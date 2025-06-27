@@ -2013,9 +2013,36 @@ class DefaultAttrsIntrinsicFlags<list<LLVMType> ret_types,
                     !foreach(i, !range(flags),
                         ImmArg<ArgIndex<!add(i, !size(param_types))>>))>;
 
-// Intrinsics for Tensor Copy using TMA
-// G2S -> From Global to Shared memory variants
-// S2G -> From Shared to Global memory variants
+// TMA Tensor Copy Intrinsics: S2G -> From Shared to Global memory variants
+foreach dim = 1...5 in {
+  defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
+  foreach mode = !if(!ge(dim, 3), ["tile", "im2col"], ["tile"]) in {
+    def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
+      DefaultAttrsIntrinsicFlags<[],
+          !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
+                       llvm_ptr_ty],        // tensormap_ptr
+                      tensor_dim_args,      // actual tensor dims
+                      [llvm_i64_ty]),       // cache_hint
+          [llvm_i1_ty],                     // Flag for cache_hint
+          [IntrConvergent,
+           ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+
+    // Intrinsics for TMA Copy with reduction
+    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
+      def int_nvvm_cp_async_bulk_tensor_reduce_ # red_op # _ # mode # _ # dim # d :
+        DefaultAttrsIntrinsicFlags<[],
+            !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
+                         llvm_ptr_ty],        // tensormap_ptr
+                         tensor_dim_args,     // actual tensor dims
+                        [llvm_i64_ty]),       // cache_hint
+          [llvm_i1_ty],                       // Flag for cache_hint
+          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
+           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
+  }
+}
+
+// TMA Tensor Copy Intrinsics: G2S -> From Global to Shared memory variants
 foreach dim = 1...5 in {
   defvar tensor_dim_args = !listsplat(llvm_i32_ty, dim);
 
@@ -2045,17 +2072,6 @@ foreach dim = 1...5 in {
     def int_nvvm_cp_async_bulk_tensor_g2s_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[], g2s_params, g2s_flags, g2s_props>;
 
-    def int_nvvm_cp_async_bulk_tensor_s2g_ # mode # _ # dim # d :
-      DefaultAttrsIntrinsicFlags<[],
-          !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                       llvm_ptr_ty],        // tensormap_ptr
-                      tensor_dim_args,      // actual tensor dims
-                      [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                     // Flag for cache_hint
-          [IntrConvergent,
-           ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
-
     def int_nvvm_cp_async_bulk_tensor_prefetch_ # mode # _ # dim # d :
       DefaultAttrsIntrinsicFlags<[],
           !listconcat([llvm_ptr_ty],        // tensormap_ptr
@@ -2065,18 +2081,6 @@ foreach dim = 1...5 in {
           [llvm_i1_ty],                     // Flag for cache_hint
           [IntrConvergent,
            ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>]>;
-
-    // Intrinsics for TMA Copy with reduction
-    foreach red_op = ["add", "min", "max", "inc", "dec", "and", "or", "xor"] in
-      def int_nvvm_cp_async_bulk_tensor_reduce_ # red_op # _ # mode # _ # dim # d :
-        DefaultAttrsIntrinsicFlags<[],
-            !listconcat([llvm_shared_ptr_ty,  // src_smem_ptr
-                         llvm_ptr_ty],        // tensormap_ptr
-                         tensor_dim_args,     // actual tensor dims
-                        [llvm_i64_ty]),       // cache_hint
-          [llvm_i1_ty],                       // Flag for cache_hint
-          [IntrConvergent, ReadOnly<ArgIndex<0>>, ReadOnly<ArgIndex<1>>,
-           NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>]>;
   }
 }
 

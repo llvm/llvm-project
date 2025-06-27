@@ -287,9 +287,12 @@ raw_ostream &operator<<(raw_ostream &OS, const DescriptorTable &Table) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const DescriptorTableClause &Clause) {
-  OS << Clause.Type << "(" << Clause.Reg
-     << ", numDescriptors = " << Clause.NumDescriptors
-     << ", space = " << Clause.Space << ", offset = ";
+  OS << Clause.Type << "(" << Clause.Reg << ", numDescriptors = ";
+  if (Clause.NumDescriptors == NumDescriptorsUnbounded)
+    OS << "unbounded";
+  else
+    OS << Clause.NumDescriptors;
+  OS << ", space = " << Clause.Space << ", offset = ";
   if (Clause.Offset == DescriptorTableOffsetAppend)
     OS << "DescriptorTableOffsetAppend";
   else
@@ -324,36 +327,45 @@ raw_ostream &operator<<(raw_ostream &OS, const StaticSampler &Sampler) {
   return OS;
 }
 
+namespace {
+
+// We use the OverloadVisit with std::visit to ensure the compiler catches if a
+// new RootElement variant type is added but it's operator<< or metadata
+// generation isn't handled.
+template <class... Ts> struct OverloadedVisit : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
+
+} // namespace
+
+raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
+  const auto Visitor = OverloadedVisit{
+      [&OS](const RootFlags &Flags) { OS << Flags; },
+      [&OS](const RootConstants &Constants) { OS << Constants; },
+      [&OS](const RootDescriptor &Descriptor) { OS << Descriptor; },
+      [&OS](const DescriptorTableClause &Clause) { OS << Clause; },
+      [&OS](const DescriptorTable &Table) { OS << Table; },
+      [&OS](const StaticSampler &Sampler) { OS << Sampler; },
+  };
+  std::visit(Visitor, Element);
+  return OS;
+}
+
 void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
-  OS << "RootElements{";
+  OS << " RootElements{";
   bool First = true;
   for (const RootElement &Element : Elements) {
     if (!First)
       OS << ",";
-    OS << " ";
-    if (const auto &Clause = std::get_if<DescriptorTableClause>(&Element))
-      OS << *Clause;
-    if (const auto &Table = std::get_if<DescriptorTable>(&Element))
-      OS << *Table;
+    OS << " " << Element;
     First = false;
   }
   OS << "}";
 }
 
-namespace {
-
-// We use the OverloadBuild with std::visit to ensure the compiler catches if a
-// new RootElement variant type is added but it's metadata generation isn't
-// handled.
-template <class... Ts> struct OverloadedBuild : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts> OverloadedBuild(Ts...) -> OverloadedBuild<Ts...>;
-
-} // namespace
-
 MDNode *MetadataBuilder::BuildRootSignature() {
-  const auto Visitor = OverloadedBuild{
+  const auto Visitor = OverloadedVisit{
       [this](const RootFlags &Flags) -> MDNode * {
         return BuildRootFlags(Flags);
       },

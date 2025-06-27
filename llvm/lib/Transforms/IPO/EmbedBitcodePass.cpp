@@ -16,7 +16,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
-#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <string>
@@ -34,11 +33,8 @@ PreservedAnalyses EmbedBitcodePass::run(Module &M, ModuleAnalysisManager &AM) {
 
   std::string Data;
   raw_string_ostream OS(Data);
-  // Clone the module with Thin LTO, since ThinLTOBitcodeWriterPass changes
-  // vtable linkage that would break the non-lto object code for FatLTO.
   if (IsThinLTO)
-    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr)
-        .run(*llvm::CloneModule(M), AM);
+    ThinLTOBitcodeWriterPass(OS, /*ThinLinkOS=*/nullptr).run(M, AM);
   else
     BitcodeWriterPass(OS, /*ShouldPreserveUseListOrder=*/false, EmitLTOSummary)
         .run(M, AM);

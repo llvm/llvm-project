@@ -108,6 +108,23 @@ inline Value_match m_Specific(SDValue N) {
   return Value_match(N);
 }
 
+template <unsigned ResNo, typename Pattern> struct Result_match {
+  Pattern P;
+
+  explicit Result_match(const Pattern &P) : P(P) {}
+
+  template <typename MatchContext>
+  bool match(const MatchContext &Ctx, SDValue N) {
+    return N.getResNo() == ResNo && P.match(Ctx, N);
+  }
+};
+
+/// Match only if the SDValue is a certain result at ResNo.
+template <unsigned ResNo, typename Pattern>
+inline Result_match<ResNo, Pattern> m_Result(const Pattern &P) {
+  return Result_match<ResNo, Pattern>(P);
+}
+
 struct DeferredValue_match {
   SDValue &MatchVal;
 
@@ -511,6 +528,13 @@ template <typename T0_P, typename T1_P, typename T2_P>
 inline TernaryOpc_match<T0_P, T1_P, T2_P>
 m_VSelect(const T0_P &Cond, const T1_P &T, const T2_P &F) {
   return TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::VSELECT, Cond, T, F);
+}
+
+template <typename T0_P, typename T1_P, typename T2_P>
+inline Result_match<0, TernaryOpc_match<T0_P, T1_P, T2_P>>
+m_Load(const T0_P &Ch, const T1_P &Ptr, const T2_P &Offset) {
+  return m_Result<0>(
+      TernaryOpc_match<T0_P, T1_P, T2_P>(ISD::LOAD, Ch, Ptr, Offset));
 }
 
 template <typename T0_P, typename T1_P, typename T2_P>

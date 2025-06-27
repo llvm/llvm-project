@@ -513,7 +513,7 @@ protected:
 
   /// Gets the entire list of expressions, but leave it to the
   /// individual clauses to expose this how they'd like.
-  llvm::ArrayRef<Expr *> getExprs() const { return Exprs; }
+  ArrayRef<Expr *> getExprs() const { return Exprs; }
 
 public:
   static bool classof(const OpenACCClause *C);
@@ -563,10 +563,10 @@ public:
   SourceLocation getQueuesLoc() const { return QueuesLoc; }
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() {
+  ArrayRef<Expr *> getQueueIdExprs() {
     return OpenACCClauseWithExprs::getExprs().drop_front();
   }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() const {
+  ArrayRef<Expr *> getQueueIdExprs() const {
     return OpenACCClauseWithExprs::getExprs().drop_front();
   }
   // If this is a plain `wait` (no parens) this returns 'false'. Else Sema/Parse
@@ -594,11 +594,9 @@ public:
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
          ArrayRef<Expr *> IntExprs, SourceLocation EndLoc);
 
-  llvm::ArrayRef<Expr *> getIntExprs() {
-    return OpenACCClauseWithExprs::getExprs();
-  }
+  ArrayRef<Expr *> getIntExprs() { return OpenACCClauseWithExprs::getExprs(); }
 
-  llvm::ArrayRef<Expr *> getIntExprs() const {
+  ArrayRef<Expr *> getIntExprs() const {
     return OpenACCClauseWithExprs::getExprs();
   }
 };
@@ -622,11 +620,9 @@ public:
                                    SourceLocation LParenLoc,
                                    ArrayRef<Expr *> SizeExprs,
                                    SourceLocation EndLoc);
-  llvm::ArrayRef<Expr *> getSizeExprs() {
-    return OpenACCClauseWithExprs::getExprs();
-  }
+  ArrayRef<Expr *> getSizeExprs() { return OpenACCClauseWithExprs::getExprs(); }
 
-  llvm::ArrayRef<Expr *> getSizeExprs() const {
+  ArrayRef<Expr *> getSizeExprs() const {
     return OpenACCClauseWithExprs::getExprs();
   }
 };

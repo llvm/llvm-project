@@ -442,6 +442,7 @@ struct IntrinsicLibrary {
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTranspose(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genThisGrid(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genThreadFence(llvm::ArrayRef<fir::ExtendedValue>);
   void genThreadFenceBlock(llvm::ArrayRef<fir::ExtendedValue>);
   void genThreadFenceSystem(llvm::ArrayRef<fir::ExtendedValue>);

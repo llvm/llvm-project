@@ -1443,13 +1443,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     break;
   }
   case 'o':
-    // We only need to change the name to match the mangling including the
-    // address space.
     if (Name.starts_with("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->arg_size() == 2 || F->arg_size() == 3 ||
-          F->getName() !=
-              Intrinsic::getName(Intrinsic::objectsize, Tys, F->getParent())) {
+      if (F->arg_size() == 2 || F->arg_size() == 3) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
                                                   Intrinsic::objectsize, Tys);
