@@ -489,8 +489,17 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   }
 
   if (TT.isAArch64()) {
-    if (TT.isWindowsArm64EC())
+    if (TT.isWindowsArm64EC()) {
       setWindowsArm64LibCallNameOverrides();
+      setLibcallImpl(RTLIB::SC_MEMCPY, RTLIB::arm64ec___arm_sc_memcpy);
+      setLibcallImpl(RTLIB::SC_MEMMOVE, RTLIB::arm64ec___arm_sc_memmove);
+      setLibcallImpl(RTLIB::SC_MEMSET, RTLIB::arm64ec___arm_sc_memset);
+    } else {
+      setLibcallImpl(RTLIB::SC_MEMCPY, RTLIB::__arm_sc_memcpy);
+      setLibcallImpl(RTLIB::SC_MEMMOVE, RTLIB::__arm_sc_memmove);
+      setLibcallImpl(RTLIB::SC_MEMSET, RTLIB::__arm_sc_memset);
+    }
+
     setAArch64LibcallNames(*this, TT);
   } else if (TT.isARM() || TT.isThumb()) {
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
