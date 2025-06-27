@@ -50,3 +50,24 @@ end subroutine
 ! CHECK: fir.store %[[SIZE]] to %[[COORD_SIZE]] : !fir.ref<i32>
 ! CHECK: %[[COORD_RANK:.*]] = fir.coordinate_of %[[RES]], rank : (!fir.ref<!fir.type<_QMcooperative_groupsTgrid_group{_QMcooperative_groupsTgrid_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
 ! CHECK: fir.store %[[RANK]] to %[[COORD_RANK]] : !fir.ref<i32>
+
+attributes(grid_global) subroutine w1()
+  use cooperative_groups
+  type(coalesced_group) :: gg
+  gg = this_warp()
+end subroutine
+
+! CHECK: %[[WARPSIZE:.*]] = fir.alloca i32 {bindc_name = "__builtin_warpsize", uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"}
+! CHECK: %[[WARPSIZE_DECL:.*]]:2 = hlfir.declare %[[WARPSIZE]] {uniq_name = "_QM__fortran_builtinsEC__builtin_warpsize"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[COALESCED_GROUP:.*]] = fir.alloca !fir.type<_QMcooperative_groupsTcoalesced_group{_QMcooperative_groupsTcoalesced_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>
+! CHECK: %[[C32:.*]] = arith.constant 32 : i32
+! CHECK: %[[SIZE_COORD:.*]] = fir.coordinate_of %[[COALESCED_GROUP]], size : (!fir.ref<!fir.type<_QMcooperative_groupsTcoalesced_group{_QMcooperative_groupsTcoalesced_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[C32]] to %[[SIZE_COORD]] : !fir.ref<i32>
+
+! CHECK: %[[THREAD_ID:.*]] = nvvm.read.ptx.sreg.tid.x : i32
+! CHECK: %[[C31:.*]] = arith.constant 31 : i32
+! CHECK: %[[C1:.*]] = arith.constant 1 : i32
+! CHECK: %[[AND:.*]] = arith.andi %[[THREAD_ID]], %[[C31]] : i32
+! CHECK: %[[RANK:.*]] = arith.addi %[[AND]], %[[C1]] : i32
+! CHECK: %[[RANK_COORD:.*]] = fir.coordinate_of %{{.*}}, rank : (!fir.ref<!fir.type<_QMcooperative_groupsTcoalesced_group{_QMcooperative_groupsTcoalesced_group.handle:!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>,size:i32,rank:i32}>>) -> !fir.ref<i32>
+! CHECK: fir.store %[[RANK]] to %[[RANK_COORD]] : !fir.ref<i32>
