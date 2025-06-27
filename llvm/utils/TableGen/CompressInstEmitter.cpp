@@ -212,8 +212,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                                                bool IsSourceInst,
                                                unsigned *SourceLastTiedOpPtr) {
   unsigned NumMIOperands = 0;
-  for (const auto &Op : Inst.Operands)
-    NumMIOperands += Op.MINumOperands;
+  if (!Inst.Operands.empty())
+    NumMIOperands =
+        Inst.Operands.back().MIOperandNo + Inst.Operands.back().MINumOperands;
   OperandMap.grow(NumMIOperands);
 
   // TiedCount keeps track of the number of operands skipped in Inst
