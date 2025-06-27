@@ -110,6 +110,9 @@ struct MissingFeatures {
   static bool opCallLandingPad() { return false; }
   static bool opCallContinueBlock() { return false; }
 
+  // CXXNewExpr
+  static bool exprNewNullCheck() { return false; }
+
   // FnInfoOpts -- This is used to track whether calls are chain calls or
   // instance methods. Classic codegen uses chain call to track and extra free
   // register for x86 and uses instance method as a condition for a thunk
@@ -170,6 +173,7 @@ struct MissingFeatures {
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmLabelAttr() { return false; }
   static bool astVarDeclInterface() { return false; }
+  static bool attributeBuiltin() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool bitfields() { return false; }
   static bool builtinCall() { return false; }
