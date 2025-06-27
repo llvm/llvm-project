@@ -145,34 +145,33 @@ public:
 /// TODO: When the MaxSymbolComplexity is reached, we should propagate the taint
 /// info to it.
 class SymbolOverlyComplex final : public SymbolData {
-  const SymExpr *OverlyComplicatedSymbol;
+  QualType Ty;
+  unsigned OverlyComplicatedSymbolHash;
 
   friend class SymExprAllocator;
   friend class SymbolManager;
 
-  SymbolOverlyComplex(SymbolID Sym, const SymExpr *OverlyComplicatedSymbol)
-      : SymbolData(ClassKind, Sym),
-        OverlyComplicatedSymbol(OverlyComplicatedSymbol) {
-    assert(OverlyComplicatedSymbol);
-  }
+  SymbolOverlyComplex(SymbolID Sym, QualType Ty,
+                      unsigned OverlyComplicatedSymbolHash)
+      : SymbolData(ClassKind, Sym), Ty(Ty),
+        OverlyComplicatedSymbolHash(OverlyComplicatedSymbolHash) {}
 
 public:
-  QualType getType() const override {
-    return OverlyComplicatedSymbol->getType();
-  }
+  QualType getType() const override { return Ty; }
 
   StringRef getKindStr() const override;
 
   void dumpToStream(raw_ostream &os) const override;
 
-  static void Profile(llvm::FoldingSetNodeID &profile,
-                      const SymExpr *OverlyComplicatedSymbol) {
+  static void Profile(llvm::FoldingSetNodeID &profile, QualType Ty,
+                      unsigned OverlyComplicatedSymbolHash) {
     profile.AddInteger((unsigned)ClassKind);
-    profile.AddPointer(OverlyComplicatedSymbol);
+    profile.Add(Ty);
+    profile.AddInteger(OverlyComplicatedSymbolHash);
   }
 
   void Profile(llvm::FoldingSetNodeID &profile) override {
-    Profile(profile, OverlyComplicatedSymbol);
+    Profile(profile, Ty, OverlyComplicatedSymbolHash);
   }
 
   // Implement isa<T> support.
@@ -750,15 +749,9 @@ const Ret *SymbolManager::acquire(Args &&...args) {
     }
     return cast<Ret>(SD);
   }
-  void *WrappedSymInsertPos;
-  SymExpr *WrappedSym =
-      DataSet.FindNodeOrInsertPos(DummyProfile, WrappedSymInsertPos);
-  if (!WrappedSym) {
-    WrappedSym = Alloc.make<T>(args...);
-    DataSet.InsertNode(WrappedSym, WrappedSymInsertPos);
-  }
 
-  SymbolOverlyComplex OverlyComplexSym(/*SymbolID=*/0, WrappedSym);
+  SymbolOverlyComplex OverlyComplexSym(/*SymbolID=*/0, Dummy.getType(),
+                                       DummyProfile.ComputeHash());
   llvm::FoldingSetNodeID OverlyComplexSymProfile;
   OverlyComplexSym.Profile(OverlyComplexSymProfile);
 
@@ -766,7 +759,8 @@ const Ret *SymbolManager::acquire(Args &&...args) {
   SymExpr *SD = DataSet.FindNodeOrInsertPos(OverlyComplexSymProfile,
                                             OverlyComplexSymInsertPos);
   if (!SD) {
-    SD = Alloc.make<SymbolOverlyComplex>(WrappedSym);
+    SD = Alloc.make<SymbolOverlyComplex>(Dummy.getType(),
+                                         DummyProfile.ComputeHash());
     DataSet.InsertNode(SD, OverlyComplexSymInsertPos);
   }
   return cast<Ret>(SD);
