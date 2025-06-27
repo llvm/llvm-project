@@ -223,6 +223,8 @@ public:
   /// Get the kind of extension that an instruction represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction *I);
+  LLVM_ABI static PartialReductionExtendKind
+  getPartialReductionExtendKind(Instruction::CastOps CastOpc);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
