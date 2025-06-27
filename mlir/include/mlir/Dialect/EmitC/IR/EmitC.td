@@ -1692,16 +1692,16 @@ def BufferMapOp
     Example:
 
     ```mlir
-    emitc.buffer_map reflection_map [ @field1, @field2, @field3 ]
+    emitc.buffer_map [ @field1, @field2, @field3 ]
     ```
 
     This generates C++ code like:
 
     ```cpp
-    const std::map<std::string, char*> _reflection_map {
-      { "field1", reinterpret_cast<char*>(&field1) },
-      { "field2", reinterpret_cast<char*>(&field2) },
-      { "field3", reinterpret_cast<char*>(&field3) }
+    const std::map<std::string, char*> _buffer_map {
+      { "some_feature", reinterpret_cast<char*>(&some_feature) },
+      { "another_feature", reinterpret_cast<char*>(&another_feature) },
+      { "input_tense", reinterpret_cast<char*>(&input_tense) }
     };
     
     char* getBufferForName(const std::string& name) const {
@@ -1711,12 +1711,10 @@ def BufferMapOp
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name,
-      Arg<OptionalAttr<ArrayAttr>, "field names">:$fields);
+  let arguments = (ins Arg<OptionalAttr<ArrayAttr>, "field names">:$fields);
 
   let results = (outs);
-  let builders = [];
-  let assemblyFormat = "$sym_name  $fields attr-dict";
+  let assemblyFormat = "$fields attr-dict";
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

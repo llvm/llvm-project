@@ -80,8 +80,7 @@ public:
 
     if (!bufferFieldAttrs.empty()) {
       ArrayAttr fieldsArrayAttr = rewriter.getArrayAttr(bufferFieldAttrs);
-      rewriter.create<emitc::BufferMapOp>(funcOp.getLoc(), "reflection_map",
-                                          fieldsArrayAttr);
+      rewriter.create<emitc::BufferMapOp>(funcOp.getLoc(), fieldsArrayAttr);
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());
