@@ -13082,7 +13082,6 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
 
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  // Classify TVal/FVal content
   bool IsTAllZero = ISD::isBuildVectorAllZeros(TVal.getNode());
   bool IsTAllOne = ISD::isBuildVectorAllOnes(TVal.getNode());
   bool IsFAllZero = ISD::isBuildVectorAllZeros(FVal.getNode());
@@ -13096,6 +13095,18 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   if (IsTAllZero && IsFAllZero) {
     return VT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, VT)
                                 : DAG.getConstant(0, DL, VT);
+  }
+
+  // check select(setgt lhs, -1), 1, -1 --> or (sra lhs, bitwidth - 1), 1
+  APInt TValAPInt;
+  if (Cond.getOpcode() == ISD::SETCC &&
+      Cond.getOperand(2) == DAG.getCondCode(ISD::SETGT) &&
+      Cond.getOperand(0).getValueType() == VT && VT.isSimple() &&
+      ISD::isConstantSplatVector(TVal.getNode(), TValAPInt) &&
+      TValAPInt.isOne() &&
+      ISD::isConstantSplatVectorAllOnes(Cond.getOperand(1).getNode()) &&
+      ISD::isConstantSplatVectorAllOnes(FVal.getNode())) {
+    return SDValue();
   }
 
   // To use the condition operand as a bitwise mask, it must have elements that
