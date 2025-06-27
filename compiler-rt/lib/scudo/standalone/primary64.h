@@ -989,11 +989,12 @@ private:
 
     // So far, instead of always filling blocks to `MaxBlockCount`, we only
     // examine single `Batch` to minimize the time spent in the primary
-    // allocator. Besides, the sizes of `Batch` and `CacheT::getMaxCached()` may
-    // also impact the time spent on accessing the primary allocator.
+    // allocator. Besides, the sizes of `Batch` and
+    // `SizeClassAllocatorT::getMaxCached()` may also impact the time spent on
+    // accessing the primary allocator.
     // TODO(chiahungduan): Evaluate if we want to always prepare `MaxBlockCount`
     // blocks and/or adjust the size of `Batch` according to
-    // `CacheT::getMaxCached()`.
+    // `SizeClassAllocatorT::getMaxCached()`.
     BatchT *B = Batches.front();
     DCHECK_NE(B, nullptr);
     DCHECK_GT(B->getCount(), 0U);

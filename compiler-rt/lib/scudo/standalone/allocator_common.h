@@ -81,7 +81,7 @@ template <class SizeClassAllocator> struct BatchGroup {
   SinglyLinkedList<Batch<SizeClassAllocator>> Batches;
   // Cache value of SizeClassAllocatorLocalCache::getMaxCached()
   // TODO(chiahungduan): Except BatchClass, every Batch stores the same number
-  // of blocks. As long as we make BatchClass follows this constraint, this
+  // of blocks. As long as we make BatchClass follow this constraint, this
   // field can be removed.
   u16 MaxCachedPerBatch;
 };
