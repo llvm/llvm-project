@@ -1559,7 +1559,8 @@ def Vector_TransferReadOp :
                    "std::optional<Value>":$padding,
                    "AffineMap":$permutationMap,
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
-    /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+    /// 3. Builder that sets padding to `padding` or poisson if not provided and
+    /// permutation map to 'getMinorIdentityMap'.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
