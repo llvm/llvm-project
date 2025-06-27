@@ -3275,7 +3275,7 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
-def err_callback_attribute_wrong_arg_count
+def err_attribute_wrong_arg_count_for_func
     : Error<"%0 attribute references function of type %1 which expects %2 "
             "%plural{1:argument|:arguments}2 but attribute specifies %3 "
             "parameter index "
@@ -4695,7 +4695,7 @@ def note_protocol_decl : Note<
   "protocol is declared here">;
 def note_protocol_decl_undefined : Note<
   "protocol %0 has no definition">;
-def err_attribute_preferred_name_arg_invalid
+def err_attribute_not_typedef_for_specialization
     : Error<"argument %0 to %1 attribute is not a typedef for "
             "a specialization of %2">;
 def err_attribute_builtin_alias : Error<
