@@ -1627,9 +1627,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       LastStore = nullptr;
 
     // If this is a read-only or write-only call, process it. Skip store
-    // MemInsts, as they will be more precisely handled lateron.
+    // MemInsts, as they will be more precisely handled later on. Also skip
+    // memsets, as DSE may be able to optimize them better by removing the
+    // earlier rather than later store.
     if (CallValue::canHandle(&Inst) &&
-        (!MemInst.isValid() || !MemInst.isStore())) {
+        (!MemInst.isValid() || !MemInst.isStore()) && !isa<MemSetInst>(&Inst)) {
       // If we have an available version of this call, and if it is the right
       // generation, replace this instruction.
       std::pair<Instruction *, unsigned> InVal = AvailableCalls.lookup(&Inst);
