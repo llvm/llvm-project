@@ -111,7 +111,7 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
                                                              bitsize))
           return false;
         if (!ent->GetAsDictionary()->GetValueForKeyAsInteger("value", value)) {
-          // we had a bitsize but no value, so move the offset forward I guess.
+          // We had a bitsize but no value, so move the offset forward I guess.
           offset += (bitsize / 8);
           return false;
         }
