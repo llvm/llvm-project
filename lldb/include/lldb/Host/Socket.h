@@ -158,7 +158,6 @@ public:
 
   bool IsValid() const override { return m_socket != kInvalidSocketValue; }
   WaitableHandle GetWaitableHandle() override;
-  bool HasReadableData() override;
 
   static llvm::Expected<HostAndPort>
   DecodeHostAndPort(llvm::StringRef host_and_port);
@@ -186,7 +185,6 @@ protected:
 
   SocketProtocol m_protocol;
   NativeSocket m_socket;
-  WaitableHandle m_waitable_handle;
   bool m_should_close_fd;
 };
 

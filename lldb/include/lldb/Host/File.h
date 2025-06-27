@@ -127,7 +127,6 @@ public:
   /// \return
   ///     a valid handle or IOObject::kInvalidHandleValue
   WaitableHandle GetWaitableHandle() override;
-  bool HasReadableData() override;
 
   /// Get the file specification for this file, if possible.
   ///
@@ -401,7 +400,6 @@ public:
   Status Write(const void *buf, size_t &num_bytes) override;
   Status Close() override;
   WaitableHandle GetWaitableHandle() override;
-  bool HasReadableData() override;
   Status GetFileSpec(FileSpec &file_spec) const override;
   int GetDescriptor() const override;
   FILE *GetStream() override;

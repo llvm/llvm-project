@@ -31,6 +31,18 @@ public:
 
   Status Run() override;
 
+  struct FdInfo {
+    FdInfo(intptr_t event, Callback callback)
+        : event(event), callback(callback) {}
+    virtual ~FdInfo() {}
+    virtual void WillPoll() {}
+    virtual void DidPoll() {}
+    virtual void Disarm() {}
+    intptr_t event;
+    Callback callback;
+  };
+  using FdInfoUP = std::unique_ptr<FdInfo>;
+
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
@@ -39,11 +51,7 @@ protected:
 private:
   llvm::Expected<size_t> Poll();
 
-  struct FdInfo {
-    lldb::IOObjectSP object_sp;
-    Callback callback;
-  };
-  llvm::DenseMap<IOObject::WaitableHandle, FdInfo> m_read_fds;
+  llvm::DenseMap<IOObject::WaitableHandle, FdInfoUP> m_read_fds;
   void *m_interrupt_event;
 };
 

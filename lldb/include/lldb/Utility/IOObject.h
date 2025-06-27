@@ -41,7 +41,6 @@ public:
   FDType GetFdType() const { return m_fd_type; }
 
   virtual WaitableHandle GetWaitableHandle() = 0;
-  virtual bool HasReadableData() = 0;
 
 protected:
   FDType m_fd_type;

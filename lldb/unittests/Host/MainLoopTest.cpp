@@ -101,6 +101,26 @@ TEST_F(MainLoopTest, ReadPipeObject) {
   ASSERT_EQ(1u, callback_count);
 }
 
+TEST_F(MainLoopTest, ReadFileObject) {
+  llvm::SmallString<1024> path;
+  int fd;
+  ASSERT_FALSE(llvm::sys::fs::createUniqueFile("test-%%%%%%%%%%", fd, path));
+  std::shared_ptr<NativeFile> file = std::make_shared<NativeFile>(fd, File::eOpenOptionReadWrite, false);
+
+  MainLoop loop;
+
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_TRUE(file->Write(&X, len).Success());
+
+  Status error;
+  auto handle = loop.RegisterReadObject(file, make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(1u, callback_count);
+}
+
 TEST_F(MainLoopTest, NoSpuriousReads) {
   // Write one byte into the socket.
   char X = 'X';
@@ -188,10 +208,6 @@ TEST_F(MainLoopTest, PendingCallbackCalledOnlyOnce) {
         if (callback_count == 0) {
           loop.AddPendingCallback([&](MainLoopBase &loop) {
             callback_count++;
-            char X = 'X';
-            size_t len = sizeof(X);
-            // Write to trigger read object again.
-            ASSERT_TRUE(socketpair[0]->Write(&X, len).Success());
           });
         }
         // Terminate the loop on second iteration.

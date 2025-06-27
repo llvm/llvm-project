@@ -24,6 +24,139 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace {
+
+DWORD ToTimeout(std::optional<MainLoopWindows::TimePoint> point) {
+  using namespace std::chrono;
+
+  if (!point)
+    return WSA_INFINITE;
+
+  nanoseconds dur = (std::max)(*point - steady_clock::now(), nanoseconds(0));
+  return ceil<milliseconds>(dur).count();
+}
+
+class PipeFdInfo : public MainLoopWindows::FdInfo {
+public:
+  explicit PipeFdInfo(HANDLE handle, MainLoopBase::Callback callback)
+      : FdInfo((intptr_t)CreateEventW(NULL, /*bManualReset=*/FALSE,
+                                      /*bInitialState=*/FALSE, NULL),
+               callback),
+        handle(handle), ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
+                                           /*bInitialState=*/FALSE, NULL)) {
+    assert(event && ready);
+  }
+
+  ~PipeFdInfo() override {
+    if (monitor_thread.joinable()) {
+      stopped = true;
+      SetEvent(ready);
+      // Keep trying to cancel ReadFile() until the thread exits.
+      do {
+        CancelIoEx((HANDLE)handle, /*lpOverlapped=*/NULL);
+      } while (WaitForSingleObject(monitor_thread.native_handle(), 1) ==
+               WAIT_TIMEOUT);
+      monitor_thread.join();
+    }
+    CloseHandle((HANDLE)event);
+    CloseHandle(ready);
+  }
+
+  void WillPoll() override { 
+    if (!monitor_thread.joinable())
+      monitor_thread = std::thread(&PipeFdInfo::Monitor, this);
+  }
+
+  void Disarm() override {
+    SetEvent(ready);
+  }
+
+  /// Monitors the handle performing a zero byte read to determine when data is
+  /// avaiable.
+  void Monitor() {
+    do {
+      char buf[1];
+      DWORD bytes_read = 0;
+      OVERLAPPED ov = {0};
+      // Block on a 0-byte read; this will only resume when data is
+      // available in the pipe. The pipe must be PIPE_WAIT or this thread
+      // will spin.
+      BOOL success =
+          ReadFile(handle, buf, /*nNumberOfBytesToRead=*/0, &bytes_read, &ov);
+      DWORD bytes_available = 0;
+      DWORD err = GetLastError();
+      if (!success && err == ERROR_IO_PENDING) {
+        success = GetOverlappedResult(handle, &ov, &bytes_read,
+                                      /*bWait=*/TRUE);
+        err = GetLastError();
+      }
+      if (success) {
+        success = PeekNamedPipe(handle, NULL, 0, NULL, &bytes_available, NULL);
+        err = GetLastError();
+      }
+      if (success) {
+        if (bytes_available == 0) {
+          // This can happen with a zero-byte write. Try again.
+          continue;
+        }
+      } else if (err == ERROR_NO_DATA) {
+        // The pipe is nonblocking. Try again.
+        Sleep(0);
+        continue;
+      } else if (err == ERROR_OPERATION_ABORTED) {
+        // Read may have been cancelled, try again.
+        continue;
+      }
+
+      SetEvent((HANDLE)event);
+
+      // Wait until the current read is consumed before doing the next read.
+      WaitForSingleObject(ready, INFINITE);
+    } while (!stopped);
+  }
+
+  HANDLE handle;
+  HANDLE ready;
+  std::thread monitor_thread;
+  std::atomic<bool> stopped = false;
+};
+
+class SocketFdInfo : public MainLoopWindows::FdInfo {
+public:
+  explicit SocketFdInfo(SOCKET socket, MainLoopBase::Callback callback)
+      : FdInfo((intptr_t)WSACreateEvent(), callback), socket(socket) {
+    assert(event != WSA_INVALID_EVENT);
+  }
+
+  ~SocketFdInfo() override { WSACloseEvent((HANDLE)event); }
+
+  void WillPoll() {
+    int result = WSAEventSelect(socket, (HANDLE)event, FD_READ | FD_ACCEPT | FD_CLOSE);
+    assert(result == 0);
+    UNUSED_IF_ASSERT_DISABLED(result);
+  }
+
+  void DidPoll() {
+    int result = WSAEventSelect(socket, WSA_INVALID_EVENT, 0);
+    assert(result == 0);
+    UNUSED_IF_ASSERT_DISABLED(result);
+  }
+
+  void Disarm() override {
+    WSAResetEvent((HANDLE)event);
+  }
+
+  SOCKET socket;
+};
+
+class FileFdInfo : public MainLoopWindows::FdInfo {
+public:
+  explicit FileFdInfo(HANDLE handle, MainLoopBase::Callback callback)
+      : FdInfo((intptr_t)handle, callback) {}
+};
+
+} // namespace
+
 MainLoopWindows::MainLoopWindows() {
   m_interrupt_event = WSACreateEvent();
   assert(m_interrupt_event != WSA_INVALID_EVENT);
@@ -39,59 +172,29 @@ MainLoopWindows::~MainLoopWindows() {
 llvm::Expected<size_t> MainLoopWindows::Poll() {
   std::vector<HANDLE> events;
   events.reserve(m_read_fds.size() + 1);
-  for (auto &[fd, fd_info] : m_read_fds) {
-    // short circuit waiting if a handle is already ready.
-    if (fd_info.object_sp->HasReadableData())
-      return events.size();
-    events.push_back(fd);
+  for (auto &[_, fd_info] : m_read_fds) {
+    fd_info->WillPoll();
+    events.push_back((HANDLE)fd_info->event);
   }
   events.push_back(m_interrupt_event);
 
-  while (true) {
-    DWORD timeout = INFINITY;
-    std::optional<lldb_private::MainLoopBase::TimePoint> deadline =
-        GetNextWakeupTime();
-    if (deadline) {
-      // Check how much time is remaining, we may have woken up early for an
-      // unrelated reason on a file descriptor (e.g. a stat was triggered).
-      std::chrono::milliseconds remaining =
-          std::chrono::duration_cast<std::chrono::milliseconds>(
-              deadline.value() - std::chrono::steady_clock::now());
-      if (remaining.count() <= 0)
-        return events.size() - 1;
-      timeout = remaining.count();
-    }
+  DWORD result =
+      WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
+                               ToTimeout(GetNextWakeupTime()), FALSE);
 
-    DWORD result =
-        WaitForMultipleObjects(events.size(), events.data(), FALSE, timeout);
-
-    // A timeout is treated as a (premature) signalization of the interrupt
-    // event.
-    if (result == WAIT_TIMEOUT)
-      return events.size() - 1;
-
-    if (result == WAIT_FAILED)
-      return llvm::createStringError(llvm::mapLastWindowsError(),
-                                     "WaitForMultipleObjects failed");
-
-    // check if interrupt requested.
-    if (result == WAIT_OBJECT_0 + events.size())
-      return result - WAIT_OBJECT_0;
-
-    // An object may be signaled before data is ready for reading, verify it has
-    // data.
-    if (result >= WAIT_OBJECT_0 &&
-        result < WAIT_OBJECT_0 + (events.size() - 1) &&
-        std::next(m_read_fds.begin(), result - WAIT_OBJECT_0)
-            ->second.object_sp->HasReadableData())
-      return result - WAIT_OBJECT_0;
-
-    // If no handles are actually ready then yield the thread to allow the CPU
-    // to progress.
-    std::this_thread::yield();
+  for (auto &[_, fd_info] : m_read_fds) {
+    fd_info->DidPoll();
   }
 
-  llvm_unreachable();
+  if (result >= WSA_WAIT_EVENT_0 && result < WSA_WAIT_EVENT_0 + events.size())
+    return result - WSA_WAIT_EVENT_0;
+
+  // A timeout is treated as a (premature) signalization of the interrupt event.
+  if (result == WSA_WAIT_TIMEOUT)
+    return events.size() - 1;
+
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "WSAWaitForMultipleEvents failed");
 }
 
 MainLoopWindows::ReadHandleUP
@@ -105,14 +208,30 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
   IOObject::WaitableHandle waitable_handle = object_sp->GetWaitableHandle();
   assert(waitable_handle != IOObject::kInvalidHandleValue);
 
-  const bool inserted =
-      m_read_fds.try_emplace(waitable_handle, FdInfo{object_sp, callback})
-          .second;
-  if (!inserted) {
+  if (m_read_fds.find(waitable_handle) != m_read_fds.end()) {
     error = Status::FromErrorStringWithFormat(
         "File descriptor %d already monitored.", waitable_handle);
     return nullptr;
   }
+
+  if (object_sp->GetFdType() == IOObject::eFDTypeSocket)
+    m_read_fds[waitable_handle] =
+        std::make_unique<SocketFdInfo>((SOCKET)waitable_handle, callback);
+  else
+    switch (GetFileType(waitable_handle)) {
+    case FILE_TYPE_PIPE:
+      m_read_fds[waitable_handle] =
+          std::make_unique<PipeFdInfo>((HANDLE)waitable_handle, callback);
+      break;
+    case FILE_TYPE_DISK:
+      m_read_fds[waitable_handle] =
+          std::make_unique<FileFdInfo>((HANDLE)waitable_handle, callback);
+      break;
+    default:
+      error = Status::FromErrorStringWithFormat("Unsupported file type %d",
+                                                GetFileType(waitable_handle));
+      return nullptr;
+    }
 
   return CreateReadHandle(object_sp);
 }
@@ -135,7 +254,8 @@ Status MainLoopWindows::Run() {
 
     if (*signaled_event < m_read_fds.size()) {
       auto &KV = *std::next(m_read_fds.begin(), *signaled_event);
-      KV.second.callback(*this); // Do the work.
+      KV.second->Disarm();
+      KV.second->callback(*this); // Do the work.
     } else {
       assert(*signaled_event == m_read_fds.size());
       WSAResetEvent(m_interrupt_event);
