@@ -398,6 +398,12 @@ static cl::opt<bool>
                          cl::desc("Enable s_delay_alu insertion"),
                          cl::init(true), cl::Hidden);
 
+// Enable Hot block rematerialize
+static cl::opt<bool>
+    EnableHotBlockRemat("amdgpu-enable-hot-block-remat",
+                        cl::desc("Enable HotBlock Rematerialize optimization"),
+                        cl::init(false), cl::Hidden);
+
 // Enable GFX11+ VOPD
 static cl::opt<bool>
     EnableVOPD("amdgpu-enable-vopd",
@@ -522,6 +528,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAtomicOptimizerPass(*PR);
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
+  initializeAMDGPUHotBlockRematerializePass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
@@ -1570,6 +1577,10 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // compilation time, so we only enable it from O2.
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     insertPass(&MachineSchedulerID, &SIFormMemoryClausesID);
+
+  // Must be run before phi elimination
+  if (isPassEnabled(EnableHotBlockRemat))
+    addPass(&AMDGPUHotBlockRematerializeID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
