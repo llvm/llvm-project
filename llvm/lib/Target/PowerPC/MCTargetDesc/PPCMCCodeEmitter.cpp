@@ -329,14 +329,11 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
     (void)SRE;
     // Currently these are the only valid PCRelative Relocations.
-    assert((getSpecifier(SRE) == PPC::S_PCREL ||
-            getSpecifier(SRE) == PPC::S_GOT_PCREL ||
-            getSpecifier(SRE) == PPC::S_GOT_TLSGD_PCREL ||
-            getSpecifier(SRE) == PPC::S_GOT_TLSLD_PCREL ||
-            getSpecifier(SRE) == PPC::S_GOT_TPREL_PCREL) &&
-           "VariantKind must be VK_PCREL or VK_GOT_PCREL or "
-           "VK_GOT_TLSGD_PCREL or VK_GOT_TLSLD_PCREL or "
-           "VK_GOT_TPREL_PCREL.");
+    assert(is_contained({PPC::S_PCREL, PPC::S_GOT_PCREL, PPC::S_GOT_TLSGD_PCREL,
+                         PPC::S_GOT_TLSLD_PCREL, PPC::S_GOT_TPREL_PCREL},
+                        SRE->getSpecifier()) &&
+           "specifier must be S_PCREL, S_GOT_PCREL, S_GOT_TLSGD_PCREL, "
+           "S_GOT_TLSLD_PCREL, or S_GOT_TPREL_PCREL");
     // Generate the fixup for the relocation.
     Fixups.push_back(
         MCFixup::create(0, Expr,

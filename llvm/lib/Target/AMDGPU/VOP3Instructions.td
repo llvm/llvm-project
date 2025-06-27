@@ -2016,16 +2016,14 @@ defm V_DIV_FIXUP_F16 :
 defm V_ADD_NC_U16      : VOP3OpSel_Real_gfx10<0x303>;
 defm V_SUB_NC_U16      : VOP3OpSel_Real_gfx10<0x304>;
 
-// FIXME-GFX10-OPSEL: Need to add "selective" opsel support to some of these
-// (they do not support SDWA or DPP).
-defm V_MUL_LO_U16      : VOP3_Real_gfx10_with_name<0x305, "V_MUL_LO_U16", "v_mul_lo_u16">;
-defm V_LSHRREV_B16     : VOP3_Real_gfx10_with_name<0x307, "V_LSHRREV_B16", "v_lshrrev_b16">;
-defm V_ASHRREV_I16     : VOP3_Real_gfx10_with_name<0x308, "V_ASHRREV_I16", "v_ashrrev_i16">;
-defm V_MAX_U16         : VOP3_Real_gfx10_with_name<0x309, "V_MAX_U16", "v_max_u16">;
-defm V_MAX_I16         : VOP3_Real_gfx10_with_name<0x30a, "V_MAX_I16", "v_max_i16">;
-defm V_MIN_U16         : VOP3_Real_gfx10_with_name<0x30b, "V_MIN_U16", "v_min_u16">;
-defm V_MIN_I16         : VOP3_Real_gfx10_with_name<0x30c, "V_MIN_I16", "v_min_i16">;
-defm V_LSHLREV_B16     : VOP3_Real_gfx10_with_name<0x314, "V_LSHLREV_B16", "v_lshlrev_b16">;
+defm V_MUL_LO_U16      : VOP3OpSel_Real_gfx10_with_name<0x305, "V_MUL_LO_U16_opsel", "v_mul_lo_u16">;
+defm V_LSHRREV_B16     : VOP3OpSel_Real_gfx10_with_name<0x307, "V_LSHRREV_B16_opsel", "v_lshrrev_b16">;
+defm V_ASHRREV_I16     : VOP3OpSel_Real_gfx10_with_name<0x308, "V_ASHRREV_I16_opsel", "v_ashrrev_i16">;
+defm V_MAX_U16         : VOP3OpSel_Real_gfx10_with_name<0x309, "V_MAX_U16_opsel", "v_max_u16">;
+defm V_MAX_I16         : VOP3OpSel_Real_gfx10_with_name<0x30a, "V_MAX_I16_opsel", "v_max_i16">;
+defm V_MIN_U16         : VOP3OpSel_Real_gfx10_with_name<0x30b, "V_MIN_U16_opsel", "v_min_u16">;
+defm V_MIN_I16         : VOP3OpSel_Real_gfx10_with_name<0x30c, "V_MIN_I16_opsel", "v_min_i16">;
+defm V_LSHLREV_B16     : VOP3OpSel_Real_gfx10_with_name<0x314, "V_LSHLREV_B16_opsel", "v_lshlrev_b16">;
 defm V_PERMLANE16_B32  : VOP3OpSel_Real_gfx10<0x377>;
 defm V_PERMLANEX16_B32 : VOP3OpSel_Real_gfx10<0x378>;
 
