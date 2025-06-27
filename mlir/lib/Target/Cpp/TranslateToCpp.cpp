@@ -9,6 +9,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
@@ -24,6 +25,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LogicalResult.h"
 #include <stack>
 #include <utility>
 
@@ -1038,6 +1040,28 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return success();
 }
 
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    BufferMapOp bufferMapOp) {
+  raw_indented_ostream &os = emitter.ostream();
+  os << "const std::map<std::string, char*> _buffer_map {\n";
+  os.indent();
+  auto buf = bufferMapOp.getFields();
+  for (auto field : *buf) {
+    os << "{ \"" << field << "\", reinterpret_cast<char*>(&" << field
+       << ") },\n";
+  }
+  os.unindent();
+  os << "};\n";
+
+  os << "char* getBufferForName(const std::string& name) const {\n";
+  os.indent();
+  os << "auto it = _buffer_map.find(name);\n";
+  os << "return (it == _buffer_map.end()) ? nullptr : it->second;\n";
+  os.unindent();
+  os << "}\n";
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, FileOp file) {
   if (!emitter.shouldEmitFile(file))
     return success();
@@ -1645,17 +1669,17 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<emitc::AddOp, emitc::ApplyOp, emitc::AssignOp,
                 emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
-                emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
-                emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
-                emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
-                emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
-                emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
-                emitc::GetFieldOp, emitc::GlobalOp, emitc::IfOp,
-                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
-                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
-                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
-                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
-                emitc::VerbatimOp>(
+                emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp,
+                emitc::BufferMapOp, emitc::CallOp, emitc::CallOpaqueOp,
+                emitc::CastOp, emitc::ClassOp, emitc::CmpOp,
+                emitc::ConditionalOp, emitc::ConstantOp, emitc::DeclareFuncOp,
+                emitc::DivOp, emitc::ExpressionOp, emitc::FieldOp,
+                emitc::FileOp, emitc::ForOp, emitc::FuncOp, emitc::GetFieldOp,
+                emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp, emitc::LoadOp,
+                emitc::LogicalAndOp, emitc::LogicalNotOp, emitc::LogicalOrOp,
+                emitc::MulOp, emitc::RemOp, emitc::ReturnOp, emitc::SubOp,
+                emitc::SwitchOp, emitc::UnaryMinusOp, emitc::UnaryPlusOp,
+                emitc::VariableOp, emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
