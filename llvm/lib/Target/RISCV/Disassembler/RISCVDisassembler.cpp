@@ -790,7 +790,8 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXmipscmov32,
      {RISCV::FeatureVendorXMIPSCMov},
      "MIPS mips.ccmov"},
-    {DecoderTableXmipscbop32, {RISCV::FeatureVendorXMIPSCBOP},
+    {DecoderTableXmipscbop32,
+     {RISCV::FeatureVendorXMIPSCBOP},
      "MIPS mips.pref"},
     {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     // Standard Extensions

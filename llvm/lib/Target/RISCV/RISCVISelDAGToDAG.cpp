@@ -2945,22 +2945,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
       Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
       return true;
     }
-
-    // Handle with 12 bit offset with sign bit off with ADDI.
-    // For Immediate Range [0, 2047]
-    else if (Addr.getOpcode() == ISD::ADD &&
-             isa<ConstantSDNode>(Addr.getOperand(1))) {
-      assert(!isUInt<9>(CVal) && "uimm9 not already handled?");
-
-      if (isUInt<11>(CVal)) {
-        Base = SDValue(CurDAG->getMachineNode(
-                           RISCV::ADDI, DL, VT, Addr.getOperand(0),
-                           CurDAG->getSignedTargetConstant(CVal, DL, VT)),
-                       0);
-        Offset = CurDAG->getTargetConstant(0, DL, VT);
-        return true;
-      }
-    }
   }
 
   Base = Addr;

@@ -8,13 +8,13 @@
 # CHECK-ENC:  encoding: [0x0b,0x04,0xf5,0x1f]
 mips.pref	8, 511(a0)
 
-# CHECK-DIS: mips.perf 0x8, 0x1ff(a0)
+# CHECK-DIS: mips.pref  0x8, 0x1ff(a0)
 
 # CHECK-INST: mips.pref 9, 0(a0)
 # CHECK-ENC:  encoding: [0x8b,0x04,0x05,0x00]
 mips.pref	9, 0(a0)
 
-# CHECK-DIS: mips.perf 0x9, 0x0(a0)
+# CHECK-DIS: mips.pref  0x9, 0x0(a0)
 
 # CHECK-INST: mips.ccmov	s0, s1, s2, s3
 # CHECK-ENC:  encoding: [0x0b,0x34,0x99,0x9e]
