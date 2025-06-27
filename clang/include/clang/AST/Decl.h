@@ -579,6 +579,10 @@ class NamespaceDecl : public NamedDecl,
   /// The unnamed namespace that inhabits this namespace, if any.
   NamespaceDecl *AnonymousNamespace = nullptr;
 
+  /// Names in this specific namespace declaration should not be included in
+  /// lookups.
+  bool IsDisabled = false;
+
   NamespaceDecl(ASTContext &C, DeclContext *DC, bool Inline,
                 SourceLocation StartLoc, SourceLocation IdLoc,
                 IdentifierInfo *Id, NamespaceDecl *PrevDecl, bool Nested);
@@ -681,6 +685,9 @@ public:
   static NamespaceDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<NamespaceDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  bool isDisabled() const { return IsDisabled; }
+  void setDisabled() { IsDisabled = true; }
 };
 
 class VarDecl;
