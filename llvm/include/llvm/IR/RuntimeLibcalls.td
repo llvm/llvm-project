@@ -371,6 +371,9 @@ def AEABI_MEMCLR8 : RuntimeLibcall;
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
 
+// XCore calls
+def MEMCPY_ALIGN_4 : RuntimeLibcall;
+
 //--------------------------------------------------------------------
 // Define implementation default libcalls
 //--------------------------------------------------------------------
@@ -1543,6 +1546,12 @@ def _aulldiv : RuntimeLibcallImpl<UDIV_I64>; // CallingConv::X86_StdCall
 def _allrem : RuntimeLibcallImpl<SREM_I64>; // CallingConv::X86_StdCall
 def _aullrem : RuntimeLibcallImpl<UREM_I64>; // CallingConv::X86_StdCall
 def _allmul : RuntimeLibcallImpl<MUL_I64>; // CallingConv::X86_StdCall
+
+//===----------------------------------------------------------------------===//
+// XCore Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+def __memcpy_4 : RuntimeLibcallImpl<MEMCPY_ALIGN_4>;
 
 //===----------------------------------------------------------------------===//
 // ZOS Runtime Libcalls
