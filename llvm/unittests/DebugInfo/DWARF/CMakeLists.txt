@@ -28,6 +28,8 @@ add_llvm_unittest(DebugInfoDWARFTests
   DWARFFormValueTest.cpp
   DWARFListTableTest.cpp
   DWARFLocationExpressionTest.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
-target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)
+target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupportStatic)
