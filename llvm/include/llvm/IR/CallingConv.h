@@ -297,8 +297,13 @@ namespace CallingConv {
 /// directly or indirectly via a call-like instruction.
 constexpr bool isCallableCC(CallingConv::ID CC) {
   switch (CC) {
+  // Called with special intrinsics:
+  // llvm.amdgcn.cs.chain
   case CallingConv::AMDGPU_CS_Chain:
   case CallingConv::AMDGPU_CS_ChainPreserve:
+  // llvm.amdgcn.call.whole.wave
+  case CallingConv::AMDGPU_Gfx_WholeWave:
+  // Hardware entry points:
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_ES:
   case CallingConv::AMDGPU_GS:
