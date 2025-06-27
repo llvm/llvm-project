@@ -261,13 +261,13 @@ MODULE_PASS_WITH_PARAMS(
 MODULE_PASS_WITH_PARAMS(
     "lto-pre-link", "", [&](OptimizationLevel L) {
       setupOptionsForPipelineAlias(PTO, L);
-      if (PTO.UnifiedLTO)
+      if (PTO.UnifiedLTO) {
         // When UnifiedLTO is enabled, use the ThinLTO pre-link pipeline. This
         // avoids compile-time performance regressions and keeps the pre-link
         // LTO pipeline "unified" for both LTO modes.
         return buildThinLTOPreLinkDefaultPipeline(L);
-      else
-        return buildLTOPreLinkDefaultPipeline(L);
+      }
+      return buildLTOPreLinkDefaultPipeline(L);
     },
     parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
 MODULE_PASS_WITH_PARAMS(
