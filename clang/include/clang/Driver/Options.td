@@ -4930,6 +4930,10 @@ def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
+def mflmap : Flag<["-"], "mflmap">, Group<m_Group>,
+  HelpText<"Use AVR mapped memory for RO data">;
+def mrodata_in_ram : Flag<["-"], "mrodata-in-ram">, Group<m_Group>,
+  HelpText<"Copy RO data to ram">;
 def msim : Flag<["-"], "msim">, Group<m_Group>;
 def mfix_and_continue : Flag<["-"], "mfix-and-continue">, Group<clang_ignored_m_Group>;
 def mieee_fp : Flag<["-"], "mieee-fp">, Group<clang_ignored_m_Group>;

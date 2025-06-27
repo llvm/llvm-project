@@ -651,8 +651,19 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // This is almost always required because otherwise avr-ld
   // will assume 'avr2' and warn about the program being larger
   // than the bare minimum supports.
-  if (Linker.find("avr-ld") != std::string::npos && FamilyName)
-    CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
+  if (Linker.find("avr-ld") != std::string::npos && FamilyName) {
+    // Option to use mapped memory for modern devices with >32kB flash.
+    // This is the only option for modern devices with <= 32kB flash,
+    // but the larger default to a copy from flash to RAM (avr-ld version < 14)
+    // or map the highest 32kB to RAM (avr-ld version >= 14).
+    if (Args.hasFlag(options::OPT_mflmap, options::OPT_mrodata_in_ram, false)) {
+      CmdArgs.push_back(
+          Args.MakeArgString(std::string("-m") + *FamilyName + "_flmap"));
+      CmdArgs.push_back(Args.MakeArgString(std::string("-u")));
+      CmdArgs.push_back(Args.MakeArgString(std::string("__do_flmap_init")));
+    } else
+      CmdArgs.push_back(Args.MakeArgString(std::string("-m") + *FamilyName));
+  }
 
   C.addCommand(std::make_unique<Command>(
       JA, *this, ResponseFileSupport::AtFileCurCP(), Args.MakeArgString(Linker),
