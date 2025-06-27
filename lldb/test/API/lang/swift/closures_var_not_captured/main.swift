@@ -87,7 +87,7 @@ func func_3(arg: Int) async {
   print(dont_find_me)
 }
 
-class MY_STRUCT {
+class MY_CLASS {
   init(input: [Int]) {
     let find_me = "hello"
     let _ = input.map {
@@ -99,7 +99,7 @@ class MY_STRUCT {
   static func static_func(input_static: [Int]) {
     let find_me_static = "hello"
     let _ = input_static.map {
-      return $0  // break_static_member
+      return $0  // break_static_member_class
     }
     let dont_find_me_static = "hello"
   }
@@ -108,5 +108,5 @@ class MY_STRUCT {
 func_1(arg: 42)
 func_2(arg: 42)
 await func_3(arg: 42)
-let _ = MY_STRUCT(input: [1, 2])
-MY_STRUCT.static_func(input_static: [42])
+let _ = MY_CLASS(input: [1, 2])
+MY_CLASS.static_func(input_static: [42])
