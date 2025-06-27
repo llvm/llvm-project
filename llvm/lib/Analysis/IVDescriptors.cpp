@@ -726,7 +726,6 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
     // The maximum acceptable range for the increasing induction variable,
     // called the valid range, will be defined as
 
-    const ConstantRange IVRange = SE.getSignedRange(AR);
     // Keep the minimum (FindLast) or maximum (FindFirst) value of the
     // recurrence type as the sentinel value. The maximum acceptable range for
     // the induction variable, called the valid range, will be defined as
@@ -746,9 +745,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
         ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       } else {
         assert(isFindFirstIVRecurrenceKind(Kind) &&
-               "Kind must either be a FindLastIV or FindFirstIV");
-        assert(IsSigned &&
-               "only FindFirstIV with SMax is supported at the moment");
+               "Kind must either be FindLastIV or FindFirstIV");
+        assert(IsSigned && "Only FindFirstIV with SMax is supported currently");
         ValidRange =
             ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
                                        APInt::getSignedMaxValue(NumBits) - 1);

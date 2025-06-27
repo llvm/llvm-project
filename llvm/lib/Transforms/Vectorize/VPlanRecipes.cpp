@@ -747,9 +747,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
       MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
     } else {
       assert(RecurrenceDescriptor::isFindFirstIVRecurrenceKind(RK) &&
-             "Kind must either be a FindLastIV or FindFirstIV");
-      assert(IsSigned &&
-             "only FindFirstIV with SMax is supported at the moment");
+             "Kind must either be FindLastIV or FindFirstIV");
+      assert(IsSigned && "Only FindFirstIV with SMax is currently supported");
       MinMaxKind = RecurKind::SMin;
     }
     for (unsigned Part = 1; Part < UF; ++Part)
