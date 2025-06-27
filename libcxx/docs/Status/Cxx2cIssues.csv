@@ -66,7 +66,7 @@
 "`LWG4060 <https://wg21.link/LWG4060>`__","``submdspan`` preconditions do not forbid creating invalid pointer","2024-06 (St. Louis)","","",""
 "`LWG4061 <https://wg21.link/LWG4061>`__","Should ``std::basic_format_context`` be default-constructible/copyable/movable?","2024-06 (St. Louis)","|Complete|","19",""
 "`LWG4071 <https://wg21.link/LWG4071>`__","``reference_wrapper`` comparisons are not SFINAE-friendly","2024-06 (St. Louis)","|Complete|","19",""
-"`LWG4074 <https://wg21.link/LWG4074>`__","``compatible-joinable-ranges`` is underconstrained","2024-06 (St. Louis)","","",""
+"`LWG4074 <https://wg21.link/LWG4074>`__","``compatible-joinable-ranges`` is underconstrained","2024-06 (St. Louis)","|Complete|","21",""
 "`LWG4076 <https://wg21.link/LWG4076>`__","``concat_view`` should be freestanding","2024-06 (St. Louis)","","",""
 "`LWG4079 <https://wg21.link/LWG4079>`__","Missing Preconditions in ``concat_view::iterator``\`s conversion constructor","2024-06 (St. Louis)","","",""
 "`LWG4082 <https://wg21.link/LWG4082>`__","``views::concat(r)`` is well-formed when ``r`` is an ``output_range``","2024-06 (St. Louis)","","",""

@@ -66,9 +66,10 @@ C++ Specific Potentially Breaking Changes
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
-- Checking for int->enum conversions in constant expressions is more strict;
-  in particular, ``const E x = (E)-1;`` is not treated as a constant if it's
-  out of range. This impacts old versions of Boost.  (#GH143034)
+- Checking for integer to enum conversions in constant expressions is more
+  strict; in particular, ``const E x = (E)-1;`` is not treated as a constant
+  if it's out of range. The Boost numeric_conversion library is impacted by
+  this; it was fixed in Boost 1.81. (#GH143034)
 
 ABI Changes in This Version
 ---------------------------
@@ -222,6 +223,7 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
+    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
@@ -295,6 +297,8 @@ C23 Feature Support
   type. Fixes #GH140887
 - Documented `WG14 N3006 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm>`_
   which clarified how Clang is handling underspecified object declarations.
+- Clang now accepts single variadic parameter in type-name. It's a part of
+  `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -327,6 +331,9 @@ Non-comprehensive list of changes in this release
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 - Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
   polymorphic object.
+- ``libclang`` receives a family of new bindings to query basic facts about
+  GCC-style inline assembly blocks, including whether the block is ``volatile``
+  and its template string following the LLVM IR ``asm`` format. (#GH143424)
 - Clang no longer rejects reinterpret_cast conversions between indirect
   ARC-managed pointers and other pointer types. The prior behavior was overly
   strict and inconsistent with the ARC specification.
@@ -642,7 +649,7 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-
+  
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -720,6 +727,7 @@ Bug Fixes in This Version
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
+- Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -877,6 +885,7 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1060,13 +1069,28 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
-A new flag - `-static-libclosure` was introduced to support statically linking
-the runtime for the Blocks extension on Windows. This flag currently only
-changes the code generation, and even then, only on Windows. This does not
-impact the linker behaviour like the other `-static-*` flags.
+- A new flag - `-static-libclosure` was introduced to support statically linking
+  the runtime for the Blocks extension on Windows. This flag currently only
+  changes the code generation, and even then, only on Windows. This does not
+  impact the linker behaviour like the other `-static-*` flags.
+- OpenACC support, enabled via `-fopenacc` has reached a level of completeness
+  to finally be at least notionally usable. Currently, the OpenACC 3.4
+  specification has been completely implemented for Sema and AST creation, so
+  nodes will show up in the AST after having been properly checked. Lowering is
+  currently a work in progress, with compute, loop, and combined constructs
+  partially implemented, plus a handful of data and executable constructs
+  implemented. Lowering will only work in Clang-IR mode (so only with a compiler
+  built with Clang-IR enabled, and with `-fclangir` used on the command line).
+  However, note that the Clang-IR implementation status is also quite partial,
+  so frequent 'not yet implemented' diagnostics should be expected.  Also, the
+  ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
+  code generation is possible for OpenACC.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+
+- Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
+  code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
 
 Improvements
 ^^^^^^^^^^^^

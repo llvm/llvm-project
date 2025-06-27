@@ -11,6 +11,9 @@
 // namespace lldb -> namespace lldb_rpc
 namespace lldb {} // namespace lldb
 
+// When the lldb namespace is used, the namespace must be replaced with lldb_rpc.
+void dummyFunction(lldb::addr_t) {}
+
 // The comment that closes the include guard must change in the same way
 // the original guard did:
 // #endif // LLDB_LLDB_ENUMERATIONS_H -> #endif // LLDB_RPC_ENUMERATIONS_H

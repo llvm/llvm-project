@@ -173,6 +173,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
   conversion in argument of ``std::make_optional``.
 
+- Improved :doc: `bugprone-sizeof-expression
+  <clang-tidy/checks/bugprone/bugprone-sizeof-expression>` check by adding
+  `WarnOnSizeOfInLoopTermination` option to detect misuses of ``sizeof``
+  expression in loop conditions.
+
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
   calls of ``std::string`` constructor with char pointer, start position and
@@ -197,10 +202,26 @@ Changes in existing checks
   <clang-tidy/checks/concurrency/mt-unsafe>` check by fixing a false positive
   where ``strerror`` was flagged as MT-unsafe.
 
+- Improved :doc:`cppcoreguidelines-avoid-goto
+  <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
+  `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
+- Improved :doc:`cppcoreguidelines-special-member-functions
+  <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
+  adding the option `IgnoreMacros` to ignore classes defined in macros.
+
 - Improved :doc:`google-readability-namespace-comments
   <clang-tidy/checks/google/readability-namespace-comments>` check by adding
   the option `AllowOmittingNamespaceComments` to accept if a namespace comment
   is omitted entirely.
+
+- Improved :doc:`hicpp-avoid-goto
+  <clang-tidy/checks/hicpp/avoid-goto>` check by adding the option
+  `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
+- Improved :doc:`hicpp-special-member-functions
+  <clang-tidy/checks/hicpp/special-member-functions>` check by adding the
+  option `IgnoreMacros` to ignore classes defined in macros.
 
 - Improved :doc:`llvm-namespace-comment
   <clang-tidy/checks/llvm/namespace-comment>` check by adding the option
@@ -277,6 +298,11 @@ Changes in existing checks
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
   fixing false positives on member functions with an explicit object parameter.
+
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding new option
+  `CountMemberInitAsStmt` that allows counting class member initializers in
+  constructors as statements.
 
 - Improved :doc:`readability-math-missing-parentheses
   <clang-tidy/checks/readability/math-missing-parentheses>` check by fixing

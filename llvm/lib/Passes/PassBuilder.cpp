@@ -374,9 +374,6 @@
 
 using namespace llvm;
 
-static const Regex DefaultAliasRegex(
-    "^(default|thinlto-pre-link|thinlto|lto-pre-link|lto)<(O[0123sz])>$");
-
 cl::opt<bool> llvm::PrintPipelinePasses(
     "print-pipeline-passes",
     cl::desc("Print a '-passes' compatible string describing the pipeline "
@@ -616,6 +613,15 @@ static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
       .Case("Os", OptimizationLevel::Os)
       .Case("Oz", OptimizationLevel::Oz)
       .Default(std::nullopt);
+}
+
+static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
+  std::optional<OptimizationLevel> OptLevel = parseOptLevel(S);
+  if (OptLevel)
+    return *OptLevel;
+  return make_error<StringError>(
+      formatv("invalid optimization level '{}'", S).str(),
+      inconvertibleErrorCode());
 }
 
 Expected<bool> PassBuilder::parseSinglePassOption(StringRef Params,
@@ -1507,13 +1513,6 @@ Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
 
 } // namespace
 
-/// Tests whether a pass name starts with a valid prefix for a default pipeline
-/// alias.
-static bool startsWithDefaultPipelineAliasPrefix(StringRef Name) {
-  return Name.starts_with("default") || Name.starts_with("thinlto") ||
-         Name.starts_with("lto");
-}
-
 /// Tests whether registered callbacks will accept a given pass name.
 ///
 /// When parsing a pipeline text, the type of the outermost pipeline may be
@@ -1535,10 +1534,6 @@ static bool callbacksAcceptPassName(StringRef Name, CallbacksT &Callbacks) {
 
 template <typename CallbacksT>
 static bool isModulePassName(StringRef Name, CallbacksT &Callbacks) {
-  // Manually handle aliases for pre-configured pipeline fragments.
-  if (startsWithDefaultPipelineAliasPrefix(Name))
-    return DefaultAliasRegex.match(Name);
-
   StringRef NameNoBracket = Name.take_until([](char C) { return C == '<'; });
 
   // Explicitly handle pass manager names.
@@ -1737,6 +1732,15 @@ PassBuilder::parsePipelineText(StringRef Text) {
   return {std::move(ResultPipeline)};
 }
 
+static void setupOptionsForPipelineAlias(PipelineTuningOptions &PTO,
+                                         OptimizationLevel L) {
+  // This is consistent with old pass manager invoked via opt, but
+  // inconsistent with clang. Clang doesn't enable loop vectorization
+  // but does enable slp vectorization at Oz.
+  PTO.LoopVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+  PTO.SLPVectorization = L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
+}
+
 Error PassBuilder::parseModulePass(ModulePassManager &MPM,
                                    const PipelineElement &E) {
   auto &Name = E.Name;
@@ -1787,47 +1791,6 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
         formatv("invalid use of '{}' pass as module pipeline", Name).str(),
         inconvertibleErrorCode());
     ;
-  }
-
-  // Manually handle aliases for pre-configured pipeline fragments.
-  if (startsWithDefaultPipelineAliasPrefix(Name)) {
-    SmallVector<StringRef, 3> Matches;
-    if (!DefaultAliasRegex.match(Name, &Matches))
-      return make_error<StringError>(
-          formatv("unknown default pipeline alias '{}'", Name).str(),
-          inconvertibleErrorCode());
-
-    assert(Matches.size() == 3 && "Must capture two matched strings!");
-
-    OptimizationLevel L = *parseOptLevel(Matches[2]);
-
-    // This is consistent with old pass manager invoked via opt, but
-    // inconsistent with clang. Clang doesn't enable loop vectorization
-    // but does enable slp vectorization at Oz.
-    PTO.LoopVectorization =
-        L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-    PTO.SLPVectorization =
-        L.getSpeedupLevel() > 1 && L != OptimizationLevel::Oz;
-
-    if (Matches[1] == "default") {
-      MPM.addPass(buildPerModuleDefaultPipeline(L));
-    } else if (Matches[1] == "thinlto-pre-link") {
-      MPM.addPass(buildThinLTOPreLinkDefaultPipeline(L));
-    } else if (Matches[1] == "thinlto") {
-      MPM.addPass(buildThinLTODefaultPipeline(L, nullptr));
-    } else if (Matches[1] == "lto-pre-link") {
-      if (PTO.UnifiedLTO)
-        // When UnifiedLTO is enabled, use the ThinLTO pre-link pipeline. This
-        // avoids compile-time performance regressions and keeps the pre-link
-        // LTO pipeline "unified" for both LTO modes.
-        MPM.addPass(buildThinLTOPreLinkDefaultPipeline(L));
-      else
-        MPM.addPass(buildLTOPreLinkDefaultPipeline(L));
-    } else {
-      assert(Matches[1] == "lto" && "Not one of the matched options!");
-      MPM.addPass(buildLTODefaultPipeline(L, nullptr));
-    }
-    return Error::success();
   }
 
   // Finally expand the basic registered passes from the .inc file.

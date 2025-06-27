@@ -251,8 +251,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   }
   auto newFuncOp = rewriter.create<spirv::FuncOp>(
       funcOp.getLoc(), funcOp.getName(),
-      rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
-                               std::nullopt));
+      rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   for (const auto &namedAttr : funcOp->getAttrs()) {
     if (namedAttr.getName() == funcOp.getFunctionTypeAttrName() ||
         namedAttr.getName() == SymbolTable::getSymbolAttrName())

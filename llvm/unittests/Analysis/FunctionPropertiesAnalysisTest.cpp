@@ -62,10 +62,10 @@ protected:
       Err.print("MLAnalysisTests", errs());
     return Mod;
   }
-  
-  CallBase* findCall(Function& F, const char* Name = nullptr) {
+
+  CallBase *findCall(Function &F, const char *Name = nullptr) {
     for (auto &BB : F)
-      for (auto &I : BB )
+      for (auto &I : BB)
         if (auto *CB = dyn_cast<CallBase>(&I))
           if (!Name || CB->getName() == Name)
             return CB;
@@ -232,7 +232,7 @@ define i32 @f2(i32 %a) {
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  CallBase* CB = findCall(*F1, "b");
+  CallBase *CB = findCall(*F1, "b");
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
@@ -285,7 +285,7 @@ define i32 @f2(i32 %a) {
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  CallBase* CB = findCall(*F1, "b");
+  CallBase *CB = findCall(*F1, "b");
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
@@ -347,7 +347,7 @@ exit:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  CallBase* CB = findCall(*F1, "b");
+  CallBase *CB = findCall(*F1, "b");
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
@@ -409,7 +409,7 @@ declare i32 @__gxx_personality_v0(...)
 )IR");
 
   Function *F1 = M->getFunction("caller");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -462,7 +462,7 @@ declare i32 @__gxx_personality_v0(...)
 )IR");
 
   Function *F1 = M->getFunction("caller");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -516,7 +516,7 @@ declare i32 @__gxx_personality_v0(...)
 )IR");
 
   Function *F1 = M->getFunction("caller");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -568,7 +568,7 @@ lpad:
 )IR");
 
   Function *F1 = M->getFunction("outer");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -624,7 +624,7 @@ lpad:
 )IR");
 
   Function *F1 = M->getFunction("outer");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -757,7 +757,7 @@ declare void @llvm.trap()
   ExpectedInitial.BlocksReachedFromConditionalInstruction = 2;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
-  
+
   FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
   ExpectedFinal.BasicBlockCount = 4;
   ExpectedFinal.DirectCallsToDefinedFunctions = 0;
@@ -974,7 +974,6 @@ BottomBlock2:
   EXPECT_EQ(DetailedF1Properties.CriticalEdgeCount, 1);
   EnableDetailedFunctionProperties.setValue(false);
 }
-
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionReturnVectors) {
   LLVMContext C;

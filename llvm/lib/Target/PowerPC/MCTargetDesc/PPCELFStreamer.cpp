@@ -18,8 +18,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCELFStreamer.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCMCCodeEmitter.h"
-#include "PPCMCExpr.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
