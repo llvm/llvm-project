@@ -544,19 +544,6 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
-static Value *createCombinedi32toi64Expansion(IRBuilder<> &Builder,
-                                              Value *LoBytes,
-                                              Value *HighBytes) {
-  // For int64, manually combine two int32s
-  // First, zero-extend both values to i64
-  Value *Lo = Builder.CreateZExt(LoBytes, Builder.getInt64Ty());
-  Value *Hi = Builder.CreateZExt(HighBytes, Builder.getInt64Ty());
-  // Shift the high bits left by 32 bits
-  Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
-  // OR the high and low bits together
-  return Builder.CreateOr(Lo, ShiftedHi);
-}
-
 static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig);
 
@@ -597,9 +584,17 @@ static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
       Combined =
           Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
                                   {ExtractElements[I], ExtractElements[I + 1]});
-    else
-      Combined = createCombinedi32toi64Expansion(Builder, ExtractElements[I],
-                                                 ExtractElements[I + 1]);
+    else {
+      // For int64, manually combine two int32s
+      // First, zero-extend both values to i64
+      Value *Lo = Builder.CreateZExt(ExtractElements[I], Builder.getInt64Ty());
+      Value *Hi =
+          Builder.CreateZExt(ExtractElements[I + 1], Builder.getInt64Ty());
+      // Shift the high bits left by 32 bits
+      Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
+      // OR the high and low bits together
+      Combined = Builder.CreateOr(Lo, ShiftedHi);
+    }
 
     if (ExtractNum == 4)
       Result = Builder.CreateInsertElement(Result, Combined,
