@@ -2043,12 +2043,12 @@ define amdgpu_kernel void @shuffle_add_f32(ptr addrspace(1) %out, ptr addrspace(
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; PACKED-GISEL-NEXT:    ds_read_b64 v[0:1], v2
-; PACKED-GISEL-NEXT:    ds_read_b64 v[2:3], v2 offset:8
+; PACKED-GISEL-NEXT:    ds_read_b64 v[4:5], v2 offset:8
 ; PACKED-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-GISEL-NEXT:    v_mov_b32_e32 v4, v3
-; PACKED-GISEL-NEXT:    v_mov_b32_e32 v5, v2
-; PACKED-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
+; PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, v5
+; PACKED-GISEL-NEXT:    v_mov_b32_e32 v3, v4
+; PACKED-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[2:3]
 ; PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; PACKED-GISEL-NEXT:    s_endpgm

@@ -109,6 +109,10 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   let TSFlags{2} = HasVGPR;
   let TSFlags{3} = HasAGPR;
   let TSFlags{4} = HasSGPR;
+
+  // RegisterClass (e.g. AGPR / VGPR) priority for allocation
+  field int RegClassPriority = 1;
+
 }
 
 multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
@@ -936,14 +940,15 @@ class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
 
   // Requires n v_mov_b32 to copy
   let CopyCost = numRegs;
-  let AllocationPriority = !sub(numRegs, 1);
+  defvar SizePrioriity = !if(!le(numRegs, 14), !sub(numRegs, 1), !if(!le(numRegs, 16), 14, 15));
+  let AllocationPriority = !add(SizePrioriity, !mul(RegClassPriority, 16));
   let Weight = numRegs;
 }
 
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
-  let HasVGPR = 1 in {
+  let HasVGPR = 1, RegClassPriority = 1 in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, regList> {
       let BaseClassOrder = !mul(numRegs, 32);
@@ -977,7 +982,7 @@ defm VReg_1024 : VRegClass<32, Reg1024Types.types, (add VGPR_1024)>;
 }
 
 multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
-  let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1 in {
+  let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1, RegClassPriority = 1 in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, regList> {
       let BaseClassOrder = !mul(numRegs, 32);
@@ -1070,7 +1075,7 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
 // aligned base register.
 multiclass AVRegClass<int numRegs, list<ValueType> regTypes,
                       dag vregList,  dag aregList> {
-  let HasVGPR = 1, HasAGPR = 1 in {
+  let HasVGPR = 1, HasAGPR = 1, RegClassPriority = 0 in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, (add vregList, aregList)>;
 

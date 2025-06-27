@@ -2595,15 +2595,15 @@ define amdgpu_kernel void @global_truncstore_v2f32_to_v2f16(ptr addrspace(1) %ou
 ; GFX11-TRUE16-LABEL: global_truncstore_v2f32_to_v2f16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v3, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    global_load_b64 v[1:2], v3, s[2:3]
+; GFX11-TRUE16-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.h, v0.l
-; GFX11-TRUE16-NEXT:    global_store_b32 v3, v0, s[0:1]
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v1.l
+; GFX11-TRUE16-NEXT:    global_store_b32 v2, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: global_truncstore_v2f32_to_v2f16:
@@ -2772,12 +2772,12 @@ define amdgpu_kernel void @global_truncstore_v4f32_to_v4f16(ptr addrspace(1) %ou
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v3
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v2
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v1
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v2.l, v3.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v0.l, v1.l
-; GFX11-TRUE16-NEXT:    global_store_b64 v4, v[1:2], s[0:1]
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v2.l, v3.l
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v0.l, v2.h
+; GFX11-TRUE16-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: global_truncstore_v4f32_to_v4f16:

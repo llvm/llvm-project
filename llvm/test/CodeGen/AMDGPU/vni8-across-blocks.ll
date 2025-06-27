@@ -623,25 +623,25 @@ define amdgpu_kernel void @v8i8_multi_block(ptr addrspace(1) %src1, ptr addrspac
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v5
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx2 v[2:3], v6, s[8:9]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v6, s[8:9]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[2:3]
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], v[0:1]
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB11_4
 ; GFX942-NEXT:  ; %bb.1: ; %bb.1
-; GFX942-NEXT:    global_load_dwordx2 v[0:1], v6, s[10:11]
+; GFX942-NEXT:    global_load_dwordx2 v[2:3], v6, s[10:11]
 ; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 7, v5
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB11_3
 ; GFX942-NEXT:  ; %bb.2: ; %bb.2
 ; GFX942-NEXT:    v_mov_b32_e32 v5, 0
-; GFX942-NEXT:    global_store_dwordx2 v5, v[2:3], s[12:13]
+; GFX942-NEXT:    global_store_dwordx2 v5, v[0:1], s[12:13]
 ; GFX942-NEXT:  .LBB11_3: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX942-NEXT:  .LBB11_4: ; %bb.3
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v4, v[0:1], s[14:15]
+; GFX942-NEXT:    global_store_dwordx2 v4, v[2:3], s[14:15]
 ; GFX942-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
