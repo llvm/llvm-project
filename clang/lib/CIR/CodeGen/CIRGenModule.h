@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
@@ -158,6 +159,15 @@ public:
       const CXXRecordDecl *derivedClass,
       llvm::iterator_range<CastExpr::path_const_iterator> path);
 
+  /// Get the CIR attributes and calling convention to use for a particular
+  /// function type.
+  ///
+  /// \param calleeInfo - The callee information these attributes are being
+  /// constructed for. If valid, the attributes applied to this decl may
+  /// contribute to the function attributes and calling convention.
+  void constructAttributeList(CIRGenCalleeInfo calleeInfo,
+                              cir::SideEffect &sideEffect);
+
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
 
@@ -258,6 +268,10 @@ public:
   void setGVProperties(mlir::Operation *op, const NamedDecl *d) const;
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
+  /// Set function attributes for a function declaration.
+  void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
+                             bool isIncompleteFunction, bool isThunk);
+
   void emitGlobalDefinition(clang::GlobalDecl gd,
                             mlir::Operation *op = nullptr);
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
@@ -330,10 +344,16 @@ public:
       clang::VisibilityAttr::VisibilityType visibility);
   cir::VisibilityAttr getGlobalVisibilityAttrFromDecl(const Decl *decl);
   static mlir::SymbolTable::Visibility getMLIRVisibility(cir::GlobalOp op);
-
+  cir::GlobalLinkageKind getFunctionLinkage(GlobalDecl gd);
   cir::GlobalLinkageKind getCIRLinkageForDeclarator(const DeclaratorDecl *dd,
                                                     GVALinkage linkage,
                                                     bool isConstantVariable);
+  void setFunctionLinkage(GlobalDecl gd, cir::FuncOp f) {
+    cir::GlobalLinkageKind l = getFunctionLinkage(gd);
+    f.setLinkageAttr(cir::GlobalLinkageKindAttr::get(&getMLIRContext(), l));
+    mlir::SymbolTable::setSymbolVisibility(f,
+                                           getMLIRVisibilityFromCIRLinkage(l));
+  }
 
   cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *vd,
                                                     bool isConstant);

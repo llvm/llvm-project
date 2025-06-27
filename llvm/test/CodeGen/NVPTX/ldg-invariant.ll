@@ -26,17 +26,16 @@ define half @ld_global_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: ld_global_v2f16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<4>;
-; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b32 %r<4>;
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [ld_global_v2f16_param_0];
-; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
-; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
-; CHECK-NEXT:    cvt.f32.f16 %r2, %rs2;
-; CHECK-NEXT:    cvt.f32.f16 %r3, %rs1;
-; CHECK-NEXT:    add.rn.f32 %r4, %r3, %r2;
-; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r4;
+; CHECK-NEXT:    ld.global.nc.v2.b16 {%rs1, %rs2}, [%rd1];
+; CHECK-NEXT:    cvt.f32.f16 %r1, %rs2;
+; CHECK-NEXT:    cvt.f32.f16 %r2, %rs1;
+; CHECK-NEXT:    add.rn.f32 %r3, %r2, %r1;
+; CHECK-NEXT:    cvt.rn.f16.f32 %rs3, %r3;
 ; CHECK-NEXT:    st.param.b16 [func_retval0], %rs3;
 ; CHECK-NEXT:    ret;
   %a = load <2 x half>, ptr addrspace(1) %ptr, !invariant.load !0

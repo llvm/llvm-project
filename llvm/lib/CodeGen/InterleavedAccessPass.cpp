@@ -629,173 +629,12 @@ static unsigned getIntrinsicFactor(const IntrinsicInst *II) {
   }
 }
 
-// For an (de)interleave tree like this:
-//
-//   A   C B   D
-//   |___| |___|
-//     |_____|
-//        |
-//     A B C D
-//
-//  We will get ABCD at the end while the leaf operands/results
-//  are ACBD, which are also what we initially collected in
-//  getVectorInterleaveFactor / getVectorDeinterleaveFactor. But TLI
-//  hooks (e.g. lowerDeinterleaveIntrinsicToLoad) expect ABCD, so we need
-//  to reorder them by interleaving these values.
-static void interleaveLeafValues(MutableArrayRef<Value *> SubLeaves) {
-  unsigned NumLeaves = SubLeaves.size();
-  assert(isPowerOf2_32(NumLeaves) && NumLeaves > 1);
-  if (NumLeaves == 2)
-    return;
-
-  const unsigned HalfLeaves = NumLeaves / 2;
-  // Visit the sub-trees.
-  interleaveLeafValues(SubLeaves.take_front(HalfLeaves));
-  interleaveLeafValues(SubLeaves.drop_front(HalfLeaves));
-
-  SmallVector<Value *, 8> Buffer;
-  //    a0 a1 a2 a3 b0 b1 b2 b3
-  // -> a0 b0 a1 b1 a2 b2 a3 b3
-  for (unsigned i = 0U; i < NumLeaves; ++i)
-    Buffer.push_back(SubLeaves[i / 2 + (i % 2 ? HalfLeaves : 0)]);
-
-  llvm::copy(Buffer, SubLeaves.begin());
-}
-
-static bool
-getVectorInterleaveFactor(IntrinsicInst *II, SmallVectorImpl<Value *> &Operands,
-                          SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(isInterleaveIntrinsic(II->getIntrinsicID()));
-
-  // Visit with BFS
-  SmallVector<IntrinsicInst *, 8> Queue;
-  Queue.push_back(II);
-  while (!Queue.empty()) {
-    IntrinsicInst *Current = Queue.front();
-    Queue.erase(Queue.begin());
-
-    // All the intermediate intrinsics will be deleted.
-    DeadInsts.push_back(Current);
-
-    for (unsigned I = 0; I < getIntrinsicFactor(Current); ++I) {
-      Value *Op = Current->getOperand(I);
-      if (auto *OpII = dyn_cast<IntrinsicInst>(Op))
-        if (OpII->getIntrinsicID() == Intrinsic::vector_interleave2) {
-          Queue.push_back(OpII);
-          continue;
-        }
-
-      // If this is not a perfectly balanced tree, the leaf
-      // result types would be different.
-      if (!Operands.empty() && Op->getType() != Operands.back()->getType())
-        return false;
-
-      Operands.push_back(Op);
-    }
-  }
-
-  const unsigned Factor = Operands.size();
-  // Currently we only recognize factors 2...8 and other powers of 2.
-  // FIXME: should we assert here instead?
-  if (Factor <= 1 ||
-      (!isPowerOf2_32(Factor) && Factor != getIntrinsicFactor(II)))
-    return false;
-
-  // Recursively interleaved factors need to have their values reordered
-  // TODO: Remove once the loop vectorizer no longer recursively interleaves
-  // factors 4 + 8
-  if (isPowerOf2_32(Factor) && getIntrinsicFactor(II) == 2)
-    interleaveLeafValues(Operands);
-  return true;
-}
-
-static bool
-getVectorDeinterleaveFactor(IntrinsicInst *II,
-                            SmallVectorImpl<Value *> &Results,
-                            SmallVectorImpl<Instruction *> &DeadInsts) {
-  assert(isDeinterleaveIntrinsic(II->getIntrinsicID()));
-  using namespace PatternMatch;
-  if (!II->hasNUses(getIntrinsicFactor(II)))
-    return false;
-
-  // Visit with BFS
-  SmallVector<IntrinsicInst *, 8> Queue;
-  Queue.push_back(II);
-  while (!Queue.empty()) {
-    IntrinsicInst *Current = Queue.front();
-    Queue.erase(Queue.begin());
-    assert(Current->hasNUses(getIntrinsicFactor(Current)));
-
-    // All the intermediate intrinsics will be deleted from the bottom-up.
-    DeadInsts.insert(DeadInsts.begin(), Current);
-
-    SmallVector<ExtractValueInst *> EVs(getIntrinsicFactor(Current), nullptr);
-    for (User *Usr : Current->users()) {
-      if (!isa<ExtractValueInst>(Usr))
-        return 0;
-
-      auto *EV = cast<ExtractValueInst>(Usr);
-      // Intermediate ExtractValue instructions will also be deleted.
-      DeadInsts.insert(DeadInsts.begin(), EV);
-      ArrayRef<unsigned> Indices = EV->getIndices();
-      if (Indices.size() != 1)
-        return false;
-
-      if (!EVs[Indices[0]])
-        EVs[Indices[0]] = EV;
-      else
-        return false;
-    }
-
-    // We have legal indices. At this point we're either going
-    // to continue the traversal or push the leaf values into Results.
-    for (ExtractValueInst *EV : EVs) {
-      // Continue the traversal. We're playing safe here and matching only the
-      // expression consisting of a perfectly balanced binary tree in which all
-      // intermediate values are only used once.
-      if (EV->hasOneUse() &&
-          match(EV->user_back(),
-                m_Intrinsic<Intrinsic::vector_deinterleave2>()) &&
-          EV->user_back()->hasNUses(2)) {
-        auto *EVUsr = cast<IntrinsicInst>(EV->user_back());
-        Queue.push_back(EVUsr);
-        continue;
-      }
-
-      // If this is not a perfectly balanced tree, the leaf
-      // result types would be different.
-      if (!Results.empty() && EV->getType() != Results.back()->getType())
-        return false;
-
-      // Save the leaf value.
-      Results.push_back(EV);
-    }
-  }
-
-  const unsigned Factor = Results.size();
-  // Currently we only recognize factors of 2...8 and other powers of 2.
-  // FIXME: should we assert here instead?
-  if (Factor <= 1 ||
-      (!isPowerOf2_32(Factor) && Factor != getIntrinsicFactor(II)))
-    return 0;
-
-  // Recursively interleaved factors need to have their values reordered
-  // TODO: Remove once the loop vectorizer no longer recursively interleaves
-  // factors 4 + 8
-  if (isPowerOf2_32(Factor) && getIntrinsicFactor(II) == 2)
-    interleaveLeafValues(Results);
-  return true;
-}
-
 static Value *getMask(Value *WideMask, unsigned Factor,
                       ElementCount LeafValueEC) {
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
-    SmallVector<Value *, 8> Operands;
-    SmallVector<Instruction *, 8> DeadInsts;
-    if (getVectorInterleaveFactor(IMI, Operands, DeadInsts)) {
-      assert(!Operands.empty());
-      if (Operands.size() == Factor && llvm::all_equal(Operands))
-        return Operands[0];
+    if (isInterleaveIntrinsic(IMI->getIntrinsicID()) &&
+        getIntrinsicFactor(IMI) == Factor && llvm::all_equal(IMI->args())) {
+      return IMI->getArgOperand(0);
     }
   }
 
@@ -830,13 +669,19 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
   if (!LoadedVal->hasOneUse() || !isa<LoadInst, VPIntrinsic>(LoadedVal))
     return false;
 
-  SmallVector<Value *, 8> DeinterleaveValues;
-  SmallVector<Instruction *, 8> DeinterleaveDeadInsts;
-  if (!getVectorDeinterleaveFactor(DI, DeinterleaveValues,
-                                   DeinterleaveDeadInsts))
+  const unsigned Factor = getIntrinsicFactor(DI);
+  if (!DI->hasNUses(Factor))
     return false;
-
-  const unsigned Factor = DeinterleaveValues.size();
+  SmallVector<Value *, 8> DeinterleaveValues(Factor);
+  for (auto *User : DI->users()) {
+    auto *Extract = dyn_cast<ExtractValueInst>(User);
+    if (!Extract || Extract->getNumIndices() != 1)
+      return false;
+    unsigned Idx = Extract->getIndices()[0];
+    if (DeinterleaveValues[Idx])
+      return false;
+    DeinterleaveValues[Idx] = Extract;
+  }
 
   if (auto *VPLoad = dyn_cast<VPIntrinsic>(LoadedVal)) {
     if (VPLoad->getIntrinsicID() != Intrinsic::vp_load)
@@ -869,7 +714,9 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
   }
 
-  DeadInsts.insert_range(DeinterleaveDeadInsts);
+  for (Value *V : DeinterleaveValues)
+    DeadInsts.insert(cast<Instruction>(V));
+  DeadInsts.insert(DI);
   // We now have a target-specific load, so delete the old one.
   DeadInsts.insert(cast<Instruction>(LoadedVal));
   return true;
@@ -883,12 +730,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
   if (!isa<StoreInst, VPIntrinsic>(StoredBy))
     return false;
 
-  SmallVector<Value *, 8> InterleaveValues;
-  SmallVector<Instruction *, 8> InterleaveDeadInsts;
-  if (!getVectorInterleaveFactor(II, InterleaveValues, InterleaveDeadInsts))
-    return false;
-
-  const unsigned Factor = InterleaveValues.size();
+  SmallVector<Value *, 8> InterleaveValues(II->args());
+  const unsigned Factor = getIntrinsicFactor(II);
 
   if (auto *VPStore = dyn_cast<VPIntrinsic>(StoredBy)) {
     if (VPStore->getIntrinsicID() != Intrinsic::vp_store)
@@ -922,7 +765,7 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
 
   // We now have a target-specific store, so delete the old one.
   DeadInsts.insert(cast<Instruction>(StoredBy));
-  DeadInsts.insert_range(InterleaveDeadInsts);
+  DeadInsts.insert(II);
   return true;
 }
 

@@ -624,6 +624,7 @@ void MapShadow(uptr addr, uptr size) {
   static uptr mapped_meta_end = 0;
   uptr meta_begin = (uptr)MemToMeta(addr);
   uptr meta_end = (uptr)MemToMeta(addr + size);
+  // Windows wants 64K alignment.
   meta_begin = RoundDownTo(meta_begin, 64 << 10);
   meta_end = RoundUpTo(meta_end, 64 << 10);
   if (!data_mapped) {
@@ -634,9 +635,6 @@ void MapShadow(uptr addr, uptr size) {
       Die();
   } else {
     // Mapping continuous heap.
-    // Windows wants 64K alignment.
-    meta_begin = RoundDownTo(meta_begin, 64 << 10);
-    meta_end = RoundUpTo(meta_end, 64 << 10);
     CHECK_GT(meta_end, mapped_meta_end);
     if (meta_begin < mapped_meta_end)
       meta_begin = mapped_meta_end;

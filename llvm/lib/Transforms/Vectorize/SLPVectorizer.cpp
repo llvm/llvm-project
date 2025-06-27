@@ -5717,20 +5717,24 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
                TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                int Index = 0, VectorType *SubTp = nullptr,
                ArrayRef<const Value *> Args = {}) {
+  VectorType *DstTy = Tp;
+  if (!Mask.empty())
+    DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
+
   if (Kind != TTI::SK_PermuteTwoSrc)
-    return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+    return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+                              Args);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
                              Mask, NumSrcElts, NumSubElts, Index)) {
     if (Index + NumSubElts > NumSrcElts &&
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
-      return TTI.getShuffleCost(
-          TTI::SK_InsertSubvector,
-          getWidenedType(Tp->getElementType(), Mask.size()), Mask,
-          TTI::TCK_RecipThroughput, Index, Tp);
+      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
+                                TTI::TCK_RecipThroughput, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+                            Args);
 }
 
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
@@ -5994,7 +5998,7 @@ static bool isMaskedLoadCompress(
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
                               Instruction::Load, AlignedLoadVecTy,
-                              CompressMask[1], std::nullopt, CommonAlignment,
+                              CompressMask[1], {}, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (InterleavedCost < GatherCost) {
         InterleaveFactor = CompressMask[1];
@@ -12036,7 +12040,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           return TTI.getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+              TTI::SK_InsertSubvector, VecTy, VecTy, {}, CostKind,
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }
@@ -12085,7 +12089,8 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
     // FIXME: this must be moved to TTI for better estimation.
     unsigned EltsPerVector = getPartNumElems(VL.size(), NumParts);
     auto CheckPerRegistersShuffle = [&](MutableArrayRef<int> Mask,
-                                        SmallVectorImpl<unsigned> &Indices)
+                                        SmallVectorImpl<unsigned> &Indices,
+                                        SmallVectorImpl<unsigned> &SubVecSizes)
         -> std::optional<TTI::ShuffleKind> {
       if (NumElts <= EltsPerVector)
         return std::nullopt;
@@ -12130,7 +12135,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                       return std::min(S, I);
                     }),
                 EltsPerVector);
-            Indices.push_back(OffsetReg1 % NumElts);
+            unsigned Index = OffsetReg1 % NumElts;
+            Indices.push_back(Index);
+            SubVecSizes.push_back(std::min(NumElts - Index, EltsPerVector));
           }
           Idx = I - OffsetReg1;
         }
@@ -12152,8 +12159,9 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       SmallVector<int> SubMask(EltsPerVector, PoisonMaskElem);
       copy(MaskSlice, SubMask.begin());
       SmallVector<unsigned, 2> Indices;
+      SmallVector<unsigned, 2> SubVecSizes;
       std::optional<TTI::ShuffleKind> RegShuffleKind =
-          CheckPerRegistersShuffle(SubMask, Indices);
+          CheckPerRegistersShuffle(SubMask, Indices, SubVecSizes);
       if (!RegShuffleKind) {
         if (*ShuffleKinds[Part] != TTI::SK_PermuteSingleSrc ||
             !ShuffleVectorInst::isIdentityMask(
@@ -12171,12 +12179,12 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
       }
       const unsigned BaseVF = getFullVectorNumberOfElements(
           *R.TTI, VL.front()->getType(), alignTo(NumElts, EltsPerVector));
-      for (unsigned Idx : Indices) {
-        assert((Idx + EltsPerVector) <= BaseVF &&
+      for (const auto [Idx, SubVecSize] : zip(Indices, SubVecSizes)) {
+        assert((Idx + SubVecSize) <= BaseVF &&
                "SK_ExtractSubvector index out of range");
         Cost += ::getShuffleCost(TTI, TTI::SK_ExtractSubvector,
                                  getWidenedType(ScalarTy, BaseVF), {}, CostKind,
-                                 Idx, getWidenedType(ScalarTy, EltsPerVector));
+                                 Idx, getWidenedType(ScalarTy, SubVecSize));
       }
       // Second attempt to check, if just a permute is better estimated than
       // subvector extract.
@@ -13557,7 +13565,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::Vectorize:
         if (unsigned Factor = E->getInterleaveFactor()) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, VecTy, Factor, std::nullopt, LI0->getAlign(),
+              Instruction::Load, VecTy, Factor, {}, LI0->getAlign(),
               LI0->getPointerAddressSpace(), CostKind);
 
         } else {
@@ -13598,7 +13606,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, LoadVecTy, InterleaveFactor, std::nullopt,
+              Instruction::Load, LoadVecTy, InterleaveFactor, {},
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
           VecLdCost = TTI->getMaskedMemoryOpCost(
@@ -13673,8 +13681,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                  "No reused shuffles expected");
           CommonCost = 0;
           VecStCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Store, VecTy, Factor, std::nullopt,
-              BaseSI->getAlign(), BaseSI->getPointerAddressSpace(), CostKind);
+              Instruction::Store, VecTy, Factor, {}, BaseSI->getAlign(),
+              BaseSI->getPointerAddressSpace(), CostKind);
         } else {
           TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
           VecStCost = TTI->getMemoryOpCost(
@@ -14910,25 +14918,47 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
 
   Cost += ExtractCost;
   auto &&ResizeToVF = [this, &Cost](const TreeEntry *TE, ArrayRef<int> Mask,
-                                    bool) {
+                                    bool ForSingleMask) {
     InstructionCost C = 0;
     unsigned VF = Mask.size();
     unsigned VecVF = TE->getVectorFactor();
-    if (VF != VecVF &&
-        (any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); }) ||
-         !ShuffleVectorInst::isIdentityMask(Mask, VF))) {
-      SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
-      std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
-                OrigMask.begin());
-      C = ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
-                           getWidenedType(TE->getMainOp()->getType(), VecVF),
-                           OrigMask);
-      LLVM_DEBUG(
-          dbgs() << "SLP: Adding cost " << C
-                 << " for final shuffle of insertelement external users.\n";
-          TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
-      Cost += C;
-      return std::make_pair(TE, true);
+    bool HasLargeIndex =
+        any_of(Mask, [VF](int Idx) { return Idx >= static_cast<int>(VF); });
+    if ((VF != VecVF && HasLargeIndex) ||
+        !ShuffleVectorInst::isIdentityMask(Mask, VF)) {
+
+      if (HasLargeIndex) {
+        SmallVector<int> OrigMask(VecVF, PoisonMaskElem);
+        std::copy(Mask.begin(), std::next(Mask.begin(), std::min(VF, VecVF)),
+                  OrigMask.begin());
+        C = ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc,
+                             getWidenedType(TE->getMainOp()->getType(), VecVF),
+                             OrigMask);
+        LLVM_DEBUG(
+            dbgs() << "SLP: Adding cost " << C
+                   << " for final shuffle of insertelement external users.\n";
+            TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
+        Cost += C;
+        return std::make_pair(TE, true);
+      }
+
+      if (!ForSingleMask) {
+        SmallVector<int> ResizeMask(VF, PoisonMaskElem);
+        for (unsigned I = 0; I < VF; ++I) {
+          if (Mask[I] != PoisonMaskElem)
+            ResizeMask[Mask[I]] = Mask[I];
+        }
+        if (!ShuffleVectorInst::isIdentityMask(ResizeMask, VF))
+          C = ::getShuffleCost(
+              *TTI, TTI::SK_PermuteSingleSrc,
+              getWidenedType(TE->getMainOp()->getType(), VecVF), ResizeMask);
+        LLVM_DEBUG(
+            dbgs() << "SLP: Adding cost " << C
+                   << " for final shuffle of insertelement external users.\n";
+            TE->dump(); dbgs() << "SLP: Current total cost = " << Cost << "\n");
+
+        Cost += C;
+      }
     }
     return std::make_pair(TE, false);
   };
@@ -21172,7 +21202,11 @@ bool SLPVectorizerPass::vectorizeStores(
         }
       }
 
+      // MaxRegVF represents the number of instructions (scalar, or vector in
+      // case of revec) that can be vectorized to naturally fit in a vector
+      // register.
       unsigned MaxRegVF = MaxVF;
+
       MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -21181,13 +21215,11 @@ bool SLPVectorizerPass::vectorizeStores(
         continue;
       }
 
-      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
-      SmallVector<unsigned> CandidateVFs(Sz + (NonPowerOf2VF > 0 ? 1 : 0));
-      unsigned Size = MinVF;
-      for (unsigned &VF : reverse(CandidateVFs)) {
-        VF = Size > MaxVF ? NonPowerOf2VF : Size;
-        Size *= 2;
-      }
+      SmallVector<unsigned> CandidateVFs;
+      for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
+           VF = divideCeil(VF, 2))
+        CandidateVFs.push_back(VF);
+
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
@@ -22967,7 +22999,10 @@ private:
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
               VectorCost += TTI->getShuffleCost(
-                  TTI::SK_PermuteSingleSrc, VectorTy,
+                  TTI::SK_PermuteSingleSrc,
+                  FixedVectorType::get(VecTy->getScalarType(),
+                                       ReducedVals.size()),
+                  VectorTy,
                   createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
               VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy,
                                                             FMF, CostKind);
@@ -23145,7 +23180,8 @@ private:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
         case RecurKind::AnyOf:
-        case RecurKind::FindLastIV:
+        case RecurKind::FindLastIVSMax:
+        case RecurKind::FindLastIVUMax:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
         case RecurKind::None:
@@ -23279,7 +23315,8 @@ private:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
-    case RecurKind::FindLastIV:
+    case RecurKind::FindLastIVSMax:
+    case RecurKind::FindLastIVUMax:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -23378,7 +23415,8 @@ private:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
-    case RecurKind::FindLastIV:
+    case RecurKind::FindLastIVSMax:
+    case RecurKind::FindLastIVUMax:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -24333,9 +24371,6 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       }
       continue;
     }
-
-    if (isa<DbgInfoIntrinsic>(It))
-      continue;
 
     // Try to vectorize reductions that use PHINodes.
     if (PHINode *P = dyn_cast<PHINode>(It)) {

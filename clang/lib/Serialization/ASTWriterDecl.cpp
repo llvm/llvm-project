@@ -1306,6 +1306,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     VarDeclBits.addBit(D->isConstexpr());
     VarDeclBits.addBit(D->isInitCapture());
     VarDeclBits.addBit(D->isPreviousDeclInSameBlockScope());
+    VarDeclBits.addBit(D->hasInitWithSideEffects());
 
     VarDeclBits.addBit(D->isEscapingByref());
     HasDeducedType = D->getType()->getContainedDeducedType();
@@ -1355,10 +1356,11 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       !D->hasExtInfo() && D->getFirstDecl() == D->getMostRecentDecl() &&
       D->getKind() == Decl::Var && !D->isInline() && !D->isConstexpr() &&
       !D->isInitCapture() && !D->isPreviousDeclInSameBlockScope() &&
-      !D->isEscapingByref() && !HasDeducedType &&
-      D->getStorageDuration() != SD_Static && !D->getDescribedVarTemplate() &&
-      !D->getMemberSpecializationInfo() && !D->isObjCForDecl() &&
-      !isa<ImplicitParamDecl>(D) && !D->isEscapingByref())
+      !D->hasInitWithSideEffects() && !D->isEscapingByref() &&
+      !HasDeducedType && D->getStorageDuration() != SD_Static &&
+      !D->getDescribedVarTemplate() && !D->getMemberSpecializationInfo() &&
+      !D->isObjCForDecl() && !isa<ImplicitParamDecl>(D) &&
+      !D->isEscapingByref())
     AbbrevToUse = Writer.getDeclVarAbbrev();
 
   Code = serialization::DECL_VAR;
@@ -2189,11 +2191,7 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
   static_assert(DeclContext::NumDeclContextBits == 13,
                 "You need to update the serializer after you change the "
                 "DeclContextBits");
-
-  uint64_t LexicalOffset = 0;
-  uint64_t VisibleOffset = 0;
-  uint64_t ModuleLocalOffset = 0;
-  uint64_t TULocalOffset = 0;
+  LookupBlockOffsets Offsets;
 
   if (Writer.isGeneratingReducedBMI() && isa<NamespaceDecl>(DC) &&
       cast<NamespaceDecl>(DC)->isFromExplicitGlobalModule()) {
@@ -2202,17 +2200,12 @@ void ASTDeclWriter::VisitDeclContext(DeclContext *DC) {
     // details.
     Writer.DelayedNamespace.push_back(cast<NamespaceDecl>(DC));
   } else {
-    LexicalOffset =
+    Offsets.LexicalOffset =
         Writer.WriteDeclContextLexicalBlock(Record.getASTContext(), DC);
-    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC,
-                                        VisibleOffset, ModuleLocalOffset,
-                                        TULocalOffset);
+    Writer.WriteDeclContextVisibleBlock(Record.getASTContext(), DC, Offsets);
   }
 
-  Record.AddOffset(LexicalOffset);
-  Record.AddOffset(VisibleOffset);
-  Record.AddOffset(ModuleLocalOffset);
-  Record.AddOffset(TULocalOffset);
+  Record.AddLookupOffsets(Offsets);
 }
 
 const Decl *ASTWriter::getFirstLocalDecl(const Decl *D) {
@@ -2740,12 +2733,12 @@ void ASTWriter::WriteDeclAbbrevs() {
   // VarDecl
   Abv->Add(BitCodeAbbrevOp(
       BitCodeAbbrevOp::Fixed,
-      21)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
+      22)); // Packed Var Decl bits:  Linkage, ModulesCodegen,
             // SClass, TSCSpec, InitStyle,
             // isARCPseudoStrong, IsThisDeclarationADemotedDefinition,
             // isExceptionVariable, isNRVOVariable, isCXXForRangeDecl,
             // isInline, isInlineSpecified, isConstexpr,
-            // isInitCapture, isPrevDeclInSameScope,
+            // isInitCapture, isPrevDeclInSameScope, hasInitWithSideEffects,
             // EscapingByref, HasDeducedType, ImplicitParamKind, isObjCForDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
