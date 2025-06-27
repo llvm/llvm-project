@@ -223,7 +223,8 @@ define i1 @eq_base_inbounds_commute_use(i64 %y) {
 
 define i1 @ne_base_inbounds_use_scaled(ptr %x, i64 %y) {
 ; CHECK-LABEL: @ne_base_inbounds_use_scaled(
-; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i64, ptr [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[G_IDX:%.*]] = shl nsw i64 [[Y:%.*]], 3
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i8, ptr [[X:%.*]], i64 [[G_IDX]]
 ; CHECK-NEXT:    call void @use(ptr [[G]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[Y]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -236,9 +237,9 @@ define i1 @ne_base_inbounds_use_scaled(ptr %x, i64 %y) {
 
 define i1 @ne_base_use_scaled(ptr %x, i64 %y) {
 ; CHECK-LABEL: @ne_base_use_scaled(
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i64, ptr [[X:%.*]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[G_IDX_MASK:%.*]] = shl i64 [[Y:%.*]], 3
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[G_IDX_MASK]]
 ; CHECK-NEXT:    call void @use(ptr [[G]])
-; CHECK-NEXT:    [[G_IDX_MASK:%.*]] = and i64 [[Y]], 2305843009213693951
 ; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[G_IDX_MASK]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
