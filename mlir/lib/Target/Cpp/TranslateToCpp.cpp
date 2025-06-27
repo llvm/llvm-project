@@ -1403,8 +1403,9 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
     }
   }
   if (auto dense = dyn_cast<DenseIntElementsAttr>(attr)) {
+    assert(isa<ShapedType>(dense.getType()) && "Expected shaped type");
     if (auto iType = dyn_cast<IntegerType>(
-            cast<TensorType>(dense.getType()).getElementType())) {
+            cast<ShapedType>(dense.getType()).getElementType())) {
       os << '{';
       interleaveComma(dense, os, [&](const APInt &val) {
         printInt(val, shouldMapToUnsigned(iType.getSignedness()));
@@ -1413,7 +1414,7 @@ LogicalResult CppEmitter::emitAttribute(Location loc, Attribute attr) {
       return success();
     }
     if (auto iType = dyn_cast<IndexType>(
-            cast<TensorType>(dense.getType()).getElementType())) {
+            cast<ShapedType>(dense.getType()).getElementType())) {
       os << '{';
       interleaveComma(dense, os,
                       [&](const APInt &val) { printInt(val, false); });
