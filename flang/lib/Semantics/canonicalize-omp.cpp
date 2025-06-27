@@ -202,7 +202,7 @@ private:
           parser::OmpClauseList &unrollClauseList{std::get<parser::OmpClauseList>(beginDir.t)};
           if (unrollClauseList.v.empty()) {
             // if the clause list is empty for an unroll construct, we assume the loop is being fully unrolled
-            tileUnrollError(beginDir, messages_);
+            tileUnrollError(beginLoopDirective, messages_);
           } else {
             // parse the clauses for the unroll directive to find the full clause
             for (auto clause{unrollClauseList.v.begin()}; clause != unrollClauseList.v.end(); ++clause) {

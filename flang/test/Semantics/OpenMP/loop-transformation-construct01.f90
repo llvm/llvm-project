@@ -84,3 +84,17 @@ subroutine loop_transformation_construct5
     v(x) = x(x) * 2
   end do
 end subroutine
+
+subroutine loop_transformation_construct5
+  implicit none
+  integer :: i = 5
+  integer :: y
+  integer :: v(i)
+
+  !$omp do
+  !$omp unroll partial(2)
+  !$omp tile
+  do x = 1, i
+    v(x) = x(x) * 2
+  end do
+end subroutine
