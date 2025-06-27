@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the interface to generically handle CIR floating-point types.
+// Defines cir type interfaces.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_TD
-#define LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_TD
+#ifndef CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
+#define CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
 
 include "mlir/IR/OpBase.td"
 
-def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
+def CIR_FPTypeInterface : TypeInterface<"FPTypeInterface"> {
   let description = [{
     Contains helper functions to query properties about a floating-point type.
   }];
@@ -53,4 +53,29 @@ def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
   ];
 }
 
-#endif // LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_TD
+def CIR_SizedTypeInterface : TypeInterface<"SizedTypeInterface"> {
+  let description = [{
+    Annotates types that have known size. Types that don't have a size are
+    abstract types and void.
+  }];
+  let cppNamespace = "::cir";
+  let methods = [
+    InterfaceMethod<[{
+        Returns true if this is a sized type. This mirrors sizedness from the
+        clang AST, where a type is sized if it has a known size.
+        By default type defining this interface returns true,
+        but this can be overridden if sizedness depends on properties of the type.
+        For example, whether a struct is not sized if it is incomplete.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isSized",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return true;
+      }]
+    >,
+  ];
+}
+
+#endif // CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD

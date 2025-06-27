@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Defines the interface to generically handle CIR floating-point types.
-//
-//===----------------------------------------------------------------------===//
 
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
-using namespace cir;
+#include <assert.h>
+#include <ext/hash_map>
+#include <string>
 
-/// Include the generated interfaces.
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.cpp.inc"
+int main(int, char**) {
+  assert(__gnu_cxx::hash<std::string>()(std::string()) == 0); // expected-error {{does not provide a call operator}}
+
+  return 0;
+}

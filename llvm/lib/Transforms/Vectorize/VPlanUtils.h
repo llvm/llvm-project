@@ -75,6 +75,8 @@ inline bool isSingleScalar(const VPValue *VPV) {
     return PreservesUniformity(WidenR->getOpcode()) &&
            all_of(WidenR->operands(), isSingleScalar);
   }
+  if (auto *WidenR = dyn_cast<VPWidenSelectRecipe>(VPV))
+    return all_of(WidenR->operands(), isSingleScalar);
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
            (PreservesUniformity(VPI->getOpcode()) &&

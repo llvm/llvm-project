@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -37,6 +38,7 @@
 #include <cctype>
 #include <deque>
 using namespace llvm;
+using namespace llvm::SDPatternMatch;
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLowering::TargetLowering(const TargetMachine &tm)
@@ -4227,6 +4229,42 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+/// This helper function of SimplifySetCC tries to optimize the comparison when
+/// either operand of the SetCC node is a bitwise-or instruction.
+/// For now, this just transforms (X | Y) ==/!= Y into X & ~Y ==/!= 0.
+SDValue TargetLowering::foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1,
+                                        ISD::CondCode Cond, const SDLoc &DL,
+                                        DAGCombinerInfo &DCI) const {
+  if (N1.getOpcode() == ISD::OR && N0.getOpcode() != ISD::OR)
+    std::swap(N0, N1);
+
+  SelectionDAG &DAG = DCI.DAG;
+  EVT OpVT = N0.getValueType();
+  if (!N0.hasOneUse() || !OpVT.isInteger() ||
+      (Cond != ISD::SETEQ && Cond != ISD::SETNE))
+    return SDValue();
+
+  // (X | Y) == Y
+  // (X | Y) != Y
+  SDValue X;
+  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(N1)) {
+    // If the target supports an 'and-not' or 'and-complement' logic operation,
+    // try to use that to make a comparison operation more efficient.
+
+    // Bail out if the compare operand that we want to turn into a zero is
+    // already a zero (otherwise, infinite loop).
+    if (isNullConstant(N1))
+      return SDValue();
+
+    // Transform this into: X & ~Y ==/!= 0.
+    SDValue NotY = DAG.getNOT(SDLoc(N1), N1, OpVT);
+    SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, X, NotY);
+    return DAG.getSetCC(DL, VT, NewAnd, DAG.getConstant(0, DL, OpVT), Cond);
+  }
+
+  return SDValue();
+}
+
 /// There are multiple IR patterns that could be checking whether certain
 /// truncation of a signed number would be lossy or not. The pattern which is
 /// best at IR level, may not lower optimally. Thus, we want to unfold it.
@@ -5521,6 +5559,9 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return V;
 
     if (SDValue V = foldSetCCWithAnd(VT, N0, N1, Cond, dl, DCI))
+      return V;
+
+    if (SDValue V = foldSetCCWithOr(VT, N0, N1, Cond, dl, DCI))
       return V;
   }
 

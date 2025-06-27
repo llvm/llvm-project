@@ -50,7 +50,7 @@ TinyPtrVector<DbgDeclareInst *> llvm::findDbgDeclares(Value *V) {
   // DenseMap lookup. This check is a bitfield datamember lookup.
   if (!V->isUsedByMetadata())
     return {};
-  auto *L = LocalAsMetadata::getIfExists(V);
+  auto *L = ValueAsMetadata::getIfExists(V);
   if (!L)
     return {};
   auto *MDV = MetadataAsValue::getIfExists(V->getContext(), L);
@@ -69,7 +69,7 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   // DenseMap lookup. This check is a bitfield datamember lookup.
   if (!V->isUsedByMetadata())
     return {};
-  auto *L = LocalAsMetadata::getIfExists(V);
+  auto *L = ValueAsMetadata::getIfExists(V);
   if (!L)
     return {};
 
@@ -86,7 +86,7 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
   // DenseMap lookup. This check is a bitfield datamember lookup.
   if (!V->isUsedByMetadata())
     return {};
-  auto *L = LocalAsMetadata::getIfExists(V);
+  auto *L = ValueAsMetadata::getIfExists(V);
   if (!L)
     return {};
 
