@@ -8,7 +8,7 @@ suggests replacing them with ``static`` declarations.
 
 The `LLVM Coding Standards <https://llvm.org/docs/CodingStandards.html#restrict-visibility>`_
 recommend keeping anonymous namespaces as small as possible and only use them
-for class declarations. For functions and variables, ``static`` specifier
+for class declarations. For functions and variables the ``static`` specifier
 should be preferred for restricting visibility.
 
 For example non-compliant code:
