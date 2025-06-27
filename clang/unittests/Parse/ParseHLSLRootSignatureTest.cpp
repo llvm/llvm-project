@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 
 using namespace clang;
+using namespace clang::hlsl;
 using namespace llvm::hlsl::rootsig;
 
 namespace {
@@ -114,7 +115,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -147,7 +148,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -156,7 +157,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_FALSE(Parser.parse());
 
   // First Descriptor Table with 4 elements
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
@@ -169,7 +170,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
@@ -181,7 +182,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::None);
 
-  Elem = Elements[2];
+  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
@@ -194,7 +195,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::None);
 
-  Elem = Elements[3];
+  Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Reg.ViewType,
@@ -209,14 +210,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             ValidDescriptorRangeFlags);
 
-  Elem = Elements[4];
+  Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
   ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::Pixel);
 
   // Empty Descriptor Table
-  Elem = Elements[5];
+  Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, 0u);
   ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
@@ -245,7 +246,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -256,7 +257,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(Elements.size(), 2u);
 
   // Check default values are as expected
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
@@ -281,7 +282,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
             llvm::dxbc::ShaderVisibility::All);
 
   // Check values can be set as expected
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
@@ -330,7 +331,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -338,55 +339,55 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 1.f);
 
-  Elem = Elements[2];
+  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -1.f);
 
-  Elem = Elements[3];
+  Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
 
-  Elem = Elements[4];
+  Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
 
-  Elem = Elements[5];
+  Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -.42f);
 
-  Elem = Elements[6];
+  Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420.f);
 
-  Elem = Elements[7];
+  Elem = Elements[7].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.000000000042f);
 
-  Elem = Elements[8];
+  Elem = Elements[8].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 42.f);
 
-  Elem = Elements[9];
+  Elem = Elements[9].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 4.2f);
 
-  Elem = Elements[10];
+  Elem = Elements[10].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 420000000000.f);
 
-  Elem = Elements[11];
+  Elem = Elements[11].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, -2147483648.f);
 
-  Elem = Elements[12];
+  Elem = Elements[12].getElement();
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 2147483648.f);
 
@@ -405,7 +406,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -413,7 +414,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
 
   ASSERT_FALSE(Parser.parse());
 
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
@@ -435,7 +436,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -445,7 +446,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 
   ASSERT_EQ(Elements.size(), 2u);
 
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
   ASSERT_EQ(std::get<RootConstants>(Elem).Num32BitConstants, 1u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
@@ -454,7 +455,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_EQ(std::get<RootConstants>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::All);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
   ASSERT_EQ(std::get<RootConstants>(Elem).Num32BitConstants, 4294967295u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
@@ -491,7 +492,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -501,15 +502,15 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
   ASSERT_EQ(Elements.size(), 3u);
 
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
   ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), llvm::dxbc::RootFlags::None);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
   ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), llvm::dxbc::RootFlags::None);
 
-  Elem = Elements[2];
+  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
   auto ValidRootFlags = llvm::dxbc::RootFlags(0xfff);
   ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), ValidRootFlags);
@@ -532,7 +533,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -542,7 +543,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   ASSERT_EQ(Elements.size(), 4u);
 
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
@@ -553,7 +554,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::TReg);
@@ -564,7 +565,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   auto ValidRootDescriptorFlags = llvm::dxbc::RootDescriptorFlags(0xe);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, ValidRootDescriptorFlags);
 
-  Elem = Elements[2];
+  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
@@ -577,7 +578,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
-  Elem = Elements[3];
+  Elem = Elements[3].getElement();
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
@@ -604,7 +605,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test no diagnostics produced
@@ -628,7 +629,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -648,7 +649,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced - invalid token
@@ -668,7 +669,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced - end of stream
@@ -693,7 +694,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -715,7 +716,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -737,7 +738,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -761,7 +762,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -783,7 +784,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -807,7 +808,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -833,7 +834,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -856,7 +857,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -878,7 +879,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -899,7 +900,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -920,7 +921,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexNegOverflowedFloatTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -941,7 +942,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedDoubleTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -962,7 +963,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexUnderflowFloatTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
@@ -986,7 +987,7 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
   auto TokLoc = SourceLocation();
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(Elements, Lexer, *PP);
 
   // Test correct diagnostic produced
