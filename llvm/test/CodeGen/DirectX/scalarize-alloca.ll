@@ -21,8 +21,7 @@ define void @alloca_4d__vec_test() {
 
 ; CHECK-LABEL: alloca_vec_test
 define void @alloca_vec_test() {
-  ; SCHECK:  alloca [4 x i32], align 16
-  ; FCHECK:  alloca [4 x i32], align 16
+  ; CHECK:  alloca [4 x i32], align 16
   ; CHECK: ret void
   %1 = alloca <4 x i32>, align 16
   ret void
