@@ -924,16 +924,16 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
                               FalseValue, TargetCC, Op->getFlags());
     return Res;
   }
-    assert(LHS.getValueType() == MVT::f32 &&
-           "We expect MVT::f32 type of the LHS Operand in SELECT_CC");
-    unsigned BrOpcode;
-    unsigned CmpOpCode;
-    GetFPBranchKind(CC, BrOpcode, CmpOpCode);
-    SDValue TargetCC = DAG.getConstant(CmpOpCode, DL, MVT::i32);
-    SDValue TargetBC = DAG.getConstant(BrOpcode, DL, MVT::i32);
-    return DAG.getNode(XtensaISD::SELECT_CC_FP, DL, Ty,
-                       {LHS, RHS, TrueValue, FalseValue, TargetCC, TargetBC},
-                       Op->getFlags());
+  assert(LHS.getValueType() == MVT::f32 &&
+         "We expect MVT::f32 type of the LHS Operand in SELECT_CC");
+  unsigned BrOpcode;
+  unsigned CmpOpCode;
+  GetFPBranchKind(CC, BrOpcode, CmpOpCode);
+  SDValue TargetCC = DAG.getConstant(CmpOpCode, DL, MVT::i32);
+  SDValue TargetBC = DAG.getConstant(BrOpcode, DL, MVT::i32);
+  return DAG.getNode(XtensaISD::SELECT_CC_FP, DL, Ty,
+                     {LHS, RHS, TrueValue, FalseValue, TargetCC, TargetBC},
+                     Op->getFlags());
 }
 
 SDValue XtensaTargetLowering::LowerRETURNADDR(SDValue Op,
