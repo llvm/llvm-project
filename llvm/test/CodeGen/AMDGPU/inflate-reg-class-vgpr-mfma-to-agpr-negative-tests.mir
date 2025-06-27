@@ -12,6 +12,10 @@
     ret void
   }
 
+  define amdgpu_kernel void @copy_physreg_to_av_crash() #0 {
+    ret void
+  }
+
   attributes #0 = { "amdgpu-wave-limiter"="true" "amdgpu-waves-per-eu"="8,8" }
 ...
 
@@ -284,5 +288,26 @@ body:             |
 
   bb.3:
     S_ENDPGM 0
+
+...
+
+---
+name:            copy_physreg_to_av_crash
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: av_32, preferred-register: '$agpr0' }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  occupancy:       10
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: copy_physreg_to_av_crash
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $agpr0 = COPY $vgpr0
+    %0:av_32 = COPY $vgpr0
+    $agpr0 = COPY %0
 
 ...
