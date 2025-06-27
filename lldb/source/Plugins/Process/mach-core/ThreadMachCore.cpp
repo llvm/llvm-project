@@ -88,6 +88,7 @@ ThreadMachCore::CreateRegisterContextForFrame(StackFrame *frame) {
     return m_thread_reg_ctx_sp;
 
   ProcessSP process_sp(GetProcess());
+  assert(process_sp);
 
   ObjectFile *core_objfile =
       static_cast<ProcessMachCore *>(process_sp.get())->GetCoreObjectFile();
