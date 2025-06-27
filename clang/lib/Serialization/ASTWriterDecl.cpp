@@ -302,7 +302,7 @@ namespace clang {
     }
     MutableArrayRef<FunctionTemplateSpecializationInfo>
     getPartialSpecializations(FunctionTemplateDecl::Common *) {
-      return std::nullopt;
+      return {};
     }
 
     template<typename DeclTy>

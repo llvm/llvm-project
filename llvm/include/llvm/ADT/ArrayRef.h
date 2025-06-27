@@ -304,7 +304,8 @@ namespace llvm {
     /*implicit*/ MutableArrayRef() = default;
 
     /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
+    /*implicit*/ LLVM_DEPRECATED("Use {} or MutableArrayRef<T>() instead", "{}")
+    MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
 
     /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
