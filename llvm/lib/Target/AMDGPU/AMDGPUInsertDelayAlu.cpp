@@ -54,9 +54,10 @@ public:
       return true;
 
     if (MIFlags & SIInstrFlags::SALU) {
-      for (auto &Op : MI.operands())
+      for (auto &Op : MI.operands()) {
         if (Op.isReg())
           return true;
+      }
     }
     return false;
   }
