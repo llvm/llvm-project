@@ -1510,6 +1510,16 @@ Operator OperationCode(
   }
 }
 
+template <typename T, typename... Ts>
+Operator OperationCode(
+    const evaluate::Operation<evaluate::Extremum<T>, Ts...> &op) {
+  if (op.derived().ordering == evaluate::Ordering::Greater) {
+    return Operator::Max;
+  } else {
+    return Operator::Min;
+  }
+}
+
 template <typename T> Operator OperationCode(const evaluate::Constant<T> &x) {
   return Operator::Constant;
 }
