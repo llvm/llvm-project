@@ -54,6 +54,7 @@ public:
   void visitSelectInst(SelectInst &I);
   void visitStoreInst(StoreInst &SI);
   void visitIntrinsicInst(IntrinsicInst &II);
+  void visitMemIntrinsic(MemIntrinsic &I);
   void visitCallBase(CallBase &CB);
 
 private:
@@ -175,6 +176,8 @@ void LifetimeMover::visitIntrinsicInst(IntrinsicInst &II) {
     Base::visitIntrinsicInst(II);
   }
 }
+
+void LifetimeMover::visitMemIntrinsic(MemIntrinsic &I) { visitInstruction(I); }
 
 void LifetimeMover::visitCallBase(CallBase &CB) {
   for (unsigned Op = 0, OpCount = CB.arg_size(); Op < OpCount; ++Op)
