@@ -32,29 +32,27 @@ using namespace mlir::tensor;
 #define DBGSNL() (llvm::dbgs() << "\n")
 
 /// Form a "full-rank" padding specification so that the application is easy.
-static llvm::SmallDenseMap<int64_t, OpFoldResult>
-getDimsToSize(Builder &b, ArrayRef<OpFoldResult> indexingSizes,
-              const PadTilingInterfaceOptions &options) {
-  llvm::SmallDenseMap<int64_t, OpFoldResult> dimsToSize;
-  for (const auto &[paddingDim, paddingSize] :
-       llvm::zip_equal(options.paddingDimensions, options.paddingSizes)) {
-    dimsToSize[paddingDim] = paddingSize;
-  }
+static SmallVector<OpFoldResult>
+getFullRankPaddingSizes(Builder &b, ArrayRef<OpFoldResult> indexingSizes,
+                        const PadTilingInterfaceOptions &options) {
+  SmallVector<OpFoldResult> paddingSizes;
   // Complete the padding specification to specify all dimensions.
-  for (int64_t idx = 0, e = indexingSizes.size(); idx != e; ++idx) {
-    if (dimsToSize.find(idx) != dimsToSize.end())
-      continue;
-    // If a dimension is not specified, either complete with:
+  for (size_t idx = 0, e = indexingSizes.size(); idx != e; ++idx) {
+    // Complete to zero if needed.
+    paddingSizes.push_back(options.paddingSizes.size() > idx
+                               ? options.paddingSizes[idx]
+                               : b.getIndexAttr(0));
+    // If a dimension is zero (either specified or completed), replace by:
     //   - 1 if we are padding to the next multiple of.
     //   - indexingSizes[idx] otherwise
-    dimsToSize[idx] =
-        options.padToMultipleOf ? b.getIndexAttr(1) : indexingSizes[idx];
-  }
-  for (int64_t idx = 0, e = indexingSizes.size(); idx != e; ++idx) {
-    LLVM_DEBUG(DBGS() << "----idx: " << idx << " : " << dimsToSize[idx]
+    if (isZeroInteger(paddingSizes[idx])) {
+      paddingSizes[idx] =
+          options.padToMultipleOf ? b.getIndexAttr(1) : indexingSizes[idx];
+    }
+    LLVM_DEBUG(DBGS() << "----idx: " << idx << " : " << paddingSizes[idx]
                       << "\n");
   }
-  return dimsToSize;
+  return paddingSizes;
 }
 
 /// Compute the padded shape of the given value `v` of `RankedTensorType` given
@@ -80,11 +78,11 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
          "rank");
 
   // "Full-rank" padding specification.
-  llvm::SmallDenseMap<int64_t, OpFoldResult> dimsToSize =
-      getDimsToSize(rewriter, indexingSizes, options);
+  SmallVector<OpFoldResult> paddingSizes =
+      getFullRankPaddingSizes(rewriter, indexingSizes, options);
 
   // For each dimension in the operand's shape, iterate over indexingSizes and
-  // add
+  // add the various term contributions.
   for (const auto &enResults : enumerate(indexingMap.getResults())) {
     int64_t resultIndex = enResults.index();
     AffineMap partialIndexingMap = indexingMap.getSubMap(
@@ -97,7 +95,9 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
     // Find all padding dimensions that contribute to this operand dimension
     // and compute the padded term contribution to the final padded shape.
     SmallVector<OpFoldResult> terms;
-    for (const auto &[paddingDim, paddingSize] : dimsToSize) {
+    for (size_t paddingDim = 0, e = paddingSizes.size(); paddingDim != e;
+         ++paddingDim) {
+      OpFoldResult paddingSize = paddingSizes[paddingDim];
       LLVM_DEBUG(DBGS() << "------try apply padding of dim: " << paddingDim
                         << " to: " << paddingSize << "\n");
       if (!enResults.value().isFunctionOfDim(paddingDim))
@@ -122,7 +122,8 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
         AffineMap composedMap = projectedMap.compose(ceilMap);
         OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
             rewriter, loc, composedMap,
-            {indexingSizes[paddingDim], paddingSize});
+            {indexingSizes[paddingDim], paddingSize},
+            /*composeAffineMin=*/true);
         terms.push_back(paddingDimOfr);
       } else {
         // Otherwise just set to paddingSize.
@@ -155,11 +156,13 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
   return paddedShape;
 }
 
-FailureOr<SmallVector<OpFoldResult>> linalg::computeLinalgPaddedShape(
+FailureOr<SmallVector<OpFoldResult>>
+linalg::computeIndexingMapOpInterfacePaddedShape(
     RewriterBase &rewriter, OpOperand &operandToPad,
     ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options) {
-  auto linalgOp = llvm::dyn_cast<LinalgOp>(operandToPad.getOwner());
-  if (!linalgOp)
+  auto transferOp =
+      llvm::dyn_cast<IndexingMapOpInterface>(operandToPad.getOwner());
+  if (!transferOp)
     return failure();
 
   // clang-format off
@@ -173,7 +176,7 @@ FailureOr<SmallVector<OpFoldResult>> linalg::computeLinalgPaddedShape(
   for (const Range &range : iterationDomain)
     loopUpperBounds.push_back(range.size);
 
-  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&operandToPad);
+  AffineMap indexingMap = transferOp.getMatchingIndexingMap(&operandToPad);
   return computePaddedShape(
       rewriter, cast<TypedValue<RankedTensorType>>(operandToPad.get()),
       indexingMap, loopUpperBounds, options);
@@ -221,9 +224,6 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
                           SmallVector<tensor::PadOp> &padOps,
                           PadSizeComputationFunction computePaddingSizeFun) {
   LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
-  assert(constOptions.paddingSizes.size() ==
-             constOptions.paddingDimensions.size() &&
-         "invalid number of elements in padToMultipleOf");
 
   Location loc = opToPad.getLoc();
   PadTilingInterfaceOptions options(constOptions);
@@ -255,7 +255,18 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad->getNumOperands());
   for (OpOperand &opOperand : opToPad->getOpOperands()) {
-    LLVM_DEBUG(DBGS() << "--start padding oprd: " << opOperand.get() << "\n");
+    Value operand = opOperand.get();
+    LLVM_DEBUG(DBGS() << "--start padding oprd: " << operand << "\n");
+
+    // 2.a. Skip scalar-like operands.
+    Type operandType = operand.getType();
+    if (!isa<RankedTensorType>(operandType)) {
+      assert(!isa<ShapedType>(operandType) ||
+             isa<VectorType>(operandType) &&
+                 "Unexpected non-vector ShapedType");
+      newOperands.push_back(operand);
+      continue;
+    }
     // 2.a. Compute padded shape.
     FailureOr<SmallVector<OpFoldResult>> maybePaddedShape =
         computePaddingSizeFun(rewriter, opOperand, iterationDomain, options);
@@ -266,14 +277,16 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
     // 2.b. Expect proper `paddingValues`.
     // TODO: we may want to allow garbage padding in the future, in which case
     // we would just not assert.
-    assert(opOperand.getOperandNumber() < options.paddingValues.size() &&
-           "--no padding value specified");
+    if (opOperand.getOperandNumber() >= options.paddingValues.size()) {
+      return rewriter.notifyMatchFailure(opToPad,
+                                         "--no padding value specified");
+    }
     Attribute paddingValueAttr =
         options.paddingValues[opOperand.getOperandNumber()];
 
     // 2.c. Perform actual padding.
     Value paddedOperand = padOperand(
-        rewriter, opToPad, cast<TypedValue<RankedTensorType>>(opOperand.get()),
+        rewriter, opToPad, cast<TypedValue<RankedTensorType>>(operand),
         *maybePaddedShape, paddingValueAttr);
     LLVM_DEBUG(DBGS() << "--done padding operand: " << paddedOperand << "\n");
 

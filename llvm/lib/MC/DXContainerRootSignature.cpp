@@ -133,10 +133,10 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
                                llvm::endianness::little);
         support::endian::write(BOS, Range.RegisterSpace,
                                llvm::endianness::little);
-        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
-                               llvm::endianness::little);
         if (Version > 1)
           support::endian::write(BOS, Range.Flags, llvm::endianness::little);
+        support::endian::write(BOS, Range.OffsetInDescriptorsFromTableStart,
+                               llvm::endianness::little);
       }
       break;
     }

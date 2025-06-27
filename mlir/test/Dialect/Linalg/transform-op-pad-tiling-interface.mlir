@@ -1,5 +1,32 @@
 // RUN: mlir-opt --transform-interpreter -canonicalize -split-input-file --verify-diagnostics %s | FileCheck %s
 
+//     CHECK-LABEL: pad_fill
+//           CHECK:   linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : tensor<8x25xf32>) -> tensor<8x25xf32>
+func.func @pad_fill(%value: f32, %output: tensor<24x25xf32>) -> tensor<24x25xf32>
+{
+  %0 = linalg.fill ins(%value : f32) outs(%output : tensor<24x25xf32>) -> tensor<24x25xf32>
+  func.return %0 : tensor<24x25xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %fill = transform.structured.match ops{["linalg.fill"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+
+    // Tile to 5 then pad to 8
+    %fill_l1, %loops_l1 = transform.structured.tile_using_for %fill tile_sizes [5] 
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+    %fill_padded, %_ = transform.structured.pad_tiling_interface %fill_l1 to padding_sizes [8] {
+      padding_values=[0.0 : f32, 0.0 : f32]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+    transform.yield
+  }
+}
+
+// -----
+
 //     CHECK-LABEL: pad_lhs
 func.func @pad_lhs(
   %arg0: tensor<24x12xf32>, %arg1: tensor<12x25xf32>, %arg2: tensor<24x25xf32>)
@@ -27,8 +54,7 @@ module attributes {transform.with_named_sequence} {
     // Tile to 5 then pad to 8 (supposedly to better hit vector ops).
     %matmul_l1, %loops_l1 = transform.structured.tile_using_for %matmul tile_sizes [5] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %matmul_padded, %_ = transform.structured.pad_tiling_interface %matmul_l1 to padding_sizes [8] {
-      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-      padding_dimensions=[0]
+      padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     transform.yield
@@ -63,8 +89,7 @@ module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [8, 14] {
-        padding_dimensions = [0, 2], 
+      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [8, 0, 14] {
         padding_values = [0.000000e+00 : f32, 0.000000e+00 : f32, 0.000000e+00 : f32]
       } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield 
@@ -119,8 +144,7 @@ module {
   module attributes {transform.with_named_sequence} {
     transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
       %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [8, 14] {
-        padding_dimensions = [0, 2], 
+      %padded, %pad = transform.structured.pad_tiling_interface %0 to padding_sizes [8, 0, 14] {
         padding_values = [0.000000e+00 : f32, 0.000000e+00 : f32, 0.000000e+00 : f32]
       } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
       transform.yield 

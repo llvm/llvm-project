@@ -179,10 +179,12 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
     Args.push_back(Entry);
   }
 
-  if (LC == RTLIB::UNKNOWN_LIBCALL)
-    report_fatal_error("Unsupported library call operation!");
-  SDValue Callee = DAG.getExternalSymbol(getLibcallName(LC),
-                                         getPointerTy(DAG.getDataLayout()));
+  const char *LibcallName = getLibcallName(LC);
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !LibcallName)
+    reportFatalInternalError("unsupported library call operation");
+
+  SDValue Callee =
+      DAG.getExternalSymbol(LibcallName, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = RetVT.getTypeForEVT(*DAG.getContext());
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -2967,6 +2969,77 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::FABS: {
+    SDValue Op0 = Op.getOperand(0);
+    APInt SignMask = APInt::getSignMask(BitWidth);
+
+    if (!DemandedBits.intersects(SignMask))
+      return TLO.CombineTo(Op, Op0);
+
+    if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
+      return true;
+
+    if (Known.isNonNegative())
+      return TLO.CombineTo(Op, Op0);
+    if (Known.isNegative())
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::FNEG, dl, VT, Op0, Op->getFlags()));
+
+    Known.Zero |= SignMask;
+    Known.One &= ~SignMask;
+
+    break;
+  }
+  case ISD::FCOPYSIGN: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    unsigned BitWidth0 = Op0.getScalarValueSizeInBits();
+    unsigned BitWidth1 = Op1.getScalarValueSizeInBits();
+    APInt SignMask0 = APInt::getSignMask(BitWidth0);
+    APInt SignMask1 = APInt::getSignMask(BitWidth1);
+
+    if (!DemandedBits.intersects(SignMask0))
+      return TLO.CombineTo(Op, Op0);
+
+    if (SimplifyDemandedBits(Op0, ~SignMask0 & DemandedBits, DemandedElts,
+                             Known, TLO, Depth + 1) ||
+        SimplifyDemandedBits(Op1, SignMask1, DemandedElts, Known2, TLO,
+                             Depth + 1))
+      return true;
+
+    if (Known2.isNonNegative())
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::FABS, dl, VT, Op0, Op->getFlags()));
+
+    if (Known2.isNegative())
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::FNEG, dl, VT,
+                              TLO.DAG.getNode(ISD::FABS, SDLoc(Op0), VT, Op0)));
+
+    Known.Zero &= ~SignMask0;
+    Known.One &= ~SignMask0;
+    break;
+  }
+  case ISD::FNEG: {
+    SDValue Op0 = Op.getOperand(0);
+    APInt SignMask = APInt::getSignMask(BitWidth);
+
+    if (!DemandedBits.intersects(SignMask))
+      return TLO.CombineTo(Op, Op0);
+
+    if (SimplifyDemandedBits(Op0, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
+      return true;
+
+    if (!Known.isSignUnknown()) {
+      Known.Zero ^= SignMask;
+      Known.One ^= SignMask;
+    }
+
+    break;
+  }
   default:
     // We also ask the target about intrinsics (which could be specific to it).
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
@@ -3514,6 +3587,19 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         DemandedLHS.setBit(M);
       else
         DemandedRHS.setBit(M - NumElts);
+    }
+
+    // If either side isn't demanded, replace it by UNDEF. We handle this
+    // explicitly here to also simplify in case of multiple uses (on the
+    // contrary to the SimplifyDemandedVectorElts calls below).
+    bool FoldLHS = !DemandedLHS && !LHS.isUndef();
+    bool FoldRHS = !DemandedRHS && !RHS.isUndef();
+    if (FoldLHS || FoldRHS) {
+      LHS = FoldLHS ? TLO.DAG.getUNDEF(LHS.getValueType()) : LHS;
+      RHS = FoldRHS ? TLO.DAG.getUNDEF(RHS.getValueType()) : RHS;
+      SDValue NewOp =
+          TLO.DAG.getVectorShuffle(VT, SDLoc(Op), LHS, RHS, ShuffleMask);
+      return TLO.CombineTo(Op, NewOp);
     }
 
     // See if we can simplify either shuffle operand.

@@ -24,32 +24,19 @@ namespace NVPTXISD {
 enum NodeType : unsigned {
   // Start the numbering from where ISD NodeType finishes.
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  Wrapper,
-  CALL,
   RET_GLUE,
-  LOAD_PARAM,
   DeclareParam,
   DeclareScalarParam,
   DeclareRetParam,
   DeclareRet,
-  DeclareScalarRet,
-  PrintCall,
-  PrintConvergentCall,
-  PrintCallUni,
-  PrintConvergentCallUni,
-  CallArgBegin,
-  CallArg,
-  LastCallArg,
-  CallArgEnd,
-  CallVoid,
-  CallVal,
-  CallSymbol,
-  Prototype,
+
+  /// This node represents a PTX call instruction. It's operands are as follows:
+  ///
+  /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
+  ///      NumParams, Callee, Proto, InGlue)
+  CALL,
+
   MoveParam,
-  PseudoUseParam,
-  RETURN,
-  CallSeqBegin,
-  CallSeqEnd,
   CallPrototype,
   ProxyReg,
   FSHL_CLAMP,
@@ -83,7 +70,6 @@ enum NodeType : unsigned {
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_X,
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Y,
   CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_Z,
-  Dummy,
 
   FIRST_MEMORY_OPCODE,
   LoadV2 = FIRST_MEMORY_OPCODE,
@@ -100,8 +86,6 @@ enum NodeType : unsigned {
   StoreParam,
   StoreParamV2,
   StoreParamV4,
-  StoreParamS32, // to sext and store a <32bit value, not used currently
-  StoreParamU32, // to zext and store a <32bit value, not used currently
   StoreRetval,
   StoreRetvalV2,
   StoreRetvalV4,
@@ -119,8 +103,6 @@ public:
   explicit NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
-
-  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
 

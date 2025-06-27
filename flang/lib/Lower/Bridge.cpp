@@ -52,6 +52,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -69,6 +70,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
@@ -261,6 +263,7 @@ public:
   }
 
   void createTypeInfo(Fortran::lower::AbstractConverter &converter) {
+    createTypeInfoForTypeDescriptorBuiltinType(converter);
     while (!registeredTypeInfoA.empty()) {
       currentTypeInfoStack = &registeredTypeInfoB;
       for (const TypeInfo &info : registeredTypeInfoA)
@@ -276,8 +279,20 @@ public:
 private:
   void createTypeInfoOpAndGlobal(Fortran::lower::AbstractConverter &converter,
                                  const TypeInfo &info) {
-    Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.symbol.get());
+    if (!::skipExternalRttiDefinition)
+      Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.symbol.get());
     createTypeInfoOp(converter, info);
+  }
+
+  void createTypeInfoForTypeDescriptorBuiltinType(
+      Fortran::lower::AbstractConverter &converter) {
+    if (registeredTypeInfoA.empty())
+      return;
+    auto builtinTypeInfoType = llvm::cast<fir::RecordType>(
+        converter.genType(registeredTypeInfoA[0].symbol.get()));
+    converter.getFirOpBuilder().createTypeInfoOp(
+        registeredTypeInfoA[0].loc, builtinTypeInfoType,
+        /*parentType=*/fir::RecordType{});
   }
 
   void createTypeInfoOp(Fortran::lower::AbstractConverter &converter,
@@ -700,8 +715,7 @@ public:
   }
   mlir::Type genType(Fortran::common::TypeCategory tc) override final {
     return Fortran::lower::getFIRType(
-        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc),
-        std::nullopt);
+        &getMLIRContext(), tc, bridge.getDefaultKinds().GetDefaultKind(tc), {});
   }
 
   Fortran::lower::TypeConstructionStack &
@@ -1236,6 +1250,8 @@ private:
   }
 
   mlir::SymbolTable *getMLIRSymbolTable() override { return &mlirSymbolTable; }
+
+  mlir::StateStack &getStateStack() override { return stateStack; }
 
   /// Add the symbol to the local map and return `true`. If the symbol is
   /// already in the map and \p forced is `false`, the map is not updated.
@@ -6552,6 +6568,9 @@ private:
   /// attribute since mlirSymbolTable must pro-actively be maintained when
   /// new Symbol operations are created.
   mlir::SymbolTable mlirSymbolTable;
+
+  /// Used to store context while recursing into regions during lowering.
+  mlir::StateStack stateStack;
 };
 
 } // namespace

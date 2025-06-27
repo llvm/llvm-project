@@ -4168,8 +4168,7 @@ void CGOpenMPRuntime::emitDepobjElements(CodeGenFunction &CGF,
         CGF, cast_or_null<OMPIteratorExpr>(
                  Data.IteratorExpr ? Data.IteratorExpr->IgnoreParenImpCasts()
                                    : nullptr));
-    for (unsigned I = 0, End = Data.DepExprs.size(); I < End; ++I) {
-      const Expr *E = Data.DepExprs[I];
+    for (const Expr *E : Data.DepExprs) {
       llvm::Value *NumDeps;
       LValue Base;
       LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
@@ -4289,31 +4288,26 @@ std::pair<llvm::Value *, Address> CGOpenMPRuntime::emitDependClause(
                                            /*isSigned=*/false);
   }
   unsigned Pos = 0;
-  for (unsigned I = 0, End = Dependencies.size(); I < End; ++I) {
-    if (Dependencies[I].DepKind == OMPC_DEPEND_depobj ||
-        Dependencies[I].IteratorExpr)
+  for (const OMPTaskDataTy::DependData &Dep : Dependencies) {
+    if (Dep.DepKind == OMPC_DEPEND_depobj || Dep.IteratorExpr)
       continue;
-    emitDependData(CGF, KmpDependInfoTy, &Pos, Dependencies[I],
-                   DependenciesArray);
+    emitDependData(CGF, KmpDependInfoTy, &Pos, Dep, DependenciesArray);
   }
   // Copy regular dependencies with iterators.
   LValue PosLVal = CGF.MakeAddrLValue(
       CGF.CreateMemTemp(C.getSizeType(), "dep.counter.addr"), C.getSizeType());
   CGF.EmitStoreOfScalar(llvm::ConstantInt::get(CGF.SizeTy, Pos), PosLVal);
-  for (unsigned I = 0, End = Dependencies.size(); I < End; ++I) {
-    if (Dependencies[I].DepKind == OMPC_DEPEND_depobj ||
-        !Dependencies[I].IteratorExpr)
+  for (const OMPTaskDataTy::DependData &Dep : Dependencies) {
+    if (Dep.DepKind == OMPC_DEPEND_depobj || !Dep.IteratorExpr)
       continue;
-    emitDependData(CGF, KmpDependInfoTy, &PosLVal, Dependencies[I],
-                   DependenciesArray);
+    emitDependData(CGF, KmpDependInfoTy, &PosLVal, Dep, DependenciesArray);
   }
   // Copy final depobj arrays without iterators.
   if (HasDepobjDeps) {
-    for (unsigned I = 0, End = Dependencies.size(); I < End; ++I) {
-      if (Dependencies[I].DepKind != OMPC_DEPEND_depobj)
+    for (const OMPTaskDataTy::DependData &Dep : Dependencies) {
+      if (Dep.DepKind != OMPC_DEPEND_depobj)
         continue;
-      emitDepobjElements(CGF, KmpDependInfoTy, PosLVal, Dependencies[I],
-                         DependenciesArray);
+      emitDepobjElements(CGF, KmpDependInfoTy, PosLVal, Dep, DependenciesArray);
     }
   }
   DependenciesArray = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(

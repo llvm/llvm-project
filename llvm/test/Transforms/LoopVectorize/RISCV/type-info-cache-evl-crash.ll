@@ -10,11 +10,7 @@ define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) 
 ; CHECK-SAME: ptr [[DSTV:%.*]], ptr [[SRC:%.*]], i64 [[WIDE_TRIP_COUNT:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[WIDE_TRIP_COUNT]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 -1, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DSTV]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[WIDE_TRIP_COUNT]], 1

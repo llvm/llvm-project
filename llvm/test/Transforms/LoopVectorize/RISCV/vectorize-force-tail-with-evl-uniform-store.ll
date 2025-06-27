@@ -13,11 +13,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP1_PEEL]], i64 2, i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 3, [[SPEC_SELECT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 -1, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 2

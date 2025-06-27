@@ -280,8 +280,7 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
       Opcode == RISCV::PseudoLongBNE || Opcode == RISCV::PseudoLongBEQ;
 
   bool UseCompressedBr = false;
-  if (IsEqTest && (STI.hasFeature(RISCV::FeatureStdExtC) ||
-                   STI.hasFeature(RISCV::FeatureStdExtZca))) {
+  if (IsEqTest && STI.hasFeature(RISCV::FeatureStdExtZca)) {
     if (RISCV::X8 <= SrcReg1.id() && SrcReg1.id() <= RISCV::X15 &&
         SrcReg2.id() == RISCV::X0) {
       UseCompressedBr = true;

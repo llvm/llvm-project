@@ -1767,8 +1767,12 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
   bool WaveRelease = MI.getOperand(8).getImm() != 0;
   bool WaveDone = MI.getOperand(9).getImm() != 0;
 
-  if (WaveDone && !WaveRelease)
-    report_fatal_error("ds_ordered_count: wave_done requires wave_release");
+  if (WaveDone && !WaveRelease) {
+    // TODO: Move this to IR verifier
+    const Function &Fn = MF->getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "ds_ordered_count: wave_done requires wave_release", DL));
+  }
 
   unsigned OrderedCountIndex = IndexOperand & 0x3f;
   IndexOperand &= ~0x3f;
@@ -1779,13 +1783,18 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
     IndexOperand &= ~(0xf << 24);
 
     if (CountDw < 1 || CountDw > 4) {
-      report_fatal_error(
-        "ds_ordered_count: dword count must be between 1 and 4");
+      const Function &Fn = MF->getFunction();
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn, "ds_ordered_count: dword count must be between 1 and 4", DL));
+      CountDw = 1;
     }
   }
 
-  if (IndexOperand)
-    report_fatal_error("ds_ordered_count: bad index operand");
+  if (IndexOperand) {
+    const Function &Fn = MF->getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "ds_ordered_count: bad index operand", DL));
+  }
 
   unsigned Instruction = IntrID == Intrinsic::amdgcn_ds_ordered_add ? 0 : 1;
   unsigned ShaderType = SIInstrInfo::getDSShaderTypeValue(*MF);

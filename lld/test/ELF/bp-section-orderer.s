@@ -21,7 +21,7 @@
 # RUN: llvm-profdata merge a.proftext -o a.profdata
 # RUN: ld.lld a.o --irpgo-profile=a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --gc-sections 2>&1 | FileCheck %s --check-prefix=STARTUP-FUNC-ORDER
 
-# STARTUP-FUNC-ORDER: Ordered 3 sections using balanced partitioning
+# STARTUP-FUNC-ORDER: Ordered 3 sections ([[#]] bytes) using balanced partitioning
 # STARTUP-FUNC-ORDER: Total area under the page fault curve: 3.
 
 # RUN: ld.lld -o out.s a.o --irpgo-profile=a.profdata --bp-startup-sort=function
@@ -49,10 +49,10 @@
 # RUN: llvm-nm -jn out.cbs | tr '\n' , | FileCheck %s --check-prefix=CBOTH-STARTUP
 # CBOTH-STARTUP: s5,s3,s4,s2,s1,A,B,C,F,E,D,merged1,merged2,_start,d4,d1,d3,d2,{{$}}
 
-# BP-COMPRESSION-FUNC: Ordered 9 sections using balanced partitioning
-# BP-COMPRESSION-ICF-FUNC: Ordered 8 sections using balanced partitioning
-# BP-COMPRESSION-DATA: Ordered 9 sections using balanced partitioning
-# BP-COMPRESSION-BOTH: Ordered 18 sections using balanced partitioning
+# BP-COMPRESSION-FUNC: Ordered 9 sections ([[#]] bytes) using balanced partitioning
+# BP-COMPRESSION-ICF-FUNC: Ordered 8 sections ([[#]] bytes) using balanced partitioning
+# BP-COMPRESSION-DATA: Ordered 9 sections ([[#]] bytes) using balanced partitioning
+# BP-COMPRESSION-BOTH: Ordered 18 sections ([[#]] bytes) using balanced partitioning
 
 #--- a.proftext
 :ir
