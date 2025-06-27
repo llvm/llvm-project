@@ -1430,6 +1430,12 @@ bool RISCVInstrInfo::reverseBranchCondition(
   case RISCV::NDS_BBS:
     Cond[0].setImm(RISCV::NDS_BBC);
     break;
+  case RISCV::NDS_BEQC:
+    Cond[0].setImm(RISCV::NDS_BNEC);
+    break;
+  case RISCV::NDS_BNEC:
+    Cond[0].setImm(RISCV::NDS_BEQC);
+    break;
   }
 
   return false;
