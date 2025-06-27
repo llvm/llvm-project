@@ -457,3 +457,25 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
   }
   llvm_unreachable("Invalid cta_group in printCTAGroup");
 }
+
+void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
+                                        raw_ostream &O, StringRef Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  assert(MO.isImm() && "Invalid operand");
+  const auto Imm = MO.getImm();
+
+  if (Modifier == "RetList") {
+    assert((Imm == 1 || Imm == 0) && "Invalid return list");
+    if (Imm)
+      O << " (retval0),";
+    return;
+  }
+
+  if (Modifier == "ParamList") {
+    assert(Imm >= 0 && "Invalid parameter list");
+    interleaveComma(llvm::seq(Imm), O,
+                    [&](const auto &I) { O << "param" << I; });
+    return;
+  }
+  llvm_unreachable("Invalid modifier");
+}

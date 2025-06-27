@@ -942,13 +942,6 @@ if (LLVM_LINK_LLVM_DYLIB AND BUILD_SHARED_LIBS)
   message(FATAL_ERROR "Cannot enable BUILD_SHARED_LIBS with LLVM_LINK_LLVM_DYLIB.  We recommend disabling BUILD_SHARED_LIBS.")
 endif()
 
-set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS OFF)
-if (LLVM_BUILD_LLVM_DYLIB OR LLVM_BUILD_SHARED_LIBS OR LLVM_ENABLE_PLUGINS)
-  # Export annotations for LLVM must be enabled if building as a shared lib or
-  # enabling plugins.
-  set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS ON)
-endif()
-
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
 if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
   set(LLVM_USE_HOST_TOOLS ON)
@@ -1062,6 +1055,13 @@ else()
   set(LLVM_ENABLE_PLUGINS_default ${LLVM_ENABLE_PIC})
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
+
+set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS OFF)
+if (LLVM_BUILD_LLVM_DYLIB OR LLVM_BUILD_SHARED_LIBS OR LLVM_ENABLE_PLUGINS)
+  # Export annotations for LLVM must be enabled if building as a shared lib or
+  # enabling plugins.
+  set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS ON)
+endif()
 
 set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
   "Enable the new pass manager by default.")

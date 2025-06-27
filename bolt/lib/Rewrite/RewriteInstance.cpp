@@ -626,6 +626,9 @@ Error RewriteInstance::discoverStorage() {
     NextAvailableAddress += BC->PageAlign;
   }
 
+  NewTextSegmentAddress = NextAvailableAddress;
+  NewTextSegmentOffset = NextAvailableOffset;
+
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
@@ -652,6 +655,8 @@ Error RewriteInstance::discoverStorage() {
 
     PHDRTableAddress = NextAvailableAddress;
     PHDRTableOffset = NextAvailableOffset;
+    NewTextSegmentAddress = NextAvailableAddress;
+    NewTextSegmentOffset = NextAvailableOffset;
 
     // Reserve space for 3 extra pheaders.
     unsigned Phnum = Obj.getHeader().e_phnum;
@@ -664,14 +669,12 @@ Error RewriteInstance::discoverStorage() {
 
     NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
     NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
+
+    // Align at cache line.
+    NextAvailableAddress = alignTo(NextAvailableAddress, 64);
+    NextAvailableOffset = alignTo(NextAvailableOffset, 64);
   }
 
-  // Align at cache line.
-  NextAvailableAddress = alignTo(NextAvailableAddress, 64);
-  NextAvailableOffset = alignTo(NextAvailableOffset, 64);
-
-  NewTextSegmentAddress = NextAvailableAddress;
-  NewTextSegmentOffset = NextAvailableOffset;
   BC->LayoutStartAddress = NextAvailableAddress;
 
   // Tools such as objcopy can strip section contents but leave header
@@ -4133,13 +4136,8 @@ void RewriteInstance::mapAllocatableSections(
     }
 
     if (SType == ST_READONLY) {
-      if (PHDRTableAddress) {
-        // Segment size includes the size of the PHDR area.
-        NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-      } else if (NewTextSegmentAddress) {
-        // Existing PHDR table would be updated.
+      if (NewTextSegmentAddress)
         NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
-      }
     } else if (SType == ST_READWRITE) {
       NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
       // Restore NextAvailableAddress if no new writable sections
@@ -4186,9 +4184,7 @@ void RewriteInstance::patchELFPHDRTable() {
   // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
   // last segments size based on the NextAvailableAddress variable.
   if (!NewWritableSegmentSize) {
-    if (PHDRTableAddress)
-      NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-    else if (NewTextSegmentAddress)
+    if (NewTextSegmentAddress)
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
@@ -4201,15 +4197,9 @@ void RewriteInstance::patchELFPHDRTable() {
     SmallVector<ELF64LEPhdrTy, 3> NewPhdrs;
     ELF64LEPhdrTy NewPhdr;
     NewPhdr.p_type = ELF::PT_LOAD;
-    if (PHDRTableAddress) {
-      NewPhdr.p_offset = PHDRTableOffset;
-      NewPhdr.p_vaddr = PHDRTableAddress;
-      NewPhdr.p_paddr = PHDRTableAddress;
-    } else {
-      NewPhdr.p_offset = NewTextSegmentOffset;
-      NewPhdr.p_vaddr = NewTextSegmentAddress;
-      NewPhdr.p_paddr = NewTextSegmentAddress;
-    }
+    NewPhdr.p_offset = NewTextSegmentOffset;
+    NewPhdr.p_vaddr = NewTextSegmentAddress;
+    NewPhdr.p_paddr = NewTextSegmentAddress;
     NewPhdr.p_filesz = NewTextSegmentSize;
     NewPhdr.p_memsz = NewTextSegmentSize;
     NewPhdr.p_flags = ELF::PF_X | ELF::PF_R;
@@ -4270,7 +4260,7 @@ void RewriteInstance::patchELFPHDRTable() {
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    if (PHDRTableAddress || NewTextSegmentSize) {
+    if (NewTextSegmentSize) {
       SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
       OS.write(reinterpret_cast<const char *>(NewPhdrs.data()),
                sizeof(ELF64LE::Phdr) * NewPhdrs.size());

@@ -958,54 +958,41 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
   }
 }
 
-static RISCVCC::CondCode getCondFromBranchOpc(unsigned Opc) {
+RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   switch (Opc) {
   default:
     return RISCVCC::COND_INVALID;
   case RISCV::BEQ:
+  case RISCV::CV_BEQIMM:
+  case RISCV::QC_BEQI:
+  case RISCV::QC_E_BEQI:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
+  case RISCV::QC_BNEI:
+  case RISCV::QC_E_BNEI:
+  case RISCV::CV_BNEIMM:
     return RISCVCC::COND_NE;
   case RISCV::BLT:
+  case RISCV::QC_BLTI:
+  case RISCV::QC_E_BLTI:
     return RISCVCC::COND_LT;
   case RISCV::BGE:
+  case RISCV::QC_BGEI:
+  case RISCV::QC_E_BGEI:
     return RISCVCC::COND_GE;
   case RISCV::BLTU:
+  case RISCV::QC_BLTUI:
+  case RISCV::QC_E_BLTUI:
     return RISCVCC::COND_LTU;
   case RISCV::BGEU:
-    return RISCVCC::COND_GEU;
-  case RISCV::CV_BEQIMM:
-    return RISCVCC::COND_CV_BEQIMM;
-  case RISCV::CV_BNEIMM:
-    return RISCVCC::COND_CV_BNEIMM;
-  case RISCV::QC_BEQI:
-    return RISCVCC::COND_QC_BEQI;
-  case RISCV::QC_E_BEQI:
-    return RISCVCC::COND_QC_E_BEQI;
-  case RISCV::QC_BNEI:
-    return RISCVCC::COND_QC_BNEI;
-  case RISCV::QC_E_BNEI:
-    return RISCVCC::COND_QC_E_BNEI;
-  case RISCV::QC_BLTI:
-    return RISCVCC::COND_QC_BLTI;
-  case RISCV::QC_E_BLTI:
-    return RISCVCC::COND_QC_E_BLTI;
-  case RISCV::QC_BGEI:
-    return RISCVCC::COND_QC_BGEI;
-  case RISCV::QC_E_BGEI:
-    return RISCVCC::COND_QC_E_BGEI;
-  case RISCV::QC_BLTUI:
-    return RISCVCC::COND_QC_BLTUI;
-  case RISCV::QC_E_BLTUI:
-    return RISCVCC::COND_QC_E_BLTUI;
   case RISCV::QC_BGEUI:
-    return RISCVCC::COND_QC_BGEUI;
   case RISCV::QC_E_BGEUI:
-    return RISCVCC::COND_QC_E_BGEUI;
+    return RISCVCC::COND_GEU;
   }
 }
 
-bool RISCVInstrInfo::evaluateCondBranch(unsigned CC, int64_t C0, int64_t C1) {
+bool RISCVInstrInfo::evaluateCondBranch(RISCVCC::CondCode CC, int64_t C0,
+                                        int64_t C1) {
   switch (CC) {
   default:
     llvm_unreachable("Unexpected CC");
@@ -1033,61 +1020,90 @@ static void parseCondBranch(MachineInstr &LastInst, MachineBasicBlock *&Target,
   assert(LastInst.getDesc().isConditionalBranch() &&
          "Unknown conditional branch");
   Target = LastInst.getOperand(2).getMBB();
-  unsigned CC = getCondFromBranchOpc(LastInst.getOpcode());
-  Cond.push_back(MachineOperand::CreateImm(CC));
+  Cond.push_back(MachineOperand::CreateImm(LastInst.getOpcode()));
   Cond.push_back(LastInst.getOperand(0));
   Cond.push_back(LastInst.getOperand(1));
 }
 
-unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC) {
-  switch (CC) {
+unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
+  switch (SelectOpc) {
   default:
-    llvm_unreachable("Unknown condition code!");
-  case RISCVCC::COND_EQ:
-    return RISCV::BEQ;
-  case RISCVCC::COND_NE:
-    return RISCV::BNE;
-  case RISCVCC::COND_LT:
-    return RISCV::BLT;
-  case RISCVCC::COND_GE:
-    return RISCV::BGE;
-  case RISCVCC::COND_LTU:
-    return RISCV::BLTU;
-  case RISCVCC::COND_GEU:
-    return RISCV::BGEU;
-  case RISCVCC::COND_CV_BEQIMM:
-    return RISCV::CV_BEQIMM;
-  case RISCVCC::COND_CV_BNEIMM:
-    return RISCV::CV_BNEIMM;
-  case RISCVCC::COND_QC_BEQI:
-    return RISCV::QC_BEQI;
-  case RISCVCC::COND_QC_E_BEQI:
-    return RISCV::QC_E_BEQI;
-  case RISCVCC::COND_QC_BNEI:
-    return RISCV::QC_BNEI;
-  case RISCVCC::COND_QC_E_BNEI:
-    return RISCV::QC_E_BNEI;
-  case RISCVCC::COND_QC_BLTI:
-    return RISCV::QC_BLTI;
-  case RISCVCC::COND_QC_E_BLTI:
-    return RISCV::QC_E_BLTI;
-  case RISCVCC::COND_QC_BGEI:
-    return RISCV::QC_BGEI;
-  case RISCVCC::COND_QC_E_BGEI:
-    return RISCV::QC_E_BGEI;
-  case RISCVCC::COND_QC_BLTUI:
-    return RISCV::QC_BLTUI;
-  case RISCVCC::COND_QC_E_BLTUI:
-    return RISCV::QC_E_BLTUI;
-  case RISCVCC::COND_QC_BGEUI:
-    return RISCV::QC_BGEUI;
-  case RISCVCC::COND_QC_E_BGEUI:
-    return RISCV::QC_E_BGEUI;
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::BEQ;
+    case RISCVCC::COND_NE:
+      return RISCV::BNE;
+    case RISCVCC::COND_LT:
+      return RISCV::BLT;
+    case RISCVCC::COND_GE:
+      return RISCV::BGE;
+    case RISCVCC::COND_LTU:
+      return RISCV::BLTU;
+    case RISCVCC::COND_GEU:
+      return RISCV::BGEU;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_SImm5_CV:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::CV_BEQIMM;
+    case RISCVCC::COND_NE:
+      return RISCV::CV_BNEIMM;
+    }
+    break;
+  case RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::QC_BEQI;
+    case RISCVCC::COND_NE:
+      return RISCV::QC_BNEI;
+    case RISCVCC::COND_LT:
+      return RISCV::QC_BLTI;
+    case RISCVCC::COND_GE:
+      return RISCV::QC_BGEI;
+    }
+    break;
+  case RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_LTU:
+      return RISCV::QC_BLTUI;
+    case RISCVCC::COND_GEU:
+      return RISCV::QC_BGEUI;
+    }
+    break;
+  case RISCV::Select_GPRNoX0_Using_CC_SImm16NonZero_QC:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::QC_E_BEQI;
+    case RISCVCC::COND_NE:
+      return RISCV::QC_E_BNEI;
+    case RISCVCC::COND_LT:
+      return RISCV::QC_E_BLTI;
+    case RISCVCC::COND_GE:
+      return RISCV::QC_E_BGEI;
+    }
+    break;
+  case RISCV::Select_GPRNoX0_Using_CC_UImm16NonZero_QC:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_LTU:
+      return RISCV::QC_E_BLTUI;
+    case RISCVCC::COND_GEU:
+      return RISCV::QC_E_BGEUI;
+    }
+    break;
   }
-}
-
-const MCInstrDesc &RISCVInstrInfo::getBrCond(RISCVCC::CondCode CC) const {
-  return get(RISCVCC::getBrCond(CC));
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
@@ -1106,34 +1122,6 @@ RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
     return RISCVCC::COND_GEU;
   case RISCVCC::COND_GEU:
     return RISCVCC::COND_LTU;
-  case RISCVCC::COND_CV_BEQIMM:
-    return RISCVCC::COND_CV_BNEIMM;
-  case RISCVCC::COND_CV_BNEIMM:
-    return RISCVCC::COND_CV_BEQIMM;
-  case RISCVCC::COND_QC_BEQI:
-    return RISCVCC::COND_QC_BNEI;
-  case RISCVCC::COND_QC_E_BEQI:
-    return RISCVCC::COND_QC_E_BNEI;
-  case RISCVCC::COND_QC_BNEI:
-    return RISCVCC::COND_QC_BEQI;
-  case RISCVCC::COND_QC_E_BNEI:
-    return RISCVCC::COND_QC_E_BEQI;
-  case RISCVCC::COND_QC_BLTI:
-    return RISCVCC::COND_QC_BGEI;
-  case RISCVCC::COND_QC_E_BLTI:
-    return RISCVCC::COND_QC_E_BGEI;
-  case RISCVCC::COND_QC_BGEI:
-    return RISCVCC::COND_QC_BLTI;
-  case RISCVCC::COND_QC_E_BGEI:
-    return RISCVCC::COND_QC_E_BLTI;
-  case RISCVCC::COND_QC_BLTUI:
-    return RISCVCC::COND_QC_BGEUI;
-  case RISCVCC::COND_QC_E_BLTUI:
-    return RISCVCC::COND_QC_E_BGEUI;
-  case RISCVCC::COND_QC_BGEUI:
-    return RISCVCC::COND_QC_BLTUI;
-  case RISCVCC::COND_QC_E_BGEUI:
-    return RISCVCC::COND_QC_E_BLTUI;
   }
 }
 
@@ -1263,9 +1251,10 @@ unsigned RISCVInstrInfo::insertBranch(
   }
 
   // Either a one or two-way conditional branch.
-  auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  MachineInstr &CondMI =
-      *BuildMI(&MBB, DL, getBrCond(CC)).add(Cond[1]).add(Cond[2]).addMBB(TBB);
+  MachineInstr &CondMI = *BuildMI(&MBB, DL, get(Cond[0].getImm()))
+                              .add(Cond[1])
+                              .add(Cond[2])
+                              .addMBB(TBB);
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
 
@@ -1348,8 +1337,71 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 bool RISCVInstrInfo::reverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const {
   assert((Cond.size() == 3) && "Invalid branch condition!");
-  auto CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
-  Cond[0].setImm(getOppositeBranchCondition(CC));
+  switch (Cond[0].getImm()) {
+  default:
+    llvm_unreachable("Unknown conditional branch!");
+  case RISCV::BEQ:
+    Cond[0].setImm(RISCV::BNE);
+    break;
+  case RISCV::BNE:
+    Cond[0].setImm(RISCV::BEQ);
+    break;
+  case RISCV::BLT:
+    Cond[0].setImm(RISCV::BGE);
+    break;
+  case RISCV::BGE:
+    Cond[0].setImm(RISCV::BLT);
+    break;
+  case RISCV::BLTU:
+    Cond[0].setImm(RISCV::BGEU);
+    break;
+  case RISCV::BGEU:
+    Cond[0].setImm(RISCV::BLTU);
+    break;
+  case RISCV::CV_BEQIMM:
+    Cond[0].setImm(RISCV::CV_BNEIMM);
+    break;
+  case RISCV::CV_BNEIMM:
+    Cond[0].setImm(RISCV::CV_BEQIMM);
+    break;
+  case RISCV::QC_BEQI:
+    Cond[0].setImm(RISCV::QC_BNEI);
+    break;
+  case RISCV::QC_BNEI:
+    Cond[0].setImm(RISCV::QC_BEQI);
+    break;
+  case RISCV::QC_BGEI:
+    Cond[0].setImm(RISCV::QC_BLTI);
+    break;
+  case RISCV::QC_BLTI:
+    Cond[0].setImm(RISCV::QC_BGEI);
+    break;
+  case RISCV::QC_BGEUI:
+    Cond[0].setImm(RISCV::QC_BLTUI);
+    break;
+  case RISCV::QC_BLTUI:
+    Cond[0].setImm(RISCV::QC_BGEUI);
+    break;
+  case RISCV::QC_E_BEQI:
+    Cond[0].setImm(RISCV::QC_E_BNEI);
+    break;
+  case RISCV::QC_E_BNEI:
+    Cond[0].setImm(RISCV::QC_E_BEQI);
+    break;
+  case RISCV::QC_E_BGEI:
+    Cond[0].setImm(RISCV::QC_E_BLTI);
+    break;
+  case RISCV::QC_E_BLTI:
+    Cond[0].setImm(RISCV::QC_E_BGEI);
+    break;
+  case RISCV::QC_E_BGEUI:
+    Cond[0].setImm(RISCV::QC_E_BLTUI);
+    break;
+  case RISCV::QC_E_BLTUI:
+    Cond[0].setImm(RISCV::QC_E_BGEUI);
+    break;
+  }
+
   return false;
 }
 
@@ -1379,40 +1431,49 @@ bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
 }
 
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
+  bool IsSigned = false;
+  bool IsEquality = false;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+  case RISCV::BEQ:
+  case RISCV::BNE:
+    IsEquality = true;
+    break;
+  case RISCV::BGE:
+  case RISCV::BLT:
+    IsSigned = true;
+    break;
+  case RISCV::BGEU:
+  case RISCV::BLTU:
+    break;
+  }
+
   MachineBasicBlock *MBB = MI.getParent();
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
 
-  MachineBasicBlock *TBB, *FBB;
-  SmallVector<MachineOperand, 3> Cond;
-  if (analyzeBranch(*MBB, TBB, FBB, Cond, /*AllowModify=*/false))
-    return false;
+  const MachineOperand &LHS = MI.getOperand(0);
+  const MachineOperand &RHS = MI.getOperand(1);
+  MachineBasicBlock *TBB = MI.getOperand(2).getMBB();
 
-  RISCVCC::CondCode CC = static_cast<RISCVCC::CondCode>(Cond[0].getImm());
+  RISCVCC::CondCode CC = getCondFromBranchOpc(MI.getOpcode());
   assert(CC != RISCVCC::COND_INVALID);
-
-  auto modifyBranch = [&]() {
-    // Build the new branch and remove the old one.
-    BuildMI(*MBB, MI, MI.getDebugLoc(),
-            getBrCond(static_cast<RISCVCC::CondCode>(Cond[0].getImm())))
-        .add(Cond[1])
-        .add(Cond[2])
-        .addMBB(TBB);
-    MI.eraseFromParent();
-  };
 
   // Canonicalize conditional branches which can be constant folded into
   // beqz or bnez.  We can't modify the CFG here.
   int64_t C0, C1;
-  if (isFromLoadImm(MRI, Cond[1], C0) && isFromLoadImm(MRI, Cond[2], C1)) {
-    unsigned NewCC =
-        evaluateCondBranch(CC, C0, C1) ? RISCVCC::COND_EQ : RISCVCC::COND_NE;
-    Cond[0] = MachineOperand::CreateImm(NewCC);
-    Cond[1] = Cond[2] = MachineOperand::CreateReg(RISCV::X0, /*isDef=*/false);
-    modifyBranch();
+  if (isFromLoadImm(MRI, LHS, C0) && isFromLoadImm(MRI, RHS, C1)) {
+    unsigned NewOpc = evaluateCondBranch(CC, C0, C1) ? RISCV::BEQ : RISCV::BNE;
+    // Build the new branch and remove the old one.
+    BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+        .addReg(RISCV::X0)
+        .addReg(RISCV::X0)
+        .addMBB(TBB);
+    MI.eraseFromParent();
     return true;
   }
 
-  if (CC == RISCVCC::COND_EQ || CC == RISCVCC::COND_NE)
+  if (IsEquality)
     return false;
 
   // For two constants C0 and C1 from
@@ -1432,8 +1493,6 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   //
   // To make sure this optimization is really beneficial, we only
   // optimize for cases where Y had only one use (i.e. only used by the branch).
-  MachineOperand &LHS = MI.getOperand(0);
-  MachineOperand &RHS = MI.getOperand(1);
   // Try to find the register for constant Z; return
   // invalid register otherwise.
   auto searchConst = [&](int64_t C1) -> Register {
@@ -1449,23 +1508,25 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return Register();
   };
 
+  unsigned NewOpc = RISCVCC::getBrCond(getOppositeBranchCondition(CC));
+
   // Might be case 1.
   // Don't change 0 to 1 since we can use x0.
   // For unsigned cases changing -1U to 0 would be incorrect.
   // The incorrect case for signed would be INT_MAX, but isFromLoadImm can't
   // return that.
   if (isFromLoadImm(MRI, LHS, C0) && C0 != 0 && LHS.getReg().isVirtual() &&
-      MRI.hasOneUse(LHS.getReg()) &&
-      (CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT || C0 != -1)) {
+      MRI.hasOneUse(LHS.getReg()) && (IsSigned || C0 != -1)) {
     assert(isInt<12>(C0) && "Unexpected immediate");
     if (Register RegZ = searchConst(C0 + 1)) {
-      reverseBranchCondition(Cond);
-      Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
-      Cond[2] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
+      BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+          .add(RHS)
+          .addReg(RegZ)
+          .addMBB(TBB);
       // We might extend the live range of Z, clear its kill flag to
       // account for this.
       MRI.clearKillFlags(RegZ);
-      modifyBranch();
+      MI.eraseFromParent();
       return true;
     }
   }
@@ -1479,13 +1540,14 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
       MRI.hasOneUse(RHS.getReg())) {
     assert(isInt<12>(C0) && "Unexpected immediate");
     if (Register RegZ = searchConst(C0 - 1)) {
-      reverseBranchCondition(Cond);
-      Cond[1] = MachineOperand::CreateReg(RegZ, /*isDef=*/false);
-      Cond[2] = MachineOperand::CreateReg(LHS.getReg(), /*isDef=*/false);
+      BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
+          .addReg(RegZ)
+          .add(LHS)
+          .addMBB(TBB);
       // We might extend the live range of Z, clear its kill flag to
       // account for this.
       MRI.clearKillFlags(RegZ);
-      modifyBranch();
+      MI.eraseFromParent();
       return true;
     }
   }

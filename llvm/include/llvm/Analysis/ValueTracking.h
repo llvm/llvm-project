@@ -311,11 +311,11 @@ LLVM_ABI std::optional<bool> computeKnownFPSignBit(const Value *V,
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is zero.
-bool canIgnoreSignBitOfZero(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfZero(const Use &U);
 
 /// Return true if the sign bit of the FP value can be ignored by the user when
 /// the value is NaN.
-bool canIgnoreSignBitOfNaN(const Use &U);
+LLVM_ABI bool canIgnoreSignBitOfNaN(const Use &U);
 
 /// If the specified value can be set by repeating the same byte in memory,
 /// return the i8 value that it is represented with. This is true for all i8

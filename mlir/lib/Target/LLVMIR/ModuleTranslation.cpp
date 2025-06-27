@@ -1922,7 +1922,7 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   if (!scopeInserted)
     return scopeIt->second;
   llvm::LLVMContext &ctx = llvmModule->getContext();
-  auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
+  auto dummy = llvm::MDNode::getTemporary(ctx, {});
   // Convert the domain metadata node if necessary.
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
