@@ -159,9 +159,9 @@ define void @global_gep_load_index(i32 %row, i32 %col, i32 %timeIndex) {
 define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 ; CHECK-LABEL: define void @global_incomplete_gep_chain(
 ; CHECK-SAME: i32 [[ROW:%.*]], i32 [[COL:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[COL]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[COL]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[ROW]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[ROW]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[DOTFLAT:%.*]] = getelementptr inbounds [24 x i32], ptr @a.1dim, i32 0, i32 [[TMP4]]
 ; CHECK-NOT: getelementptr inbounds [2 x [3 x [4 x i32]]]{{.*}}
