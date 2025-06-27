@@ -105,6 +105,7 @@
 #include "llvm/Transforms/Scalar/LoopDataPrefetch.h"
 #include "llvm/Transforms/Scalar/NaryReassociate.h"
 #include "llvm/Transforms/Scalar/SeparateConstOffsetFromGEP.h"
+#include "llvm/Transforms/Scalar/SinkGEPConstOffset.h"
 #include "llvm/Transforms/Scalar/Sink.h"
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Scalar/StructurizeCFG.h"
@@ -1236,6 +1237,7 @@ void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
   if (isPassEnabled(EnableLoopPrefetch, CodeGenOptLevel::Aggressive))
     addPass(createLoopDataPrefetchPass());
   addPass(createSeparateConstOffsetFromGEPPass());
+  addPass(createSinkGEPConstOffsetPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
   addPass(createStraightLineStrengthReducePass());
@@ -2304,6 +2306,8 @@ void AMDGPUCodeGenPassBuilder::addStraightLineScalarOptimizationPasses(
     addPass(LoopDataPrefetchPass());
 
   addPass(SeparateConstOffsetFromGEPPass());
+
+  addPass(SinkGEPConstOffsetPass());
 
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
