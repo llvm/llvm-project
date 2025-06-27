@@ -198,39 +198,6 @@ def AddLike: PatFrags<(ops node:$A, node:$B),
     return CurDAG->isBaseWithConstantOffset(SDValue(N, 0));
 }]>;
 
-def AddShl : PatFrag<(ops node:$Ra, node:$Rb, node:$SH3),
-                     (add node:$Ra, (shl node:$Rb, node:$SH3))>;
-
-def IntCCtoQCRISCVCC : SDNodeXForm<riscv_selectcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
-  int64_t Imm = cast<ConstantSDNode>(N->getOperand(1))->getSExtValue();
-  RISCVCC::CondCode BrCC;
-  switch (CC) {
-  default:
-   report_fatal_error("Unexpected CondCode for Xqcibi branch instructions");
-  case ISD::SETEQ:
-    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BEQI :  RISCVCC::COND_QC_E_BEQI;
-    break;
-  case ISD::SETNE:
-    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BNEI :  RISCVCC::COND_QC_E_BNEI;
-    break;
-  case ISD::SETLT:
-    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BLTI :  RISCVCC::COND_QC_E_BLTI;
-    break;
-  case ISD::SETGE:
-    BrCC = isInt<5>(Imm) ? RISCVCC::COND_QC_BGEI :  RISCVCC::COND_QC_E_BGEI;
-    break;
-  case ISD::SETULT:
-    BrCC = isUInt<5>(Imm) ? RISCVCC::COND_QC_BLTUI :  RISCVCC::COND_QC_E_BLTUI;
-    break;
-  case ISD::SETUGE:
-    BrCC = isUInt<5>(Imm) ? RISCVCC::COND_QC_BGEUI :  RISCVCC::COND_QC_E_BGEUI;
-    break;
-  }
-  return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
-}]>;
-
-
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -1327,12 +1294,14 @@ class QC48StPat<PatFrag StoreOp, RVInst48 Inst>
     : Pat<(StoreOp (i32 GPR:$rs2), (AddLike (i32 GPR:$rs1), simm26_nosimm12:$imm26)),
           (Inst GPR:$rs2, GPR:$rs1, simm26_nosimm12:$imm26)>;
 
+def AddrRegRegScale7 : AddrRegRegScale<7>;
+
 class QCScaledLdPat<PatFrag LoadOp, RVInst Inst>
-    : Pat<(i32 (LoadOp (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
+    : Pat<(i32 (LoadOp (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt))),
           (Inst GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 class QCScaledStPat<PatFrag StoreOp, RVInst Inst>
-    : Pat<(StoreOp (i32 GPR:$rd), (AddShl (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
+    : Pat<(StoreOp (i32 GPR:$rd), (AddrRegRegScale7 (i32 GPRMem:$rs1), (i32 GPRNoX0:$rs2), uimm3:$shamt)),
           (Inst GPR:$rd, GPRMem:$rs1, GPRNoX0:$rs2, uimm3:$shamt)>;
 
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
@@ -1353,7 +1322,7 @@ class SelectQCbi<CondCode Cond, DAGOperand InTyImm, Pseudo OpNode >
     : Pat<(riscv_selectcc_frag:$cc (i32 GPRNoX0:$lhs), InTyImm:$Constant, Cond,
                                    (i32 GPRNoX0:$truev), GPRNoX0:$falsev),
           (OpNode GPRNoX0:$lhs, InTyImm:$Constant,
-           (IntCCtoQCRISCVCC $cc), GPRNoX0:$truev, GPRNoX0:$falsev)>;
+           (IntCCtoRISCVCC $cc), GPRNoX0:$truev, GPRNoX0:$falsev)>;
 
 /// Simple arithmetic operations
 
