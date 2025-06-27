@@ -180,9 +180,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //   asinpi(x) = 1/2 - 2 * asinpi(sqrt(u))
 
   float16 u = fputil::multiply_add(-ONE_OVER_TWO, x, ONE_OVER_TWO);
-
   float16 asinpi_sqrt_u = __asinpi_polyeval(u);
-
   float16 result = fputil::multiply_add(-2.0f16, asinpi_sqrt_u, ONE_OVER_TWO);
 
   return fputil::cast<float16>(result);
