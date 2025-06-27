@@ -153,7 +153,7 @@ void Mangled::SetValue(ConstString name) {
 static ConstString GetSwiftDemangledStr(ConstString m_mangled,
                                         const SymbolContext *sc,
                                         ConstString &m_demangled) {
-  const char *mangled_name = m_mangled.GetCString();
+  const char *mangled_name = m_mangled.AsCString("");
   Log *log = GetLog(LLDBLog::Demangle);
   LLDB_LOGF(log, "demangle swift: %s", mangled_name);
   auto [demangled, info] = SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
