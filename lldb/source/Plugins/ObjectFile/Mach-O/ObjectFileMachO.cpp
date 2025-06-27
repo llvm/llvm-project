@@ -5854,8 +5854,7 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
         log,
         "Multiple 'process metadata' LC_NOTEs found, only using the first.");
 
-  offset_t payload_offset = std::get<0>(lc_notes[0]);
-  offset_t strsize = std::get<1>(lc_notes[0]);
+  auto [payload_offset, strsize] = lc_notes[0];
   std::string buf(strsize, '\0');
   if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
     LLDB_LOGF(log,
