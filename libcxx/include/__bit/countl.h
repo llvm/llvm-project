@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___BIT_COUNTL_H
 #define _LIBCPP___BIT_COUNTL_H
 
+#include <__bit/rotate.h>
 #include <__config>
 #include <__type_traits/integer_traits.h>
 #include <limits>
