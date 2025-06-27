@@ -6,13 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/workitem/clc_get_enqueued_local_size.h>
-#include <clc/workitem/clc_get_global_id.h>
 #include <clc/workitem/clc_get_global_offset.h>
-#include <clc/workitem/clc_get_group_id.h>
-#include <clc/workitem/clc_get_local_id.h>
 
-_CLC_OVERLOAD _CLC_DEF size_t __clc_get_global_id(uint dim) {
-  return __clc_get_group_id(dim) * __clc_get_enqueued_local_size(dim) +
-         __clc_get_local_id(dim) + __clc_get_global_offset(dim);
+#if __clang_major__ >= 8
+#define CONST_AS __constant
+#elif __clang_major__ >= 7
+#define CONST_AS __attribute__((address_space(4)))
+#else
+#define CONST_AS __attribute__((address_space(2)))
+#endif
+
+_CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_offset(uint dim) {
+  CONST_AS uint *ptr = (CONST_AS uint *)__builtin_amdgcn_implicitarg_ptr();
+  if (dim < 3)
+    return ptr[dim + 1];
+  return 0;
 }

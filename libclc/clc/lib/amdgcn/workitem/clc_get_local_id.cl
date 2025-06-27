@@ -6,11 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_WORKITEM_CLC_GET_ENQUEUED_NUM_SUB_GROUPS_H__
-#define __CLC_WORKITEM_CLC_GET_ENQUEUED_NUM_SUB_GROUPS_H__
+#include <clc/workitem/clc_get_local_id.h>
 
-#include <clc/internal/clc.h>
-
-_CLC_DEF _CLC_OVERLOAD uint __clc_get_enqueued_num_sub_groups();
-
-#endif // __CLC_WORKITEM_CLC_GET_ENQUEUED_NUM_SUB_GROUPS_H__
+_CLC_DEF _CLC_OVERLOAD size_t __clc_get_local_id(uint dim) {
+  switch (dim) {
+  case 0:
+    return __builtin_amdgcn_workitem_id_x();
+  case 1:
+    return __builtin_amdgcn_workitem_id_y();
+  case 2:
+    return __builtin_amdgcn_workitem_id_z();
+  default:
+    return 1;
+  }
+}

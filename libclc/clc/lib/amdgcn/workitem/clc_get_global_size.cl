@@ -6,9 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/workitem/get_enqueued_num_sub_groups.h>
-#include <clc/workitem/clc_get_enqueued_num_sub_groups.h>
+#include <clc/workitem/clc_get_global_size.h>
 
-_CLC_OVERLOAD _CLC_DEF uint get_enqueued_num_sub_groups() {
-  return __clc_get_enqueued_num_sub_groups();
+_CLC_DEF _CLC_OVERLOAD size_t __clc_get_global_size(uint dim) {
+  switch (dim) {
+  case 0:
+    return __builtin_amdgcn_grid_size_x();
+  case 1:
+    return __builtin_amdgcn_grid_size_y();
+  case 2:
+    return __builtin_amdgcn_grid_size_z();
+  default:
+    return 1;
+  }
 }
