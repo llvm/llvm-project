@@ -969,6 +969,7 @@ def InferredNoReturn : InheritableAttr {
   let Spellings = []; 
   let SemaHandler = 0;
   let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Documentation = [InternalOnly];
 }
 
 def Annotate : InheritableParamOrStmtAttr {
