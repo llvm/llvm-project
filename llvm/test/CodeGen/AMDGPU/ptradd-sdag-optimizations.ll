@@ -100,7 +100,7 @@ define void @baseptr_null(i64 %offset, i8 %v) {
 
 ; Taken from implicit-kernarg-backend-usage.ll, tests the PTRADD handling in the
 ; assertalign DAG combine.
-define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr)  #0 {
+define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr) {
 ; GFX942-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
@@ -416,6 +416,60 @@ entry:
   ret void
 }
 
+; Check that ptradds can be lowered to disjoint ORs.
+define ptr @gep_disjoint_or(ptr %base) {
+; GFX942-LABEL: gep_disjoint_or:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-NEXT:    v_and_or_b32 v0, v0, -16, 4
+; GFX942-NEXT:    s_setpc_b64 s[30:31]
+  %p = call ptr @llvm.ptrmask(ptr %base, i64 s0xf0)
+  %gep = getelementptr nuw inbounds i8, ptr %p, i64 4
+  ret ptr %gep
+}
+
+; Check that AssertAlign nodes between ptradd nodes don't block offset folding,
+; taken from preload-implicit-kernargs.ll
+define amdgpu_kernel void @random_incorrect_offset(ptr addrspace(1) inreg %out) #0 {
+; GFX942_PTRADD-LABEL: random_incorrect_offset:
+; GFX942_PTRADD:       ; %bb.1:
+; GFX942_PTRADD-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX942_PTRADD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    s_branch .LBB21_0
+; GFX942_PTRADD-NEXT:    .p2align 8
+; GFX942_PTRADD-NEXT:  ; %bb.2:
+; GFX942_PTRADD-NEXT:  .LBB21_0:
+; GFX942_PTRADD-NEXT:    s_load_dword s0, s[0:1], 0xa
+; GFX942_PTRADD-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942_PTRADD-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_PTRADD-NEXT:    v_mov_b32_e32 v1, s0
+; GFX942_PTRADD-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX942_PTRADD-NEXT:    s_endpgm
+;
+; GFX942_LEGACY-LABEL: random_incorrect_offset:
+; GFX942_LEGACY:       ; %bb.1:
+; GFX942_LEGACY-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
+; GFX942_LEGACY-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    s_branch .LBB21_0
+; GFX942_LEGACY-NEXT:    .p2align 8
+; GFX942_LEGACY-NEXT:  ; %bb.2:
+; GFX942_LEGACY-NEXT:  .LBB21_0:
+; GFX942_LEGACY-NEXT:    s_mov_b32 s4, 8
+; GFX942_LEGACY-NEXT:    s_load_dword s0, s[0:1], s4 offset:0x2
+; GFX942_LEGACY-NEXT:    v_mov_b32_e32 v0, 0
+; GFX942_LEGACY-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942_LEGACY-NEXT:    v_mov_b32_e32 v1, s0
+; GFX942_LEGACY-NEXT:    global_store_dword v0, v1, s[2:3]
+; GFX942_LEGACY-NEXT:    s_endpgm
+  %imp_arg_ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep = getelementptr i8, ptr addrspace(4) %imp_arg_ptr, i32 2
+  %load = load i32, ptr addrspace(4) %gep
+  store i32 %load, ptr addrspace(1) %out
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p4.i64(ptr noalias nocapture writeonly, ptr addrspace(4) noalias nocapture readonly, i64, i1 immarg)
 
 !0 = !{}
+
+attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
