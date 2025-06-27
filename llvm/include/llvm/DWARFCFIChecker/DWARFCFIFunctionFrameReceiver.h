@@ -30,18 +30,18 @@ public:
   CFIFunctionFrameReceiver(const CFIFunctionFrameReceiver &) = delete;
   CFIFunctionFrameReceiver &
   operator=(const CFIFunctionFrameReceiver &) = delete;
-  virtual ~CFIFunctionFrameReceiver();
+  virtual ~CFIFunctionFrameReceiver() = default;
 
   CFIFunctionFrameReceiver(MCContext &Context) : Context(Context) {}
 
   MCContext &getContext() const { return Context; }
 
   virtual void startFunctionUnit(bool IsEH,
-                                 ArrayRef<MCCFIInstruction> Prologue);
+                                 ArrayRef<MCCFIInstruction> Prologue) {}
   virtual void
   emitInstructionAndDirectives(const MCInst &Inst,
-                               ArrayRef<MCCFIInstruction> Directives);
-  virtual void finishFunctionUnit();
+                               ArrayRef<MCCFIInstruction> Directives) {}
+  virtual void finishFunctionUnit() {}
 };
 
 } // namespace llvm

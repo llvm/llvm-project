@@ -46,14 +46,13 @@ public:
 
 private:
   void checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
-                    const dwarf::UnwindTable::const_iterator &PrevRow,
-                    const dwarf::UnwindTable::const_iterator &NextRow,
+                    const dwarf::UnwindRow *PrevRow,
+                    const dwarf::UnwindRow *NextRow,
                     const SmallSet<DWARFRegNum, 4> &Reads,
                     const SmallSet<DWARFRegNum, 4> &Writes);
 
-  void checkCFADiff(const MCInst &Inst,
-                    const dwarf::UnwindTable::const_iterator &PrevRow,
-                    const dwarf::UnwindTable::const_iterator &NextRow,
+  void checkCFADiff(const MCInst &Inst, const dwarf::UnwindRow *PrevRow,
+                    const dwarf::UnwindRow *NextRow,
                     const SmallSet<DWARFRegNum, 4> &Reads,
                     const SmallSet<DWARFRegNum, 4> &Writes);
 };

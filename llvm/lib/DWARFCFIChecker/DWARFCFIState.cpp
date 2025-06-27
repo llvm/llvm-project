@@ -18,12 +18,17 @@
 
 using namespace llvm;
 
-std::optional<dwarf::UnwindTable::const_iterator>
+DWARFCFIState::~DWARFCFIState() {
+  for (auto &&Row : Table)
+    delete Row;
+}
+
+std::optional<const dwarf::UnwindRow *>
 DWARFCFIState::getCurrentUnwindRow() const {
   if (!Table.size())
     return std::nullopt;
 
-  return --Table.end();
+  return *(--Table.end());
 }
 
 void DWARFCFIState::update(const MCCFIInstruction &Directive) {
@@ -33,16 +38,18 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
 
   // This is a copy of the last row of the table (or a new empty row), its value
   // will be updated by `parseRows`.
-  dwarf::UnwindRow NewRow = MaybeCurrentRow.has_value()
-                                ? *(MaybeCurrentRow.value())
-                                : dwarf::UnwindRow();
+  dwarf::UnwindRow *NewRow = nullptr;
+  if (MaybeCurrentRow)
+    NewRow = new dwarf::UnwindRow(*(MaybeCurrentRow.value()));
+  else
+    NewRow = new dwarf::UnwindRow();
 
   // `parseRows` updates the current row by applying the `CFIProgram` to it.
   // During this process, it may create multiple rows that should be placed in
   // the unwinding table, preceding the newly updated row and following the
   // previous rows. These middle rows are stored in `PrecedingRows`.
   dwarf::UnwindTable::RowContainer PrecedingRows;
-  if (Error Err = parseRows(CFIP, NewRow, nullptr).moveInto(PrecedingRows)) {
+  if (Error Err = parseRows(CFIP, *NewRow, nullptr).moveInto(PrecedingRows)) {
     Context->reportError(
         Directive.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
@@ -52,7 +59,8 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
     return;
   }
 
-  Table.insert(Table.end(), PrecedingRows.begin(), PrecedingRows.end());
+  for (auto &&PrecedingRow : PrecedingRows)
+    Table.push_back(new dwarf::UnwindRow(PrecedingRow));
   Table.push_back(NewRow);
 }
 

@@ -26,13 +26,14 @@ using DWARFRegNum = uint32_t;
 class DWARFCFIState {
 public:
   DWARFCFIState(MCContext *Context) : Context(Context) {};
+  ~DWARFCFIState();
 
-  std::optional<dwarf::UnwindTable::const_iterator> getCurrentUnwindRow() const;
+  std::optional<const dwarf::UnwindRow *> getCurrentUnwindRow() const;
   void update(const MCCFIInstruction &Directive);
 
 private:
   MCContext *Context;
-  dwarf::UnwindTable::RowContainer Table;
+  std::vector<dwarf::UnwindRow *> Table;
 
   dwarf::CFIProgram convert(MCCFIInstruction Directive);
 };
