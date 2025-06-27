@@ -522,15 +522,14 @@ TEST_F(LexerTest, GetBeginningOfTokenWithEscapedNewLine) {
   std::vector<Token> LexedTokens = CheckLex(TextToLex, ExpectedTokens);
 
   for (const Token &Tok : LexedTokens) {
-    std::pair<FileID, unsigned> OriginalLocation =
+    FileIDAndOffset OriginalLocation =
         SourceMgr.getDecomposedLoc(Tok.getLocation());
     for (unsigned Offset = 0; Offset < IdentifierLength; ++Offset) {
       SourceLocation LookupLocation =
           Tok.getLocation().getLocWithOffset(Offset);
 
-      std::pair<FileID, unsigned> FoundLocation =
-          SourceMgr.getDecomposedExpansionLoc(
-              Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
+      FileIDAndOffset FoundLocation = SourceMgr.getDecomposedExpansionLoc(
+          Lexer::GetBeginningOfToken(LookupLocation, SourceMgr, LangOpts));
 
       // Check that location returned by the GetBeginningOfToken
       // is the same as original token location reported by Lexer.

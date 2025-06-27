@@ -1011,8 +1011,8 @@ bool CXIndexDataConsumer::markEntityOccurrenceInFile(const NamedDecl *D,
 
   SourceManager &SM = Ctx->getSourceManager();
   D = getEntityDecl(D);
-  
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
+
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
   FileID FID = LocInfo.first;
   if (FID.isInvalid())
     return true;
@@ -1093,7 +1093,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
   SourceManager &SM = Ctx->getSourceManager();
   Loc = SM.getFileLoc(Loc);
 
-  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+  FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
   FileID FID = LocInfo.first;
   unsigned FileOffset = LocInfo.second;
 
