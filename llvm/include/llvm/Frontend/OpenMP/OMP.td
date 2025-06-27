@@ -960,6 +960,8 @@ def OMP_Parallel : Directive<[Spelling<"parallel">]> {
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NumThreads>,
     VersionedClause<OMPC_ProcBind>,
+    VersionedClause<OMPC_Message>,
+    VersionedClause<OMPC_Severity>,
   ];
   let association = AS_Block;
   let category = CA_Executable;
