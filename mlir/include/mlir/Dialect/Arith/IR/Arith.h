@@ -56,8 +56,6 @@ public:
   using arith::ConstantOp::ConstantOp;
   static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
 
-  using arith::ConstantOp::build;
-
   /// Build a constant int op that produces an integer of the specified width.
   static void build(OpBuilder &builder, OperationState &result, int64_t value,
                     unsigned width);
@@ -83,8 +81,6 @@ class ConstantFloatOp : public arith::ConstantOp {
 public:
   using arith::ConstantOp::ConstantOp;
   static ::mlir::TypeID resolveTypeID() { return TypeID::get<ConstantOp>(); }
-
-  using arith::ConstantOp::build;
 
   /// Build a constant float op that produces a float of the specified type.
   static void build(OpBuilder &builder, OperationState &result,
