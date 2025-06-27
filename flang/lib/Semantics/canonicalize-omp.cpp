@@ -187,10 +187,9 @@ private:
             ++endIt;
           }
           RewriteOpenMPLoopConstruct(*ompLoopCons, block, nextIt);
-          auto &ompLoop =
-              std::get<std::optional<parser::NestedConstruct>>(x.t);
-          ompLoop = std::optional<parser::NestedConstruct>{
-              parser::NestedConstruct{
+          auto &ompLoop = std::get<std::optional<parser::NestedConstruct>>(x.t);
+          ompLoop =
+              std::optional<parser::NestedConstruct>{parser::NestedConstruct{
                   common::Indirection{std::move(*ompLoopCons)}}};
           nextIt = block.erase(nextIt);
         } else {
