@@ -392,58 +392,82 @@ let Latency = 4 in {
   def : WriteRes<WriteFMovI32ToF32, [SMX60_IEU]>;
 }
 
-// 7. Vector Loads and Stores
-// TODO
+// 6. Configuration-Setting Instructions
 def : WriteRes<WriteVSETVLI, [SMX60_IEUA]>;
 def : WriteRes<WriteVSETIVLI, [SMX60_IEUA]>;
 def : WriteRes<WriteVSETVL, [SMX60_IEUA]>;
 
+// 7. Vector Loads and Stores
+// TODO: These latencies are estimations and are not confirmed experimentally
 foreach mx = SchedMxList in {
   defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
 
-  defm "" : LMULWriteResMX<"WriteVLDE",  [SMX60_VLS], mx, IsWorstCase>;
-  defm "" : LMULWriteResMX<"WriteVLDFF", [SMX60_VLS], mx, IsWorstCase>;
+  // Unit-stride loads and stores
+  let Latency = SMX60GetBasicLatency<mx>.c in {
+    defm "" : LMULWriteResMX<"WriteVLDE",  [SMX60_VLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVLDFF", [SMX60_VLS], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVSTE",  [SMX60_VLS], mx, IsWorstCase>;
+  }
 
-  defm "" : LMULWriteResMX<"WriteVSTE",  [SMX60_VLS], mx, IsWorstCase>;
+  // Mask loads and stores
+  let Latency = 3 in {
+    defm "" : LMULWriteResMX<"WriteVLDM",  [SMX60_VLS], mx, IsWorstCase=!eq(mx, "M1")>;
+    defm "" : LMULWriteResMX<"WriteVSTM",  [SMX60_VLS], mx, IsWorstCase=!eq(mx, "M1")>;
+  }
 
-  defm "" : LMULWriteResMX<"WriteVLDM",  [SMX60_VLS], mx, IsWorstCase=!eq(mx, "M1")>;
-  defm "" : LMULWriteResMX<"WriteVSTM",  [SMX60_VLS], mx, IsWorstCase=!eq(mx, "M1")>;
-
+  // Strided and indexed loads and stores: scale with both LMUL and EEW
   foreach eew = [8, 16, 32, 64] in {
-    defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+    defvar EEWMultiplier = !div(eew, 8);
+    defvar StridedLatency = !mul(SMX60GetArithmeticLatency<mx>.c, EEWMultiplier);
+    let Latency = StridedLatency in {
+      defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
 
-    defm "" : LMULWriteResMX<"WriteVSTS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTS"  # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTUX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTOX" # eew, [SMX60_VLS], mx, IsWorstCase>;
+    }
   }
 }
 
+// Segmented loads and stores: base latency multiplied by number of fields
+// TODO: These latencies are estimations and are not confirmed experimentally
 foreach mx = SchedMxList in {
   foreach nf=2-8 in {
     foreach eew = [8, 16, 32, 64] in {
       defvar IsWorstCase = SMX60IsWorstCaseMX<mx, SchedMxList>.c;
+      defvar EEWMultiplier = !div(eew, 8);
+      defvar StridedLatency = !mul(SMX60GetArithmeticLatency<mx>.c, EEWMultiplier);
 
-      defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" #eew,   [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" #eew,  [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+      // Unit-stride segmented
+      let Latency = !mul(SMX60GetBasicLatency<mx>.c, nf) in {
+        defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" #eew,   [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" #eew,   [SMX60_VLS], mx, IsWorstCase>;
+      }
 
-      defm "" : LMULWriteResMX<"WriteVSSEG" # nf # "e" #eew,   [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" #eew,  [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
-      defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+      // Strided/indexed segmented
+      let Latency = !mul(StridedLatency, nf) in {
+        defm "" : LMULWriteResMX<"WriteVLSSEG" # nf # "e" #eew,  [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVLOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+
+        defm "" : LMULWriteResMX<"WriteVSSSEG" # nf # "e" #eew,  [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSUXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+        defm "" : LMULWriteResMX<"WriteVSOXSEG" # nf # "e" #eew, [SMX60_VLS], mx, IsWorstCase>;
+      }
     }
   }
 }
 
 // Whole register move/load/store
-// TODO
+// TODO: These latencies are estimations and are not confirmed experimentally
 foreach LMul = [1, 2, 4, 8] in {
-  def : WriteRes<!cast<SchedWrite>("WriteVLD" # LMul # "R"), [SMX60_VLS]>;
-  def : WriteRes<!cast<SchedWrite>("WriteVST" # LMul # "R"), [SMX60_VLS]>;
+  let Latency = SMX60GetProgressiveLatency<!strconcat("M", !cast<string>(LMul))>.c in {
+    def : WriteRes<!cast<SchedWrite>("WriteVLD" # LMul # "R"), [SMX60_VLS]>;
+    def : WriteRes<!cast<SchedWrite>("WriteVST" # LMul # "R"), [SMX60_VLS]>;
+  }
 }
 
 let Latency = 4 in {
