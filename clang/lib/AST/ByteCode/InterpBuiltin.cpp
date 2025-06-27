@@ -96,10 +96,21 @@ static void pushInteger(InterpState &S, T Val, QualType QT) {
                 QT);
 }
 
-static void assignInteger(const Pointer &Dest, PrimType ValueT,
+static void assignInteger(InterpState &S, const Pointer &Dest, PrimType ValueT,
                           const APSInt &Value) {
-  INT_TYPE_SWITCH_NO_BOOL(
-      ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+
+  if (ValueT == PT_IntAPS) {
+    Dest.deref<IntegralAP<true>>() =
+        S.allocAP<IntegralAP<true>>(Value.getBitWidth());
+    Dest.deref<IntegralAP<true>>().copy(Value);
+  } else if (ValueT == PT_IntAP) {
+    Dest.deref<IntegralAP<false>>() =
+        S.allocAP<IntegralAP<false>>(Value.getBitWidth());
+    Dest.deref<IntegralAP<false>>().copy(Value);
+  } else {
+    INT_TYPE_SWITCH_NO_BOOL(
+        ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
+  }
 }
 
 static QualType getElemType(const Pointer &P) {
@@ -544,8 +555,8 @@ static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
   APSInt FPClassArg = popToAPSInt(S.Stk, FPClassArgT);
   const Floating &F = S.Stk.pop<Floating>();
 
-  int32_t Result =
-      static_cast<int32_t>((F.classify() & FPClassArg).getZExtValue());
+  int32_t Result = static_cast<int32_t>(
+      (F.classify() & std::move(FPClassArg)).getZExtValue());
   pushInteger(S, Result, Call->getType());
 
   return true;
@@ -845,11 +856,11 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
     if (!APSInt::isSameValue(Temp, Result))
       Overflow = true;
-    Result = Temp;
+    Result = std::move(Temp);
   }
 
   // Write Result to ResultPtr and put Overflow on the stack.
-  assignInteger(ResultPtr, ResultT, Result);
+  assignInteger(S, ResultPtr, ResultT, Result);
   ResultPtr.initialize();
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -902,7 +913,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(CarryOutPtr, CarryOutT, CarryOut);
+  assignInteger(S, CarryOutPtr, CarryOutT, CarryOut);
   CarryOutPtr.initialize();
 
   assert(Call->getType() == Call->getArg(0)->getType());
@@ -1124,17 +1135,17 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
 
   if (isIntegralType(FirstArgT)) {
     const APSInt &Src = popToAPSInt(S.Stk, FirstArgT);
-    APSInt Align = Alignment.extOrTrunc(Src.getBitWidth());
+    APInt AlignMinusOne = Alignment.extOrTrunc(Src.getBitWidth()) - 1;
     if (BuiltinOp == Builtin::BI__builtin_align_up) {
       APSInt AlignedVal =
-          APSInt((Src + (Align - 1)) & ~(Align - 1), Src.isUnsigned());
+          APSInt((Src + AlignMinusOne) & ~AlignMinusOne, Src.isUnsigned());
       pushInteger(S, AlignedVal, Call->getType());
     } else if (BuiltinOp == Builtin::BI__builtin_align_down) {
-      APSInt AlignedVal = APSInt(Src & ~(Align - 1), Src.isUnsigned());
+      APSInt AlignedVal = APSInt(Src & ~AlignMinusOne, Src.isUnsigned());
       pushInteger(S, AlignedVal, Call->getType());
     } else {
       assert(*S.Ctx.classify(Call->getType()) == PT_Bool);
-      S.Stk.push<Boolean>((Src & (Align - 1)) == 0);
+      S.Stk.push<Boolean>((Src & AlignMinusOne) == 0);
     }
     return true;
   }
@@ -1414,7 +1425,7 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(CarryOutPtr, CarryOutT, APSInt(Result, true));
+  assignInteger(S, CarryOutPtr, CarryOutT, APSInt(std::move(Result), true));
 
   pushInteger(S, CarryOut, Call->getType());
 
@@ -1478,7 +1489,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     // The std::nothrow_t arg never gets put on the stack.
     if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
       --NumArgs;
-    auto Args = llvm::ArrayRef(Call->getArgs(), Call->getNumArgs());
+    auto Args = ArrayRef(Call->getArgs(), Call->getNumArgs());
     // First arg is needed.
     Args = Args.drop_front();
 
@@ -2626,8 +2637,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
-                       llvm::ArrayRef<int64_t> ArrayIndices,
-                       int64_t &IntResult) {
+                       ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

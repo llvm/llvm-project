@@ -604,19 +604,20 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                           VectorType *Tp, ArrayRef<int> Mask,
+                                           VectorType *DstTy, VectorType *SrcTy,
+                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
 
   InstructionCost CostFactor =
-      vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);
+      vectorCostAdjustmentFactor(Instruction::ShuffleVector, SrcTy, nullptr);
   if (!CostFactor.isValid())
     return InstructionCost::getMax();
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant

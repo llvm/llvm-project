@@ -491,8 +491,8 @@ analyzeModule(Module &M) {
 
   for (const auto &RSDefNode : RootSignatureNode->operands()) {
     if (RSDefNode->getNumOperands() != 3) {
-      reportError(Ctx, "Invalid format for Root Signature Definition. Pairs "
-                       "of function, root signature expected.");
+      reportError(Ctx, "Invalid Root Signature metadata - expected function, "
+                       "signature, and version.");
       continue;
     }
 

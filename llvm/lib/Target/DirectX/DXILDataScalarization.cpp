@@ -117,19 +117,23 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
   return nullptr; // Not found
 }
 
-static bool isArrayOfVectors(Type *T) {
+// Helper function to check if a type is a vector or an array of vectors
+static bool isVectorOrArrayOfVectors(Type *T) {
+  if (isa<VectorType>(T))
+    return true;
   if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
-    return isa<VectorType>(ArrType->getElementType());
+    return isa<VectorType>(ArrType->getElementType()) ||
+           isVectorOrArrayOfVectors(ArrType->getElementType());
   return false;
 }
 
 bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
-  if (!isArrayOfVectors(AI.getAllocatedType()))
+  Type *AllocatedType = AI.getAllocatedType();
+  if (!isVectorOrArrayOfVectors(AllocatedType))
     return false;
 
-  ArrayType *ArrType = cast<ArrayType>(AI.getAllocatedType());
   IRBuilder<> Builder(&AI);
-  Type *NewType = equivalentArrayTypeFromVector(ArrType);
+  Type *NewType = equivalentArrayTypeFromVector(AllocatedType);
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
   ArrAlloca->setAlignment(AI.getAlign());
@@ -308,9 +312,8 @@ bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
     NeedsTransform = true;
   } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
     Type *AllocatedType = Alloca->getAllocatedType();
-    // OrigGEPType might just be a pointer lets make sure
-    // to add the allocated type so we have a size
-    if (AllocatedType != OrigGEPType) {
+    // Only transform if the allocated type is an array
+    if (AllocatedType != OrigGEPType && isa<ArrayType>(AllocatedType)) {
       NewGEPType = AllocatedType;
       NeedsTransform = true;
     }

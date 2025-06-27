@@ -1497,6 +1497,14 @@ public:
     MMO->refineAlignment(NewMMO);
   }
 
+  void refineRanges(const MachineMemOperand *NewMMO) {
+    // If this node has range metadata that is different than NewMMO, clear the
+    // range metadata.
+    // FIXME: Union the ranges instead?
+    if (getRanges() && getRanges() != NewMMO->getRanges())
+      MMO->clearRanges();
+  }
+
   const SDValue &getChain() const { return getOperand(0); }
 
   const SDValue &getBasePtr() const {
@@ -1700,9 +1708,9 @@ public:
 
   static int getSplatMaskIndex(ArrayRef<int> Mask) {
     assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
-    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
-      if (Mask[i] >= 0)
-        return Mask[i];
+    for (int Elem : Mask)
+      if (Elem >= 0)
+        return Elem;
 
     // We can choose any index value here and be correct because all elements
     // are undefined. Return 0 for better potential for callers to simplify.

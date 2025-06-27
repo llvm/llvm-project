@@ -21,12 +21,30 @@ add_object_library(
 )
 
 add_object_library(
+  wcrtomb
+  HDRS
+    wcrtomb.h
+  SRCS 
+    wcrtomb.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.error_or
+    libc.src.__support.common
+    .character_converter
+    .mbstate
+)
+
+add_object_library(
   mbrtowc
   HDRS
     mbrtowc.h
   SRCS
     mbrtowc.cpp
   DEPENDS
+  libc.hdr.errno_macros
   libc.hdr.types.wchar_t
   libc.hdr.types.size_t
   libc.src.__support.common
