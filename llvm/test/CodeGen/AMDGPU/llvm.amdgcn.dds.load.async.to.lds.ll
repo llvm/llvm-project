@@ -100,7 +100,8 @@ entry:
 define amdgpu_ps void @dds_load_async_to_lds_b32_saddr_scale_offset(ptr addrspace(11) inreg %gaddr, ptr addrspace(3) %laddr, i32 %idx) {
 ; GFX13-LABEL: dds_load_async_to_lds_b32_saddr_scale_offset:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    dds_load_async_to_lds_b32 v0, v1, s0 offset:16 scale_offset th:TH_LOAD_NT
+; GFX13-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GFX13-NEXT:    dds_load_async_to_lds_b32 v0, v1, s0 offset:16 th:TH_LOAD_NT
 ; GFX13-NEXT:    s_endpgm
 entry:
   %idxprom = sext i32 %idx to i64

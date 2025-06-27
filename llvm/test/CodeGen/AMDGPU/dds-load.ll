@@ -89,7 +89,8 @@ define amdgpu_ps float @dds_load_saddr_f32_natural_addressing(ptr addrspace(11) 
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    dds_load_b32 v0, v0, off
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
-; GFX13-NEXT:    dds_load_b32 v0, v0, s0 scale_offset
+; GFX13-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX13-NEXT:    dds_load_b32 v0, v0, s0
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    ; return to shader part epilog
   %voffset = load i32, ptr addrspace(11) %voffset.ptr

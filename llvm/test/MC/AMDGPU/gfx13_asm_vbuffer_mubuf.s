@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding < %s | FileCheck -check-prefix=GFX13 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding -mattr=+atomic-minmax-with-payload < %s | FileCheck -check-prefix=GFX13 %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX1250-ERR --strict-whitespace %s
 
 buffer_load_b32 v5, off, s[8:11], s3 offset:8388607

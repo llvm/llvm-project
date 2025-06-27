@@ -314,20 +314,24 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 #endif /* LLPC_BUILD_NPI */
   int64_t Imm;
   if (MO.isExpr()) {
-    const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
-    if (!C)
 #if LLPC_BUILD_NPI
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
       return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
               OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
                  ? 254
                  : 255;
 #else /* LLPC_BUILD_NPI */
+    const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
+    if (!C)
       return 255;
-#endif /* LLPC_BUILD_NPI */
 
     Imm = C->getValue();
+#endif /* LLPC_BUILD_NPI */
   } else {
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
     assert(!MO.isDFPImm());
 
     if (!MO.isImm())

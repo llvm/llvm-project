@@ -166,8 +166,9 @@ private:
                            SDValue &Offset) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
 #if LLPC_BUILD_NPI
-                         SDValue &VOffset, SDValue &Offset,
-                         bool &ScaleOffset, bool NeedIOffset = true) const;
+                         SDValue &VOffset, SDValue &Offset, bool &ScaleOffset,
+                         bool NeedIOffset = true,
+                         bool NeedScaleOffset = true) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
@@ -184,6 +185,11 @@ private:
                                   SDValue &VOffset, SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
                                     SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoScaleOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                      SDValue &VOffset, SDValue &Offset,
+                                      SDValue &CPol) const;
+  bool SelectGlobalSAddrNoIOffsetScaleOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                  SDValue &VOffset, SDValue &CPol) const;
 #else /* LLPC_BUILD_NPI */
                          SDValue &VOffset, SDValue &Offset) const;
 #endif /* LLPC_BUILD_NPI */

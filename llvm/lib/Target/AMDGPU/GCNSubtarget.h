@@ -325,6 +325,9 @@ protected:
   bool HasLdsBarrierArriveAtomic = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasSetPrioIncWgInst = false;
+#if LLPC_BUILD_NPI
+  bool HasAtomicMinMaxWithPayload = false;
+#endif /* LLPC_BUILD_NPI */
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1619,6 +1622,8 @@ public:
 
 #if LLPC_BUILD_NPI
   bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
+
+  bool hasAtomicMinMaxWithPayload() const { return HasAtomicMinMaxWithPayload; }
 
 #endif /* LLPC_BUILD_NPI */
   /// \returns The maximum number of instructions that can be enclosed in an

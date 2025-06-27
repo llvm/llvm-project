@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -disassemble -show-encoding < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -disassemble -show-encoding -mattr=+atomic-minmax-with-payload < %s | FileCheck -strict-whitespace -check-prefix=GFX13 %s
 
 # GFX13: global_load_async_mcast_to_lds_b8 v1, v[2:3], off ; encoding: [0x7c,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00]
 0x7c,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x00,0x00,0x00

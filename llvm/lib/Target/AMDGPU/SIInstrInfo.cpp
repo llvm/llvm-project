@@ -381,6 +381,12 @@ static bool isRTSOpc(unsigned op) {
   case AMDGPU::RTS_RAY_SAVE:
   case AMDGPU::RTS_RAY_RESTORE:
   case AMDGPU::RTS_UPDATE_RAY:
+  case AMDGPU::RTS_TRACE_RAY:
+  case AMDGPU::RTS_TRACE_RAY_NONBLOCK:
+  case AMDGPU::RTS_READ_VERTEX:
+  case AMDGPU::RTS_READ_VERTEX_COORDS:
+  case AMDGPU::RTS_READ_PACKET_INFO:
+  case AMDGPU::RTS_READ_PRIM_INFO:
     return true;
   default:
     return false;

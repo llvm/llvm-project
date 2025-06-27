@@ -277,7 +277,7 @@ private:
   InstructionSelector::ComplexRendererFns
 #if LLPC_BUILD_NPI
   selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
-                    bool NeedIOffset = true) const;
+                    bool NeedIOffset = true, bool NeedScaleOffset = true) const;
   InstructionSelector::ComplexRendererFns
 #endif /* LLPC_BUILD_NPI */
   selectGlobalSAddr(MachineOperand &Root) const;
@@ -291,7 +291,11 @@ private:
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetScaleOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoScaleOffset(MachineOperand &Root) const;
 #endif /* LLPC_BUILD_NPI */
 
   InstructionSelector::ComplexRendererFns

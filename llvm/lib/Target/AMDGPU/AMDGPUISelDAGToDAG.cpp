@@ -1953,7 +1953,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
 #if LLPC_BUILD_NPI
                                            SDValue &Offset,
                                            bool &ScaleOffset,
-                                           bool NeedIOffset) const {
+                                           bool NeedIOffset,
+                                           bool NeedScaleOffset) const {
 #else /* LLPC_BUILD_NPI */
                                            SDValue &Offset) const {
 #endif /* LLPC_BUILD_NPI */
@@ -2039,7 +2040,9 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
 #if LLPC_BUILD_NPI
       // add (i64 sgpr), (*_extend (i32 vgpr))
       RHS = Addr.getOperand(1);
-      ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
+      if (NeedScaleOffset)
+        ScaleOffset =
+            SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
       if (SDValue ExtRHS =
               matchExtFromI32orI32(RHS, Subtarget->hasSignedGVSOffset(),
                                    CurDAG)) {
@@ -2062,7 +2065,9 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     if (!SAddr && !RHS->isDivergent()) {
 #if LLPC_BUILD_NPI
       // add (*_extend (i32 vgpr)), (i64 sgpr)
-      ScaleOffset = SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
+      if (NeedScaleOffset)
+        ScaleOffset =
+            SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
       if (SDValue ExtLHS =
               matchExtFromI32orI32(LHS, Subtarget->hasSignedGVSOffset(),
                                    CurDAG)) {
@@ -2205,6 +2210,24 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffset(SDNode *N,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetScaleOffset(SDNode *N,
+                                                    SDValue Addr,
+                                                    SDValue &SAddr,
+                                                    SDValue &VOffset,
+                                                    SDValue &CPol) const {
+  bool ScaleOffset;
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false, false))
+    return false;
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 1) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetM0(SDNode *N,
                                                       SDValue Addr,
                                                       SDValue &SAddr,
@@ -2243,6 +2266,23 @@ static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
   return SAddr;
 }
 
+#if LLPC_BUILD_NPI
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoScaleOffset(SDNode *N,
+                                           SDValue Addr,
+                                           SDValue &SAddr,
+                                           SDValue &VOffset,
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset, true, false))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(0,
+                                   SDLoc(), MVT::i32);
+  return true;
+}
+
+#endif /* LLPC_BUILD_NPI */
 // Match (32-bit SGPR base) + sext(imm offset)
 bool AMDGPUDAGToDAGISel::SelectScratchSAddr(SDNode *Parent, SDValue Addr,
                                             SDValue &SAddr,
@@ -4958,6 +4998,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
   if ((Mods & SISrcMods::ABS) == 0) {
     unsigned ModsTmp;
     SelectVOP3ModsImpl(Src, Src, ModsTmp);
+
+    if ((ModsTmp & SISrcMods::NEG) != 0)
+      Mods ^= SISrcMods::NEG;
 #else /* LLPC_BUILD_NPI */
       if ((ModsTmp & SISrcMods::ABS) != 0)
         Mods |= SISrcMods::ABS;
@@ -4965,8 +5008,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-    if ((ModsTmp & SISrcMods::NEG) != 0)
-      Mods ^= SISrcMods::NEG;
+    if ((ModsTmp & SISrcMods::ABS) != 0)
+      Mods |= SISrcMods::ABS;
+  }
 #else /* LLPC_BUILD_NPI */
     // op_sel/op_sel_hi decide the source type and source.
     // If the source's op_sel_hi is set, it indicates to do a conversion from fp16.
@@ -4975,9 +5019,10 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-    if ((ModsTmp & SISrcMods::ABS) != 0)
-      Mods |= SISrcMods::ABS;
-  }
+  // op_sel/op_sel_hi decide the source type and source.
+  // If the source's op_sel_hi is set, it indicates to do a conversion from
+  // fp16. If the sources's op_sel is set, it picks the high half of the source
+  // register.
 #else /* LLPC_BUILD_NPI */
     Mods |= SISrcMods::OP_SEL_1;
     if (isExtractHiElt(Src, Src)) {
@@ -4985,21 +5030,16 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  // op_sel/op_sel_hi decide the source type and source.
-  // If the source's op_sel_hi is set, it indicates to do a conversion from
-  // fp16. If the sources's op_sel is set, it picks the high half of the source
-  // register.
+  Mods |= SISrcMods::OP_SEL_1;
+  if (IsExtractHigh ||
+      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
+    Mods |= SISrcMods::OP_SEL_0;
 #else /* LLPC_BUILD_NPI */
       // TODO: Should we try to look for neg/abs here?
     }
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
-  Mods |= SISrcMods::OP_SEL_1;
-  if (IsExtractHigh ||
-      (Src.getValueSizeInBits() == 16 && isExtractHiElt(Src, Src))) {
-    Mods |= SISrcMods::OP_SEL_0;
-
     // TODO: Should we try to look for neg/abs here?
 #else /* LLPC_BUILD_NPI */
     // Prevent unnecessary subreg COPY to VGPR_16

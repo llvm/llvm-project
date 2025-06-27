@@ -1499,6 +1499,12 @@ def FeatureSGPRVMEM : SubtargetFeature< "sgpr-vmem",
   "Shader Load/Store/Atomics of SGPRs through VMEM"
 >;
 
+def FeatureAtomicMinMaxWithPayload : SubtargetFeature< "atomic-minmax-with-payload",
+  "HasAtomicMinMaxWithPayload",
+  "true",
+  "Atomic 64bit min/max with 64bit payload"
+>;
+
 def FeatureParallelBitInsts : SubtargetFeature< "parallel-bit-insts",
   "HasParallelBitInsts",
   "true",
@@ -3311,6 +3317,9 @@ def HasIndexedResources : Predicate<"Subtarget->hasIndexedResources()">,
 
 def HasSGPRVMEM : Predicate<"Subtarget->hasSGPRVMEM()">,
   AssemblerPredicate<(all_of FeatureSGPRVMEM)>;
+
+def HasAtomicMinMaxWithPayload : Predicate<"Subtarget->hasAtomicMinMaxWithPayload()">,
+  AssemblerPredicate<(all_of FeatureAtomicMinMaxWithPayload)>;
 
 def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
   AssemblerPredicate<(all_of FeatureParallelBitInsts)>;

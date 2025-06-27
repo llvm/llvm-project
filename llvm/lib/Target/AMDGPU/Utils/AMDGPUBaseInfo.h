@@ -128,6 +128,11 @@ struct WMMAInstInfo {
   bool is_wmma_xdl;
 };
 
+struct FLATInfo {
+  uint16_t Opcode;
+  bool IsVDDS;
+};
+
 #endif /* LLPC_BUILD_NPI */
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
@@ -141,6 +146,7 @@ struct WMMAInstInfo {
 #define GET_True16D16Table_DECL
 #if LLPC_BUILD_NPI
 #define GET_WMMAInstInfoTable_DECL
+#define GET_FLATInfoTable_DECL
 #endif /* LLPC_BUILD_NPI */
 #include "AMDGPUGenSearchableTables.inc"
 
@@ -609,6 +615,9 @@ bool isVOPMAsmOnly(unsigned Opc);
 
 LLVM_READONLY
 bool isVOPMPseudo(unsigned Opc);
+
+LLVM_READONLY
+bool isVDDS(unsigned Opc);
 
 LLVM_READONLY
 bool isConvolve(unsigned Opc);
