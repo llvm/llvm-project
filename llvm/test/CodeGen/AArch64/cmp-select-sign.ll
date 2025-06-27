@@ -114,10 +114,9 @@ define i64 @not_sign_i64_4(i64 %a) {
 define <7 x i8> @sign_7xi8(<7 x i8> %a) {
 ; CHECK-LABEL: sign_7xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    movi v2.8b, #1
-; CHECK-NEXT:    cmge v0.8b, v1.8b, v0.8b
-; CHECK-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-NEXT:    movi v1.8b, #1
+; CHECK-NEXT:    cmlt v0.8b, v0.8b, #0
+; CHECK-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %c = icmp sgt <7 x i8> %a, <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
   %res = select <7 x i1> %c, <7 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <7 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
@@ -151,8 +150,7 @@ define <16 x i8> @sign_16xi8(<16 x i8> %a) {
 define <3 x i32> @sign_3xi32(<3 x i32> %a) {
 ; CHECK-LABEL: sign_3xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2d, #0xffffffffffffffff
-; CHECK-NEXT:    cmge v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-NEXT:    orr v0.4s, #1
 ; CHECK-NEXT:    ret
   %c = icmp sgt <3 x i32> %a, <i32 -1, i32 -1, i32 -1>
