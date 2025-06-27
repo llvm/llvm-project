@@ -1,11 +1,12 @@
 # Model Context Protocol (MCP)
 
-LLDB supports for the [Model Context Protocol][1] (MCP). This structured,
-machine-friendly protocol allows AI models to access and interact with external
-tools, such as the debugger. Using MCP, an AI agent can execute LLDB commands
-to control the debugger: set breakpoints, inspect memory, step through code.
-This can range from helping you run a specific command you can't immediately
-remember to a fully agent-driven debugging experiences
+LLDB supports the [Model Context Protocol][https://modelcontextprotocol.io]
+(MCP). This structured, machine-friendly protocol allows AI models to access
+and interact with external tools, for example debuggers. Using MCP, an AI agent
+can execute LLDB commands to control the debugger: set breakpoints, inspect
+memory, step through code. This can range from helping you run a specific
+command you cannot immediately remember, to a fully agent-driven debugging
+experience.
 
 ## MCP Server
 
@@ -26,6 +27,9 @@ explicitly with the `protocol-server stop` command.
 (lldb) protocol-server stop MCP
 ```
 
+The commands will fail if a server is already running or not running
+respectively.
+
 ## MCP Client
 
 MCP uses standard input/output (stdio) for communication between client and
@@ -34,7 +38,15 @@ allow you to specify an MCP server as a binary and arguments. This means that
 you need to use something like `netcat` to connect to LLDB's MCP server and
 forward communication over stdio over the network connection.
 
-Configuration example for [Claude Code][2]:
+```
+┌──────────┐               ┌──────────┐               ┌──────────┐
+│          │               │          │               │          │
+│   LLDB   ├─────socket────┤  netcat  ├─────stdio─────┤MCP Client│
+│          │               │          │               │          │
+└──────────┘               └──────────┘               └──────────┘
+```
+
+Configuration example for [Claude Code][https://modelcontextprotocol.io/quickstart/user]:
 
 ```
 {
@@ -47,7 +59,7 @@ Configuration example for [Claude Code][2]:
 }
 ```
 
-Configuration example for [Visual Studio Code][3]:
+Configuration example for [Visual Studio Code][https://code.visualstudio.com/docs/copilot/chat/mcp-servers]:
 
 ```
 {
@@ -63,6 +75,11 @@ Configuration example for [Visual Studio Code][3]:
 }
 ```
 
-[1]: https://modelcontextprotocol.io
-[2]: https://modelcontextprotocol.io/quickstart/user
-[3]: https://code.visualstudio.com/docs/copilot/chat/mcp-servers
+### Troubleshooting
+
+The MCP server uses the `Host` log channel. You can enable logging with the
+`log enable` command.
+
+```
+(lldb) log enable lldb host
+```
