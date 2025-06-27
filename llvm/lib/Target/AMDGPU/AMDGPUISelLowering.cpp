@@ -721,6 +721,18 @@ static bool selectSupportsSourceMods(const SDNode *N) {
   return N->getValueType(0) == MVT::f32;
 }
 
+LLVM_READONLY
+static bool buildVectorSupportsSourceMods(const SDNode *N) {
+  if (N->getValueType(0) != MVT::v2f32)
+    return true;
+
+  if (N->getOperand(0)->getOpcode() != ISD::SELECT ||
+      N->getOperand(1)->getOpcode() != ISD::SELECT)
+    return true;
+
+  return false;
+}
+
 // Most FP instructions support source modifiers, but this could be refined
 // slightly.
 LLVM_READONLY
@@ -754,6 +766,8 @@ static bool hasSourceMods(const SDNode *N) {
       return true;
     }
   }
+  case ISD::BUILD_VECTOR:
+    return buildVectorSupportsSourceMods(N);
   case ISD::SELECT:
     return selectSupportsSourceMods(N);
   default:
@@ -4056,6 +4070,50 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   SDLoc SL(N);
   SelectionDAG &DAG = DCI.DAG;
 
+  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDValue VAND = RHS.getOperand(0);
+    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
+      uint64_t AndIndex = RHS->getConstantOperandVal(1);
+      if (VAND->getOpcode() == ISD::AND && CRRHS) {
+        SDValue LHSAND = VAND.getOperand(0);
+        SDValue RHSAND = VAND.getOperand(1);
+        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
+          // Part of shlcombine is to optimise for the case where its possible
+          // to reduce shl64 to shl32 if shift range is [63-32]. This
+          // transforms: DST = shl i64 X, Y to [0, shl i32 X, (Y & 31) ]. The
+          // '&' is then elided by ISel. The vector code for this was being
+          // completely scalarised by the vector legalizer, but now v2i32 is
+          // made legal the vector legaliser only partially scalarises the
+          // vector operations and the and was not elided. This check enables us
+          // to locate and scalarise the v2i32 and and re-enable ISel to elide
+          // the and instruction.
+          ConstantSDNode *CANDL =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+          ConstantSDNode *CANDR =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
+              RHSAND->getConstantOperandVal(1) == 0x1f) {
+            // Get the non-const AND operands and produce scalar AND
+            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                                     LHSAND, Zero);
+            SDValue Hi =
+                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+            SDValue LoAnd =
+                DAG.getNode(ISD::AND, SL, MVT::i32, Lo, RHSAND->getOperand(0));
+            SDValue HiAnd =
+                DAG.getNode(ISD::AND, SL, MVT::i32, Hi, RHSAND->getOperand(0));
+            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+            if (AndIndex == 0 || AndIndex == 1)
+              return DAG.getNode(ISD::SHL, SL, MVT::i32, Trunc,
+                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
+          }
+        }
+      }
+    }
+  }
+
   unsigned RHSVal;
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
@@ -4096,8 +4154,6 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
-
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
@@ -4252,6 +4308,49 @@ SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
   unsigned RHSVal;
+
+  if (RHS->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDValue VAND = RHS.getOperand(0);
+    if (ConstantSDNode *CRRHS = dyn_cast<ConstantSDNode>(RHS->getOperand(1))) {
+      uint64_t AndIndex = RHS->getConstantOperandVal(1);
+      if (VAND->getOpcode() == ISD::AND && CRRHS) {
+        SDValue LHSAND = VAND.getOperand(0);
+        SDValue RHSAND = VAND.getOperand(1);
+        if (RHSAND->getOpcode() == ISD::BUILD_VECTOR) {
+          // Part of srlcombine is to optimise for the case where its possible
+          // to reduce shl64 to shl32 if shift range is [63-32]. This
+          // transforms: DST = shl i64 X, Y to [0, srl i32 X, (Y & 31) ]. The
+          // '&' is then elided by ISel. The vector code for this was being
+          // completely scalarised by the vector legalizer, but now v2i32 is
+          // made legal the vector legaliser only partially scalarises the
+          // vector operations and the and was not elided. This check enables us
+          // to locate and scalarise the v2i32 and and re-enable ISel to elide
+          // the and instruction.
+          ConstantSDNode *CANDL =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(0));
+          ConstantSDNode *CANDR =
+              dyn_cast<ConstantSDNode>(RHSAND->getOperand(1));
+          if (CANDL && CANDR && RHSAND->getConstantOperandVal(0) == 0x1f &&
+              RHSAND->getConstantOperandVal(1) == 0x1f) {
+            // Get the non-const AND operands and produce scalar AND
+            const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+            const SDValue One = DAG.getConstant(1, SL, MVT::i32);
+            SDValue Lo = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32,
+                                     LHSAND, Zero);
+            SDValue Hi =
+                DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, LHSAND, One);
+            SDValue AndMask = DAG.getConstant(0x1f, SL, MVT::i32);
+            SDValue LoAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Lo, AndMask);
+            SDValue HiAnd = DAG.getNode(ISD::AND, SL, MVT::i32, Hi, AndMask);
+            SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, LHS);
+            if (AndIndex == 0 || AndIndex == 1)
+              return DAG.getNode(ISD::SRL, SL, MVT::i32, Trunc,
+                                 AndIndex == 0 ? LoAnd : HiAnd, N->getFlags());
+          }
+        }
+      }
+    }
+  }
 
   if (CRHS) {
     RHSVal = CRHS->getZExtValue();
@@ -4765,8 +4864,8 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
 
-    return distributeOpThroughSelect(DCI, LHS.getOpcode(),
-                                     SDLoc(N), Cond, LHS, RHS);
+    return distributeOpThroughSelect(DCI, LHS.getOpcode(), SDLoc(N), Cond, LHS,
+                                     RHS);
   }
 
   bool Inv = false;
