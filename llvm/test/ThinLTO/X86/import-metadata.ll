@@ -12,7 +12,7 @@
 
 ; CHECK: !llvm.dbg.cu = !{![[#CU1:]], ![[#CU2:]]}
 ;; Note that MD1 comes from the current module. MD2 is from the imported module. 
-;; We are checking that MD2 is combined with MD1 and the imported MD2 doesn't
+;; We are checking that MD2 is unified with MD1 and the imported MD2 doesn't
 ;; end up having a null operand.
 ; CHECK: !llvm.md = !{![[#MD1:]]}
 ; CHECK: ![[#MD3:]] = !{}
