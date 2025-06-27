@@ -3015,10 +3015,29 @@ def NVVM_GriddepcontrolLaunchDependentsOp
 // NVVM Mapa Op
 //===----------------------------------------------------------------------===//
 
+// Helper predicates for address space checking
+def IsGenericAddressSpace : CPred<"llvm::cast<LLVM::LLVMPointerType>($_self).getAddressSpace() == 0">;
+def IsSharedAddressSpace : CPred<"llvm::cast<LLVM::LLVMPointerType>($_self).getAddressSpace() == 3">;
+def IsSharedClusterAddressSpace : CPred<"llvm::cast<LLVM::LLVMPointerType>($_self).getAddressSpace() == 7">;
+
+class NVVM_AddressSpaceMapping<string inputArg, string resultArg> : 
+    PredOpTrait<"valid address space mapping for NVVM mapa operation",
+                Or<[
+                  // Generic -> Generic
+                  And<[
+                    SubstLeaves<"$_self", "$" # inputArg # ".getType()", IsGenericAddressSpace>,
+                    SubstLeaves<"$_self", "$" # resultArg # ".getType()", IsGenericAddressSpace>
+                  ]>,
+                  // Shared -> SharedCluster
+                  And<[
+                    SubstLeaves<"$_self", "$" # inputArg # ".getType()", IsSharedAddressSpace>,
+                    SubstLeaves<"$_self", "$" # resultArg # ".getType()", IsSharedClusterAddressSpace>
+                  ]>
+                ]>>;
+
 def NVVM_MapaOp: NVVM_Op<"mapa",
-    [TypesMatchWith<"`res` and `a` should have the same type",
-                    "a", "res", "$_self">, NVVMRequiresSM<90>]> {
-  let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$res);
+    [NVVM_AddressSpaceMapping<"a", "res">, NVVMRequiresSM<90>]> {
+  let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerSharedCluster]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
 
   string llvmBuilder = [{
