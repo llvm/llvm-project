@@ -568,25 +568,25 @@ def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 //===----------------------------------------------------------------------===//
 
 class NDS_BBPat<CondCode Cond, NDSRVInstBB Inst>
-    : Pat<(riscv_brcc(and(XLenVT GPR:$rs1), PowerOf2:$mask), 0, Cond,
+    : Pat<(riscv_brcc (and(XLenVT GPR:$rs1), PowerOf2:$mask), 0, Cond,
               bb:$imm10),
           (Inst GPR:$rs1, (Log2 PowerOf2:$mask), bare_simm11_lsb0:$imm10)>;
 
 class NDS_BCPat<CondCode Cond, NDSRVInstBC Inst>
-    : Pat<(riscv_brcc(XLenVT GPR:$rs1), uimm7:$cimm, Cond, bb:$imm10),
+    : Pat<(riscv_brcc (XLenVT GPR:$rs1), uimm7:$cimm, Cond, bb:$imm10),
           (Inst GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10)>;
 
 defm CC_UImmLog2XLen_NDS : SelectCC_GPR_riirr<GPR, uimmlog2xlen>;
 defm CC_UImm7_NDS        : SelectCC_GPR_riirr<GPR, uimm7>;
 
 class SelectNDS_BB<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc(and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
+    : Pat<(riscv_selectcc_frag:$cc (and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
               Cond, (XLenVT GPR:$truev), GPR:$falsev),
           (Select_GPR_Using_CC_UImmLog2XLen_NDS GPR:$lhs, (Log2 PowerOf2:$mask),
               (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 class SelectNDS_BC<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$cc(XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), uimm7:$cimm, Cond,
               (XLenVT GPR:$truev), GPR:$falsev),
           (Select_GPR_Using_CC_UImm7_NDS GPR:$lhs, uimm7:$cimm,
               (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
