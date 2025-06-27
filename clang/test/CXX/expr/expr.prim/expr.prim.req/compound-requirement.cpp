@@ -89,7 +89,7 @@ template<typename T>
 concept Large = sizeof(typename remove_reference<T>::type) >= 4;
 // expected-note@-1{{because 'sizeof(typename remove_reference<short &>::type) >= 4' (2 >= 4) evaluated to false}}
 
-template<typename T> requires requires (T t) { { t } -> Large; } // expected-note{{because 'short &' does not satisfy 'Large':}}
+template<typename T> requires requires (T t) { { t } -> Large; } // expected-note{{because 'short &' does not satisfy 'Large'}}
 struct r7 {};
 
 using r7i1 = r7<int>;
@@ -160,7 +160,7 @@ namespace std_example {
   template<typename T> concept C2 =
     requires(T x) {
       {*x} -> same_as<typename T::inner>;
-      // expected-note@-1{{because type constraint 'same_as<int, typename T2::inner>' was not satisfied:}}
+      // expected-note@-1{{because 'same_as<int, typename T2::inner>' evaluated to false}}
       // expected-note@-2{{because '*x' would be invalid: indirection requires pointer operand ('int' invalid)}}
     };
 
