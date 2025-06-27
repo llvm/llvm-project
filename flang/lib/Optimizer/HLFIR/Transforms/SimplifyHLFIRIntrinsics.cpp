@@ -2332,7 +2332,6 @@ private:
 /// matches call to '__divdc3', extracts the real and imaginary components of
 /// the numerator and denominator, and replaces the function call with an
 /// explicit computation using MLIR's arithmetic operations.
-///
 /// Specifically, it replaces the call to '__divdc3(x0, y0, x1, y1)' —where
 /// (x0 + y0i) / (x1 + y1i) is the intended operation—with the mathematically
 /// equivalent expression:
