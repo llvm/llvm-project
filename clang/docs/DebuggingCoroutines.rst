@@ -17,7 +17,7 @@ Coroutines are generally used either as generators or for asynchronous
 programming. In this document, we will discuss both use cases. Even if you are
 using coroutines for asynchronous programming, you should still read the
 generators section, as it will introduce foundational debugging techniques also
-applicable to the debugging of asynchronous programming.
+applicable to the debugging of asynchronous programs.
 
 Both compilers (clang, gcc, ...) and debuggers (lldb, gdb, ...) are
 still improving their support for coroutines. As such, we recommend using the
@@ -42,11 +42,11 @@ earlier.
 Debugging generators
 ====================
 
-The first major use case for coroutines in C++ are generators, i.e., functions
-which can produce values via ``co_yield``. Values are produced lazily,
-on-demand. For that purpose, every time a new value is requested the coroutine
-gets resumed. As soon as it reaches a ``co_yield`` and thereby returns the
-requested value, the coroutine is suspended again.
+One of the two major use cases for coroutines in C++ are generators, i.e.,
+functions which can produce values via ``co_yield``. Values are produced
+lazily, on-demand. For that purpose, every time a new value is requested the
+coroutine gets resumed. As soon as it reaches a ``co_yield`` and thereby
+returns the requested value, the coroutine is suspended again.
 
 This logic is encapsulated in a ``generator`` type similar to this one:
 
@@ -483,7 +483,7 @@ Known issues & workarounds for older LLDB versions
 
 LLDB before 21.0 did not yet show the ``__coro_frame`` inside
 ``coroutine_handle``. To inspect the coroutine frame, you had to use the
-approach described in the :ref:`Devirtualization of coroutine handles` section.
+approach described in the :ref:`devirtualization` section.
 
 LLDB before 18.0 was hiding the ``__promise`` and ``__coro_frame``
 variable by default. The variables are still present, but they need to be
@@ -492,7 +492,7 @@ explicitly added to the "watch" pane in VS Code or requested via
 
 LLDB before 16.0 did not yet provide a pretty-printer for
 ``std::coroutine_handle``. To inspect the coroutine handle, you had to manually
-use the approach described in the :ref:`Devirtualization of coroutine handles`
+use the approach described in the :ref:`devirtualization`
 section.
 
 Toolchain Implementation Details
@@ -590,6 +590,44 @@ the promise as follows:
 
   print (task::promise_type)*(0x416eb0+16)
 
+Implementation in clang / LLVM
+------------------------------
+
+The C++ Coroutines feature in the Clang compiler is implemented in two parts of
+the compiler. Semantic analysis is performed in Clang, and Coroutine
+construction and optimization takes place in the LLVM middle-end.
+
+For each coroutine function, the frontend generates a single corresponding
+LLVM-IR function. This function uses special ``llvm.coro.suspend`` intrinsics
+to mark the suspension points of the coroutine. The middle end first optimizes
+this function and applies, e.g., constant propagation across the whole,
+non-split coroutine.
+
+CoroSplit then splits the function into ramp, resume and destroy functions.
+This pass also moves stack-local variables which are alive across suspension
+points into the coroutine frame. Most of the heavy lifting to preserve debugging
+information is done in this pass. This pass needs to rewrite all variable
+locations to point into the coroutine frame.
+
+Afterwards, a couple of additional optimizations are applied, before code
+gets emitted, but none of them are really interesting regarding debugging
+information.
+
+For more details on the IR representation of coroutines and the relevant
+optimization passes, see `Coroutines in LLVM <https://llvm.org/docs/Coroutines.html>`_.
+
+Emitting debug information inside ``CoroSplit`` forces us to generate
+insufficient debugging information. Usually, the compiler generates debug
+information in the frontend, as debug information is highly language specific.
+However, this is not possible for coroutine frames because the frames are
+constructed in the LLVM middle-end.
+
+To mitigate this problem, the LLVM middle end attempts to generate some debug
+information, which is unfortunately incomplete, since much of the language
+specific information is missing in the middle end.
+
+.. _devirtualization:
+
 Devirtualization of coroutine handles
 -------------------------------------
 
@@ -651,11 +689,7 @@ clang / LLVM usually use variables like ``__int_32_0`` to represent this
 optimized storage. Those values usually do not directly correspond to variables
 in the source code.
 
-For example, when compiling the following program, the compiler creates a
-single entry ``__int_32_0`` in the coroutine state. Intuitively, one might
-assume that ``__int_32_0`` represents the value of the local variable ``a``.
-However, inspecting ``__int_32_0`` in the debugger while single-stepping will
-show the following values:
+When compiling the program
 
 .. code-block:: c++
 
@@ -675,10 +709,16 @@ show the following values:
     std::cout << a << "\n";
   }
 
-The value of ``__int_32_0`` seemingly does not change, despite being frequently
-incremented. While this might be surprising, this is a result of the optimizer
-recognizing that it can eliminate most of the load/store operations. The above
-code gets optimized to the equivalent of:
+clang creates a single entry ``__int_32_0`` in the coroutine state.
+
+Intuitively, one might assume that ``__int_32_0`` represents the value of the
+local variable ``a``. However, inspecting ``__int_32_0`` in the debugger while
+single-stepping will reveal that the value of ``__int_32_0`` stays constant,
+despite ``a`` being frequently incremented.
+
+While this might be surprising, this is a result of the optimizer recognizing
+that it can eliminate most of the load/store operations.
+The above code gets optimized to the equivalent of:
 
 .. code-block:: c++
 
