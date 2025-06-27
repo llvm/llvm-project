@@ -23389,6 +23389,8 @@ static SDValue performPostLD1Combine(SDNode *N,
     auto *LaneC = dyn_cast<ConstantSDNode>(Lane);
     if (!LaneC || LaneC->getZExtValue() >= VT.getVectorNumElements())
       return SDValue();
+    if (LaneC->getZExtValue() == 0 && isNullOrNullSplat(N->getOperand(0)))
+      return SDValue();
   }
 
   LoadSDNode *LoadSDN = cast<LoadSDNode>(LD);
