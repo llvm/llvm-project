@@ -71,6 +71,8 @@ public:
                       const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
   bool appendWSuffixes(MachineFunction &MF, const RISCVInstrInfo &TII,
                        const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
+  bool convertZExtLoads(MachineFunction &MF, const RISCVInstrInfo &TII,
+                        const RISCVSubtarget &ST, MachineRegisterInfo &MRI);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -788,6 +790,27 @@ bool RISCVOptWInstrs::appendWSuffixes(MachineFunction &MF,
   return MadeChange;
 }
 
+bool RISCVOptWInstrs::convertZExtLoads(MachineFunction &MF,
+                                       const RISCVInstrInfo &TII,
+                                       const RISCVSubtarget &ST,
+                                       MachineRegisterInfo &MRI) {
+  bool MadeChange = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      // LW is compressible while LWU isn't, and making this change reduces
+      // unnecessary diffs versus RV32.
+      if (MI.getOpcode() == RISCV::LWU && hasAllWUsers(MI, ST, MRI) {
+        LLVM_DEBUG(dbgs() << "Replacing " << MI);
+        MI.setDesc(TII.get(RISCV::LW));
+        LLVM_DEBUG(dbgs() << "     with " << MI);
+        MadeChange = true;
+      }
+    }
+  }
+
+  return MadeChange;
+}
+
 bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -807,6 +830,8 @@ bool RISCVOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
 
   if (ST.preferWInst())
     MadeChange |= appendWSuffixes(MF, TII, ST, MRI);
+
+  MadeChange |= convertZExtLoads(MF, TII, ST, MRI);
 
   return MadeChange;
 }
