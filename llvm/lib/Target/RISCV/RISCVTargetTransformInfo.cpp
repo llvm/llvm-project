@@ -1191,9 +1191,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::f64, 9},
     {Intrinsic::rint, MVT::f32, 7},
     {Intrinsic::rint, MVT::f64, 7},
-    {Intrinsic::lrint, MVT::i32, 1},
-    {Intrinsic::lrint, MVT::i64, 1},
-    {Intrinsic::llrint, MVT::i64, 1},
     {Intrinsic::nearbyint, MVT::f32, 9},
     {Intrinsic::nearbyint, MVT::f64, 9},
     {Intrinsic::bswap, MVT::i16, 3},
@@ -1261,12 +1258,17 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
   case Intrinsic::lrint:
-  case Intrinsic::llrint:
+  case Intrinsic::llrint: {
     // We can't currently lower half or bfloat vector lrint/llrint.
     if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
         VecTy && VecTy->getElementType()->is16bitFPTy())
       return InstructionCost::getInvalid();
-    [[fallthrough]];
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
+      return LT.first *
+             getRISCVInstructionCost(RISCV::VFCVT_X_F_V, LT.second, CostKind);
+    break;
+  }
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::trunc:
