@@ -10477,7 +10477,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue VOffset;
     // Try to split SAddr and VOffset. Global and LDS pointers share the same
     // immediate offset, so we cannot use a regular SelectGlobalSAddr().
-    if (Addr->isDivergent() && Addr.getOpcode() == ISD::ADD) {
+    if (Addr->isDivergent() && Addr->isAnyAdd()) {
       SDValue LHS = Addr.getOperand(0);
       SDValue RHS = Addr.getOperand(1);
 
@@ -12027,8 +12027,7 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N, unsigned AddrSpace,
 
   // We only do this to handle cases where it's profitable when there are
   // multiple uses of the add, so defer to the standard combine.
-  if ((N0.getOpcode() != ISD::ADD && N0.getOpcode() != ISD::OR) ||
-      N0->hasOneUse())
+  if ((!N0->isAnyAdd() && N0.getOpcode() != ISD::OR) || N0->hasOneUse())
     return SDValue();
 
   const ConstantSDNode *CN1 = dyn_cast<ConstantSDNode>(N1);
@@ -12067,6 +12066,8 @@ SDValue SITargetLowering::performSHLPtrCombine(SDNode *N, unsigned AddrSpace,
       N->getFlags().hasNoUnsignedWrap() &&
       (N0.getOpcode() == ISD::OR || N0->getFlags().hasNoUnsignedWrap()));
 
+  // Use ISD::ADD even if the original operation was ISD::PTRADD, since we can't
+  // be sure that the new left operand is a proper base pointer.
   return DAG.getNode(ISD::ADD, SL, VT, ShlX, COffset, Flags);
 }
 
