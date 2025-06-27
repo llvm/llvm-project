@@ -723,7 +723,8 @@ MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
 
 template <typename TAttr>
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
-                                         TAttr Attributes, MCSection *Parent) {
+                                         TAttr Attributes, MCSection *Parent,
+                                         bool IsVirtual) {
   std::string UniqueName(Name);
   if (Parent) {
     UniqueName.append("/").append(Parent->getName());
@@ -737,8 +738,9 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
     return Iter->second;
 
   StringRef CachedName = StringRef(Iter->first.c_str(), Name.size());
-  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate()) MCSectionGOFF(
-      CachedName, Kind, Attributes, static_cast<MCSectionGOFF *>(Parent));
+  MCSectionGOFF *GOFFSection = new (GOFFAllocator.Allocate())
+      MCSectionGOFF(CachedName, Kind, IsVirtual, Attributes,
+                    static_cast<MCSectionGOFF *>(Parent));
   Iter->second = GOFFSection;
   allocInitialFragment(*GOFFSection);
   return GOFFSection;
@@ -746,19 +748,23 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          GOFF::SDAttr SDAttributes) {
-  return getGOFFSection<GOFF::SDAttr>(Kind, Name, SDAttributes, nullptr);
+  return getGOFFSection<GOFF::SDAttr>(Kind, Name, SDAttributes, nullptr,
+                                      /*IsVirtual=*/true);
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          GOFF::EDAttr EDAttributes,
                                          MCSection *Parent) {
-  return getGOFFSection<GOFF::EDAttr>(Kind, Name, EDAttributes, Parent);
+  return getGOFFSection<GOFF::EDAttr>(
+      Kind, Name, EDAttributes, Parent,
+      /*IsVirtual=*/EDAttributes.BindAlgorithm == GOFF::ESD_BA_Merge);
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          GOFF::PRAttr PRAttributes,
                                          MCSection *Parent) {
-  return getGOFFSection<GOFF::PRAttr>(Kind, Name, PRAttributes, Parent);
+  return getGOFFSection<GOFF::PRAttr>(Kind, Name, PRAttributes, Parent,
+                                      /*IsVirtual=*/false);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
