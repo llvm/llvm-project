@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 wchar_t *wcstok(wchar_t *__restrict str, const wchar_t *__restrict delim,
-                wchar_t **__restrict ptr);
+                wchar_t **__restrict context);
 
 } // namespace LIBC_NAMESPACE_DECL
 

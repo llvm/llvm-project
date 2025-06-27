@@ -13,34 +13,38 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+bool isADelimeter(wchar_t wc, const wchar_t *delimiters) {
+  for (const wchar_t *delim_ptr = delimiters; *delim_ptr != L'\0'; delim_ptr++)
+    if (wc == *delim_ptr)
+      return true;
+  return false;
+}
+
 LLVM_LIBC_FUNCTION(wchar_t *, wcstok,
                    (wchar_t *__restrict str, const wchar_t *__restrict delim,
-                    wchar_t **__restrict ptr)) {
-  if (str == nullptr)
-    str = *ptr;
+                    wchar_t **__restrict context)) {
+  if (str == nullptr) {
+    if (*context == nullptr)
+      return nullptr;
 
-  bool foundTokenStart = false;
-  wchar_t *out = nullptr;
-  wchar_t *str_ptr;
-  for (str_ptr = str; *str_ptr != L'\0'; str_ptr++) {
-    bool inDelim = false;
-    for (const wchar_t *delim_ptr = delim; *delim_ptr != L'\0' && !inDelim;
-         delim_ptr++)
-      if (*str_ptr == *delim_ptr)
-        inDelim = true;
-
-    if (!inDelim && !foundTokenStart) {
-      foundTokenStart = true;
-      out = str_ptr;
-    } else if (inDelim && foundTokenStart) {
-      *str_ptr = L'\0';
-      *ptr = str_ptr + 1;
-      return out;
-    }
+    str = *context;
   }
 
-  *ptr = str_ptr;
-  return out;
+  wchar_t *tok_start, *tok_end;
+  for (tok_start = str; *tok_start != L'\0' && isADelimeter(*tok_start, delim);
+       tok_start++)
+    ;
+
+  for (tok_end = tok_start; *tok_end != L'\0' && !isADelimeter(*tok_end, delim);
+       tok_end++)
+    ;
+
+  if (*tok_end != L'\0') {
+    *tok_end = L'\0';
+    tok_end++;
+  }
+  *context = tok_end;
+  return *tok_start == L'\0' ? nullptr : tok_start;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
