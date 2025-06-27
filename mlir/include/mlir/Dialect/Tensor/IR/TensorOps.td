@@ -1256,6 +1256,7 @@ def Tensor_CollapseShapeOp : Tensor_ReassociativeReshapeOp<"collapse_shape"> {
 
 def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
     AttrSizedOperandSegments,
     Pure,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {

@@ -625,3 +625,21 @@ defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS", AllQuadWidenableVD4DOTVectors>;
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU", AllQuadWidenableVD4DOTVectors>;
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU", AllQuadWidenableVD4DOTVectors>;
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions for SFB (Short Forward Branch)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
+def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
+                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                               GPR:$falsev, GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+                       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
+                              ReadSFBALU]>;
+def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
+                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                               GPR:$falsev, GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+                       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
+                              ReadSFBALU]>;
+}

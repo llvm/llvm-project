@@ -31,6 +31,8 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   case Intrinsic::dx_asdouble:
   case Intrinsic::dx_isinf:
   case Intrinsic::dx_firstbitlow:
+  case Intrinsic::dx_firstbituhigh:
+  case Intrinsic::dx_firstbitshigh:
     return OpdIdx == 0;
   default:
     return OpdIdx == -1;

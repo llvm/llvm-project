@@ -421,6 +421,7 @@ namespace {
     SDValue visitADDLike(SDNode *N);
     SDValue visitADDLikeCommutative(SDValue N0, SDValue N1,
                                     SDNode *LocReference);
+    SDValue visitPTRADD(SDNode *N);
     SDValue visitSUB(SDNode *N);
     SDValue visitADDSAT(SDNode *N);
     SDValue visitSUBSAT(SDNode *N);
@@ -1140,7 +1141,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
       return true;
   }
 
-  if (Opc != ISD::ADD)
+  if (Opc != ISD::ADD && Opc != ISD::PTRADD)
     return false;
 
   auto *C2 = dyn_cast<ConstantSDNode>(N1);
@@ -1345,6 +1346,40 @@ SDValue DAGCombiner::reassociateReduction(unsigned RedOpc, unsigned Opc,
     return DAG.getNode(RedOpc, DL, VT,
                        DAG.getNode(Opc, DL, N0.getOperand(0).getValueType(),
                                    N0.getOperand(0), N1.getOperand(0)));
+  }
+
+  // Reassociate op(op(vecreduce(a), b), op(vecreduce(c), d)) into
+  // op(vecreduce(op(a, c)), op(b, d)), to combine the reductions into a
+  // single node.
+  SDValue A, B, C, D, RedA, RedB;
+  if (sd_match(N0, m_OneUse(m_c_BinOp(
+                       Opc,
+                       m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(A))),
+                               m_Value(RedA)),
+                       m_Value(B)))) &&
+      sd_match(N1, m_OneUse(m_c_BinOp(
+                       Opc,
+                       m_AllOf(m_OneUse(m_UnaryOp(RedOpc, m_Value(C))),
+                               m_Value(RedB)),
+                       m_Value(D)))) &&
+      !sd_match(B, m_UnaryOp(RedOpc, m_Value())) &&
+      !sd_match(D, m_UnaryOp(RedOpc, m_Value())) &&
+      A.getValueType() == C.getValueType() &&
+      hasOperation(Opc, A.getValueType()) &&
+      TLI.shouldReassociateReduction(RedOpc, VT)) {
+    if ((Opc == ISD::FADD || Opc == ISD::FMUL) &&
+        (!N0->getFlags().hasAllowReassociation() ||
+         !N1->getFlags().hasAllowReassociation() ||
+         !RedA->getFlags().hasAllowReassociation() ||
+         !RedB->getFlags().hasAllowReassociation()))
+      return SDValue();
+    SelectionDAG::FlagInserter FlagsInserter(
+        DAG, Flags & N0->getFlags() & N1->getFlags() & RedA->getFlags() &
+                 RedB->getFlags());
+    SDValue Op = DAG.getNode(Opc, DL, A.getValueType(), A, C);
+    SDValue Red = DAG.getNode(RedOpc, DL, VT, Op);
+    SDValue Op2 = DAG.getNode(Opc, DL, VT, B, D);
+    return DAG.getNode(Opc, DL, VT, Red, Op2);
   }
   return SDValue();
 }
@@ -1860,6 +1895,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::TokenFactor:        return visitTokenFactor(N);
   case ISD::MERGE_VALUES:       return visitMERGE_VALUES(N);
   case ISD::ADD:                return visitADD(N);
+  case ISD::PTRADD:             return visitPTRADD(N);
   case ISD::SUB:                return visitSUB(N);
   case ISD::SADDSAT:
   case ISD::UADDSAT:            return visitADDSAT(N);
@@ -2627,6 +2663,86 @@ SDValue DAGCombiner::foldSubToAvg(SDNode *N, const SDLoc &DL) {
                         m_Sra(m_Xor(m_Deferred(A), m_Deferred(B)), m_One())))) {
     return DAG.getNode(ISD::AVGCEILS, DL, VT, A, B);
   }
+  return SDValue();
+}
+
+/// Try to fold a pointer arithmetic node.
+/// This needs to be done separately from normal addition, because pointer
+/// addition is not commutative.
+SDValue DAGCombiner::visitPTRADD(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT PtrVT = N0.getValueType();
+  EVT IntVT = N1.getValueType();
+  SDLoc DL(N);
+
+  // This is already ensured by an assert in SelectionDAG::getNode(). Several
+  // combines here depend on this assumption.
+  assert(PtrVT == IntVT &&
+         "PTRADD with different operand types is not supported");
+
+  // fold (ptradd x, 0) -> x
+  if (isNullConstant(N1))
+    return N0;
+
+  // fold (ptradd 0, x) -> x
+  if (PtrVT == IntVT && isNullConstant(N0))
+    return N1;
+
+  if (N0.getOpcode() != ISD::PTRADD ||
+      reassociationCanBreakAddressingModePattern(ISD::PTRADD, DL, N, N0, N1))
+    return SDValue();
+
+  SDValue X = N0.getOperand(0);
+  SDValue Y = N0.getOperand(1);
+  SDValue Z = N1;
+  bool N0OneUse = N0.hasOneUse();
+  bool YIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Y);
+  bool ZIsConstant = DAG.isConstantIntBuildVectorOrConstantInt(Z);
+
+  // (ptradd (ptradd x, y), z) -> (ptradd x, (add y, z)) if:
+  //   * y is a constant and (ptradd x, y) has one use; or
+  //   * y and z are both constants.
+  if ((YIsConstant && N0OneUse) || (YIsConstant && ZIsConstant)) {
+    // If both additions in the original were NUW, the new ones are as well.
+    SDNodeFlags Flags =
+        (N->getFlags() & N0->getFlags()) & SDNodeFlags::NoUnsignedWrap;
+    SDValue Add = DAG.getNode(ISD::ADD, DL, IntVT, {Y, Z}, Flags);
+    AddToWorklist(Add.getNode());
+    return DAG.getMemBasePlusOffset(X, Add, DL, Flags);
+  }
+
+  // TODO: There is another possible fold here that was proven useful.
+  // It would be this:
+  //
+  // (ptradd (ptradd x, y), z) -> (ptradd (ptradd x, z), y) if:
+  //   * (ptradd x, y) has one use; and
+  //   * y is a constant; and
+  //   * z is not a constant.
+  //
+  // In some cases, specifically in AArch64's FEAT_CPA, it exposes the
+  // opportunity to select more complex instructions such as SUBPT and
+  // MSUBPT. However, a hypothetical corner case has been found that we could
+  // not avoid. Consider this (pseudo-POSIX C):
+  //
+  // char *foo(char *x, int z) {return (x + LARGE_CONSTANT) + z;}
+  // char *p = mmap(LARGE_CONSTANT);
+  // char *q = foo(p, -LARGE_CONSTANT);
+  //
+  // Then x + LARGE_CONSTANT is one-past-the-end, so valid, and a
+  // further + z takes it back to the start of the mapping, so valid,
+  // regardless of the address mmap gave back. However, if mmap gives you an
+  // address < LARGE_CONSTANT (ignoring high bits), x - LARGE_CONSTANT will
+  // borrow from the high bits (with the subsequent + z carrying back into
+  // the high bits to give you a well-defined pointer) and thus trip
+  // FEAT_CPA's pointer corruption checks.
+  //
+  // We leave this fold as an opportunity for future work, addressing the
+  // corner case for FEAT_CPA, as well as reconciling the solution with the
+  // more general application of pointer arithmetic in other future targets.
+  // For now each architecture that wants this fold must implement it in the
+  // target-specific code (see e.g. SITargetLowering::performPtrAddCombine)
+
   return SDValue();
 }
 
@@ -15061,6 +15177,7 @@ SDValue DAGCombiner::visitAssertAlign(SDNode *N) {
   default:
     break;
   case ISD::ADD:
+  case ISD::PTRADD:
   case ISD::SUB: {
     unsigned AlignShift = Log2(AL);
     SDValue LHS = N0.getOperand(0);
@@ -16738,8 +16855,8 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                              Options.UnsafeFPMath || HasFMAD);
+  bool AllowFusionGlobally =
+      Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
     return SDValue();
@@ -17555,12 +17672,15 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
                            DAG.getConstantFP(4.0, DL, VT));
       }
     }
+  } // enable-unsafe-fp-math && AllowNewConst
 
+  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+       (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))) {
     // Fold fadd(vecreduce(x), vecreduce(y)) -> vecreduce(fadd(x, y))
     if (SDValue SD = reassociateReduction(ISD::VECREDUCE_FADD, ISD::FADD, DL,
                                           VT, N0, N1, Flags))
       return SD;
-  } // enable-unsafe-fp-math
+  }
 
   // FADD -> FMA combines:
   if (SDValue Fused = visitFADDForFMACombine<EmptyMatchContext>(N)) {
@@ -17945,6 +18065,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   SDValue N2 = N->getOperand(2);
   ConstantFPSDNode *N0CFP = dyn_cast<ConstantFPSDNode>(N0);
   ConstantFPSDNode *N1CFP = dyn_cast<ConstantFPSDNode>(N1);
+  ConstantFPSDNode *N2CFP = dyn_cast<ConstantFPSDNode>(N2);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   const TargetOptions &Options = DAG.getTarget().Options;
@@ -17974,11 +18095,17 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
   }
 
   // FIXME: use fast math flags instead of Options.UnsafeFPMath
-  if (Options.UnsafeFPMath) {
-    if (N0CFP && N0CFP->isZero())
-      return N2;
-    if (N1CFP && N1CFP->isZero())
-      return N2;
+  // TODO: Finally migrate away from global TargetOptions.
+  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
+      (Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
+      (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
+    if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
+        (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
+      if (N0CFP && N0CFP->isZero())
+        return N2;
+      if (N1CFP && N1CFP->isZero())
+        return N2;
+    }
   }
 
   // FIXME: Support splat of constant.
