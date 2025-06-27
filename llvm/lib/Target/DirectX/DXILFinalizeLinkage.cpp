@@ -24,7 +24,9 @@ static bool finalizeLinkage(Module &M) {
   for (Function &EF : M.functions()) {
     if (EF.isIntrinsic())
       continue;
-    if (EF.hasFnAttribute("hlsl.shader") || EF.hasFnAttribute("hlsl.export"))
+    if (EF.hasExternalLinkage() && EF.hasDefaultVisibility())
+      continue;
+    if (EF.hasFnAttribute("hlsl.shader"))
       continue;
     Funcs.push_back(&EF);
   }
@@ -35,14 +37,6 @@ static bool finalizeLinkage(Module &M) {
     if (F->isDefTriviallyDead())
       M.getFunctionList().erase(F);
   }
-
-  // Do a pass over intrinsics that are no longer used and remove them.
-  Funcs.clear();
-  for (Function &F : M.functions())
-    if (F.isIntrinsic() && F.use_empty())
-      Funcs.push_back(&F);
-  for (Function *F : Funcs)
-    F->eraseFromParent();
 
   return false;
 }

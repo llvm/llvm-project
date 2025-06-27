@@ -1117,9 +1117,11 @@ static std::vector<std::pair<SmallString<128>, bool>> runLTO() {
         std::make_unique<llvm::raw_fd_ostream>(FD, true));
   };
 
-  auto AddBuffer = [&](size_t Task, const Twine &moduleName,
+  auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
                        std::unique_ptr<MemoryBuffer> MB) {
-    *AddStream(Task, moduleName)->OS << MB->getBuffer();
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
   };
 
   FileCache Cache;

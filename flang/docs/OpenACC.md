@@ -25,6 +25,8 @@ local:
   logical expression.
 * `!$acc routine` directive can be placed at the top level. 
 * `!$acc cache` directive accepts scalar variable.
+* The `!$acc declare` directive accepts assumed size array arguments for 
+  `deviceptr` and `present` clauses.
 
 ## Remarks about incompatibilities with other implementations
 * Array element references in the data clauses are equivalent to array sections

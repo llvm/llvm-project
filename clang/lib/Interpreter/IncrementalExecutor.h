@@ -57,7 +57,7 @@ public:
   virtual llvm::Error removeModule(PartialTranslationUnit &PTU);
   virtual llvm::Error runCtors() const;
   virtual llvm::Error cleanUp();
-  llvm::Expected<llvm::orc::ExecutorAddr>
+  virtual llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
 
   llvm::orc::LLJIT &GetExecutionEngine() { return *Jit; }

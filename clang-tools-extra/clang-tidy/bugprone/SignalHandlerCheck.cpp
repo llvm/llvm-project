@@ -22,7 +22,9 @@ constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
 // mentioned POSIX specification was not updated after 'quick_exit' appeared
 // in the C11 standard.
 // Also, we want to keep the "minimal set" a subset of the "POSIX set".
-// The list is repeated in bugprone-signal-handler.rst and should be kept up to date.
+// The list is repeated in bugprone-signal-handler.rst and should be kept up to
+// date.
+// clang-format off
 constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
@@ -215,7 +217,9 @@ constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "wmemcpy",
     "wmemmove",
     "wmemset",
-    "write"};
+    "write"
+};
+// clang-format on
 
 using namespace clang::ast_matchers;
 
@@ -301,7 +305,7 @@ bool isCXXOnlyStmt(const Stmt *S) {
 /// It is unspecified which call is found if multiple calls exist, but the order
 /// should be deterministic (depend only on the AST).
 Expr *findCallExpr(const CallGraphNode *Caller, const CallGraphNode *Callee) {
-  auto FoundCallee = llvm::find_if(
+  const auto *FoundCallee = llvm::find_if(
       Caller->callees(), [Callee](const CallGraphNode::CallRecord &Call) {
         return Call.Callee == Callee;
       });
@@ -322,24 +326,21 @@ SourceRange getSourceRangeOfStmt(const Stmt *S, ASTContext &Ctx) {
   return P.getSourceRange();
 }
 
-} // namespace
-
 AST_MATCHER(FunctionDecl, isStandardFunction) {
   return isStandardFunction(&Node);
 }
+
+} // namespace
 
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       AsyncSafeFunctionSet(Options.get("AsyncSafeFunctionSet",
                                        AsyncSafeFunctionSetKind::POSIX)) {
-  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal) {
-    for (StringRef v : MinimalConformingFunctions)
-      ConformingFunctions.insert(v);
-  } else {
-    for (StringRef v : POSIXConformingFunctions)
-      ConformingFunctions.insert(v);
-  }
+  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal)
+    ConformingFunctions.insert_range(MinimalConformingFunctions);
+  else
+    ConformingFunctions.insert_range(POSIXConformingFunctions);
 }
 
 void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {

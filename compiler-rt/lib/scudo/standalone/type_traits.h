@@ -42,6 +42,14 @@ template <typename T> struct isPointer<T *> {
   static constexpr bool value = true;
 };
 
+template <bool Cond, typename L, typename R> struct Conditional {
+  using type = L;
+};
+
+template <typename L, typename R> struct Conditional<false, L, R> {
+  using type = R;
+};
+
 } // namespace scudo
 
 #endif // SCUDO_TYPE_TRAITS_H_

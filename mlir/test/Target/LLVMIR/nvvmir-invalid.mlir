@@ -111,15 +111,15 @@ llvm.func @tma_reduce_2d_im2col(%src : !llvm.ptr<3>, %tma_desc : !llvm.ptr, %d0 
 
 llvm.func @convert_float_to_tf32_rna_relu(%src : f32) -> i32 {
   // expected-error @below {{Relu not supported with rna rounding mode.}}
-  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rna>, relu=true}
+  %res = nvvm.convert.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rna>, relu=true}
   llvm.return %res : i32
 }
 
 // -----
 
 llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
-  // expected-error @below {{Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.}}
-  %res = nvvm.cvt.float.to.tf32 %src
+  // expected-error @below {{Only {rn,rz,rna} rounding modes supported for ConvertFloatToTF32Op.}}
+  %res = nvvm.convert.float.to.tf32 %src
   llvm.return %res : i32
 }
 
@@ -174,5 +174,141 @@ llvm.func @nvvm_match_sync_all(%val32: i32, %thread_mask: i32) {
 llvm.func @nvvm_match_sync_any(%val32: i32, %thread_mask: i32) {
   // expected-error @below {{match.sync 'any' returns an i32}}
   %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_e4m3(%a : f32, %b : f32) {
+  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to .e4m3x2 or .e5m2x2 types}}
+  %res = nvvm.convert.f32x2.to.f8x2 <e4m3> %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<satfinite>} : i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_e5m2(%a : f32, %b : f32) {
+  // expected-error @below {{Only RN rounding mode is supported for conversions from f32x2 to .e4m3x2 or .e5m2x2 types}}
+  %res = nvvm.convert.f32x2.to.f8x2 <e5m2> %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<satfinite>} : i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_float_to_f8x2_invalid_rounding_ue8m0(%a : f32, %b : f32) {
+  // expected-error @below {{Only RZ or RP rounding modes are supported for conversions from f32x2 to .ue8m0x2 type}}
+  %res = nvvm.convert.f32x2.to.f8x2 <ue8m0> %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_float_to_f8x2_invalid_saturation_e4m3(%a : f32, %b : f32) {
+  // expected-error @below {{Only SATFINITE saturation mode is supported for conversions from f32x2 to .e4m3x2 or .e5m2x2 types}}
+  %res = nvvm.convert.f32x2.to.f8x2 <e4m3> %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<none>} : i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_float_to_f8x2_invalid_saturation_e5m2(%a : f32, %b : f32) {
+  // expected-error @below {{Only SATFINITE saturation mode is supported for conversions from f32x2 to .e4m3x2 or .e5m2x2 types}}
+  %res = nvvm.convert.f32x2.to.f8x2 <e5m2> %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<none>} : i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_float_to_f8x2_relu_not_supported_ue8m0(%a : f32, %b : f32) {
+  // expected-error @below {{relu not supported for conversions to .ue8m0x2 type}}
+  %res = nvvm.convert.f32x2.to.f8x2 <ue8m0> %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, relu = true} : i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f16x2_to_f8x2_invalid_type(%src : vector<2xf16>) {
+  // expected-error @below {{Only .e4m3 or .e5m2 types are supported for conversions from f16x2 to f8x2.}}
+  %res = nvvm.convert.f16x2.to.f8x2 <ue8m0> %src : vector<2xf16> -> i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_type(%src : vector<2xbf16>) {
+  // expected-error @below {{Only .ue8m0 type is supported for conversions from bf16x2 to f8x2.}}
+  %res = nvvm.convert.bf16x2.to.f8x2 <e4m3> %src {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16> -> i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_bf16x2_to_f8x2_invalid_rounding(%src : vector<2xbf16>) {
+  // expected-error @below {{Only RZ and RP rounding modes are supported for conversions from bf16x2 to f8x2.}}
+  %res = nvvm.convert.bf16x2.to.f8x2 <ue8m0> %src {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16> -> i16
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L1_with_evict_priority(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{cache eviction priority supported only for cache level L2}}
+  nvvm.prefetch level = L1, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_evict_last_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
+  // expected-error @below {{cache eviction priority requires a global pointer}}
+  nvvm.prefetch level = L2, %local_ptr, evict_priority = evict_last : !llvm.ptr<5>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_evict_normal_invalid_addr_space(%local_ptr: !llvm.ptr<5>) {
+  // expected-error @below {{cache eviction priority requires a global pointer}}
+  nvvm.prefetch level = L2, %local_ptr, evict_priority = evict_normal : !llvm.ptr<5>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_invalid_evict_first(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_first : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_invalid_evict_unchanged(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_unchanged : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_L2_with_invalid_no_allocate(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{unsupported cache eviction priority, only evict_last and evict_normal are supported}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = no_allocate : !llvm.ptr<1>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_uniform_with_L2(%gen_ptr: !llvm.ptr) {
+  // expected-error @below {{unsupported cache level, the only supported uniform cache level is L1}}
+  nvvm.prefetch level = L2 uniform, %gen_ptr : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_prefetch_uniform_with_invalid_addr_space(%global_ptr: !llvm.ptr<1>) {
+  // expected-error @below {{prefetch to uniform cache requires a generic pointer}}
+  nvvm.prefetch level = L1 uniform, %global_ptr : !llvm.ptr<1>
   llvm.return
 }

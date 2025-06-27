@@ -338,7 +338,7 @@ public:
 };
 
 template <class _HashIterator>
-class _LIBCPP_TEMPLATE_VIS __hash_map_iterator {
+class __hash_map_iterator {
   _HashIterator __i_;
 
   typedef const typename _HashIterator::value_type::first_type key_type;
@@ -376,19 +376,19 @@ public:
   }
 
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS hash_map;
+  friend class hash_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS hash_multimap;
+  friend class hash_multimap;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+  friend class __hash_const_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+  friend class __hash_const_local_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator;
+  friend class __hash_map_const_iterator;
 };
 
 template <class _HashIterator>
-class _LIBCPP_TEMPLATE_VIS __hash_map_const_iterator {
+class __hash_map_const_iterator {
   _HashIterator __i_;
 
   typedef const typename _HashIterator::value_type::first_type key_type;
@@ -430,13 +430,13 @@ public:
   }
 
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS hash_map;
+  friend class hash_map;
   template <class, class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS hash_multimap;
+  friend class hash_multimap;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_iterator;
+  friend class __hash_const_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator;
+  friend class __hash_const_local_iterator;
 };
 
 template <class _Key,
@@ -444,7 +444,7 @@ template <class _Key,
           class _Hash  = hash<_Key>,
           class _Pred  = std::equal_to<_Key>,
           class _Alloc = std::allocator<std::pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS hash_map {
+class hash_map {
 public:
   // types
   typedef _Key key_type;
@@ -670,7 +670,7 @@ template <class _Key,
           class _Hash  = hash<_Key>,
           class _Pred  = std::equal_to<_Key>,
           class _Alloc = std::allocator<std::pair<const _Key, _Tp> > >
-class _LIBCPP_TEMPLATE_VIS hash_multimap {
+class hash_multimap {
 public:
   // types
   typedef _Key key_type;

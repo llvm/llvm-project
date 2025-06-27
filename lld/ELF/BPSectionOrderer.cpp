@@ -53,7 +53,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
       hashes.push_back(byte);
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
   static StringRef getSymName(const Defined &sym) { return sym.getName(); }
@@ -81,7 +81,8 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
     if (!sec || sec->size == 0 || !sec->isLive() || sec->repl != sec ||
         !orderer.secToSym.try_emplace(sec, d).second)
       return;
-    rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
+    rootSymbolToSectionIdxs[CachedHashStringRef(
+                                lld::utils::getRootSymbol(sym.getName()))]
         .insert(sections.size());
     sections.emplace_back(sec);
   };

@@ -108,8 +108,7 @@ public:
         LookupContinuation->run(Result.takeError());
       else {
         AsyncLookupResult LR;
-        for (auto &KV : *Result)
-          LR[KV.first] = KV.second;
+        LR.insert_range(*Result);
         LookupContinuation->run(std::move(LR));
       }
     };
@@ -208,7 +207,6 @@ public:
     if (auto Err = MR->notifyResolved(InternedResult))
       return Err;
 
-    notifyLoaded();
     return Error::success();
   }
 
@@ -243,11 +241,6 @@ public:
         [this](LinkGraph &G) { return registerDependencies(G); });
 
     return Error::success();
-  }
-
-  void notifyLoaded() {
-    for (auto &P : Plugins)
-      P->notifyLoaded(*MR);
   }
 
   Error notifyEmitted(jitlink::JITLinkMemoryManager::FinalizedAlloc FA) {

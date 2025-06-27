@@ -76,7 +76,7 @@ Register XtensaInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 }
 
 /// Adjust SP by Amount bytes.
-void XtensaInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
+void XtensaInstrInfo::adjustStackPtr(MCRegister SP, int64_t Amount,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I) const {
   DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
@@ -88,21 +88,25 @@ void XtensaInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
   const TargetRegisterClass *RC = &Xtensa::ARRegClass;
 
   // create virtual reg to store immediate
-  unsigned Reg = RegInfo.createVirtualRegister(RC);
+  MCRegister Reg = RegInfo.createVirtualRegister(RC);
 
   if (isInt<8>(Amount)) { // addi sp, sp, amount
     BuildMI(MBB, I, DL, get(Xtensa::ADDI), Reg).addReg(SP).addImm(Amount);
   } else { // Expand immediate that doesn't fit in 8-bit.
-    unsigned Reg1;
+    MCRegister Reg1;
     loadImmediate(MBB, I, &Reg1, Amount);
     BuildMI(MBB, I, DL, get(Xtensa::ADD), Reg)
         .addReg(SP)
         .addReg(Reg1, RegState::Kill);
   }
 
-  BuildMI(MBB, I, DL, get(Xtensa::OR), SP)
-      .addReg(Reg, RegState::Kill)
-      .addReg(Reg, RegState::Kill);
+  if (STI.isWindowedABI()) {
+    BuildMI(MBB, I, DL, get(Xtensa::MOVSP), SP).addReg(Reg, RegState::Kill);
+  } else {
+    BuildMI(MBB, I, DL, get(Xtensa::OR), SP)
+        .addReg(Reg, RegState::Kill)
+        .addReg(Reg, RegState::Kill);
+  }
 }
 
 void XtensaInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
@@ -147,16 +151,20 @@ void XtensaInstrInfo::getLoadStoreOpcodes(const TargetRegisterClass *RC,
                                           unsigned &LoadOpcode,
                                           unsigned &StoreOpcode,
                                           int64_t offset) const {
-  assert((RC == &Xtensa::ARRegClass) &&
-         "Unsupported regclass to load or store");
-
-  LoadOpcode = Xtensa::L32I;
-  StoreOpcode = Xtensa::S32I;
+  if (RC == &Xtensa::ARRegClass) {
+    LoadOpcode = Xtensa::L32I;
+    StoreOpcode = Xtensa::S32I;
+  } else if (RC == &Xtensa::FPRRegClass) {
+    LoadOpcode = Xtensa::LSI;
+    StoreOpcode = Xtensa::SSI;
+  } else {
+    llvm_unreachable("Unsupported regclass to load or store");
+  }
 }
 
 void XtensaInstrInfo::loadImmediate(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI,
-                                    unsigned *Reg, int64_t Value) const {
+                                    MCRegister *Reg, int64_t Value) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   MachineRegisterInfo &RegInfo = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC = &Xtensa::ARRegClass;
@@ -516,8 +524,10 @@ void XtensaInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
     JumpToMBB = &RestoreBB;
   }
 
+  unsigned LabelId = XtensaFI->createCPLabelId();
+
   XtensaConstantPoolValue *C = XtensaConstantPoolMBB::Create(
-      MF->getFunction().getContext(), JumpToMBB, 0);
+      MF->getFunction().getContext(), JumpToMBB, LabelId);
   unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align(4));
   L32R.addOperand(MachineOperand::CreateCPI(Idx, 0));
 

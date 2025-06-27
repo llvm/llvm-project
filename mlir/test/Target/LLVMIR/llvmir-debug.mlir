@@ -1,5 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir --write-experimental-debuginfo=false --split-input-file %s | FileCheck %s --check-prefixes=CHECK,INTRINSICS
-// RUN: mlir-translate -mlir-to-llvmir --write-experimental-debuginfo=true --split-input-file %s | FileCheck %s --check-prefixes=CHECK,RECORDS
+// RUN: mlir-translate -mlir-to-llvmir --split-input-file %s | FileCheck %s --check-prefixes=CHECK,RECORDS
 
 // CHECK-LABEL: define void @func_with_empty_named_info()
 // Check that translation doens't crash in the presence of an inlineble call
@@ -100,15 +99,12 @@ llvm.func @func_with_debug(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // INTRINSICS: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
   // RECORDS: #dbg_value(i64 %[[ARG]], ![[VAR_LOC:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 1), !{{.*}})
   llvm.intr.dbg.value #variable #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %arg : i64
 
-  // INTRINSICS: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed))
   // RECORDS: #dbg_declare(ptr %[[ALLOC]], ![[ADDR_LOC:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed), !{{.*}})
   llvm.intr.dbg.declare #variableAddr #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %alloc : !llvm.ptr
 
-  // INTRINSICS: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
   // RECORDS: #dbg_value(i64 %[[ARG]], ![[NO_NAME_VAR:[0-9]+]], !DIExpression(), !{{.*}})
   llvm.intr.dbg.value #noNameVariable = %arg : i64
 
@@ -230,13 +226,10 @@ llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.m
 // CHECK-LABEL: define i32 @func_with_inlined_dbg_value(
 // CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
 llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
-  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
   // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC0:[0-9]+]], !DIExpression(), ![[DBG_LOC0:.*]])
   llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
-  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
   // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC1:[0-9]+]], !DIExpression(), ![[DBG_LOC1:.*]])
   llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(#loc1)
-  // INTRINSICS: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
   // RECORDS: #dbg_label(![[LABEL:[0-9]+]], ![[DBG_LOC1:.*]])
   llvm.intr.dbg.label #di_label loc(#loc1)
   llvm.return %arg0 : i32
@@ -268,7 +261,6 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-LABEL: define void @func_without_subprogram(
 // CHECK-SAME: i32 %[[ARG:.*]])
 llvm.func @func_without_subprogram(%0 : i32) {
-  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
   // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC:[0-9]+]], !DIExpression(), ![[DBG_LOC0:.*]])
   llvm.intr.dbg.value #di_local_variable = %0 : i32 loc(fused<#di_subprogram>[#loc])
   llvm.return
@@ -300,13 +292,10 @@ llvm.func @func_without_subprogram(%0 : i32) {
 llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
-  // INTRINSICS-NOT: @llvm.dbg.value
   // RECORDS-NOT: #dbg_value
   llvm.intr.dbg.value #di_local_variable = %arg0 : i32
-  // INTRINSICS-NOT: @llvm.dbg.declare
   // RECORDS-NOT: #dbg_declare
   llvm.intr.dbg.declare #declared_var = %alloc : !llvm.ptr
-  // INTRINSICS-NOT: @llvm.dbg.label
   // RECORDS-NOT: #dbg_label
   llvm.intr.dbg.label #di_label
   llvm.return %arg0 : i32

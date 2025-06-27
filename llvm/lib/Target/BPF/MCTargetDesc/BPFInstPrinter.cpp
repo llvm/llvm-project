@@ -42,17 +42,12 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
   if (!SRE)
     report_fatal_error("Unexpected MCExpr type.");
 
-#ifndef NDEBUG
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
-
-  assert(Kind == MCSymbolRefExpr::VK_None);
-#endif
+  assert(SRE->getSpecifier() == 0);
   O << *Expr;
 }
 
 void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O, const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                  raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     O << getRegisterName(Op.getReg());
@@ -64,8 +59,8 @@ void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo, raw_ostream &O,
-                                     const char *Modifier) {
+void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo,
+                                     raw_ostream &O) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
 

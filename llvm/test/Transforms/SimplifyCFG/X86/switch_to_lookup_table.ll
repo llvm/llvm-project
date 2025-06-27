@@ -1028,15 +1028,14 @@ define i32 @nodefaultwithholes(i32 %c) {
 ; CHECK-LABEL: @nodefaultwithholes(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[C:%.*]], 6
-; CHECK-NEXT:    br i1 [[TMP0]], label [[SWITCH_HOLE_CHECK:%.*]], label [[SW_DEFAULT:%.*]]
-; CHECK:       sw.default:
-; CHECK-NEXT:    call void @exit(i32 1)
-; CHECK-NEXT:    unreachable
-; CHECK:       switch.hole_check:
 ; CHECK-NEXT:    [[SWITCH_MASKINDEX:%.*]] = trunc i32 [[C]] to i8
 ; CHECK-NEXT:    [[SWITCH_SHIFTED:%.*]] = lshr i8 47, [[SWITCH_MASKINDEX]]
 ; CHECK-NEXT:    [[SWITCH_LOBIT:%.*]] = trunc i8 [[SWITCH_SHIFTED]] to i1
-; CHECK-NEXT:    br i1 [[SWITCH_LOBIT]], label [[SWITCH_LOOKUP:%.*]], label [[SW_DEFAULT]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_LOBIT]], i1 false
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[SWITCH_LOOKUP:%.*]], label [[SW_DEFAULT:%.*]]
+; CHECK:       sw.default:
+; CHECK-NEXT:    call void @exit(i32 1)
+; CHECK-NEXT:    unreachable
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [6 x i32], ptr @switch.table.nodefaultwithholes, i32 0, i32 [[C]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4

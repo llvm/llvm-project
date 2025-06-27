@@ -10,6 +10,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel5.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel4.0-compute -x hlsl -ast-dump -o - %s -DFAIL -verify
 
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-compute -x hlsl -ast-dump -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
+
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_COMPUTE || __SHADER_TARGET_STAGE == __SHADER_STAGE_MESH || __SHADER_TARGET_STAGE == __SHADER_STAGE_AMPLIFICATION || __SHADER_TARGET_STAGE == __SHADER_STAGE_LIBRARY
 #ifdef FAIL
 
@@ -88,23 +90,29 @@ int entry() {
 
 // Because these two attributes match, they should both appear in the AST
 [numthreads(2,2,1)]
-// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:90:2, col:18> 2 2 1
+// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+}}:2, col:18> 2 2 1
 int secondFn();
 
 [numthreads(2,2,1)]
-// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:94:2, col:18> 2 2 1
+// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+}}:2, col:18> 2 2 1
 int secondFn() {
   return 1;
 }
 
 [numthreads(4,2,1)]
-// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:100:2, col:18> 4 2 1
+// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+}}:2, col:18> 4 2 1
 int onlyOnForwardDecl();
 
-// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:100:2, col:18> Inherited 4 2 1
+// CHECK: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+}}:2, col:18> Inherited 4 2 1
 int onlyOnForwardDecl() {
   return 1;
 }
+
+#ifdef __spirv__ 
+[numthreads(4,2,128)]
+// CHECK-SPIRV: HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <line:{{[0-9]+}}:2, col:20> 4 2 128
+int largeZ();
+#endif 
 
 #else // Vertex and Pixel only beyond here
 // expected-error-re@+1 {{attribute 'numthreads' is unsupported in '{{[A-Za-z]+}}' shaders, requires one of the following: compute, amplification, mesh}}

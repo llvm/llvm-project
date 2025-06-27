@@ -134,16 +134,148 @@ bb:
   ret void
 }
 
-; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm:
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_0:
 ; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], 0{{$}}
 ; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
 ; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], 0{{$}}
 ; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
 ; GCN:    global_store_dwordx4
 ; GCN:    global_store_dwordx4
-define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm(ptr addrspace(1) %arg, double %a, double %b) #0 {
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_0(ptr addrspace(1) %arg, double %a, double %b) #0 {
 bb:
-  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> <double 0.0, double 0.0, double 0.0, double 0.0>, i32 0, i32 0, i32 0)
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> zeroinitializer, i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_int_neg1:
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], -1{{$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], -1{{$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_neg1(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 -1 to double)), i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_1:
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], 1.0{{$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], 1.0{{$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_1(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double 1.0), i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_neg1:
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], -1.0{{$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], -1.0{{$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_neg1(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double -1.0), i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_int_64:
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], 64{{$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], 64{{$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 64 to double)), i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
+; GCN: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 0{{$}}
+; GCN: v_accvgpr_write_b32 a[[A_HIGH_BITS_0:[0-9]+]], 64
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_HIGH_BITS_0]]
+
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 274877906944 to double)), i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
+; GCN: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 64{{$}}
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_LOW_BITS_0]]
+
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (i64 274877907008 to double)), i32 0, i32 0, i32 0)
+  %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
+  store <4 x double> %mai.2, ptr addrspace(1) %arg
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
+; GCN: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 1.0
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GCN: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_LOW_BITS_0]]
+
+; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
+; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
+; GFX942: v_mfma_f64_16x16x4_f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
+; GFX942: v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 neg:[1,1,0]
+; GCN:    global_store_dwordx4
+; GCN:    global_store_dwordx4
+define amdgpu_kernel void @test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low(ptr addrspace(1) %arg, double %a, double %b) #0 {
+bb:
+  %mai.1 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> splat (double bitcast (<2 x float> splat (float 1.0) to double)), i32 0, i32 0, i32 0)
   %mai.2 = tail call <4 x double> @llvm.amdgcn.mfma.f64.16x16x4f64(double %a, double %b, <4 x double> %mai.1, i32 1, i32 2, i32 3)
   store <4 x double> %mai.2, ptr addrspace(1) %arg
   ret void

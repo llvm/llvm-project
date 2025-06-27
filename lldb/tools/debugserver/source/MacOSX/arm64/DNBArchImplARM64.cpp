@@ -2952,8 +2952,15 @@ kern_return_t DNBArchMachARM64::SetRegisterState(int set) {
     return err;
 
   switch (set) {
-  case e_regSetALL:
-    return SetGPRState() | SetVFPState() | SetEXCState() | SetDBGState(false);
+  case e_regSetALL: {
+    kern_return_t ret =
+        SetGPRState() | SetVFPState() | SetEXCState() | SetDBGState(false);
+    if (CPUHasSME()) {
+      SetSVEState();
+      SetSMEState();
+    }
+    return ret;
+  }
   case e_regSetGPR:
     return SetGPRState();
   case e_regSetVFP:
@@ -3123,6 +3130,12 @@ uint32_t DNBArchMachARM64::SaveRegisterState() {
                                  "error: %s regs failed to read: %u",
                      "VFP", kret);
   } else {
+    if (CPUHasSME()) {
+      // These can fail when processor is not in streaming SVE mode,
+      // and that failure should be ignored.
+      GetSVEState(force);
+      GetSMEState(force);
+    }
     const uint32_t save_id = GetNextRegisterStateSaveID();
     m_saved_register_states[save_id] = m_state.context;
     return save_id;
@@ -3149,6 +3162,12 @@ bool DNBArchMachARM64::RestoreRegisterState(uint32_t save_id) {
                                    "write: %u",
                        save_id, "VFP", kret);
       success = false;
+    }
+    if (CPUHasSME()) {
+      // These can fail when processor is not in streaming SVE mode,
+      // and that failure should be ignored.
+      SetSVEState();
+      SetSMEState();
     }
     m_saved_register_states.erase(pos);
     return success;

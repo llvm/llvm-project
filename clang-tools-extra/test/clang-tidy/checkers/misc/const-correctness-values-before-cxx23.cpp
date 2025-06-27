@@ -10,7 +10,7 @@
 double &non_const_ref_return() {
   double p_local0 = 0.0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'p_local0' of type 'double' can be declared 'const'
-  // CHECK-FIXES: double const p_local0
+  // CHECK-FIXES: double const p_local0 = 0.0;
   double np_local0 = 42.42;
   return np_local0;
 }

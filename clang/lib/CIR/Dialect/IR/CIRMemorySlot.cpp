@@ -34,8 +34,8 @@ llvm::SmallVector<MemorySlot> cir::AllocaOp::getPromotableSlots() {
 
 Value cir::AllocaOp::getDefaultValue(const MemorySlot &slot,
                                      OpBuilder &builder) {
-  return builder.create<cir::ConstantOp>(
-      getLoc(), slot.elemType, builder.getAttr<cir::UndefAttr>(slot.elemType));
+  return builder.create<cir::ConstantOp>(getLoc(),
+                                         cir::UndefAttr::get(slot.elemType));
 }
 
 void cir::AllocaOp::handleBlockArgument(const MemorySlot &slot,
@@ -74,7 +74,7 @@ bool cir::LoadOp::canUsesBeRemoved(
     return false;
   Value blockingUse = (*blockingUses.begin())->get();
   return blockingUse == slot.ptr && getAddr() == slot.ptr &&
-         getResult().getType() == slot.elemType;
+         getType() == slot.elemType;
 }
 
 DeletionKind cir::LoadOp::removeBlockingUses(

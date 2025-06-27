@@ -25,6 +25,7 @@
 namespace clang {
   class DiagnosticsEngine;
   class DiagnosticBuilder;
+  class LangOptions;
   class SourceLocation;
 
   // Import the diagnostic enums themselves.
@@ -38,7 +39,7 @@ namespace clang {
       DIAG_SIZE_FRONTEND      =  200,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  500,
-      DIAG_SIZE_PARSE         =  700,
+      DIAG_SIZE_PARSE         =  800,
       DIAG_SIZE_AST           =  300,
       DIAG_SIZE_COMMENT       =  100,
       DIAG_SIZE_CROSSTU       =  100,
@@ -70,17 +71,6 @@ namespace clang {
     /// All of the diagnostics that can be emitted by the frontend.
     typedef unsigned kind;
 
-    // Get typedefs for common diagnostics.
-    enum {
-#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, CATEGORY,      \
-             NOWERROR, SHOWINSYSHEADER, SHOWINSYSMACRO, DEFFERABLE)            \
-  ENUM,
-#define COMMONSTART
-#include "clang/Basic/DiagnosticCommonKinds.inc"
-      NUM_BUILTIN_COMMON_DIAGNOSTICS
-#undef DIAG
-    };
-
     /// Enum values that allow the client to map NOTEs, WARNINGs, and EXTENSIONs
     /// to either Ignore (nothing), Remark (emit a remark), Warning
     /// (emit a warning) or Error (emit as an error).  It allows clients to
@@ -102,8 +92,13 @@ namespace clang {
       Remark          ///< A diagnostic that indicates normal progress through
                       ///< compilation.
     };
-  }
+  } // end namespace diag
+} // end namespace clang
 
+// This has to be included *after* the DIAG_START_ enums above are defined.
+#include "clang/Basic/DiagnosticCommonInterface.inc"
+
+namespace clang {
 class DiagnosticMapping {
   LLVM_PREFERRED_TYPE(diag::Severity)
   unsigned Severity : 3;
@@ -464,6 +459,11 @@ public:
   /// given group name.
   static StringRef getNearestOption(diag::Flavor Flavor, StringRef Group);
 
+  /// Get the appropriate diagnostic Id to use for issuing a compatibility
+  /// diagnostic. For use by the various DiagCompat() helpers.
+  static unsigned getCXXCompatDiagId(const LangOptions &LangOpts,
+                                     unsigned CompatDiagId);
+
 private:
   /// Classify the specified diagnostic ID into a Level, consumable by
   /// the DiagnosticClient.
@@ -482,18 +482,6 @@ private:
                         const DiagnosticsEngine &Diag) const LLVM_READONLY;
 
   Class getDiagClass(unsigned DiagID) const;
-
-  /// Used to report a diagnostic that is finally fully formed.
-  ///
-  /// \returns \c true if the diagnostic was emitted, \c false if it was
-  /// suppressed.
-  bool ProcessDiag(DiagnosticsEngine &Diag,
-                   const DiagnosticBuilder &DiagBuilder) const;
-
-  /// Used to emit a diagnostic that is finally fully formed,
-  /// ignoring suppression.
-  void EmitDiag(DiagnosticsEngine &Diag, const DiagnosticBuilder &DiagBuilder,
-                Level DiagLevel) const;
 
   /// Whether the diagnostic may leave the AST in a state where some
   /// invariants can break.

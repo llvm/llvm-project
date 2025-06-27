@@ -769,5 +769,3 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) {
   ret double %call
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

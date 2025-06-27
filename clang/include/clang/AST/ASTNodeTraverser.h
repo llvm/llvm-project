@@ -396,8 +396,7 @@ public:
     // FIXME: Provide a NestedNameSpecifier visitor.
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (NestedNameSpecifier::SpecifierKind K = Qualifier->getKind();
-        K == NestedNameSpecifier::TypeSpec ||
-        K == NestedNameSpecifier::TypeSpecWithTemplate)
+        K == NestedNameSpecifier::TypeSpec)
       Visit(Qualifier->getAsType());
     if (T->isSugared())
       Visit(T->getMostRecentCXXRecordDecl()->getTypeForDecl());
@@ -450,6 +449,24 @@ public:
     QualType Contained = T->getContainedType();
     if (!Contained.isNull())
       Visit(Contained);
+  }
+  void VisitHLSLInlineSpirvType(const HLSLInlineSpirvType *T) {
+    for (auto &Operand : T->getOperands()) {
+      using SpirvOperandKind = SpirvOperand::SpirvOperandKind;
+
+      switch (Operand.getKind()) {
+      case SpirvOperandKind::ConstantId:
+      case SpirvOperandKind::Literal:
+        break;
+
+      case SpirvOperandKind::TypeId:
+        Visit(Operand.getResultType());
+        break;
+
+      default:
+        llvm_unreachable("Invalid SpirvOperand kind!");
+      }
+    }
   }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
@@ -539,8 +556,8 @@ public:
       for (const auto *Parameter : D->parameters())
         Visit(Parameter);
 
-    if (const Expr *TRC = D->getTrailingRequiresClause())
-      Visit(TRC);
+    if (const AssociatedConstraint &TRC = D->getTrailingRequiresClause())
+      Visit(TRC.ConstraintExpr);
 
     if (Traversal == TK_IgnoreUnlessSpelledInSource && D->isDefaulted())
       return;
@@ -588,7 +605,7 @@ public:
   }
 
   void VisitFileScopeAsmDecl(const FileScopeAsmDecl *D) {
-    Visit(D->getAsmString());
+    Visit(D->getAsmStringExpr());
   }
 
   void VisitTopLevelStmtDecl(const TopLevelStmtDecl *D) { Visit(D->getStmt()); }
