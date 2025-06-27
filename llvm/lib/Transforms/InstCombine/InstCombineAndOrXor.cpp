@@ -2365,8 +2365,7 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 /// number of and/or instructions might have to be created.
 Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
                                                  Instruction &I, bool IsAnd,
-                                                 bool RHSIsLogical,
-                                                 bool RHSIsDisjoint) {
+                                                 bool RHSIsLogical) {
   Instruction::BinaryOps Opcode = IsAnd ? Instruction::And : Instruction::Or;
 
   // LHS bop (X lop Y) --> (LHS bop X) lop Y
@@ -2380,39 +2379,6 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
     return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
                         : Builder.CreateBinOp(Opcode, X, Res);
 
-  if (RHSIsDisjoint && !IsAnd && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
-    if (Value *Res = foldDisjointOr(LHS, X, I)) {
-      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, Y));
-      Disjoint->setIsDisjoint(true);
-      return cast<Value>(Disjoint);
-    }
-    if (Value *Res = foldDisjointOr(LHS, Y, I)) {
-      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, X));
-      Disjoint->setIsDisjoint(true);
-      return cast<Value>(Disjoint);
-    }
-    Value *X1, *Y1;
-    if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X1), m_Value(Y1))))) {
-      auto TryFold = [this, &I](Value *Op0, Value *Op1, Value *Rem0,
-                                Value *Rem1) -> Value * {
-        if (Value *Res = foldDisjointOr(Op0, Op1, I)) {
-          auto Disjoint =
-              cast<PossiblyDisjointInst>(Builder.CreateOr(Rem0, Rem1));
-          Disjoint->setIsDisjoint(true);
-          auto Disjoint2 =
-              cast<PossiblyDisjointInst>(Builder.CreateOr(Disjoint, Res));
-          return cast<Value>(Disjoint2);
-        }
-        return nullptr;
-      };
-
-      if (Value *Res = TryFold(X, X1, Y, Y1))
-        return Res;
-
-      if (Value *Res = TryFold(X, Y1, Y, X1))
-        return Res;
-    }
-  }
   return nullptr;
 }
 
@@ -3578,6 +3544,56 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   return foldAndOrOfICmpsUsingRanges(LHS, RHS, IsAnd);
 }
 
+/// If IsLogical is true, then the and/or is in select form and the transform
+/// must be poison-safe.
+Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
+                                          Instruction &I, bool IsAnd,
+                                          bool IsLogical) {
+  if (!LHS->getType()->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  // handle (roughly):
+  // (icmp ne (A & B), C) | (icmp ne (A & D), E)
+  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
+  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder,
+                                        SQ.getWithInstruction(&I)))
+    return V;
+
+  if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
+      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical))
+        return Res;
+
+  if (auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
+    if (auto *RHSCmp = dyn_cast<FCmpInst>(RHS))
+      if (Value *Res = foldLogicOfFCmps(LHSCmp, RHSCmp, IsAnd, IsLogical))
+        return Res;
+
+  if (Value *Res = foldEqOfParts(LHS, RHS, IsAnd))
+    return Res;
+
+  return nullptr;
+}
+
+static Value *foldOrOfInversions(BinaryOperator &I,
+                                 InstCombiner::BuilderTy &Builder) {
+  assert(I.getOpcode() == Instruction::Or &&
+         "Simplification only supports or at the moment.");
+
+  Value *Cmp1, *Cmp2, *Cmp3, *Cmp4;
+  if (!match(I.getOperand(0), m_And(m_Value(Cmp1), m_Value(Cmp2))) ||
+      !match(I.getOperand(1), m_And(m_Value(Cmp3), m_Value(Cmp4))))
+    return nullptr;
+
+  // Check if any two pairs of the and operations are inversions of each other.
+  if (isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4))
+    return Builder.CreateXor(Cmp1, Cmp4);
+  if (isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3))
+    return Builder.CreateXor(Cmp1, Cmp3);
+
+  return nullptr;
+}
+
 // A decomposition of ((X & Mask) * Factor). The NUW / NSW bools
 // track these properities for preservation. Note that we can decompose
 // equivalent select form of this expression (e.g. (!(X & Mask) ? 0 : Mask *
@@ -3680,63 +3696,73 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
   return nullptr;
 }
 
-/// If IsLogical is true, then the and/or is in select form and the transform
-/// must be poison-safe.
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS,
                                         Instruction &I) {
-  if (Value *V = foldBitmaskMul(LHS, RHS, Builder))
-    return V;
-
-  return nullptr;
-}
-
-/// If IsLogical is true, then the and/or is in select form and the transform
-/// must be poison-safe.
-Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
-                                          Instruction &I, bool IsAnd,
-                                          bool IsLogical) {
-  if (!LHS->getType()->isIntOrIntVectorTy(1))
-    return nullptr;
-
-  // handle (roughly):
-  // (icmp ne (A & B), C) | (icmp ne (A & D), E)
-  // (icmp eq (A & B), C) & (icmp eq (A & D), E)
-  if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder,
-                                        SQ.getWithInstruction(&I)))
-    return V;
-
-  if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
-    if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
-      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical))
-        return Res;
-
-  if (auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
-    if (auto *RHSCmp = dyn_cast<FCmpInst>(RHS))
-      if (Value *Res = foldLogicOfFCmps(LHSCmp, RHSCmp, IsAnd, IsLogical))
-        return Res;
-
-  if (Value *Res = foldEqOfParts(LHS, RHS, IsAnd))
+  if (Value *Res = foldBitmaskMul(LHS, RHS, Builder)) {
     return Res;
+  }
 
   return nullptr;
 }
 
-static Value *foldOrOfInversions(BinaryOperator &I,
-                                 InstCombiner::BuilderTy &Builder) {
-  assert(I.getOpcode() == Instruction::Or &&
-         "Simplification only supports or at the moment.");
+Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS,
+                                               Instruction &I) {
 
-  Value *Cmp1, *Cmp2, *Cmp3, *Cmp4;
-  if (!match(I.getOperand(0), m_And(m_Value(Cmp1), m_Value(Cmp2))) ||
-      !match(I.getOperand(1), m_And(m_Value(Cmp3), m_Value(Cmp4))))
-    return nullptr;
+  Value *X, *Y;
+  if (match(RHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
+    if (Value *Res = foldDisjointOr(LHS, X, I)) {
+      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, Y));
+      Disjoint->setIsDisjoint(true);
+      return cast<Value>(Disjoint);
+    }
+    if (Value *Res = foldDisjointOr(LHS, Y, I)) {
+      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, X));
+      Disjoint->setIsDisjoint(true);
+      return cast<Value>(Disjoint);
+    }
+  }
 
-  // Check if any two pairs of the and operations are inversions of each other.
-  if (isKnownInversion(Cmp1, Cmp3) && isKnownInversion(Cmp2, Cmp4))
-    return Builder.CreateXor(Cmp1, Cmp4);
-  if (isKnownInversion(Cmp1, Cmp4) && isKnownInversion(Cmp2, Cmp3))
-    return Builder.CreateXor(Cmp1, Cmp3);
+  if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
+    if (Value *Res = foldDisjointOr(X, RHS, I)) {
+      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, Y));
+      Disjoint->setIsDisjoint(true);
+      return cast<Value>(Disjoint);
+    }
+    if (Value *Res = foldDisjointOr(Y, RHS, I)) {
+      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, X));
+      Disjoint->setIsDisjoint(true);
+      return cast<Value>(Disjoint);
+    }
+  }
 
+  Value *X1, *Y1;
+  if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y)))) &&
+      (match(RHS, m_OneUse(m_DisjointOr(m_Value(X1), m_Value(Y1)))))) {
+    auto TryFold = [this, &I](Value *Op0, Value *Op1, Value *Rem0,
+                              Value *Rem1) -> Value * {
+      if (Value *Res = foldDisjointOr(Op0, Op1, I)) {
+        auto Disjoint =
+            cast<PossiblyDisjointInst>(Builder.CreateOr(Rem0, Rem1));
+        Disjoint->setIsDisjoint(true);
+        auto Disjoint2 =
+            cast<PossiblyDisjointInst>(Builder.CreateOr(Disjoint, Res));
+        return cast<Value>(Disjoint2);
+      }
+      return nullptr;
+    };
+
+    if (Value *Res = TryFold(X, X1, Y, Y1))
+      return Res;
+
+    if (Value *Res = TryFold(X, Y1, Y, X1))
+      return Res;
+
+    if (Value *Res = TryFold(Y, X1, X, Y1))
+      return Res;
+
+    if (Value *Res = TryFold(Y, Y1, X, X1))
+      return Res;
+  }
   return nullptr;
 }
 
@@ -3825,23 +3851,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (Value *Res = foldBitmaskMul(I.getOperand(0), I.getOperand(1), Builder))
       return replaceInstUsesWith(I, Res);
 
-    Value *X, *Y;
-    if (match(I.getOperand(1),
-              m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
-      if (auto Res = reassociateBooleanAndOr(
-              I.getOperand(0), X, Y, I, /*IsAnd=*/false, /*RHSIsLogical=*/true,
-              /*RHSIsDisjoint*/ true)) {
-        return replaceInstUsesWith(I, Res);
-      }
-    }
-    if (match(I.getOperand(0),
-              m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
-      if (auto Res = reassociateBooleanAndOr(
-              I.getOperand(1), X, Y, I, /*IsAnd=*/false, /*RHSIsLogical=*/true,
-              /*RHSIsDisjoint*/ true)) {
-        return replaceInstUsesWith(I, Res);
-      }
-    }
+    if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1), I))
+      return replaceInstUsesWith(I, Res);
   }
 
   Value *X, *Y;
