@@ -453,4 +453,42 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// BitfieldInfoAttr
+//===----------------------------------------------------------------------===//
+
+def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
+  let summary = "Represents a bit field info";
+  let description = [{
+    Holds the next information about bitfields: name, storage type, a bitfield
+    size and position in the storage, if the bitfield is signed or not.
+  }];
+  let parameters = (ins "mlir::StringAttr":$name,
+                        "mlir::Type":$storageType,
+                        "uint64_t":$size,
+                        "uint64_t":$offset,
+                        "bool":$isSigned);
+
+  let assemblyFormat = [{`<` struct($name,
+                                    $storageType,
+                                    $size,
+                                    $offset,
+                                    $isSigned)
+                         `>`
+                        }];
+
+  let builders = [
+    AttrBuilder<(ins "llvm::StringRef":$name,
+                     "mlir::Type":$storageType,
+                     "uint64_t":$size,
+                     "uint64_t":$offset,
+                     "bool":$isSigned
+                     ), [{
+      return $_get($_ctxt, mlir::StringAttr::get($_ctxt, name), storageType,
+                   size, offset, isSigned);
+    }]>
+  ];
+}
+
+
 #endif // LLVM_CLANG_CIR_DIALECT_IR_CIRATTRS_TD

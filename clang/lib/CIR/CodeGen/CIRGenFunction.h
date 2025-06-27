@@ -959,6 +959,8 @@ public:
   /// ignoring the result.
   void emitIgnoredExpr(const clang::Expr *e);
 
+  RValue emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc);
+
   /// Given an expression that represents a value lvalue, this method emits
   /// the address of the lvalue, then loads the result as an rvalue,
   /// returning the rvalue.
