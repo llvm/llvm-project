@@ -178,6 +178,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   SDValue ExtractELT =
       DAG->getNode(ISD::EXTRACT_VECTOR_ELT, DL, Int32VT, V1, Op3);
 
+  SDValue Ch = DAG->getEntryNode();
+  SDValue BasePtr = DAG->getRegister(1, MVT::i64);
+  SDValue Offset = DAG->getUNDEF(MVT::i64);
+  MachinePointerInfo PtrInfo;
+  SDValue Load = DAG->getLoad(MVT::i32, DL, Ch, BasePtr, PtrInfo);
+
   using namespace SDPatternMatch;
   ISD::CondCode CC;
   EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(),
@@ -230,6 +236,13 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   EXPECT_FALSE(sd_match(
       InsertSubvector,
       m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_SpecificInt(3))));
+
+  EXPECT_TRUE(sd_match(
+      Load, m_Load(m_Specific(Ch), m_Specific(BasePtr), m_Specific(Offset))));
+
+  EXPECT_FALSE(
+      sd_match(Load.getValue(1), m_Load(m_Specific(Ch), m_Specific(BasePtr),
+                                        m_Specific(Offset))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
