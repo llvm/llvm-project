@@ -14,6 +14,6 @@ define i32 @f() {
 ; CHECK-NEXT:    l32i a2, a8, 0
 ; CHECK-NEXT:    ret
 entry:
-	%tmp1 = load i32, ptr @i
-	ret i32 %tmp1
+  %tmp1 = load i32, ptr @i
+  ret i32 %tmp1
 }

@@ -933,10 +933,12 @@ SDValue XtensaTargetLowering::LowerGlobalTLSAddress(SDValue Op,
   TLSModel::Model model = getTargetMachine().getTLSModel(GV);
 
   if (!Subtarget.hasTHREADPTR()) {
-    report_fatal_error("only emulated TLS supported");
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(), "only emulated TLS supported",
+        DL.getDebugLoc()));
   }
 
-  if ((model == TLSModel::LocalExec) || (model == TLSModel::InitialExec)) {
+  if (model == TLSModel::LocalExec || model == TLSModel::InitialExec) {
     bool Priv = GV->isPrivateLinkage(GV->getLinkage());
     MachineFunction &MF = DAG.getMachineFunction();
     XtensaMachineFunctionInfo *XtensaFI =
@@ -960,8 +962,12 @@ SDValue XtensaTargetLowering::LowerGlobalTLSAddress(SDValue Op,
         DAG.getNode(XtensaISD::RUR, DL, MVT::i32, TPRegister);
 
     return DAG.getNode(ISD::ADD, DL, PtrVT, ThreadPointer, Addr);
-  } else
-    report_fatal_error("only local-exec and initial-exec TLS mode supported");
+  } else {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "only local-exec and initial-exec TLS mode supported",
+        DL.getDebugLoc()));
+  }
 
   return SDValue();
 }

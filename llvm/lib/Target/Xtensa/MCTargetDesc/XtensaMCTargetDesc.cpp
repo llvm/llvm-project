@@ -209,20 +209,23 @@ bool Xtensa::checkRegister(MCRegister RegNo, const FeatureBitset &FeatureBits,
 
 // Get Xtensa User Register by encoding value.
 MCRegister Xtensa::getUserRegister(unsigned Code, const MCRegisterInfo &MRI) {
+  MCRegister UserReg = Xtensa::NoRegister;
+
   if (MRI.getEncodingValue(Xtensa::FCR) == Code) {
-    return Xtensa::FCR;
+    UserReg = Xtensa::FCR;
   } else if (MRI.getEncodingValue(Xtensa::FSR) == Code) {
-    return Xtensa::FSR;
+    UserReg = Xtensa::FSR;
   } else if (MRI.getEncodingValue(Xtensa::F64R_LO) == Code) {
-    return Xtensa::F64R_LO;
+    UserReg = Xtensa::F64R_LO;
   } else if (MRI.getEncodingValue(Xtensa::F64R_HI) == Code) {
-    return Xtensa::F64R_HI;
+    UserReg = Xtensa::F64R_HI;
   } else if (MRI.getEncodingValue(Xtensa::F64S) == Code) {
-    return Xtensa::F64S;
+    UserReg = Xtensa::F64S;
   } else if (MRI.getEncodingValue(Xtensa::THREADPTR) == Code) {
-    return Xtensa::THREADPTR;
+    UserReg = Xtensa::THREADPTR;
   }
-  return Xtensa::NoRegister;
+
+  return UserReg;
 }
 
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
