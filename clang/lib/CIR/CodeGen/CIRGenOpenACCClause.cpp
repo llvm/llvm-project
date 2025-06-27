@@ -593,7 +593,7 @@ public:
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain. Exit data,update constructs
+      // unreachable. Combined constructs remain. Exit data, update constructs
       // remain.
       return clauseNotImplemented(clause);
     }
