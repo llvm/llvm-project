@@ -47,6 +47,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -17574,7 +17575,21 @@ static bool ConvertAPValueToString(const APValue &V, QualType T,
           break;
         }
       }
-      V.getInt().toString(Str);
+
+      llvm::APSInt vInt = V.getInt();
+      if (llvm::APSInt::compareValues(
+              vInt, llvm::APSInt::getUnsigned(
+                        std::numeric_limits<uint64_t>::max())) >= 0 ||
+          vInt < std::numeric_limits<int64_t>::min()) {
+        // The value of cutSize is not special, it is just a number of
+        // characters that gives us enough info without losing readability.
+        const int cutSize = 20;
+        vInt.toString(Str, 16);
+        Str.erase(Str.begin() + cutSize, Str.end() - cutSize);
+        Str.insert(Str.begin() + cutSize, 3, '.');
+      } else {
+        vInt.toString(Str);
+      }
     }
 
     break;

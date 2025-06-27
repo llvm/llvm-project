@@ -87,12 +87,12 @@ typedef unsigned __int128 uint128_t;
 static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
 static_assert(UINT128_MAX == -1, "");
 static_assert(UINT128_MAX == 1, ""); // both-error {{static assertion failed}} \
-                                     // both-note {{'340282366920938463463374607431768211455 == 1'}}
+                                     // both-note {{'FFFFFFFFFFFFFFFFFFFF...FFFFFFFFFFFFFFFFFFFF == 1'}}
 
 static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
 static_assert(INT128_MAX != 0, "");
 static_assert(INT128_MAX == 0, ""); // both-error {{failed}} \
-                                    // both-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+                                    // both-note {{evaluates to '7FFFFFFFFFFFFFFFFFFF...FFFFFFFFFFFFFFFFFFFF == 0'}}
 static const __int128_t INT128_MIN = -INT128_MAX - 1;
 
 
@@ -113,14 +113,14 @@ namespace i128 {
   static const __uint128_t UINT128_MAX =__uint128_t(__int128_t(-1L));
   static_assert(UINT128_MAX == -1, "");
   static_assert(UINT128_MAX == 1, ""); // both-error {{static assertion failed}} \
-                                       // both-note {{'340282366920938463463374607431768211455 == 1'}}
+                                       // both-note {{'FFFFFFFFFFFFFFFFFFFF...FFFFFFFFFFFFFFFFFFFF == 1'}}
 
   constexpr uint128_t TooMuch = UINT128_MAX * 2;
 
   static const __int128_t INT128_MAX = UINT128_MAX >> (__int128_t)1;
   static_assert(INT128_MAX != 0, "");
   static_assert(INT128_MAX == 0, ""); // both-error {{failed}} \
-                                      // both-note {{evaluates to '170141183460469231731687303715884105727 == 0'}}
+                                      // both-note {{evaluates to '7FFFFFFFFFFFFFFFFFFF...FFFFFFFFFFFFFFFFFFFF == 0'}}
 
   constexpr int128_t TooMuch2 = INT128_MAX * INT128_MAX; // both-error {{must be initialized by a constant expression}} \
                                                          // both-note {{value 28948022309329048855892746252171976962977213799489202546401021394546514198529 is outside the range of representable}}
