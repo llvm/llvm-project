@@ -2286,11 +2286,9 @@ public:
                         const llvm::SmallVectorImpl<StringRef> &NoBuiltins);
 
   /// A label from a C++ #pragma export, for a symbol that we
-  /// haven't seen the declaration for yet. The TypeList is the argument list
-  /// the function must match if HasTypeList is true.
+  /// haven't seen the declaration for yet.
   struct SymbolLabel {
     SourceLocation NameLoc;
-    IdentifierInfo *IdentId;
     bool Used;
   };
 

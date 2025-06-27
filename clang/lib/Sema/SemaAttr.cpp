@@ -1330,7 +1330,6 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
 
 void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc) {
   SymbolLabel Label;
-  Label.IdentId = IdentId;
   Label.NameLoc = NameLoc;
   Label.Used = false;
 
