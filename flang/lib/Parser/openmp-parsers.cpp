@@ -1004,6 +1004,8 @@ TYPE_PARSER( //
     "IF" >> construct<OmpClause>(construct<OmpClause::If>(
                 parenthesized(Parser<OmpIfClause>{}))) ||
     "INBRANCH" >> construct<OmpClause>(construct<OmpClause::Inbranch>()) ||
+    "INDIRECT" >> construct<OmpClause>(construct<OmpClause::Indirect>(
+                      maybe(parenthesized(scalarLogicalExpr)))) ||
     "INIT" >> construct<OmpClause>(construct<OmpClause::Init>(
                   parenthesized(Parser<OmpInitClause>{}))) ||
     "INCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Inclusive>(

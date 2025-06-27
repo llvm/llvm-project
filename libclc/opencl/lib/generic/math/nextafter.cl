@@ -6,27 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clcmacro.h>
 #include <clc/math/clc_nextafter.h>
 #include <clc/opencl/clc.h>
 
-_CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(float, nextafter, __clc_nextafter,
-                                        float, float)
+#define FUNCTION nextafter
+#define __CLC_FUNCTION(x) __clc_nextafter
+#define __CLC_BODY <clc/shared/binary_def.inc>
 
-#ifdef cl_khr_fp64
-
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-
-_CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(double, nextafter, __clc_nextafter,
-                                        double, double)
-
-#endif
-
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-_CLC_DEFINE_BINARY_BUILTIN_NO_SCALARIZE(half, nextafter, __clc_nextafter, half,
-                                        half)
-
-#endif
+#include <clc/math/gentype.inc>
