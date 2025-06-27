@@ -42,9 +42,7 @@ void SystemZTargetHLASMStreamer::emitExtern(StringRef Sym) {
   getStreamer().emitRawText(Twine(" EXTRN ") + Twine(Sym));
 }
 
-void SystemZTargetHLASMStreamer::emitEnd() {
-  getHLASMStreamer().emitEnd();
-}
+void SystemZTargetHLASMStreamer::emitEnd() { getHLASMStreamer().emitEnd(); }
 
 // HLASM statements can only perform a single operation at a time
 const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
