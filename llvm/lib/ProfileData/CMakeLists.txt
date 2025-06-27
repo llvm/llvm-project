@@ -35,7 +35,6 @@ add_llvm_component_library(LLVMProfileData
   Demangle
   Symbolize
   DebugInfoDWARF
-  DebugInfoDWARFLowLevel
   TargetParser
   )
 

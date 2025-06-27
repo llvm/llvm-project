@@ -36,8 +36,7 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
-#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
@@ -86,7 +85,7 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
   llvm::DIDumpOptions DumpOpts;
   DumpOpts.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
-  llvm::printDwarfExpression(&E, s->AsRawOstream(), DumpOpts, nullptr);
+  llvm::DWARFExpressionPrinter::print(&E, s->AsRawOstream(), DumpOpts, nullptr);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
