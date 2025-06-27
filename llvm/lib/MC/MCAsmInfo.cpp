@@ -124,7 +124,7 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
 }
 
-void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
+void MCAsmInfo::initializeVariantKinds(ArrayRef<AtSpecifier> Descs) {
   assert(SpecifierToName.empty() && "cannot initialize twice");
   for (auto Desc : Descs) {
     [[maybe_unused]] auto It =
@@ -132,8 +132,7 @@ void MCAsmInfo::initializeVariantKinds(ArrayRef<VariantKindDesc> Descs) {
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
         NameToSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
-    // Workaround for VK_PPC_L/VK_PPC_LO ("l").
-    assert(It2.second || Desc.Name == "l");
+    assert(It2.second);
   }
 }
 
