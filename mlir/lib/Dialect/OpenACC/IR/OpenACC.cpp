@@ -575,8 +575,10 @@ LogicalResult acc::CreateOp::verify() {
     return failure();
   if (failed(checkVarAndAccVar(*this)))
     return failure();
+  // this op is the entry part of copyout, so it also needs to allow all
+  // modifiers allowed on copyout.
   if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
-                                           acc::DataClauseModifier::alwaysout |
+                                           acc::DataClauseModifier::always |
                                            acc::DataClauseModifier::capture)))
     return failure();
   return success();
@@ -708,7 +710,7 @@ LogicalResult acc::DeleteOp::verify() {
   // allowed on either case.
   if (failed(checkValidModifier(*this, acc::DataClauseModifier::zero |
                                            acc::DataClauseModifier::readonly |
-                                           acc::DataClauseModifier::alwaysin |
+                                           acc::DataClauseModifier::always |
                                            acc::DataClauseModifier::capture)))
     return failure();
   return success();
@@ -3214,6 +3216,53 @@ Value EnterDataOp::getDataOperand(unsigned i) {
 void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
+}
+
+void EnterDataOp::addAsyncOnly(
+    MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void EnterDataOp::addWaitOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void EnterDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
 }
 
 //===----------------------------------------------------------------------===//

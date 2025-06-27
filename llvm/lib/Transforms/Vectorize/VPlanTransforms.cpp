@@ -1221,7 +1221,7 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!RepR && !isa<VPWidenRecipe, VPWidenSelectRecipe>(&R))
         continue;
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;

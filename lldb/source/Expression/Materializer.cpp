@@ -74,22 +74,20 @@ public:
     // Allocate a spare memory area to store the persistent variable's
     // contents.
 
-    Status allocate_error;
     const bool zero_memory = false;
-
-    lldb::addr_t mem = map.Malloc(
+    auto address_or_error = map.Malloc(
         llvm::expectedToOptional(m_persistent_variable_sp->GetByteSize())
             .value_or(0),
         8, lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-        IRMemoryMap::eAllocationPolicyMirror, zero_memory, allocate_error);
-
-    if (!allocate_error.Success()) {
+        IRMemoryMap::eAllocationPolicyMirror, zero_memory);
+    if (!address_or_error) {
       err = Status::FromErrorStringWithFormat(
           "couldn't allocate a memory area to store %s: %s",
           m_persistent_variable_sp->GetName().GetCString(),
-          allocate_error.AsCString());
+          toString(address_or_error.takeError()).c_str());
       return;
     }
+    lldb::addr_t mem = *address_or_error;
 
     LLDB_LOGF(log, "Allocated %s (0x%" PRIx64 ") successfully",
               m_persistent_variable_sp->GetName().GetCString(), mem);
@@ -565,25 +563,24 @@ public:
 
         size_t byte_align = (*opt_bit_align + 7) / 8;
 
-        Status alloc_error;
         const bool zero_memory = false;
-
-        m_temporary_allocation = map.Malloc(
-            data.GetByteSize(), byte_align,
-            lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-            IRMemoryMap::eAllocationPolicyMirror, zero_memory, alloc_error);
+        if (auto address_or_error = map.Malloc(
+                data.GetByteSize(), byte_align,
+                lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+                IRMemoryMap::eAllocationPolicyMirror, zero_memory)) {
+          m_temporary_allocation = *address_or_error;
+        } else {
+          err = Status::FromErrorStringWithFormat(
+              "couldn't allocate a temporary region for %s: %s",
+              GetName().AsCString(),
+              toString(address_or_error.takeError()).c_str());
+          return;
+        }
 
         m_temporary_allocation_size = data.GetByteSize();
 
         m_original_data = std::make_shared<DataBufferHeap>(data.GetDataStart(),
                                                            data.GetByteSize());
-
-        if (!alloc_error.Success()) {
-          err = Status::FromErrorStringWithFormat(
-              "couldn't allocate a temporary region for %s: %s",
-              GetName().AsCString(), alloc_error.AsCString());
-          return;
-        }
 
         Status write_error;
 
@@ -967,21 +964,20 @@ public:
 
       size_t byte_align = (*opt_bit_align + 7) / 8;
 
-      Status alloc_error;
       const bool zero_memory = true;
-
-      m_temporary_allocation = map.Malloc(
-          byte_size, byte_align,
-          lldb::ePermissionsReadable | lldb::ePermissionsWritable,
-          IRMemoryMap::eAllocationPolicyMirror, zero_memory, alloc_error);
-      m_temporary_allocation_size = byte_size;
-
-      if (!alloc_error.Success()) {
+      if (auto address_or_error = map.Malloc(
+              byte_size, byte_align,
+              lldb::ePermissionsReadable | lldb::ePermissionsWritable,
+              IRMemoryMap::eAllocationPolicyMirror, zero_memory)) {
+        m_temporary_allocation = *address_or_error;
+      } else {
         err = Status::FromErrorStringWithFormat(
             "couldn't allocate a temporary region for the result: %s",
-            alloc_error.AsCString());
+            toString(address_or_error.takeError()).c_str());
         return;
       }
+
+      m_temporary_allocation_size = byte_size;
 
       Status pointer_write_error;
 

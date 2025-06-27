@@ -9070,44 +9070,41 @@ llvm::canConvertToMinOrMaxIntrinsic(ArrayRef<Value *> VL) {
   return {Intrinsic::not_intrinsic, false};
 }
 
-bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
-                                 Value *&Start, Value *&Step) {
+template <typename InstTy>
+static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
+                                    Value *&Init, Value *&OtherOp) {
   // Handle the case of a simple two-predecessor recurrence PHI.
   // There's a lot more that could theoretically be done here, but
   // this is sufficient to catch some interesting cases.
   // TODO: Expand list -- gep, uadd.sat etc.
-  if (P->getNumIncomingValues() != 2)
+  if (PN->getNumIncomingValues() != 2)
     return false;
 
-  for (unsigned i = 0; i != 2; ++i) {
-    Value *L = P->getIncomingValue(i);
-    Value *R = P->getIncomingValue(!i);
-    auto *LU = dyn_cast<BinaryOperator>(L);
-    if (!LU)
-      continue;
-    Value *LL = LU->getOperand(0);
-    Value *LR = LU->getOperand(1);
+  for (unsigned I = 0; I != 2; ++I) {
+    if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I))) {
+      Value *LHS = Operation->getOperand(0);
+      Value *RHS = Operation->getOperand(1);
+      if (LHS != PN && RHS != PN)
+        continue;
 
-    // Find a recurrence.
-    if (LL == P)
-      L = LR;
-    else if (LR == P)
-      L = LL;
-    else
-      continue; // Check for recurrence with L and R flipped.
-
-    // We have matched a recurrence of the form:
-    //   %iv = [R, %entry], [%iv.next, %backedge]
-    //   %iv.next = binop %iv, L
-    // OR
-    //   %iv = [R, %entry], [%iv.next, %backedge]
-    //   %iv.next = binop L, %iv
-    BO = LU;
-    Start = R;
-    Step = L;
-    return true;
+      Inst = Operation;
+      Init = PN->getIncomingValue(!I);
+      OtherOp = (LHS == PN) ? RHS : LHS;
+      return true;
+    }
   }
   return false;
+}
+
+bool llvm::matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
+                                 Value *&Start, Value *&Step) {
+  // We try to match a recurrence of the form:
+  //   %iv = [Start, %entry], [%iv.next, %backedge]
+  //   %iv.next = binop %iv, Step
+  // Or:
+  //   %iv = [Start, %entry], [%iv.next, %backedge]
+  //   %iv.next = binop Step, %iv
+  return matchTwoInputRecurrence(P, BO, Start, Step);
 }
 
 bool llvm::matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
@@ -9117,6 +9114,22 @@ bool llvm::matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
   if (!P)
     P = dyn_cast<PHINode>(I->getOperand(1));
   return P && matchSimpleRecurrence(P, BO, Start, Step) && BO == I;
+}
+
+bool llvm::matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                PHINode *&P, Value *&Init,
+                                                Value *&OtherOp) {
+  // Binary intrinsics only supported for now.
+  if (I->arg_size() != 2 || I->getType() != I->getArgOperand(0)->getType() ||
+      I->getType() != I->getArgOperand(1)->getType())
+    return false;
+
+  IntrinsicInst *II = nullptr;
+  P = dyn_cast<PHINode>(I->getArgOperand(0));
+  if (!P)
+    P = dyn_cast<PHINode>(I->getArgOperand(1));
+
+  return P && matchTwoInputRecurrence(P, II, Init, OtherOp) && II == I;
 }
 
 /// Return true if "icmp Pred LHS RHS" is always true.

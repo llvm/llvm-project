@@ -6848,32 +6848,32 @@ static SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   // Get sign bit into an integer value.
-  SDValue SignAsInt;
   unsigned SignSize = Sign.getValueSizeInBits();
-  if (SignSize == Subtarget.getXLen()) {
-    SignAsInt = DAG.getNode(ISD::BITCAST, DL, XLenVT, Sign);
-  } else if (SignSize == 16) {
-    SignAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Sign);
-  } else if (SignSize == 32) {
-    SignAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Sign);
-  } else if (SignSize == 64) {
-    assert(XLenVT == MVT::i32 && "Unexpected type");
-    // Copy the upper word to integer.
-    SignAsInt = DAG.getNode(RISCVISD::SplitF64, DL, {MVT::i32, MVT::i32}, Sign)
-                    .getValue(1);
-    SignSize = 32;
-  } else
-    llvm_unreachable("Unexpected sign size");
+  SDValue SignAsInt = [&]() {
+    if (SignSize == Subtarget.getXLen())
+      return DAG.getNode(ISD::BITCAST, DL, XLenVT, Sign);
+    switch (SignSize) {
+    case 16:
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Sign);
+    case 32:
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Sign);
+    case 64: {
+      assert(XLenVT == MVT::i32 && "Unexpected type");
+      // Copy the upper word to integer.
+      SignSize = 32;
+      return DAG.getNode(RISCVISD::SplitF64, DL, {MVT::i32, MVT::i32}, Sign)
+          .getValue(1);
+    }
+    default:
+      llvm_unreachable("Unexpected sign size");
+    }
+  }();
 
   // Get the signbit at the right position for MagAsInt.
-  int ShiftAmount = (int)SignSize - (int)Mag.getValueSizeInBits();
-  if (ShiftAmount > 0) {
-    SignAsInt = DAG.getNode(ISD::SRL, DL, XLenVT, SignAsInt,
-                            DAG.getConstant(ShiftAmount, DL, XLenVT));
-  } else if (ShiftAmount < 0) {
-    SignAsInt = DAG.getNode(ISD::SHL, DL, XLenVT, SignAsInt,
-                            DAG.getConstant(-ShiftAmount, DL, XLenVT));
-  }
+  if (int ShiftAmount = (int)SignSize - (int)Mag.getValueSizeInBits())
+    SignAsInt = DAG.getNode(ShiftAmount > 0 ? ISD::SRL : ISD::SHL, DL, XLenVT,
+                            SignAsInt,
+                            DAG.getConstant(std::abs(ShiftAmount), DL, XLenVT));
 
   // Mask the sign bit and any bits above it. The extra bits will be dropped
   // when we convert back to FP.
@@ -21445,12 +21445,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // EmitLoweredCascadedSelect.
 
   auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
-  if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
-       MI.getOpcode() != RISCV::Select_GPR_Using_CC_SImm5_CV &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_SImm16NonZero_QC &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_UImm16NonZero_QC) &&
+  if (MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
+      MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
       Next->getOperand(5).isKill())
