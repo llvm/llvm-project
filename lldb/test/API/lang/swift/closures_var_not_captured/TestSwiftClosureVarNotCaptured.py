@@ -110,8 +110,12 @@ class TestSwiftClosureVarNotCaptured(TestBase):
     def test_ctor_class_closure(self):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_ctor_class")
-        check_not_captured_error(self, thread.frames[0], "input", "MY_STRUCT.init(input:)")
-        check_not_captured_error(self, thread.frames[0], "find_me", "MY_STRUCT.init(input:)")
+        check_not_captured_error(
+            self, thread.frames[0], "input", "MY_STRUCT.init(input:)"
+        )
+        check_not_captured_error(
+            self, thread.frames[0], "find_me", "MY_STRUCT.init(input:)"
+        )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
         lldbutil.continue_to_source_breakpoint(
