@@ -1191,9 +1191,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::f64, 9},
     {Intrinsic::rint, MVT::f32, 7},
     {Intrinsic::rint, MVT::f64, 7},
-    {Intrinsic::lrint, MVT::i32, 1},
-    {Intrinsic::lrint, MVT::i64, 1},
-    {Intrinsic::llrint, MVT::i64, 1},
     {Intrinsic::nearbyint, MVT::f32, 9},
     {Intrinsic::nearbyint, MVT::f64, 9},
     {Intrinsic::bswap, MVT::i16, 3},
@@ -1251,11 +1248,45 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   switch (ICA.getID()) {
   case Intrinsic::lrint:
   case Intrinsic::llrint:
-    // We can't currently lower half or bfloat vector lrint/llrint.
-    if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
-        VecTy && VecTy->getElementType()->is16bitFPTy())
-      return InstructionCost::getInvalid();
-    [[fallthrough]];
+  case Intrinsic::lround:
+  case Intrinsic::llround: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      ArrayRef<unsigned> Ops;
+      unsigned DstEltSz =
+          DL.getTypeSizeInBits(cast<VectorType>(RetTy)->getElementType());
+      if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (DstEltSz == 64 && ST->is64Bit())
+          // vfwcvtbf16.f.f.v v9, v8
+          // vfcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          // vfwcvtbf16.f.f.v v9, v8
+          // vfwcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
+        if (DstEltSz == 64 && ST->is64Bit())
+          // vfwcvt.f.f.v v9, v8
+          // vfwcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
+        else
+          // vfwcvt.f.f.v v9, v8
+          // vfcvt.x.f.v v8, v9
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
+
+      } else if (DstEltSz == 32 && ST->is64Bit()) {
+        // vfncvt.x.f.w v10, v8
+        // vmv.v.v v8, v10
+        Ops = {RISCV::VFNCVT_X_F_W, RISCV::VMV_V_V};
+      } else {
+        // vfcvt.x.f.v v8, v8
+        Ops = {RISCV::VFCVT_X_F_V};
+      }
+      return LT.first * getRISCVInstructionCost(Ops, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::trunc:
