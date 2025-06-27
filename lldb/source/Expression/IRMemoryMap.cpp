@@ -319,10 +319,10 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
   }
 }
 
-llvm::Expected<lldb::addr_t> IRMemoryMap::Malloc(size_t size, uint8_t alignment,
-                                                 uint32_t permissions,
-                                                 AllocationPolicy policy,
-                                                 bool zero_memory) {
+llvm::Expected<lldb::addr_t>
+IRMemoryMap::Malloc(size_t size, uint8_t alignment, uint32_t permissions,
+                    AllocationPolicy policy, bool zero_memory,
+                    AllocationPolicy *used_policy) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   lldb::ProcessSP process_sp;
@@ -453,6 +453,9 @@ llvm::Expected<lldb::addr_t> IRMemoryMap::Malloc(size_t size, uint8_t alignment,
               (uint64_t)allocation_size, (uint64_t)alignment,
               (uint64_t)permissions, policy_string, aligned_address);
   }
+
+  if (used_policy)
+    *used_policy = policy;
 
   return aligned_address;
 }
