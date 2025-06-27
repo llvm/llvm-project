@@ -67,7 +67,8 @@ namespace llvm {
     /*implicit*/ ArrayRef() = default;
 
     /// Construct an empty ArrayRef from std::nullopt.
-    /*implicit*/ ArrayRef(std::nullopt_t) {}
+    /*implicit*/ LLVM_DEPRECATED("Use {} or ArrayRef<T>() instead", "{}")
+    ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
     /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
