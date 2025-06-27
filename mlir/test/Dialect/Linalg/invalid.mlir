@@ -1824,9 +1824,8 @@ func.func @unpack_invalid_outer_dims_perm(%source: tensor<128x256xf32>, %dest: t
 
 // -----
 
-// Here we have the source tensor being tiled as: `source[1] / 32` and `source[0] / 16` but the inner_dims_pos does not imply
-// a transpose of the outer dimensions for the result tensor. The tiled dimensions appear in the result tensor in the order
-// they appear in the source tensor, i.e. 16x4x32x16
+// The outer dims in the output tensor are incorrectly/unexpectedly transposed.
+// This could be fixed by adding `outer_dims_perm = [1, 0]` (the default value assumes no transpose).
 func.func @pack_invalid_result_shape(%input: tensor<256x128xf32>, %output: tensor<4x16x32x16xf32>) -> tensor<4x16x32x16xf32> {
   // expected-error@+1 {{the shape of output is not large enough to hold the packed data. Expected at least 'tensor<16x4x32x16xf32>', got 'tensor<4x16x32x16xf32>'}}
   %0 = linalg.pack %input inner_dims_pos = [1, 0] inner_tiles = [32, 16] into %output : tensor<256x128xf32> -> tensor<4x16x32x16xf32>

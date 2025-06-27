@@ -100,7 +100,8 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     `inner_dims_pos` (mandatory) specifies `k` source tensor dimensions that are
     being tiled, where `0 <= k <= n`.
      - `inner_dims_pos[i]` specifies the source tensor dimension tiled by
-    `inner_tiles[i]` where `0 <= i < k`.
+    `inner_tiles[i]` where `0 <= i < k`. All the values in `inner_dims_pos` are
+    within [0, n).
      - The tiled dimensions (of size `inner_tiles`) are added to the end of the
      result tensor in the order in which they appear, i.e.
      `shape(result)[rank(result) + i] = inner_tiles[i]` for `0 <= i < k`.
@@ -275,7 +276,7 @@ def Linalg_UnPackOp : Linalg_RelayoutOp<"unpack"> {
     packed source tensor. The source tensor (i.e. packed tensor) dimensions can
     be unpacked given `inner_dims_pos` as follows.
     - For `0 <= i < k` the following relationship holds:
-    `shape(result)[inner_dims_pos[i]] = shape(source)[n-k+i] + shape(source)[inner_dims_pos[i]]`.
+    `shape(result)[inner_dims_pos[i]] <= shape(source)[n-k+i] * shape(source)[inner_dims_pos[i]]`.
     - For `0 <= j < n-k` and `j` not in `inner_dims_pos` the following relationship holds:
     `shape(result)[j] = shape(source)[j]`.
 
