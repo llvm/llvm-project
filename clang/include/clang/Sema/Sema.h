@@ -125,6 +125,8 @@ class CXXBasePath;
 class CXXBasePaths;
 class CXXFieldCollector;
 class CodeCompleteConsumer;
+class SummaryContext;
+class SummaryConsumer;
 enum class ComparisonCategoryType : unsigned char;
 class ConstraintSatisfaction;
 class DarwinSDKInfo;
@@ -883,7 +885,9 @@ class Sema final : public SemaBase {
 public:
   Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
        TranslationUnitKind TUKind = TU_Complete,
-       CodeCompleteConsumer *CompletionConsumer = nullptr);
+       CodeCompleteConsumer *CompletionConsumer = nullptr,
+       SummaryContext *SummaryCtx = nullptr,
+       SummaryConsumer *SummaryConsumer = nullptr);
   ~Sema();
 
   /// Perform initialization that occurs after the parser has been
@@ -1267,6 +1271,8 @@ public:
   DiagnosticsEngine &Diags;
   SourceManager &SourceMgr;
   api_notes::APINotesManager APINotes;
+  SummaryContext *SummaryCtx;
+  SummaryConsumer *SummaryCnsmr;
 
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {

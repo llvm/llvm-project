@@ -58,6 +58,7 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
+#include "clang/Summary/SummaryContext.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -16691,6 +16692,13 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
   if (FD && !FD->isDeleted())
     checkTypeSupport(FD->getType(), FD->getLocation(), FD);
+
+  // FIXME: checking this should be done by the summary context
+  if (SummaryCnsmr && !LateTemplateParser && FD &&
+      !SourceMgr.isInSystemHeader(FD->getLocation()) && !FD->getBuiltinID()) {
+    SummaryCtx->SummarizeFunctionBody(FD);
+    SummaryCnsmr->ProcessFunctionSummary(*SummaryCtx->GetSummary(FD));
+  }
 
   return dcl;
 }
