@@ -2960,3 +2960,24 @@ llvm.func @invalid_mapper(%0 : !llvm.ptr) {
   }
   llvm.return
 }
+
+func.func @invalid_workdistribute_with_multiple_blocks() {
+  // expected-error @below {{workdistribute must be nested under teams}}
+  omp.workdistribute {
+    omp.terminator
+  }
+  return
+}
+
+func.func @invalid_workdistribute_with_multiple_blocks() {
+  omp.teams {
+  // expected-error @below {{region must contain exactly one block}}
+  omp.workdistribute {
+    cf.br ^bb1
+  ^bb1:
+    omp.terminator
+  }
+  omp.terminator
+  }
+  return
+}
