@@ -148,6 +148,15 @@ func.func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 
 // -----
 
+// CHECK-LABEL: func @aligned_load(
+func.func @aligned_load(%static : memref<10x42xf32>, %i : index, %j : index) {
+// CHECK:  llvm.load %{{.*}} {alignment = 16 : i64} : !llvm.ptr -> f32
+  %0 = memref.load %static[%i, %j] { alignment = 16 } : memref<10x42xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @zero_d_store
 func.func @zero_d_store(%arg0: memref<f32>, %arg1: f32) {
 // CHECK: %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64)>
@@ -172,6 +181,16 @@ func.func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %va
 // CHECK: llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
 
   memref.store %val, %static[%i, %j] : memref<10x42xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @aligned_store
+func.func @aligned_store(%static : memref<10x42xf32>, %i : index, %j : index, %val : f32) {
+// CHECK: llvm.store %{{.*}}, %{{.*}} {alignment = 16 : i64} : f32, !llvm.ptr
+
+  memref.store %val, %static[%i, %j] { alignment = 16 } : memref<10x42xf32>
   return
 }
 
