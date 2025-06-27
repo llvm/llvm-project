@@ -3183,7 +3183,7 @@ define i32 @testoverflowcheck() {
 ; IND-NEXT:    [[INC4_I:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_I:%.*]], [[COND_END_I]] ]
 ; IND-NEXT:    [[AND_I:%.*]] = and i32 [[BC_MERGE_RDX]], [[TMP0]]
 ; IND-NEXT:    [[INC_I]] = add i8 [[INC4_I]], 1
-; IND-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC_I]], 0
+; IND-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC4_I]], -1
 ; IND-NEXT:    br i1 [[TOBOOL_I]], label [[LOOPEXIT]], label [[COND_END_I]], !llvm.loop [[LOOP33:![0-9]+]]
 ; IND:       loopexit:
 ; IND-NEXT:    [[AND_I_LCSSA:%.*]] = phi i32 [ [[AND_I]], [[COND_END_I]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
@@ -3225,7 +3225,7 @@ define i32 @testoverflowcheck() {
 ; UNROLL-NEXT:    [[INC4_I:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_I:%.*]], [[COND_END_I]] ]
 ; UNROLL-NEXT:    [[AND_I:%.*]] = and i32 [[BC_MERGE_RDX]], [[TMP0]]
 ; UNROLL-NEXT:    [[INC_I]] = add i8 [[INC4_I]], 1
-; UNROLL-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC_I]], 0
+; UNROLL-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC4_I]], -1
 ; UNROLL-NEXT:    br i1 [[TOBOOL_I]], label [[LOOPEXIT]], label [[COND_END_I]], !llvm.loop [[LOOP33:![0-9]+]]
 ; UNROLL:       loopexit:
 ; UNROLL-NEXT:    [[AND_I_LCSSA:%.*]] = phi i32 [ [[AND_I]], [[COND_END_I]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
@@ -3315,7 +3315,7 @@ define i32 @testoverflowcheck() {
 ; INTERLEAVE-NEXT:    [[INC4_I:%.*]] = phi i8 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC_I:%.*]], [[COND_END_I]] ]
 ; INTERLEAVE-NEXT:    [[AND_I:%.*]] = and i32 [[BC_MERGE_RDX]], [[TMP0]]
 ; INTERLEAVE-NEXT:    [[INC_I]] = add i8 [[INC4_I]], 1
-; INTERLEAVE-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC_I]], 0
+; INTERLEAVE-NEXT:    [[TOBOOL_I:%.*]] = icmp eq i8 [[INC4_I]], -1
 ; INTERLEAVE-NEXT:    br i1 [[TOBOOL_I]], label [[LOOPEXIT]], label [[COND_END_I]], !llvm.loop [[LOOP33:![0-9]+]]
 ; INTERLEAVE:       loopexit:
 ; INTERLEAVE-NEXT:    [[AND_I_LCSSA:%.*]] = phi i32 [ [[AND_I]], [[COND_END_I]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
@@ -5399,7 +5399,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; INTERLEAVE-NEXT:    [[VAR4:%.*]] = phi i32 [ [[TMP50]], [[FOR_COND]] ], [ 0, [[FOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[VAR6]] = or i32 [[VAR0]], [[VAR4]]
 ; INTERLEAVE-NEXT:    [[I_NEXT]] = add nsw i32 [[I]], 1
-; INTERLEAVE-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], 0
+; INTERLEAVE-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], -1
 ; INTERLEAVE-NEXT:    br i1 [[COND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP47:![0-9]+]]
 ; INTERLEAVE:       for.end:
 ; INTERLEAVE-NEXT:    [[VAR7:%.*]] = phi i32 [ [[VAR6]], [[FOR_INC]] ], [ poison, [[MIDDLE_BLOCK]] ]
