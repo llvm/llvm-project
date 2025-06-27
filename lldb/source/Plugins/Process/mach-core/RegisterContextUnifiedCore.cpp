@@ -95,8 +95,8 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
   }
 
   // Set 'offset' fields for each register definition into our combined
-  // register data buffer. DynamicRegisterInfo needs
-  // this field set to parse the JSON.
+  // register data buffer. DynamicRegisterInfo needs this field set to
+  // parse the JSON.
   // Also copy the values of the registers into our register data buffer.
   if (metadata_registers_dict) {
     size_t offset = core_buffer_end;
