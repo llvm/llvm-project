@@ -17,6 +17,13 @@ functions:
     return_type: size_t
     arguments:
       - type: const wchar_t *
+  - name: wcsnlen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+      - type: size_t
   - name: wctob
     standards:
       - stdc

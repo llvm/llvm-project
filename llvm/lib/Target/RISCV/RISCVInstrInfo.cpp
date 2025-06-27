@@ -1637,6 +1637,9 @@ unsigned getPredicatedOpcode(unsigned Opcode) {
   case RISCV::ANDN:  return RISCV::PseudoCCANDN;  break;
   case RISCV::ORN:   return RISCV::PseudoCCORN;   break;
   case RISCV::XNOR:  return RISCV::PseudoCCXNOR;  break;
+
+  case RISCV::NDS_BFOS:  return RISCV::PseudoCCNDS_BFOS;  break;
+  case RISCV::NDS_BFOZ:  return RISCV::PseudoCCNDS_BFOZ;  break;
   }
 
   return RISCV::INSTRUCTION_LIST_END;
