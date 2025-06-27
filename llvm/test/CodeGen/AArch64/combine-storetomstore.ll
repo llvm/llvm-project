@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=aarch64-- -mattr=+neon   | FileCheck %s -check-prefix=AARCH64
 ; RUN: llc < %s -mtriple=aarch64-- -mattr=+sve    | FileCheck %s -check-prefix=SVE
 
-define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AARCH64-LABEL: test_masked_store_success:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
@@ -39,12 +39,12 @@ define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
 ; SVE-NEXT:    st1w { z0.s }, p0, [x0]
 ; SVE-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
-define void @test_masked_store_volatile_load(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_volatile_load(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AARCH64-LABEL: test_masked_store_volatile_load:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
@@ -79,12 +79,12 @@ define void @test_masked_store_volatile_load(<8 x i32> %x, ptr %ptr, <8 x i1> %c
 ; SVE-NEXT:    stp q0, q1, [x0]
 ; SVE-NEXT:    ret
   %load = load volatile <8 x i32>, ptr %ptr, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
-define void @test_masked_store_volatile_store(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_volatile_store(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AARCH64-LABEL: test_masked_store_volatile_store:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
@@ -119,14 +119,14 @@ define void @test_masked_store_volatile_store(<8 x i32> %x, ptr %ptr, <8 x i1> %
 ; SVE-NEXT:    str q1, [x0, #16]
 ; SVE-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store volatile <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
 declare void @use_vec(<8 x i32>)
 
-define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AARCH64-LABEL: test_masked_store_intervening:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    sub sp, sp, #96
@@ -204,13 +204,13 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp
   store <8 x i32> zeroinitializer, ptr %ptr, align 32
   %tmp = load <8 x i32>, ptr %ptr
   call void @use_vec(<8 x i32> %tmp)
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
 
-define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %cmp, <8 x i1> %cmp2) {
+define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %mask, <8 x i1> %mask2) {
 ; AARCH64-LABEL: test_masked_store_multiple:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    zip1 v6.8b, v4.8b, v0.8b
@@ -274,9 +274,53 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; SVE-NEXT:    ret
   %load = load <8 x i32>, ptr %ptr1, align 32
   %load2 = load <8 x i32>, ptr %ptr2, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
-  %sel2 = select <8 x i1> %cmp2, <8 x i32> %y, <8 x i32> %load2
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
+  %sel2 = select <8 x i1> %mask2, <8 x i32> %y, <8 x i32> %load2
   store <8 x i32> %sel, ptr %ptr1, align 32
   store <8 x i32> %sel2, ptr %ptr2, align 32
+  ret void
+}
+
+define void @test_masked_store_unaligned(<8 x i32> %data, ptr %ptr, <8 x i1> %mask) {
+; AARCH64-LABEL: test_masked_store_unaligned:
+; AARCH64:       // %bb.0:
+; AARCH64-NEXT:    zip1 v3.8b, v2.8b, v0.8b
+; AARCH64-NEXT:    zip2 v2.8b, v2.8b, v0.8b
+; AARCH64-NEXT:    ldp q4, q5, [x0]
+; AARCH64-NEXT:    ushll v3.4s, v3.4h, #0
+; AARCH64-NEXT:    ushll v2.4s, v2.4h, #0
+; AARCH64-NEXT:    shl v3.4s, v3.4s, #31
+; AARCH64-NEXT:    shl v2.4s, v2.4s, #31
+; AARCH64-NEXT:    cmlt v3.4s, v3.4s, #0
+; AARCH64-NEXT:    cmlt v2.4s, v2.4s, #0
+; AARCH64-NEXT:    bif v0.16b, v4.16b, v3.16b
+; AARCH64-NEXT:    bif v1.16b, v5.16b, v2.16b
+; AARCH64-NEXT:    stp q0, q1, [x0]
+; AARCH64-NEXT:    ret
+;
+; SVE-LABEL: test_masked_store_unaligned:
+; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $q0 killed $q0 def $z0
+; SVE-NEXT:    zip2 v3.8b, v2.8b, v0.8b
+; SVE-NEXT:    zip1 v2.8b, v2.8b, v0.8b
+; SVE-NEXT:    mov x8, #4 // =0x4
+; SVE-NEXT:    ptrue p0.s, vl4
+; SVE-NEXT:    // kill: def $q1 killed $q1 def $z1
+; SVE-NEXT:    ushll v3.4s, v3.4h, #0
+; SVE-NEXT:    ushll v2.4s, v2.4h, #0
+; SVE-NEXT:    shl v3.4s, v3.4s, #31
+; SVE-NEXT:    shl v2.4s, v2.4s, #31
+; SVE-NEXT:    cmlt v3.4s, v3.4s, #0
+; SVE-NEXT:    cmlt v2.4s, v2.4s, #0
+; SVE-NEXT:    cmpne p1.s, p0/z, z3.s, #0
+; SVE-NEXT:    cmpne p0.s, p0/z, z2.s, #0
+; SVE-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
+; SVE-NEXT:    st1w { z0.s }, p0, [x0]
+; SVE-NEXT:    ret
+  %ptr_i8 = getelementptr i8, ptr %ptr, i32 1
+  %ptr_vec = bitcast ptr %ptr_i8 to ptr
+  %load = load <8 x i32>, ptr %ptr, align 1
+  %sel = select <8 x i1> %mask, <8 x i32> %data, <8 x i32> %load
+  store <8 x i32> %sel, ptr %ptr, align 1
   ret void
 }

@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s -check-prefix=AVX512
 
 
-define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_success:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -34,12 +34,12 @@ define void @test_masked_store_success(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %load = load <8 x i32>, ptr %ptr, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
-define void @test_masked_store_volatile_load(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_volatile_load(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_volatile_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -75,12 +75,12 @@ define void @test_masked_store_volatile_load(<8 x i32> %x, ptr %ptr, <8 x i1> %c
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %load = load volatile <8 x i32>, ptr %ptr, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
-define void @test_masked_store_volatile_store(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_volatile_store(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_volatile_store:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
@@ -116,14 +116,14 @@ define void @test_masked_store_volatile_store(<8 x i32> %x, ptr %ptr, <8 x i1> %
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %load = load <8 x i32>, ptr %ptr, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store volatile <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
 declare void @use_vec(<8 x i32>)
 
-define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp) {
+define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mask) {
 ; AVX-LABEL: test_masked_store_intervening:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    pushq %rbx
@@ -211,13 +211,13 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %cmp
   store <8 x i32> zeroinitializer, ptr %ptr, align 32
   %tmp = load <8 x i32>, ptr %ptr
   call void @use_vec(<8 x i32> %tmp)
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
   store <8 x i32> %sel, ptr %ptr, align 32
   ret void
 }
 
 
-define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %cmp, <8 x i1> %cmp2) {
+define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, ptr %ptr2, <8 x i1> %mask, <8 x i1> %mask2) {
 ; AVX-LABEL: test_masked_store_multiple:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm4 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero
@@ -268,9 +268,46 @@ define void @test_masked_store_multiple(<8 x i32> %x, <8 x i32> %y, ptr %ptr1, p
 ; AVX512-NEXT:    retq
   %load = load <8 x i32>, ptr %ptr1, align 32
   %load2 = load <8 x i32>, ptr %ptr2, align 32
-  %sel = select <8 x i1> %cmp, <8 x i32> %x, <8 x i32> %load
-  %sel2 = select <8 x i1> %cmp2, <8 x i32> %y, <8 x i32> %load2
+  %sel = select <8 x i1> %mask, <8 x i32> %x, <8 x i32> %load
+  %sel2 = select <8 x i1> %mask2, <8 x i32> %y, <8 x i32> %load2
   store <8 x i32> %sel, ptr %ptr1, align 32
   store <8 x i32> %sel2, ptr %ptr2, align 32
+  ret void
+}
+
+define void @test_masked_store_unaligned(<8 x i32> %data, ptr %ptr, <8 x i1> %mask) {
+; AVX-LABEL: test_masked_store_unaligned:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; AVX-NEXT:    vpslld $31, %xmm2, %xmm2
+; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; AVX-NEXT:    vpslld $31, %xmm1, %xmm1
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX-NEXT:    vmaskmovps %ymm0, %ymm1, (%rdi)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
+;
+; AVX2-LABEL: test_masked_store_unaligned:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX2-NEXT:    vpslld $31, %ymm1, %ymm1
+; AVX2-NEXT:    vpmaskmovd %ymm0, %ymm1, (%rdi)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: test_masked_store_unaligned:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vpmovsxwq %xmm1, %zmm1
+; AVX512-NEXT:    vpsllq $63, %zmm1, %zmm1
+; AVX512-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; AVX512-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %ptr_i8 = getelementptr i8, ptr %ptr, i32 1
+  %ptr_vec = bitcast ptr %ptr_i8 to ptr
+  %load = load <8 x i32>, ptr %ptr, align 1
+  %sel = select <8 x i1> %mask, <8 x i32> %data, <8 x i32> %load
+  store <8 x i32> %sel, ptr %ptr, align 1
   ret void
 }
