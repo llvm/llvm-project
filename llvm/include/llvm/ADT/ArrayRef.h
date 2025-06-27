@@ -99,11 +99,6 @@ namespace llvm {
     /*implicit*/ constexpr ArrayRef(const C &V)
         : Data(V.data()), Length(V.size()) {}
 
-    /// Construct an ArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const std::array<T, N> &Arr)
-        : Data(Arr.data()), Length(N) {}
-
     /// Construct an ArrayRef from a C array.
     template <size_t N>
     /*implicit*/ constexpr ArrayRef(const T (&Arr LLVM_LIFETIME_BOUND)[N])
