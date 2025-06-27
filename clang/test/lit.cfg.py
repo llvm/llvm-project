@@ -173,13 +173,16 @@ if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
     tools.append("clang-check")
 
+    I_z3_include_dir = ""
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
-        config.substitutions.append(
-            ("%z3_include_dir", config.clang_staticanalyzer_z3_include_dir)
-        )
+        if config.clang_staticanalyzer_z3_include_dir:
+            I_z3_include_dir = '-I "%s"' % config.clang_staticanalyzer_z3_include_dir
     else:
         config.available_features.add("no-z3")
+    config.substitutions.append(
+        ("%I_z3_include_dir", I_z3_include_dir)
+    )
 
     check_analyzer_fixit_path = os.path.join(
         config.test_source_root, "Analysis", "check-analyzer-fixit.py"
