@@ -924,7 +924,6 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
 /// value, and mutate S to point to a new SCEV with that value excluded.
 static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
   const APInt *C;
-  const SCEV *Op1;
   if (match(S, m_scev_APInt(C))) {
     if (C->getSignificantBits() <= 64) {
       S = SE.getConstant(S->getType(), 0);
@@ -945,8 +944,7 @@ static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
                            SCEV::FlagAnyWrap);
     return Result;
   } else if (EnableVScaleImmediates &&
-             match(S, m_scev_Mul(m_scev_APInt(C), m_SCEV(Op1))) &&
-             isa<SCEVVScale>(Op1)) {
+             match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
     S = SE.getConstant(S->getType(), 0);
     return Immediate::getScalable(C->getSExtValue());
   }
@@ -3332,9 +3330,8 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
   } else {
     // Look for mul(vscale, constant), to detect a scalable offset.
     const APInt *C;
-    const SCEV *Op1;
-    if (!match(IncExpr, m_scev_Mul(m_scev_APInt(C), m_SCEV(Op1))) ||
-        !isa<SCEVVScale>(Op1) || C->getSignificantBits() > 64)
+    if (!match(IncExpr, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale())) ||
+        C->getSignificantBits() > 64)
       return false;
     IncOffset = Immediate::getScalable(C->getSExtValue());
   }
