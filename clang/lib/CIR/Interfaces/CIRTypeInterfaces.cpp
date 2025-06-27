@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the interface to generically handle CIR floating-point types.
+// Defines cir type interfaces.
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 using namespace cir;
 
 /// Include the generated interfaces.
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.cpp.inc"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.cpp.inc"

@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the interface to generically handle CIR floating-point types.
+// Defines cir type interfaces.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_TD
-#define LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_TD
+#ifndef CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
+#define CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
 
 include "mlir/IR/OpBase.td"
 
-def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
+def CIR_FPTypeInterface : TypeInterface<"FPTypeInterface"> {
   let description = [{
     Contains helper functions to query properties about a floating-point type.
   }];
@@ -53,4 +53,4 @@ def CIRFPTypeInterface : TypeInterface<"CIRFPTypeInterface"> {
   ];
 }
 
-#endif // LLVM_CLANG_INCLUDE_CLANG_CIR_INTERFACES_CIRFPTYPEINTERFACE_TD
+#endif // CLANG_CIR_INTERFACES_CIRTYPEINTERFACES_TD
