@@ -715,8 +715,12 @@ Register AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
 void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator InsertBefore,
                                    VRegMaskPair VMP) {
-  unsigned SubRegIdx = getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI);
+  
   const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
+  LaneBitmask FullMask = getFullMaskForRC(*RC, TRI);
+  unsigned SubRegIdx = VMP.getLaneMask() == FullMask
+                           ? AMDGPU::NoRegister
+                           : getSubRegIndexForLaneMask(VMP.getLaneMask(), TRI);
 
   int FI = assignVirt2StackSlot(VMP);
   TII->storeRegToStackSlot(MBB, InsertBefore, VMP.getVReg(), true, FI, RC, TRI,
