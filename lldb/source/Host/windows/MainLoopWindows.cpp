@@ -39,8 +39,9 @@ namespace {
 class PipeEvent : public MainLoopWindows::IOEvent {
 public:
   explicit PipeEvent(HANDLE handle)
-      : IOEvent((IOObject::WaitableHandle)CreateEventW(NULL, /*bManualReset=*/FALSE,
-                                             /*bInitialState=*/FALSE, NULL)),
+  : IOEvent((IOObject::WaitableHandle)CreateEventW(
+        NULL, /*bManualReset=*/FALSE,
+        /*bInitialState=*/FALSE, NULL)),
         m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
                                                /*bInitialState=*/FALSE, NULL)) {
     assert(event && ready);
@@ -130,8 +131,8 @@ public:
   ~SocketEvent() override { WSACloseEvent((HANDLE)m_event); }
 
   void WillPoll() {
-    int result =
-        WSAEventSelect(m_socket, (HANDLE)m_event, FD_READ | FD_ACCEPT | FD_CLOSE);
+    int result = WSAEventSelect(m_socket, (HANDLE)m_event, 
+                                FD_READ | FD_ACCEPT | FD_CLOSE);
     assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);
   }

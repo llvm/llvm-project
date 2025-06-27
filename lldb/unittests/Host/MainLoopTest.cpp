@@ -110,8 +110,8 @@ TEST_F(MainLoopTest, NoSpuriousPipeReads) {
   size_t len = sizeof(X);
   ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::Succeeded());
 
-  lldb::IOObjectSP r = std::make_shared<NativeFile>(pipe.GetReadFileDescriptor(),
-                                              File::eOpenOptionReadOnly, false);
+  lldb::IOObjectSP r = std::make_shared<NativeFile>(
+      pipe.GetReadFileDescriptor(), File::eOpenOptionReadOnly, false);
 
   MainLoop loop;
 
