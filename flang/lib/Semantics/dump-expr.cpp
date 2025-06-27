@@ -22,7 +22,6 @@ inline const char *DumpEvaluateExpr::GetIndentString() const {
 void DumpEvaluateExpr::Show(const evaluate::CoarrayRef &x) {
   Indent("coarray ref");
   Show(x.base());
-  Show(x.subscript());
   Show(x.cosubscript());
   Show(x.stat());
   Show(x.team());
@@ -152,7 +151,7 @@ void DumpEvaluateExpr::Show(const evaluate::StructureConstructor &x) {
 }
 
 void DumpEvaluateExpr::Show(const evaluate::Relational<evaluate::SomeType> &x) {
-  Indent("expr some type");
+  Indent("relational some type");
   Show(x.u);
   Outdent();
 }

@@ -42,7 +42,7 @@ public:
 
 struct GEPData {
   ArrayType *ParentArrayType;
-  Value *ParendOperand;
+  Value *ParentOperand;
   SmallVector<Value *> Indices;
   SmallVector<uint64_t> Dims;
   bool AllIndicesAreConstInt;
@@ -86,6 +86,13 @@ private:
   Value *genInstructionFlattenIndices(ArrayRef<Value *> Indices,
                                       ArrayRef<uint64_t> Dims,
                                       IRBuilder<> &Builder);
+
+  // Helper function to collect indices and dimensions from a GEP instruction
+  void collectIndicesAndDimsFromGEP(GetElementPtrInst &GEP,
+                                    SmallVectorImpl<Value *> &Indices,
+                                    SmallVectorImpl<uint64_t> &Dims,
+                                    bool &AllIndicesAreConstInt);
+
   void
   recursivelyCollectGEPs(GetElementPtrInst &CurrGEP,
                          ArrayType *FlattenedArrayType, Value *PtrOperand,
@@ -211,23 +218,43 @@ bool DXILFlattenArraysVisitor::visitAllocaInst(AllocaInst &AI) {
 
   ArrayType *FattenedArrayType = ArrayType::get(BaseType, TotalElements);
   AllocaInst *FlatAlloca =
-      Builder.CreateAlloca(FattenedArrayType, nullptr, AI.getName() + ".flat");
+      Builder.CreateAlloca(FattenedArrayType, nullptr, AI.getName() + ".1dim");
   FlatAlloca->setAlignment(AI.getAlign());
   AI.replaceAllUsesWith(FlatAlloca);
   AI.eraseFromParent();
   return true;
 }
 
+void DXILFlattenArraysVisitor::collectIndicesAndDimsFromGEP(
+    GetElementPtrInst &GEP, SmallVectorImpl<Value *> &Indices,
+    SmallVectorImpl<uint64_t> &Dims, bool &AllIndicesAreConstInt) {
+
+  Type *CurrentType = GEP.getSourceElementType();
+
+  // Note index 0 is the ptr index.
+  for (Value *Index : llvm::drop_begin(GEP.indices(), 1)) {
+    Indices.push_back(Index);
+    AllIndicesAreConstInt &= isa<ConstantInt>(Index);
+
+    if (auto *ArrayTy = dyn_cast<ArrayType>(CurrentType)) {
+      Dims.push_back(ArrayTy->getNumElements());
+      CurrentType = ArrayTy->getElementType();
+    } else {
+      assert(false && "Expected array type in GEP chain");
+    }
+  }
+}
+
 void DXILFlattenArraysVisitor::recursivelyCollectGEPs(
     GetElementPtrInst &CurrGEP, ArrayType *FlattenedArrayType,
     Value *PtrOperand, unsigned &GEPChainUseCount, SmallVector<Value *> Indices,
     SmallVector<uint64_t> Dims, bool AllIndicesAreConstInt) {
-  Value *LastIndex = CurrGEP.getOperand(CurrGEP.getNumOperands() - 1);
-  AllIndicesAreConstInt &= isa<ConstantInt>(LastIndex);
-  Indices.push_back(LastIndex);
-  assert(isa<ArrayType>(CurrGEP.getSourceElementType()));
-  Dims.push_back(
-      cast<ArrayType>(CurrGEP.getSourceElementType())->getNumElements());
+  // Check if this GEP is already in the map to avoid circular references
+  if (GEPChainMap.count(&CurrGEP) > 0)
+    return;
+
+  // Collect indices and dimensions from the current GEP
+  collectIndicesAndDimsFromGEP(CurrGEP, Indices, Dims, AllIndicesAreConstInt);
   bool IsMultiDimArr = isMultiDimensionalArray(CurrGEP.getSourceElementType());
   if (!IsMultiDimArr) {
     assert(GEPChainUseCount < FlattenedArrayType->getNumElements());
@@ -271,9 +298,19 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInstInGEPChainBase(
         genInstructionFlattenIndices(GEPInfo.Indices, GEPInfo.Dims, Builder);
 
   ArrayType *FlattenedArrayType = GEPInfo.ParentArrayType;
-  Value *FlatGEP =
-      Builder.CreateGEP(FlattenedArrayType, GEPInfo.ParendOperand, FlatIndex,
-                        GEP.getName() + ".flat", GEP.isInBounds());
+
+  // Don't append '.flat' to an empty string. If the SSA name isn't available
+  // it could conflict with the ParentOperand's name.
+  std::string FlatName = GEP.hasName() ? GEP.getName().str() + ".flat" : "";
+
+  Value *FlatGEP = Builder.CreateGEP(FlattenedArrayType, GEPInfo.ParentOperand,
+                                     {Builder.getInt32(0), FlatIndex}, FlatName,
+                                     GEP.getNoWrapFlags());
+
+  // Note: Old gep will become an invalid instruction after replaceAllUsesWith.
+  // Erase the old GEP in the map before to avoid invalid instructions
+  // and circular references.
+  GEPChainMap.erase(&GEP);
 
   GEP.replaceAllUsesWith(FlatGEP);
   GEP.eraseFromParent();
@@ -302,9 +339,12 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // Handle zero uses here because there won't be an update via
   // a child in the chain later.
   if (GEPChainUseCount == 0) {
-    SmallVector<Value *> Indices({GEP.getOperand(GEP.getNumOperands() - 1)});
-    SmallVector<uint64_t> Dims({ArrType->getNumElements()});
-    bool AllIndicesAreConstInt = isa<ConstantInt>(Indices[0]);
+    SmallVector<Value *> Indices;
+    SmallVector<uint64_t> Dims;
+    bool AllIndicesAreConstInt = true;
+
+    // Collect indices and dimensions from the GEP
+    collectIndicesAndDimsFromGEP(GEP, Indices, Dims, AllIndicesAreConstInt);
     GEPData GEPInfo{std::move(FlattenedArrayType), PtrOperand,
                     std::move(Indices), std::move(Dims), AllIndicesAreConstInt};
     return visitGetElementPtrInstInGEPChainBase(GEPInfo, GEP);

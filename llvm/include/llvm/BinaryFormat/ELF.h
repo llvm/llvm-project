@@ -20,6 +20,7 @@
 #define LLVM_BINARYFORMAT_ELF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
@@ -613,33 +614,7 @@ enum {
 
 // Hexagon-specific e_flags
 enum {
-  // Object processor version flags, bits[11:0]
-  EF_HEXAGON_MACH_V2 = 0x00000001,   // Hexagon V2
-  EF_HEXAGON_MACH_V3 = 0x00000002,   // Hexagon V3
-  EF_HEXAGON_MACH_V4 = 0x00000003,   // Hexagon V4
-  EF_HEXAGON_MACH_V5 = 0x00000004,   // Hexagon V5
-  EF_HEXAGON_MACH_V55 = 0x00000005,  // Hexagon V55
-  EF_HEXAGON_MACH_V60 = 0x00000060,  // Hexagon V60
-  EF_HEXAGON_MACH_V61 = 0x00000061,  // Hexagon V61
-  EF_HEXAGON_MACH_V62 = 0x00000062,  // Hexagon V62
-  EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
-  EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
-  EF_HEXAGON_MACH_V67 = 0x00000067,  // Hexagon V67
-  EF_HEXAGON_MACH_V67T = 0x00008067, // Hexagon V67T
-  EF_HEXAGON_MACH_V68 = 0x00000068,  // Hexagon V68
-  EF_HEXAGON_MACH_V69 = 0x00000069,  // Hexagon V69
-  EF_HEXAGON_MACH_V71 = 0x00000071,  // Hexagon V71
-  EF_HEXAGON_MACH_V71T = 0x00008071, // Hexagon V71T
-  EF_HEXAGON_MACH_V73 = 0x00000073,  // Hexagon V73
-  EF_HEXAGON_MACH_V75 = 0x00000075,  // Hexagon V75
-  EF_HEXAGON_MACH_V77 = 0x00000077,  // Hexagon V77
-  EF_HEXAGON_MACH_V79 = 0x00000079,  // Hexagon V79
-  EF_HEXAGON_MACH_V81 = 0x00000081,  // Hexagon V81
-  EF_HEXAGON_MACH_V83 = 0x00000083,  // Hexagon V83
-  EF_HEXAGON_MACH_V85 = 0x00000085,  // Hexagon V85
-  EF_HEXAGON_MACH = 0x000003ff,      // Hexagon V..
-
-  // Highest ISA version flags
+  // Hexagon ISA version, bits[11:0]
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
                                     // of e_flags
   EF_HEXAGON_ISA_V2 = 0x00000010,   // Hexagon V2 ISA
@@ -663,7 +638,43 @@ enum {
   EF_HEXAGON_ISA_V81 = 0x00000081,  // Hexagon V81 ISA
   EF_HEXAGON_ISA_V83 = 0x00000083,  // Hexagon V83 ISA
   EF_HEXAGON_ISA_V85 = 0x00000085,  // Hexagon V85 ISA
+  EF_HEXAGON_ISA_V87 = 0x00000087,  // Hexagon V87 ISA
+  EF_HEXAGON_ISA_V89 = 0x00000089,  // Hexagon V89 ISA
   EF_HEXAGON_ISA = 0x000003ff,      // Hexagon V.. ISA
+
+  // Tiny core flag, bit[15]
+  EF_HEXAGON_TINY_CORE = 0x00008000, // Hexagon Tiny Core
+
+  // Hexagon processor version, bits[15:0]
+  EF_HEXAGON_MACH_V2 = 0x00000001,          // Hexagon V2
+  EF_HEXAGON_MACH_V3 = 0x00000002,          // Hexagon V3
+  EF_HEXAGON_MACH_V4 = 0x00000003,          // Hexagon V4
+  EF_HEXAGON_MACH_V5 = 0x00000004,          // Hexagon V5
+  EF_HEXAGON_MACH_V55 = 0x00000005,         // Hexagon V55
+  EF_HEXAGON_MACH_V60 = EF_HEXAGON_ISA_V60, // Hexagon V60
+  EF_HEXAGON_MACH_V61 = EF_HEXAGON_ISA_V61, // Hexagon V61
+  EF_HEXAGON_MACH_V62 = EF_HEXAGON_ISA_V62, // Hexagon V62
+  EF_HEXAGON_MACH_V65 = EF_HEXAGON_ISA_V65, // Hexagon V65
+  EF_HEXAGON_MACH_V66 = EF_HEXAGON_ISA_V66, // Hexagon V66
+  EF_HEXAGON_MACH_V67 = EF_HEXAGON_ISA_V67, // Hexagon V67
+  EF_HEXAGON_MACH_V67T =
+      EF_HEXAGON_ISA_V67 | EF_HEXAGON_TINY_CORE, // Hexagon V67T
+  EF_HEXAGON_MACH_V68 = EF_HEXAGON_ISA_V68,      // Hexagon V68
+  EF_HEXAGON_MACH_V69 = EF_HEXAGON_ISA_V69,      // Hexagon V69
+  EF_HEXAGON_MACH_V71 = EF_HEXAGON_ISA_V71,      // Hexagon V71
+  EF_HEXAGON_MACH_V71T =
+      EF_HEXAGON_ISA_V71 | EF_HEXAGON_TINY_CORE, // Hexagon V71T
+  EF_HEXAGON_MACH_V73 = EF_HEXAGON_ISA_V73,      // Hexagon V73
+  EF_HEXAGON_MACH_V75 = EF_HEXAGON_ISA_V75,      // Hexagon V75
+  EF_HEXAGON_MACH_V77 = EF_HEXAGON_ISA_V77,      // Hexagon V77
+  EF_HEXAGON_MACH_V79 = EF_HEXAGON_ISA_V79,      // Hexagon V79
+  EF_HEXAGON_MACH_V81 = EF_HEXAGON_ISA_V81,      // Hexagon V81
+  EF_HEXAGON_MACH_V83 = EF_HEXAGON_ISA_V83,      // Hexagon V83
+  EF_HEXAGON_MACH_V85 = EF_HEXAGON_ISA_V85,      // Hexagon V85
+  EF_HEXAGON_MACH_V87 = EF_HEXAGON_ISA_V87,      // Hexagon V87
+  EF_HEXAGON_MACH_V89 = EF_HEXAGON_ISA_V89,      // Hexagon V89
+
+  EF_HEXAGON_MACH = 0x0000ffff, // Hexagon V..
 };
 
 // Hexagon-specific section indexes for common small data
@@ -824,7 +835,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1101         = 0x046,
   EF_AMDGPU_MACH_AMDGCN_GFX1102         = 0x047,
   EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
+  EF_AMDGPU_MACH_AMDGCN_GFX1250         = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
@@ -2014,20 +2025,20 @@ enum {
 constexpr unsigned CREL_HDR_ADDEND = 4;
 
 /// Convert an architecture name into ELF's e_machine value.
-uint16_t convertArchNameToEMachine(StringRef Arch);
+LLVM_ABI uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
-StringRef convertEMachineToArchName(uint16_t EMachine);
+LLVM_ABI StringRef convertEMachineToArchName(uint16_t EMachine);
 
 // Convert a triple's architecture to ELF's e_machine value.
-uint16_t convertTripleArchTypeToEMachine(Triple::ArchType ArchType);
+LLVM_ABI uint16_t convertTripleArchTypeToEMachine(Triple::ArchType ArchType);
 
 // Convert a lowercase string identifier into an OSABI value.
-uint8_t convertNameToOSABI(StringRef Name);
+LLVM_ABI uint8_t convertNameToOSABI(StringRef Name);
 
 // Convert an OSABI value into a string that identifies the OS- or ABI-
 // specific ELF extension.
-StringRef convertOSABIToName(uint8_t OSABI);
+LLVM_ABI StringRef convertOSABIToName(uint8_t OSABI);
 
 } // end namespace ELF
 } // end namespace llvm

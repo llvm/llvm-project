@@ -176,6 +176,17 @@ TEST(BitmaskEnumTest, BitwiseNot) {
   EXPECT_EQ(15, ~V0);
 }
 
+TEST(BitmaskEnumTest, BooleanNot) {
+  bool b0 = !F0;
+  EXPECT_TRUE(b0);
+
+  bool b1 = !(F1 & F2);
+  EXPECT_TRUE(b1);
+
+  bool b2 = !(F2 | F4);
+  EXPECT_FALSE(b2);
+}
+
 enum class FlagsClass {
   F0 = 0,
   F1 = 1,

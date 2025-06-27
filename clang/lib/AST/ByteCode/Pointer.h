@@ -613,6 +613,13 @@ public:
 
   const Block *block() const { return asBlockPointer().Pointee; }
 
+  /// If backed by actual data (i.e. a block pointer), return
+  /// an address to that data.
+  const std::byte *getRawAddress() const {
+    assert(isBlockPointer());
+    return asBlockPointer().Pointee->rawData() + Offset;
+  }
+
   /// Returns the index into an array.
   int64_t getIndex() const {
     if (!isBlockPointer())
@@ -715,6 +722,14 @@ public:
     getInlineDesc()->LifeState = Lifetime::Ended;
   }
 
+  void startLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Started;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))
@@ -741,6 +756,7 @@ public:
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
+  bool pointsToStringLiteral() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;

@@ -236,6 +236,7 @@ std::optional<bool> isUnchecked(const QualType T) {
 void RetainTypeChecker::visitTranslationUnitDecl(
     const TranslationUnitDecl *TUD) {
   IsARCEnabled = TUD->getLangOpts().ObjCAutoRefCount;
+  DefaultSynthProperties = TUD->getLangOpts().ObjCDefaultSynthProperties;
 }
 
 void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
@@ -370,8 +371,6 @@ std::optional<bool> isUnsafePtr(const QualType T, bool IsArcEnabled) {
 std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   assert(M);
 
-  std::optional<RetainTypeChecker> RTC;
-
   if (isa<CXXMethodDecl>(M)) {
     const CXXRecordDecl *calleeMethodsClass = M->getParent();
     auto className = safeGetName(calleeMethodsClass);
@@ -469,6 +468,18 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "dynamic_objc_cast" ||
       FunctionName == "checked_objc_cast")
     return true;
+
+  auto ReturnType = F->getReturnType();
+  if (auto *Type = ReturnType.getTypePtrOrNull()) {
+    if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
+      if (auto *Attr = AttrType->getAttr()) {
+        if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
+          if (AnnotateType->getAnnotation() == "webkit.pointerconversion")
+            return true;
+        }
+      }
+    }
+  }
 
   return false;
 }

@@ -2,6 +2,8 @@ add_lldb_library(lldbPluginProcessMachCore PLUGIN
   ProcessMachCore.cpp
   ThreadMachCore.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbBreakpoint
     lldbCore
@@ -12,6 +14,4 @@ add_lldb_library(lldbPluginProcessMachCore PLUGIN
     lldbPluginDynamicLoaderDarwinKernel
     lldbPluginDynamicLoaderMacOSXDYLD
     lldbPluginObjectFileMachO
-  LINK_COMPONENTS
-    Support
   )

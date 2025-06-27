@@ -209,6 +209,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_extern);
     return Builder.CreateCall(Callee);
   }
+  case WebAssembly::BI__builtin_wasm_ref_is_null_extern: {
+    Value *Src = EmitScalarExpr(E->getArg(0));
+    Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_is_null_extern);
+    return Builder.CreateCall(Callee, {Src});
+  }
   case WebAssembly::BI__builtin_wasm_ref_null_func: {
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_ref_null_func);
     return Builder.CreateCall(Callee);

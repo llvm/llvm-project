@@ -270,7 +270,7 @@ protected:
   unsigned HasBuiltinMSVaList : 1;
 
   LLVM_PREFERRED_TYPE(bool)
-  unsigned HasAArch64SVETypes : 1;
+  unsigned HasAArch64ACLETypes : 1;
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasRISCVVTypes : 1;
@@ -1036,8 +1036,8 @@ public:
 
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts,
-                 bool IsArmStreamingFunction) const {
+  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+                 llvm::StringMap<bool> *FeatureMap = nullptr) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in
@@ -1055,9 +1055,9 @@ public:
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
 
-  /// Returns whether or not the AArch64 SVE built-in types are
+  /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
-  bool hasAArch64SVETypes() const { return HasAArch64SVETypes; }
+  bool hasAArch64ACLETypes() const { return HasAArch64ACLETypes; }
 
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.

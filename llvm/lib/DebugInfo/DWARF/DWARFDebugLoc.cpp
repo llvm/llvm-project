@@ -116,7 +116,8 @@ static void dumpExpression(raw_ostream &OS, DIDumpOptions DumpOpts,
   std::optional<dwarf::DwarfFormat> Format;
   if (U)
     Format = U->getFormat();
-  DWARFExpression(Extractor, AddressSize, Format).print(OS, DumpOpts, U);
+  DWARFExpression E(Extractor, AddressSize, Format);
+  DWARFExpressionPrinter::print(&E, OS, DumpOpts, U);
 }
 
 bool DWARFLocationTable::dumpLocationList(

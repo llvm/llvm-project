@@ -20,8 +20,8 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]]#1 : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_5]]#1 {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_6]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_8:.*]] = arith.constant true
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_10]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_12:.*]] = fir.shape_shift %[[VAL_11]]#0, %[[VAL_11]]#1 : (index, index) -> !fir.shapeshift<1>
@@ -82,10 +82,10 @@ end subroutine
 ! CHECK:               %[[VAL_16:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_17:.*]] = arith.subi %[[VAL_15]]#0, %[[VAL_16]] : index
 ! CHECK:               %[[VAL_18:.*]] = arith.addi %[[VAL_13]], %[[VAL_17]] : index
-! CHECK:               %[[VAL_19:.*]] = hlfir.designate %[[VAL_8]] (%[[VAL_18]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_19]] : !fir.ref<i32>
-! CHECK:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:               %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_19:.*]] = hlfir.designate %[[VAL_8]] (%[[VAL_18]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_20:.*]] = fir.load %[[VAL_19]] : !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_21:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+! CHECK-DAG:               %[[VAL_22:.*]] = fir.load %[[VAL_21]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_23:.*]] = arith.cmpi sgt, %[[VAL_20]], %[[VAL_22]] : i32
 ! CHECK:               %[[VAL_24:.*]] = arith.select %[[VAL_23]], %[[VAL_20]], %[[VAL_22]] : i32
 ! CHECK:               hlfir.yield_element %[[VAL_24]] : i32

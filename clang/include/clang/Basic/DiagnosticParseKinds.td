@@ -1065,11 +1065,23 @@ def ext_ms_abstract_keyword : ExtWarn<
   "'abstract' keyword is a Microsoft extension">,
   InGroup<MicrosoftAbstract>;
 
+def ext_relocatable_keyword : ExtWarn<
+  "'%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0' "
+  "keyword is a C++2c extension">,
+  InGroup<CXX26>;
+def warn_relocatable_keyword  : Warning<
+  "'%select{trivially_relocatable|replaceable}0_if_eligible' "
+  "keyword is incompatible with standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def err_access_specifier_interface : Error<
   "interface types cannot specify '%select{private|protected}0' access">;
 
 def err_duplicate_class_virt_specifier : Error<
   "class already marked '%0'">;
+
+def err_duplicate_class_relocation_specifier : Error<
+  "class already marked '%select{trivially_relocatable_if_eligible|replaceable_if_eligible}0'">;
 
 def err_duplicate_virt_specifier : Error<
   "class member already marked '%0'">;
@@ -1444,6 +1456,9 @@ def err_acc_unexpected_directive
 def err_acc_invalid_directive
     : Error<"invalid OpenACC directive %select{%1|'%1 %2'}0">;
 def err_acc_invalid_clause : Error<"invalid OpenACC clause %0">;
+def warn_acc_unsupported_extension_clause
+    : Warning<"unsupported OpenACC extension clause %0">,
+      InGroup<DiagGroup<"unknown-acc-extension-clause">>;
 def err_acc_missing_directive : Error<"expected OpenACC directive">;
 def err_acc_invalid_open_paren
     : Error<"expected clause-list or newline in OpenACC directive">;
@@ -1457,7 +1472,8 @@ def err_acc_expected_reduction_operator
 def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
-def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_incorrect_bind_arg
+    : Error<"expected identifier or string literal in OpenACC 'bind' clause">;
 def err_acc_modifier
     : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
             "0 modifier %1 in OpenACC modifier-list on '%2' clause">;
@@ -1565,8 +1581,10 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
-def err_omp_unknown_adjust_args_op : Error<
-  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
+def err_omp_unknown_adjust_args_op
+    : Error<
+          "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
+          "'need_device_addr',}0 or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
@@ -1843,6 +1861,11 @@ def err_hlsl_unexpected_end_of_params
     : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
 def err_hlsl_rootsig_repeat_param : Error<"specified the same parameter '%0' multiple times">;
 def err_hlsl_rootsig_missing_param : Error<"did not specify mandatory parameter '%0'">;
-def err_hlsl_number_literal_overflow : Error<"integer literal is too large to be represented as a 32-bit %select{signed |}0 integer type">;
+def err_hlsl_number_literal_overflow : Error<
+  "%select{integer|float}0 literal is too large to be represented as a "
+  "%select{32-bit %select{signed|}1 integer|float}0 type">;
+def err_hlsl_number_literal_underflow : Error<
+  "float literal has a magnitude that is too small to be represented as a float type">;
+def err_hlsl_rootsig_non_zero_flag : Error<"flag value is neither a literal 0 nor a named value">;
 
 } // end of Parser diagnostics

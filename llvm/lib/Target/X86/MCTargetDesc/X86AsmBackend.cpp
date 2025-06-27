@@ -169,16 +169,16 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  bool shouldForceRelocation(const MCFixup &, const MCValue &) override;
+
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCFixup &, const MCValue &, uint64_t,
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 
   void relaxInstruction(MCInst &Inst,
@@ -194,7 +194,7 @@ public:
   bool padInstructionEncoding(MCRelaxableFragment &RF, MCCodeEmitter &Emitter,
                               unsigned &RemainingSize) const;
 
-  void finishLayout(const MCAssembler &Asm) const override;
+  bool finishLayout(const MCAssembler &Asm) const override;
 
   unsigned getMaximumNopSize(const MCSubtargetInfo &STI) const override;
 
@@ -687,10 +687,16 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
-void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+// Force relocation when there is a specifier. This might be too conservative -
+// GAS doesn't emit a relocation for call local@plt; local:.
+bool X86AsmBackend::shouldForceRelocation(const MCFixup &,
+                                          const MCValue &Target) {
+  return Target.getSpecifier();
+}
+
+void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                const MCValue &, MutableArrayRef<char> Data,
-                               uint64_t Value, bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
+                               uint64_t Value, bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -703,8 +709,8 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
       getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
-      Asm.getContext().reportError(
-                                   Fixup.getLoc(), "value of " + Twine(SignedValue) +
+      getContext().reportError(Fixup.getLoc(),
+                               "value of " + Twine(SignedValue) +
                                    " is too large for field of " + Twine(Size) +
                                    ((Size == 1) ? " byte." : " bytes."));
   } else {
@@ -729,8 +735,7 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
           MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                 const MCFixup &Fixup,
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                  const MCValue &Target,
                                                  uint64_t Value,
                                                  bool Resolved) const {
@@ -858,7 +863,7 @@ bool X86AsmBackend::padInstructionEncoding(MCRelaxableFragment &RF,
   return Changed;
 }
 
-void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
+bool X86AsmBackend::finishLayout(const MCAssembler &Asm) const {
   // See if we can further relax some instructions to cut down on the number of
   // nop bytes required for code alignment.  The actual win is in reducing
   // instruction count, not number of bytes.  Modern X86-64 can easily end up
@@ -866,15 +871,16 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
   // (i.e. eliminate nops) even at the cost of increasing the size and
   // complexity of others.
   if (!X86PadForAlign && !X86PadForBranchAlign)
-    return;
+    return false;
 
   // The processed regions are delimitered by LabeledFragments. -g may have more
   // MCSymbols and therefore different relaxation results. X86PadForAlign is
   // disabled by default to eliminate the -g vs non -g difference.
   DenseSet<MCFragment *> LabeledFragments;
   for (const MCSymbol &S : Asm.symbols())
-    LabeledFragments.insert(S.getFragment(false));
+    LabeledFragments.insert(S.getFragment());
 
+  bool Changed = false;
   for (MCSection &Sec : Asm) {
     if (!Sec.isText())
       continue;
@@ -911,9 +917,6 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
         continue;
       }
 
-#ifndef NDEBUG
-      const uint64_t OrigOffset = Asm.getFragmentOffset(F);
-#endif
       const uint64_t OrigSize = Asm.computeFragmentSize(F);
 
       // To keep the effects local, prefer to relax instructions closest to
@@ -926,8 +929,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
         // Give the backend a chance to play any tricks it wishes to increase
         // the encoding size of the given instruction.  Target independent code
         // will try further relaxation, but target's may play further tricks.
-        if (padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize))
-          Sec.setHasLayout(false);
+        Changed |= padInstructionEncoding(RF, Asm.getEmitter(), RemainingSize);
 
         // If we have an instruction which hasn't been fully relaxed, we can't
         // skip past it and insert bytes before it.  Changing its starting
@@ -940,22 +942,12 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
       }
       Relaxable.clear();
 
-      // BoundaryAlign explicitly tracks it's size (unlike align)
-      if (F.getKind() == MCFragment::FT_BoundaryAlign)
-        cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
-
-#ifndef NDEBUG
-      const uint64_t FinalOffset = Asm.getFragmentOffset(F);
-      const uint64_t FinalSize = Asm.computeFragmentSize(F);
-      assert(OrigOffset + OrigSize == FinalOffset + FinalSize &&
-             "can't move start of next fragment!");
-      assert(FinalSize == RemainingSize && "inconsistent size computation?");
-#endif
-
       // If we're looking at a boundary align, make sure we don't try to pad
       // its target instructions for some following directive.  Doing so would
       // break the alignment of the current boundary align.
       if (auto *BF = dyn_cast<MCBoundaryAlignFragment>(&F)) {
+        cast<MCBoundaryAlignFragment>(F).setSize(RemainingSize);
+        Changed = true;
         const MCFragment *LastFragment = BF->getLastFragment();
         if (!LastFragment)
           continue;
@@ -965,11 +957,7 @@ void X86AsmBackend::finishLayout(MCAssembler const &Asm) const {
     }
   }
 
-  // The layout is done. Mark every fragment as valid.
-  for (MCSection &Section : Asm) {
-    Asm.getFragmentOffset(*Section.curFragList()->Tail);
-    Asm.computeFragmentSize(*Section.curFragList()->Tail);
-  }
+  return Changed;
 }
 
 unsigned X86AsmBackend::getMaximumNopSize(const MCSubtargetInfo &STI) const {

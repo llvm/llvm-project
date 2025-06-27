@@ -59,6 +59,11 @@ public:
   /// Evaluates a toplevel initializer.
   bool evaluateAsInitializer(State &Parent, const VarDecl *VD, APValue &Result);
 
+  bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                         const Expr *PtrExpr, APValue &Result);
+  bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
+                         const Expr *PtrExpr, std::string &Result);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
@@ -100,7 +105,7 @@ public:
   }
 
   /// Returns the program. This is only needed for unittests.
-  Program &getProgram() const { return *P.get(); }
+  Program &getProgram() const { return *P; }
 
   unsigned collectBaseOffset(const RecordDecl *BaseDecl,
                              const RecordDecl *DerivedDecl) const;
@@ -120,6 +125,10 @@ private:
   /// Runs a function.
   bool Run(State &Parent, const Function *Func);
 
+  template <typename ResultT>
+  bool evaluateStringRepr(State &Parent, const Expr *SizeExpr,
+                          const Expr *PtrExpr, ResultT &Result);
+
   /// Current compilation context.
   ASTContext &Ctx;
   /// Interpreter stack, shared across invocations.
@@ -128,6 +137,11 @@ private:
   std::unique_ptr<Program> P;
   /// ID identifying an evaluation.
   unsigned EvalID = 0;
+  /// Cached widths (in bits) of common types, for a faster classify().
+  unsigned ShortWidth;
+  unsigned IntWidth;
+  unsigned LongWidth;
+  unsigned LongLongWidth;
 };
 
 } // namespace interp

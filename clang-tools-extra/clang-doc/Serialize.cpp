@@ -8,10 +8,10 @@
 
 #include "Serialize.h"
 #include "BitcodeWriter.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Comment.h"
 #include "clang/Index/USRGeneration.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SHA1.h"
 
@@ -20,6 +20,17 @@ using clang::comments::FullComment;
 namespace clang {
 namespace doc {
 namespace serialize {
+
+namespace {
+static SmallString<16> exprToString(const clang::Expr *E) {
+  clang::LangOptions Opts;
+  clang::PrintingPolicy Policy(Opts);
+  SmallString<16> Result;
+  llvm::raw_svector_ostream OS(Result);
+  E->printPretty(OS, nullptr, Policy);
+  return Result;
+}
+} // namespace
 
 SymbolID hashUSR(llvm::StringRef USR) {
   return llvm::SHA1::hash(arrayRefFromStringRef(USR));
@@ -34,6 +45,184 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
                                    const DeclaratorDecl *D,
                                    bool IsStatic = false);
+
+static void getTemplateParameters(const TemplateParameterList *TemplateParams,
+                                  llvm::raw_ostream &Stream) {
+  Stream << "template <";
+
+  for (unsigned i = 0; i < TemplateParams->size(); ++i) {
+    if (i > 0)
+      Stream << ", ";
+
+    const NamedDecl *Param = TemplateParams->getParam(i);
+    if (const auto *TTP = llvm::dyn_cast<TemplateTypeParmDecl>(Param)) {
+      if (TTP->wasDeclaredWithTypename())
+        Stream << "typename";
+      else
+        Stream << "class";
+      if (TTP->isParameterPack())
+        Stream << "...";
+      Stream << " " << TTP->getNameAsString();
+
+      // We need to also handle type constraints for code like:
+      //   template <class T = void>
+      //   class C {};
+      if (TTP->hasTypeConstraint()) {
+        Stream << " = ";
+        TTP->getTypeConstraint()->print(
+            Stream, TTP->getASTContext().getPrintingPolicy());
+      }
+    } else if (const auto *NTTP =
+                   llvm::dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+      NTTP->getType().print(Stream, NTTP->getASTContext().getPrintingPolicy());
+      if (NTTP->isParameterPack())
+        Stream << "...";
+      Stream << " " << NTTP->getNameAsString();
+    } else if (const auto *TTPD =
+                   llvm::dyn_cast<TemplateTemplateParmDecl>(Param)) {
+      Stream << "template <";
+      getTemplateParameters(TTPD->getTemplateParameters(), Stream);
+      Stream << "> class " << TTPD->getNameAsString();
+    }
+  }
+
+  Stream << "> ";
+}
+
+// Extract the full function prototype from a FunctionDecl including
+// Full Decl
+static llvm::SmallString<256>
+getFunctionPrototype(const FunctionDecl *FuncDecl) {
+  llvm::SmallString<256> Result;
+  llvm::raw_svector_ostream Stream(Result);
+  const ASTContext &Ctx = FuncDecl->getASTContext();
+  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(FuncDecl);
+  // If it's a templated function, handle the template parameters
+  if (const auto *TmplDecl = FuncDecl->getDescribedTemplate())
+    getTemplateParameters(TmplDecl->getTemplateParameters(), Stream);
+
+  // If it's a virtual method
+  if (Method && Method->isVirtual())
+    Stream << "virtual ";
+
+  // Print return type
+  FuncDecl->getReturnType().print(Stream, Ctx.getPrintingPolicy());
+
+  // Print function name
+  Stream << " " << FuncDecl->getNameAsString() << "(";
+
+  // Print parameter list with types, names, and default values
+  for (unsigned I = 0; I < FuncDecl->getNumParams(); ++I) {
+    if (I > 0)
+      Stream << ", ";
+    const ParmVarDecl *ParamDecl = FuncDecl->getParamDecl(I);
+    QualType ParamType = ParamDecl->getType();
+    ParamType.print(Stream, Ctx.getPrintingPolicy());
+
+    // Print parameter name if it has one
+    if (!ParamDecl->getName().empty())
+      Stream << " " << ParamDecl->getNameAsString();
+
+    // Print default argument if it exists
+    if (ParamDecl->hasDefaultArg() &&
+        !ParamDecl->hasUninstantiatedDefaultArg()) {
+      if (const Expr *DefaultArg = ParamDecl->getDefaultArg()) {
+        Stream << " = ";
+        DefaultArg->printPretty(Stream, nullptr, Ctx.getPrintingPolicy());
+      }
+    }
+  }
+
+  // If it is a variadic function, add '...'
+  if (FuncDecl->isVariadic()) {
+    if (FuncDecl->getNumParams() > 0)
+      Stream << ", ";
+    Stream << "...";
+  }
+
+  Stream << ")";
+
+  // If it's a const method, add 'const' qualifier
+  if (Method) {
+    if (Method->isDeleted())
+      Stream << " = delete";
+    if (Method->size_overridden_methods())
+      Stream << " override";
+    if (Method->hasAttr<clang::FinalAttr>())
+      Stream << " final";
+    if (Method->isConst())
+      Stream << " const";
+    if (Method->isPureVirtual())
+      Stream << " = 0";
+  }
+
+  if (auto ExceptionSpecType = FuncDecl->getExceptionSpecType())
+    Stream << " " << ExceptionSpecType;
+
+  return Result; // Convert SmallString to std::string for return
+}
+
+static llvm::SmallString<16> getTypeAlias(const TypeAliasDecl *Alias) {
+  llvm::SmallString<16> Result;
+  llvm::raw_svector_ostream Stream(Result);
+  const ASTContext &Ctx = Alias->getASTContext();
+  if (const auto *TmplDecl = Alias->getDescribedTemplate())
+    getTemplateParameters(TmplDecl->getTemplateParameters(), Stream);
+  Stream << "using " << Alias->getNameAsString() << " = ";
+  QualType Q = Alias->getUnderlyingType();
+  Q.print(Stream, Ctx.getPrintingPolicy());
+
+  return Result;
+}
+
+// extract full syntax for record declaration
+static llvm::SmallString<16> getRecordPrototype(const CXXRecordDecl *CXXRD) {
+  llvm::SmallString<16> Result;
+  LangOptions LangOpts;
+  PrintingPolicy Policy(LangOpts);
+  Policy.SuppressTagKeyword = false;
+  Policy.FullyQualifiedName = true;
+  Policy.IncludeNewlines = false;
+  llvm::raw_svector_ostream OS(Result);
+  if (const auto *TD = CXXRD->getDescribedClassTemplate()) {
+    OS << "template <";
+    bool FirstParam = true;
+    for (const auto *Param : *TD->getTemplateParameters()) {
+      if (!FirstParam)
+        OS << ", ";
+      Param->print(OS, Policy);
+      FirstParam = false;
+    }
+    OS << ">\n";
+  }
+
+  if (CXXRD->isStruct())
+    OS << "struct ";
+  else if (CXXRD->isClass())
+    OS << "class ";
+  else if (CXXRD->isUnion())
+    OS << "union ";
+
+  OS << CXXRD->getNameAsString();
+
+  // We need to make sure we have a good enough declaration to check. In the
+  // case where the class is a forward declaration, we'll fail assertions  in
+  // DeclCXX.
+  if (CXXRD->isCompleteDefinition() && CXXRD->getNumBases() > 0) {
+    OS << " : ";
+    bool FirstBase = true;
+    for (const auto &Base : CXXRD->bases()) {
+      if (!FirstBase)
+        OS << ", ";
+      if (Base.isVirtual())
+        OS << "virtual ";
+      OS << getAccessSpelling(Base.getAccessSpecifier()) << " ";
+      OS << Base.getType().getAsString(Policy);
+      FirstBase = false;
+    }
+  }
+  return Result;
+}
 
 // A function to extract the appropriate relative path for a given info's
 // documentation. The path returned is a composite of the parent namespaces.
@@ -92,7 +281,7 @@ private:
 };
 
 void ClangDocCommentVisitor::parseComment(const comments::Comment *C) {
-  CurrentCI.Kind = C->getCommentKindName();
+  CurrentCI.Kind = stringToCommentKind(C->getCommentKindName());
   ConstCommentVisitor<ClangDocCommentVisitor>::visit(C);
   for (comments::Comment *Child :
        llvm::make_range(C->child_begin(), C->child_end())) {
@@ -210,9 +399,15 @@ std::string serialize(std::unique_ptr<Info> &I) {
     return serialize(*static_cast<EnumInfo *>(I.get()));
   case InfoType::IT_function:
     return serialize(*static_cast<FunctionInfo *>(I.get()));
-  default:
+  case InfoType::IT_concept:
+    return serialize(*static_cast<ConceptInfo *>(I.get()));
+  case InfoType::IT_variable:
+    return serialize(*static_cast<VarInfo *>(I.get()));
+  case InfoType::IT_typedef:
+  case InfoType::IT_default:
     return "";
   }
+  llvm_unreachable("unhandled enumerator");
 }
 
 static void parseFullComment(const FullComment *C, CommentInfo &CI) {
@@ -242,9 +437,12 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
 static TypeInfo getTypeInfoForType(const QualType &T,
                                    const PrintingPolicy &Policy) {
   const TagDecl *TD = getTagDeclForType(T);
-  if (!TD)
-    return TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
-
+  if (!TD) {
+    TypeInfo TI = TypeInfo(Reference(SymbolID(), T.getAsString(Policy)));
+    TI.IsBuiltIn = T->isBuiltinType();
+    TI.IsTemplate = T->isTemplateTypeParmType();
+    return TI;
+  }
   InfoType IT;
   if (isa<EnumDecl>(TD)) {
     IT = InfoType::IT_enum;
@@ -253,8 +451,12 @@ static TypeInfo getTypeInfoForType(const QualType &T,
   } else {
     IT = InfoType::IT_default;
   }
-  return TypeInfo(Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
-                            T.getAsString(Policy), getInfoRelativePath(TD)));
+  Reference R = Reference(getUSRForDecl(TD), TD->getNameAsString(), IT,
+                          T.getAsString(Policy), getInfoRelativePath(TD));
+  TypeInfo TI = TypeInfo(R);
+  TI.IsBuiltIn = T->isBuiltinType();
+  TI.IsTemplate = T->isTemplateTypeParmType();
+  return TI;
 }
 
 static bool isPublic(const clang::AccessSpecifier AS,
@@ -304,6 +506,14 @@ static void InsertChild(ScopeChildren &Scope, TypedefInfo Info) {
   Scope.Typedefs.push_back(std::move(Info));
 }
 
+static void InsertChild(ScopeChildren &Scope, ConceptInfo Info) {
+  Scope.Concepts.push_back(std::move(Info));
+}
+
+static void InsertChild(ScopeChildren &Scope, VarInfo Info) {
+  Scope.Variables.push_back(std::move(Info));
+}
+
 // Creates a parent of the correct type for the given child and inserts it into
 // that parent.
 //
@@ -340,9 +550,15 @@ static std::unique_ptr<Info> makeAndInsertIntoParent(ChildType Child) {
     InsertChild(ParentRec->Children, std::forward<ChildType>(Child));
     return ParentRec;
   }
-  default:
-    llvm_unreachable("Invalid reference type for parent namespace");
+  case InfoType::IT_default:
+  case InfoType::IT_enum:
+  case InfoType::IT_function:
+  case InfoType::IT_typedef:
+  case InfoType::IT_concept:
+  case InfoType::IT_variable:
+    break;
   }
+  llvm_unreachable("Invalid reference type for parent namespace");
 }
 
 // There are two uses for this function.
@@ -408,7 +624,6 @@ static void parseEnumerators(EnumInfo &I, const EnumDecl *D) {
     ASTContext &Context = E->getASTContext();
     if (RawComment *Comment =
             E->getASTContext().getRawCommentForDeclNoCache(E)) {
-      CommentInfo CInfo;
       Comment->setAttached();
       if (comments::FullComment *Fc = Comment->parse(Context, nullptr, E)) {
         EnumValueInfo &Member = I.Members.back();
@@ -434,6 +649,7 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
   // Don't parse bases if this isn't a definition.
   if (!D->isThisDeclarationADefinition())
     return;
+
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual())
       continue;
@@ -525,7 +741,13 @@ template <typename T>
 static void populateInfo(Info &I, const T *D, const FullComment *C,
                          bool &IsInAnonymousNamespace) {
   I.USR = getUSRForDecl(D);
-  I.Name = D->getNameAsString();
+  if (auto ConversionDecl = dyn_cast_or_null<CXXConversionDecl>(D);
+      ConversionDecl && ConversionDecl->getConversionType()
+                            .getTypePtr()
+                            ->isTemplateTypeParmType())
+    I.Name = "operator " + ConversionDecl->getConversionType().getAsString();
+  else
+    I.Name = D->getNameAsString();
   populateParentNamespaces(I.Namespace, D, IsInAnonymousNamespace);
   if (C) {
     I.Description.emplace_back();
@@ -543,15 +765,63 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
     I.Loc.emplace_back(Loc);
 }
 
+static void
+handleCompoundConstraints(const Expr *Constraint,
+                          std::vector<ConstraintInfo> &ConstraintInfos) {
+  if (Constraint->getStmtClass() == Stmt::ParenExprClass) {
+    handleCompoundConstraints(dyn_cast<ParenExpr>(Constraint)->getSubExpr(),
+                              ConstraintInfos);
+  } else if (Constraint->getStmtClass() == Stmt::BinaryOperatorClass) {
+    auto *BinaryOpExpr = dyn_cast<BinaryOperator>(Constraint);
+    handleCompoundConstraints(BinaryOpExpr->getLHS(), ConstraintInfos);
+    handleCompoundConstraints(BinaryOpExpr->getRHS(), ConstraintInfos);
+  } else if (Constraint->getStmtClass() ==
+             Stmt::ConceptSpecializationExprClass) {
+    auto *Concept = dyn_cast<ConceptSpecializationExpr>(Constraint);
+    ConstraintInfo CI(getUSRForDecl(Concept->getNamedConcept()),
+                      Concept->getNamedConcept()->getNameAsString());
+    CI.ConstraintExpr = exprToString(Concept);
+    ConstraintInfos.push_back(CI);
+  }
+}
+
+static void populateConstraints(TemplateInfo &I, const TemplateDecl *D) {
+  if (!D || !D->hasAssociatedConstraints())
+    return;
+
+  SmallVector<AssociatedConstraint> AssociatedConstraints;
+  D->getAssociatedConstraints(AssociatedConstraints);
+  for (const auto &Constraint : AssociatedConstraints) {
+    if (!Constraint)
+      continue;
+
+    // TODO: Investigate if atomic constraints need to be handled specifically.
+    if (const auto *ConstraintExpr =
+            dyn_cast_or_null<ConceptSpecializationExpr>(
+                Constraint.ConstraintExpr)) {
+      ConstraintInfo CI(getUSRForDecl(ConstraintExpr->getNamedConcept()),
+                        ConstraintExpr->getNamedConcept()->getNameAsString());
+      CI.ConstraintExpr = exprToString(ConstraintExpr);
+      I.Constraints.push_back(std::move(CI));
+    } else {
+      handleCompoundConstraints(Constraint.ConstraintExpr, I.Constraints);
+    }
+  }
+}
+
 static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
                                  const FullComment *FC, Location Loc,
                                  bool &IsInAnonymousNamespace) {
   populateSymbolInfo(I, D, FC, Loc, IsInAnonymousNamespace);
   auto &LO = D->getLangOpts();
   I.ReturnType = getTypeInfoForType(D->getReturnType(), LO);
+  I.Prototype = getFunctionPrototype(D);
   parseParameters(I, D);
+  I.IsStatic = D->isStatic();
 
   populateTemplateParameters(I.Template, D);
+  if (I.Template)
+    populateConstraints(I.Template.value(), D->getDescribedFunctionTemplate());
 
   // Handle function template specializations.
   if (const FunctionTemplateSpecializationInfo *FTSI =
@@ -680,15 +950,19 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
+
   auto RI = std::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
+
   populateSymbolInfo(*RI, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
   RI->TagType = D->getTagKind();
   parseFields(*RI, D, PublicOnly);
+
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
+    RI->FullName = getRecordPrototype(C);
     if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
       RI->Name = TD->getNameAsString();
       RI->IsTypeDef = true;
@@ -700,6 +974,8 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
   RI->Path = getInfoRelativePath(RI->Namespace);
 
   populateTemplateParameters(RI->Template, D);
+  if (RI->Template)
+    populateConstraints(RI->Template.value(), D->getDescribedTemplate());
 
   // Full and partial specializations.
   if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
@@ -710,11 +986,11 @@ emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
 
     // What this is a specialization of.
     auto SpecOf = CTSD->getSpecializedTemplateOrPartial();
-    if (auto *CTD = dyn_cast<ClassTemplateDecl *>(SpecOf))
-      Specialization.SpecializationOf = getUSRForDecl(CTD);
-    else if (auto *CTPSD =
+    if (auto *SpecTD = dyn_cast<ClassTemplateDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(SpecTD);
+    else if (auto *SpecTD =
                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
-      Specialization.SpecializationOf = getUSRForDecl(CTPSD);
+      Specialization.SpecializationOf = getUSRForDecl(SpecTD);
 
     // Parameters to the specialization. For partial specializations, get the
     // parameters "as written" from the ClassTemplatePartialSpecializationDecl
@@ -786,18 +1062,34 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc,
   return {nullptr, makeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
 }
 
+static void extractCommentFromDecl(const Decl *D, TypedefInfo &Info) {
+  assert(D && "Invalid Decl when extracting comment");
+  ASTContext &Context = D->getASTContext();
+  RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
+  if (!Comment)
+    return;
+
+  Comment->setAttached();
+  if (comments::FullComment *Fc = Comment->parse(Context, nullptr, D)) {
+    Info.Description.emplace_back();
+    parseFullComment(Fc, Info.Description.back());
+  }
+}
+
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
   TypedefInfo Info;
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
+
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
   Info.DefLoc = Loc;
   auto &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
     // The record serializer explicitly checks for this syntax and constructs
@@ -805,6 +1097,7 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
     return {};
   }
   Info.IsUsing = false;
+  extractCommentFromDecl(D, Info);
 
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
@@ -816,16 +1109,18 @@ std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
   TypedefInfo Info;
-
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
 
   Info.DefLoc = Loc;
-  auto &LO = D->getLangOpts();
+  const LangOptions &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
+  Info.TypeDeclaration = getTypeAlias(D);
   Info.IsUsing = true;
+
+  extractCommentFromDecl(D, Info);
 
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, makeAndInsertIntoParent<TypedefInfo &&>(std::move(Info))};
@@ -850,6 +1145,50 @@ emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
 
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, makeAndInsertIntoParent<EnumInfo &&>(std::move(Enum))};
+}
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const ConceptDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly) {
+  ConceptInfo Concept;
+
+  bool IsInAnonymousNamespace = false;
+  populateInfo(Concept, D, FC, IsInAnonymousNamespace);
+  Concept.IsType = D->isTypeConcept();
+  Concept.DefLoc = Loc;
+  Concept.ConstraintExpression = exprToString(D->getConstraintExpr());
+
+  if (auto *ConceptParams = D->getTemplateParameters()) {
+    for (const auto *Param : ConceptParams->asArray()) {
+      Concept.Template.Params.emplace_back(
+          getSourceCode(Param, Param->getSourceRange()));
+    }
+  }
+
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  return {nullptr, makeAndInsertIntoParent<ConceptInfo &&>(std::move(Concept))};
+}
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, const Location &Loc,
+         bool PublicOnly) {
+  VarInfo Var;
+  bool IsInAnonymousNamespace = false;
+  populateSymbolInfo(Var, D, FC, Loc, IsInAnonymousNamespace);
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  if (D->getStorageClass() == StorageClass::SC_Static)
+    Var.IsStatic = true;
+  Var.Type =
+      getTypeInfoForType(D->getType(), D->getASTContext().getPrintingPolicy());
+
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  return {nullptr, makeAndInsertIntoParent<VarInfo &&>(std::move(Var))};
 }
 
 } // namespace serialize

@@ -386,8 +386,8 @@ public:
       // for it. Use an empty ValueLocPair to search for an entry in ValueToLoc.
       const ValueIDNum &Num = Op.ID;
       ValueLocPair Probe(Num, LocationAndQuality());
-      auto ValuesPreferredLoc = std::lower_bound(
-          ValueToLoc.begin(), ValueToLoc.end(), Probe, ValueToLocSort);
+      auto ValuesPreferredLoc =
+          llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
 
       // There must be a legitimate entry found for Num.
       assert(ValuesPreferredLoc != ValueToLoc.end() &&
@@ -486,8 +486,7 @@ public:
 
       // Is there a variable that wants a location for this value? If not, skip.
       ValueLocPair Probe(VNum, LocationAndQuality());
-      auto VIt = std::lower_bound(ValueToLoc.begin(), ValueToLoc.end(), Probe,
-                                  ValueToLocSort);
+      auto VIt = llvm::lower_bound(ValueToLoc, Probe, ValueToLocSort);
       if (VIt == ValueToLoc.end() || VIt->first != VNum)
         continue;
 
@@ -1692,8 +1691,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
   // filled in later.
   for (const DbgOp &Op : DbgOps) {
     if (!Op.IsConst)
-      if (FoundLocs.insert({Op.ID, TransferTracker::LocationAndQuality()})
-              .second)
+      if (FoundLocs.try_emplace(Op.ID).second)
         ValuesToFind.push_back(Op.ID);
   }
 
@@ -2588,8 +2586,7 @@ void InstrRefBasedLDV::placeMLocPHIs(
   auto CollectPHIsForLoc = [&](LocIdx L) {
     // Collect the set of defs.
     SmallPtrSet<MachineBasicBlock *, 32> DefBlocks;
-    for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-      MachineBasicBlock *MBB = OrderToBB[I];
+    for (MachineBasicBlock *MBB : OrderToBB) {
       const auto &TransferFunc = MLocTransfer[MBB->getNumber()];
       if (TransferFunc.contains(L))
         DefBlocks.insert(MBB);
@@ -3800,8 +3797,7 @@ bool InstrRefBasedLDV::ExtendRanges(MachineFunction &MF,
   // To mirror old LiveDebugValues, enumerate variables in RPOT order. Otherwise
   // the order is unimportant, it just has to be stable.
   unsigned VarAssignCount = 0;
-  for (unsigned int I = 0; I < OrderToBB.size(); ++I) {
-    auto *MBB = OrderToBB[I];
+  for (MachineBasicBlock *MBB : OrderToBB) {
     auto *VTracker = &vlocs[MBB->getNumber()];
     // Collect each variable with a DBG_VALUE in this block.
     for (auto &idx : VTracker->Vars) {

@@ -113,6 +113,28 @@ entry:
   ret i32 %conv
 }
 
+define i32 @ctz1_nusw(i32 %x) {
+; CHECK-LABEL: @ctz1_nusw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 125613361
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr nusw [32 x i8], ptr @ctz7.table, i64 0, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
 @ctz2.table = internal unnamed_addr constant [64 x i16] [i16 32, i16 0, i16 1, i16 12, i16 2, i16 6, i16 0, i16 13, i16 3, i16 0, i16 7, i16 0, i16 0, i16 0, i16 0, i16 14, i16 10, i16 4, i16 0, i16 0, i16 8, i16 0, i16 0, i16 25, i16 0, i16 0, i16 0, i16 0, i16 0, i16 21, i16 27, i16 15, i16 31, i16 11, i16 5, i16 0, i16 0, i16 0, i16 0, i16 0, i16 9, i16 0, i16 0, i16 24, i16 0, i16 0, i16 20, i16 26, i16 30, i16 0, i16 0, i16 0, i16 0, i16 23, i16 0, i16 19, i16 29, i16 0, i16 22, i16 18, i16 28, i16 17, i16 16, i16 0], align 2
 
 define i32 @ctz2(i32 %x) {

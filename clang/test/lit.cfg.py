@@ -70,6 +70,8 @@ llvm_config.use_default_substitutions()
 
 llvm_config.use_clang()
 
+config.substitutions.append(("%src_dir", config.clang_src_dir))
+
 config.substitutions.append(("%src_include_dir", config.clang_src_dir + "/include"))
 
 config.substitutions.append(("%target_triple", config.target_triple))
@@ -173,6 +175,9 @@ if config.clang_staticanalyzer:
 
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
+        config.substitutions.append(
+            ("%z3_include_dir", config.clang_staticanalyzer_z3_include_dir)
+        )
     else:
         config.available_features.add("no-z3")
 

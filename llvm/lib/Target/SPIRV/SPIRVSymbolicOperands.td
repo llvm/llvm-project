@@ -172,6 +172,8 @@ def KernelProfilingInfoOperand : OperandCategory;
 def OpcodeOperand : OperandCategory;
 def CooperativeMatrixLayoutOperand : OperandCategory;
 def CooperativeMatrixOperandsOperand : OperandCategory;
+def SpecConstantOpOperandsOperand : OperandCategory;
+def MatrixMultiplyAccumulateOperandsOperand : OperandCategory;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Extesions enum values and at the same time
@@ -315,6 +317,8 @@ defm SPV_INTEL_memory_access_aliasing : ExtensionOperand<118>;
 defm SPV_INTEL_fp_max_error : ExtensionOperand<119>;
 defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120>;
 defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121>;
+defm SPV_INTEL_2d_block_io : ExtensionOperand<122>;
+defm SPV_INTEL_int4 : ExtensionOperand<123>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -517,6 +521,11 @@ defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory
 defm FPMaxErrorINTEL : CapabilityOperand<6169, 0, 0, [SPV_INTEL_fp_max_error], []>;
 defm TernaryBitwiseFunctionINTEL : CapabilityOperand<6241, 0, 0, [SPV_INTEL_ternary_bitwise_function], []>;
 defm SubgroupMatrixMultiplyAccumulateINTEL : CapabilityOperand<6236, 0, 0, [SPV_INTEL_subgroup_matrix_multiply_accumulate], []>;
+defm Subgroup2DBlockIOINTEL : CapabilityOperand<6228, 0, 0, [SPV_INTEL_2d_block_io], []>;
+defm Subgroup2DBlockTransformINTEL : CapabilityOperand<6229, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
+defm Subgroup2DBlockTransposeINTEL : CapabilityOperand<6230, 0, 0, [SPV_INTEL_2d_block_io], [Subgroup2DBlockIOINTEL]>;
+defm Int4TypeINTEL : CapabilityOperand<5112, 0, 0, [SPV_INTEL_int4], []>;
+defm Int4CooperativeMatrixINTEL : CapabilityOperand<5114, 0, 0, [SPV_INTEL_int4], [Int4TypeINTEL, CooperativeMatrixKHR]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1746,3 +1755,129 @@ defm MatrixAAndBTF32ComponentsINTEL : CooperativeMatrixOperandsOperand<0x20, [SP
 defm MatrixAAndBBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x40, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixCBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x80, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
 defm MatrixResultBFloat16ComponentsINTEL : CooperativeMatrixOperandsOperand<0x100, [SPV_INTEL_joint_matrix], [CooperativeMatrixBFloat16ComponentTypeINTEL]>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define SpecConstant Operands enum values and at the
+// same time SymbolicOperand.
+//===----------------------------------------------------------------------===//
+
+def SpecConstantOpOperands : GenericEnum, Operand<i32> {
+  let FilterClass = "SpecConstantOpOperands";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class SpecConstantOpOperands<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass SpecConstantOpOperandsOperand<bits<32> value, list<Extension> reqExtensions, list<Capability> reqCapabilities> {
+  def : SpecConstantOpOperands<NAME, value>;
+  defm : SymbolicOperandWithRequirements<SpecConstantOpOperandsOperand, value, NAME, 0, 0, reqExtensions, reqCapabilities>;
+}
+
+// Conversion
+defm SConvert :  SpecConstantOpOperandsOperand<114, [], []>;
+defm FConvert :  SpecConstantOpOperandsOperand<115, [], []>;
+defm ConvertFToS :  SpecConstantOpOperandsOperand<110, [], [Kernel]>;
+defm ConvertSToF :  SpecConstantOpOperandsOperand<111, [], [Kernel]>;
+defm ConvertFToU :  SpecConstantOpOperandsOperand<109, [], [Kernel]>;
+defm ConvertUToF :  SpecConstantOpOperandsOperand<112, [], [Kernel]>;
+defm UConvert :  SpecConstantOpOperandsOperand<113, [], [Kernel]>;
+defm ConvertPtrToU :  SpecConstantOpOperandsOperand<117, [], [Kernel]>;
+defm ConvertUToPtr :  SpecConstantOpOperandsOperand<120, [], [Kernel]>;
+defm GenericCastToPtr :  SpecConstantOpOperandsOperand<122, [], [Kernel]>;
+defm PtrCastToGeneric :  SpecConstantOpOperandsOperand<121, [], [Kernel]>;
+defm Bitcast :  SpecConstantOpOperandsOperand<124, [], []>;
+defm QuantizeToF16 :  SpecConstantOpOperandsOperand<116, [], [Shader]>;
+// Arithmetic 
+defm SNegate :  SpecConstantOpOperandsOperand<126, [], []>;
+defm Not :  SpecConstantOpOperandsOperand<200, [], []>;
+defm IAdd :  SpecConstantOpOperandsOperand<128, [], []>;
+defm ISub :  SpecConstantOpOperandsOperand<130, [], []>;
+defm IMul :  SpecConstantOpOperandsOperand<132, [], []>;
+defm UDiv :  SpecConstantOpOperandsOperand<134, [], []>;
+defm SDiv :  SpecConstantOpOperandsOperand<135, [], []>;
+defm UMod :  SpecConstantOpOperandsOperand<137, [], []>;
+defm SRem :  SpecConstantOpOperandsOperand<138, [], []>;
+defm SMod :  SpecConstantOpOperandsOperand<139, [], []>;
+defm ShiftRightLogical :  SpecConstantOpOperandsOperand<194, [], []>;
+defm ShiftRightArithmetic :  SpecConstantOpOperandsOperand<195, [], []>;
+defm ShiftLeftLogical :  SpecConstantOpOperandsOperand<196, [], []>;
+defm BitwiseOr :  SpecConstantOpOperandsOperand<197, [], []>;
+defm BitwiseAnd :  SpecConstantOpOperandsOperand<199, [], []>;
+defm BitwiseXor :  SpecConstantOpOperandsOperand<198, [], []>;
+defm FNegate :  SpecConstantOpOperandsOperand<127, [], [Kernel]>;
+defm FAdd :  SpecConstantOpOperandsOperand<129, [], [Kernel]>;
+defm FSub :  SpecConstantOpOperandsOperand<131, [], [Kernel]>;
+defm FMul :  SpecConstantOpOperandsOperand<133, [], [Kernel]>;
+defm FDiv :  SpecConstantOpOperandsOperand<136, [], [Kernel]>;
+defm FRem :  SpecConstantOpOperandsOperand<140, [], [Kernel]>;
+defm FMod :  SpecConstantOpOperandsOperand<141, [], [Kernel]>;
+// Composite;
+defm VectorShuffle :  SpecConstantOpOperandsOperand<79, [], []>;
+defm CompositeExtract :  SpecConstantOpOperandsOperand<81, [], []>;
+defm CompositeInsert :  SpecConstantOpOperandsOperand<82, [], []>;
+// Logical;
+defm LogicalOr :  SpecConstantOpOperandsOperand<166, [], []>;
+defm LogicalAnd :  SpecConstantOpOperandsOperand<167, [], []>;
+defm LogicalNot :  SpecConstantOpOperandsOperand<168, [], []>;
+defm LogicalEqual :  SpecConstantOpOperandsOperand<164, [], []>;
+defm LogicalNotEqual :  SpecConstantOpOperandsOperand<165, [], []>;
+defm Select :  SpecConstantOpOperandsOperand<169, [], []>;
+// Comparison;
+defm IEqual :  SpecConstantOpOperandsOperand<170, [], []>;
+defm INotEqual :  SpecConstantOpOperandsOperand<171, [], []>;
+defm ULessThan :  SpecConstantOpOperandsOperand<176, [], []>;
+defm SLessThan :  SpecConstantOpOperandsOperand<177, [], []>;
+defm UGreaterThan :  SpecConstantOpOperandsOperand<172, [], []>;
+defm SGreaterThan :  SpecConstantOpOperandsOperand<173, [], []>;
+defm ULessThanEqual :  SpecConstantOpOperandsOperand<178, [], []>;
+defm SLessThanEqual :  SpecConstantOpOperandsOperand<179, [], []>;
+defm UGreaterThanEqual :  SpecConstantOpOperandsOperand<174, [], []>;
+defm SGreaterThanEqual :  SpecConstantOpOperandsOperand<175, [], []>;
+// Memory
+defm AccessChain :  SpecConstantOpOperandsOperand<65, [], [Kernel]>;
+defm InBoundsAccessChain :  SpecConstantOpOperandsOperand<66, [], [Kernel]>;
+defm PtrAccessChain :  SpecConstantOpOperandsOperand<67, [], [Kernel]>;
+defm InBoundsPtrAccessChain :  SpecConstantOpOperandsOperand<70, [], [Kernel]>;
+defm CooperativeMatrixLengthKHR : SpecConstantOpOperandsOperand<4460, [], []>;
+
+//===----------------------------------------------------------------------===//
+// Multiclass used to define Matrix Multiply Accumulate Operands enum values and at the same time
+// SymbolicOperand entries with string mnemonics and capabilities.
+//===----------------------------------------------------------------------===//
+def MatrixMultiplyAccumulateOperands : GenericEnum, Operand<i32> {
+  let FilterClass = "MatrixMultiplyAccumulateOperands";
+  let NameField = "Name";
+  let ValueField = "Value";
+  let PrintMethod = !strconcat("printSymbolicOperand<OperandCategory::", FilterClass, "Operand>");
+}
+
+class MatrixMultiplyAccumulateOperands<string name, bits<32> value> {
+  string Name = name;
+  bits<32> Value = value;
+}
+
+multiclass  MatrixMultiplyAccumulateOperandsOperand<bits<32> value, list<Extension> reqExtensions> {
+  def : MatrixMultiplyAccumulateOperands<NAME, value>;
+  defm : SymbolicOperandWithRequirements<MatrixMultiplyAccumulateOperandsOperand, value, NAME, 0, 0, reqExtensions, []>;
+}
+
+defm None :  MatrixMultiplyAccumulateOperandsOperand<0x0, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixASignedComponentsINTEL :  MatrixMultiplyAccumulateOperandsOperand<0x1, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBSignedComponentsINTEL :  MatrixMultiplyAccumulateOperandsOperand<0x2, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixCBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x4, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixResultBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x8, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedInt8INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x10, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedInt8INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x20, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedInt4INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x40, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedInt4INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x80, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixATF32INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x100, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBTF32INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x200, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x400, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x800, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixAPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x1000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;
+defm MatrixBPackedBFloat16INTEL :  MatrixMultiplyAccumulateOperandsOperand<0x2000, [SPV_INTEL_subgroup_matrix_multiply_accumulate]>;

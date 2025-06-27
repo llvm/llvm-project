@@ -23,16 +23,16 @@ def SDT_StorePair : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
                                          SDTCisPtrTy<2>,
                                          SDTCisVT<3, XLenVT>]>;
 
-def th_lwud : SDNode<"RISCVISD::TH_LWUD", SDT_LoadPair,
-                     [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_lwd : SDNode<"RISCVISD::TH_LWD", SDT_LoadPair,
-                    [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_ldd : SDNode<"RISCVISD::TH_LDD", SDT_LoadPair,
-                    [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def th_swd : SDNode<"RISCVISD::TH_SWD", SDT_StorePair,
-                    [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def th_sdd : SDNode<"RISCVISD::TH_SDD", SDT_StorePair,
-                    [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_lwud : RVSDNode<"TH_LWUD", SDT_LoadPair,
+                       [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_lwd : RVSDNode<"TH_LWD", SDT_LoadPair,
+                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_ldd : RVSDNode<"TH_LDD", SDT_LoadPair,
+                      [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def th_swd : RVSDNode<"TH_SWD", SDT_StorePair,
+                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def th_sdd : RVSDNode<"TH_SDD", SDT_StorePair,
+                      [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def ImmThreeAsmOperand : AsmOperandClass {
   let Name = "ImmThree";
@@ -578,7 +578,6 @@ def : PatGprImm<rotr, TH_SRRI, uimmlog2xlen>;
 // it can be implemented with th.srri by negating the immediate.
 def : Pat<(rotl (XLenVT GPR:$rs1), uimmlog2xlen:$shamt),
           (TH_SRRI GPR:$rs1, (ImmSubFromXLen uimmlog2xlen:$shamt))>;
-def : Pat<(sext_inreg (XLenVT GPR:$rs1), i32), (TH_EXT GPR:$rs1, 31, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (TH_EXT GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (TH_EXT GPR:$rs1, 7, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i1), (TH_EXT GPR:$rs1, 0, 0)>;
@@ -661,10 +660,12 @@ def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
+let Predicates = [HasVendorXTHeadVdot] in {
 defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
 defm PseudoTHVdotVMAQAUS    : VPseudoVMAQA_VX;
+}
 
 let Predicates = [HasVendorXTHeadVdot] in {
 defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",
@@ -742,32 +743,30 @@ def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
 def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
 }
 
-def AddrRegRegScale : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<3>">;
-def AddrRegZextRegScale
-    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<3, 32>",
-                     [], [], 10>;
+def AddrRegRegScale3 : AddrRegRegScale<3>;
+def AddrRegZextRegScale3 : AddrRegZextRegScale<3>;
 
 multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-def : Pat<(vt (LoadOp (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegRegScale3 (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = i64> {
-def : Pat<(vt (LoadOp (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegZextRegScale3 (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                     ValueType vt = XLenVT> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
+            (AddrRegRegScale3 (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                         ValueType vt = i64> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
+            (AddrRegZextRegScale3 (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 

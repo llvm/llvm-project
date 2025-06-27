@@ -15,6 +15,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
@@ -111,31 +112,29 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
     return ShouldRemoveRandom() || ShouldRemoveHot(*(II->getParent()), cutoff);
   };
 
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-      if (!II)
-        continue;
-      auto ID = II->getIntrinsicID();
-      switch (ID) {
-      case Intrinsic::allow_ubsan_check:
-      case Intrinsic::allow_runtime_check: {
-        ++NumChecksTotal;
+  for (Instruction &I : instructions(F)) {
+    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+    if (!II)
+      continue;
+    auto ID = II->getIntrinsicID();
+    switch (ID) {
+    case Intrinsic::allow_ubsan_check:
+    case Intrinsic::allow_runtime_check: {
+      ++NumChecksTotal;
 
-        bool ToRemove = ShouldRemove(II);
+      bool ToRemove = ShouldRemove(II);
 
-        ReplaceWithValue.push_back({
-            II,
-            ToRemove,
-        });
-        if (ToRemove)
-          ++NumChecksRemoved;
-        emitRemark(II, ORE, ToRemove);
-        break;
-      }
-      default:
-        break;
-      }
+      ReplaceWithValue.push_back({
+          II,
+          ToRemove,
+      });
+      if (ToRemove)
+        ++NumChecksRemoved;
+      emitRemark(II, ORE, ToRemove);
+      break;
+    }
+    default:
+      break;
     }
   }
 
@@ -159,7 +158,9 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
-             ? PreservedAnalyses::none()
+             // We do not change the CFG, we only replace the intrinsics with
+             // true or false.
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
              : PreservedAnalyses::all();
 }
 
@@ -181,11 +182,13 @@ void LowerAllowCheckPass::printPipeline(
   // correctness.
   // TODO: print shorter output by combining adjacent runs, etc.
   int i = 0;
+  bool printed = false;
   for (unsigned int cutoff : Opts.cutoffs) {
     if (cutoff > 0) {
-      if (i > 0)
+      if (printed)
         OS << ";";
       OS << "cutoffs[" << i << "]=" << cutoff;
+      printed = true;
     }
 
     i++;

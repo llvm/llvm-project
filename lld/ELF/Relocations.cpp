@@ -55,7 +55,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Endian.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -162,7 +161,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
     // symbol, the R_MIPS_GOT16 relocation creates a GOT entry to hold
     // the high 16 bits of the symbol's value. A paired R_MIPS_LO16
     // relocations handle low 16 bits of the address. That allows
-    // to allocate only one GOT entry for every 64 KBytes of local data.
+    // to allocate only one GOT entry for every 64 KiB of local data.
     return isLocal ? R_MIPS_LO16 : R_MIPS_NONE;
   case R_MICROMIPS_GOT16:
     return isLocal ? R_MICROMIPS_LO16 : R_MIPS_NONE;
@@ -991,10 +990,17 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
     return ctx.target->usesOnlyLowPageBits(type) || !ctx.arg.isPic;
-
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
-  if (sym.isPreemptible || e == RE_AARCH64_AUTH)
+  if (e == RE_AARCH64_AUTH)
     return false;
+
+  // The behavior of an undefined weak reference is implementation defined.
+  // (We treat undefined non-weak the same as undefined weak.) For static
+  // -no-pie linking, dynamic relocations are generally avoided (except
+  // IRELATIVE). Emitting dynamic relocations for -shared aligns with its -z
+  // undefs default. Dynamic -no-pie linking and -pie allow flexibility.
+  if (sym.isPreemptible)
+    return sym.isUndefined() && !ctx.arg.isPic;
   if (!ctx.arg.isPic)
     return true;
 
@@ -1114,19 +1120,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
-  //
-  // The behavior of an undefined weak reference is implementation defined. For
-  // non-link-time constants, we resolve relocations statically (let
-  // relocate{,Non}Alloc() resolve them) for -no-pie and try producing dynamic
-  // relocations for -pie and -shared.
-  //
-  // The general expectation of -no-pie static linking is that there is no
-  // dynamic relocation (except IRELATIVE). Emitting dynamic relocations for
-  // -shared matches the spirit of its -z undefs default. -pie has freedom on
-  // choices, and we choose dynamic relocations to be consistent with the
-  // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
-      (!ctx.arg.isPic && sym.isUndefWeak())) {
+  if (isStaticLinkTimeConstant(expr, type, sym, offset)) {
     sec->addReloc({expr, type, offset, addend, &sym});
     return;
   }
@@ -1671,9 +1665,10 @@ void RelocationScanner::scan(Relocs<RelTy> rels) {
   }
 
   // Sort relocations by offset for more efficient searching for
-  // R_RISCV_PCREL_HI20 and R_PPC64_ADDR64.
+  // R_RISCV_PCREL_HI20, R_PPC64_ADDR64 and the branch-to-branch optimization.
   if (ctx.arg.emachine == EM_RISCV ||
-      (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc"))
+      (ctx.arg.emachine == EM_PPC64 && sec->name == ".toc") ||
+      ctx.arg.branchToBranch)
     llvm::stable_sort(sec->relocs(),
                       [](const Relocation &lhs, const Relocation &rhs) {
                         return lhs.offset < rhs.offset;
@@ -1964,6 +1959,9 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  if (ctx.arg.branchToBranch)
+    ctx.target->applyBranchToBranchOpt();
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {

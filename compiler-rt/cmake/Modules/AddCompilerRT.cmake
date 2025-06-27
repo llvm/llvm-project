@@ -123,7 +123,7 @@ macro(set_output_name output name arch)
   else()
     if(ANDROID AND ${arch} STREQUAL "i386")
       set(${output} "${name}-i686${COMPILER_RT_OS_SUFFIX}")
-    elseif("${arch}" MATCHES "^arm")
+    elseif(NOT "${arch}" MATCHES "^arm64" AND "${arch}" MATCHES "^arm")
       if(COMPILER_RT_DEFAULT_TARGET_ONLY)
         set(triple "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
       else()
@@ -581,6 +581,24 @@ macro(add_compiler_rt_script name)
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     DESTINATION ${COMPILER_RT_INSTALL_BINARY_DIR})
 endmacro(add_compiler_rt_script src name)
+
+
+macro(add_compiler_rt_cfg target_name file_name component arch)
+  set(src_file "${CMAKE_CURRENT_SOURCE_DIR}/${file_name}")
+  get_compiler_rt_output_dir(${arch} output_dir)
+  set(dst_file "${output_dir}/${file_name}")
+  add_custom_command(OUTPUT ${dst_file}
+    DEPENDS ${src_file}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dst_file}
+    COMMENT "Copying ${file_name}...")
+  add_custom_target(${target_name} DEPENDS ${dst_file})
+  install(FILES ${file_name}
+    DESTINATION ${COMPILER_RT_INSTALL_LIBRARY_DIR}
+    COMPONENT ${component})
+  add_dependencies(${component} ${target_name})
+
+  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT Misc")
+endmacro()
 
 # Builds custom version of libc++ and installs it in <prefix>.
 # Can be used to build sanitized versions of libc++ for running unit tests.

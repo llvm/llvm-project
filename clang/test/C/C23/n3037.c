@@ -20,11 +20,11 @@ void bar(void) {
 #define PRODUCT(A ,B) struct prod { A a; B b; }                   // expected-note 2 {{expanded from macro 'PRODUCT'}}
 #define SUM(A, B) struct sum { _Bool flag; union { A a; B b; }; } // expected-note 2 {{expanded from macro 'SUM'}}
 
-void func1(PRODUCT(int, SUM(float, double)) x); // both-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
-                                                   both-warning {{declaration of 'struct sum' will not be visible outside of this function}} \
+void func1(PRODUCT(int, SUM(float, double)) x); // c17-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
+                                                   c17-warning {{declaration of 'struct sum' will not be visible outside of this function}} \
                                                    c17-note {{passing argument to parameter 'x' here}}
-void func2(PRODUCT(int, SUM(float, double)) y) { // both-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
-                                                    both-warning {{declaration of 'struct sum' will not be visible outside of this function}}
+void func2(PRODUCT(int, SUM(float, double)) y) { // c17-warning {{declaration of 'struct prod' will not be visible outside of this function}} \
+                                                    c17-warning {{declaration of 'struct sum' will not be visible outside of this function}}
   func1(y); // c17-error {{passing 'struct prod' to parameter of incompatible type 'struct prod'}}
 }
 
@@ -140,7 +140,7 @@ struct quals_matter { // c17-note {{previous definition is here}}
 };
 
 struct quals_matter { // c17-error {{redefinition of 'quals_matter'}} \
-                         c23-error {{type 'struct quals_matter' has incompatible definitions}}                         
+                         c23-error {{type 'struct quals_matter' has incompatible definitions}}
   const int x;        // c23-note {{field 'x' has type 'const int' here}}
 };
 
@@ -307,7 +307,7 @@ enum fixed_test_2 : typedef_of_type_int { FT2 }; // c17-error {{redefinition of 
 // Test more bizarre situations in terms of where the type is declared. This
 // has always been allowed.
 struct declared_funny_1 { int x; }
-declared_funny_func(struct declared_funny_1 { int x; } arg) { // both-warning {{declaration of 'struct declared_funny_1' will not be visible outside of this function}}
+declared_funny_func(struct declared_funny_1 { int x; } arg) { // c17-warning {{declaration of 'struct declared_funny_1' will not be visible outside of this function}}
   return declared_funny_func((__typeof__(arg)){ 0 });
 }
 
@@ -359,3 +359,45 @@ struct alignment { // c17-error {{redefinition of 'alignment'}} \
                       c23-error {{type 'struct alignment' has a member with an attribute which currently causes the types to be treated as though they are incompatible}}
   int x;
 };
+
+// Both structures need to have a tag in order to be compatible within the same
+// translation unit.
+struct     {int i;} nontag;
+struct tag {int i;} tagged; // c17-note 2 {{previous definition is here}}
+
+_Static_assert(1 == _Generic(tagged, struct tag {int i;}:1, default:0)); // c17-error {{redefinition of 'tag'}} \
+                                                                            c17-error {{static assertion failed}}
+_Static_assert(0 == _Generic(tagged, struct     {int i;}:1, default:0));
+_Static_assert(0 == _Generic(nontag, struct tag {int i;}:1, default:0)); // c17-error {{redefinition of 'tag'}}
+// That means these two structures are not actually compatible; see GH141724.
+_Static_assert(0 == _Generic(nontag, struct     {int i;}:1, default:0));
+
+// Also test the behavior within a function (so the declaration context is not
+// at the translation unit level).
+void nontag_func_test(void) {
+  struct { int i; } test;
+  _Static_assert(0 == _Generic(test, struct { int i; } : 1, default : 0));
+}
+
+// Same kind of test, but this time for a declaration in the parameter list.
+void nontag_param_test(struct { int i; } herp) {
+  _Static_assert(0 == _Generic(herp, struct { int i; } : 1, default : 0));
+}
+
+// Same kind of test, but demonstrating that these still aren't compatible.
+void nontag_both_in_params(struct { int i; } Arg1, struct { int i; } Arg2) {
+  _Static_assert(0 == _Generic(__typeof__(Arg1), __typeof__(Arg2) : 1, default : 0)); // both-warning {{passing a type argument as the first operand to '_Generic' is a C2y extension}}
+}
+
+struct InnerAnonStruct {
+  struct {
+    int i;
+  } untagged;
+} inner_anon_tagged;
+
+_Static_assert(0 == _Generic(inner_anon_tagged.untagged, struct { int i; } : 1, default : 0));
+
+// Test the same thing with enumerations (test for unions is omitted because
+// unions and structures are both RecordDecl objects, whereas EnumDecl is not).
+enum { E_Untagged1 } nontag_enum; // both-note {{previous definition is here}}
+_Static_assert(0 == _Generic(nontag_enum, enum { E_Untagged1 } : 1, default : 0)); // both-error {{redefinition of enumerator 'E_Untagged1'}}

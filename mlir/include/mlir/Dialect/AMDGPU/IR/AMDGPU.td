@@ -112,6 +112,38 @@ def AMDGPU_ExtPackedFp8Op :
   }];
 }
 
+def AMDGPU_ScaledExtPackedOp
+    : AMDGPU_Op<"scaled_ext_packed", [Pure]>,
+      Arguments<(
+          ins AnyTypeOf<[VectorOfLengthAndType<[1, 2, 3, 4], [F8E5M2, F8E4M3FN]>,
+                         VectorOfLengthAndType<[1, 2, 3, 4, 5, 6, 7, 8],
+                                               [F4E2M1FN]>]>:$source,
+          F32:$scale,
+          ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfLengthAndType<[2], [F32]>,
+                          FixedVectorOfLengthAndType<[2], [F16]>,
+                          FixedVectorOfLengthAndType<[2], [BF16]>]>:$res)> {
+  let summary = "Extend a vector of packed floating point values";
+
+  let description = [{
+    Extend and scale two packed floats in `source[index]` to two floats and 
+    return them.
+
+    This rather unusual signature arises from the fact that AMD GPUs cannot
+    easily work with sub 32-bit quantities, so the compiler intrinsics for
+    extending 8-bit floats (which are, currently, the only way to work with
+    this operation) take packed vectors of 2 such floats.
+
+    If the passed-in vector has fewer than two elements, or the input is scalar,
+    the remaining values in the <2 x i8> will be filled with
+    undefined values as needed.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `[` $index `]` `,` $scale `:` type($source) `to` type($res)
+  }];
+}
+
 def AMDGPU_PackedTrunc2xFp8Op :
     AMDGPU_Op<"packed_trunc_2xfp8", [Pure, AttrSizedOperandSegments]>,
     Arguments<(ins F32:$sourceA,
@@ -135,6 +167,36 @@ def AMDGPU_PackedTrunc2xFp8Op :
     attr-dict $sourceA `,` ($sourceB^):(`undef`)?
     `into` ($existing^):(`undef`)? `[` `word` $wordIndex `]`
     `:` type($sourceA) `to` type($res) (`into` type($existing)^)?
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_PackedScaledTruncOp
+    : AMDGPU_Op<"packed_scaled_trunc", [Pure]>,
+      Arguments<(ins VectorOfLengthAndType<[1, 2], [F32, F16, BF16]>:$source,
+          F32:$scale,
+          ConfinedAttr<I32Attr, [IntNonNegative, IntMaxValue<7>]>:$index,
+          Optional<AnyTypeOf<
+              [FixedVectorOfLengthAndType<[4], [F8E5M2, F8E4M3FN]>,
+               FixedVectorOfLengthAndType<[8], [F4E2M1FN]>]>>:$existing)>,
+      Results<(
+          outs AnyTypeOf<[FixedVectorOfLengthAndType<[4], [F8E5M2, F8E4M3FN]>,
+                          FixedVectorOfLengthAndType<[8], [F4E2M1FN]>]>:$res)> {
+  let summary = "Round two floats into a packed vector of floats";
+  let description = [{
+    Scale and round the inputs `source` (which is undefined if not
+    specified) into the low or high word (bottom two or top two) elements
+    of the returned vector, keeping the other two elements of `existing`
+    unchanged if present (or undefined if it was not passed in).
+
+    The reason for this odd signature is that AMD GPUs cannot easily work with
+    sub-registers, and so the conversion intrinsics take 32-bit wide
+    packed vectors of float values.
+  }];
+  let assemblyFormat = [{
+    attr-dict $source `into` ($existing^):(`undef`)? `[` $index `]`
+    `,` $scale
+    `:` type($source) `to` type($res) (`into` type($existing)^)?
   }];
   let hasVerifier = 1;
 }
@@ -810,15 +872,17 @@ def AMDGPU_GatherToLDSOp :
     Results<(outs)> {
   let summary = "MLIR wrapper for CDNA Gather to LDS instructions";
   let description = [{
-    The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
+    The `amdgpu.gather_to_lds` op is a wrapper around the `global_load_lds` instructions.
 
     Operands:
-    * `$src`: global memory memref to read from.
+    * `$src`: global memory (including fat buffer) memref to read from.
     * `$srcIndices`: indices into `$src` to read from for this thread.
     * `$dst`: LDS memory memref to write to.
     * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
-      The elements gathered by the subgroup will be written in order of lane ID will be written
-      into contiguously starting at `$dst[$dstIndices]`.
+      The elements gathered by the subgroup will be written contiguously in order of lane ID
+      starting at `$dst[$dstIndices]`. Byte-sized (ex. i8) or short-sized (ex. i16)
+      types will be zero-padded/extended to 32 bits before being written. 96-bit types
+      (ex. vector<3xf32>) will be zero-padded to 128 bits before being written.
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
@@ -826,10 +890,44 @@ def AMDGPU_GatherToLDSOp :
     The `$dst`, along with its indices, points to the memory location the subgroup of this thread
     will write to.
 
-    Note: only enabled for gfx942 and later.
+    Note: only supported on gfx9 and gfx10.
   }];
   let assemblyFormat = [{
     $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_TransposeLoadOp :
+    AMDGPU_Op<"transpose_load", [SameVariadicOperandSize]>,
+    Arguments<(ins Arg<AnyMemRef, "buffer to transpose load from", [MemRead]>:$src, Variadic<Index>:$srcIndices)>,
+    Results<(outs AnyTypeOf<[AnyVectorOfNonZeroRank]>:$result)> {
+  let summary = "MLIR wrapper for CDNA Transpose Load instructions";
+  let description = [{
+    The `amdgpu.transpose_load` op is a wrapper around the `ds_read_tr` instructions.
+    The transpose load op represents a subgroup load from LDS memory,
+    where the subgroup of threads collectively reads a matrix from the source
+    memref, with each thread reading a vector of the matrix, and gets a transposed matrix
+    in as the result. That is, each thread reads a vector of the col-major matrix at different
+    indices, and the thread's read result is a vector of the corresponding row of the transposed
+    matrix.
+
+    This op is a direct wrapper around the ROCDL `ds_read_tr` family intrinsics. Please refer
+    to the CDNA4 ISA documentation for more details about its exact semantics.
+
+    Format example:
+    ```
+    %0 = amdgpu.transpose_load %src[%srcIndices] : memref<128x256xf16> -> vector<4xf16>
+    ```
+    Operands:
+    * `$src`: LDS memref to read from.
+    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$result`: target register this transpose load instruction will write to.
+
+    Note: Lowering is only supported on gfx950 and up.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` attr-dict `:` type($src) `->` type($result)
   }];
   let hasVerifier = 1;
 }

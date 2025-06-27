@@ -572,13 +572,11 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // hlfir.assign, check there are no effects which make this unsafe
 
   // keep track of any values written to in the elemental, as these can't be
-  // read from between the elemental and the assignment
+  // read from or written to between the elemental and the assignment
+  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
   // likewise, values read in the elemental cannot be written to between the
   // elemental and the assign
-  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
-  // any accesses to the array between the array and the assignment means it
-  // would be unsafe to move the elemental to the assignment
-  notToBeAccessedBeforeAssign.push_back(match.array);
+  mlir::SmallVector<mlir::Value, 1> notToBeWrittenBeforeAssign;
 
   // 1) side effects in the elemental body - it isn't sufficient to just look
   // for ordered elementals because we also cannot support out of order reads
@@ -593,10 +591,12 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
     mlir::AliasResult res = containsReadOrWriteEffectOn(effect, match.array);
     if (res.isNo()) {
-      if (mlir::isa<mlir::MemoryEffects::Write, mlir::MemoryEffects::Read>(
-              effect.getEffect()))
-        if (effect.getValue())
+      if (effect.getValue()) {
+        if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()))
           notToBeAccessedBeforeAssign.push_back(effect.getValue());
+        else if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect()))
+          notToBeWrittenBeforeAssign.push_back(effect.getValue());
+      }
 
       // this is safe in the elemental
       continue;
@@ -605,6 +605,12 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     // don't allow any aliasing writes in the elemental
     if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
       LLVM_DEBUG(llvm::dbgs() << "write inside the elemental body\n");
+      return std::nullopt;
+    }
+
+    if (effect.getValue() == nullptr) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "side-effect with no value, cannot analyze further\n");
       return std::nullopt;
     }
 
@@ -663,8 +669,20 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
       mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
       if (!res.isNo()) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "diasllowed side-effect: " << effect.getValue() << " for "
+                   << "disallowed side-effect: " << effect.getValue() << " for "
                    << elemental.getLoc() << "\n");
+        return std::nullopt;
+      }
+    }
+    // Anything that is read inside the elemental can only be safely read
+    // between the elemental and the assignment.
+    for (mlir::Value val : notToBeWrittenBeforeAssign) {
+      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+      if (!res.isNo() &&
+          !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "disallowed non-read side-effect: " << effect.getValue()
+                   << " for " << elemental.getLoc() << "\n");
         return std::nullopt;
       }
     }
@@ -682,10 +700,17 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
 
   mlir::Location loc = elemental->getLoc();
   fir::FirOpBuilder builder(rewriter, elemental.getOperation());
-  auto extents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
+  auto rhsExtents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
 
   // create the loop at the assignment
   builder.setInsertionPoint(match->assign);
+  hlfir::Entity lhs{match->array};
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> lhsExtents =
+      hlfir::getIndexExtents(loc, builder, lhsShape);
+  llvm::SmallVector<mlir::Value> extents =
+      fir::factory::deduceOptimalExtents(rhsExtents, lhsExtents);
 
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
@@ -699,8 +724,8 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   rewriter.eraseOp(yield);
 
   // Assign the element value to the array element for this iteration.
-  auto arrayElement = hlfir::getElementAt(
-      loc, builder, hlfir::Entity{match->array}, loopNest.oneBasedIndices);
+  auto arrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
   builder.create<hlfir::AssignOp>(
       loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
