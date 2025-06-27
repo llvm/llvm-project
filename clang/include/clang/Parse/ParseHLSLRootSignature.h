@@ -29,12 +29,15 @@ namespace hlsl {
 // Introduce a wrapper struct around the underlying RootElement. This structure
 // will retain extra clang diagnostic information that is not available in llvm.
 struct RootSignatureElement {
-  RootSignatureElement(llvm::hlsl::rootsig::RootElement Element)
-      : Element(Element) {}
+  RootSignatureElement(SourceLocation Loc,
+                       llvm::hlsl::rootsig::RootElement Element)
+      : Loc(Loc), Element(Element) {}
 
   const llvm::hlsl::rootsig::RootElement &getElement() const { return Element; }
+  const SourceLocation &getLocation() const { return Loc; }
 
 private:
+  SourceLocation Loc;
   llvm::hlsl::rootsig::RootElement Element;
 };
 
