@@ -46,7 +46,8 @@ enum class InfoType {
   IT_enum,
   IT_typedef,
   IT_concept,
-  IT_variable
+  IT_variable,
+  IT_friend
 };
 
 enum class CommentKind {
@@ -379,6 +380,22 @@ struct SymbolInfo : public Info {
   bool IsStatic = false;
 };
 
+struct FriendInfo : SymbolInfo {
+  FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
+  FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
+  FriendInfo(const InfoType IT, const SymbolID &USR,
+             const StringRef Name = StringRef())
+      : SymbolInfo(IT, USR, Name) {}
+  bool mergeable(const FriendInfo &Other);
+  void merge(FriendInfo &&Other);
+
+  Reference Ref;
+  std::optional<TemplateInfo> Template;
+  std::optional<TypeInfo> ReturnType;
+  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  bool IsClass = false;
+};
+
 struct VarInfo : SymbolInfo {
   VarInfo() : SymbolInfo(InfoType::IT_variable) {}
   explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
@@ -453,6 +470,8 @@ struct RecordInfo : public SymbolInfo {
   std::vector<BaseRecordInfo>
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
+
+  std::vector<FriendInfo> Friends;
 
   ScopeChildren Children;
 };
