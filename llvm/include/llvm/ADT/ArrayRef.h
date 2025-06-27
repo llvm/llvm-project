@@ -328,11 +328,6 @@ namespace llvm {
                   void>>
     /*implicit*/ constexpr MutableArrayRef(const C &V) : ArrayRef<T>(V) {}
 
-    /// Construct a MutableArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr MutableArrayRef(std::array<T, N> &Arr)
-        : ArrayRef<T>(Arr) {}
-
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>
     /*implicit*/ constexpr MutableArrayRef(T (&Arr)[N]) : ArrayRef<T>(Arr) {}
