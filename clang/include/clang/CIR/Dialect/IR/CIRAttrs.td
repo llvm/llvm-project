@@ -160,18 +160,17 @@ def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
     value of the specified floating-point type. Supporting only CIR FP types.
   }];
   let parameters = (ins
-    AttributeSelfTypeParameter<"", "::cir::CIRFPTypeInterface">:$type,
+    AttributeSelfTypeParameter<"", "::cir::FPTypeInterface">:$type,
     APFloatParameter<"">:$value
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "const llvm::APFloat &":$value), [{
-      return $_get(type.getContext(), mlir::cast<CIRFPTypeInterface>(type),
-                   value);
+      return $_get(type.getContext(), mlir::cast<FPTypeInterface>(type), value);
     }]>,
     AttrBuilder<(ins "mlir::Type":$type,
                      "const llvm::APFloat &":$value), [{
-      return $_get($_ctxt, mlir::cast<CIRFPTypeInterface>(type), value);
+      return $_get($_ctxt, mlir::cast<FPTypeInterface>(type), value);
     }]>,
   ];
   let extraClassDeclaration = [{

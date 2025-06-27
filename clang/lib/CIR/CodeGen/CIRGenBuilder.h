@@ -11,7 +11,7 @@
 
 #include "Address.h"
 #include "CIRGenTypeCache.h"
-#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+#include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
@@ -141,8 +141,7 @@ public:
 
   bool isSized(mlir::Type ty) {
     if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType, cir::IntType,
-                  cir::CIRFPTypeInterface, cir::ComplexType, cir::RecordType>(
-            ty))
+                  cir::FPTypeInterface, cir::ComplexType, cir::RecordType>(ty))
       return true;
 
     if (const auto vt = mlir::dyn_cast<cir::VectorType>(ty))
