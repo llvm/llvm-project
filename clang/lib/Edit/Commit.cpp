@@ -239,7 +239,7 @@ bool Commit::canInsert(SourceLocation loc, FileOffset &offs) {
   if (SM.isInSystemHeader(loc))
     return false;
 
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(loc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(loc);
   if (locInfo.first.isInvalid())
     return false;
   offs = FileOffset(locInfo.first, locInfo.second);
@@ -273,7 +273,7 @@ bool Commit::canInsertAfterToken(SourceLocation loc, FileOffset &offs,
   if (loc.isInvalid())
     return false;
 
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(loc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(loc);
   if (locInfo.first.isInvalid())
     return false;
   offs = FileOffset(locInfo.first, locInfo.second);
@@ -309,8 +309,8 @@ bool Commit::canRemoveRange(CharSourceRange range,
   if (PPRec && PPRec->rangeIntersectsConditionalDirective(range.getAsRange()))
     return false;
 
-  std::pair<FileID, unsigned> beginInfo = SM.getDecomposedLoc(range.getBegin());
-  std::pair<FileID, unsigned> endInfo = SM.getDecomposedLoc(range.getEnd());
+  FileIDAndOffset beginInfo = SM.getDecomposedLoc(range.getBegin());
+  FileIDAndOffset endInfo = SM.getDecomposedLoc(range.getEnd());
   if (beginInfo.first != endInfo.first ||
       beginInfo.second > endInfo.second)
     return false;

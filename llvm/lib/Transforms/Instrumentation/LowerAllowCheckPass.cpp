@@ -158,7 +158,9 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
-             ? PreservedAnalyses::none()
+             // We do not change the CFG, we only replace the intrinsics with
+             // true or false.
+             ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
              : PreservedAnalyses::all();
 }
 
