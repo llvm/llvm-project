@@ -229,9 +229,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
   for (const auto &Opnd : Inst.Operands) {
     int TiedOpIdx = Opnd.getTiedRegister();
     if (-1 != TiedOpIdx) {
+      assert((unsigned)TiedOpIdx < OpNo);
       // Set the entry in OperandMap for the tied operand we're skipping.
-      OperandMap[OpNo].Kind = OperandMap[TiedOpIdx].Kind;
-      OperandMap[OpNo].Data = OperandMap[TiedOpIdx].Data;
+      OperandMap[OpNo] = OperandMap[TiedOpIdx];
       if (IsSourceInst)
         *SourceLastTiedOpPtr = OpNo;
       ++OpNo;
@@ -405,8 +405,8 @@ void CompressInstEmitter::createInstOperandMapping(
     int TiedInstOpIdx = Operand.getTiedRegister();
     if (TiedInstOpIdx != -1) {
       ++TiedCount;
-      DestOperandMap[OpNo].Data = DestOperandMap[TiedInstOpIdx].Data;
-      DestOperandMap[OpNo].Kind = DestOperandMap[TiedInstOpIdx].Kind;
+      assert((unsigned)TiedInstOpIdx < OpNo);
+      DestOperandMap[OpNo] = DestOperandMap[TiedInstOpIdx];
       if (DestOperandMap[OpNo].Kind == OpData::Operand)
         // No need to fill the SourceOperandMap here since it was mapped to
         // destination operand 'TiedInstOpIdx' in a previous iteration.
