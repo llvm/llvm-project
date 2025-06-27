@@ -911,9 +911,8 @@ public:
         result =
             builder.create<cir::ComplexEqualOp>(loc, boInfo.lhs, boInfo.rhs);
       } else {
-        assert(!cir::MissingFeatures::complexType());
-        cgf.cgm.errorNYI(loc, "complex not equal");
-        result = builder.getBool(false, loc);
+        result =
+            builder.create<cir::ComplexNotEqualOp>(loc, boInfo.lhs, boInfo.rhs);
       }
     }
 

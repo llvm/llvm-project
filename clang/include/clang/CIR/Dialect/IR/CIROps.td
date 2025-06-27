@@ -2482,6 +2482,31 @@ def ComplexEqualOp : CIR_Op<"complex.eq", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ComplexNotEqualOp
+//===----------------------------------------------------------------------===//
+
+def ComplexNotEqualOp : CIR_Op<"complex.neq", [Pure, SameTypeOperands]> {
+
+  let summary = "Computes whether two complex values are not equal";
+  let description = [{
+   The `complex.equal` op takes two complex numbers and returns whether
+   they are not equal.
+
+    ```mlir
+    %r = cir.complex.neq %a, %b : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let results = (outs CIR_BoolType:$result);
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs
+    `:` qualified(type($lhs)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
