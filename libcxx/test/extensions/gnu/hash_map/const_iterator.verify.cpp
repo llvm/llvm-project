@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <assert.h>
-#include <ext/hash_map>
-#include <string>
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
-int main(int, char**)
-{
-    assert(__gnu_cxx::hash<std::string>()(std::string()) == 0);  // error
+#include <ext/hash_map>
+
+int main(int, char**) {
+  __gnu_cxx::hash_map<int, int> m;
+  m[1]                                    = 1;
+  const __gnu_cxx::hash_map<int, int>& cm = m;
+  cm.find(1)->second = 2; // expected-error {{cannot assign to return value because function 'operator->' returns a const value}}
 
   return 0;
 }

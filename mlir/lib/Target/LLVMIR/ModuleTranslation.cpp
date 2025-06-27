@@ -727,10 +727,8 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
 
   if (auto stringAttr = dyn_cast<StringAttr>(attr)) {
-    return llvm::ConstantDataArray::get(
-        moduleTranslation.getLLVMContext(),
-        ArrayRef<char>{stringAttr.getValue().data(),
-                       stringAttr.getValue().size()});
+    return llvm::ConstantDataArray::get(moduleTranslation.getLLVMContext(),
+                                        ArrayRef<char>{stringAttr.getValue()});
   }
 
   // Handle arrays of structs that cannot be represented as DenseElementsAttr
@@ -1922,7 +1920,7 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   if (!scopeInserted)
     return scopeIt->second;
   llvm::LLVMContext &ctx = llvmModule->getContext();
-  auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
+  auto dummy = llvm::MDNode::getTemporary(ctx, {});
   // Convert the domain metadata node if necessary.
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);

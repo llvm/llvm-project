@@ -147,7 +147,7 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
-  initializeVariantKinds(MachOAtSpecifiers);
+  initializeAtSpecifiers(MachOAtSpecifiers);
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -225,7 +225,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
 
   HasIdentDirective = true;
 
-  initializeVariantKinds(ELFAtSpecifiers);
+  initializeAtSpecifiers(ELFAtSpecifiers);
 }
 
 void AArch64MCAsmInfoELF::printSpecifierExpr(
@@ -257,7 +257,7 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
-  initializeVariantKinds(COFFAtSpecifiers);
+  initializeAtSpecifiers(COFFAtSpecifiers);
 }
 
 void AArch64MCAsmInfoMicrosoftCOFF::printSpecifierExpr(
@@ -287,7 +287,7 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
-  initializeVariantKinds(COFFAtSpecifiers);
+  initializeAtSpecifiers(COFFAtSpecifiers);
 }
 
 void AArch64MCAsmInfoGNUCOFF::printSpecifierExpr(
