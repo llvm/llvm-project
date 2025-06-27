@@ -154,7 +154,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error unloadBinaryImpl(DeviceImageTy *Image) override {
     auto Elf = reinterpret_cast<GenELF64DeviceImageTy *>(Image);
     DynamicLibrary::closeLibrary(Elf->getDynamicLibrary());
-    Plugin.free(Image);
+    Plugin.free(Elf);
     return Plugin::success();
   }
 
