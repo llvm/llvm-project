@@ -65,5 +65,5 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
     ExceptionsType = ExceptionHandling::Wasm;
 
-  initializeVariantKinds(atSpecifiers);
+  initializeAtSpecifiers(atSpecifiers);
 }
