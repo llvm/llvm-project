@@ -683,7 +683,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
     } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid) {
       // If the final statement is a call to an always-throwing function,
       // don't warn about the fall-through.
-      if (const auto *FD = D->getAsFunction()) {
+      if (D->getAsFunction()) {
         if (const auto *CS = dyn_cast<CompoundStmt>(Body);
             CS && !CS->body_empty()) {
           const Stmt *LastStmt = CS->body_back();
