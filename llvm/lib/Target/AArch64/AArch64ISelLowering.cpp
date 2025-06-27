@@ -20987,11 +20987,9 @@ static SDValue performBuildVectorCombine(SDNode *N,
 }
 
 // A special combine for the vqdmulh family of instructions.
-// truncate( smin( sra ( mul( sext v0, sext v1 ) ), SHIFT_AMOUNT ),
-// SATURATING_VAL ) can be reduced to sqdmulh(...)
-static SDValue trySQDMULHCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 SelectionDAG &DAG) {
+// smin( sra ( mul( sext v0, sext v1 ) ), SHIFT_AMOUNT ),
+// SATURATING_VAL ) can be reduced to sext(sqdmulh(...))
+static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
 
   if (N->getOpcode() != ISD::TRUNCATE)
     return SDValue();
@@ -21013,17 +21011,11 @@ static SDValue trySQDMULHCombine(SDNode *N,
 
   MVT ScalarType;
   unsigned ShiftAmt = 0;
-  // Here we are considering clamped Arm Q format
-  // data types which use 2 upper bits, one for the
-  // integer part and one for the sign. We also consider
-  // standard signed integer types
   switch (Clamp->getSExtValue()) {
-  case (1ULL << 14) - 1: // Q15 saturation
   case (1ULL << 15) - 1:
     ScalarType = MVT::i16;
     ShiftAmt = 16;
     break;
-  case (1ULL << 30) - 1: // Q31 saturation
   case (1ULL << 31) - 1:
     ScalarType = MVT::i32;
     ShiftAmt = 32;
@@ -21052,15 +21044,23 @@ static SDValue trySQDMULHCombine(SDNode *N,
   SDValue SExt1 = Mul.getOperand(1);
 
   if (SExt0.getOpcode() != ISD::SIGN_EXTEND ||
-      SExt1.getOpcode() != ISD::SIGN_EXTEND)
+      SExt1.getOpcode() != ISD::SIGN_EXTEND ||
+      SExt0.getValueType() != SExt1.getValueType())
+    return SDValue();
+
+  if ((ShiftAmt == 16 && (SExt0.getValueType() != MVT::v8i32 &&
+                          SExt0.getValueType() != MVT::v4i32)) ||
+      (ShiftAmt == 32 && (SExt0.getValueType() != MVT::v4i64 &&
+                          SExt0.getValueType() != MVT::v2i64)))
     return SDValue();
 
   SDValue V0 = SExt0.getOperand(0);
   SDValue V1 = SExt1.getOperand(0);
 
-  SDLoc DL(N);
+  SDLoc DL(SMin);
   EVT VecVT = N->getValueType(0);
-  return DAG.getNode(AArch64ISD::SQDMULH, DL, VecVT, V0, V1);
+  SDValue SQDMULH = DAG.getNode(AArch64ISD::SQDMULH, DL, VecVT, V0, V1);
+  return DAG.getNode(ISD::SIGN_EXTEND, DL, N->getValueType(0), SQDMULH);
 }
 
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
@@ -21077,8 +21077,9 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(N0.getOpcode(), DL, VT, Op);
   }
 
-  if (SDValue V = trySQDMULHCombine(N, DCI, DAG))
-    return V;
+  if (SDValue V = trySQDMULHCombine(N, DAG)) {
+    return DAG.getNode(ISD::TRUNCATE, DL, VT, V);
+  }
 
   // Performing the following combine produces a preferable form for ISEL.
   // i32 (trunc (extract Vi64, idx)) -> i32 (extract (nvcast Vi32), idx*2))
