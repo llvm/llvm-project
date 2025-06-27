@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -emit-llvm -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only %s
+// RUN: %clang_cc1 -verify -triple x86_64-windows-pc -fms-compatibility -fsyntax-only  %s
 
 // expected-no-diagnostics
 
