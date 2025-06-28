@@ -7044,13 +7044,10 @@ static unsigned getRISCVVLOp(SDValue Op) {
 
 static bool isPromotedOpNeedingSplit(SDValue Op,
                                      const RISCVSubtarget &Subtarget) {
-  if (Op.getValueType() == MVT::nxv32f16 &&
-      (Subtarget.hasVInstructionsF16Minimal() &&
-       !Subtarget.hasVInstructionsF16()))
-    return true;
-  if (Op.getValueType() == MVT::nxv32bf16)
-    return true;
-  return false;
+  return (Op.getValueType() == MVT::nxv32f16 &&
+          (Subtarget.hasVInstructionsF16Minimal() &&
+           !Subtarget.hasVInstructionsF16())) ||
+         Op.getValueType() == MVT::nxv32bf16;
 }
 
 static SDValue SplitVectorOp(SDValue Op, SelectionDAG &DAG) {
