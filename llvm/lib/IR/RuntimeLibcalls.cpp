@@ -56,18 +56,15 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
       const struct {
         const RTLIB::Libcall Op;
         const RTLIB::LibcallImpl Impl;
-        const CallingConv::ID CC;
       } LibraryCalls[] = {
-          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod, CallingConv::ARM_AAPCS},
-          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod, CallingConv::ARM_AAPCS},
-          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod, CallingConv::ARM_AAPCS},
+          {RTLIB::SDIVREM_I32, RTLIB::__aeabi_idivmod},
+          {RTLIB::SDIVREM_I64, RTLIB::__aeabi_ldivmod},
+          {RTLIB::UDIVREM_I32, RTLIB::__aeabi_uidivmod},
+          {RTLIB::UDIVREM_I64, RTLIB::__aeabi_uldivmod},
       };
 
-      for (const auto &LC : LibraryCalls) {
+      for (const auto &LC : LibraryCalls)
         Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
-      }
     }
   }
 
