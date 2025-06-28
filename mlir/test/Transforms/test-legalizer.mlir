@@ -1,10 +1,18 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -test-legalize-patterns -verify-diagnostics -profile-actions-to=- %s | FileCheck %s
 
+//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "B"
+//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "B"
+//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "B"
+//      CHECK: "name": "apply-pattern", "cat": "PERF", "ph": "E"
+// Note: Listener notifications appear after the pattern application because
+// the conversion driver sends all notifications at the end of the conversion
+// in bulk.
 //      CHECK: notifyOperationInserted: test.legal_op_a, was unlinked
 // CHECK-NEXT: notifyOperationReplaced: test.illegal_op_a
 // CHECK-NEXT: notifyOperationModified: func.return
 // CHECK-NEXT: notifyOperationErased: test.illegal_op_a
-
+//      CHECK: "name": "apply-conversion", "cat": "PERF", "ph": "E"
+//      CHECK: "name": "pass-execution", "cat": "PERF", "ph": "E"
 // CHECK-LABEL: verifyDirectPattern
 func.func @verifyDirectPattern() -> i32 {
   // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
