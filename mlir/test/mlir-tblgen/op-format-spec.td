@@ -95,7 +95,7 @@ def DirectiveRegionsValid : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
-def DirectiveResultsInvalidA : TestFormat_Op<[{
+def DirectiveResultsValid : TestFormat_Op<[{
   type(results) attr-dict
 }]>;
 
@@ -104,7 +104,7 @@ def DirectiveResultsInvalidA : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
-def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
+def DirectiveSuccessorsValid : TestFormat_Op<[{
   successors attr-dict
 }]>;
 
@@ -167,7 +167,7 @@ def OptionalValidA : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error
-def StringInvalidA : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
+def StringValid : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
 
 //===----------------------------------------------------------------------===//
 // Variables
