@@ -256,7 +256,7 @@ MCOperand X86MCInstLower::LowerSymbolOperand(const MachineOperand &MO,
         Expr, MCSymbolRefExpr::create(MF.getPICBaseSymbol(), Ctx), Ctx);
     break;
   case X86II::MO_SECREL:
-    Specifier = uint16_t(MCSymbolRefExpr::VK_SECREL);
+    Specifier = uint16_t(X86::S_COFF_SECREL);
     break;
   case X86II::MO_TLSGD:
     Specifier = X86::S_TLSGD;

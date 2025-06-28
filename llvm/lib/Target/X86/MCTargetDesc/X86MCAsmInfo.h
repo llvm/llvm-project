@@ -69,6 +69,7 @@ using Specifier = uint16_t;
 
 enum {
   S_None,
+  S_COFF_SECREL,
 
   S_ABS8 = MCSymbolRefExpr::FirstTargetSpecifier,
   S_DTPOFF,

@@ -53,7 +53,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {X86::S_PCREL, "PCREL"},
     {X86::S_PLT, "PLT"},
     {X86::S_PLTOFF, "PLTOFF"},
-    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {X86::S_COFF_SECREL, "SECREL32"},
     {X86::S_SIZE, "SIZE"},
     {X86::S_TLSCALL, "tlscall"},
     {X86::S_TLSDESC, "tlsdesc"},
