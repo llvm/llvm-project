@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_MATH_ASINFPI16_H
-#define LLVM_LIBC_SRC_MATH_ASINFPI16_H
+#ifndef LLVM_LIBC_SRC_MATH_ASINPIF16_H
+#define LLVM_LIBC_SRC_MATH_ASINPIF16_H
 
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
