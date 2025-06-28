@@ -2421,7 +2421,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and glue operands which copy the outgoing args into registers.
   SDValue InGlue;
-  for (const auto [Reg, N] : RegsToPass) {
+  for (const auto &[Reg, N] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
@@ -2461,7 +2461,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (const auto [Reg, N] : RegsToPass)
+  for (const auto &[Reg, N] : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
