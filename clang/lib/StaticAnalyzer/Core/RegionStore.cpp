@@ -2122,20 +2122,8 @@ SVal RegionStoreManager::getBindingForField(RegionBindingsConstRef B,
   if (const std::optional<SVal> &V = B.getDirectBinding(R))
     return *V;
 
-  // UnnamedBitField is always Undefined unless using memory operation such
-  // as 'memset'.
-  // For example, for code
-  //    typedef struct {
-  //      int i  :2;
-  //      int    :30;  // unnamed bit-field
-  //    } A;
-  //    A a = {1};
-  // The bits of the unnamed bit-field in local variable a can be anything.
-  const FieldDecl *FD = R->getDecl();
-  if (FD->isUnnamedBitField())
-    return UndefinedVal();
-
   // If the containing record was initialized, try to get its constant value.
+  const FieldDecl *FD = R->getDecl();
   QualType Ty = FD->getType();
   const MemRegion* superR = R->getSuperRegion();
   if (const auto *VR = dyn_cast<VarRegion>(superR)) {
