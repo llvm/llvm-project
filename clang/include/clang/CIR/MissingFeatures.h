@@ -172,6 +172,7 @@ struct MissingFeatures {
   static bool alignCXXRecordDecl() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
   static bool attributeNoBuiltin() { return false; }
