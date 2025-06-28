@@ -313,6 +313,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `AllowedTypes`, that excludes specified types from adding qualifiers.
 
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check by fixing
+  false positives on out-of-line explicitly defaulted functions.
+
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
   some false positives involving smart pointers to arrays.
