@@ -99,6 +99,24 @@ qc.e.li s1, undef
 
 .option norelax
 
+## Enable compression/relaxation to check how symbols are handled.
+.option noexact
+.option relax
+
+# ASM: qc.li a1, %qc.abs20(undef)
+# OBJ-NEXT: qc.li a1, 0x0
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM192 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.li a1, %qc.abs20(undef)
+
+# ASM: qc.e.li a1, undef
+# OBJ-NEXT: qc.e.li a1, 0x0
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.li a1, undef
+
 .section .text.other, "ax", @progbits
 
 # ASM-LABEL: other_section:

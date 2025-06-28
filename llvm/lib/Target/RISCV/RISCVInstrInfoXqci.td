@@ -146,7 +146,12 @@ def simm20_li : RISCVOp<XLenVT>,
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isInt<20>(Imm);
-    return MCOp.isBareSymbolRef();
+
+    if (!MCOp.isExpr())
+      return false;
+
+    return MCOp.getExpr()->getKind() == MCExpr::Specifier &&
+      cast<MCSpecifierExpr>(MCOp.getExpr())->getSpecifier() == RISCV::S_QC_ABS20;
   }];
 }
 
