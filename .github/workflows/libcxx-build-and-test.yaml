@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: generic-tsan
-        run: sudo sysctl vm.mmap_rnd_bits=30 && ulimit -s 16000000; libcxx/utils/ci/run-buildbot generic-tsan
+        run: sudo sysctl vm.mmap_rnd_bits=32 && ulimit -s 16000000; libcxx/utils/ci/run-buildbot generic-tsan
         env:
           CC: clang-21
           CXX: clang++-21
