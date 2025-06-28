@@ -273,6 +273,7 @@ Changes to the LLVM tools
 * In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
   ([#47468](https://github.com/llvm/llvm-project/issues/47468))
 * llvm-addr2line now supports a `+` prefix when specifying an address.
+* Support for `SHT_LLVM_BB_ADDR_MAP` versions 1 and lower is dropped.
 
 Changes to LLDB
 ---------------------------------
