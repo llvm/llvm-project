@@ -344,7 +344,7 @@ public:
       return SymbolRefExpr->getSpecifier() == Lanai::S_None;
     if (const MCSymbolRefExpr *SymbolRefExpr =
             dyn_cast<MCSymbolRefExpr>(Imm.Value)) {
-      return SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None;
+      return SymbolRefExpr->getSpecifier() == 0;
     }
 
     // Binary expression
@@ -354,7 +354,7 @@ public:
         return SymbolRefExpr->getSpecifier() == Lanai::S_None;
       if (const MCSymbolRefExpr *SymbolRefExpr =
               dyn_cast<MCSymbolRefExpr>(BinaryExpr->getLHS()))
-        return SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None;
+        return SymbolRefExpr->getSpecifier() == 0;
     }
 
     return false;
@@ -535,8 +535,7 @@ public:
 #ifndef NDEBUG
       const MCSymbolRefExpr *SymbolRefExpr =
           dyn_cast<MCSymbolRefExpr>(getImm());
-      assert(SymbolRefExpr &&
-             SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None);
+      assert(SymbolRefExpr && SymbolRefExpr->getSpecifier() == 0);
 #endif
       Inst.addOperand(MCOperand::createExpr(getImm()));
     } else if (isa<MCBinaryExpr>(getImm())) {

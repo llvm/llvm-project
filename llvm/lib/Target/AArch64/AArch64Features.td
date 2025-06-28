@@ -612,8 +612,11 @@ def FeatureExperimentalZeroingPseudos
 def FeatureNoSVEFPLD1R : SubtargetFeature<"no-sve-fp-ld1r",
   "NoSVEFPLD1R", "true", "Avoid using LD1RX instructions for FP">;
 
-def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
-                                        "Has zero-cycle register moves">;
+def FeatureZCRegMoveGPR64 : SubtargetFeature<"zcm-gpr64", "HasZeroCycleRegMoveGPR64", "true",
+                                        "Has zero-cycle register moves for GPR64 registers">;
+
+def FeatureZCRegMoveGPR32 : SubtargetFeature<"zcm-gpr32", "HasZeroCycleRegMoveGPR32", "true",
+                                        "Has zero-cycle register moves for GPR32 registers">;
 
 def FeatureZCRegMoveFPR64 : SubtargetFeature<"zcm-fpr64", "HasZeroCycleRegMoveFPR64", "true",
                                         "Has zero-cycle register moves for FPR64 registers">;
