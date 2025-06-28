@@ -175,6 +175,7 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 STATISTIC(LoopsVectorized, "Number of loops vectorized");
 STATISTIC(LoopsAnalyzed, "Number of loops analyzed for vectorization");
 STATISTIC(LoopsEpilogueVectorized, "Number of epilogues vectorized");
+STATISTIC(LoopsEarlyExitVectorized, "Number of early exit loops vectorized");
 
 static cl::opt<bool> EnableEpilogueVectorization(
     "enable-epilogue-vectorization", cl::init(true), cl::Hidden,
@@ -7318,6 +7319,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
          "Trying to execute plan with unsupported VF");
   assert(BestVPlan.hasUF(BestUF) &&
          "Trying to execute plan with unsupported UF");
+  ++LoopsVectorized;
+  if (BestVPlan.hasEarlyExit())
+    ++LoopsEarlyExitVectorized;
+  if (VectorizingEpilogue)
+    ++LoopsEpilogueVectorized;
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
@@ -10261,7 +10267,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           L, PSE, LI, DT, TLI, TTI, AC, ORE, ElementCount::getFixed(1),
           ElementCount::getFixed(1), IC, &CM, BFI, PSI, Checks, BestPlan);
 
-      LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
+      LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT,
+                      /*VectorizingEpilogue*/ false);
 
       ORE->emit([&]() {
         return OptimizationRemark(LV_NAME, "Interleaved", L->getStartLoc(),
@@ -10290,9 +10297,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,
                                            EPI, &CM, BFI, PSI, Checks,
                                            *BestMainPlan);
-        auto ExpandedSCEVs = LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF,
-                                             *BestMainPlan, MainILV, DT, false);
-        ++LoopsVectorized;
+        auto ExpandedSCEVs =
+            LVP.executePlan(EPI.MainLoopVF, EPI.MainLoopUF, *BestMainPlan,
+                            MainILV, DT, /*VectorizingEpilogue*/ false);
 
         // Second pass vectorizes the epilogue and adjusts the control flow
         // edges from the first pass.
@@ -10305,7 +10312,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         preparePlanForEpilogueVectorLoop(BestEpiPlan, L, ExpandedSCEVs, EPI);
 
         LVP.executePlan(EPI.EpilogueVF, EPI.EpilogueUF, BestEpiPlan, EpilogILV,
-                        DT, true);
+                        DT, /*VectorizingEpilogue*/ true);
 
         // Fix induction resume values from the additional bypass block.
         BasicBlock *BypassBlock = EpilogILV.getAdditionalBypassBlock();
@@ -10320,7 +10327,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
           // TODO: Directly add as extra operand to the VPResumePHI recipe.
           Inc->setIncomingValueForBlock(BypassBlock, V);
         }
-        ++LoopsEpilogueVectorized;
 
         if (!Checks.hasChecks())
           DisableRuntimeUnroll = true;
@@ -10329,7 +10335,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                VF.MinProfitableTripCount, IC, &CM, BFI, PSI,
                                Checks, BestPlan);
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
-        ++LoopsVectorized;
 
         // Add metadata to disable runtime unrolling a scalar loop when there
         // are no runtime checks about strides and memory. A scalar loop that is
