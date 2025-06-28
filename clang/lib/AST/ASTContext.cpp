@@ -1520,18 +1520,12 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // size_t (C99TC3 6.5.3.4), signed size_t (C++23 5.13.2) and
   // ptrdiff_t (C99TC3 6.5.6) Although these types are not built-in, they are
   // part of the core language and are widely used.
-  if (!LangOpts.HLSL) {
-    // Using PredefinedSugarType makes these types as named sugar types rather
-    // than standard integer types, enabling better hints and diagnostics.
-    using Kind = PredefinedSugarType::Kind;
-    SizeType = getPredefinedSugarType(Kind::SizeT);
-    SignedSizeType = getPredefinedSugarType(Kind::SignedSizeT);
-    PtrdiffType = getPredefinedSugarType(Kind::PtrdiffT);
-  } else {
-    SizeType = getFromTargetType(Target.getSizeType());
-    SignedSizeType = getFromTargetType(Target.getSignedSizeType());
-    PtrdiffType = getFromTargetType(Target.getPtrDiffType(LangAS::Default));
-  }
+  // Using PredefinedSugarType makes these types as named sugar types rather
+  // than standard integer types, enabling better hints and diagnostics.
+  using Kind = PredefinedSugarType::Kind;
+  SizeType = getPredefinedSugarType(Kind::SizeT);
+  SignedSizeType = getPredefinedSugarType(Kind::SignedSizeT);
+  PtrdiffType = getPredefinedSugarType(Kind::PtrdiffT);
 }
 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
