@@ -14,8 +14,7 @@
 #include "llvm/DebugInfo/LogicalView/Readers/LVDWARFReader.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
-#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
@@ -595,7 +594,8 @@ std::string LVDWARFReader::getRegisterName(LVSmall Opcode,
     return {};
   };
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts, Opcode, Operands);
+  DWARFExpressionPrinter::prettyPrintRegisterOp(/*U=*/nullptr, Stream, DumpOpts,
+                                                Opcode, Operands);
   return Stream.str();
 }
 
