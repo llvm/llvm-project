@@ -1255,4 +1255,3 @@ entry:
     %partial.reduce = tail call <2 x i64> @llvm.experimental.vector.partial.reduce.add(<2 x i64> %acc, <8 x i64> %input.wide)
     ret <2 x i64> %partial.reduce
 }
-
