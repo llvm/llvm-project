@@ -1701,7 +1701,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .setMIFlags(MachineInstr::FrameSetup)
                                     .add(predOps(ARMCC::AL));
-      for (const auto [Reg, Kill] : Regs)
+      for (const auto &[Reg, Kill] : Regs)
         MIB.addReg(Reg, getKillRegState(Kill));
     } else if (Regs.size() == 1) {
       BuildMI(MBB, MI, DL, TII.get(StrOpc), ARM::SP)
