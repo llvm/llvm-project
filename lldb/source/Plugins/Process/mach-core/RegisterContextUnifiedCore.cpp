@@ -194,17 +194,22 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
     }
   }
 
-  // Set up our RegisterInfo array, one RegisterSet at a time.
-  // The metadata registers may be declared to be in a core thread
-  // register set (e.g. "General Purpose Registers"), so we scan
-  // both core registers and metadata registers when creating the
-  // combined RegisterInfo arrays.
+  // Set up our combined RegisterInfo array, one RegisterSet at a time.
   for (size_t combined_regset_idx = 0;
        combined_regset_idx < m_register_sets.size(); combined_regset_idx++) {
     uint32_t registers_this_regset = 0;
+
+    // Copy all LC_THREAD RegisterInfos that have a value into our
+    // combined RegisterInfo array.  (the LC_THREAD RegisterContext
+    // may describe registers that were not provided in this thread)
+    //
+    // LC_THREAD register set indexes are identical to the combined
+    // register set indexes.  The combined register set array may have
+    // additional entries.
     if (combined_regset_idx < core_thread_regctx_sp->GetRegisterSetCount()) {
       const RegisterSet *regset =
           core_thread_regctx_sp->GetRegisterSet(combined_regset_idx);
+      // Copy all the registers that have values in.
       for (size_t j = 0; j < regset->num_registers; j++) {
         uint32_t reg_idx = regset->registers[j];
         const RegisterInfo *reginfo =
@@ -219,6 +224,12 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
         }
       }
     }
+
+    // Copy all the metadata RegisterInfos into our combined combined
+    // RegisterInfo array.
+    // The metadata may add registers to one of the LC_THREAD register sets,
+    // or its own newly added register sets.  metadata_regset_to_combined_regset
+    // has the association of the RegisterSet indexes between the two.
     if (additional_reginfo_up) {
       // Find the register set in the metadata that matches this register
       // set, then copy all its RegisterInfos.
@@ -233,9 +244,6 @@ RegisterContextUnifiedCore::RegisterContextUnifiedCore(
                 additional_reginfo_up->GetRegisterInfoAtIndex(reg_idx);
             m_regset_regnum_collection[combined_regset_idx].push_back(
                 m_register_infos.size());
-            // register names in DynamicRegisterInfo are ConstString stored;
-            // we can reuse the char* pointers here without retaining the
-            // DynamicRegisterInfo.
             m_register_infos.push_back(*reginfo);
             registers_this_regset++;
           }
