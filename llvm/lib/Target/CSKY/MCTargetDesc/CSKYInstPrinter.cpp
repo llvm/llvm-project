@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 #include "CSKYInstPrinter.h"
 #include "MCTargetDesc/CSKYBaseInfo.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
