@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -167,7 +168,7 @@ public:
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Immediate:
-      OS << *getImm();
+      MCAsmInfo().printExpr(OS, *getImm());
       break;
     case Register:
       OS << "<register x";
