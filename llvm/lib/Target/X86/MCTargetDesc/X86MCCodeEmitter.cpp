@@ -496,7 +496,7 @@ startsWithGlobalOffsetTable(const MCExpr *Expr) {
 static bool hasSecRelSymbolRef(const MCExpr *Expr) {
   if (Expr->getKind() == MCExpr::SymbolRef) {
     auto *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
-    return Ref->getKind() == MCSymbolRefExpr::VK_SECREL;
+    return Ref->getSpecifier() == X86::S_COFF_SECREL;
   }
   return false;
 }
