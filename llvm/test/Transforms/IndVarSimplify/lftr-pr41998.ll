@@ -41,17 +41,15 @@ end:
 define void @test_ptr(i32 %start) {
 ; CHECK-LABEL: @test_ptr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[START:%.*]] to i3
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i3 -1, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i3 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr @data, i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[P:%.*]] = phi ptr [ @data, [[ENTRY:%.*]] ], [ [[P_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ @data, [[ENTRY]] ], [ [[P_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_INC]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i8, ptr [[P]], i64 1
 ; CHECK-NEXT:    store volatile i8 0, ptr [[P_INC]], align 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq ptr [[P_INC]], [[UGLYGEP]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[I_INC]], 7
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void
