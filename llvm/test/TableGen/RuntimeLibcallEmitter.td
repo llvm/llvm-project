@@ -33,10 +33,6 @@ def calloc  : RuntimeLibcallImpl<CALLOC, "calloc">;
 def CompilerRTLibcalls : LibcallImpls<(add __ashlsi3, __lshrdi3)>;
 def LibmLibcalls : LibcallImpls<(add sqrtl_f80)>;
 
-//def AllCalls : LibcallImpls<(add CompilerRTLibcalls, LibmLibcalls, __ashlsi3)>;
-
-//def MostCalls : LibcallImpls<(sub AllCalls, __ashlsi3, sqrtl_f128)>;
-
 def isSimpleArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::simple}]>;
 def isFooArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::foo}]>;
 
@@ -52,7 +48,6 @@ def isBuzzArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::buzz}]>;
 def isBlahArch : RuntimeLibcallPredicate<[{TT.getArch() == Triple::blah}]>;
 
 def hasCompilerRT : RuntimeLibcallPredicate<[{TT.hasCompilerRT()}]>;
-
 
 
 def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch,
