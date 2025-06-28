@@ -1403,11 +1403,27 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
 
+  bool hasAlias = false;
+  mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);
+  if (parser.parseOptionalKeyword("alias").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr aliaseeAttr;
+    if (parser.parseOptionalSymbolName(aliaseeAttr).failed())
+      return failure();
+    state.addAttribute(aliaseeNameAttr, FlatSymbolRefAttr::get(aliaseeAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+    hasAlias = true;
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, arguments, /*enableNameShadowing=*/false);
   if (parseResult.has_value()) {
+    if (hasAlias)
+      return parser.emitError(loc, "function alias shall not have a body");
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
@@ -1419,13 +1435,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 }
 
 // This function corresponds to `llvm::GlobalValue::isDeclaration` and should
-// have a similar implementation. We don't currently support aliases, ifuncs,
-// or materializable functions, but those should be handled here as they are
-// implemented.
+// have a similar implementation. We don't currently ifuncs or materializable
+// functions, but those should be handled here as they are implemented.
 bool cir::FuncOp::isDeclaration() {
-  assert(!cir::MissingFeatures::opFuncGlobalAliases());
   assert(!cir::MissingFeatures::supportIFuncAttr());
-  return getFunctionBody().empty();
+
+  std::optional<StringRef> aliasee = getAliasee();
+  if (!aliasee)
+    return getFunctionBody().empty();
+
+  // Aliases are always definitions.
+  return false;
 }
 
 mlir::Region *cir::FuncOp::getCallableRegion() {
@@ -1459,6 +1479,12 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   cir::FuncType fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       p, *this, fnType.getInputs(), fnType.isVarArg(), fnType.getReturnTypes());
+
+  if (std::optional<StringRef> aliaseeName = getAliasee()) {
+    p << " alias(";
+    p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);

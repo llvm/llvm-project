@@ -21,6 +21,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -964,6 +965,21 @@ LLVM_ABI bool matchSimpleRecurrence(const PHINode *P, BinaryOperator *&BO,
 /// Analogous to the above, but starting from the binary operator
 LLVM_ABI bool matchSimpleRecurrence(const BinaryOperator *I, PHINode *&P,
                                     Value *&Start, Value *&Step);
+
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp, %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.binary.intrinsic(X_i-1, %b)
+/// Where %b is not required to be loop-invariant.
+LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                   PHINode *&P, Value *&Init,
+                                                   Value *&OtherOp);
 
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if

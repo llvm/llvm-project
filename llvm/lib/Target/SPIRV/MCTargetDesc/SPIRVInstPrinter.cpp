@@ -377,10 +377,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
     SRE = cast<MCSymbolRefExpr>(BE->getLHS());
   else
     SRE = cast<MCSymbolRefExpr>(Expr);
-
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
-
-  assert(Kind == MCSymbolRefExpr::VK_None);
+  assert(SRE->getSpecifier() == 0);
 #endif
   O << *Expr;
 }
