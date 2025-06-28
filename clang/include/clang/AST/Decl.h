@@ -1589,9 +1589,8 @@ public:
     NonParmVarDeclBits.IsCXXCondDecl = true;
   }
 
-  /// Determine whether this variable is the compiler-generated '__range'
-  /// variable used to hold the range expression in a C++11 and later for-range
-  /// statement.
+  /// Whether this variable is the implicit '__range' variable in C++
+  /// range-based for loops.
   bool isCXXForRangeImplicitVar() const {
     return isa<ParmVarDecl>(this) ? false
                                   : NonParmVarDeclBits.IsCXXForRangeImplicitVar;

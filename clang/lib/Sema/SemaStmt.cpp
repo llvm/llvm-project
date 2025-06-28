@@ -2374,9 +2374,6 @@ static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
       SemaRef.ObjC().inferObjCARCLifetime(Decl))
     Decl->setInvalidDecl();
 
-  if (SemaRef.getLangOpts().CPlusPlus23)
-    SemaRef.currentEvaluationContext().InLifetimeExtendingContext = true;
-
   SemaRef.AddInitializerToDecl(Decl, Init, /*DirectInit=*/false);
   SemaRef.FinalizeDeclaration(Decl);
   SemaRef.CurContext->addHiddenDecl(Decl);

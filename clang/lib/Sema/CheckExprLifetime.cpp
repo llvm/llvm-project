@@ -57,7 +57,6 @@ enum LifetimeKind {
 };
 using LifetimeResult =
     llvm::PointerIntPair<const InitializedEntity *, 3, LifetimeKind>;
-
 } // namespace
 
 /// Determine the declaration which an initialized entity ultimately refers to,
@@ -1344,7 +1343,8 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
 
         if (SemaRef.getLangOpts().CPlusPlus23) {
-          if (const VarDecl *VD = cast<VarDecl>(InitEntity->getDecl());
+          if (const VarDecl *VD =
+                  dyn_cast_if_present<VarDecl>(InitEntity->getDecl());
               VD && VD->isCXXForRangeImplicitVar())
             return false;
         }
