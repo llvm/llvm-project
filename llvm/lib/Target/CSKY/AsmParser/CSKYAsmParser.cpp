@@ -441,10 +441,10 @@ public:
 
     switch (Kind) {
     case CPOP:
-      OS << *getConstpoolOp();
+      MAI.printExpr(OS, *getConstpoolOp());
       break;
     case Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
