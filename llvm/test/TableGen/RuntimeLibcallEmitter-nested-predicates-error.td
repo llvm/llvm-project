@@ -1,6 +1,6 @@
 // RUN: not llvm-tblgen -gen-runtime-libcalls -I %p/../../include %s 2>&1 | FileCheck -check-prefix=ERR %s
 
-include "llvm/IR/RuntimeLibCallsImpl.td"
+include "llvm/IR/RuntimeLibcallsImpl.td"
 
 def FUNC0 : RuntimeLibcall;
 def FUNC1 : RuntimeLibcall;

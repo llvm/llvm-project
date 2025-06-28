@@ -4,7 +4,7 @@
 // Check behavior of libcall emission when multiple RuntimeLibcallImpl
 // implementations provide the same RuntimeLibcall
 
-include "llvm/IR/RuntimeLibCallsImpl.td"
+include "llvm/IR/RuntimeLibcallsImpl.td"
 
 def SOME_FUNC : RuntimeLibcall;
 def OTHER_FUNC : RuntimeLibcall;
