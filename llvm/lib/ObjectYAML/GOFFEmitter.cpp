@@ -174,6 +174,7 @@ private:
 class GOFFState {
   void writeHeader(GOFFYAML::FileHeader &FileHdr);
   void writeEnd();
+  void writeSymbol(GOFFYAML::Symbol Sym);
 
   void reportError(const Twine &Msg) {
     ErrHandler(Msg);
@@ -242,6 +243,53 @@ void GOFFState::writeHeader(GOFFYAML::FileHeader &FileHdr) {
   }
 }
 
+void GOFFState::writeSymbol(GOFFYAML::Symbol Sym) {
+  SmallString<80> SymName;
+  if (std::error_code EC = ConverterEBCDIC::convertToEBCDIC(Sym.Name, SymName))
+    reportError("cannot convert '" + Sym.Name + "' to EBCDIC: " + EC.message());
+  size_t SymNameLength = SymName.size();
+  if (SymNameLength > GOFF::MaxDataLength)
+    reportError("symbol name is too long: " + Twine(SymNameLength) +
+                ". Max length is: " + Twine(GOFF::MaxDataLength));
+
+  const unsigned NameLengthOffset = 69;
+  GW.makeNewRecord(GOFF::RT_ESD, NameLengthOffset + SymNameLength);
+  GW << binaryBe(Sym.Type)          // Symbol type
+     << binaryBe(Sym.ID)            // ESDID
+     << binaryBe(Sym.OwnerID)       // Owner ESDID
+     << binaryBe(uint32_t(0))       // Reserved
+     << binaryBe(Sym.Address)       // Offset/Address
+     << binaryBe(uint32_t(0))       // Reserved
+     << binaryBe(Sym.Length)        // Length
+     << binaryBe(Sym.ExtAttrID)     // Extended attributes
+     << binaryBe(Sym.ExtAttrOffset) // Extended attributes data offset
+     << binaryBe(uint32_t(0))       // Reserved
+     << binaryBe(Sym.NameSpace)     // Namespace ID
+     << binaryBe(Sym.Flags)         // Flags
+     << binaryBe(Sym.FillByteValue) // Fill byte value
+     << binaryBe(uint8_t(0))        // Reserved
+     << binaryBe(Sym.PSectID)       // PSECT ID
+     << binaryBe(Sym.Priority);     // Priority
+  if (Sym.Signature)
+    GW << Sym.Signature; // Signature
+  else
+    GW << zeros(8);
+#define BIT(E, N) (Sym.BAFlags & GOFF::E ? 1 << (7 - N) : 0)
+  GW << binaryBe(Sym.Amode) // Behavioral attributes - Amode
+     << binaryBe(Sym.Rmode) // Behavioral attributes - Rmode
+     << binaryBe(uint8_t(Sym.TextStyle << 4 | Sym.BindingAlgorithm))
+     << binaryBe(uint8_t(Sym.TaskingBehavior << 5 | BIT(ESD_BA_Movable, 3) |
+                         BIT(ESD_BA_ReadOnly, 4) | Sym.Executable))
+     << binaryBe(uint8_t(BIT(ESD_BA_NoPrime, 1) | Sym.BindingStrength))
+     << binaryBe(uint8_t(Sym.LoadingBehavior << 6 | BIT(ESD_BA_COMMON, 2) |
+                         BIT(ESD_BA_Indirect, 3) | Sym.BindingScope))
+     << binaryBe(uint8_t(Sym.LinkageType << 5 | Sym.Alignment))
+     << zeros(3) // Behavioral attributes - Reserved
+     << binaryBe(static_cast<uint16_t>(SymNameLength)) // Name length
+     << SymName.str();
+#undef BIT
+}
+
 void GOFFState::writeEnd() {
   GW.makeNewRecord(GOFF::RT_END, GOFF::PayloadLength);
   GW << binaryBe(uint8_t(0)) // No entry point
@@ -256,6 +304,13 @@ bool GOFFState::writeObject() {
   writeHeader(Doc.Header);
   if (HasError)
     return false;
+  // Iterate over all records.
+  for (const auto &[RecordNum, Rec] : llvm::enumerate(Doc.Records)) {
+    if (const auto *Sym = dyn_cast<GOFFYAML::Symbol>(Rec.get()))
+      writeSymbol(*Sym);
+    else
+      reportError("unknown record type on record index" + Twine(RecordNum));
+  }
   writeEnd();
   return true;
 }
