@@ -654,9 +654,8 @@ Improvements to Clang's diagnostics
   a call to a function that is trivially known to always throw (i.e., its
   body consists solely of a `throw` statement). This avoids certain
   false positives in exception-heavy code, though only simple patterns
-  are currently recognized.
+  are currently recognized. Additionally, if -Wmissing-noreturn is enabled, emit a suggestion to explicitly mark the function with [[noreturn]].
 
-  
 Improvements to Clang's time-trace
 ----------------------------------
 
