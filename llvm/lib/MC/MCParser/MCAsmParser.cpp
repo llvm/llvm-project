@@ -165,6 +165,7 @@ bool MCAsmParser::parseGNUAttribute(SMLoc L, int64_t &Tag,
 void MCParsedAsmOperand::dump() const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "  " << *this;
+  dbgs() << "  ";
+  print(dbgs());
 #endif
 }
