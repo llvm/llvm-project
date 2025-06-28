@@ -13112,6 +13112,16 @@ float64x2_t test_vld1q_f64(float64_t const *a) {
   return vld1q_f64(a);
 }
 
+// CHECK-LABEL: define dso_local <16 x i8> @test_vld1q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[A]], align 1
+// CHECK-NEXT:    ret <16 x i8> [[TMP0]]
+//
+mfloat8x16_t test_vld1q_mf8(mfloat8_t const *a) {
+  return vld1q_mf8(a);
+}
+
 // CHECK-LABEL: define dso_local <16 x i8> @test_vld1q_p8(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -13240,6 +13250,16 @@ float32x2_t test_vld1_f32(float32_t const *a) {
 //
 float64x1_t test_vld1_f64(float64_t const *a) {
   return vld1_f64(a);
+}
+
+// CHECK-LABEL: define dso_local <8 x i8> @test_vld1_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[A]], align 1
+// CHECK-NEXT:    ret <8 x i8> [[TMP0]]
+//
+mfloat8x8_t test_vld1_mf8(mfloat8_t const *a) {
+  return vld1_mf8(a);
 }
 
 // CHECK-LABEL: define dso_local <8 x i8> @test_vld1_p8(
@@ -13546,6 +13566,20 @@ float64x2x2_t test_vld2q_f64(float64_t const *a) {
   return vld2q_f64(a);
 }
 
+// CHECK-LABEL: define dso_local %struct.mfloat8x16x2_t @test_vld2q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD2:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld2.v16i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD2_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[VLD2]], 0
+// CHECK-NEXT:    [[VLD2_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[VLD2]], 1
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T:%.*]] poison, <16 x i8> [[VLD2_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[VLD2_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_1_INSERT]]
+//
+mfloat8x16x2_t test_vld2q_mf8(mfloat8_t const *a) {
+  return vld2q_mf8(a);
+}
+
 // CHECK-LABEL: define dso_local %struct.poly8x16x2_t @test_vld2q_p8(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -13726,6 +13760,20 @@ float32x2x2_t test_vld2_f32(float32_t const *a) {
 //
 float64x1x2_t test_vld2_f64(float64_t const *a) {
   return vld2_f64(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x8x2_t @test_vld2_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD2:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD2_FCA_0_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8> } [[VLD2]], 0
+// CHECK-NEXT:    [[VLD2_FCA_1_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8> } [[VLD2]], 1
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T:%.*]] poison, <8 x i8> [[VLD2_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[VLD2_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_1_INSERT]]
+//
+mfloat8x8x2_t test_vld2_mf8(mfloat8_t const *a) {
+  return vld2_mf8(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly8x8x2_t @test_vld2_p8(
@@ -13930,6 +13978,22 @@ float32x4x3_t test_vld3q_f32(float32_t const *a) {
 //
 float64x2x3_t test_vld3q_f64(float64_t const *a) {
   return vld3q_f64(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x16x3_t @test_vld3q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD3:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld3.v16i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD3_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD3]], 0
+// CHECK-NEXT:    [[VLD3_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD3]], 1
+// CHECK-NEXT:    [[VLD3_FCA_2_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD3]], 2
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X3_T:%.*]] poison, <16 x i8> [[VLD3_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X3_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[VLD3_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X3_T]] [[DOTFCA_0_1_INSERT]], <16 x i8> [[VLD3_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X3_T]] [[DOTFCA_0_2_INSERT]]
+//
+mfloat8x16x3_t test_vld3q_mf8(mfloat8_t const *a) {
+  return vld3q_mf8(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly8x16x3_t @test_vld3q_p8(
@@ -14138,6 +14202,22 @@ float32x2x3_t test_vld3_f32(float32_t const *a) {
 //
 float64x1x3_t test_vld3_f64(float64_t const *a) {
   return vld3_f64(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x8x3_t @test_vld3_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD3:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld3.v8i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD3_FCA_0_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD3]], 0
+// CHECK-NEXT:    [[VLD3_FCA_1_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD3]], 1
+// CHECK-NEXT:    [[VLD3_FCA_2_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD3]], 2
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X3_T:%.*]] poison, <8 x i8> [[VLD3_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X3_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[VLD3_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X3_T]] [[DOTFCA_0_1_INSERT]], <8 x i8> [[VLD3_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X3_T]] [[DOTFCA_0_2_INSERT]]
+//
+mfloat8x8x3_t test_vld3_mf8(mfloat8_t const *a) {
+  return vld3_mf8(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly8x8x3_t @test_vld3_p8(
@@ -14368,6 +14448,24 @@ float32x4x4_t test_vld4q_f32(float32_t const *a) {
 //
 float64x2x4_t test_vld4q_f64(float64_t const *a) {
   return vld4q_f64(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x16x4_t @test_vld4q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD4:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD4_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD4]], 0
+// CHECK-NEXT:    [[VLD4_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD4]], 1
+// CHECK-NEXT:    [[VLD4_FCA_2_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD4]], 2
+// CHECK-NEXT:    [[VLD4_FCA_3_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD4]], 3
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T:%.*]] poison, <16 x i8> [[VLD4_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[VLD4_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_1_INSERT]], <16 x i8> [[VLD4_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    [[DOTFCA_0_3_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_2_INSERT]], <16 x i8> [[VLD4_FCA_3_EXTRACT]], 0, 3
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_3_INSERT]]
+//
+mfloat8x16x4_t test_vld4q_mf8(mfloat8_t const *a) {
+  return vld4q_mf8(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly8x16x4_t @test_vld4q_p8(
@@ -14602,6 +14700,24 @@ float32x2x4_t test_vld4_f32(float32_t const *a) {
 //
 float64x1x4_t test_vld4_f64(float64_t const *a) {
   return vld4_f64(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x8x4_t @test_vld4_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD4:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld4.v8i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD4_FCA_0_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD4]], 0
+// CHECK-NEXT:    [[VLD4_FCA_1_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD4]], 1
+// CHECK-NEXT:    [[VLD4_FCA_2_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD4]], 2
+// CHECK-NEXT:    [[VLD4_FCA_3_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD4]], 3
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T:%.*]] poison, <8 x i8> [[VLD4_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[VLD4_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_1_INSERT]], <8 x i8> [[VLD4_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    [[DOTFCA_0_3_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_2_INSERT]], <8 x i8> [[VLD4_FCA_3_EXTRACT]], 0, 3
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_3_INSERT]]
+//
+mfloat8x8x4_t test_vld4_mf8(mfloat8_t const *a) {
+  return vld4_mf8(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly8x8x4_t @test_vld4_p8(
@@ -16398,6 +16514,20 @@ float64x2x2_t test_vld1q_f64_x2(float64_t const *a) {
   return vld1q_f64_x2(a);
 }
 
+// CHECK-LABEL: define dso_local %struct.mfloat8x16x2_t @test_vld1q_mf8_x2(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x2.v16i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD1XN_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[VLD1XN]], 0
+// CHECK-NEXT:    [[VLD1XN_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8> } [[VLD1XN]], 1
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T:%.*]] poison, <16 x i8> [[VLD1XN_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[VLD1XN_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X2_T]] [[DOTFCA_0_1_INSERT]]
+//
+mfloat8x16x2_t test_vld1q_mf8_x2(mfloat8_t const *a) {
+  return vld1q_mf8_x2(a);
+}
+
 // CHECK-LABEL: define dso_local %struct.poly64x2x2_t @test_vld1q_p64_x2(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -16424,6 +16554,20 @@ poly64x2x2_t test_vld1q_p64_x2(poly64_t const *a) {
 //
 float64x1x2_t test_vld1_f64_x2(float64_t const *a) {
   return vld1_f64_x2(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x8x2_t @test_vld1_mf8_x2(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x2.v8i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD1XN_FCA_0_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8> } [[VLD1XN]], 0
+// CHECK-NEXT:    [[VLD1XN_FCA_1_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8> } [[VLD1XN]], 1
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T:%.*]] poison, <8 x i8> [[VLD1XN_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[VLD1XN_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X2_T]] [[DOTFCA_0_1_INSERT]]
+//
+mfloat8x8x2_t test_vld1_mf8_x2(mfloat8_t const *a) {
+  return vld1_mf8_x2(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly64x1x2_t @test_vld1_p64_x2(
@@ -16456,6 +16600,22 @@ float64x2x3_t test_vld1q_f64_x3(float64_t const *a) {
   return vld1q_f64_x3(a);
 }
 
+// CHECK-LABEL: define dso_local %struct.mfloat8x16x3_t @test_vld1q_mf8_x3(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x3.v16i8.p0(ptr [[PTR]])
+// CHECK-NEXT:    [[VLD1XN_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 0
+// CHECK-NEXT:    [[VLD1XN_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 1
+// CHECK-NEXT:    [[VLD1XN_FCA_2_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 2
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X3_T:%.*]] poison, <16 x i8> [[VLD1XN_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X3_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[VLD1XN_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X3_T]] [[DOTFCA_0_1_INSERT]], <16 x i8> [[VLD1XN_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X3_T]] [[DOTFCA_0_2_INSERT]]
+//
+mfloat8x16x3_t test_vld1q_mf8_x3(mfloat8_t const *ptr) {
+  return vld1q_mf8_x3(ptr);
+}
+
 // CHECK-LABEL: define dso_local %struct.poly64x2x3_t @test_vld1q_p64_x3(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -16486,6 +16646,23 @@ poly64x2x3_t test_vld1q_p64_x3(poly64_t const *a) {
 //
 float64x1x3_t test_vld1_f64_x3(float64_t const *a) {
   return vld1_f64_x3(a);
+}
+
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x8x3_t @test_vld1_mf8_x3(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x3.v8i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD1XN_FCA_0_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 0
+// CHECK-NEXT:    [[VLD1XN_FCA_1_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 1
+// CHECK-NEXT:    [[VLD1XN_FCA_2_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 2
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X3_T:%.*]] poison, <8 x i8> [[VLD1XN_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X3_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[VLD1XN_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X3_T]] [[DOTFCA_0_1_INSERT]], <8 x i8> [[VLD1XN_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X3_T]] [[DOTFCA_0_2_INSERT]]
+//
+mfloat8x8x3_t test_vld1_mf8_x3(mfloat8_t const *a) {
+  return vld1_mf8_x3(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly64x1x3_t @test_vld1_p64_x3(
@@ -16522,6 +16699,24 @@ float64x2x4_t test_vld1q_f64_x4(float64_t const *a) {
   return vld1q_f64_x4(a);
 }
 
+// CHECK-LABEL: define dso_local %struct.mfloat8x16x4_t @test_vld1q_mf8_x4(
+// CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD1XN:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld1x4.v16i8.p0(ptr [[PTR]])
+// CHECK-NEXT:    [[VLD1XN_FCA_0_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 0
+// CHECK-NEXT:    [[VLD1XN_FCA_1_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 1
+// CHECK-NEXT:    [[VLD1XN_FCA_2_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 2
+// CHECK-NEXT:    [[VLD1XN_FCA_3_EXTRACT:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[VLD1XN]], 3
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T:%.*]] poison, <16 x i8> [[VLD1XN_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_0_INSERT]], <16 x i8> [[VLD1XN_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_1_INSERT]], <16 x i8> [[VLD1XN_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    [[DOTFCA_0_3_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_2_INSERT]], <16 x i8> [[VLD1XN_FCA_3_EXTRACT]], 0, 3
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X16X4_T]] [[DOTFCA_0_3_INSERT]]
+//
+mfloat8x16x4_t test_vld1q_mf8_x4(mfloat8_t const *ptr) {
+  return vld1q_mf8_x4(ptr);
+}
+
 // CHECK-LABEL: define dso_local %struct.poly64x2x4_t @test_vld1q_p64_x4(
 // CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -16556,6 +16751,24 @@ poly64x2x4_t test_vld1q_p64_x4(poly64_t const *a) {
 //
 float64x1x4_t test_vld1_f64_x4(float64_t const *a) {
   return vld1_f64_x4(a);
+}
+
+// CHECK-LABEL: define dso_local %struct.mfloat8x8x4_t @test_vld1_mf8_x4(
+// CHECK-SAME: ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VLD1XN:%.*]] = call { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld1x4.v8i8.p0(ptr [[A]])
+// CHECK-NEXT:    [[VLD1XN_FCA_0_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 0
+// CHECK-NEXT:    [[VLD1XN_FCA_1_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 1
+// CHECK-NEXT:    [[VLD1XN_FCA_2_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 2
+// CHECK-NEXT:    [[VLD1XN_FCA_3_EXTRACT:%.*]] = extractvalue { <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8> } [[VLD1XN]], 3
+// CHECK-NEXT:    [[DOTFCA_0_0_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T:%.*]] poison, <8 x i8> [[VLD1XN_FCA_0_EXTRACT]], 0, 0
+// CHECK-NEXT:    [[DOTFCA_0_1_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_0_INSERT]], <8 x i8> [[VLD1XN_FCA_1_EXTRACT]], 0, 1
+// CHECK-NEXT:    [[DOTFCA_0_2_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_1_INSERT]], <8 x i8> [[VLD1XN_FCA_2_EXTRACT]], 0, 2
+// CHECK-NEXT:    [[DOTFCA_0_3_INSERT:%.*]] = insertvalue [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_2_INSERT]], <8 x i8> [[VLD1XN_FCA_3_EXTRACT]], 0, 3
+// CHECK-NEXT:    ret [[STRUCT_MFLOAT8X8X4_T]] [[DOTFCA_0_3_INSERT]]
+//
+mfloat8x8x4_t test_vld1_mf8_x4(mfloat8_t const *a) {
+  return vld1_mf8_x4(a);
 }
 
 // CHECK-LABEL: define dso_local %struct.poly64x1x4_t @test_vld1_p64_x4(
