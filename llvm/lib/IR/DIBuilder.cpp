@@ -946,9 +946,13 @@ DILocalVariable *DIBuilder::createParameterVariable(
 }
 
 DILabel *DIBuilder::createLabel(DIScope *Context, StringRef Name, DIFile *File,
-                                 unsigned LineNo, bool AlwaysPreserve) {
+                                unsigned LineNo, unsigned Column,
+                                bool IsArtificial,
+                                std::optional<unsigned> CoroSuspendIdx,
+                                bool AlwaysPreserve) {
   auto *Scope = cast<DILocalScope>(Context);
-  auto *Node = DILabel::get(VMContext, Scope, Name, File, LineNo);
+  auto *Node = DILabel::get(VMContext, Scope, Name, File, LineNo, Column,
+                            IsArtificial, CoroSuspendIdx);
 
   if (AlwaysPreserve) {
     /// The optimizer may remove labels. If there is an interest
