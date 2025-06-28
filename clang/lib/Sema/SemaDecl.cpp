@@ -12490,6 +12490,14 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
                                 : FixItHint());
       FD->setInvalidDecl(true);
     }
+
+    // In C++ [basic.start.main]p3, it is said a program attaching main to a
+    // named module is ill-formed.
+    if (FD->isInNamedModule()) {
+      Diag(FD->getTypeSpecStartLoc(), diag::err_main_in_named_module)
+          << FixItHint();
+      FD->setInvalidDecl(true);
+    }
   }
 
   // Treat protoless main() as nullary.
