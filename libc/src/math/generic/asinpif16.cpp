@@ -6,60 +6,40 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/math/asinpif16.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
-#include "src/math/asinfpi16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-static constexpr float16 ONE_OVER_TWO = 0x3800; // 0.5f16
+static constexpr float16 ONE_OVER_TWO = 0.5f16;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr size_t N_ASINFPI_EXCEPTS = 9;
-
-static constexpr float16 ONE_OVER_THREE = 0x3555; // 0.333251953125f16
-static constexpr float16 ONE_OVER_FOUR = 0x3400;  // 0.25f16
-static constexpr float16 ONE_OVER_SIX = 0x32ab;   // 0.166748046875f16
+static constexpr size_t N_ASINFPI_EXCEPTS = 3;
+static constexpr float16 ONE_OVER_SIX = 0.166748046875f16;
 
 static constexpr fputil::ExceptValues<float16, N_ASINFPI_EXCEPTS>
     ASINFPI_EXCEPTS{{
         // (input_hex, RZ_output_hex, RU_offset, RD_offset, RN_offset)
-
         // x = 0.0, asinfpi(0.0) = 0.0
         {0x0000, 0x0000, 0, 0, 0},
 
         // x = 1.0, asinfpi(1.0) = 0.5
-        {0x3C00, ONE_OVER_TWO.uintval(), 0, 0, 0},
-
-        // x = -1.0, asinfpi(-1.0) = -0.5
-        {0xBC00, (fputil::FPBits<float16>(-ONE_OVER_TWO)).uintval(), 0, 0, 0},
+        {(fputil::FPBits<float16>(1.0f16)).uintval(),
+         (fputil::FPBits<float16>(ONE_OVER_TWO)).uintval(), 0, 0, 0},
 
         // x = 0.5, asinfpi(0.5) = 1/6
-        {0x3800, ONE_OVER_SIX.uintval(), 0, 0, 0},
+        {(fputil::FPBits<float16>(0.5f16)).uintval(),
+         (fputil::FPBits<float16>(ONE_OVER_SIX)).uintval(), 0, 0, 0},
 
-        // x = -0.5, asinfpi(-0.5) = -1/6
-        {0xB800, (fputil::FPBits<float16>(-ONE_OVER_SIX)).uintval(), 0, 0, 0},
-
-        // x = sqrt(2)/2 ~ 0.70710678, asinfpi(x) = 1/4
-        // 0x3B41 is float16 for ~0.707. 0x3400 is float16 for 0.25
-        {0x3B41, ONE_OVER_FOUR.uintval(), 0, 0, 0},
-
-        // x = -sqrt(2)/2 ~ -0.70710678, asinfpi(x) = -1/4
-        {0xBB41, (fputil::FPBits<float16>(-ONE_OVER_FOUR)).uintval(), 0, 0, 0},
-
-        // x = sqrt(3)/2 ~ 0.8660254, asinfpi(x) = 1/3
-        // 0x3BF2 is float16 for ~0.866. 0x3555 is float16 for 1/3
-        {0x3BF2, ONE_OVER_THREE.uintval(), 0, 0, 0},
-
-        // x = -sqrt(3)/2 ~ -0.8660254, asinfpi(x) = -1/3
-        {0xBBF2, (fputil::FPBits<float16>(-ONE_OVER_THREE)).uintval(), 0, 0, 0},
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
@@ -68,10 +48,14 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
   FPBits xbits(x);
   uint16_t x_uint = xbits.uintval();
-  uint16_t x_abs = xbits.uintval() & 0x7fffU;
-  uint16_t x_sign = x_uint >> 15;
+  bool is_neg = static_cast<bool>(x_uint >> 15);
+  float16 x_abs = is_neg ? -x : x;
 
-  if (LIBC_UNLIKELY(x_abs > 0x3c00)) {
+  auto __signed_result = [is_neg](float16 r) -> float16 {
+    return is_neg ? -r : r;
+  };
+
+  if (LIBC_UNLIKELY(x_abs > 1.0f16)) {
     // aspinf16(NaN) = NaN
     if (xbits.is_nan()) {
       if (xbits.is_signaling_nan()) {
@@ -89,31 +73,31 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   }
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  // Handle exceptional values
-  if (auto r = ACOSF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
-    return r.value();
-
-#else
-  // Handling zero
-  if (LIBC_UNLIKELY(x_abs == 0x0000)) {
-    return x;
-  }
-
-  // Handling +/-1.0
-  // If x is +/-1.0, return +/-0.5
-  if (LIBC_UNLIKELY(x_abs == 0x3c00)) {
-    return fputil::cast<float16>(x_sign ? -ONE_OVER_TWO : ONE_OVER_TWO);
+  // exceptional values
+  if (auto r = ASINFPI_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value())) {
+    return (r.value());
   }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+  // zero
+  if (LIBC_UNLIKELY(x_abs == 0.0f16)) {
+    return 0.0f16;
+  }
+
+  // +/-1.0
+  // if x is +/-1.0, return +/-0.5
+  if (LIBC_UNLIKELY(x_abs == 1.0f16)) {
+    return fputil::cast<float16>(__signed_result(ONE_OVER_TWO));
+  }
 
   // the coefficients for the polynomial approximation of asin(x)/pi in the
   // range [0, 0.5] extracted using python-sympy
   //
   // Python code to generate the coefficients:
-  //   from sympy import *
-  //   import math
-  //   x = symbols('x')
-  //   print(series(asin(x)/math.pi, x, 0, 21))
+  //  > from sympy import *
+  //  > import math
+  //  > x = symbols('x')
+  //  > print(series(asin(x)/math.pi, x, 0, 21))
   //
   // OUTPUT:
   //
@@ -143,16 +127,16 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   auto __asinpi_polyeval = [](float16 xsq) -> float16 {
     return fputil::polyeval(xsq, POLY_COEFFS[0], POLY_COEFFS[1], POLY_COEFFS[2],
                             POLY_COEFFS[3], POLY_COEFFS[4], POLY_COEFFS[5],
-                            POLY_COEFFS[6], POLY_COEFFS[7], POLY_COEFFS[9],
+                            POLY_COEFFS[6], POLY_COEFFS[7], POLY_COEFFS[8],
                             POLY_COEFFS[9]);
   };
 
   // if |x| <= 0.5:
-  if (x_abs <= 0x3800) {
+  if (LIBC_UNLIKELY(x_abs <= ONE_OVER_TWO)) {
     // Use polynomial approximation of asin(x)/pi in the range [0, 0.5]
     float16 xsq = x * x;
     float16 result = x * __asinpi_polyeval(xsq);
-    return fputil::cast<float16>(result);
+    return fputil::cast<float16>(__signed_result(result));
   }
 
   // If |x| > 0.5, we need to use the range reduction method:
@@ -178,12 +162,16 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //
   // Finally, we can write:
   //   asinpi(x) = 1/2 - 2 * asinpi(sqrt(u))
+  //     where u = (1 - x) /2
+  //             = 0.5 - 0.5 * x
+  //             = multiply_add(-0.5, x, 0.5)
 
-  float16 u = fputil::multiply_add(-ONE_OVER_TWO, x, ONE_OVER_TWO);
-  float16 asinpi_sqrt_u = __asinpi_polyeval(u);
+  float16 u = fputil::multiply_add(-ONE_OVER_TWO, x_abs, ONE_OVER_TWO);
+  float16 u_sqrt = fputil::sqrt<float16>(u);
+  float16 asinpi_sqrt_u = u_sqrt * __asinpi_polyeval(u);
   float16 result = fputil::multiply_add(-2.0f16, asinpi_sqrt_u, ONE_OVER_TWO);
 
-  return fputil::cast<float16>(result);
+  return fputil::cast<float16>(__signed_result(result));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
