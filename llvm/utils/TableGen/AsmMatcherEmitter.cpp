@@ -3725,7 +3725,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      if (ActualIdx < Operands.size())\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \" (\";\n";
   OS << "                        Operands[ActualIdx]->print(dbgs(), "
-        "MCAsmInfo()); dbgs() << "
+        "*getContext().getAsmInfo()); dbgs() << "
         "\"): \");\n";
   OS << "      else\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \": \");\n";
