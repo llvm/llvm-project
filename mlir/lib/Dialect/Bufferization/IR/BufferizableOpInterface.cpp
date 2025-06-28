@@ -17,6 +17,7 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
@@ -990,6 +991,12 @@ bool bufferization::detail::defaultIsRepetitiveRegion(
   if (!regionInterface)
     return false;
   return regionInterface.isRepetitiveRegion(index);
+}
+
+bool bufferization::detail::defaultIsParallelRegion(
+    BufferizableOpInterface bufferizableOp, unsigned index) {
+  assert(index < bufferizableOp->getNumRegions() && "invalid region index");
+  return bufferizableOp->hasTrait<OpTrait::HasParallelRegion>();
 }
 
 AliasingOpOperandList
