@@ -3130,21 +3130,66 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return MadeChanges;
 }
 
+/// For a given chain of patterns of the following form:
+///
+/// ```
+///   %1 = shufflevector <n x ty1> %0, <n x ty1> poison <n x ty2> mask
+///
+///   %2 = tail call <n x ty1> llvm.<umin/umax/smin/smax>(<n x ty1> %0, <n x
+///   ty1> %1)
+///     OR
+///   %2 = add/mul/or/and/xor <n x ty1> %0, %1
+///
+///   %3 = shufflevector <n x ty1> %2, <n x ty1> poison <n x ty2> mask
+///   ...
+///   ...
+///   %(i - 1) = tail call <n x ty1> llvm.<umin/umax/smin/smax>(<n x ty1> %(i -
+///   3), <n x ty1> %(i - 2)
+///     OR
+///   %(i - 1) = add/mul/or/and/xor <n x ty1> %(i - 3), %(i - 2)
+///
+///   %(i) = extractelement <n x ty1> %(i - 1), 0
+/// ```
+///
+/// Where:
+///    `mask` follows a partition pattern:
+///
+/// Ex:
+///    [n = 8, p = poison]
+///
+///    4 5 6 7 | p p p p
+///    2 3 | p p p p p p
+///    1 | p p p p p p p
+///
+///    For powers of 2, there's a consistent pattern, but for other cases
+///    the parity of the current half value at each step decides the
+///    next partition half (see `ExpectedParityMask` for more logical details
+///    in generalising this).
+///
+/// Ex:
+///    [n = 6]
+///
+///    3 4 5 | p p p
+///    1 2 | p p p p
+///    1 | p p p p p
 bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
-  auto *EEI = dyn_cast<ExtractElementInst>(&I);
-  if (!EEI)
-    return false;
-
+  // Going bottom-up for the pattern.
   std::queue<Value *> InstWorklist;
-  Value *InitEEV = nullptr;
-  Intrinsic::ID CommonOp = 0;
+  InstructionCost OrigCost = 0;
 
-  bool IsFirstCallInst = true;
-  bool ShouldBeCallInst = true;
+  // Common instruction operation after each shuffle op.
+  std::optional<unsigned int> CommonCallOp = std::nullopt;
+  std::optional<Instruction::BinaryOps> CommonBinOp = std::nullopt;
 
+  bool IsFirstCallOrBinInst = true;
+  bool ShouldBeCallOrBinInst = true;
+
+  // This stores the last used instructions for shuffle/common op.
+  //
+  // PrevVecV[2] stores the first vector from extract element instruction,
+  // while PrevVecV[0] / PrevVecV[1] store the last two simultaneous
+  // instructions from either shuffle/common op.
   SmallVector<Value *, 3> PrevVecV(3, nullptr);
-  int64_t ShuffleMaskHalf = -1, ExpectedShuffleMaskHalf = 1;
-  int64_t VecSize = -1;
 
   Value *VecOp;
   if (!match(&I, m_ExtractElt(m_Value(VecOp), m_Zero())))
@@ -3154,43 +3199,53 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (!FVT)
     return false;
 
-  VecSize = FVT->getNumElements();
-  if (VecSize < 2 || (VecSize % 2) != 0)
+  int64_t VecSize = FVT->getNumElements();
+  if (VecSize < 2)
     return false;
 
-  ShuffleMaskHalf = 1;
-  PrevVecV[2] = VecOp;
-  InitEEV = EEI;
+  // Number of levels would be ~log2(n), considering we always partition
+  // by half for this fold pattern.
+  unsigned int NumLevels = Log2_64_Ceil(VecSize), VisitedCnt = 0;
+  int64_t ShuffleMaskHalf = 1, ExpectedParityMask = 0;
 
+  // This is how we generalise for all element sizes.
+  // At each step, if vector size is odd, we need non-poison
+  // values to cover the dominant half so we don't miss out on any element.
+  //
+  // This mask will help us retrieve this as we go from bottom to top:
+  //
+  // Mask Set -> N = N * 2 - 1
+  // Mask Unset -> N = N * 2
+  for (int Cur = VecSize, Mask = NumLevels - 1; Cur > 1;
+       Cur = (Cur + 1) / 2, --Mask) {
+    if (Cur & 1)
+      ExpectedParityMask |= (1ll << Mask);
+  }
+
+  PrevVecV[2] = VecOp;
   InstWorklist.push(PrevVecV[2]);
 
   while (!InstWorklist.empty()) {
-    Value *V = InstWorklist.front();
+    Value *CI = InstWorklist.front();
     InstWorklist.pop();
 
-    auto *CI = dyn_cast<Instruction>(V);
-    if (!CI)
-      return false;
-
-    if (auto *CallI = dyn_cast<CallInst>(CI)) {
-      if (!ShouldBeCallInst || !PrevVecV[2])
+    if (auto *II = dyn_cast<IntrinsicInst>(CI)) {
+      if (!ShouldBeCallOrBinInst)
         return false;
 
-      if (!IsFirstCallInst &&
+      if (!IsFirstCallOrBinInst &&
           any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
         return false;
 
-      if (CallI != (IsFirstCallInst ? PrevVecV[2] : PrevVecV[0]))
+      // For the first found call/bin op, the vector has to come from the
+      // extract element op.
+      if (II != (IsFirstCallOrBinInst ? PrevVecV[2] : PrevVecV[0]))
         return false;
-      IsFirstCallInst = false;
+      IsFirstCallOrBinInst = false;
 
-      auto *II = dyn_cast<IntrinsicInst>(CallI);
-      if (!II)
-        return false;
-
-      if (!CommonOp)
-        CommonOp = II->getIntrinsicID();
-      if (II->getIntrinsicID() != CommonOp)
+      if (!CommonCallOp)
+        CommonCallOp = II->getIntrinsicID();
+      if (II->getIntrinsicID() != *CommonCallOp)
         return false;
 
       switch (II->getIntrinsicID()) {
@@ -3198,8 +3253,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       case Intrinsic::umax:
       case Intrinsic::smin:
       case Intrinsic::smax: {
-        auto *Op0 = CallI->getOperand(0);
-        auto *Op1 = CallI->getOperand(1);
+        auto *Op0 = II->getOperand(0);
+        auto *Op1 = II->getOperand(1);
         PrevVecV[0] = Op0;
         PrevVecV[1] = Op1;
         break;
@@ -3207,88 +3262,123 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       default:
         return false;
       }
-      ShouldBeCallInst ^= 1;
+      ShouldBeCallOrBinInst ^= 1;
+
+      IntrinsicCostAttributes ICA(
+          *CommonCallOp, II->getType(),
+          {PrevVecV[0]->getType(), PrevVecV[1]->getType()});
+      OrigCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
+
+      // We may need a swap here since it can be (a, b) or (b, a)
+      // and accordingly change as we go up.
+      if (!isa<ShuffleVectorInst>(PrevVecV[1]))
+        std::swap(PrevVecV[0], PrevVecV[1]);
+      InstWorklist.push(PrevVecV[1]);
+      InstWorklist.push(PrevVecV[0]);
+    } else if (auto *BinOp = dyn_cast<BinaryOperator>(CI)) {
+      // Similar logic for bin ops.
+
+      if (!ShouldBeCallOrBinInst)
+        return false;
+
+      if (!IsFirstCallOrBinInst &&
+          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+        return false;
+
+      if (BinOp != (IsFirstCallOrBinInst ? PrevVecV[2] : PrevVecV[0]))
+        return false;
+      IsFirstCallOrBinInst = false;
+
+      if (!CommonBinOp)
+        CommonBinOp = BinOp->getOpcode();
+
+      if (BinOp->getOpcode() != *CommonBinOp)
+        return false;
+
+      switch (*CommonBinOp) {
+      case BinaryOperator::Add:
+      case BinaryOperator::Mul:
+      case BinaryOperator::Or:
+      case BinaryOperator::And:
+      case BinaryOperator::Xor: {
+        auto *Op0 = BinOp->getOperand(0);
+        auto *Op1 = BinOp->getOperand(1);
+        PrevVecV[0] = Op0;
+        PrevVecV[1] = Op1;
+        break;
+      }
+      default:
+        return false;
+      }
+      ShouldBeCallOrBinInst ^= 1;
+
+      OrigCost +=
+          TTI.getArithmeticInstrCost(*CommonBinOp, BinOp->getType(), CostKind);
 
       if (!isa<ShuffleVectorInst>(PrevVecV[1]))
         std::swap(PrevVecV[0], PrevVecV[1]);
       InstWorklist.push(PrevVecV[1]);
       InstWorklist.push(PrevVecV[0]);
     } else if (auto *SVInst = dyn_cast<ShuffleVectorInst>(CI)) {
-      if (ShouldBeCallInst ||
+      // We shouldn't have any null values in the previous vectors,
+      // is so, there was a mismatch in pattern.
+      if (ShouldBeCallOrBinInst ||
           any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
         return false;
 
       if (SVInst != PrevVecV[1])
         return false;
 
-      auto *ShuffleVec = SVInst->getOperand(0);
-      if (!ShuffleVec || ShuffleVec != PrevVecV[0])
+      ArrayRef<int> CurMask;
+      if (!match(SVInst, m_Shuffle(m_Specific(PrevVecV[0]), m_Poison(),
+                                   m_Mask(CurMask))))
         return false;
 
-      SmallVector<int> CurMask;
-      SVInst->getShuffleMask(CurMask);
-
-      if (ShuffleMaskHalf != ExpectedShuffleMaskHalf)
-        return false;
-      ExpectedShuffleMaskHalf *= 2;
-
+      // Subtract the parity mask when checking the condition.
       for (int Mask = 0, MaskSize = CurMask.size(); Mask != MaskSize; ++Mask) {
-        if (Mask < ShuffleMaskHalf && CurMask[Mask] != ShuffleMaskHalf + Mask)
+        if (Mask < ShuffleMaskHalf &&
+            CurMask[Mask] != ShuffleMaskHalf + Mask - (ExpectedParityMask & 1))
           return false;
         if (Mask >= ShuffleMaskHalf && CurMask[Mask] != -1)
           return false;
       }
+
+      // Update mask values.
       ShuffleMaskHalf *= 2;
-      if (ExpectedShuffleMaskHalf == VecSize)
+      ShuffleMaskHalf -= (ExpectedParityMask & 1);
+      ExpectedParityMask >>= 1;
+
+      OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
+                                     SVInst->getType(), SVInst->getType(),
+                                     CurMask, CostKind);
+
+      VisitedCnt += 1;
+      if (!ExpectedParityMask && VisitedCnt == NumLevels)
         break;
-      ShouldBeCallInst ^= 1;
+
+      ShouldBeCallOrBinInst ^= 1;
     } else {
       return false;
     }
   }
 
-  if (ShouldBeCallInst)
+  // Pattern should end with a shuffle op.
+  if (ShouldBeCallOrBinInst)
     return false;
 
-  assert(VecSize != -1 && ExpectedShuffleMaskHalf == VecSize &&
-         "Expected Match for Vector Size and Mask Half");
+  assert(VecSize != -1 && "Expected Match for Vector Size");
 
   Value *FinalVecV = PrevVecV[0];
-  auto *FinalVecVTy = dyn_cast<FixedVectorType>(FinalVecV->getType());
-
-  if (!InitEEV || !FinalVecV)
+  if (!FinalVecV)
     return false;
 
-  assert(FinalVecVTy && "Expected non-null value for Vector Type");
+  auto *FinalVecVTy = cast<FixedVectorType>(FinalVecV->getType());
 
-  Intrinsic::ID ReducedOp = 0;
-  switch (CommonOp) {
-  case Intrinsic::umin:
-    ReducedOp = Intrinsic::vector_reduce_umin;
-    break;
-  case Intrinsic::umax:
-    ReducedOp = Intrinsic::vector_reduce_umax;
-    break;
-  case Intrinsic::smin:
-    ReducedOp = Intrinsic::vector_reduce_smin;
-    break;
-  case Intrinsic::smax:
-    ReducedOp = Intrinsic::vector_reduce_smax;
-    break;
-  default:
+  Intrinsic::ID ReducedOp =
+      (CommonCallOp ? getMinMaxReductionIntrinsicID(*CommonCallOp)
+                    : getReductionForBinop(*CommonBinOp));
+  if (!ReducedOp)
     return false;
-  }
-
-  InstructionCost OrigCost = 0;
-  unsigned int NumLevels = Log2_64(VecSize);
-
-  for (unsigned int Level = 0; Level < NumLevels; ++Level) {
-    OrigCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
-                                   FinalVecVTy, FinalVecVTy);
-    OrigCost += TTI.getArithmeticInstrCost(Instruction::ICmp, FinalVecVTy);
-  }
-  OrigCost += TTI.getVectorInstrCost(Instruction::ExtractElement, FinalVecVTy,
-                                     CostKind, 0);
 
   IntrinsicCostAttributes ICA(ReducedOp, FinalVecVTy, {FinalVecV});
   InstructionCost NewCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
@@ -3298,7 +3388,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   auto *ReducedResult =
       Builder.CreateIntrinsic(ReducedOp, {FinalVecV->getType()}, {FinalVecV});
-  replaceValue(*InitEEV, *ReducedResult);
+  replaceValue(I, *ReducedResult);
 
   return true;
 }
@@ -4391,8 +4481,8 @@ bool VectorCombine::run() {
           return true;
         break;
       case Instruction::ExtractElement:
-        MadeChange |= foldShuffleChainsToReduce(I);
-        break;
+        if (foldShuffleChainsToReduce(I))
+          return true;
       case Instruction::ICmp:
       case Instruction::FCmp:
         if (foldExtractExtract(I))

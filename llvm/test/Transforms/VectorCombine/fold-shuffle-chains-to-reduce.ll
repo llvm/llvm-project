@@ -17,6 +17,52 @@ define i16 @test_reduce_v8i16(<8 x i16> %a0) {
   ret i16 %7
 }
 
+define i16 @test_reduce_v7i16_or(<7 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v7i16_or(
+; CHECK-SAME: <7 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.or.v7i16(<7 x i16> [[A0]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %1 = shufflevector <7 x i16> %a0, <7 x i16> poison, <7 x i32> <i32 3, i32 4, i32 5, i32 6, i32 poison, i32 poison, i32 poison>
+  %2 = or <7 x i16> %a0, %1
+  %3 = shufflevector <7 x i16> %2, <7 x i16> poison, <7 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = or <7 x i16> %2, %3
+  %5 = shufflevector <7 x i16> %4, <7 x i16> poison, <7 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = or <7 x i16> %4, %5
+  %7 = extractelement <7 x i16> %6, i64 0
+  ret i16 %7
+}
+
+define i16 @test_reduce_v3i16_and(<3 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v3i16_and(
+; CHECK-SAME: <3 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.and.v3i16(<3 x i16> [[A0]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %1 = shufflevector <3 x i16> %a0, <3 x i16> poison, <3 x i32> <i32 1, i32 2, i32 poison>
+  %2 = and <3 x i16> %a0, %1
+  %3 = shufflevector <3 x i16> %2, <3 x i16> poison, <3 x i32> <i32 1, i32 poison, i32 poison>
+  %4 = and <3 x i16> %2, %3
+  %5 = extractelement <3 x i16> %4, i64 0
+  ret i16 %5
+}
+
+define i16 @test_reduce_v6i16_xor(<6 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v6i16_xor(
+; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.xor.v6i16(<6 x i16> [[A0]])
+; CHECK-NEXT:    ret i16 [[TMP1]]
+;
+  %1 = shufflevector <6 x i16> %a0, <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
+  %2 = xor <6 x i16> %a0, %1
+  %3 = shufflevector <6 x i16> %2, <6 x i16> poison, <6 x i32> <i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = xor <6 x i16> %2, %3
+  %5 = shufflevector <6 x i16> %4, <6 x i16> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = xor <6 x i16> %4, %5
+  %7 = extractelement <6 x i16> %6, i64 0
+  ret i16 %7
+}
+
 define i16 @test_reduce_v8i16_2(<8 x i16> %a0) {
 ; CHECK-LABEL: define i16 @test_reduce_v8i16_2(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) {
@@ -124,4 +170,26 @@ define i16 @test_reduce_v8i16_neg3(<8 x i16> %a0) {
   %7 = tail call <8 x i16> @llvm.umin.v8i16(<8 x i16> %5, <8 x i16> %6)
   %8 = extractelement <8 x i16> %7, i64 0
   ret i16 %8
+}
+
+define i16 @test_reduce_v6i16_xor_neg(<6 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_reduce_v6i16_xor_neg(
+; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i16> [[A0]], <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <6 x i16> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i16> [[TMP2]], <6 x i16> poison, <6 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <6 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x i16> [[TMP4]], <6 x i16> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <6 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <6 x i16> [[TMP6]], i64 0
+; CHECK-NEXT:    ret i16 [[TMP7]]
+;
+  %1 = shufflevector <6 x i16> %a0, <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
+  %2 = xor <6 x i16> %a0, %1
+  %3 = shufflevector <6 x i16> %2, <6 x i16> poison, <6 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+  %4 = xor <6 x i16> %2, %3
+  %5 = shufflevector <6 x i16> %4, <6 x i16> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %6 = xor <6 x i16> %4, %5
+  %7 = extractelement <6 x i16> %6, i64 0
+  ret i16 %7
 }
