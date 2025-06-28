@@ -30,7 +30,7 @@ endif()
 
 ExternalProject_Add(google-benchmark
         EXCLUDE_FROM_ALL ON
-        DEPENDS cxx cxx-headers install-cxx-test-suite-prefix
+        DEPENDS cxx cxx-headers
         PREFIX google-benchmark
         SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark
