@@ -215,18 +215,6 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (GEPChainInfoMap.contains(cast<GEPOperator>(&GEP)))
     return false;
 
-  // Construct GEPInfo for this GEP
-  GEPInfo Info;
-
-  // Obtain the variable and constant byte offsets computed by this GEP
-  const DataLayout &DL = GEP.getDataLayout();
-  unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP.getType());
-  Info.ConstantOffset = {BitWidth, 0};
-  bool Success = GEP.collectOffset(DL, BitWidth, Info.VariableOffsets,
-                                   Info.ConstantOffset);
-  (void)Success;
-  assert(Success && "Failed to collect offsets for GEP");
-
   Value *PtrOperand = GEP.getPointerOperand();
 
   // Replace a GEP ConstantExpr pointer operand with a GEP instruction so that
@@ -243,7 +231,7 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
           Builder.CreateGEP(GEP.getSourceElementType(), OldGEPI, Indices,
                             GEP.getName(), GEP.getNoWrapFlags());
       assert(isa<GetElementPtrInst>(NewGEP) &&
-             "Expected newly-created GEP to not be a ConstantExpr");
+             "Expected newly-created GEP to be an instruction");
       GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
 
       GEP.replaceAllUsesWith(NewGEPI);
@@ -252,6 +240,18 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       visitGetElementPtrInst(*NewGEPI);
       return true;
     }
+
+  // Construct GEPInfo for this GEP
+  GEPInfo Info;
+
+  // Obtain the variable and constant byte offsets computed by this GEP
+  const DataLayout &DL = GEP.getDataLayout();
+  unsigned BitWidth = DL.getIndexTypeSizeInBits(GEP.getType());
+  Info.ConstantOffset = {BitWidth, 0};
+  bool Success = GEP.collectOffset(DL, BitWidth, Info.VariableOffsets,
+                                   Info.ConstantOffset);
+  (void)Success;
+  assert(Success && "Failed to collect offsets for GEP");
 
   // If there is a parent GEP, inherit the root array type and pointer, and
   // merge the byte offsets. Otherwise, this GEP is itself the root of a GEP
@@ -270,15 +270,13 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
     // We should try to determine the type of the root from the pointer rather
     // than the GEP's source element type because this could be a scalar GEP
-    // into a multidimensional array-typed pointer from an Alloca or Global
-    // Variable.
+    // into an array-typed pointer from an Alloca or Global Variable.
     Type *RootTy = GEP.getSourceElementType();
     if (auto *GlobalVar = dyn_cast<GlobalVariable>(PtrOperand)) {
-      if (!GlobalMap.contains(GlobalVar))
-        return false;
-      GlobalVariable *NewGlobal = GlobalMap[GlobalVar];
-      Info.RootPointerOperand = NewGlobal;
-      RootTy = NewGlobal->getValueType();
+      if (GlobalMap.contains(GlobalVar))
+        GlobalVar = GlobalMap[GlobalVar];
+      Info.RootPointerOperand = GlobalVar;
+      RootTy = GlobalVar->getValueType();
     } else if (auto *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
       RootTy = Alloca->getAllocatedType();
     }
@@ -341,7 +339,8 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   }
 
   // This GEP is potentially dead at the end of the pass since it may not have
-  // any users anymore after GEP chains have been collapsed.
+  // any users anymore after GEP chains have been collapsed. We retain store
+  // GEPInfo for GEPs down the chain to use to compute their indices.
   GEPChainInfoMap.insert({cast<GEPOperator>(&GEP), std::move(Info)});
   PotentiallyDeadInstrs.emplace_back(&GEP);
   return false;
