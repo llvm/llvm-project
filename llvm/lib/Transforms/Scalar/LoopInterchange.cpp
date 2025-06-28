@@ -550,10 +550,8 @@ struct LoopInterchange {
     // For the old pass manager CacheCost would be null.
     DenseMap<const Loop *, unsigned> CostMap;
     if (CC != nullptr) {
-      const auto &LoopCosts = CC->getLoopCosts();
-      for (unsigned i = 0; i < LoopCosts.size(); i++) {
-        CostMap[LoopCosts[i].first] = i;
-      }
+      for (const auto &[Idx, Cost] : enumerate(CC->getLoopCosts()))
+        CostMap[Cost.first] = Idx;
     }
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
@@ -970,8 +968,8 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
 static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *LoopNestExit = OuterLoop->getUniqueExitBlock();
   for (PHINode &PHI : LoopNestExit->phis()) {
-    for (unsigned i = 0; i < PHI.getNumIncomingValues(); i++) {
-      Instruction *IncomingI = dyn_cast<Instruction>(PHI.getIncomingValue(i));
+    for (Value *Incoming : PHI.incoming_values()) {
+      Instruction *IncomingI = dyn_cast<Instruction>(Incoming);
       if (!IncomingI || IncomingI->getParent() != OuterLoop->getLoopLatch())
         continue;
 
@@ -1130,15 +1128,14 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
       if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
-        unsigned NumOp = GEP->getNumOperands();
         bool FoundInnerInduction = false;
         bool FoundOuterInduction = false;
-        for (unsigned i = 0; i < NumOp; ++i) {
+        for (Value *Op : GEP->operands()) {
           // Skip operands that are not SCEV-able.
-          if (!SE->isSCEVable(GEP->getOperand(i)->getType()))
+          if (!SE->isSCEVable(Op->getType()))
             continue;
 
-          const SCEV *OperandVal = SE->getSCEV(GEP->getOperand(i));
+          const SCEV *OperandVal = SE->getSCEV(Op);
           const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(OperandVal);
           if (!AR)
             continue;
@@ -1218,8 +1215,8 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
 
 /// Return true if we can vectorize the loop specified by \p LoopId.
 static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
-  for (unsigned I = 0; I != DepMatrix.size(); I++) {
-    char Dir = DepMatrix[I][LoopId];
+  for (const auto &Dep : DepMatrix) {
+    char Dir = Dep[LoopId];
     if (Dir != 'I' && Dir != '=')
       return false;
   }
