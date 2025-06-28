@@ -2996,10 +2996,11 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
 
   std::queue<Value *> InstWorklist;
   Value *InitEEV = nullptr;
-  Intrinsic::ID CommonOp = 0;
 
-  bool IsFirstCallInst = true;
-  bool ShouldBeCallInst = true;
+  unsigned int CommonCallOp = 0, CommonBinOp = 0;
+
+  bool IsFirstCallOrBinInst = true;
+  bool ShouldBeCallOrBinInst = true;
 
   SmallVector<Value *, 3> PrevVecV(3, nullptr);
   int64_t ShuffleMaskHalf = -1, ExpectedShuffleMaskHalf = 1;
@@ -3032,24 +3033,24 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       return false;
 
     if (auto *CallI = dyn_cast<CallInst>(CI)) {
-      if (!ShouldBeCallInst || !PrevVecV[2])
+      if (!ShouldBeCallOrBinInst || !PrevVecV[2])
         return false;
 
-      if (!IsFirstCallInst &&
+      if (!IsFirstCallOrBinInst &&
           any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
         return false;
 
-      if (CallI != (IsFirstCallInst ? PrevVecV[2] : PrevVecV[0]))
+      if (CallI != (IsFirstCallOrBinInst ? PrevVecV[2] : PrevVecV[0]))
         return false;
-      IsFirstCallInst = false;
+      IsFirstCallOrBinInst = false;
 
       auto *II = dyn_cast<IntrinsicInst>(CallI);
       if (!II)
         return false;
 
-      if (!CommonOp)
-        CommonOp = II->getIntrinsicID();
-      if (II->getIntrinsicID() != CommonOp)
+      if (!CommonCallOp)
+        CommonCallOp = II->getIntrinsicID();
+      if (II->getIntrinsicID() != CommonCallOp)
         return false;
 
       switch (II->getIntrinsicID()) {
@@ -3066,14 +3067,52 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       default:
         return false;
       }
-      ShouldBeCallInst ^= 1;
+      ShouldBeCallOrBinInst ^= 1;
+
+      if (!isa<ShuffleVectorInst>(PrevVecV[1]))
+        std::swap(PrevVecV[0], PrevVecV[1]);
+      InstWorklist.push(PrevVecV[1]);
+      InstWorklist.push(PrevVecV[0]);
+    } else if (auto *BinOp = dyn_cast<BinaryOperator>(CI)) {
+      if (!ShouldBeCallOrBinInst || !PrevVecV[2])
+        return false;
+
+      if (!IsFirstCallOrBinInst &&
+          any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
+        return false;
+
+      if (BinOp != (IsFirstCallOrBinInst ? PrevVecV[2] : PrevVecV[0]))
+        return false;
+      IsFirstCallOrBinInst = false;
+
+      if (!CommonBinOp)
+        CommonBinOp = CI->getOpcode();
+      if (CI->getOpcode() != CommonBinOp)
+        return false;
+
+      switch (CI->getOpcode()) {
+      case BinaryOperator::Add:
+      case BinaryOperator::Mul:
+      case BinaryOperator::Or:
+      case BinaryOperator::And:
+      case BinaryOperator::Xor: {
+        auto *Op0 = BinOp->getOperand(0);
+        auto *Op1 = BinOp->getOperand(1);
+        PrevVecV[0] = Op0;
+        PrevVecV[1] = Op1;
+        break;
+      }
+      default:
+        return false;
+      }
+      ShouldBeCallOrBinInst ^= 1;
 
       if (!isa<ShuffleVectorInst>(PrevVecV[1]))
         std::swap(PrevVecV[0], PrevVecV[1]);
       InstWorklist.push(PrevVecV[1]);
       InstWorklist.push(PrevVecV[0]);
     } else if (auto *SVInst = dyn_cast<ShuffleVectorInst>(CI)) {
-      if (ShouldBeCallInst ||
+      if (ShouldBeCallOrBinInst ||
           any_of(PrevVecV, [](Value *VecV) { return VecV == nullptr; }))
         return false;
 
@@ -3100,13 +3139,13 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       ShuffleMaskHalf *= 2;
       if (ExpectedShuffleMaskHalf == VecSize)
         break;
-      ShouldBeCallInst ^= 1;
+      ShouldBeCallOrBinInst ^= 1;
     } else {
       return false;
     }
   }
 
-  if (ShouldBeCallInst)
+  if (ShouldBeCallOrBinInst)
     return false;
 
   assert(VecSize != -1 && ExpectedShuffleMaskHalf == VecSize &&
@@ -3121,21 +3160,43 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   assert(FinalVecVTy && "Expected non-null value for Vector Type");
 
   Intrinsic::ID ReducedOp = 0;
-  switch (CommonOp) {
-  case Intrinsic::umin:
-    ReducedOp = Intrinsic::vector_reduce_umin;
-    break;
-  case Intrinsic::umax:
-    ReducedOp = Intrinsic::vector_reduce_umax;
-    break;
-  case Intrinsic::smin:
-    ReducedOp = Intrinsic::vector_reduce_smin;
-    break;
-  case Intrinsic::smax:
-    ReducedOp = Intrinsic::vector_reduce_smax;
-    break;
-  default:
-    return false;
+  if (CommonCallOp) {
+    switch (CommonCallOp) {
+    case Intrinsic::umin:
+      ReducedOp = Intrinsic::vector_reduce_umin;
+      break;
+    case Intrinsic::umax:
+      ReducedOp = Intrinsic::vector_reduce_umax;
+      break;
+    case Intrinsic::smin:
+      ReducedOp = Intrinsic::vector_reduce_smin;
+      break;
+    case Intrinsic::smax:
+      ReducedOp = Intrinsic::vector_reduce_smax;
+      break;
+    default:
+      return false;
+    }
+  } else if (CommonBinOp) {
+    switch (CommonBinOp) {
+    case BinaryOperator::Add:
+      ReducedOp = Intrinsic::vector_reduce_add;
+      break;
+    case BinaryOperator::Mul:
+      ReducedOp = Intrinsic::vector_reduce_mul;
+      break;
+    case BinaryOperator::Or:
+      ReducedOp = Intrinsic::vector_reduce_or;
+      break;
+    case BinaryOperator::And:
+      ReducedOp = Intrinsic::vector_reduce_and;
+      break;
+    case BinaryOperator::Xor:
+      ReducedOp = Intrinsic::vector_reduce_xor;
+      break;
+    default:
+      return false;
+    }
   }
 
   InstructionCost OrigCost = 0;
