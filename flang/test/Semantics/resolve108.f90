@@ -44,7 +44,7 @@ subroutine s2
   use :: m2, only: foo
   !If we got the type of foo right, this declaration will fail
   !due to an attempted division by zero.
-  !WARNING: INTEGER(4) division by zero
+  !WARNING: INTEGER(4) division by zero [-Wfolding-exception]
   !ERROR: Must be a constant value
   integer, parameter :: test = 1 / (kind(foo(1)) - kind(1.d0))
 end subroutine
@@ -54,7 +54,7 @@ module m3
  contains
   real(kind=kind(x)) function foo(x)
     real(kind=kind(1.0d0)) x
-    !WARNING: INTEGER(4) division by zero
+    !WARNING: INTEGER(4) division by zero [-Wfolding-exception]
     !ERROR: Must be a constant value
     integer, parameter :: test = 1 / (kind(foo) - kind(1.d0))
     foo = n
