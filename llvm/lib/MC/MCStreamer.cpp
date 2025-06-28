@@ -400,6 +400,18 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     return getContext().reportError(Loc, "symbol '" + Twine(Symbol->getName()) +
                                              "' is already defined");
 
+  if (InlineAsmStrictMode) {
+    StringRef Name = Symbol->getName();
+    if (!Name.empty() && !Name.starts_with(".L") && !Name.starts_with("L..") &&
+        !Name.starts_with("$") && !Name.starts_with("__") &&
+        Name.front() != '.' && !std::isdigit(Name.front())) {
+      getContext().reportWarning(
+          Loc, "non-local label '" + Name +
+                   "' in inline assembly strict mode may be unsafe for "
+                   "external jumps; consider using local labels (.L*) instead");
+    }
+  }
+
   assert(!Symbol->isVariable() && "Cannot emit a variable symbol!");
   assert(getCurrentSectionOnly() && "Cannot emit before setting section!");
   assert(!Symbol->getFragment() && "Unexpected fragment on symbol data!");
