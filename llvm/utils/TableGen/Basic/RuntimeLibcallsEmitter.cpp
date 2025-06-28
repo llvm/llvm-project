@@ -335,9 +335,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
       if (!LibCallImpl) {
         PrintError(R, "entry for SystemLibrary is not a RuntimeLibcallImpl");
-
         PrintNote(Elt->getLoc(), "invalid entry `" + Elt->getName() + "`");
-
         continue;
       }
 
