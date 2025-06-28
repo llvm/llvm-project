@@ -398,9 +398,8 @@ public:
                                 mlir::Value addr, mlir::Type storageType,
                                 const CIRGenBitFieldInfo &info,
                                 bool isLvalueVolatile, bool useVolatile) {
-    unsigned int offset = useVolatile ? info.volatileOffset : info.offset;
     return create<cir::GetBitfieldOp>(loc, resultType, addr, storageType,
-                                      info.name, info.size, offset,
+                                      info.name, info.size, info.offset,
                                       info.isSigned, isLvalueVolatile);
   }
 };
