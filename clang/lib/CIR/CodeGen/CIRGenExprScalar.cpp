@@ -907,9 +907,7 @@ public:
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
 
       BinOpInfo boInfo = emitBinOps(e);
-      cir::CmpOpKind opKind =
-          e->getOpcode() == BO_EQ ? cir::CmpOpKind::eq : cir::CmpOpKind::ne;
-      result = builder.create<cir::CmpOp>(loc, opKind, boInfo.lhs, boInfo.rhs);
+      result = builder.create<cir::CmpOp>(loc, kind, boInfo.lhs, boInfo.rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
