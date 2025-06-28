@@ -88,6 +88,12 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
+  std::optional<Hexagon::ArchEnum> ArchVer = Hexagon::getCpu(CPUString);
+  if (ArchVer)
+    HexagonArchVersion = *ArchVer;
+  else
+    llvm_unreachable("Unrecognized Hexagon processor version");
+
   UseHVX128BOps = false;
   UseHVX64BOps = false;
   UseAudioOps = false;
@@ -157,7 +163,7 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   FeatureBitset FeatureBits = getFeatureBits();
   if (HexagonDisableDuplex)
     setFeatureBits(FeatureBits.reset(Hexagon::FeatureDuplex));
-  SetFeatureBitsTransitively(Hexagon_MC::completeHVXFeatures(FeatureBits));
+  setFeatureBits(Hexagon_MC::completeHVXFeatures(FeatureBits));
 
   return *this;
 }

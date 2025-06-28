@@ -25,7 +25,6 @@ namespace targets {
 // Hexagon abstract base class
 class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
 
-  static const llvm::ArrayRef<llvm::StringLiteral> CpuValsText;
   static const char *const GCCRegNames[];
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   std::string CPU;
@@ -116,11 +115,11 @@ public:
 
   std::string_view getClobbers() const override { return ""; }
 
+  static const char *getHexagonCPUSuffix(StringRef Name);
   static std::optional<unsigned> getHexagonCPURev(StringRef Name);
 
   bool isValidCPUName(StringRef Name) const override {
-    return std::any_of(std::begin(CpuValsText), std::end(CpuValsText),
-                       [Name](StringRef V) { return V == Name; });
+    return getHexagonCPUSuffix(Name);
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
