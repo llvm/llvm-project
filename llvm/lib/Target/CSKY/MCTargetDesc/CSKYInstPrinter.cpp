@@ -138,7 +138,7 @@ void CSKYInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void CSKYInstPrinter::printDataSymbol(const MCInst *MI, unsigned OpNo,
@@ -150,7 +150,7 @@ void CSKYInstPrinter::printDataSymbol(const MCInst *MI, unsigned OpNo,
   if (MO.isImm())
     O << MO.getImm();
   else
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
   O << "]";
 }
 
@@ -173,7 +173,7 @@ void CSKYInstPrinter::printConstpool(const MCInst *MI, uint64_t Address,
   assert(MO.isExpr() && "Unknown operand kind in printConstpool");
 
   O << "[";
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
   O << "]";
 }
 

@@ -8,6 +8,7 @@
 
 #include "CSKYMCExpr.h"
 #include "CSKYFixupKinds.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -63,7 +64,8 @@ void CSKYMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
 }
 
 void CSKYMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  Expr->print(OS, MAI);
+  if (MAI)
+    MAI->printExpr(OS, *Expr);
   OS << getVariantKindName(getSpecifier());
 }
 
