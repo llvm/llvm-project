@@ -330,7 +330,7 @@ DEFAULT_PARAMETERS = [
                 AddFeature("msan")                         if sanitizer in ["Memory", "MemoryWithOrigins"] else None,
                 AddFlag("-fsanitize-memory-track-origins") if sanitizer == "MemoryWithOrigins" else None,
 
-                AddFlag("-fsanitize=thread") if sanitizer == "Thread" else None,
+                AddFlag("-fsanitize=thread -fno-sanitize-recover=all -g -O1") if sanitizer == "Thread" else None,
                 AddFeature("tsan")           if sanitizer == "Thread" else None,
 
                 AddFlag("-fsanitize=dataflow") if sanitizer == "DataFlow" else None,
