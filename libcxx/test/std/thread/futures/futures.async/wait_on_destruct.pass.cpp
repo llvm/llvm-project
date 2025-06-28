@@ -20,9 +20,7 @@
 #include <atomic>
 #include <future>
 #include <mutex>
-#include <thread>
-#include <condition>
-#include <chrono>
+#include <condition_variable>
 
 std::mutex mux;
 
