@@ -736,6 +736,10 @@ Bug Fixes in This Version
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

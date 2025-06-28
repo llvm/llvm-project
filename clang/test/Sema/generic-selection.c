@@ -86,3 +86,13 @@ void GH55562(void) {
   struct S s = { 0 };
   int i = s.a;
 }
+
+struct { const int i; } GH96713_1(void);
+void GH96713_2(void) {
+  _Static_assert(           // ext-warning {{'_Static_assert' is a C11 extension}}
+    _Generic(GH96713_1().i, // ext-warning {{'_Generic' is a C11 extension}}
+      int : 1,
+      const int : 0         // expected-warning {{due to lvalue conversion of the controlling expression, association of type 'const int' will never be selected because it is qualified}}
+    ), ""
+  );
+}
