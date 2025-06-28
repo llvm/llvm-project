@@ -18,7 +18,6 @@
 #include "../types.h"
 
 constexpr void test() {
-
   // Test two iterators
   {
     std::array<int, 2> array1{0, 1};
