@@ -736,6 +736,9 @@ Bug Fixes in This Version
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
