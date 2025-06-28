@@ -3044,6 +3044,11 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     return replaceInstUsesWith(I, NewCopySign);
   }
 
+  // fneg (shuffle x, Mask) --> shuffle (fneg x), Mask
+  ArrayRef<int> Mask;
+  if (match(OneUse, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
+    return new ShuffleVectorInst(Builder.CreateFNegFMF(X, &I), Mask);
+
   return nullptr;
 }
 
