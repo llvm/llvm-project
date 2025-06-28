@@ -59,9 +59,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   bool is_neg = static_cast<bool>(x_uint >> 15);
   float16 x_abs = is_neg ? -x : x;
 
-  auto signed_result = [is_neg](float16 r) -> float16 {
-    return is_neg ? -r : r;
-  };
+  auto signed_result = [is_neg](auto r) -> auto { return is_neg ? -r : r; };
 
   if (LIBC_UNLIKELY(x_abs > 1.0f16)) {
     // aspinf16(NaN) = NaN
@@ -105,22 +103,22 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //
   // it's very accurate in the range [0, 0.5] and has a maximum error of
   // 0.0000000000000001 in the range [0, 0.5].
-  static constexpr float16 POLY_COEFFS[10] = {
-      0.318309886183791f16,   // x^1
-      0.0530516476972984f16,  // x^3
-      0.0238732414637843f16,  // x^5
-      0.0142102627760621f16,  // x^7
-      0.00967087327815336f16, // x^9
-      0.00712127941391293f16, // x^11
-      0.00552355646848375f16, // x^13
-      0.00444514782463692f16, // x^15
-      0.00367705242846804f16, // x^17
-      0.00310721681820837f16  // x^19
+  static constexpr float POLY_COEFFS[10] = {
+      0.318309886183791f,   // x^1
+      0.0530516476972984f,  // x^3
+      0.0238732414637843f,  // x^5
+      0.0142102627760621f,  // x^7
+      0.00967087327815336f, // x^9
+      0.00712127941391293f, // x^11
+      0.00552355646848375f, // x^13
+      0.00444514782463692f, // x^15
+      0.00367705242846804f, // x^17
+      0.00310721681820837f  // x^19
   };
 
   // polynomial evaluation using horner's method
   // work only for |x| in [0, 0.5]
-  auto asinpi_polyeval = [](float16 xsq) -> float16 {
+  auto asinpi_polyeval = [](float xsq) -> float {
     return fputil::polyeval(xsq, POLY_COEFFS[0], POLY_COEFFS[1], POLY_COEFFS[2],
                             POLY_COEFFS[3], POLY_COEFFS[4], POLY_COEFFS[5],
                             POLY_COEFFS[6], POLY_COEFFS[7], POLY_COEFFS[8],
@@ -131,7 +129,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   if (LIBC_UNLIKELY(x_abs <= ONE_OVER_TWO)) {
     // Use polynomial approximation of asin(x)/pi in the range [0, 0.5]
     float16 xsq = x * x;
-    float16 result = x * asinpi_polyeval(xsq);
+    float result = x * asinpi_polyeval(xsq);
     return fputil::cast<float16>(signed_result(result));
   }
 
@@ -162,10 +160,11 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //             = 0.5 - 0.5 * x
   //             = multiply_add(-0.5, x, 0.5)
 
-  float16 u = fputil::multiply_add(-ONE_OVER_TWO, x_abs, ONE_OVER_TWO);
-  float16 u_sqrt = fputil::sqrt<float16>(u);
-  float16 asinpi_sqrt_u = u_sqrt * asinpi_polyeval(u);
-  float16 result = fputil::multiply_add(-2.0f16, asinpi_sqrt_u, ONE_OVER_TWO);
+  float u = static_cast<float>(
+      fputil::multiply_add(-ONE_OVER_TWO, x_abs, ONE_OVER_TWO));
+  float u_sqrt = fputil::sqrt<float>(static_cast<float>(u));
+  float asinpi_sqrt_u = u_sqrt * asinpi_polyeval(u);
+  float result = fputil::multiply_add(-2.0f16, asinpi_sqrt_u, ONE_OVER_TWO);
 
   return fputil::cast<float16>(signed_result(result));
 }
