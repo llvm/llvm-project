@@ -272,7 +272,8 @@ public:
   static ProgramStateRef
   invalidateDestinationBufferBySize(CheckerContext &C, ProgramStateRef S,
                                     const Expr *BufE, ConstCFGElementRef Elem,
-                                    SVal BufV, SVal SizeV, QualType SizeTy);
+                                    SVal BufV, SVal SizeV, QualType SizeTy,
+                                    bool CouldAccessOutOfBound = true);
 
   /// Operation never overflows, do not invalidate the super region.
   static ProgramStateRef invalidateDestinationBufferNeverOverflows(
@@ -1211,14 +1212,17 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
 
 ProgramStateRef CStringChecker::invalidateDestinationBufferBySize(
     CheckerContext &C, ProgramStateRef S, const Expr *BufE,
-    ConstCFGElementRef Elem, SVal BufV, SVal SizeV, QualType SizeTy) {
+    ConstCFGElementRef Elem, SVal BufV, SVal SizeV, QualType SizeTy,
+    bool CouldAccessOutOfBound) {
   auto InvalidationTraitOperations =
-      [&C, S, BufTy = BufE->getType(), BufV, SizeV,
-       SizeTy](RegionAndSymbolInvalidationTraits &ITraits, const MemRegion *R) {
+      [&C, S, BufTy = BufE->getType(), BufV, SizeV, SizeTy,
+       CouldAccessOutOfBound](RegionAndSymbolInvalidationTraits &ITraits,
+                              const MemRegion *R) {
         // If destination buffer is a field region and access is in bound, do
         // not invalidate its super region.
         if (MemRegion::FieldRegionKind == R->getKind() &&
-            isFirstBufInBound(C, S, BufV, BufTy, SizeV, SizeTy)) {
+            (!CouldAccessOutOfBound ||
+             isFirstBufInBound(C, S, BufV, BufTy, SizeV, SizeTy))) {
           ITraits.setTrait(
               R,
               RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
@@ -2223,6 +2227,67 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         Result = lastElement;
     }
 
+    // For bounded method, amountCopied take the minimum of two values,
+    // for ConcatFnKind::strlcat:
+    // amountCopied = min (size - dstLen - 1 , srcLen)
+    // for others:
+    // amountCopied = min (srcLen, size)
+    // So even if we don't know about amountCopied, as long as one of them will
+    // not cause an out-of-bound access, the whole function's operation will not
+    // too, that will avoid invalidating the superRegion of data member in that
+    // situation.
+    bool CouldAccessOutOfBound = true;
+    if (IsBounded && amountCopied.isUnknown()) {
+      // Get the max number of characters to copy.
+      SizeArgExpr lenExpr = {{Call.getArgExpr(2), 2}};
+      SVal lenVal = state->getSVal(lenExpr.Expression, LCtx);
+
+      // Protect against misdeclared strncpy().
+      lenVal =
+          svalBuilder.evalCast(lenVal, sizeTy, lenExpr.Expression->getType());
+
+      std::optional<NonLoc> lenValNL = lenVal.getAs<NonLoc>();
+
+      auto CouldAccessOutOfBoundForSVal = [&](NonLoc Val) -> bool {
+        return !isFirstBufInBound(C, state, C.getSVal(Dst.Expression),
+                                  Dst.Expression->getType(), Val,
+                                  C.getASTContext().getSizeType());
+      };
+
+      if (strLengthNL) {
+        CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*strLengthNL);
+      }
+
+      if (CouldAccessOutOfBound && lenValNL) {
+        switch (appendK) {
+        case ConcatFnKind::none:
+        case ConcatFnKind::strcat: {
+          CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*lenValNL);
+          break;
+        }
+        case ConcatFnKind::strlcat: {
+          if (!dstStrLengthNL)
+            break;
+
+          SVal freeSpace = svalBuilder.evalBinOpNN(state, BO_Sub, *lenValNL,
+                                                   *dstStrLengthNL, sizeTy);
+          if (!isa<NonLoc>(freeSpace))
+            break;
+
+          freeSpace =
+              svalBuilder.evalBinOp(state, BO_Sub, freeSpace,
+                                    svalBuilder.makeIntVal(1, sizeTy), sizeTy);
+          std::optional<NonLoc> freeSpaceNL = freeSpace.getAs<NonLoc>();
+          if (!freeSpaceNL)
+            break;
+
+          CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*freeSpaceNL);
+          break;
+        }
+        }
+      }
+    }
+
     // Invalidate the destination (regular invalidation without pointer-escaping
     // the address of the top-level region). This must happen before we set the
     // C string length because invalidation will clear the length.
@@ -2232,7 +2297,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // string, but that's still an improvement over blank invalidation.
     state = invalidateDestinationBufferBySize(
         C, state, Dst.Expression, Call.getCFGElementRef(), *dstRegVal,
-        amountCopied, C.getASTContext().getSizeType());
+        amountCopied, C.getASTContext().getSizeType(), CouldAccessOutOfBound);
 
     // Invalidate the source (const-invalidation without const-pointer-escaping
     // the address of the top-level region).
