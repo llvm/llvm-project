@@ -30,11 +30,11 @@ int main(int, char**) {
   auto v                     = std::async(std::launch::async, [&in_async, value = 1]() mutable {
     in_async = true;
     in_async.notify_all();
-    std::scoped_lock thread_lock(mux);
+    std::unique_lock thread_lock(mux);
     value = 4;
     (void)value;
   });
-  in_async.wait(true);
+  in_async.wait(false);
   lock.unlock();
 
   return 0;
