@@ -463,26 +463,6 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
-class CIRToLLVMComplexEqualOpLowering
-    : public mlir::OpConversionPattern<cir::ComplexEqualOp> {
-public:
-  using mlir::OpConversionPattern<cir::ComplexEqualOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::ComplexEqualOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
-class CIRToLLVMComplexNotEqualOpLowering
-    : public mlir::OpConversionPattern<cir::ComplexNotEqualOp> {
-public:
-  using mlir::OpConversionPattern<cir::ComplexNotEqualOp>::OpConversionPattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(cir::ComplexNotEqualOp op, OpAdaptor,
-                  mlir::ConversionPatternRewriter &) const override;
-};
-
 } // namespace direct
 } // namespace cir
 

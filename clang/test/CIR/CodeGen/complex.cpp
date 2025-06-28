@@ -376,7 +376,7 @@ bool foo18(int _Complex a, int _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR: %[[RESULT:.*]] = cir.complex.eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!s32i>
+// CIR: %[[RESULT:.*]] = cir.cmp(eq, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!s32i>, !cir.bool
 
 // LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
 // LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
@@ -408,7 +408,8 @@ bool foo19(double _Complex a, double _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[RESULT:.*]] = cir.complex.eq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
+// CIR: %[[RESULT:.*]] = cir.cmp(eq, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!cir.double>, !cir.bool
+
 
 // LLVM: %[[COMPLEX_A:.*]] = load { double, double }, ptr {{.*}}, align 8
 // LLVM: %[[COMPLEX_B:.*]] = load { double, double }, ptr {{.*}}, align 8
@@ -449,7 +450,7 @@ bool foo20(int _Complex a, int _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CIR: %[[RESULT:.*]] = cir.complex.neq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!s32i>
+// CIR: %[[RESULT:.*]] = cir.cmp(ne, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!s32i>, !cir.bool
 
 // LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
 // LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
@@ -481,7 +482,7 @@ bool foo21(double _Complex a, double _Complex b) {
 
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
-// CIR: %[[RESULT:.*]] = cir.complex.neq %[[COMPLEX_A]], %[[COMPLEX_B]] : !cir.complex<!cir.double>
+// CIR: %[[RESULT:.*]] = cir.cmp(ne, %[[COMPLEX_A]], %[[COMPLEX_B]]) : !cir.complex<!cir.double>, !cir.bool
 
 // LLVM: %[[COMPLEX_A:.*]] = load { double, double }, ptr {{.*}}, align 8
 // LLVM: %[[COMPLEX_B:.*]] = load { double, double }, ptr {{.*}}, align 8
