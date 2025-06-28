@@ -23,7 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 static constexpr float16 ONE_OVER_TWO = 0.5f16;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr size_t N_ASINFPI_EXCEPTS = 3;
+static constexpr size_t N_ASINFPI_EXCEPTS = 5;
 static constexpr float16 ONE_OVER_SIX = 0.166748046875f16;
 
 static constexpr fputil::ExceptValues<float16, N_ASINFPI_EXCEPTS>
@@ -32,13 +32,21 @@ static constexpr fputil::ExceptValues<float16, N_ASINFPI_EXCEPTS>
         // x = 0.0, asinfpi(0.0) = 0.0
         {0x0000, 0x0000, 0, 0, 0},
 
-        // x = 1.0, asinfpi(1.0) = 0.5
-        {(fputil::FPBits<float16>(1.0f16)).uintval(),
-         (fputil::FPBits<float16>(ONE_OVER_TWO)).uintval(), 0, 0, 0},
+        // x = 1.0, asinfpi(1) = 1/2
+        {(fputil::FPBits<float16>(-1.0f16)).uintval(),
+         (fputil::FPBits<float16>(-ONE_OVER_TWO)).uintval(), 0, 0, 0},
+
+        // x = -1.0, asinfpi(-1.0) = -1/2
+        {(fputil::FPBits<float16>(-1.0f16)).uintval(),
+         (fputil::FPBits<float16>(-ONE_OVER_TWO)).uintval(), 0, 0, 0},
 
         // x = 0.5, asinfpi(0.5) = 1/6
         {(fputil::FPBits<float16>(0.5f16)).uintval(),
          (fputil::FPBits<float16>(ONE_OVER_SIX)).uintval(), 0, 0, 0},
+
+        // x = -0.5, asinfpi(0.5) = -1/6
+        {(fputil::FPBits<float16>(-0.5f16)).uintval(),
+         (fputil::FPBits<float16>(-ONE_OVER_SIX)).uintval(), 0, 0, 0},
 
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -75,7 +83,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // exceptional values
   if (auto r = ASINFPI_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value())) {
-    return (r.value());
+    return r.value();
   }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
@@ -90,7 +98,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //
   // OUTPUT:
   //
-  // 
+  //
   // 0.318309886183791*x + 0.0530516476972984*x**3 + 0.0238732414637843*x**5 +
   // 0.0142102627760621*x**7 + 0.00967087327815336*x**9 +
   // 0.00712127941391293*x**11 + 0.00552355646848375*x**13 +
