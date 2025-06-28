@@ -1895,8 +1895,7 @@ ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
 
 ExpectedType clang::ASTNodeImporter::VisitPredefinedSugarType(
     const clang::PredefinedSugarType *T) {
-  return Importer.getToContext().getPredefinedSugarType(
-      llvm::to_underlying(T->getKind()));
+  return Importer.getToContext().getPredefinedSugarType(T->getKind());
 }
 
 ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(

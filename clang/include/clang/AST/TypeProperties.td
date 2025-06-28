@@ -1034,6 +1034,6 @@ let Class = PredefinedSugarType in {
     let Read = [{ static_cast<uint32_t>(node->getKind()) }];
   }
   def : Creator<[{
-    return ctx.getPredefinedSugarType(kind);
+    return ctx.getPredefinedSugarType(static_cast<PredefinedSugarType::Kind>(kind));
   }]>;
 }

@@ -8066,11 +8066,16 @@ public:
   using Kind = PredefinedSugarKind;
 
 private:
-  PredefinedSugarType(Kind KD, QualType UnderlyingType)
-      : Type(PredefinedSugar, UnderlyingType->getCanonicalTypeInternal(),
-             TypeDependence::None) {
+  PredefinedSugarType(Kind KD, const IdentifierInfo *IdentName,
+                      QualType CanonicalType)
+      : Type(PredefinedSugar, CanonicalType, TypeDependence::None),
+        Name(IdentName) {
     PredefinedSugarTypeBits.Kind = llvm::to_underlying(KD);
   }
+
+  static StringRef getName(Kind KD);
+
+  const IdentifierInfo *Name;
 
 public:
   bool isSugared() const { return true; }
@@ -8079,7 +8084,7 @@ public:
 
   Kind getKind() const { return Kind(PredefinedSugarTypeBits.Kind); }
 
-  StringRef getName() const;
+  const IdentifierInfo *getIdentifier() const { return Name; }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == PredefinedSugar;

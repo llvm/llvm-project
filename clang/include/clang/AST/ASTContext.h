@@ -1567,7 +1567,7 @@ public:
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
-  QualType getPredefinedSugarType(uint32_t KD) const;
+  QualType getPredefinedSugarType(PredefinedSugarType::Kind KD) const;
 
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.

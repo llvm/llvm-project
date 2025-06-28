@@ -1420,7 +1420,7 @@ void TypePrinter::printDependentBitIntAfter(const DependentBitIntType *T,
 
 void TypePrinter::printPredefinedSugarBefore(const PredefinedSugarType *T,
                                              raw_ostream &OS) {
-  OS << T->getName();
+  OS << T->getIdentifier()->getName();
   spaceBeforePlaceHolder(OS);
 }
 

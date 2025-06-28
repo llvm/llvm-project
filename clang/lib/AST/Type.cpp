@@ -5623,8 +5623,8 @@ HLSLAttributedResourceType::findHandleTypeOnResource(const Type *RT) {
   return nullptr;
 }
 
-StringRef PredefinedSugarType::getName() const {
-  switch (getKind()) {
+StringRef PredefinedSugarType::getName(Kind KD) {
+  switch (KD) {
   case Kind::SizeT:
     return "__size_t";
   case Kind::SignedSizeT:
