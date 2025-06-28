@@ -551,21 +551,32 @@ bool Scanner::lexModuleDirectiveBody(DirectiveKind Kind, const char *&First,
       First = Previous;
       return false;
     }
-    if (Tok.is(tok::eof))
+    if (Tok.is(tok::eof) || (LangOpts.CPlusPlusModules && Tok.is(tok::eod)))
       return reportError(
           DirectiveLoc,
           diag::err_dep_source_scanner_missing_semi_after_at_import);
     if (Tok.is(tok::semi))
       break;
   }
+
+  // Skip extra tokens after semi in C++20 Modules directive.
+  bool IsCXXModules = Kind == DirectiveKind::cxx_export_import_decl ||
+                      Kind == DirectiveKind::cxx_export_module_decl ||
+                      Kind == DirectiveKind::cxx_import_decl ||
+                      Kind == DirectiveKind::cxx_module_decl;
+  if (IsCXXModules)
+    lexPPDirectiveBody(First, End);
   pushDirective(Kind);
   skipWhitespace(First, End);
   if (First == End)
     return false;
-  if (!isVerticalWhitespace(*First))
-    return reportError(
-        DirectiveLoc, diag::err_dep_source_scanner_unexpected_tokens_at_import);
-  skipNewline(First, End);
+  if (!IsCXXModules) {
+    if (!isVerticalWhitespace(*First))
+      return reportError(
+          DirectiveLoc,
+          diag::err_dep_source_scanner_unexpected_tokens_at_import);
+    skipNewline(First, End);
+  }
   return false;
 }
 
@@ -900,10 +911,6 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   if (*First == '@')
     return lexAt(First, End);
 
-  // Handle module directives for C++20 modules.
-  if (*First == 'i' || *First == 'e' || *First == 'm')
-    return lexModule(First, End);
-
   if (*First == '_') {
     if (isNextIdentifierOrSkipLine("_Pragma", First, End))
       return lex_Pragma(First, End);
@@ -915,6 +922,26 @@ bool Scanner::lexPPLine(const char *&First, const char *const End) {
   TheLexer.setParsingPreprocessorDirective(true);
   auto ScEx2 = make_scope_exit(
       [&]() { TheLexer.setParsingPreprocessorDirective(false); });
+
+  // Since P1857R3, the standard handling C++ module/import as a directive:
+  //
+  // [cpp.pre]p1:
+  //  A preprocessing directive consists of a sequence of preprocessing tokens
+  //  that satisfies the following constraints: At the start of translation
+  //  phase 4, the first preprocessing token in the sequence, referred to as a
+  //  directive-introducing token, begins with the first character in the source
+  //  file (optionally after whitespace containing no new-line characters) or
+  //  follows whitespace containing at least one new-line character, and is
+  //    - a # preprocessing token, or
+  //    - an import preprocessing token immediately followed on the same logical
+  //    source line by a header-name, <, identifier, string-literal, or :
+  //    preprocessing token, or
+  //    - a module preprocessing token immediately followed on the same logical
+  //    source line by an identifier, :, or ; preprocessing token, or
+  //    - an export preprocessing token immediately followed on the same logical
+  //    source line by one of the two preceding forms.
+  if (*First == 'i' || *First == 'e' || *First == 'm')
+    return lexModule(First, End);
 
   // Lex '#'.
   const dependency_directives_scan::Token &HashTok = lexToken(First, End);

@@ -146,6 +146,7 @@ class MangleNumberingContext;
 typedef ArrayRef<IdentifierLoc> ModuleIdPath;
 class ModuleLoader;
 class MultiLevelTemplateArgumentList;
+class ModuleNameLoc;
 struct NormalizedConstraint;
 class ObjCInterfaceDecl;
 class ObjCMethodDecl;
@@ -9849,7 +9850,7 @@ public:
   /// \param IsPartition If the name is for a partition.
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
-                               SourceLocation ImportLoc, ModuleIdPath Path,
+                               SourceLocation ImportLoc, ModuleNameLoc *PathLoc,
                                bool IsPartition = false);
   DeclResult ActOnModuleImport(SourceLocation StartLoc,
                                SourceLocation ExportLoc,
