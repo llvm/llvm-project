@@ -302,9 +302,6 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const auto *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
-          })
-          .Case<VPReductionRecipe>([this](const auto *R) {
-            return inferScalarType(R->getChainOp());
           });
 
   assert(ResultTy && "could not infer type for the given VPValue");
