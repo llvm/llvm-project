@@ -39,7 +39,8 @@ RUN regsvr32 /S "C:\BuildTools\DIA SDK\bin\amd64\msdia140.dll" & \
 
 # install tools as described in https://llvm.org/docs/GettingStartedVS.html
 # and a few more that were not documented...
-RUN choco install -y ninja git sccache
+# make is needed by LLDB tests
+RUN choco install -y ninja git sccache make
 # Pin an older version of Python; the current Python 3.10 fails when
 # doing "pip install" for the other dependencies, as it fails to find libxml
 # while compiling some package.
