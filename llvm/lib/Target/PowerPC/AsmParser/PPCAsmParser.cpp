@@ -666,7 +666,7 @@ public:
     return StringRef(Tok.Data, Tok.Length);
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<PPCOperand> CreateToken(StringRef Str, SMLoc S,
                                                  bool IsPPC64) {
@@ -781,7 +781,7 @@ private:
 
 } // end anonymous namespace.
 
-void PPCOperand::print(raw_ostream &OS) const {
+void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case Token:
     OS << "'" << getToken() << "'";
