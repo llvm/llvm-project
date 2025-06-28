@@ -117,6 +117,29 @@ if config.clang_examples:
     config.available_features.add("examples")
 
 
+def have_host_out_of_process_jit_feature_support():
+    clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
+
+    if not clang_repl_exe:
+        return False
+
+    testcode = b"\n".join([b"int i = 0;", b"%quit"])
+
+    try:
+        clang_repl_cmd = subprocess.run(
+            [clang_repl_exe, "-orc-runtime", "-oop-executor"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            input=testcode,
+        )
+    except OSError:
+        return False
+
+    if clang_repl_cmd.returncode == 0:
+        return True
+
+    return False
+
 def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which("clang-repl", config.clang_tools_dir)
 
@@ -168,6 +191,9 @@ if have_host_jit_feature_support('jit'):
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
+
+    if have_host_out_of_process_jit_feature_support():
+        config.available_features.add("host-supports-out-of-process-jit")
 
 if config.clang_staticanalyzer:
     config.available_features.add("staticanalyzer")
