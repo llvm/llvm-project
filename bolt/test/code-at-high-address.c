@@ -19,10 +19,6 @@
 // CHECK-SAME: AX
 // CHECK-NEXT: .text PROGBITS
 
-int foo() {
-  return 0;
-}
+int foo() { return 0; }
 
-int main() {
-  return foo();
-}
+int main() { return foo(); }

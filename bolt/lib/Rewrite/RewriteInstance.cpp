@@ -3922,9 +3922,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     // the allocation of the first section, or 0 if [0, Address) range is not
     // big enough to fit all sections.
     auto allocateBefore = [&](uint64_t Address) -> uint64_t {
-      for (auto SI = CodeSections.rbegin(), SE = CodeSections.rend(); SI != SE;
-           ++SI) {
-        BinarySection *Section = *SI;
+      for (BinarySection *Section : llvm::reverse(CodeSections)) {
         if (Section->getOutputSize() > Address)
           return 0;
         Address -= Section->getOutputSize();
