@@ -100,8 +100,10 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       LaneBitmask DefMask = VRInfo.PrevMask;
       dbgs() << "Def mask : " << PrintLaneMask(DefMask) << "\n";
       LaneBitmask LanesDefinedyCurrentDef = (UndefSubRegs & DefMask) & UseMask;
+      dbgs() << "Lanes defined by current Def: "
+             << PrintLaneMask(LanesDefinedyCurrentDef) << "\n";
       DefinedLanes |= LanesDefinedyCurrentDef;
-      dbgs() << "Defined lanes: " << PrintLaneMask(DefinedLanes) << "\n";
+      dbgs() << "Total defined lanes: " << PrintLaneMask(DefinedLanes) << "\n";
 
       if (LanesDefinedyCurrentDef == UseMask) {
         // All lanes used here are defined by this def.
@@ -123,9 +125,15 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         // Current definition defines some of the lanes used here.
         unsigned DstSubReg =
             getSubRegIndexForLaneMask(LanesDefinedyCurrentDef, TRI);
+        if (!DstSubReg) {
+          // Should never be 0!
+          // Less over all def chain defined granularity
+          // LessDefinedGranularity = ~LanesDefinedyCurrentDef & UseMask (on each individual iteration!)
+          // Scan UndefSubRegs to cover with Mask = LessDefinedGranularity
+        }
         unsigned SrcSubReg = (DefMask & ~LanesDefinedyCurrentDef).any()
-                                 ? SubRegIdx
-                                 : AMDGPU::NoRegister;
+                                   ? DstSubReg
+                                   : AMDGPU::NoRegister;
         RegSeqOps.push_back({CurVReg, SrcSubReg, DstSubReg});
         UndefSubRegs = UseMask & ~DefinedLanes;
         dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
