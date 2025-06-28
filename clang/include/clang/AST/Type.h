@@ -8060,7 +8060,7 @@ public:
   }
 };
 
-class PredefinedSugarType final : public Type {
+class PredefinedSugarType final : public Type, public llvm::FoldingSetNode {
 public:
   friend class ASTContext;
   using Kind = PredefinedSugarKind;
@@ -8088,6 +8088,14 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == PredefinedSugar;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    Profile(ID, llvm::to_underlying(getKind()));
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, unsigned KD) {
+    ID.AddInteger(KD);
   }
 };
 

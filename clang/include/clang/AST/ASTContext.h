@@ -258,6 +258,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
+  mutable llvm::FoldingSet<PredefinedSugarType> PredefinedSugarTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;

@@ -5232,7 +5232,16 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 
 QualType
 ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
+  llvm::FoldingSetNodeID ID;
+  PredefinedSugarType::Profile(ID, llvm::to_underlying(KD));
+
+  void *InsertPos = nullptr;
+  if (PredefinedSugarType *Existing =
+          PredefinedSugarTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(Existing, 0);
+
   using Kind = PredefinedSugarType::Kind;
+
   auto getCanonicalType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
     switch (KDI) {
     case Kind::SizeT:
@@ -5244,10 +5253,12 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
     }
     llvm_unreachable("unexpected kind");
   };
+
   auto *New = new (*this, alignof(PredefinedSugarType))
       PredefinedSugarType(KD, &Idents.get(PredefinedSugarType::getName(KD)),
                           getCanonicalType(*this, static_cast<Kind>(KD)));
   Types.push_back(New);
+  PredefinedSugarTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
 }
 
