@@ -578,14 +578,15 @@ public:
         !__x.__it_.valueless_by_exception(),
         "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
     return __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
-      auto __dx           = ranges::distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __x.__it_);
+      auto __dx =
+          ranges::distance(std::get<__index_x>(__x.__it_), ranges::end(std::get<__index_x>(__x.__parent_->__views_)));
       difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& self) -> difference_type {
         if constexpr (__start < __end) {
           return ranges::size(std::get<__start>(__x.__parent_->__views_)) +
                  self.template operator()<__start + 1, __end>();
         }
         return 0;
-      }.template operator()<0, __index_x>();
+      }.template operator()<__index_x + 1, sizeof...(_Views)>();
       return -(__dx + __s);
     });
   }
@@ -595,7 +596,7 @@ public:
              ...) &&
             (__apply_drop_first<_Const, _Views...>::value)
   {
-    -(__x - default_sentinel);
+    return -(__x - default_sentinel);
   }
 };
 

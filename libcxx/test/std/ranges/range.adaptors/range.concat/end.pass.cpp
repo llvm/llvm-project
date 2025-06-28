@@ -11,9 +11,6 @@
 #include <ranges>
 
 #include <cassert>
-#include <concepts>
-#include <type_traits>
-#include <iterator>
 #include "test_iterators.h"
 
 struct Range : std::ranges::view_base {

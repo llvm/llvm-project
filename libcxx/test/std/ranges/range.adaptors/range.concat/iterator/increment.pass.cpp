@@ -10,14 +10,12 @@
 
 #include <ranges>
 
-#include <iostream>
 #include <array>
 #include <cassert>
 #include <concepts>
 #include <type_traits>
 #include <utility>
 #include "test_iterators.h"
-#include "test_macros.h"
 #include "../types.h"
 
 template <class Iterator>

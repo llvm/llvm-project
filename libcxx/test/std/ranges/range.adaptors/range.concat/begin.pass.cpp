@@ -20,8 +20,8 @@ constexpr void general_tests() {
   // Check the return type of `.begin()`
   {
     std::ranges::concat_view view(v1, v2);
-    using FilterIterator = std::ranges::iterator_t<decltype(view)>;
-    ASSERT_SAME_TYPE(FilterIterator, decltype(view.begin()));
+    using ConcatIterator = std::ranges::iterator_t<decltype(view)>;
+    ASSERT_SAME_TYPE(ConcatIterator, decltype(view.begin()));
   }
 }
 

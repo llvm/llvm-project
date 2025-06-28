@@ -9,13 +9,8 @@
 // REQUIRES: std-at-least-c++26
 
 #include <ranges>
-
 #include <cassert>
-#include <concepts>
 #include <initializer_list>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 #include "test_iterators.h"
 #include "test_range.h"

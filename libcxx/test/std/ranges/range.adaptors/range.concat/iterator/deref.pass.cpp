@@ -12,11 +12,7 @@
 
 #include <array>
 #include <cassert>
-#include <concepts>
-#include <cstddef>
-#include <utility>
 #include "test_iterators.h"
-#include "test_macros.h"
 #include "../types.h"
 
 template <class Iter, class ValueType = int, class Sent = sentinel_wrapper<Iter>>
