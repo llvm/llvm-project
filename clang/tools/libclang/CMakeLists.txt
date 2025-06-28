@@ -157,15 +157,28 @@ if(ENABLE_STATIC)
 endif()
 
 if(ENABLE_SHARED)
-  if(WIN32)
+  if(WIN32 OR CYGWIN)
     set_target_properties(libclang
       PROPERTIES
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
-      # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
-      # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
-      # implicitly be exported from libclang.
-      target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
+    if (CYGWIN)
+      # On Cygwin environment, a library target generates "cyg${OUTPUT_NAME}-${VERSION}.dll" and "lib${OUTPUT_NAME}.dll.a" but
+      # don't provide link "cyg${OUTPUT_NAME}.dll" differs from expected as other Unix platforms.
+      # Although, to dlopen(), usually "cyg${OUTPUT_NAME}.dll" will be passed (or "lib${OUTPUT_NAME}.dll" and "lib${OUTPUT_NAME}.so"
+      # are also viable as Cygwin runtime replaces those prefix and suffix), which is same manner to other Unix platforms,
+      # and clang-python does so.
+      # Thus, put a copy of dll named without version suffix to convinience to use of dlopen(). A symbolic link can't be
+      # viable here as the path passed to dlopen() will be passed directly to LoadLibraryExW, so it must be a real file.
+      set(UNPAINTED_TARGET_NAME "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
+      add_custom_command(TARGET libclang POST_BUILD
+                         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:libclang>" "${UNPAINTED_TARGET_NAME}")
+      install(FILES "${UNPAINTED_TARGET_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT libclang)
+    endif()
+    # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
+    # If llvm/libclang-cpp dll is also being built for windows clang c++ symbols will still be
+    # implicitly be exported from libclang.
+    target_compile_definitions(libclang PRIVATE CLANG_BUILD_STATIC)
   elseif(APPLE)
     set(LIBCLANG_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
     set(LIBCLANG_LINK_FLAGS "${LIBCLANG_LINK_FLAGS} -Wl,-current_version -Wl,${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
