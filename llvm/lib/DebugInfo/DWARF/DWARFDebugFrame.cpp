@@ -12,12 +12,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFCFIProgram.h"
+#include "llvm/DebugInfo/DWARF/DWARFCFIPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
@@ -112,7 +115,7 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     break;
   case DWARFExpr: {
     if (Expr)
-      DWARFExpressionPrinter::print(&(*Expr), OS, DumpOpts, nullptr);
+      printDwarfExpression(&Expr.value(), OS, DumpOpts, nullptr);
     break;
   }
   case Constant:
@@ -203,7 +206,7 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
   return OS;
 }
 
-Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
+Expected<UnwindTable> llvm::dwarf::createUnwindTable(const FDE *Fde) {
   const CIE *Cie = Fde->getLinkedCIE();
   if (Cie == nullptr)
     return createStringError(errc::invalid_argument,
@@ -212,46 +215,56 @@ Expected<UnwindTable> UnwindTable::create(const FDE *Fde) {
 
   // Rows will be empty if there are no CFI instructions.
   if (Cie->cfis().empty() && Fde->cfis().empty())
-    return UnwindTable();
+    return UnwindTable({});
 
-  UnwindTable UT;
+  UnwindTable::RowContainer CieRows;
   UnwindRow Row;
   Row.setAddress(Fde->getInitialLocation());
-  UT.EndAddress = Fde->getInitialLocation() + Fde->getAddressRange();
-  if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
+  if (Error CieError = parseRows(Cie->cfis(), Row, nullptr).moveInto(CieRows))
     return std::move(CieError);
   // We need to save the initial locations of registers from the CIE parsing
   // in case we run into DW_CFA_restore or DW_CFA_restore_extended opcodes.
+  UnwindTable::RowContainer FdeRows;
   const RegisterLocations InitialLocs = Row.getRegisterLocations();
-  if (Error FdeError = UT.parseRows(Fde->cfis(), Row, &InitialLocs))
+  if (Error FdeError =
+          parseRows(Fde->cfis(), Row, &InitialLocs).moveInto(FdeRows))
     return std::move(FdeError);
+
+  UnwindTable::RowContainer AllRows;
+  AllRows.insert(AllRows.end(), CieRows.begin(), CieRows.end());
+  AllRows.insert(AllRows.end(), FdeRows.begin(), FdeRows.end());
+
   // May be all the CFI instructions were DW_CFA_nop amd Row becomes empty.
   // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
-    UT.Rows.push_back(Row);
-  return UT;
+    AllRows.push_back(Row);
+  return UnwindTable(std::move(AllRows));
 }
 
-Expected<UnwindTable> UnwindTable::create(const CIE *Cie) {
+Expected<UnwindTable> llvm::dwarf::createUnwindTable(const CIE *Cie) {
   // Rows will be empty if there are no CFI instructions.
   if (Cie->cfis().empty())
-    return UnwindTable();
+    return UnwindTable({});
 
-  UnwindTable UT;
+  UnwindTable::RowContainer Rows;
   UnwindRow Row;
-  if (Error CieError = UT.parseRows(Cie->cfis(), Row, nullptr))
+  if (Error CieError = parseRows(Cie->cfis(), Row, nullptr).moveInto(Rows))
     return std::move(CieError);
   // May be all the CFI instructions were DW_CFA_nop amd Row becomes empty.
   // Do not add that to the unwind table.
   if (Row.getRegisterLocations().hasLocations() ||
       Row.getCFAValue().getLocation() != UnwindLocation::Unspecified)
-    UT.Rows.push_back(Row);
-  return UT;
+    Rows.push_back(Row);
+  return UnwindTable(std::move(Rows));
 }
 
-Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
-                             const RegisterLocations *InitialLocs) {
+Expected<UnwindTable::RowContainer>
+llvm::dwarf::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
+                       const RegisterLocations *InitialLocs) {
+  // All the unwinding rows parsed during processing of the CFI program.
+  UnwindTable::RowContainer Rows;
+
   // State consists of CFA value and register locations.
   std::vector<std::pair<UnwindLocation, RegisterLocations>> States;
   for (const CFIProgram::Instruction &Inst : CFIP) {
@@ -553,7 +566,7 @@ Error UnwindTable::parseRows(const CFIProgram &CFIP, UnwindRow &Row,
       break;
     }
   }
-  return Error::success();
+  return Rows;
 }
 
 // Returns the CIE identifier to be used by the requested format.
@@ -602,10 +615,11 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << "\n";
   }
   OS << "\n";
-  CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, /*InitialLocation=*/{});
+  printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1,
+                  /*InitialLocation=*/{});
   OS << "\n";
 
-  if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
+  if (Expected<UnwindTable> RowsOrErr = createUnwindTable(this))
     RowsOrErr->dump(OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
@@ -630,10 +644,10 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIs.dump(OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
+  printCFIProgram(CFIs, OS, DumpOpts, /*IndentLevel=*/1, InitialLocation);
   OS << "\n";
 
-  if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
+  if (Expected<UnwindTable> RowsOrErr = createUnwindTable(this))
     RowsOrErr->dump(OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(

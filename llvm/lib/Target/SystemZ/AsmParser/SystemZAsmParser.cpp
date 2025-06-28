@@ -30,6 +30,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -731,16 +732,7 @@ static struct InsnMatchEntry InsnMatchTable[] = {
 static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
   if (!E)
     return;
-  if (auto *CE = dyn_cast<MCConstantExpr>(E))
-    OS << *CE;
-  else if (auto *UE = dyn_cast<MCUnaryExpr>(E))
-    OS << *UE;
-  else if (auto *BE = dyn_cast<MCBinaryExpr>(E))
-    OS << *BE;
-  else if (auto *SRE = dyn_cast<MCSymbolRefExpr>(E))
-    OS << *SRE;
-  else
-    OS << *E;
+  MCAsmInfo().printExpr(OS, *E);
 }
 
 void SystemZOperand::print(raw_ostream &OS) const {
@@ -1784,6 +1776,7 @@ bool SystemZAsmParser::isLabel(AsmToken &Token) {
 
 // Force static initialization.
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmParser() {
   RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

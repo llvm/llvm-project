@@ -432,6 +432,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
+  // Reading type padding, return zero.
+  if (ByteOffset >= DL.getTypeStoreSize(C->getType()))
+    return true;
+
   // If this element is zero or undefined, we can just return since *CurPtr is
   // zero initialized.
   if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C))
@@ -2549,6 +2553,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::cosh:
         return ConstantFoldFP(cosh, APF, Ty);
       case Intrinsic::atan:
+        // Implement optional behavior from C's Annex F for +/-0.0.
+        if (U.isZero())
+          return ConstantFP::get(Ty->getContext(), U);
         return ConstantFoldFP(atan, APF, Ty);
       case Intrinsic::sqrt:
         return ConstantFoldFP(sqrt, APF, Ty);
@@ -2602,6 +2609,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case LibFunc_atan:
     case LibFunc_atanf:
+      // Implement optional behavior from C's Annex F for +/-0.0.
+      if (U.isZero())
+        return ConstantFP::get(Ty->getContext(), U);
       if (TLI->has(Func))
         return ConstantFoldFP(atan, APF, Ty);
       break;

@@ -399,8 +399,9 @@ static bool isIFunc(const MCSymbolELF *Symbol) {
     const MCSymbolRefExpr *Value;
     if (!Symbol->isVariable() ||
         !(Value = dyn_cast<MCSymbolRefExpr>(Symbol->getVariableValue())) ||
-        Value->getKind() != MCSymbolRefExpr::VK_None ||
-        mergeTypeForSet(Symbol->getType(), ELF::STT_GNU_IFUNC) != ELF::STT_GNU_IFUNC)
+        Value->getSpecifier() ||
+        mergeTypeForSet(Symbol->getType(), ELF::STT_GNU_IFUNC) !=
+            ELF::STT_GNU_IFUNC)
       return false;
     Symbol = &cast<MCSymbolELF>(Value->getSymbol());
   }

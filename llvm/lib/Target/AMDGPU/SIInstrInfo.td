@@ -31,6 +31,7 @@ def SIEncodingFamily {
   int GFX940 = 9;
   int GFX11 = 10;
   int GFX12 = 11;
+  int GFX1250 = 12;
 }
 
 //===----------------------------------------------------------------------===//
@@ -44,6 +45,8 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
   int Subtarget = sub;
 }
 
+def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
+def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX11Gen : GFXGen<isGFX11Only, "GFX11", "_gfx11", SIEncodingFamily.GFX11>;
 def GFX10Gen : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.GFX10>;
@@ -2648,11 +2651,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
   // the asm operand name via this HasModifiers flag
   field string AsmDPP8 = getAsmDPP8<HasDst, NumSrcArgs, 0 /*HasModifiers*/, DstVT>.ret;
   field string AsmVOP3Base = getAsmVOP3Base<NumSrcArgs, HasDst, HasClamp,
-   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0Mods, HasSrc1Mods,
-   HasSrc2Mods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
+   HasOpSel, HasOMod, IsVOP3P, HasNeg, HasSrc0FloatMods, HasSrc1FloatMods,
+   HasSrc2FloatMods, DstVT, HasFP8ByteSel, HasBitOp3>.ret;
   field string Asm64 = AsmVOP3Base;
   field string AsmVOP3P = getAsmVOP3P<HasDst, NumSrcArgs, HasNeg, HasClamp, HasOpSel>.ret;
-  field string AsmVOP3OpSel = AsmVOP3Base;
   field string AsmVOP3DPP = getAsmVOP3DPP<AsmVOP3Base>.ret;
   field string AsmVOP3DPP16 = getAsmVOP3DPP16<AsmVOP3Base>.ret;
   field string AsmVOP3DPP8 = getAsmVOP3DPP8<AsmVOP3Base>.ret;
@@ -3067,7 +3069,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX90A)],
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
-                   [!cast<string>(SIEncodingFamily.GFX12)]];
+                   [!cast<string>(SIEncodingFamily.GFX12)],
+                   [!cast<string>(SIEncodingFamily.GFX1250)]];
 }
 
 // Get equivalent SOPK instruction.

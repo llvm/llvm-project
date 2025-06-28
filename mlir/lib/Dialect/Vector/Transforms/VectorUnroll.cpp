@@ -54,6 +54,28 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   return slicedIndices;
 }
 
+// Compute the new indices by adding `offsets` to `originalIndices`.
+// If m < n (m = offsets.size(), n = originalIndices.size()),
+// then only the trailing m values in `originalIndices` are updated.
+static SmallVector<Value> sliceLoadStoreIndices(PatternRewriter &rewriter,
+                                                Location loc,
+                                                OperandRange originalIndices,
+                                                ArrayRef<int64_t> offsets) {
+  assert(offsets.size() <= originalIndices.size() &&
+         "Offsets should not exceed the number of original indices");
+  SmallVector<Value> indices(originalIndices);
+
+  auto start = indices.size() - offsets.size();
+  for (auto [i, offset] : llvm::enumerate(offsets)) {
+    if (offset != 0) {
+      indices[start + i] = rewriter.create<arith::AddIOp>(
+          loc, originalIndices[start + i],
+          rewriter.create<arith::ConstantIndexOp>(loc, offset));
+    }
+  }
+  return indices;
+}
+
 // Clones `op` into a new operations that takes `operands` and returns
 // `resultTypes`.
 static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
@@ -631,6 +653,90 @@ private:
   vector::UnrollVectorOptions options;
 };
 
+struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
+  UnrollLoadPattern(MLIRContext *context,
+                    const vector::UnrollVectorOptions &options,
+                    PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::LoadOp>(context, benefit), options(options) {}
+
+  LogicalResult matchAndRewrite(vector::LoadOp loadOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecType = loadOp.getVectorType();
+
+    auto targetShape = getTargetShape(options, loadOp);
+    if (!targetShape)
+      return failure();
+
+    Location loc = loadOp.getLoc();
+    ArrayRef<int64_t> originalShape = vecType.getShape();
+    SmallVector<int64_t> strides(targetShape->size(), 1);
+
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, vecType, rewriter.getZeroAttr(vecType));
+
+    SmallVector<int64_t> loopOrder =
+        getUnrollOrder(originalShape.size(), loadOp, options);
+
+    auto targetVecType =
+        VectorType::get(*targetShape, vecType.getElementType());
+
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(originalShape, *targetShape, loopOrder)) {
+      SmallVector<Value> indices =
+          sliceLoadStoreIndices(rewriter, loc, loadOp.getIndices(), offsets);
+      Value slicedLoad = rewriter.create<vector::LoadOp>(
+          loc, targetVecType, loadOp.getBase(), indices);
+      result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
+          loc, slicedLoad, result, offsets, strides);
+    }
+    rewriter.replaceOp(loadOp, result);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
+struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
+  UnrollStorePattern(MLIRContext *context,
+                     const vector::UnrollVectorOptions &options,
+                     PatternBenefit benefit = 1)
+      : OpRewritePattern<vector::StoreOp>(context, benefit), options(options) {}
+
+  LogicalResult matchAndRewrite(vector::StoreOp storeOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType vecType = storeOp.getVectorType();
+
+    auto targetShape = getTargetShape(options, storeOp);
+    if (!targetShape)
+      return failure();
+
+    Location loc = storeOp.getLoc();
+    ArrayRef<int64_t> originalShape = vecType.getShape();
+    SmallVector<int64_t> strides(targetShape->size(), 1);
+
+    Value base = storeOp.getBase();
+    Value vector = storeOp.getValueToStore();
+
+    SmallVector<int64_t> loopOrder =
+        getUnrollOrder(originalShape.size(), storeOp, options);
+
+    for (SmallVector<int64_t> offsets :
+         StaticTileOffsetRange(originalShape, *targetShape, loopOrder)) {
+      SmallVector<Value> indices =
+          sliceLoadStoreIndices(rewriter, loc, storeOp.getIndices(), offsets);
+      Value slice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
+          loc, vector, offsets, *targetShape, strides);
+      rewriter.create<vector::StoreOp>(loc, slice, base, indices);
+    }
+    rewriter.eraseOp(storeOp);
+    return success();
+  }
+
+private:
+  vector::UnrollVectorOptions options;
+};
+
 struct UnrollBroadcastPattern : public OpRewritePattern<vector::BroadcastOp> {
   UnrollBroadcastPattern(MLIRContext *context,
                          const vector::UnrollVectorOptions &options,
@@ -699,10 +805,10 @@ private:
 void mlir::vector::populateVectorUnrollPatterns(
     RewritePatternSet &patterns, const UnrollVectorOptions &options,
     PatternBenefit benefit) {
-  patterns
-      .add<UnrollTransferReadPattern, UnrollTransferWritePattern,
-           UnrollContractionPattern, UnrollElementwisePattern,
-           UnrollReductionPattern, UnrollMultiReductionPattern,
-           UnrollTransposePattern, UnrollGatherPattern, UnrollBroadcastPattern>(
-          patterns.getContext(), options, benefit);
+  patterns.add<UnrollTransferReadPattern, UnrollTransferWritePattern,
+               UnrollContractionPattern, UnrollElementwisePattern,
+               UnrollReductionPattern, UnrollMultiReductionPattern,
+               UnrollTransposePattern, UnrollGatherPattern, UnrollLoadPattern,
+               UnrollStorePattern, UnrollBroadcastPattern>(
+      patterns.getContext(), options, benefit);
 }

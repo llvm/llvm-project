@@ -225,6 +225,10 @@ void MCObjectStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
 
 void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol, Loc);
+  // If Symbol is a non-redefiniable variable, emitLabel has reported an error.
+  // Bail out.
+  if (Symbol->isVariable())
+    return;
 
   getAssembler().registerSymbol(*Symbol);
 
@@ -432,9 +436,8 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
                                      const MCSymbol *B, SMLoc Loc) {
   MCContext &Context = OS.getContext();
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *ARef = MCSymbolRefExpr::create(A, Variant, Context);
-  const MCExpr *BRef = MCSymbolRefExpr::create(B, Variant, Context);
+  const MCExpr *ARef = MCSymbolRefExpr::create(A, Context);
+  const MCExpr *BRef = MCSymbolRefExpr::create(B, Context);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context, Loc);
   return AddrDelta;

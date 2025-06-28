@@ -8,6 +8,7 @@
 
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCAsmInfo.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -1167,7 +1169,9 @@ public:
       OS << '\'' << getToken() << '\'';
       break;
     case Expression:
-      OS << "<expr " << *Expr << '>';
+      OS << "<expr ";
+      MCAsmInfo().printExpr(OS, *Expr);
+      OS << '>';
       break;
     }
   }
@@ -6450,26 +6454,26 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
   setForcedDPP(false);
   setForcedSDWA(false);
 
-  if (Name.ends_with("_e64_dpp")) {
+  if (Name.consume_back("_e64_dpp")) {
     setForcedDPP(true);
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 8);
+    return Name;
   }
-  if (Name.ends_with("_e64")) {
+  if (Name.consume_back("_e64")) {
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_e32")) {
+  if (Name.consume_back("_e32")) {
     setForcedEncodingSize(32);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_dpp")) {
+  if (Name.consume_back("_dpp")) {
     setForcedDPP(true);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_sdwa")) {
+  if (Name.consume_back("_sdwa")) {
     setForcedSDWA(true);
-    return Name.substr(0, Name.size() - 5);
+    return Name;
   }
   return Name;
 }
@@ -9800,7 +9804,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 }
 
 /// Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUAsmParser() {
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
 }

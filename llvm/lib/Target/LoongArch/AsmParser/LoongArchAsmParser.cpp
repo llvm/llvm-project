@@ -9,7 +9,6 @@
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchInstPrinter.h"
 #include "MCTargetDesc/LoongArchMCAsmInfo.h"
-#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "MCTargetDesc/LoongArchTargetStreamer.h"
@@ -27,6 +26,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -1953,7 +1953,8 @@ ParseStatus LoongArchAsmParser::parseDirective(AsmToken DirectiveID) {
   return ParseStatus::NoMatch;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchAsmParser() {
   RegisterMCAsmParser<LoongArchAsmParser> X(getTheLoongArch32Target());
   RegisterMCAsmParser<LoongArchAsmParser> Y(getTheLoongArch64Target());
 }
