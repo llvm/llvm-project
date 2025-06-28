@@ -2262,7 +2262,7 @@ protected:
     /// The "size_t" type.
     SizeT,
 
-    /// The "signed size_t" type.
+    /// The signed integer type corresponding to "size_t".
     SignedSizeT,
 
     /// The "ptrdiff_t" type.

@@ -5239,7 +5239,7 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 
 QualType ASTContext::getPredefinedSugarType(uint32_t KD) const {
   using Kind = PredefinedSugarType::Kind;
-  auto getUnderlyingType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
+  auto getCanonicalType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
     switch (KDI) {
     case Kind::SizeT:
       return Ctx.getFromTargetType(Ctx.Target->getSizeType());
@@ -5251,7 +5251,7 @@ QualType ASTContext::getPredefinedSugarType(uint32_t KD) const {
     llvm_unreachable("unexpected kind");
   };
   auto *New = new (*this, alignof(PredefinedSugarType)) PredefinedSugarType(
-      static_cast<Kind>(KD), getUnderlyingType(*this, static_cast<Kind>(KD)));
+      static_cast<Kind>(KD), getCanonicalType(*this, static_cast<Kind>(KD)));
   Types.push_back(New);
   return QualType(New, 0);
 }
@@ -14565,7 +14565,8 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                       CDX);
   }
   case Type::PredefinedSugar:
-    // FIXME: Should this be reachable here?
+    assert(cast<PredefinedSugarType>(X)->getKind() !=
+           cast<PredefinedSugarType>(Y)->getKind());
     return QualType();
   }
   llvm_unreachable("Unhandled Type Class");
