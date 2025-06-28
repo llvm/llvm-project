@@ -901,7 +901,7 @@ defvar AllDefaultLibCalls =
     !foreach(entry, AllDefaultRuntimeLibcallImpls, entry.Provides);
 
 // These libcalls are only available in compiler-rt, not libgcc for
-// 32-bit arch.
+// 32-bit arch. They are available on both for 64-bit.
 defvar LibCallsCompilerRT64OrLibGCC = [
    __ashlti3, __lshrti3, __ashrti3, __multi3, __mulodi4
 ];
