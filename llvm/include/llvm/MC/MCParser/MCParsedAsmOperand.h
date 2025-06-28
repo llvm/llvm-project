@@ -94,15 +94,6 @@ public:
   /// dump - Print to the debug stream.
   virtual void dump() const;
 };
-
-//===----------------------------------------------------------------------===//
-// Debugging Support
-
-inline raw_ostream& operator<<(raw_ostream &OS, const MCParsedAsmOperand &MO) {
-  MO.print(OS);
-  return OS;
-}
-
 } // end namespace llvm
 
 #endif // LLVM_MC_MCPARSER_MCPARSEDASMOPERAND_H
