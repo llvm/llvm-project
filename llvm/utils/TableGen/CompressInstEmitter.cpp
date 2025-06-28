@@ -298,14 +298,11 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
                              bool IsSource) {
   unsigned NumMIOperands = 0;
 
-  // Use this to count number of tied Operands in Source Inst in this function.
-  // This counter is required here to error out when there is a Source
-  // Inst with two or more tied operands.
-  unsigned SourceInstTiedOpCount = 0;
+  unsigned TiedOpCount = 0;
   for (const auto &Op : Inst.Operands) {
     NumMIOperands += Op.MINumOperands;
     if (Op.getTiedRegister() != -1)
-      SourceInstTiedOpCount++;
+      TiedOpCount++;
   }
 
   if (Dag->getNumArgs() == NumMIOperands)
@@ -313,7 +310,7 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
 
   // Source instructions are non compressed instructions and have at most one
   // tied operand.
-  if (IsSource && (SourceInstTiedOpCount >= 2))
+  if (IsSource && (TiedOpCount > 1))
     PrintFatalError(Inst.TheDef->getLoc(),
                     "Input operands for Inst '" + Inst.TheDef->getName() +
                         "' and input Dag operand count mismatch");
@@ -326,12 +323,7 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
 
   // The Instruction might have tied operands so the Dag might have
   // a fewer operand count.
-  unsigned RealCount = NumMIOperands;
-  for (const auto &Operand : Inst.Operands)
-    if (Operand.getTiedRegister() != -1)
-      --RealCount;
-
-  if (Dag->getNumArgs() != RealCount)
+  if (Dag->getNumArgs() != (NumMIOperands - TiedOpCount))
     PrintFatalError(Inst.TheDef->getLoc(),
                     "Inst '" + Inst.TheDef->getName() +
                         "' and Dag operand count mismatch");

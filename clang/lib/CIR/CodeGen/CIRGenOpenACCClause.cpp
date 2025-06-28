@@ -922,7 +922,7 @@ public:
 
   void VisitDevicePtrClause(const OpenACCDevicePtrClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::DevicePtrOp>(
             var, mlir::acc::DataClause::acc_deviceptr, {},
@@ -932,7 +932,7 @@ public:
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. data, declare remain.
+      // unreachable. declare remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -953,7 +953,7 @@ public:
 
   void VisitPresentClause(const OpenACCPresentClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_present, {}, /*structured=*/true,
@@ -962,14 +962,14 @@ public:
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. data & declare remain.
+      // unreachable. declare remains.
       return clauseNotImplemented(clause);
     }
   }
 
   void VisitAttachClause(const OpenACCAttachClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::AttachOp, mlir::acc::DetachOp>(
             var, mlir::acc::DataClause::acc_attach, {}, /*structured=*/true,
@@ -978,7 +978,7 @@ public:
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. data, enter data remain.
+      // unreachable. enter data remains.
       return clauseNotImplemented(clause);
     }
   }
