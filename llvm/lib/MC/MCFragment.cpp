@@ -17,7 +17,9 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
@@ -72,6 +74,10 @@ void MCFragment::destroy() {
     case FT_PseudoProbe:
       cast<MCPseudoProbeAddrFragment>(this)->~MCPseudoProbeAddrFragment();
       return;
+    case FT_DwarfLoclistEntry:
+      cast<MCDwarfLocListOffsetPairFragment>(this)
+          ->~MCDwarfLocListOffsetPairFragment();
+      return;
   }
 }
 
@@ -108,6 +114,9 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Org:   OS << "MCOrgFragment"; break;
   case MCFragment::FT_Dwarf: OS << "MCDwarfFragment"; break;
   case MCFragment::FT_DwarfFrame: OS << "MCDwarfCallFrameFragment"; break;
+  case MCFragment::FT_DwarfLoclistEntry:
+    OS << "MCDwarfLocListOffsetPairFragment";
+    break;
   case MCFragment::FT_LEB:   OS << "MCLEBFragment"; break;
   case MCFragment::FT_BoundaryAlign: OS<<"MCBoundaryAlignFragment"; break;
   case MCFragment::FT_SymbolId:    OS << "MCSymbolIdFragment"; break;
@@ -195,6 +204,21 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     OS << " AddrDelta:" << CF->getAddrDelta();
     break;
   }
+  case MCFragment::FT_DwarfLoclistEntry: {
+    const auto *LF = cast<MCDwarfLocListOffsetPairFragment>(this);
+    OS << "\n       "
+       << " StartOffset: " << LF->StartOffset
+       << " EndOffset: " << LF->EndOffset;
+    if (!LF->LocationDescriptionExpr.empty()) {
+      OS << " Expr: [";
+      llvm::interleave(
+          LF->LocationDescriptionExpr,
+          [&](uint8_t C) { OS << format_hex_no_prefix(C, 2); },
+          [&]() { OS << " "; });
+      OS << "]";
+    }
+    break;
+  }
   case MCFragment::FT_LEB: {
     const auto *LF = cast<MCLEBFragment>(this);
     OS << "\n       ";
@@ -241,3 +265,14 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   OS << ">";
 }
 #endif
+
+MCDwarfLocListOffsetPairFragment::MCDwarfLocListOffsetPairFragment(
+    MCContext &Context, const MCSymbol *Base, const MCSymbol *Begin,
+    const MCSymbol *End)
+    : MCEncodedFragmentWithFixups<16, 0>(FT_DwarfLoclistEntry, false) {
+  const MCExpr *BaseSym = MCSymbolRefExpr::create(Base, Context);
+  StartOffset = MCBinaryExpr::createSub(MCSymbolRefExpr::create(Begin, Context),
+                                        BaseSym, Context);
+  EndOffset = MCBinaryExpr::createSub(MCSymbolRefExpr::create(End, Context),
+                                      BaseSym, Context);
+}
