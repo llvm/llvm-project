@@ -196,9 +196,7 @@ public:
   // expressions with @). MCTargetExpr, as used by AArch64 and RISC-V, offers a
   // cleaner approach.
   enum VariantKind : uint16_t {
-    VK_None,
-
-    VK_SECREL,
+    VK_SECREL = 1,
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
 
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
@@ -219,7 +217,7 @@ public:
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx,
                                        SMLoc Loc = SMLoc()) {
-    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
+    return MCSymbolRefExpr::create(Symbol, 0, Ctx, Loc);
   }
 
   LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol,
