@@ -96,6 +96,10 @@ def HasWideArithmetic :
     Predicate<"Subtarget->hasWideArithmetic()">,
     AssemblerPredicate<(all_of FeatureWideArithmetic), "wide-arithmetic">;
 
+def HasBranchHinting :
+    Predicate<"Subtarget->hasBranchHinting()">,
+    AssemblerPredicate<(all_of FeatureBranchHinting), "branch-hinting">;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//

@@ -69,6 +69,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("simd128", SIMDLevel >= SIMD128)
       .Case("tail-call", HasTailCall)
       .Case("wide-arithmetic", HasWideArithmetic)
+      .Case("branch-hinting", HasBranchHinting)
       .Default(false);
 }
 
@@ -116,6 +117,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_tail_call__");
   if (HasWideArithmetic)
     Builder.defineMacro("__wasm_wide_arithmetic__");
+  if (HasBranchHinting)
+    Builder.defineMacro("__wasm_branch_hinting__");
 
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
@@ -194,6 +197,7 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["multimemory"] = true;
     Features["tail-call"] = true;
     Features["wide-arithmetic"] = true;
+    Features["branch-hinting"] = true;
     setSIMDLevel(Features, RelaxedSIMD, true);
   };
   if (CPU == "generic") {
@@ -345,6 +349,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-wide-arithmetic") {
       HasWideArithmetic = false;
+      continue;
+    }
+    if (Feature == "+branch-hinting") {
+      HasBranchHinting = true;
+      continue;
+    }
+    if (Feature == "-branch-hinting") {
+      HasBranchHinting = false;
       continue;
     }
 

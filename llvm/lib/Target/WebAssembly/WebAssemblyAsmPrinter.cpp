@@ -55,6 +55,17 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 extern cl::opt<bool> WasmKeepRegisters;
+// values are divided by 1<<31 to calculate the probability
+static cl::opt<float>
+    WasmHighBranchProb("wasm-branch-prob-high", cl::Hidden,
+                       cl::desc("lowest branch probability to not be annotated "
+                                "as likely taken (range [0.0-1.0])"),
+                       cl::init(0.5f));
+static cl::opt<float>
+    WasmLowBranchProb("wasm-branch-prob-low", cl::Hidden,
+                      cl::desc("highest branch probability to be annotated as "
+                               "unlikely taken (range [0.0-1.0])"),
+                      cl::init(0.5f));
 
 //===----------------------------------------------------------------------===//
 // Helpers.
@@ -442,6 +453,40 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
   EmitProducerInfo(M);
   EmitTargetFeatures(M);
   EmitFunctionAttributes(M);
+
+  // Subtarget may be null if no functions have been defined in file
+  if (Subtarget && Subtarget->hasBranchHinting())
+    emitBranchHintSection();
+}
+
+void WebAssemblyAsmPrinter::emitBranchHintSection() const {
+  MCSectionWasm *BranchHintsSection = OutContext.getWasmSection(
+      "metadata.code.branch_hint", SectionKind::getMetadata());
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(BranchHintsSection);
+  const uint32_t NumFunctionHints =
+      std::count_if(BranchHints.begin(), BranchHints.end(),
+                    [](const auto &BHR) { return !BHR.Hints.empty(); });
+  OutStreamer->emitULEB128IntValue(NumFunctionHints, 5);
+  for (const auto &BHR : BranchHints) {
+    if (BHR.Hints.empty())
+      continue;
+    // emit relocatable function index for the function symbol
+    OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
+        BHR.FuncSym, WebAssembly::S_FUNCINDEX, OutContext));
+    // emit the number of hints for this function (is constant -> does not need
+    // handling by target streamer for reloc)
+    OutStreamer->emitULEB128IntValue(BHR.Hints.size());
+    for (const auto &[instrSym, hint] : BHR.Hints) {
+      assert(hint == 0 || hint == 1);
+      // offset from function start
+      OutStreamer->emitULEB128Value(MCSymbolRefExpr::create(
+          instrSym, WebAssembly::S_DEBUG_REF, OutContext));
+      OutStreamer->emitULEB128IntValue(1); // hint size
+      OutStreamer->emitULEB128IntValue(hint);
+    }
+  }
+  OutStreamer->popSection();
 }
 
 void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
@@ -697,6 +742,42 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
+    if (Subtarget->hasBranchHinting() && MFI) {
+      if (const auto Prob = MFI->BranchProbabilities.find(MI);
+          Prob != MFI->BranchProbabilities.end()) {
+        const float ThresholdProbLow = WasmLowBranchProb.getValue();
+        const float ThresholdProbHigh = WasmHighBranchProb.getValue();
+        assert(ThresholdProbLow >= 0.0f && ThresholdProbLow <= 1.0f &&
+               ThresholdProbHigh >= 0.0f && ThresholdProbHigh <= 1.0f &&
+               "Branch probability thresholds must be in range [0.0-1.0]");
+
+        MCSymbol *BrIfSym = OutContext.createTempSymbol();
+        OutStreamer->emitLabel(BrIfSym);
+        constexpr uint8_t HintLikely = 0x01;
+        constexpr uint8_t HintUnlikely = 0x00;
+        const uint32_t D = BranchProbability::getOne().getDenominator();
+        uint8_t HintValue;
+        if (Prob->getSecond() >
+            BranchProbability::getRaw(ThresholdProbHigh * D))
+          HintValue = HintLikely;
+        else if (Prob->getSecond() <=
+                 BranchProbability::getRaw(ThresholdProbLow * D))
+          HintValue = HintUnlikely;
+        else
+          goto emit; // Don't emit branch hint between thresholds
+
+        // we know that we only emit branch hints for internal functions,
+        // therefore we can directly cast and don't need getMCSymbolForFunction
+        MCSymbol *FuncSym = cast<MCSymbolWasm>(getSymbol(&MF->getFunction()));
+        const uint32_t LocalFuncIdx = MF->getFunctionNumber();
+        if (BranchHints.size() <= LocalFuncIdx) {
+          BranchHints.resize(LocalFuncIdx + 1);
+          BranchHints[LocalFuncIdx].FuncSym = FuncSym;
+        }
+        BranchHints[LocalFuncIdx].Hints.emplace_back(BrIfSym, HintValue);
+      }
+    }
+  emit:
     EmitToStreamer(*OutStreamer, TmpInst);
     break;
   }

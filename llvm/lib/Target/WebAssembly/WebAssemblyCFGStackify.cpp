@@ -31,6 +31,7 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -48,6 +49,7 @@ STATISTIC(NumCatchUnwindMismatches, "Number of catch unwind mismatches found");
 namespace {
 class WebAssemblyCFGStackify final : public MachineFunctionPass {
   MachineDominatorTree *MDT;
+  MachineBranchProbabilityInfo *MBPI;
 
   StringRef getPassName() const override { return "WebAssembly CFG Stackify"; }
 
@@ -55,6 +57,7 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<WebAssemblyExceptionInfo>();
+    AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -2562,8 +2565,9 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
           MO = MachineOperand::CreateImm(getDelegateDepth(Stack, MO.getMBB()));
         else if (MI.getOpcode() == WebAssembly::RETHROW)
           MO = MachineOperand::CreateImm(getRethrowDepth(Stack, MO.getMBB()));
-        else
+        else {
           MO = MachineOperand::CreateImm(getBranchDepth(Stack, MO.getMBB()));
+        }
       }
       MI.addOperand(MF, MO);
     }
@@ -2608,6 +2612,21 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
         Stack.push_back(std::make_pair(&MBB, &MI));
         break;
 
+      case WebAssembly::BR_IF: {
+        // this is the last place where we can easily calculate the branch
+        // probabilities. we do not emit scf-ifs, therefore, only br_ifs have
+        // to be annotated with branch probabilities.
+        if (MF.getSubtarget<WebAssemblySubtarget>().hasBranchHinting() &&
+            MI.getParent()->hasSuccessorProbabilities()) {
+          const auto Prob = MBPI->getEdgeProbability(
+              MI.getParent(), MI.operands().begin()->getMBB());
+          WebAssemblyFunctionInfo *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
+          assert(!MFI->BranchProbabilities.contains(&MI));
+          MFI->BranchProbabilities[&MI] = Prob;
+        }
+        RewriteOperands(MI);
+        break;
+      }
       default:
         if (MI.isTerminator())
           RewriteOperands(MI);
@@ -2639,6 +2658,7 @@ bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
                     << MF.getName() << '\n');
   const MCAsmInfo *MCAI = MF.getTarget().getMCAsmInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
   releaseMemory();
 
