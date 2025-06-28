@@ -13,7 +13,7 @@ define i32 @guards_applied_to_add_rec(ptr %dst) {
 ; CHECK-NEXT:    [[OUTER_IV_0:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[OUTER_IV_0_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; CHECK-NEXT:    [[OUTER_IV_1:%.*]] = phi i32 [ 1, %[[ENTRY]] ], [ [[OUTER_IV_0]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[SHR28:%.*]] = lshr i32 [[OUTER_IV_1]], 1
-; CHECK-NEXT:    [[PRE:%.*]] = icmp samesign ult i32 [[OUTER_IV_1]], 2
+; CHECK-NEXT:    [[PRE:%.*]] = icmp samesign eq i32 [[OUTER_IV_1]], 1
 ; CHECK-NEXT:    br i1 [[PRE]], label %[[OUTER_LATCH]], label %[[INNER_PREHEADER:.*]]
 ; CHECK:       [[INNER_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[SHR28]] to i64
