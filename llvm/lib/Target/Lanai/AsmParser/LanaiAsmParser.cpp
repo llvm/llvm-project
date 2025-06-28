@@ -562,10 +562,14 @@ public:
       OS << "Reg: %r" << getReg() << "\n";
       break;
     case MEMORY_IMM:
-      OS << "MemImm: " << *getMemOffset() << "\n";
+      OS << "MemImm: ";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << '\n';
       break;
     case MEMORY_REG_IMM:
-      OS << "MemRegImm: " << getMemBaseReg() << "+" << *getMemOffset() << "\n";
+      OS << "MemRegImm: " << getMemBaseReg() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << '\n';
       break;
     case MEMORY_REG_REG:
       assert(getMemOffset() == nullptr);

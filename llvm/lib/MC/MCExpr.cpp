@@ -179,7 +179,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
       return MAI->printSpecifierExpr(OS, SE);
     // Used by dump features like -show-inst. Regular MCAsmStreamer output must
     // set MAI.
-    OS << "specifier(" << SE.getSpecifier() << ',' << *SE.getSubExpr() << ')';
+    OS << "specifier(" << SE.getSpecifier() << ',';
+    SE.getSubExpr()->print(OS, nullptr);
+    OS << ')';
     return;
   }
   }
@@ -189,7 +191,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCExpr::dump() const {
-  dbgs() << *this;
+  print(dbgs(), nullptr);
   dbgs() << '\n';
 }
 #endif

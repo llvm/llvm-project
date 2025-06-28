@@ -791,10 +791,10 @@ void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     OS << getImm();
     break;
   case Expression:
-    OS << *getExpr();
+    MAI.printExpr(OS, *getExpr());
     break;
   case TLSRegister:
-    OS << *getTLSReg();
+    MAI.printExpr(OS, *getTLSReg());
     break;
   }
 }

@@ -234,11 +234,12 @@ public:
       O << "Register " << Reg;
       break;
     case k_Imm:
-      O << "Immediate " << *Imm;
+      O << "Immediate ";
+      MAI.printExpr(O, *Imm);
       break;
     case k_Mem:
       O << "Memory ";
-      O << *Mem.Offset << "(" << Reg << ")";
+      MAI.printExpr(O, *Mem.Offset);
       break;
     case k_IndReg:
       O << "RegInd " << Reg;
