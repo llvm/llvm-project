@@ -305,7 +305,7 @@ public:
   void print(raw_ostream &OS) const override {
     switch (Kind) {
     case Immediate:
-      OS << *getImm();
+      MCAsmInfo().printExpr(OS, *getImm());
       break;
     case Register:
       OS << "<register x";

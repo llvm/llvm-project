@@ -256,12 +256,16 @@ public:
       O << "Register: " << getReg();
       break;
     case k_Immediate:
-      O << "Immediate: \"" << *getImm() << "\"";
+      O << "Immediate: \"";
+      MCAsmInfo().printExpr(O, *getImm());
+      O << "\"";
       break;
     case k_Memri: {
       // only manually print the size for non-negative values,
       // as the sign is inserted automatically.
-      O << "Memri: \"" << getReg() << '+' << *getImm() << "\"";
+      O << "Memri: \"" << getReg() << '+';
+      MCAsmInfo().printExpr(O, *getImm());
+      O << "\"";
       break;
     }
     }
