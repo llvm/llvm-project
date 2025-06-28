@@ -1664,14 +1664,14 @@ public:
     switch (Kind) {
     case k_Immediate:
       OS << "Imm<";
-      OS << *Imm.Val;
+      MAI.printExpr(OS, *Imm.Val);
       OS << ">";
       break;
     case k_Memory:
       OS << "Mem<";
       Mem.Base->print(OS, MAI);
       OS << ", ";
-      OS << *Mem.Off;
+      MAI.printExpr(OS, *Mem.Off);
       OS << ">";
       break;
     case k_RegisterIndex:
