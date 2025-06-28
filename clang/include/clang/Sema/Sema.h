@@ -3613,6 +3613,16 @@ public:
                                ParsedType &SuggestedType,
                                bool IsTemplateName = false);
 
+  // Try to suggest the missing standard library include files
+  //
+  // \param SymbolName the symbol name like 'cout'
+  // \param SourceLocation the location of the note being emitted
+  // \param Namespace the namespace that must end with ::, so like 'std::'
+  void NoteStandardIncludes(StringRef SymbolName, SourceLocation IILoc,
+                            StringRef Namespace);
+  void NoteStandardIncludes(StringRef SymbolName, SourceLocation IILoc,
+                            const CXXScopeSpec *SS);
+
   /// Attempt to behave like MSVC in situations where lookup of an unqualified
   /// type name has failed in a dependent context. In these situations, we
   /// automatically form a DependentTypeName that will retry lookup in a related

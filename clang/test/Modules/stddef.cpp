@@ -10,13 +10,13 @@ void *pointer = NULL;
 size_t size = 0;
 
 // When building with modules, a pcm is never re-imported, so re-including
-// stddef.h will not re-import _Builtin_stddef.null to restore the definition of
+// stddef.h will not re-import _Builtin_stddef.null to restore the definition of 
 // NULL, even though stddef.h will unconditionally include __stddef_null.h when
 // building with modules.
 #undef NULL
 #include <stddef.h>
 
-void *anotherPointer = NULL; // expected-error{{use of undeclared identifier 'NULL'}}
+void *anotherPointer = NULL; // expected-error{{use of undeclared identifier 'NULL'}} expected-note {{maybe try to include <cstddef>; 'NULL' is defined in <cstddef>}}
 
 // stddef.h needs to be a `textual` header to support clients doing things like
 // this.
