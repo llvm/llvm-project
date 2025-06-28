@@ -201,9 +201,11 @@ if config.clang_staticanalyzer:
 
     if config.clang_staticanalyzer_z3:
         config.available_features.add("z3")
-        config.substitutions.append(
-            ("%z3_include_dir", config.clang_staticanalyzer_z3_include_dir)
-        )
+        if config.clang_staticanalyzer_z3_devel:
+            config.available_features.add("z3-devel")
+            config.substitutions.append(
+                ("%z3_include_dir", config.clang_staticanalyzer_z3_include_dir)
+            )
     else:
         config.available_features.add("no-z3")
 
