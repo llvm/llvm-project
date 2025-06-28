@@ -5150,9 +5150,9 @@ void IntrinsicLibrary::genIeeeGetOrSetModesOrStatus(
         isModes ? fir::runtime::genGetModesTypeSize(builder, loc)
                 : fir::runtime::genGetStatusTypeSize(builder, loc);
     byteSize = builder.createConvert(loc, builder.getIndexType(), byteSize);
-    addr =
-        builder.create<fir::AllocMemOp>(loc, extractSequenceType(heapTy),
-                                        /*typeparams=*/std::nullopt, byteSize);
+    addr = builder.create<fir::AllocMemOp>(loc, extractSequenceType(heapTy),
+                                           /*typeparams=*/mlir::ValueRange(),
+                                           byteSize);
     mlir::Value shape = builder.create<fir::ShapeOp>(loc, byteSize);
     builder.create<fir::StoreOp>(
         loc, builder.create<fir::EmboxOp>(loc, fieldTy, addr, shape), fieldRef);
