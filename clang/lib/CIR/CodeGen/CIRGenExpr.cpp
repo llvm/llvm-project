@@ -360,6 +360,7 @@ LValue CIRGenFunction::emitLValueForBitField(LValue base,
       cgm.getTypes().getCIRGenRecordLayout(field->getParent());
   const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
   unsigned idx = layout.getCIRFieldNo(field);
 
   Address addr = getAddrOfBitFieldStorage(base, field, info.storageType, idx);
