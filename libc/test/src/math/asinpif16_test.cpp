@@ -6,13 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/math/asinpif16.h"
 #include "src/math/fabs.h"
 #include "test/UnitTest/FPMatcher.h"
-
-#include <errno.h>
-#include <stdint.h>
 
 using LlvmLibcAsinpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
