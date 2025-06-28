@@ -255,5 +255,24 @@ define void @gep_4d_index_and_gep_chain_mixed() {
   ret void
 }
 
+; This test demonstrates that the collapsing of GEP chains occurs regardless of
+; the source element type given to the GEP. As long as the root pointer being
+; indexed to is an aggregate data structure, the GEP will be flattened.
+define void @gep_scalar_flatten() {
+  ; CHECK-LABEL: gep_scalar_flatten
+  ; CHECK-NEXT: [[ALLOCA:%.*]] = alloca [24 x i32]
+  ; CHECK-NEXT: getelementptr inbounds nuw [24 x i32], ptr [[ALLOCA]], i32 0, i32 17
+  ; CHECK-NEXT: getelementptr inbounds nuw [24 x i32], ptr [[ALLOCA]], i32 0, i32 17
+  ; CHECK-NEXT: getelementptr inbounds nuw [24 x i32], ptr [[ALLOCA]], i32 0, i32 23
+  ; CHECK-NEXT: ret void
+  %a = alloca [2 x [3 x [4 x i32]]], align 4
+  %i8root = getelementptr inbounds nuw i8, [2 x [3 x [4 x i32]]]* %a, i32 68 ; %a[1][1][1]
+  %i32root = getelementptr inbounds nuw i32, [2 x [3 x [4 x i32]]]* %a, i32 17 ; %a[1][1][1]
+  %c0 = getelementptr inbounds nuw [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* %a, i32 0, i32 1 ; %a[1]
+  %c1 = getelementptr inbounds nuw i32, [3 x [4 x i32]]* %c0, i32 8 ; %a[1][2]
+  %c2 = getelementptr inbounds nuw i8, [4 x i32]* %c1, i32 12 ; %a[1][2][3]
+  ret void
+}
+
 ; Make sure we don't try to walk the body of a function declaration.
 declare void @opaque_function()
