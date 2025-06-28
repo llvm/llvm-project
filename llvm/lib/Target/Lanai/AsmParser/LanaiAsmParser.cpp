@@ -550,7 +550,7 @@ public:
       assert(false && "Operand type not supported.");
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case IMMEDIATE:
       OS << "Imm: " << getImm() << "\n";
