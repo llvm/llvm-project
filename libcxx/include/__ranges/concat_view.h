@@ -577,7 +577,7 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__x.__it_.valueless_by_exception(),
         "Trying to subtract a valuess iterators of concat_view from the default sentinel.");
-    __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
+    return __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
       auto __dx           = ranges::distance(ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), __x.__it_);
       difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& self) -> difference_type {
         if constexpr (__start < __end) {

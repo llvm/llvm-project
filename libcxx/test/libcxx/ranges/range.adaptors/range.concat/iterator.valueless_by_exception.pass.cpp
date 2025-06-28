@@ -101,11 +101,12 @@ public:
   template <std::size_t X, std::size_t Y>
   friend difference_type operator-(Iter<X> a, Iter<Y> b);
 
-  friend bool operator==(Iter a, Iter b) = default;
+  friend bool operator==(Iter a, Iter b) { return a.ptr_ == b.ptr_; };
   friend bool operator<(Iter a, Iter b) { return a.ptr_ < b.ptr_; }
   friend bool operator>(Iter a, Iter b) { return a.ptr_ > b.ptr_; }
   friend bool operator<=(Iter a, Iter b) { return a.ptr_ <= b.ptr_; }
   friend bool operator>=(Iter a, Iter b) { return a.ptr_ >= b.ptr_; }
+  friend auto operator<=>(Iter a, Iter b) { return a.ptr_ <=> b.ptr_; }
 };
 
 template <std::size_t X>
@@ -132,6 +133,7 @@ template <std::size_t N>
 struct Range : std::ranges::view_base {
   using iterator       = Iter<N>;
   using const_iterator = Iter<N>;
+  using sentinel       = sentinel_wrapper<iterator>;
 
   int* data_;
   std::size_t size_;
@@ -190,6 +192,22 @@ int main() {
   }
 
   {
+    // valueless by exception test operator== with a sentinel
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([=] { (void)(iter1 == std::default_sentinel); }(), "valueless by exception");
+    }
+  }
+
+  {
     // valueless by exception test operator--
     flag = false;
     Range<0> r1;
@@ -202,7 +220,7 @@ int main() {
     try {
       iter1 = std::move(iter2);
     } catch (...) {
-      TEST_LIBCPP_ASSERT_FAILURE([&] { iter1--; }(), "valueless by exception");
+      TEST_LIBCPP_ASSERT_FAILURE([&] { --iter1; }(), "valueless by exception");
     }
   }
 
@@ -237,6 +255,108 @@ int main() {
       iter1 = std::move(iter2);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { iter1 += 1; }(), "valueless by exception");
+    }
+  }
+
+  {
+    // valueless by exception test operator>
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 > iter2); }(), "valueless by exception");
+    }
+  }
+
+  {
+    // valueless by exception test operator>=
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 >= iter2); }(), "valueless by exception");
+    }
+  }
+
+  {
+    // valueless by exception test operator<
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 < iter2); }(), "valueless by exception");
+    }
+  }
+
+  {
+    // valueless by exception test operator<=
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 <= iter2); }(), "valueless by exception");
+    }
+  }
+
+  {
+    // valueless by exception test operator- between two iterators
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 - iter2); }(), "valueless by exception");
+    }
+  }
+
+  {
+    // valueless by exception test operator- with a constant
+    flag = false;
+    Range<0> r1;
+    Range<1> r2;
+
+    auto cv    = std::views::concat(r1, r2);
+    auto iter1 = cv.begin();
+    auto iter2 = std::ranges::next(cv.begin(), 4);
+    flag       = true;
+    try {
+      iter1 = std::move(iter2);
+    } catch (...) {
+      TEST_LIBCPP_ASSERT_FAILURE([&] { (void)(iter1 - 1); }(), "valueless by exception");
     }
   }
 
