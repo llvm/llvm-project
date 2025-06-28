@@ -1808,4 +1808,5 @@ def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
 // this on emscripten depending on what they end up doing.
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
-      (add DefaultRuntimeLibcallImpls, emscripten_return_address)>;
+      (add DefaultRuntimeLibcallImpls, LibCallsCompilerRT64OrLibGCC,
+           emscripten_return_address)>;
