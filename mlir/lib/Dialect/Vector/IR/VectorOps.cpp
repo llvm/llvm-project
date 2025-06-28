@@ -3252,6 +3252,19 @@ LogicalResult InsertOp::verify() {
   return success();
 }
 
+// Calculate the linearized position of the continuous chunk of elements to
+// insert, based on the shape of the value to insert and the positions to insert
+// at.
+static int64_t calculateInsertPosition(VectorType destTy,
+                                       ArrayRef<int64_t> positions) {
+  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
+  copy(positions, completePositions.begin());
+  int64_t insertBeginPosition =
+      linearize(completePositions, computeStrides(destTy.getShape()));
+
+  return insertBeginPosition;
+}
+
 namespace {
 
 // If insertOp is only inserting unit dimensions it can be transformed to a
@@ -3294,6 +3307,127 @@ public:
   }
 };
 
+/// Pattern to optimize a chain of insertions into a poison vector.
+///
+/// This pattern identifies chains of vector.insert operations that:
+/// 1. Start from an ub.poison operation.
+/// 2. Only insert values at static positions.
+/// 3. Completely initialize all elements in the resulting vector.
+/// 4. All intermediate insert operations have only one use.
+///
+/// When these conditions are met, the entire chain can be replaced with a
+/// single vector.from_elements operation.
+///
+/// Example transformation:
+///   %poison = ub.poison : vector<2xi32>
+///   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
+///   %1 = vector.insert %c2, %0[1] : i32 into vector<2xi32>
+/// ->
+///   %result = vector.from_elements %c1, %c2 : vector<2xi32>
+/// TODO: Support the case where only some elements of the poison vector are
+/// set. Currently, MLIR doesn't support partial poison vectors.
+class InsertToPoison final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(InsertOp op,
+                                PatternRewriter &rewriter) const override {
+
+    VectorType destTy = op.getDestVectorType();
+    if (destTy.isScalable())
+      return failure();
+    // Check if the result is used as the dest operand of another vector.insert
+    // Only care about the last op in a chain of insertions.
+    for (Operation *user : op.getResult().getUsers())
+      if (auto insertOp = dyn_cast<InsertOp>(user))
+        if (insertOp.getDest() == op.getResult())
+          return failure();
+
+    InsertOp firstInsertOp;
+    InsertOp previousInsertOp = op;
+    SmallVector<InsertOp> chainInsertOps;
+    while (previousInsertOp) {
+      // Dynamic position is not supported.
+      if (previousInsertOp.hasDynamicPosition())
+        return failure();
+
+      chainInsertOps.push_back(previousInsertOp);
+
+      firstInsertOp = previousInsertOp;
+      previousInsertOp = previousInsertOp.getDest().getDefiningOp<InsertOp>();
+
+      // Check that intermediate inserts have only one use to avoid an explosion
+      // of vectors.
+      if (previousInsertOp && !previousInsertOp->hasOneUse())
+        return failure();
+    }
+
+    if (!firstInsertOp.getDest().getDefiningOp<ub::PoisonOp>())
+      return failure();
+
+    // Currently, MLIR doesn't support partial poison vectors, so we can only
+    // optimize when the entire vector is completely initialized.
+    int64_t vectorSize = destTy.getNumElements();
+    int64_t initializedCount = 0;
+    SmallVector<bool> initialized(vectorSize, false);
+    SmallVector<Value> elements(vectorSize);
+
+    for (auto insertOp : chainInsertOps) {
+      // The insert op folder will fold an insert at poison index into a
+      // ub.poison, which truncates the insert chain's backward traversal.
+      if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
+        return failure();
+
+      // Calculate the linearized position for inserting elements.
+      int64_t insertBeginPosition =
+          calculateInsertPosition(destTy, insertOp.getStaticPosition());
+
+      // The valueToStore operand may be a vector or a scalar. Need to handle
+      // both cases.
+      SmallVector<Value> elementsToInsert;
+      int64_t elementsToInsertSize = 1;
+      if (auto srcVectorType =
+              llvm::dyn_cast<VectorType>(insertOp.getValueToStoreType())) {
+
+        elementsToInsertSize = srcVectorType.getNumElements();
+        elementsToInsert.reserve(elementsToInsertSize);
+        SmallVector<int64_t> strides = computeStrides(srcVectorType.getShape());
+        // Get all elements from the vector in row-major order.
+        for (int64_t linearIdx = 0; linearIdx < elementsToInsertSize;
+             linearIdx++) {
+          SmallVector<int64_t> position = delinearize(linearIdx, strides);
+          Value extractedElement = rewriter.create<vector::ExtractOp>(
+              insertOp.getLoc(), insertOp.getValueToStore(), position);
+          elementsToInsert.push_back(extractedElement);
+        }
+      } else {
+        elementsToInsert.push_back(insertOp.getValueToStore());
+      }
+
+      for (auto index :
+           llvm::seq<int64_t>(insertBeginPosition,
+                              insertBeginPosition + elementsToInsertSize)) {
+        if (initialized[index])
+          continue;
+
+        initialized[index] = true;
+        ++initializedCount;
+        elements[index] = elementsToInsert[index - insertBeginPosition];
+      }
+      // If all elements in the vector have been initialized, we can stop
+      // processing the remaining insert operations in the chain.
+      if (initializedCount == vectorSize)
+        break;
+    }
+
+    // Some positions are not initialized.
+    if (initializedCount != vectorSize)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(op, destTy, elements);
+    return success();
+  }
+};
+
 } // namespace
 
 static Attribute
@@ -3320,13 +3454,9 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
       !insertOp->hasOneUse())
     return {};
 
-  // Calculate the linearized position of the continuous chunk of elements to
-  // insert.
-  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
-  copy(insertOp.getStaticPosition(), completePositions.begin());
+  // Calculate the linearized position for inserting elements.
   int64_t insertBeginPosition =
-      linearize(completePositions, computeStrides(destTy.getShape()));
-
+      calculateInsertPosition(destTy, insertOp.getStaticPosition());
   SmallVector<Attribute> insertedValues;
   Type destEltType = destTy.getElementType();
 
@@ -3359,7 +3489,8 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
+              InsertToPoison>(context);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
