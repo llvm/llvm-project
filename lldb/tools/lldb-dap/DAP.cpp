@@ -1542,6 +1542,7 @@ void DAP::RegisterRequests() {
   RegisterRequest<StepOutRequestHandler>();
   RegisterRequest<ThreadsRequestHandler>();
   RegisterRequest<VariablesRequestHandler>();
+  RegisterRequest<WriteMemoryRequestHandler>();
 
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();
@@ -1551,4 +1552,10 @@ void DAP::RegisterRequests() {
   RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
 }
 
+void DAP::SendErrorResponse(llvm::json::Object &response,
+                            llvm::StringRef message) {
+  response["success"] = false;
+  EmplaceSafeString(response, "message", message);
+  SendJSON(llvm::json::Value(std::move(response)));
+}
 } // namespace lldb_dap
