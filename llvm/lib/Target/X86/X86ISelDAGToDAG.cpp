@@ -1139,24 +1139,62 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       break;
     }
     case ISD::VSELECT: {
-      // Replace VSELECT with non-mask conditions with with BLENDV/VPTERNLOG.
-      EVT EleVT = N->getOperand(0).getValueType().getVectorElementType();
-      if (EleVT == MVT::i1)
-        break;
-
-      assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
-      assert(N->getValueType(0).getVectorElementType() != MVT::i16 &&
-             "We can't replace VSELECT with BLENDV in vXi16!");
+      SDValue Cond = N->getOperand(0);
+      SDValue LHS = N->getOperand(1);
+      SDValue RHS = N->getOperand(2);
+      EVT CondVT = Cond.getValueType();
+      EVT CondSVT = CondVT.getVectorElementType();
+      EVT VT = N->getValueType(0);
+      SDLoc DL(N);
       SDValue R;
-      if (Subtarget->hasVLX() && CurDAG->ComputeNumSignBits(N->getOperand(0)) ==
-                                     EleVT.getSizeInBits()) {
-        R = CurDAG->getNode(X86ISD::VPTERNLOG, SDLoc(N), N->getValueType(0),
-                            N->getOperand(0), N->getOperand(1), N->getOperand(2),
-                            CurDAG->getTargetConstant(0xCA, SDLoc(N), MVT::i8));
+
+      if (CondSVT == MVT::i1) {
+        assert(Subtarget->hasAVX512() && "Expected AVX512 support!");
+        if (!Cond->hasOneUse() || !ISD::isBuildVectorAllZeros(LHS.getNode()) ||
+            ISD::isBuildVectorAllZeros(RHS.getNode()))
+          break;
+        // If this is an avx512 target we can improve the use of zero masking by
+        // swapping the operands and inverting the condition.
+        // vselect cond, zero, op = vselect not(cond), op, zero
+        auto InverseCondition = [this](SDValue Cond, const SDLoc &DL) {
+          EVT CondVT = Cond.getValueType();
+          if (Cond.getOpcode() == ISD::SETCC &&
+              !ISD::isBuildVectorAllZeros(Cond.getOperand(0).getNode())) {
+            ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+            CC = ISD::getSetCCInverse(CC, Cond.getOperand(0).getValueType());
+            return CurDAG->getSetCC(DL, CondVT, Cond.getOperand(0),
+                                    Cond.getOperand(1), CC);
+          }
+          if (Cond.getOpcode() == X86ISD::CMPM ||
+              Cond.getOpcode() == X86ISD::FSETCCM) {
+            unsigned CC = Cond.getConstantOperandVal(2);
+            return CurDAG->getNode(
+                Cond.getOpcode(), DL, CondVT, Cond.getOperand(0),
+                Cond.getOperand(1),
+                CurDAG->getTargetConstant(CC ^ 4, DL, MVT::i8));
+          }
+          return CurDAG->getNOT(DL, Cond, CondVT);
+        };
+        if (Cond.getOpcode() == ISD::INSERT_SUBVECTOR &&
+            Cond.getOperand(0).isUndef())
+          R = CurDAG->getNode(
+              ISD::INSERT_SUBVECTOR, DL, CondVT, Cond.getOperand(0),
+              InverseCondition(Cond.getOperand(1), DL), Cond.getOperand(2));
+        else
+          R = InverseCondition(Cond, DL);
+        R = CurDAG->getSelect(DL, VT, R, RHS, LHS);
       } else {
-        R = CurDAG->getNode(X86ISD::BLENDV, SDLoc(N), N->getValueType(0),
-                            N->getOperand(0), N->getOperand(1),
-                            N->getOperand(2));
+        // Replace VSELECT with non-mask conditions with BLENDV/VPTERNLOG.
+        assert(Subtarget->hasSSE41() && "Expected SSE4.1 support!");
+        assert(VT.getVectorElementType() != MVT::i16 &&
+               "We can't replace VSELECT with BLENDV in vXi16!");
+        if (Subtarget->hasVLX() &&
+            CurDAG->ComputeNumSignBits(Cond) == CondSVT.getSizeInBits()) {
+          R = CurDAG->getNode(X86ISD::VPTERNLOG, DL, VT, Cond, LHS, RHS,
+                              CurDAG->getTargetConstant(0xCA, DL, MVT::i8));
+        } else {
+          R = CurDAG->getNode(X86ISD::BLENDV, DL, VT, Cond, LHS, RHS);
+        }
       }
       --I;
       CurDAG->ReplaceAllUsesWith(N, R.getNode());

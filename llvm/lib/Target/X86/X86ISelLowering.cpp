@@ -48039,19 +48039,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Check if the first operand is all zeros and Cond type is vXi1.
-  // If this an avx512 target we can improve the use of zero masking by
-  // swapping the operands and inverting the condition.
-  if (N->getOpcode() == ISD::VSELECT && Cond.hasOneUse() &&
-      Subtarget.hasAVX512() && CondVT.getVectorElementType() == MVT::i1 &&
-      ISD::isBuildVectorAllZeros(LHS.getNode()) &&
-      !ISD::isBuildVectorAllZeros(RHS.getNode())) {
-    // Invert the cond to not(cond) : xor(op,allones)=not(op)
-    SDValue CondNew = DAG.getNOT(DL, Cond, CondVT);
-    // Vselect cond, op1, op2 = Vselect not(cond), op2, op1
-    return DAG.getSelect(DL, VT, CondNew, RHS, LHS);
-  }
-
   // Attempt to convert a (vXi1 bitcast(iX Cond)) selection mask before it might
   // get split by legalization.
   if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::BITCAST &&
@@ -48115,33 +48102,35 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     return V;
 
   // select(~Cond, X, Y) -> select(Cond, Y, X)
-  if (CondVT.getScalarType() != MVT::i1) {
+  // Limit vXi1 cases to AVX512 canonicalization of zero mask to the RHS.
+  if (CondVT.getScalarType() != MVT::i1 ||
+      (ISD::isBuildVectorAllZeros(LHS.getNode()) &&
+       !ISD::isBuildVectorAllZeros(RHS.getNode())))
     if (SDValue CondNot = IsNOT(Cond, DAG))
       return DAG.getNode(N->getOpcode(), DL, VT,
                          DAG.getBitcast(CondVT, CondNot), RHS, LHS);
 
-    // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
-    if (Cond.getOpcode() == X86ISD::PCMPEQ &&
-        Cond.getOperand(0).getOpcode() == ISD::AND &&
-        ISD::isBuildVectorAllZeros(Cond.getOperand(1).getNode()) &&
-        isConstantPowerOf2(Cond.getOperand(0).getOperand(1),
-                           Cond.getScalarValueSizeInBits(),
-                           /*AllowUndefs=*/true) &&
-        Cond.hasOneUse()) {
-      Cond = DAG.getNode(X86ISD::PCMPEQ, DL, CondVT, Cond.getOperand(0),
-                         Cond.getOperand(0).getOperand(1));
-      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
-    }
+  // select(pcmpeq(and(X,Pow2),0),A,B) -> select(pcmpeq(and(X,Pow2),Pow2),B,A)
+  if (Cond.getOpcode() == X86ISD::PCMPEQ &&
+      Cond.getOperand(0).getOpcode() == ISD::AND &&
+      ISD::isBuildVectorAllZeros(Cond.getOperand(1).getNode()) &&
+      isConstantPowerOf2(Cond.getOperand(0).getOperand(1),
+                         Cond.getScalarValueSizeInBits(),
+                         /*AllowUndefs=*/true) &&
+      Cond.hasOneUse()) {
+    Cond = DAG.getNode(X86ISD::PCMPEQ, DL, CondVT, Cond.getOperand(0),
+                       Cond.getOperand(0).getOperand(1));
+    return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
+  }
 
-    // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
-    // signbit.
-    if (Cond.getOpcode() == X86ISD::PCMPGT &&
-        ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode()) &&
-        Cond.hasOneUse()) {
-      Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
-                         DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
-      return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
-    }
+  // pcmpgt(X, -1) -> pcmpgt(0, X) to help select/blendv just use the
+  // signbit.
+  if (Cond.getOpcode() == X86ISD::PCMPGT &&
+      ISD::isBuildVectorAllOnes(Cond.getOperand(1).getNode()) &&
+      Cond.hasOneUse()) {
+    Cond = DAG.getNode(X86ISD::PCMPGT, DL, CondVT,
+                       DAG.getConstant(0, DL, CondVT), Cond.getOperand(0));
+    return DAG.getNode(N->getOpcode(), DL, VT, Cond, RHS, LHS);
   }
 
   // Try to optimize vXi1 selects if both operands are either all constants or
