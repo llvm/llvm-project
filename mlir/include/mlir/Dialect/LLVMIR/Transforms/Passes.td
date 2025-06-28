@@ -45,6 +45,14 @@ def LLVMRequestCWrappersPass
   }];
 }
 
+def LLVMDataLayoutFromTarget : Pass<"llvm-data-layout-from-target", "::mlir::ModuleOp"> {
+  let summary = "TODO";
+  let dependentDialects = ["mlir::DLTIDialect"];
+  let description = [{
+  TODO
+  }];
+}
+
 def NVVMOptimizeForTargetPass : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
 }
