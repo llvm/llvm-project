@@ -79,17 +79,6 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-  // zero
-  if (LIBC_UNLIKELY(x_abs == 0.0f16)) {
-    return 0.0f16;
-  }
-
-  // +/-1.0
-  // if x is +/-1.0, return +/-0.5
-  if (LIBC_UNLIKELY(x_abs == 1.0f16)) {
-    return fputil::cast<float16>(__signed_result(ONE_OVER_TWO));
-  }
-
   // the coefficients for the polynomial approximation of asin(x)/pi in the
   // range [0, 0.5] extracted using python-sympy
   //
@@ -101,6 +90,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   //
   // OUTPUT:
   //
+  // 
   // 0.318309886183791*x + 0.0530516476972984*x**3 + 0.0238732414637843*x**5 +
   // 0.0142102627760621*x**7 + 0.00967087327815336*x**9 +
   // 0.00712127941391293*x**11 + 0.00552355646848375*x**13 +
