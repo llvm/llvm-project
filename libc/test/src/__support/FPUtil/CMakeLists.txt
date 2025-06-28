@@ -38,3 +38,15 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.rounding_mode
 )
+
+add_fp_unittest(
+  comparison_operations_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    comparison_operations_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    # libc.src.__support.FPUtil.comparison_operations
+)
+
