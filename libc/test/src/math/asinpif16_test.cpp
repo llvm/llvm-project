@@ -82,7 +82,8 @@ TEST_F(LlvmLibcAsinpif16Test, SymmetryProperty) {
       float16 pos_result = LIBC_NAMESPACE::asinpif16(x);
       float16 neg_result = LIBC_NAMESPACE::asinpif16(-x);
 
-      EXPECT_FP_EQ(pos_result, LIBC_NAMESPACE::fabs(neg_result));
+      EXPECT_FP_EQ(pos_result,
+                   static_cast<float16>(LIBC_NAMESPACE::fabs(neg_result)));
     }
   }
 }
