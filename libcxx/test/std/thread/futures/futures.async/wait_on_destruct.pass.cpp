@@ -37,7 +37,7 @@ int main(int, char**) {
     value = 4;
     (void)value;
   });
-  cond.wait(mux);
+  cond.wait(lock);
 
 
   return 0;
