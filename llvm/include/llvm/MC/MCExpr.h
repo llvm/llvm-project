@@ -134,11 +134,6 @@ public:
                                            MCValue &);
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const MCExpr &E) {
-  E.print(OS, nullptr);
-  return OS;
-}
-
 ////  Represent a constant integer expression.
 class MCConstantExpr : public MCExpr {
   int64_t Value;
