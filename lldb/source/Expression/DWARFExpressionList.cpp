@@ -64,17 +64,19 @@ DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
 
   if (func_load_addr == LLDB_INVALID_ADDRESS)
     func_load_addr = m_func_file_addr;
+  
+  // translate to file-relative PC
   lldb::addr_t file_pc = load_addr - func_load_addr + m_func_file_addr;
 
-  uint32_t idx = m_exprs.FindEntryIndexThatContains(file_pc);
-  if (idx == UINT32_MAX)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "no DWARF location list entry for PC 0x%" PRIx64, load_addr);
+  if (const auto *entry = m_exprs.FindEntryThatContains(file_pc)) {
+    AddressRange range_in_file(entry->GetRangeBase(),
+                              entry->GetRangeEnd() - entry->GetRangeBase());
+    return DWARFExpressionEntry{range_in_file, &entry->data};
+  }
 
-  const auto &entry = *m_exprs.GetEntryAtIndex(idx);
-  AddressRange range_in_file(entry.base, entry.GetRangeEnd() - entry.base);
-  return DWARFExpressionEntry{range_in_file, &entry.data};
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      "no DWARF location list entry for PC 0x%" PRIx64, load_addr);
 }
 
 const DWARFExpression *
