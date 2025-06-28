@@ -9,7 +9,6 @@
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03
 
-
 // <future>
 
 // template <class F, class... Args>
