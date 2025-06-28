@@ -97,6 +97,7 @@ struct AllocInfo {
 // Global shared state for liboffload
 struct OffloadContext;
 static OffloadContext *OffloadContextVal;
+std::mutex OffloadContextValMutex;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
   OffloadContext(OffloadContext &&) = delete;
@@ -107,6 +108,7 @@ struct OffloadContext {
   bool ValidationEnabled = true;
   DenseMap<void *, AllocInfo> AllocInfoMap{};
   SmallVector<ol_platform_impl_t, 4> Platforms{};
+  size_t RefCount;
 
   ol_device_handle_t HostDevice() {
     // The host platform is always inserted last
@@ -146,19 +148,19 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #include "Shared/Targets.def"
 
 Error initPlugins() {
-  auto *Context = new OffloadContext{};
+  auto &Context = OffloadContext::get();
 
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Context->Platforms.emplace_back(ol_platform_impl_t{                        \
+    Context.Platforms.emplace_back(ol_platform_impl_t{                         \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()),               \
         pluginNameToBackend(#Name)});                                          \
   } while (false);
 #include "Shared/Targets.def"
 
   // Preemptively initialize all devices in the plugin
-  for (auto &Platform : Context->Platforms) {
+  for (auto &Platform : Context.Platforms) {
     // Do not use the host plugin - it isn't supported.
     if (Platform.BackendType == OL_PLATFORM_BACKEND_UNKNOWN)
       continue;
@@ -178,31 +180,54 @@ Error initPlugins() {
   }
 
   // Add the special host device
-  auto &HostPlatform = Context->Platforms.emplace_back(
+  auto &HostPlatform = Context.Platforms.emplace_back(
       ol_platform_impl_t{nullptr, OL_PLATFORM_BACKEND_HOST});
   HostPlatform.Devices.emplace_back(-1, nullptr, nullptr, InfoTreeNode{});
-  Context->HostDevice()->Platform = &HostPlatform;
+  Context.HostDevice()->Platform = &HostPlatform;
 
-  Context->TracingEnabled = std::getenv("OFFLOAD_TRACE");
-  Context->ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
-
-  OffloadContextVal = Context;
+  Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
+  Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 
   return Plugin::success();
 }
 
-// TODO: We can properly reference count here and manage the resources in a more
-// clever way
 Error olInit_impl() {
-  static std::once_flag InitFlag;
-  std::optional<Error> InitResult{};
-  std::call_once(InitFlag, [&] { InitResult = initPlugins(); });
+  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+
+  std::optional<Error> InitResult;
+  if (!isOffloadInitialized()) {
+    OffloadContextVal = new OffloadContext{};
+    InitResult = initPlugins();
+  }
+
+  OffloadContext::get().RefCount++;
 
   if (InitResult)
     return std::move(*InitResult);
   return Error::success();
 }
-Error olShutDown_impl() { return Error::success(); }
+
+Error olShutDown_impl() {
+  std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
+
+  if (--OffloadContext::get().RefCount != 0)
+    return Error::success();
+
+  llvm::Error Result = Error::success();
+
+  for (auto &P : OffloadContext::get().Platforms) {
+    // Host plugin is nullptr and has no deinit
+    if (!P.Plugin)
+      continue;
+
+    if (auto Res = P.Plugin->deinit())
+      Result = llvm::joinErrors(std::move(Result), std::move(Res));
+  }
+  delete OffloadContextVal;
+  OffloadContextVal = nullptr;
+
+  return Result;
+}
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,

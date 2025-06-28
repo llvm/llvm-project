@@ -176,7 +176,7 @@ def : Function {
   let desc = "Release the resources in use by Offload";
   let details = [
     "This decrements an internal reference count. When this reaches 0, all resources will be released",
-    "Subsequent API calls made after this are not valid"
+    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED"
   ];
   let params = [];
   let returns = [];
