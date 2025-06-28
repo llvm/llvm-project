@@ -62,7 +62,7 @@ bool MCOperand::isBareSymbolRef() const {
   const MCExpr *Expr = getExpr();
   MCExpr::ExprKind Kind = getExpr()->getKind();
   return Kind == MCExpr::SymbolRef &&
-    cast<MCSymbolRefExpr>(Expr)->getKind() == MCSymbolRefExpr::VK_None;
+         cast<MCSymbolRefExpr>(Expr)->getSpecifier() == 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

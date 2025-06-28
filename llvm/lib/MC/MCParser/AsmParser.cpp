@@ -1353,7 +1353,7 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
-    if (SRE->getKind() != MCSymbolRefExpr::VK_None) {
+    if (SRE->getSpecifier()) {
       TokError("invalid variant on expression '" + getTok().getIdentifier() +
                "' (already modified)");
       return E;

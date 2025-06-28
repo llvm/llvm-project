@@ -91,7 +91,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
     Sym.print(OS, MAI);
 
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
-    if (Kind != MCSymbolRefExpr::VK_None) {
+    if (Kind) {
       if (!MAI) // should only be used by dump()
         OS << "@<variant " << Kind << '>';
       else if (MAI->useParensForSpecifier()) // ARM
@@ -487,8 +487,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       }
       return false;
     }
-    if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
-        !Sym.isWeakExternal()) {
+    if (Sym.isVariable() && (Kind == 0 || Layout) && !Sym.isWeakExternal()) {
       Sym.setIsResolving(true);
       auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
@@ -502,7 +501,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       auto *A = Res.getAddSym();
       auto *B = Res.getSubSym();
       if (InSet || !(A && !B && A->isInSection())) {
-        if (Kind != MCSymbolRefExpr::VK_None) {
+        if (Kind) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(&Sym, nullptr, 0, Kind);
             return true;
@@ -510,8 +509,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           // If the reference has a variant kind, we can only handle expressions
           // which evaluate exactly to a single unadorned symbol. Attach the
           // original VariantKind to SymA of the result.
-          if (Res.getSpecifier() != MCSymbolRefExpr::VK_None ||
-              !Res.getAddSym() || Res.getSubSym() || Res.getConstant())
+          if (Res.getSpecifier() || !Res.getAddSym() || Res.getSubSym() ||
+              Res.getConstant())
             return false;
           Res.Specifier = Kind;
         }
