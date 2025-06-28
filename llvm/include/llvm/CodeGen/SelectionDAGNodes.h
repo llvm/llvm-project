@@ -1937,6 +1937,11 @@ LLVM_ABI bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 /// Does not permit build vector implicit truncation.
 LLVM_ABI bool isAllOnesOrAllOnesSplat(SDValue V, bool AllowUndefs = false);
 
+/// Returns the demanded elements from the mask of a masked op (i.e
+/// MSTORE/MLOAD).
+APInt getDemandedEltsForMaskedOp(SDValue Mask, unsigned NumElts,
+                                 SmallVector<SDValue> *MaskEltsOut = nullptr);
+
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {
   return isa<ConstantSDNode>(V) || isa<ConstantFPSDNode>(V);
