@@ -77,8 +77,10 @@ protected:
   const unsigned ArrayIndexWidth;
 
 public:
-  SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
-              ProgramStateManager &stateMgr);
+  SValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
+              llvm::BumpPtrAllocator &SymbolManagerAllocator,
+              llvm::BumpPtrAllocator &MemRegionManagerAllocator,
+              ASTContext &context, ProgramStateManager &stateMgr);
 
   virtual ~SValBuilder() = default;
 
@@ -398,9 +400,11 @@ public:
                                const StackFrameContext *SFC);
 };
 
-SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,
-                                     ASTContext &context,
-                                     ProgramStateManager &stateMgr);
+SValBuilder *
+createSimpleSValBuilder(llvm::BumpPtrAllocator &BasicValueFactoryAllocator,
+                        llvm::BumpPtrAllocator &SymbolManagerAllocator,
+                        llvm::BumpPtrAllocator &MemRegionManagerAllocator,
+                        ASTContext &context, ProgramStateManager &stateMgr);
 
 } // namespace ento
 
