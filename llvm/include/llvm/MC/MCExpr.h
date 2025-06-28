@@ -193,15 +193,10 @@ public:
   // VariantKind isn't ideal for encoding relocation operators because:
   // (a) other expressions, like MCConstantExpr (e.g., 4@l) and MCBinaryExpr
   // (e.g., (a+1)@l), also need it; (b) semantics become unclear (e.g., folding
-  // expressions with @). MCTargetExpr, as used by AArch64 and RISC-V, offers a
-  // cleaner approach.
+  // expressions with @). MCSpecifierExpr, as used by AArch64 and RISC-V, offers
+  // a cleaner approach.
   enum VariantKind : uint16_t {
-    VK_None,
-
-    VK_SECREL,
-    VK_WEAKREF, // The link between the symbols in .weakref foo, bar
-
-    VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
+    VK_COFF_IMGREL32 = 3, // symbol@imgrel (image-relative)
 
     FirstTargetSpecifier,
   };
@@ -219,7 +214,7 @@ public:
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx,
                                        SMLoc Loc = SMLoc()) {
-    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
+    return MCSymbolRefExpr::create(Symbol, 0, Ctx, Loc);
   }
 
   LLVM_ABI static const MCSymbolRefExpr *create(const MCSymbol *Symbol,

@@ -21,7 +21,6 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -42,6 +41,7 @@ class LoopInfo;
 class MDNode;
 class StringRef;
 class TargetLibraryInfo;
+class IntrinsicInst;
 template <typename T> class ArrayRef;
 
 constexpr unsigned MaxAnalysisRecursionDepth = 6;
