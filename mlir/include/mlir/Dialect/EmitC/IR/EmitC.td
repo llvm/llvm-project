@@ -1644,17 +1644,14 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
     Example:
 
     ```mlir
-    // Example with an attribute:
-    emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.opaque = "another_feature"}
     // Example with no attribute:
     emitc.field @fieldName0 : !emitc.array<1xf32>
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
-      OptionalAttr<AnyAttr>:$attrs);
+  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type);
 
-  let assemblyFormat = [{ $sym_name `:` $type ($attrs^)? attr-dict}];
+  let assemblyFormat = [{ $sym_name `:` $type attr-dict}];
 
   let hasVerifier = 1;
 }
@@ -1677,6 +1674,44 @@ def EmitC_GetFieldOp
   let arguments = (ins FlatSymbolRefAttr:$field_name);
   let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
   let assemblyFormat = "$field_name `:` type($result) attr-dict";
+}
+
+def BufferMapOp
+    : EmitC_Op<"buffer_map", [Pure,
+                              DeclareOpInterfaceMethods<OpAsmOpInterface>]> {
+  let summary = "Creates a buffer map for field access";
+  let description = [{
+    The `emitc.buffer_map` operation generates a C++ std::map that maps field names
+    to their memory addresses for efficient runtime field access. This operation
+    collects fields with buffer attributes and creates the necessary lookup 
+    infrastructure.
+
+    Example:
+
+    ```mlir
+    emitc.buffer_map [ @field1, @field2, @field3 ]
+    ```
+
+    This generates C++ code like:
+
+    ```cpp
+    const std::map<std::string, char*> _buffer_map {
+      { "some_feature", reinterpret_cast<char*>(&some_feature) },
+      { "another_feature", reinterpret_cast<char*>(&another_feature) },
+      { "input_tense", reinterpret_cast<char*>(&input_tense) }
+    };
+    
+    char* getBufferForName(const std::string& name) const {
+      auto it = _reflection_map.find(name);
+      return (it == _reflection_map.end()) ? nullptr : it->second;
+    }
+    ```
+  }];
+
+  let arguments = (ins Arg<OptionalAttr<ArrayAttr>, "field names">:$fields);
+
+  let results = (outs);
+  let assemblyFormat = "$fields attr-dict";
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

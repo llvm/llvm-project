@@ -19,9 +19,10 @@ module attributes { } {
 
 // CHECK: module {
 // CHECK-NEXT:   emitc.class @modelClass {
-// CHECK-NEXT:     emitc.field @fieldName0 : !emitc.array<1xf32> {emitc.name_hint = "another_feature"}
-// CHECK-NEXT:     emitc.field @fieldName1 : !emitc.array<1xf32>  {emitc.name_hint = "some_feature"}
-// CHECK-NEXT:     emitc.field @fieldName2 : !emitc.array<1xf32>  {emitc.name_hint = "output_0"}
+// CHECK-NEXT:     emitc.field @fieldName0 : !emitc.array<1xf32> 
+// CHECK-NEXT:     emitc.field @fieldName1 : !emitc.array<1xf32>  
+// CHECK-NEXT:     emitc.field @fieldName2 : !emitc.array<1xf32>  
+// CHECK-NEXT:     emitc.buffer_map ["another_feature", "some_feature", "output_0"]
 // CHECK-NEXT:     emitc.func @execute() {
 // CHECK-NEXT:       get_field @fieldName0 : !emitc.array<1xf32>
 // CHECK-NEXT:       get_field @fieldName1 : !emitc.array<1xf32>
