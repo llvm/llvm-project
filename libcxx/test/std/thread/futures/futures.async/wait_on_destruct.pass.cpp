@@ -22,17 +22,18 @@
 #include <mutex>
 
 std::mutex mux;
+std::atomic<bool> in_async = false;
 
 int main(int, char**) {
   using namespace std::chrono_literals;
   std::unique_lock lock(mux);
-  std::atomic<bool> in_async = false;
+
   auto v                     = std::async(std::launch::async, [&in_async, value = 1]() mutable {
     in_async = true;
     in_async.notify_all();
     std::scoped_lock thread_lock(mux);
     value = 4;
-    (void)value;
+    return value;
   });
   in_async.wait(true);
   lock.unlock();
