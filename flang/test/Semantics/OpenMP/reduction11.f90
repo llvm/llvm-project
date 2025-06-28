@@ -12,7 +12,7 @@ program omp_reduction
 
   ! CHECK: OtherConstruct scope
   ! CHECK: i (OmpPrivate, OmpPreDetermined): HostAssoc
-  ! CHECK: k (OmpReduction): HostAssoc
+  ! CHECK: k (OmpReduction, OmpExplicit): HostAssoc
   ! CHECK: max, INTRINSIC: ProcEntity
   !$omp parallel do  reduction(max:k)
   do i=1,10

@@ -12,9 +12,9 @@
 
 #include "ReductionProcessor.h"
 
-#include "PrivateReductionUtils.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/Support/PrivateReductionUtils.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
@@ -25,6 +25,7 @@
 #include "flang/Parser/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Support/CommandLine.h"
+#include <type_traits>
 
 static llvm::cl::opt<bool> forceByrefReduction(
     "force-byref-reduction",
@@ -37,6 +38,37 @@ using ReductionModifier =
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+// explicit template declarations
+template void
+ReductionProcessor::processReductionArguments<omp::clause::Reduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::Reduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod);
+
+template void
+ReductionProcessor::processReductionArguments<omp::clause::TaskReduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::TaskReduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod);
+
+template void
+ReductionProcessor::processReductionArguments<omp::clause::InReduction>(
+    mlir::Location currentLocation, lower::AbstractConverter &converter,
+    const omp::clause::InReduction &reduction,
+    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    llvm::SmallVectorImpl<bool> &reduceVarByRef,
+    llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    mlir::omp::ReductionModifierAttr *reductionMod);
 
 ReductionProcessor::ReductionIdentifier ReductionProcessor::getReductionType(
     const omp::clause::ProcedureDesignator &pd) {
@@ -357,7 +389,8 @@ static void genBoxCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   hlfir::LoopNest nest = hlfir::genLoopNest(
       loc, builder, shapeShift.getExtents(), /*isUnordered=*/true);
   builder.setInsertionPointToStart(nest.body);
-  mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+  const bool seqIsVolatile = fir::isa_volatile_type(seqTy.getEleTy());
+  mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy(), seqIsVolatile);
   auto lhsEleAddr = builder.create<fir::ArrayCoorOp>(
       loc, refTy, lhs, shapeShift, /*slice=*/mlir::Value{},
       nest.oneBasedIndices, /*typeparms=*/mlir::ValueRange{});
@@ -538,28 +571,30 @@ mlir::omp::ReductionModifier translateReductionModifier(ReductionModifier mod) {
   return mlir::omp::ReductionModifier::defaultmod;
 }
 
+template <class T>
 void ReductionProcessor::processReductionArguments(
     mlir::Location currentLocation, lower::AbstractConverter &converter,
-    const omp::clause::Reduction &reduction,
-    llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+    const T &reduction, llvm::SmallVectorImpl<mlir::Value> &reductionVars,
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-    mlir::omp::ReductionModifierAttr &reductionMod) {
+    mlir::omp::ReductionModifierAttr *reductionMod) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  auto mod = std::get<std::optional<ReductionModifier>>(reduction.t);
-  if (mod.has_value()) {
-    if (mod.value() == ReductionModifier::Task)
-      TODO(currentLocation, "Reduction modifier `task` is not supported");
-    else
-      reductionMod = mlir::omp::ReductionModifierAttr::get(
-          firOpBuilder.getContext(), translateReductionModifier(mod.value()));
+  if constexpr (std::is_same_v<T, omp::clause::Reduction>) {
+    auto mod = std::get<std::optional<ReductionModifier>>(reduction.t);
+    if (mod.has_value()) {
+      if (mod.value() == ReductionModifier::Task)
+        TODO(currentLocation, "Reduction modifier `task` is not supported");
+      else
+        *reductionMod = mlir::omp::ReductionModifierAttr::get(
+            firOpBuilder.getContext(), translateReductionModifier(mod.value()));
+    }
   }
 
   mlir::omp::DeclareReductionOp decl;
   const auto &redOperatorList{
-      std::get<omp::clause::Reduction::ReductionIdentifiers>(reduction.t)};
+      std::get<typename T::ReductionIdentifiers>(reduction.t)};
   assert(redOperatorList.size() == 1 && "Expecting single operator");
   const auto &redOperator = redOperatorList.front();
   const auto &objectList{std::get<omp::ObjectList>(reduction.t)};
@@ -625,7 +660,8 @@ void ReductionProcessor::processReductionArguments(
     assert(fir::isa_ref_type(symVal.getType()) &&
            "reduction input var is passed by reference");
     mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
-    mlir::Type refTy = fir::ReferenceType::get(elementType);
+    const bool symIsVolatile = fir::isa_volatile_type(symVal.getType());
+    mlir::Type refTy = fir::ReferenceType::get(elementType, symIsVolatile);
 
     reductionVars.push_back(
         builder.createConvert(currentLocation, refTy, symVal));

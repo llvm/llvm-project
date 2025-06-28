@@ -38,6 +38,7 @@
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -53,7 +54,6 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
@@ -79,6 +79,7 @@
 
 using namespace llvm;
 using namespace PatternMatch;
+using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "indvars"
 
@@ -406,9 +407,7 @@ bool IndVarSimplify::rewriteNonIntegerIVs(Loop *L) {
   // the SCEV routines.
   BasicBlock *Header = L->getHeader();
 
-  SmallVector<WeakTrackingVH, 8> PHIs;
-  for (PHINode &PN : Header->phis())
-    PHIs.push_back(&PN);
+  SmallVector<WeakTrackingVH, 8> PHIs(llvm::make_pointer_range(Header->phis()));
 
   bool Changed = false;
   for (WeakTrackingVH &PHI : PHIs)
@@ -808,12 +807,8 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
   if (!SE->isSCEVable(Phi->getType()))
     return false;
 
-  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(Phi));
-  if (!AR || AR->getLoop() != L || !AR->isAffine())
-    return false;
-
-  const SCEV *Step = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*SE));
-  if (!Step || !Step->isOne())
+  const SCEV *S = SE->getSCEV(Phi);
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L))))
     return false;
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
@@ -1511,6 +1506,9 @@ bool IndVarSimplify::canonicalizeExitCondition(Loop *L) {
       auto *NewRHS = CastInst::Create(
           Instruction::Trunc, RHS, LHSOp->getType(), "",
           L->getLoopPreheader()->getTerminator()->getIterator());
+      // NewRHS is an operation that has been hoisted out of the loop, and
+      // therefore should have a dropped location.
+      NewRHS->setDebugLoc(DebugLoc::getDropped());
       ICmp->setOperand(Swapped ? 1 : 0, LHSOp);
       ICmp->setOperand(Swapped ? 0 : 1, NewRHS);
       // Samesign flag cannot be preserved after narrowing the compare.

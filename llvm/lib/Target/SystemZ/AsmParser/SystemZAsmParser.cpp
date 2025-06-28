@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/SystemZGNUInstPrinter.h"
 #include "MCTargetDesc/SystemZMCAsmInfo.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "MCTargetDesc/SystemZTargetStreamer.h"
 #include "TargetInfo/SystemZTargetInfo.h"
@@ -22,7 +21,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
@@ -31,8 +30,10 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -410,6 +411,12 @@ class SystemZAsmParser : public MCTargetAsmParser {
 
 private:
   MCAsmParser &Parser;
+
+  // A vector to contain the stack of FeatureBitsets created by `.machine push`.
+  // `.machine pop` pops the top of the stack and uses `setAvailableFeatures` to
+  // apply the result.
+  SmallVector<FeatureBitset> MachineStack;
+
   enum RegisterGroup {
     RegGR,
     RegFP,
@@ -494,9 +501,8 @@ private:
 
 public:
   SystemZAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                   const MCInstrInfo &MII,
-                   const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
+                   const MCInstrInfo &MII, const MCTargetOptions &Options)
+      : MCTargetAsmParser(Options, sti, MII), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Alias the .word directive to .short.
@@ -1382,16 +1388,32 @@ bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
       Parser.getTok().isNot(AsmToken::String))
     return TokError("unexpected token in '.machine' directive");
 
-  StringRef CPU = Parser.getTok().getIdentifier();
+  StringRef Id = Parser.getTok().getIdentifier();
+  SMLoc IdLoc = Parser.getTok().getLoc();
+
   Parser.Lex();
   if (parseEOL())
     return true;
 
-  MCSubtargetInfo &STI = copySTI();
-  STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
-  setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
-
-  getTargetStreamer().emitMachine(CPU);
+  // Parse push and pop directives first
+  if (Id == "push") {
+    // Push the Current FeatureBitSet onto the stack.
+    MachineStack.push_back(getAvailableFeatures());
+  } else if (Id == "pop") {
+    // If the stack is not empty pop the topmost FeatureBitset and use it.
+    if (MachineStack.empty())
+      return Error(IdLoc,
+                   "pop without corresponding push in '.machine' directive");
+    setAvailableFeatures(MachineStack.back());
+    MachineStack.pop_back();
+  } else {
+    // Try to interpret the Identifier as a CPU spec and derive the
+    // FeatureBitset from that.
+    MCSubtargetInfo &STI = copySTI();
+    STI.setDefaultFeatures(Id, /*TuneCPU*/ Id, "");
+    setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+  }
+  getTargetStreamer().emitMachine(Id);
 
   return false;
 }
@@ -1685,12 +1707,12 @@ ParseStatus SystemZAsmParser::parsePCRel(OperandVector &Operands,
     if (Parser.getTok().isNot(AsmToken::Identifier))
       return Error(Parser.getTok().getLoc(), "unexpected token");
 
-    SystemZMCExpr::Specifier Kind = SystemZMCExpr::VK_None;
+    auto Kind = SystemZ::S_None;
     StringRef Name = Parser.getTok().getString();
     if (Name == "tls_gdcall")
-      Kind = SystemZMCExpr::VK_TLSGD;
+      Kind = SystemZ::S_TLSGD;
     else if (Name == "tls_ldcall")
-      Kind = SystemZMCExpr::VK_TLSLDM;
+      Kind = SystemZ::S_TLSLDM;
     else
       return Error(Parser.getTok().getLoc(), "unknown TLS tag");
     Parser.Lex();
@@ -1763,6 +1785,7 @@ bool SystemZAsmParser::isLabel(AsmToken &Token) {
 
 // Force static initialization.
 // NOLINTNEXTLINE(readability-identifier-naming)
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSystemZAsmParser() {
   RegisterMCAsmParser<SystemZAsmParser> X(getTheSystemZTarget());
 }

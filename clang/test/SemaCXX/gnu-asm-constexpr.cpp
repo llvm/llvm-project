@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -triple x86_64-gnu-linux
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++26 -triple x86_64-gnu-linux -fexperimental-new-constant-interpreter
 
 template <bool Leak>
 struct RAIIBase {

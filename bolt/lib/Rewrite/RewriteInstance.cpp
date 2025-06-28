@@ -626,6 +626,9 @@ Error RewriteInstance::discoverStorage() {
     NextAvailableAddress += BC->PageAlign;
   }
 
+  NewTextSegmentAddress = NextAvailableAddress;
+  NewTextSegmentOffset = NextAvailableOffset;
+
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
@@ -652,6 +655,8 @@ Error RewriteInstance::discoverStorage() {
 
     PHDRTableAddress = NextAvailableAddress;
     PHDRTableOffset = NextAvailableOffset;
+    NewTextSegmentAddress = NextAvailableAddress;
+    NewTextSegmentOffset = NextAvailableOffset;
 
     // Reserve space for 3 extra pheaders.
     unsigned Phnum = Obj.getHeader().e_phnum;
@@ -664,14 +669,12 @@ Error RewriteInstance::discoverStorage() {
 
     NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
     NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
+
+    // Align at cache line.
+    NextAvailableAddress = alignTo(NextAvailableAddress, 64);
+    NextAvailableOffset = alignTo(NextAvailableOffset, 64);
   }
 
-  // Align at cache line.
-  NextAvailableAddress = alignTo(NextAvailableAddress, 64);
-  NextAvailableOffset = alignTo(NextAvailableOffset, 64);
-
-  NewTextSegmentAddress = NextAvailableAddress;
-  NewTextSegmentOffset = NextAvailableOffset;
   BC->LayoutStartAddress = NextAvailableAddress;
 
   // Tools such as objcopy can strip section contents but leave header
@@ -780,14 +783,6 @@ void RewriteInstance::discoverFileObjects() {
 
   // For local symbols we want to keep track of associated FILE symbol name for
   // disambiguation by combined name.
-  StringRef FileSymbolName;
-  bool SeenFileName = false;
-  struct SymbolRefHash {
-    size_t operator()(SymbolRef const &S) const {
-      return std::hash<decltype(DataRefImpl::p)>{}(S.getRawDataRefImpl().p);
-    }
-  };
-  std::unordered_map<SymbolRef, StringRef, SymbolRefHash> SymbolToFileName;
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     Expected<StringRef> NameOrError = Symbol.getName();
     if (NameOrError && NameOrError->starts_with("__asan_init")) {
@@ -806,21 +801,8 @@ void RewriteInstance::discoverFileObjects() {
     if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Undefined)
       continue;
 
-    if (cantFail(Symbol.getType()) == SymbolRef::ST_File) {
+    if (cantFail(Symbol.getType()) == SymbolRef::ST_File)
       FileSymbols.emplace_back(Symbol);
-      StringRef Name =
-          cantFail(std::move(NameOrError), "cannot get symbol name for file");
-      // Ignore Clang LTO artificial FILE symbol as it is not always generated,
-      // and this uncertainty is causing havoc in function name matching.
-      if (Name == "ld-temp.o")
-        continue;
-      FileSymbolName = Name;
-      SeenFileName = true;
-      continue;
-    }
-    if (!FileSymbolName.empty() &&
-        !(cantFail(Symbol.getFlags()) & SymbolRef::SF_Global))
-      SymbolToFileName[Symbol] = FileSymbolName;
   }
 
   // Sort symbols in the file by value. Ignore symbols from non-allocatable
@@ -968,8 +950,9 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    // Ignore input hot markers
-    if (SymName == "__hot_start" || SymName == "__hot_end")
+    // Ignore input hot markers unless in heatmap mode
+    if ((SymName == "__hot_start" || SymName == "__hot_end") &&
+        !opts::HeatmapMode)
       continue;
 
     FileSymRefs.emplace(SymbolAddress, Symbol);
@@ -1027,14 +1010,14 @@ void RewriteInstance::discoverFileObjects() {
       // The <id> field is used for disambiguation of local symbols since there
       // could be identical function names coming from identical file names
       // (e.g. from different directories).
-      std::string AltPrefix;
-      auto SFI = SymbolToFileName.find(Symbol);
-      if (SymbolType == SymbolRef::ST_Function && SFI != SymbolToFileName.end())
-        AltPrefix = Name + "/" + std::string(SFI->second);
+      auto SFI = llvm::upper_bound(FileSymbols, ELFSymbolRef(Symbol));
+      if (SymbolType == SymbolRef::ST_Function && SFI != FileSymbols.begin()) {
+        StringRef FileSymbolName = cantFail(SFI[-1].getName());
+        if (!FileSymbolName.empty())
+          AlternativeName = NR.uniquify(Name + "/" + FileSymbolName.str());
+      }
 
       UniqueName = NR.uniquify(Name);
-      if (!AltPrefix.empty())
-        AlternativeName = NR.uniquify(AltPrefix);
     }
 
     uint64_t SymbolSize = ELFSymbolRef(Symbol).getSize();
@@ -1293,7 +1276,7 @@ void RewriteInstance::discoverFileObjects() {
                              FDE->getAddressRange());
   }
 
-  BC->setHasSymbolsWithFileName(SeenFileName);
+  BC->setHasSymbolsWithFileName(FileSymbols.size());
 
   // Now that all the functions were created - adjust their boundaries.
   adjustFunctionBoundaries();
@@ -1338,6 +1321,19 @@ void RewriteInstance::discoverFileObjects() {
           BC->logBOLTErrorsAndQuitOnFatal(
               BF->markIslandDynamicRelocationAtAddress(RelAddress));
         }
+      }
+    }
+
+    // The linker may omit data markers for absolute long veneers. Introduce
+    // those markers artificially to assist the disassembler.
+    for (BinaryFunction &BF :
+         llvm::make_second_range(BC->getBinaryFunctions())) {
+      if (BF.getOneName().starts_with("__AArch64AbsLongThunk_") &&
+          BF.getSize() == 16 && !BF.getSizeOfDataInCodeAt(8)) {
+        BC->errs() << "BOLT-WARNING: missing data marker detected in veneer "
+                   << BF << '\n';
+        BF.markDataAtOffset(8);
+        BC->AddressToConstantIslandMap[BF.getAddress() + 8] = &BF;
       }
     }
   }
@@ -1453,7 +1449,8 @@ void RewriteInstance::updateRtFiniReloc() {
 }
 
 void RewriteInstance::registerFragments() {
-  if (!BC->HasSplitFunctions)
+  if (!BC->HasSplitFunctions ||
+      opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     return;
 
   // Process fragments with ambiguous parents separately as they are typically a
@@ -1551,6 +1548,11 @@ void RewriteInstance::registerFragments() {
       StopSymbol = *FSI;
 
     uint64_t ParentAddress{0};
+
+    // Check if containing FILE symbol is BOLT emitted synthetic symbol marking
+    // local fragments of global parents.
+    if (cantFail(FSI[-1].getName()) == getBOLTFileSymbolName())
+      goto registerParent;
 
     // BOLT split fragment symbols are emitted just before the main function
     // symbol.
@@ -1998,7 +2000,7 @@ Error RewriteInstance::readSpecialSections() {
           BC->getUniqueSectionByName(BoltAddressTranslation::SECTION_NAME)) {
     BC->HasBATSection = true;
     // Do not read BAT when plotting a heatmap
-    if (!opts::HeatmapMode) {
+    if (opts::HeatmapMode != opts::HeatmapModeKind::HM_Exclusive) {
       if (std::error_code EC = BAT->parse(BC->outs(), BATSec->getContents())) {
         BC->errs() << "BOLT-ERROR: failed to parse BOLT address translation "
                       "table.\n";
@@ -2037,7 +2039,7 @@ Error RewriteInstance::readSpecialSections() {
   }
 
   // Force non-relocation mode for heatmap generation
-  if (opts::HeatmapMode)
+  if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
     BC->HasRelocations = false;
 
   if (BC->HasRelocations)
@@ -2697,20 +2699,19 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                BD->nameStartsWith("_ZTCN"))) { // construction vtable
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
-      if (!BF || BF->getAddress() != SymbolAddress) {
-        BC->errs()
-            << "BOLT-ERROR: the virtual function table entry at offset 0x"
-            << Twine::utohexstr(Rel.getOffset());
-        if (BF)
-          BC->errs() << " points to the middle of a function @ 0x"
-                     << Twine::utohexstr(BF->getAddress()) << "\n";
-        else
-          BC->errs() << " does not point to any function\n";
-        exit(1);
+      if (BF) {
+        if (BF->getAddress() != SymbolAddress) {
+          BC->errs()
+              << "BOLT-ERROR: the virtual function table entry at offset 0x"
+              << Twine::utohexstr(Rel.getOffset())
+              << " points to the middle of a function @ 0x"
+              << Twine::utohexstr(BF->getAddress()) << "\n";
+          exit(1);
+        }
+        BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
+                          ExtractedValue);
+        return;
       }
-      BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
-                        ExtractedValue);
-      return;
     }
   }
 
@@ -3281,7 +3282,7 @@ void RewriteInstance::preprocessProfileData() {
     ProfileReader->setBAT(&*BAT);
   }
 
-  if (Error E = ProfileReader->preprocessProfile(*BC.get()))
+  if (Error E = ProfileReader->preprocessProfile(*BC))
     report_error("cannot pre-process profile", std::move(E));
 
   if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName() &&
@@ -3336,7 +3337,7 @@ void RewriteInstance::processProfileDataPreCFG() {
   NamedRegionTimer T("processprofile-precfg", "process profile data pre-CFG",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
 
-  if (Error E = ProfileReader->readProfilePreCFG(*BC.get()))
+  if (Error E = ProfileReader->readProfilePreCFG(*BC))
     report_error("cannot read profile pre-CFG", std::move(E));
 }
 
@@ -3347,7 +3348,7 @@ void RewriteInstance::processProfileData() {
   NamedRegionTimer T("processprofile", "process profile data", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
 
-  if (Error E = ProfileReader->readProfile(*BC.get()))
+  if (Error E = ProfileReader->readProfile(*BC))
     report_error("cannot read profile", std::move(E));
 
   if (opts::PrintProfile || opts::PrintAll) {
@@ -3432,6 +3433,7 @@ void RewriteInstance::disassembleFunctions() {
         BC->outs() << "BOLT-INFO: could not disassemble function " << Function
                    << ". Will ignore.\n";
       // Forcefully ignore the function.
+      Function.scanExternalRefs();
       Function.setIgnored();
     });
 
@@ -4134,13 +4136,8 @@ void RewriteInstance::mapAllocatableSections(
     }
 
     if (SType == ST_READONLY) {
-      if (PHDRTableAddress) {
-        // Segment size includes the size of the PHDR area.
-        NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-      } else if (NewTextSegmentAddress) {
-        // Existing PHDR table would be updated.
+      if (NewTextSegmentAddress)
         NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
-      }
     } else if (SType == ST_READWRITE) {
       NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
       // Restore NextAvailableAddress if no new writable sections
@@ -4187,12 +4184,15 @@ void RewriteInstance::patchELFPHDRTable() {
   // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
   // last segments size based on the NextAvailableAddress variable.
   if (!NewWritableSegmentSize) {
-    if (PHDRTableAddress)
-      NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-    else if (NewTextSegmentAddress)
+    if (NewTextSegmentAddress)
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+  }
+
+  if (!NewTextSegmentSize && !NewWritableSegmentSize) {
+    BC->outs() << "BOLT-INFO: not adding new segments\n";
+    return;
   }
 
   const uint64_t SavedPos = OS.tell();
@@ -4202,15 +4202,9 @@ void RewriteInstance::patchELFPHDRTable() {
     SmallVector<ELF64LEPhdrTy, 3> NewPhdrs;
     ELF64LEPhdrTy NewPhdr;
     NewPhdr.p_type = ELF::PT_LOAD;
-    if (PHDRTableAddress) {
-      NewPhdr.p_offset = PHDRTableOffset;
-      NewPhdr.p_vaddr = PHDRTableAddress;
-      NewPhdr.p_paddr = PHDRTableAddress;
-    } else {
-      NewPhdr.p_offset = NewTextSegmentOffset;
-      NewPhdr.p_vaddr = NewTextSegmentAddress;
-      NewPhdr.p_paddr = NewTextSegmentAddress;
-    }
+    NewPhdr.p_offset = NewTextSegmentOffset;
+    NewPhdr.p_vaddr = NewTextSegmentAddress;
+    NewPhdr.p_paddr = NewTextSegmentAddress;
     NewPhdr.p_filesz = NewTextSegmentSize;
     NewPhdr.p_memsz = NewTextSegmentSize;
     NewPhdr.p_flags = ELF::PF_X | ELF::PF_R;
@@ -4271,7 +4265,7 @@ void RewriteInstance::patchELFPHDRTable() {
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    if (PHDRTableAddress || NewTextSegmentSize) {
+    if (NewTextSegmentSize) {
       SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
       OS.write(reinterpret_cast<const char *>(NewPhdrs.data()),
                sizeof(ELF64LE::Phdr) * NewPhdrs.size());
@@ -4702,7 +4696,6 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   }
 
   // Assign indices to sections.
-  std::unordered_map<std::string, uint64_t> NameToIndex;
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
 

@@ -97,6 +97,9 @@ protected:
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
+                            SelectionDAG &DAG) const;
+
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
@@ -215,9 +218,8 @@ public:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
-  bool shouldReduceLoadWidth(SDNode *Load,
-                             ISD::LoadExtType ExtType,
-                             EVT ExtVT) const override;
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
+                             std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;

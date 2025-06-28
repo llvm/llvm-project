@@ -209,6 +209,14 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
             Direction = '*';
           Dep.push_back(Direction);
         }
+
+        // If the Dependence object doesn't have any information, fill the
+        // dependency vector with '*'.
+        if (D->isConfused()) {
+          assert(Dep.empty() && "Expected empty dependency vector");
+          Dep.assign(Level, '*');
+        }
+
         while (Dep.size() != Level) {
           Dep.push_back('I');
         }
@@ -227,22 +235,24 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
 // matrix by exchanging the two columns.
 static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
                                     unsigned ToIndx) {
-  for (unsigned I = 0, E = DepMatrix.size(); I < E; ++I)
-    std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
+  for (auto &Row : DepMatrix)
+    std::swap(Row[ToIndx], Row[FromIndx]);
 }
 
-// After interchanging, check if the direction vector is valid.
+// Check if a direction vector is lexicographically positive. Return true if it
+// is positive, nullopt if it is "zero", otherwise false.
 // [Theorem] A permutation of the loops in a perfect nest is legal if and only
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
-static bool isLexicographicallyPositive(std::vector<char> &DV) {
-  for (unsigned char Direction : DV) {
+static std::optional<bool>
+isLexicographicallyPositive(ArrayRef<char> DV, unsigned Begin, unsigned End) {
+  for (unsigned char Direction : DV.slice(Begin, End - Begin)) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')
       return false;
   }
-  return true;
+  return std::nullopt;
 }
 
 // Checks if it is legal to interchange 2 loops.
@@ -256,10 +266,19 @@ static bool isLegalToInterChangeLoops(CharMatrix &DepMatrix,
     // Create temporary DepVector check its lexicographical order
     // before and after swapping OuterLoop vs InnerLoop
     Cur = DepMatrix[Row];
-    if (!isLexicographicallyPositive(Cur))
+
+    // If the surrounding loops already ensure that the direction vector is
+    // lexicographically positive, nothing within the loop will be able to break
+    // the dependence. In such a case we can skip the subsequent check.
+    if (isLexicographicallyPositive(Cur, 0, OuterLoopId) == true)
+      continue;
+
+    // Check if the direction vector is lexicographically positive (or zero)
+    // for both before/after exchanged.
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
     std::swap(Cur[InnerLoopId], Cur[OuterLoopId]);
-    if (!isLexicographicallyPositive(Cur))
+    if (isLexicographicallyPositive(Cur, OuterLoopId, Cur.size()) == false)
       return false;
   }
   return true;
@@ -288,18 +307,18 @@ static void populateWorklist(Loop &L, LoopVector &LoopList) {
   LoopList.push_back(CurrentLoop);
 }
 
-static bool hasSupportedLoopDepth(SmallVectorImpl<Loop *> &LoopList,
+static bool hasSupportedLoopDepth(ArrayRef<Loop *> LoopList,
                                   OptimizationRemarkEmitter &ORE) {
   unsigned LoopNestDepth = LoopList.size();
   if (LoopNestDepth < MinLoopNestDepth || LoopNestDepth > MaxLoopNestDepth) {
     LLVM_DEBUG(dbgs() << "Unsupported depth of loop nest " << LoopNestDepth
                       << ", the supported range is [" << MinLoopNestDepth
                       << ", " << MaxLoopNestDepth << "].\n");
-    Loop **OuterLoop = LoopList.begin();
+    Loop *OuterLoop = LoopList.front();
     ORE.emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopNestDepth",
-                                      (*OuterLoop)->getStartLoc(),
-                                      (*OuterLoop)->getHeader())
+                                      OuterLoop->getStartLoc(),
+                                      OuterLoop->getHeader())
              << "Unsupported depth of loop nest, the supported range is ["
              << std::to_string(MinLoopNestDepth) << ", "
              << std::to_string(MaxLoopNestDepth) << "].\n";
@@ -356,7 +375,7 @@ public:
     return OuterInnerReductions;
   }
 
-  const SmallVectorImpl<PHINode *> &getInnerLoopInductions() const {
+  const ArrayRef<PHINode *> getInnerLoopInductions() const {
     return InnerLoopInductions;
   }
 
@@ -531,10 +550,8 @@ struct LoopInterchange {
     // For the old pass manager CacheCost would be null.
     DenseMap<const Loop *, unsigned> CostMap;
     if (CC != nullptr) {
-      const auto &LoopCosts = CC->getLoopCosts();
-      for (unsigned i = 0; i < LoopCosts.size(); i++) {
-        CostMap[LoopCosts[i].first] = i;
-      }
+      for (const auto &[Idx, Cost] : enumerate(CC->getLoopCosts()))
+        CostMap[Cost.first] = Idx;
     }
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
@@ -951,8 +968,8 @@ areInnerLoopExitPHIsSupported(Loop *InnerL, Loop *OuterL,
 static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   BasicBlock *LoopNestExit = OuterLoop->getUniqueExitBlock();
   for (PHINode &PHI : LoopNestExit->phis()) {
-    for (unsigned i = 0; i < PHI.getNumIncomingValues(); i++) {
-      Instruction *IncomingI = dyn_cast<Instruction>(PHI.getIncomingValue(i));
+    for (Value *Incoming : PHI.incoming_values()) {
+      Instruction *IncomingI = dyn_cast<Instruction>(Incoming);
       if (!IncomingI || IncomingI->getParent() != OuterLoop->getLoopLatch())
         continue;
 
@@ -1111,15 +1128,14 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
   for (BasicBlock *BB : InnerLoop->blocks()) {
     for (Instruction &Ins : *BB) {
       if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
-        unsigned NumOp = GEP->getNumOperands();
         bool FoundInnerInduction = false;
         bool FoundOuterInduction = false;
-        for (unsigned i = 0; i < NumOp; ++i) {
+        for (Value *Op : GEP->operands()) {
           // Skip operands that are not SCEV-able.
-          if (!SE->isSCEVable(GEP->getOperand(i)->getType()))
+          if (!SE->isSCEVable(Op->getType()))
             continue;
 
-          const SCEV *OperandVal = SE->getSCEV(GEP->getOperand(i));
+          const SCEV *OperandVal = SE->getSCEV(Op);
           const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(OperandVal);
           if (!AR)
             continue;
@@ -1199,8 +1215,8 @@ LoopInterchangeProfitability::isProfitablePerInstrOrderCost() {
 
 /// Return true if we can vectorize the loop specified by \p LoopId.
 static bool canVectorize(const CharMatrix &DepMatrix, unsigned LoopId) {
-  for (unsigned I = 0; I != DepMatrix.size(); I++) {
-    char Dir = DepMatrix[I][LoopId];
+  for (const auto &Dep : DepMatrix) {
+    char Dir = Dep[LoopId];
     if (Dir != 'I' && Dir != '=')
       return false;
   }
@@ -1463,7 +1479,6 @@ bool LoopInterchangeTransform::transform() {
   BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
   BasicBlock *OuterLoopHeader = OuterLoop->getHeader();
   if (InnerLoopPreHeader != OuterLoopHeader) {
-    SmallPtrSet<Instruction *, 4> NeedsMoving;
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
@@ -1512,11 +1527,8 @@ static void updateSuccessor(BranchInst *BI, BasicBlock *OldBB,
                             BasicBlock *NewBB,
                             std::vector<DominatorTree::UpdateType> &DTUpdates,
                             bool MustUpdateOnce = true) {
-  assert((!MustUpdateOnce ||
-          llvm::count_if(successors(BI),
-                         [OldBB](BasicBlock *BB) {
-                           return BB == OldBB;
-                         }) == 1) && "BI must jump to OldBB exactly once.");
+  assert((!MustUpdateOnce || llvm::count(successors(BI), OldBB) == 1) &&
+         "BI must jump to OldBB exactly once.");
   bool Changed = false;
   for (Use &Op : BI->operands())
     if (Op == OldBB) {

@@ -130,11 +130,11 @@ int llvm_test_dibuilder(void) {
   LLVMMetadataRef FooParamLocation =
     LLVMDIBuilderCreateDebugLocation(LLVMGetGlobalContext(), 42, 0,
                                      ReplaceableFunctionMetadata, NULL);
-  LLVMMetadataRef FunctionMetadata =
-    LLVMDIBuilderCreateFunction(DIB, File, "foo", 3, "foo", 3,
-                                File, 42, FunctionTy, true, true,
-                                42, 0, false);
+  LLVMMetadataRef FunctionMetadata = LLVMDIBuilderCreateFunction(
+      DIB, File, "foo", 3, "foo", 3, File, 42, NULL, true, true, 42, 0, false);
   LLVMMetadataReplaceAllUsesWith(ReplaceableFunctionMetadata, FunctionMetadata);
+
+  LLVMDISubprogramReplaceType(FunctionMetadata, FunctionTy);
 
   LLVMMetadataRef FooParamExpression =
     LLVMDIBuilderCreateExpression(DIB, NULL, 0);
@@ -214,6 +214,26 @@ int llvm_test_dibuilder(void) {
       EnumeratorsTest, 3, Int64Ty);
   LLVMAddNamedMetadataOperand(
       M, "EnumTest", LLVMMetadataAsValue(LLVMGetModuleContext(M), EnumTest));
+
+  LLVMMetadataRef UInt128Ty = LLVMDIBuilderCreateBasicType(
+      DIB, "UInt128", strlen("UInt128"), 128, 0, LLVMDIFlagZero);
+  const uint64_t WordsTestD[] = {0x098a224000000000ull, 0x4b3b4ca85a86c47aull};
+  const uint64_t WordsTestE[] = {0xFFFFFFFFFFFFFFFFull, 0xFFFFFFFFFFFFFFFFull};
+
+  LLVMMetadataRef LargeEnumeratorTestD =
+      LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+          DIB, "Test_D", strlen("Test_D"), 128, WordsTestD, false);
+  LLVMMetadataRef LargeEnumeratorTestE =
+      LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision(
+          DIB, "Test_E", strlen("Test_E"), 128, WordsTestE, false);
+  LLVMMetadataRef LargeEnumeratorsTest[] = {LargeEnumeratorTestD,
+                                            LargeEnumeratorTestE};
+  LLVMMetadataRef LargeEnumTest = LLVMDIBuilderCreateEnumerationType(
+      DIB, NameSpace, "LargeEnumTest", strlen("LargeEnumTest"), File, 0, 128, 0,
+      LargeEnumeratorsTest, 2, UInt128Ty);
+  LLVMAddNamedMetadataOperand(
+      M, "LargeEnumTest",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), LargeEnumTest));
 
   // Using the new debug format, debug records get attached to instructions.
   // Insert a `br` and `ret` now to absorb the debug records which are

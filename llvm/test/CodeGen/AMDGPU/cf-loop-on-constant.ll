@@ -473,5 +473,3 @@ for.body:
   br i1 %cond, label %for.body, label %for.exit
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

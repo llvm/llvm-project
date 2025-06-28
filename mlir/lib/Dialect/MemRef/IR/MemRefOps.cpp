@@ -68,7 +68,6 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
 OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
                                   int64_t dim) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
-  SmallVector<OpFoldResult> result;
   if (memrefType.isDynamicDim(dim))
     return builder.createOrFold<memref::DimOp>(loc, value, dim);
 
@@ -399,8 +398,9 @@ static bool isOpItselfPotentialAutomaticAllocation(Operation *op) {
 /// and is only followed by a terminator. This prevents
 /// extending the lifetime of allocations.
 static bool lastNonTerminatorInRegion(Operation *op) {
-  return op->getNextNode() == op->getBlock()->getTerminator() &&
-         llvm::hasSingleElement(op->getParentRegion()->getBlocks());
+  return op->getBlock()->mightHaveTerminator() &&
+         op->getNextNode() == op->getBlock()->getTerminator() &&
+         op->getParentRegion()->hasOneBlock();
 }
 
 /// Inline an AllocaScopeOp if either the direct parent is an allocation scope
@@ -526,6 +526,20 @@ LogicalResult AssumeAlignmentOp::verify() {
   if (!llvm::isPowerOf2_32(getAlignment()))
     return emitOpError("alignment must be power of 2");
   return success();
+}
+
+void AssumeAlignmentOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  setNameFn(getResult(), "assume_align");
+}
+
+OpFoldResult AssumeAlignmentOp::fold(FoldAdaptor adaptor) {
+  auto source = getMemref().getDefiningOp<AssumeAlignmentOp>();
+  if (!source)
+    return {};
+  if (source.getAlignment() != getAlignment())
+    return {};
+  return getMemref();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1553,11 +1567,23 @@ LogicalResult GlobalOp::verify() {
     // Check that the type of the initial value is compatible with the type of
     // the global variable.
     if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
-      Type initType = elementsAttr.getType();
-      Type tensorType = getTensorTypeFromMemRefType(memrefType);
-      if (initType != tensorType)
-        return emitOpError("initial value expected to be of type ")
-               << tensorType << ", but was of type " << initType;
+      // Check the element types match.
+      auto initElementType =
+          cast<TensorType>(elementsAttr.getType()).getElementType();
+      auto memrefElementType = memrefType.getElementType();
+
+      if (initElementType != memrefElementType)
+        return emitOpError("initial value element expected to be of type ")
+               << memrefElementType << ", but was of type " << initElementType;
+
+      // Check the shapes match, given that memref globals can only produce
+      // statically shaped memrefs and elements literal type must have a static
+      // shape we can assume both types are shaped.
+      auto initShape = elementsAttr.getShapedType().getShape();
+      auto memrefShape = memrefType.getShape();
+      if (initShape != memrefShape)
+        return emitOpError("initial value shape expected to be ")
+               << memrefShape << " but was " << initShape;
     }
   }
 
@@ -1890,9 +1916,7 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
     // are 0.
     if (auto prev = src.getDefiningOp<SubViewOp>())
-      if (llvm::all_of(prev.getMixedOffsets(), [](OpFoldResult val) {
-            return isConstantIntValue(val, 0);
-          }))
+      if (llvm::all_of(prev.getMixedOffsets(), isZeroInteger))
         return prev.getSource();
 
     return nullptr;
@@ -2009,7 +2033,7 @@ public:
       // Second, check the sizes.
       if (!llvm::equal(extractStridedMetadata.getConstifiedMixedSizes(),
                        op.getConstifiedMixedSizes()))
-          return false;
+        return false;
 
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&
@@ -2905,27 +2929,32 @@ static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
 }
 
 static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
-                                            Operation *op, Type expectedType) {
+                                            SubViewOp op, Type expectedType) {
   auto memrefType = llvm::cast<ShapedType>(expectedType);
   switch (result) {
   case SliceVerificationResult::Success:
     return success();
   case SliceVerificationResult::RankTooLarge:
     return op->emitError("expected result rank to be smaller or equal to ")
-           << "the source rank. ";
+           << "the source rank, but got " << op.getType();
   case SliceVerificationResult::SizeMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result sizes) ";
+           << " or a rank-reduced version. (mismatch of result sizes), but got "
+           << op.getType();
   case SliceVerificationResult::ElemTypeMismatch:
     return op->emitError("expected result element type to be ")
-           << memrefType.getElementType();
+           << memrefType.getElementType() << ", but got " << op.getType();
   case SliceVerificationResult::MemSpaceMismatch:
-    return op->emitError("expected result and source memory spaces to match.");
+    return op->emitError(
+               "expected result and source memory spaces to match, but got ")
+           << op.getType();
   case SliceVerificationResult::LayoutMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result layout) ";
+           << " or a rank-reduced version. (mismatch of result layout), but "
+              "got "
+           << op.getType();
   }
   llvm_unreachable("unexpected subview verification result");
 }
@@ -3286,11 +3315,9 @@ OpFoldResult SubViewOp::fold(FoldAdaptor adaptor) {
     auto srcSizes = srcSubview.getMixedSizes();
     auto sizes = getMixedSizes();
     auto offsets = getMixedOffsets();
-    bool allOffsetsZero = llvm::all_of(
-        offsets, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 0); });
+    bool allOffsetsZero = llvm::all_of(offsets, isZeroInteger);
     auto strides = getMixedStrides();
-    bool allStridesOne = llvm::all_of(
-        strides, [](OpFoldResult ofr) { return isConstantIntValue(ofr, 1); });
+    bool allStridesOne = llvm::all_of(strides, isOneInteger);
     bool allSizesSame = llvm::equal(sizes, srcSizes);
     if (allOffsetsZero && allStridesOne && allSizesSame &&
         resultMemrefType == sourceMemrefType)

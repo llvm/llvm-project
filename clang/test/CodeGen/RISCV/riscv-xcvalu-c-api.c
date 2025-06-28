@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <riscv_corev_alu.h>
 
-// CHECK-LABEL: @test_alu_slet(
+// CHECK-LABEL: @test_alu_sle(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR_I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B_ADDR_I:%.*]] = alloca i32, align 4
@@ -23,11 +23,11 @@
 // CHECK-NEXT:    [[SLE_I:%.*]] = zext i1 [[TMP4]] to i32
 // CHECK-NEXT:    ret i32 [[SLE_I]]
 //
-int test_alu_slet(int32_t a, int32_t b) {
-  return __riscv_cv_alu_slet(a, b);
+int test_alu_sle(int32_t a, int32_t b) {
+  return __riscv_cv_alu_sle(a, b);
 }
 
-// CHECK-LABEL: @test_alu_sletu(
+// CHECK-LABEL: @test_alu_sleu(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[A_ADDR_I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[B_ADDR_I:%.*]] = alloca i32, align 4
@@ -45,8 +45,8 @@ int test_alu_slet(int32_t a, int32_t b) {
 // CHECK-NEXT:    [[SLEU_I:%.*]] = zext i1 [[TMP4]] to i32
 // CHECK-NEXT:    ret i32 [[SLEU_I]]
 //
-int test_alu_sletu(uint32_t a, uint32_t b) {
-  return __riscv_cv_alu_sletu(a, b);
+int test_alu_sleu(uint32_t a, uint32_t b) {
+  return __riscv_cv_alu_sleu(a, b);
 }
 
 // CHECK-LABEL: @test_alu_min(

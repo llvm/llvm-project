@@ -11,6 +11,7 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/CodeGen.h"
@@ -57,6 +58,10 @@ protected:
 
     // RISC-V is not supported yet
     if (Triple.isRISCV())
+      GTEST_SKIP();
+
+    // ARM is not supported yet.
+    if (Triple.isARM())
       GTEST_SKIP();
 
     auto EPC = SelfExecutorProcessControl::Create();

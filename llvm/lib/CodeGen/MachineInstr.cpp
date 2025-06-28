@@ -821,8 +821,7 @@ unsigned MachineInstr::getNumExplicitOperands() const {
   if (!MCID->isVariadic())
     return NumOperands;
 
-  for (unsigned I = NumOperands, E = getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = getOperand(I);
+  for (const MachineOperand &MO : operands_impl().drop_front(NumOperands)) {
     // The operands must always be in the following order:
     // - explicit reg defs,
     // - other explicit operands (reg uses, immediates, etc.),
@@ -840,8 +839,7 @@ unsigned MachineInstr::getNumExplicitDefs() const {
   if (!MCID->isVariadic())
     return NumDefs;
 
-  for (unsigned I = NumDefs, E = getNumOperands(); I != E; ++I) {
-    const MachineOperand &MO = getOperand(I);
+  for (const MachineOperand &MO : operands_impl().drop_front(NumDefs)) {
     if (!MO.isReg() || !MO.isDef() || MO.isImplicit())
       break;
     ++NumDefs;
@@ -1196,9 +1194,9 @@ void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   assert(!DefMO.isTied() && "Def is already tied to another use");
   assert(!UseMO.isTied() && "Use is already tied to another def");
 
-  if (DefIdx < TiedMax)
+  if (DefIdx < TiedMax) {
     UseMO.TiedTo = DefIdx + 1;
-  else {
+  } else {
     // Inline asm can use the group descriptors to find tied operands,
     // statepoint tied operands are trivial to match (1-1 reg def with reg use),
     // but on normal instruction, the tied def must be within the first TiedMax
@@ -2306,7 +2304,7 @@ MachineInstrExpressionTrait::getHashValue(const MachineInstr* const &MI) {
 
     HashComponents.push_back(hash_value(MO));
   }
-  return hash_combine_range(HashComponents.begin(), HashComponents.end());
+  return hash_combine_range(HashComponents);
 }
 
 const MDNode *MachineInstr::getLocCookieMD() const {

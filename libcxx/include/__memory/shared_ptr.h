@@ -316,8 +316,10 @@ public:
 #endif
 
   // A shared_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
-  // any bookkeeping, so it's always trivially relocatable.
+  // any bookkeeping, so it's always trivially relocatable. It is also replaceable because assignment just rebinds the
+  // shared_ptr to manage a different object.
   using __trivially_relocatable _LIBCPP_NODEBUG = shared_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = shared_ptr;
 
 private:
   element_type* __ptr_;
@@ -1211,8 +1213,9 @@ public:
 #endif
 
   // A weak_ptr contains only two raw pointers which point to the heap and move constructing already doesn't require
-  // any bookkeeping, so it's always trivially relocatable.
+  // any bookkeeping, so it's always trivially relocatable. It's also replaceable for the same reason.
   using __trivially_relocatable _LIBCPP_NODEBUG = weak_ptr;
+  using __replaceable _LIBCPP_NODEBUG           = weak_ptr;
 
 private:
   element_type* __ptr_;

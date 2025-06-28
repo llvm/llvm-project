@@ -95,12 +95,11 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
   }];
 
   let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-                       Optional<AnyIntegerType>:$stream,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-                       cuf_DataAttributeAttr:$data_attr,
-                       UnitAttr:$hasStat);
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+      Optional<fir_ReferenceType>:$stream,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
+      Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
+      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
 
   let results = (outs AnyIntegerType:$stat);
 
@@ -254,24 +253,19 @@ def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
     represented by a 0 constant value.
   }];
 
-  let arguments = (ins
-    Variadic<I32>:$grid, // empty means `*`
-    Variadic<I32>:$block, // empty means `*`
-    Optional<I32>:$stream,
-    Variadic<Index>:$lowerbound,
-    Variadic<Index>:$upperbound,
-    Variadic<Index>:$step,
-    OptionalAttr<I64Attr>:$n,
-    Variadic<AnyType>:$reduceOperands,
-    OptionalAttr<ArrayAttr>:$reduceAttrs
-  );
+  let arguments = (ins Variadic<I32>:$grid, // empty means `*`
+      Variadic<I32>:$block,                 // empty means `*`
+      Optional<fir_ReferenceType>:$stream, Variadic<Index>:$lowerbound,
+      Variadic<Index>:$upperbound, Variadic<Index>:$step,
+      OptionalAttr<I64Attr>:$n, Variadic<AnyType>:$reduceOperands,
+      OptionalAttr<ArrayAttr>:$reduceAttrs);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     `<` `<` `<` custom<CUFKernelValues>($grid, type($grid)) `,` 
                 custom<CUFKernelValues>($block, type($block))
-        ( `,` `stream` `=` $stream^ )? `>` `>` `>`
+        ( `,` `stream` `=` $stream^ `:` qualified(type($stream)))? `>` `>` `>`
         ( `reduce` `(` $reduceOperands^ `:` type($reduceOperands) `:` $reduceAttrs `)` )?
         custom<CUFKernelLoopControl>($region, $lowerbound, type($lowerbound),
             $upperbound, type($upperbound), $step, type($step))

@@ -149,6 +149,10 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicWithScalarOpAtArg(ID, ScalarOpdIdx);
 
+  // Vector predication intrinsics have the EVL as the last operand.
+  if (VPIntrinsic::getVectorLengthParamPos(ID) == ScalarOpdIdx)
+    return true;
+
   switch (ID) {
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
@@ -166,7 +170,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
-    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4 || ScalarOpdIdx == 5;
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
   default:
     return false;
   }
@@ -234,6 +238,30 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
       ID == Intrinsic::sideeffect || ID == Intrinsic::pseudoprobe)
     return ID;
   return Intrinsic::not_intrinsic;
+}
+
+struct InterleaveIntrinsic {
+  Intrinsic::ID Interleave, Deinterleave;
+};
+
+static InterleaveIntrinsic InterleaveIntrinsics[] = {
+    {Intrinsic::vector_interleave2, Intrinsic::vector_deinterleave2},
+    {Intrinsic::vector_interleave3, Intrinsic::vector_deinterleave3},
+    {Intrinsic::vector_interleave4, Intrinsic::vector_deinterleave4},
+    {Intrinsic::vector_interleave5, Intrinsic::vector_deinterleave5},
+    {Intrinsic::vector_interleave6, Intrinsic::vector_deinterleave6},
+    {Intrinsic::vector_interleave7, Intrinsic::vector_deinterleave7},
+    {Intrinsic::vector_interleave8, Intrinsic::vector_deinterleave8},
+};
+
+Intrinsic::ID llvm::getInterleaveIntrinsicID(unsigned Factor) {
+  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  return InterleaveIntrinsics[Factor - 2].Interleave;
+}
+
+Intrinsic::ID llvm::getDeinterleaveIntrinsicID(unsigned Factor) {
+  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
+  return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
 
 /// Given a vector and an element number, see if the scalar value is
@@ -750,9 +778,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
   // to ensure no extra casts would need to be inserted, so every DAG
   // of connected values must have the same minimum bitwidth.
   EquivalenceClasses<Value *> ECs;
-  SmallVector<Value *, 16> Worklist;
-  SmallPtrSet<Value *, 4> Roots;
-  SmallPtrSet<Value *, 16> Visited;
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 4> Roots;
+  SmallPtrSet<Instruction *, 16> Visited;
   DenseMap<Value *, uint64_t> DBits;
   SmallPtrSet<Instruction *, 4> InstructionSet;
   MapVector<Instruction *, uint64_t> MinBWs;
@@ -786,16 +814,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
   // Now proceed breadth-first, unioning values together.
   while (!Worklist.empty()) {
-    Value *Val = Worklist.pop_back_val();
-    Value *Leader = ECs.getOrInsertLeaderValue(Val);
+    Instruction *I = Worklist.pop_back_val();
+    Value *Leader = ECs.getOrInsertLeaderValue(I);
 
-    if (!Visited.insert(Val).second)
+    if (!Visited.insert(I).second)
       continue;
-
-    // Non-instructions terminate a chain successfully.
-    if (!isa<Instruction>(Val))
-      continue;
-    Instruction *I = cast<Instruction>(Val);
 
     // If we encounter a type that is larger than 64 bits, we can't represent
     // it so bail out.
@@ -827,13 +850,19 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (isa<PHINode>(I))
       continue;
 
+    // Don't modify the types of operands of a call, as doing that would cause a
+    // signature mismatch.
+    if (isa<CallBase>(I))
+      continue;
+
     if (DBits[Leader] == ~0ULL)
       // All bits demanded, no point continuing.
       continue;
 
-    for (Value *O : cast<User>(I)->operands()) {
+    for (Value *O : I->operands()) {
       ECs.unionSets(Leader, O);
-      Worklist.push_back(O);
+      if (auto *OI = dyn_cast<Instruction>(O))
+        Worklist.push_back(OI);
     }
   }
 
@@ -874,7 +903,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (!MI)
         continue;
       Type *Ty = M->getType();
-      if (Roots.count(M))
+      if (Roots.count(MI))
         Ty = MI->getOperand(0)->getType();
 
       if (MinBW >= Ty->getScalarSizeInBits())
@@ -882,7 +911,9 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
 
       // If any of M's operands demand more bits than MinBW then M cannot be
       // performed safely in MinBW.
-      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+      auto *Call = dyn_cast<CallBase>(MI);
+      auto Ops = Call ? Call->args() : MI->operands();
+      if (any_of(Ops, [&DB, MinBW](Use &U) {
             auto *CI = dyn_cast<ConstantInt>(U);
             // For constants shift amounts, check if the shift would result in
             // poison.

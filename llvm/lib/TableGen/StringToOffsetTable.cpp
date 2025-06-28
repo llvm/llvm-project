@@ -44,8 +44,8 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS, const Twine &Name,
   bool UseChars = !EmitLongStrLiterals && AggregateString.size() > (64 * 1024);
   OS << (UseChars ? "{\n" : "\n");
 
-  llvm::ListSeparator LineSep(UseChars ? ",\n" : "\n");
-  llvm::SmallVector<StringRef> Strings(split(AggregateString, '\0'));
+  ListSeparator LineSep(UseChars ? ",\n" : "\n");
+  SmallVector<StringRef> Strings(split(AggregateString, '\0'));
   // We should always have an empty string at the start, and because these are
   // null terminators rather than separators, we'll have one at the end as
   // well. Skip the end one.
@@ -63,7 +63,7 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS, const Twine &Name,
       continue;
     }
 
-    llvm::ListSeparator CharSep(", ");
+    ListSeparator CharSep(", ");
     for (char C : Str) {
       OS << CharSep << "'";
       OS.write_escaped(StringRef(&C, 1));

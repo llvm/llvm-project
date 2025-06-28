@@ -4,7 +4,7 @@
 ## range whose low address equals the start address of the output section.
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
-# RUN: ld.lld --gdb-index --icf=all -Ttext=0x1000 %t.o -o %t
+# RUN: ld.lld --gdb-index --icf=all --image-base=0x1000 -Ttext=0x1000 %t.o -o %t
 # RUN: llvm-dwarfdump --gdb-index %t | FileCheck %s
 
 # CHECK:      Address area offset = 0x38, has 2 entries:

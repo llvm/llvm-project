@@ -31,34 +31,12 @@
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
-
-namespace mlir {
-namespace OpTrait {
-
-namespace impl {
-// These functions are out-of-line implementations of the methods in the
-// corresponding trait classes.  This avoids them being template
-// instantiated/duplicated.
-LogicalResult verifySameFirstOperandAndResultType(Operation *op);
-} // namespace impl
-
-/// This class provides verification for ops that are known to have the same
-/// first operand and result type.
-///
-template <typename ConcreteType>
-class SameFirstOperandAndResultType
-    : public TraitBase<ConcreteType, SameFirstOperandAndResultType> {
-public:
-  static llvm::LogicalResult verifyTrait(Operation *op) {
-    return impl::verifySameFirstOperandAndResultType(op);
-  }
-};
-
-} // namespace OpTrait
-} // namespace mlir
+#include "clang/CIR/MissingFeatures.h"
 
 using BuilderCallbackRef =
     llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
+using BuilderOpStateCallbackRef = llvm::function_ref<void(
+    mlir::OpBuilder &, mlir::Location, mlir::OperationState &)>;
 
 namespace cir {
 void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);

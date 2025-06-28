@@ -14,24 +14,24 @@ void Test() {
   for(int i = 5; i < 10;++i);
 
   // expected-error@+2{{OpenACC 'vector_length' clause cannot appear more than once on a 'kernels loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'vector_length' clause is here}}
 #pragma acc kernels loop vector_length(1) vector_length(2)
   for(int i = 5; i < 10;++i);
 
   // expected-error@+2{{OpenACC 'vector_length' clause cannot appear more than once on a 'parallel loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'vector_length' clause is here}}
 #pragma acc parallel loop vector_length(1) vector_length(2)
   for(int i = 5; i < 10;++i);
 
   // expected-error@+3{{OpenACC 'vector_length' clause cannot appear more than once in a 'device_type' region on a 'kernels loop' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'vector_length' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc kernels loop vector_length(1) device_type(*) vector_length(1) vector_length(2)
   for(int i = 5; i < 10;++i);
 
   // expected-error@+3{{OpenACC 'vector_length' clause cannot appear more than once in a 'device_type' region on a 'parallel loop' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'vector_length' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc parallel loop device_type(*) vector_length(1) vector_length(2)
   for(int i = 5; i < 10;++i);
 

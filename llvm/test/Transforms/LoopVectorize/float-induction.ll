@@ -1483,11 +1483,11 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC4_INTERL2-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VEC4_INTERL2:       scalar.ph:
 ; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi float [ [[DOTCAST]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; VEC4_INTERL2-NEXT:    [[BC_RESUME_VAL17:%.*]] = phi float [ [[DOTCAST]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; VEC4_INTERL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; VEC4_INTERL2:       for.body:
 ; VEC4_INTERL2-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; VEC4_INTERL2-NEXT:    [[J:%.*]] = phi float [ [[J_NEXT:%.*]], [[FOR_INC]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; VEC4_INTERL2-NEXT:    [[J:%.*]] = phi float [ [[J_NEXT:%.*]], [[FOR_INC]] ], [ [[BC_RESUME_VAL17]], [[SCALAR_PH]] ]
 ; VEC4_INTERL2-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[I]]
 ; VEC4_INTERL2-NEXT:    [[VAR1:%.*]] = load float, ptr [[VAR0]], align 4
 ; VEC4_INTERL2-NEXT:    [[VAR2:%.*]] = fcmp fast oeq float [[VAR1]], 0.000000e+00
@@ -1514,22 +1514,22 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC1_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC1_INTERL2:       vector.body:
 ; VEC1_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE3:%.*]] ]
-; VEC1_INTERL2-NEXT:    [[DOTCAST2:%.*]] = sitofp i64 [[INDEX]] to float
-; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
+; VEC1_INTERL2-NEXT:    [[DOTCAST1:%.*]] = sitofp i64 [[INDEX]] to float
+; VEC1_INTERL2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[INDEX]]
 ; VEC1_INTERL2-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
 ; VEC1_INTERL2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
-; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP9]], align 4
+; VEC1_INTERL2-NEXT:    [[TMP3:%.*]] = load float, ptr [[TMP0]], align 4
 ; VEC1_INTERL2-NEXT:    [[TMP4:%.*]] = load float, ptr [[TMP2]], align 4
 ; VEC1_INTERL2-NEXT:    [[TMP5:%.*]] = fcmp fast oeq float [[TMP3]], 0.000000e+00
 ; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = fcmp fast oeq float [[TMP4]], 0.000000e+00
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; VEC1_INTERL2:       pred.store.if:
-; VEC1_INTERL2-NEXT:    store float [[DOTCAST2]], ptr [[TMP9]], align 4
+; VEC1_INTERL2-NEXT:    store float [[DOTCAST1]], ptr [[TMP0]], align 4
 ; VEC1_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; VEC1_INTERL2:       pred.store.continue:
 ; VEC1_INTERL2-NEXT:    br i1 [[TMP6]], label [[PRED_STORE_IF2:%.*]], label [[PRED_STORE_CONTINUE3]]
 ; VEC1_INTERL2:       pred.store.if2:
-; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = fadd fast float [[DOTCAST2]], 1.000000e+00
+; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = fadd fast float [[DOTCAST1]], 1.000000e+00
 ; VEC1_INTERL2-NEXT:    store float [[TMP7]], ptr [[TMP2]], align 4
 ; VEC1_INTERL2-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; VEC1_INTERL2:       pred.store.continue3:
@@ -1541,11 +1541,11 @@ define void @non_primary_iv_float_scalar(ptr %A, i64 %N) {
 ; VEC1_INTERL2-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; VEC1_INTERL2:       scalar.ph:
 ; VEC1_INTERL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; VEC1_INTERL2-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi float [ [[DOTCAST]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
+; VEC1_INTERL2-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi float [ [[DOTCAST]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; VEC1_INTERL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; VEC1_INTERL2:       for.body:
 ; VEC1_INTERL2-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; VEC1_INTERL2-NEXT:    [[J:%.*]] = phi float [ [[J_NEXT:%.*]], [[FOR_INC]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; VEC1_INTERL2-NEXT:    [[J:%.*]] = phi float [ [[J_NEXT:%.*]], [[FOR_INC]] ], [ [[BC_RESUME_VAL4]], [[SCALAR_PH]] ]
 ; VEC1_INTERL2-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[I]]
 ; VEC1_INTERL2-NEXT:    [[VAR1:%.*]] = load float, ptr [[VAR0]], align 4
 ; VEC1_INTERL2-NEXT:    [[VAR2:%.*]] = fcmp fast oeq float [[VAR1]], 0.000000e+00

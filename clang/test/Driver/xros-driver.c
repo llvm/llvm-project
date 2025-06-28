@@ -30,8 +30,8 @@
 // LINK: "-platform_version" "xros" "1.0.0" "1.0.0"
 // LINK-SIM: "-platform_version" "xros-simulator" "1.0.0" "1.0.0"
 
-// OBJC-RUNTIME: "-fobjc-runtime=ios-17.0.0.0"
-// OBJC-RUNTIME2: "-fobjc-runtime=ios-18.0.0.0"
+// OBJC-RUNTIME: "-fobjc-runtime=ios-17.0.0"
+// OBJC-RUNTIME2: "-fobjc-runtime=ios-18.0.0"
 // ARC-NOT: error:
 
 // SSP_ON: "-stack-protector" "1"

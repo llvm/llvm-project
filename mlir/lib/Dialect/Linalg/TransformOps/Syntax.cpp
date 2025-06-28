@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/IR/OpImplementation.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -67,7 +68,7 @@ void mlir::printSemiFunctionType(OpAsmPrinter &printer, Operation *op,
 
   if (resultType.size() > 1)
     printer << "(";
-  llvm::interleaveComma(resultType, printer.getStream());
+  printer << llvm::interleaved(resultType);
   if (resultType.size() > 1)
     printer << ")";
 }
