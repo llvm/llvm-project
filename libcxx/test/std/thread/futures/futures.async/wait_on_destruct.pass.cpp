@@ -21,6 +21,7 @@
 #include <future>
 #include <mutex>
 #include <thread>
+#include <condition>
 #include <chrono>
 
 std::mutex mux;
@@ -28,17 +29,18 @@ std::mutex mux;
 int main(int, char**) {
   using namespace std::chrono_literals;
   std::unique_lock lock(mux);
-  std::atomic<bool> in_async = false;
-  auto v                     = std::async(std::launch::async, [&in_async, value = 1]() mutable {
-    in_async = true;
-    in_async.notify_all();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    std::scoped_lock thread_lock(mux);
+  std::condition_variable cond;
+  auto v                     = std::async(std::launch::async, [&cond, value = 1]() mutable {
+
+    std::unique_lock thread_lock(mux);
+    cond.notify_all();
+    thread_lock.unlock();
+
     value = 4;
     (void)value;
   });
-  in_async.wait(true);
-  lock.unlock();
+  cond.wait(mux);
+
 
   return 0;
 }
