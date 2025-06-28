@@ -3098,6 +3098,75 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
   return BB;
 }
 
+// Helper function to find the instruction that defined a virtual register.
+// If unable to find such instruction, returns nullptr.
+static MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
+                                     Register Reg) {
+  while (Reg.isVirtual()) {
+    MachineInstr *DefMI = MRI.getVRegDef(Reg);
+    assert(DefMI && "Virtual register definition not found");
+    unsigned Opcode = DefMI->getOpcode();
+
+    if (Opcode == AArch64::COPY) {
+      Reg = DefMI->getOperand(1).getReg();
+      // Vreg is defined by copying from physreg.
+      if (Reg.isPhysical())
+        return DefMI;
+      continue;
+    }
+    if (Opcode == AArch64::SUBREG_TO_REG) {
+      Reg = DefMI->getOperand(2).getReg();
+      continue;
+    }
+
+    return DefMI;
+  }
+  return nullptr;
+}
+
+void AArch64TargetLowering::fixupBlendComponents(
+    MachineInstr &MI, MachineBasicBlock *BB, MachineOperand &IntDiscOp,
+    MachineOperand &AddrDiscOp, const TargetRegisterClass *AddrDiscRC) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  Register AddrDisc = AddrDiscOp.getReg();
+  int64_t IntDisc = IntDiscOp.getImm();
+
+  assert(IntDisc == 0 && "Blend components are already expanded");
+
+  MachineInstr *MaybeBlend = stripVRegCopies(MRI, AddrDisc);
+
+  if (MaybeBlend) {
+    // Detect blend(addr, imm) which is lowered as "MOVK addr, #imm, #48".
+    // Alternatively, recognize small immediate modifier passed via VReg.
+    if (MaybeBlend->getOpcode() == AArch64::MOVKXi &&
+        MaybeBlend->getOperand(3).getImm() == 48) {
+      AddrDisc = MaybeBlend->getOperand(1).getReg();
+      IntDisc = MaybeBlend->getOperand(2).getImm();
+    } else if (MaybeBlend->getOpcode() == AArch64::MOVi32imm &&
+               isUInt<16>(MaybeBlend->getOperand(1).getImm())) {
+      AddrDisc = AArch64::XZR;
+      IntDisc = MaybeBlend->getOperand(1).getImm();
+    }
+  }
+
+  // Normalize NoRegister operands emitted by GlobalISel.
+  if (AddrDisc == AArch64::NoRegister)
+    AddrDisc = AArch64::XZR;
+
+  // Make sure AddrDisc operand respects the register class imposed by MI.
+  if (AddrDisc != AArch64::XZR && MRI.getRegClass(AddrDisc) != AddrDiscRC) {
+    Register TmpReg = MRI.createVirtualRegister(AddrDiscRC);
+    BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), TmpReg).addReg(AddrDisc);
+    AddrDisc = TmpReg;
+  }
+
+  AddrDiscOp.setReg(AddrDisc);
+  IntDiscOp.setImm(IntDisc);
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -3196,6 +3265,11 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
+
+  case AArch64::PAC:
+    fixupBlendComponents(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                         &AArch64::GPR64noipRegClass);
+    return BB;
   }
 }
 
