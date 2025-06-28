@@ -5,8 +5,9 @@
 
 define dso_local <4 x float> @foo(<4 x i32> %0) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[TMP0:%.*]] to <4 x float>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[TMP1:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <4 x i32> [[TMP0]] to <4 x float>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[TMP3]]
 ;
   %2 = extractelement <4 x i32> %0, i32 1
