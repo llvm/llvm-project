@@ -1194,29 +1194,50 @@ static void findForkedSCEVs(
   }
 }
 
-static SmallVector<PointerIntPair<const SCEV *, 1, bool>>
-findForkedPointer(PredicatedScalarEvolution &PSE,
-                  const DenseMap<Value *, const SCEV *> &StridesMap, Value *Ptr,
-                  const Loop *L) {
-  ScalarEvolution *SE = PSE.getSE();
-  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
-  SmallVector<PointerIntPair<const SCEV *, 1, bool>> Scevs;
-  findForkedSCEVs(SE, L, Ptr, Scevs, MaxForkedSCEVDepth);
+/// Given \p ForkedSCEVs corresponding to \p Ptr, get AddRecs from \p Assume and
+/// \p StridesMap, and return SCEVs that could potentially be checked at runtime
+/// (AddRecs and loop-invariants). Returns an empty range as an early exit.
+static iterator_range<PointerIntPair<const SCEV *, 1, bool> *> getRTCheckPtrs(
+    PredicatedScalarEvolution &PSE, const Loop *L, Value *Ptr,
+    MutableArrayRef<PointerIntPair<const SCEV *, 1, bool>> ForkedSCEVs,
+    const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume) {
+  for (auto &P : ForkedSCEVs) {
+    auto *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
+    if (!AR && Assume)
+      AR = PSE.getAsAddRec(Ptr);
 
-  // For now, we will only accept a forked pointer with two possible SCEVs
-  // that are either SCEVAddRecExprs or loop invariant.
-  if (Scevs.size() == 2 &&
-      (isa<SCEVAddRecExpr>(get<0>(Scevs[0])) ||
-       SE->isLoopInvariant(get<0>(Scevs[0]), L)) &&
-      (isa<SCEVAddRecExpr>(get<0>(Scevs[1])) ||
-       SE->isLoopInvariant(get<0>(Scevs[1]), L))) {
-    LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
-    LLVM_DEBUG(dbgs() << "\t(1) " << *get<0>(Scevs[0]) << "\n");
-    LLVM_DEBUG(dbgs() << "\t(2) " << *get<0>(Scevs[1]) << "\n");
-    return Scevs;
+    // Call replaceSymbolicStrideSCEV only after PSE.getAsAddRec, because
+    // assumptions might have been added to PSE, resulting in simplifications.
+    const SCEV *S = replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr);
+    auto *SAR = dyn_cast<SCEVAddRecExpr>(S);
+    auto *PtrVal = SAR ? SAR : AR;
+    if (PtrVal && PtrVal->isAffine())
+      P.setPointer(PtrVal);
+    else if (!PSE.getSE()->isLoopInvariant(P.getPointer(), L))
+      return {ForkedSCEVs.end(), ForkedSCEVs.end()};
   }
 
-  return {{replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr), false}};
+  // De-duplicate the ForkedSCEVs. If two SCEVs are equal, prefer the SCEV that
+  // doesn't need freeze.
+  auto PtrEq = [](const auto &P, const auto &Q) {
+    return get<0>(P) == get<0>(Q);
+  };
+  auto FreezeLess = [PtrEq](const auto &P, const auto &Q) {
+    return PtrEq(P, Q) && get<1>(P) < get<1>(Q);
+  };
+  stable_sort(ForkedSCEVs, FreezeLess);
+  auto UniqPtrs = make_range(ForkedSCEVs.begin(), unique(ForkedSCEVs, PtrEq));
+
+  if (size(UniqPtrs) == 1) {
+    // If there are no forked pointers, there is no branch-on-poison, and hence
+    // drop freeze information.
+    UniqPtrs.begin()->setInt(false);
+    return UniqPtrs;
+  }
+  LLVM_DEBUG(dbgs() << "LAA: Found forked pointer: " << *Ptr << "\n");
+  for (auto [Idx, P] : enumerate(UniqPtrs))
+    LLVM_DEBUG(dbgs() << "\t(" << Idx << ") " << *P.getPointer() << "\n");
+  return UniqPtrs;
 }
 
 bool AccessAnalysis::createCheckForAccess(
@@ -1225,42 +1246,25 @@ bool AccessAnalysis::createCheckForAccess(
     DenseMap<Value *, unsigned> &DepSetId, Loop *TheLoop,
     unsigned &RunningDepId, unsigned ASId, bool Assume) {
   Value *Ptr = Access.getPointer();
+  ScalarEvolution *SE = PSE.getSE();
+  assert(SE->isSCEVable(Ptr->getType()) && "Value is not SCEVable!");
 
-  SmallVector<PointerIntPair<const SCEV *, 1, bool>> TranslatedPtrs =
-      findForkedPointer(PSE, StridesMap, Ptr, TheLoop);
-  assert(!TranslatedPtrs.empty() && "must have some translated pointers");
+  // Find the ForkedSCEVs, and prepare the runtime-check pointers.
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> ForkedSCEVs;
+  findForkedSCEVs(SE, TheLoop, Ptr, ForkedSCEVs, MaxForkedSCEVDepth);
+  auto RTCheckPtrs =
+      getRTCheckPtrs(PSE, TheLoop, Ptr, ForkedSCEVs, StridesMap, Assume);
 
-  /// Check whether all pointers can participate in a runtime bounds check. They
-  /// must either be invariant or AddRecs. If ShouldCheckWrap is true, they also
-  /// must not wrap.
-  for (auto &P : TranslatedPtrs) {
-    // The bounds for loop-invariant pointer is trivial.
-    if (PSE.getSE()->isLoopInvariant(P.getPointer(), TheLoop))
-      continue;
+  /// Check whether all pointers can participate in a runtime bounds check: they
+  /// must either be loop-invariant, or an affine AddRec that does not wrap.
+  if (!size(RTCheckPtrs) || any_of(RTCheckPtrs, [&](const auto &P) {
+        auto *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
+        return AR && !isNoWrap(PSE, AR, size(RTCheckPtrs) == 1 ? Ptr : nullptr,
+                               AccessTy, TheLoop, Assume);
+      }))
+    return false;
 
-    const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(P.getPointer());
-    if (!AR && Assume)
-      AR = PSE.getAsAddRec(Ptr);
-    if (!AR || !AR->isAffine())
-      return false;
-
-    // If there's only one option for Ptr, look it up after bounds and wrap
-    // checking, because assumptions might have been added to PSE.
-    if (TranslatedPtrs.size() == 1) {
-      AR =
-          cast<SCEVAddRecExpr>(replaceSymbolicStrideSCEV(PSE, StridesMap, Ptr));
-      P.setPointer(AR);
-    }
-
-    // When we run after a failing dependency check we have to make sure
-    // we don't have wrapping pointers.
-    if (!isNoWrap(PSE, AR, TranslatedPtrs.size() == 1 ? Ptr : nullptr, AccessTy,
-                  TheLoop, Assume)) {
-      return false;
-    }
-  }
-
-  for (auto [PtrExpr, NeedsFreeze] : TranslatedPtrs) {
+  for (auto [PtrExpr, NeedsFreeze] : RTCheckPtrs) {
     // The id of the dependence set.
     unsigned DepId;
 
