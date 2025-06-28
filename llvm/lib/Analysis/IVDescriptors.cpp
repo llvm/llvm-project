@@ -715,11 +715,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
       return std::nullopt;
 
     const SCEV *Step = AR->getStepRecurrence(SE);
-
-    if (isFindFirstIVRecurrenceKind(Kind)) {
-      if (!SE.isKnownNegative(Step))
-        return std::nullopt;
-    } else if (!SE.isKnownPositive(Step))
+    if ((isFindFirstIVRecurrenceKind(Kind) && !SE.isKnownNegative(Step)) ||
+        (isFindLastIVRecurrenceKind(Kind) && !SE.isKnownPositive(Step)))
       return std::nullopt;
 
     // Keep the minimum value of the recurrence type as the sentinel value.
@@ -744,8 +741,6 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                   : APInt::getMinValue(NumBits);
         ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       } else {
-        assert(isFindFirstIVRecurrenceKind(Kind) &&
-               "Kind must either be FindLastIV or FindFirstIV");
         assert(IsSigned && "Only FindFirstIV with SMax is supported currently");
         ValidRange =
             ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
