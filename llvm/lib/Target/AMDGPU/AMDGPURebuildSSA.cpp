@@ -56,9 +56,50 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
     IDF.calculate(PHIBlocks);
   }
 
-  MachineOperand &rewriteUse(MachineOperand &Op, MachineInstr &I,
+  MachineOperand &rewriteUse(MachineOperand &Op, MachineBasicBlock::iterator I,
                              MachineBasicBlock &MBB,
                              DenseMap<unsigned, VRegDefStack> VregNames) {
+    const std::pair<unsigned, std::string> indexToNameTable[] = {
+        {0, "NoSubRegister"},
+        {1, "hi16"},
+        {2, "lo16"},
+        {3, "sub0"},
+        {4, "sub0_sub1"},
+        {5, "sub0_sub1_sub2"},
+        {6, "sub0_sub1_sub2_sub3"},
+        {7, "sub0_sub1_sub2_sub3_sub4"},
+        {8, "sub0_sub1_sub2_sub3_sub4_sub5"},
+        {9, "sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7"},
+        {10, "sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_"
+             "sub11_sub12_sub13_sub14_sub15"},
+        {11, "sub1"},
+        {12, "sub1_hi16"},
+        {13, "sub1_lo16"},
+        {14, "sub1_sub2"},
+        {15, "sub1_sub2_sub3"},
+        {16, "sub1_sub2_sub3_sub4"},
+        {17, "sub1_sub2_sub3_sub4_sub5"},
+        {18, "sub1_sub2_sub3_sub4_sub5_sub6"},
+        {19, "sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8"},
+        {20, "sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_"
+             "sub12_sub13_sub14_sub15_sub16"},
+        {21, "sub2"},
+        {22, "sub2_hi16"},
+        {23, "sub2_lo16"},
+        {24, "sub2_sub3"},
+        {25, "sub2_sub3_sub4"},
+        {26, "sub2_sub3_sub4_sub5"},
+        {27, "sub2_sub3_sub4_sub5_sub6"},
+        {28, "sub2_sub3_sub4_sub5_sub6_sub7"},
+        {29, "sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9"},
+        {30, "sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_"
+             "sub13_sub14_sub15_sub16_sub17"},
+        {31, "sub3"},
+        {32, "sub3_hi16"},
+        {33, "sub3_lo16"}};
+    std::map<unsigned, std::string> indexToName(
+        indexToNameTable, indexToNameTable + sizeof(indexToNameTable) /
+                                                 sizeof(indexToNameTable[0]));
     // Sub-reg handling:
     // 1. if (UseMask & ~DefMask) != 0 : current Def does not define all used
     // lanes. We should search names stack for the Def that defines missed
@@ -126,15 +167,52 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         unsigned DstSubReg =
             getSubRegIndexForLaneMask(LanesDefinedyCurrentDef, TRI);
         if (!DstSubReg) {
-          // Should never be 0!
-          // Less over all def chain defined granularity
-          // LessDefinedGranularity = ~LanesDefinedyCurrentDef & UseMask (on each individual iteration!)
-          // Scan UndefSubRegs to cover with Mask = LessDefinedGranularity
-        }
-        unsigned SrcSubReg = (DefMask & ~LanesDefinedyCurrentDef).any()
+          const TargetRegisterClass *RC =
+              TRI->getRegClassForOperandReg(*MRI, *DefOp);
+          SmallVector<unsigned, 8> MatchingSubIndices;
+
+          for (unsigned SubIdx = 1; SubIdx < TRI->getNumSubRegIndices();
+               ++SubIdx) {
+            if (!TRI->getSubClassWithSubReg(RC, SubIdx))
+              continue;
+
+            LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubIdx);
+            if ((SubMask & LanesDefinedyCurrentDef).any()) {
+              MatchingSubIndices.push_back(SubIdx);
+            }
+          }
+          for (unsigned SubIdx : MatchingSubIndices) {
+            dbgs() << "Matching subreg: " << indexToName[SubIdx] << " : "
+                   << PrintLaneMask(TRI->getSubRegIndexLaneMask(SubIdx))
+                   << "\n";
+          }
+
+          SmallVector<unsigned, 8> OptimalSubIndices;
+          llvm::stable_sort(MatchingSubIndices, [&](unsigned A, unsigned B) {
+            return TRI->getSubRegIndexLaneMask(A).getNumLanes() >
+                   TRI->getSubRegIndexLaneMask(B).getNumLanes();
+          });
+          for (unsigned SubIdx : MatchingSubIndices) {
+            LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubIdx);
+            if ((LanesDefinedyCurrentDef & SubMask) == SubMask) {
+              OptimalSubIndices.push_back(SubIdx);
+              LanesDefinedyCurrentDef &= ~SubMask; // remove covered bits
+              if (LanesDefinedyCurrentDef.none())
+                break;
+            }
+          }
+          for (unsigned SubIdx : OptimalSubIndices) {
+            dbgs() << "Matching subreg: " << indexToName[SubIdx] << " : "
+                   << PrintLaneMask(TRI->getSubRegIndexLaneMask(SubIdx))
+                   << "\n";
+            RegSeqOps.push_back({CurVReg, SubIdx, SubIdx});
+          }
+        } else {
+          unsigned SrcSubReg = (DefMask & ~LanesDefinedyCurrentDef).any()
                                    ? DstSubReg
                                    : AMDGPU::NoRegister;
-        RegSeqOps.push_back({CurVReg, SrcSubReg, DstSubReg});
+          RegSeqOps.push_back({CurVReg, SrcSubReg, DstSubReg});
+        }
         UndefSubRegs = UseMask & ~DefinedLanes;
         dbgs() << "UndefSubRegs: " << PrintLaneMask(UndefSubRegs) << "\n";
         if (UndefSubRegs.none())
@@ -151,7 +229,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       // All subreg defs are found. Insert REG_SEQUENCE.
       auto *RC = TRI->getRegClassForReg(*MRI, VReg);
       CurVReg = MRI->createVirtualRegister(RC);
-      auto RS = BuildMI(MBB, I, I.getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
+      auto RS = BuildMI(MBB, I, I->getDebugLoc(), TII->get(AMDGPU::REG_SEQUENCE),
                         CurVReg);
       for (auto O : RegSeqOps) {
         auto [R, SrcSubreg, DstSubreg] = O;
@@ -230,15 +308,10 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
           PHI.addOperand(MachineOperand::CreateReg(VReg, false, false, false,
                                                    false, false));
         } else {
-          // CurVRegInfo VRInfo = VregNames[VReg].back();
-          // MachineInstr *DefMI = VregNames[VReg].back().DefMI;
-          // MachineOperand *DefOp = DefMI->findRegisterDefOperand(VRInfo.CurName, TRI);
-          // PHI.addOperand(MachineOperand::CreateReg(VRInfo.CurName, false, false,
-          //                                          false, false, false, false,
-          //                                          DefOp->getSubReg()));
           MachineOperand Op = MachineOperand::CreateReg(VReg, false);
+          MachineBasicBlock::iterator IP = MBB.getFirstTerminator();
+          Op = rewriteUse(Op, IP, MBB, VregNames);
           PHI.addOperand(Op);
-          Op = rewriteUse(Op, PHI, *Succ, VregNames);
         }
         PHI.addOperand(MachineOperand::CreateMBB(&MBB));
       }
