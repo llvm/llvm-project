@@ -88,6 +88,36 @@ void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
   mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
 }
 
+static constexpr const char *ignoreDenormalModeName =
+    "fir.ignore.denormal.mode";
+void fir::setIgnoreDenormalMode(mlir::ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  mod->setAttr(ignoreDenormalModeName, mlir::UnitAttr::get(ctx));
+}
+
+bool fir::getIgnoreDenormalMode(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(ignoreDenormalModeName);
+}
+
+static constexpr const char *fineGrainedMemoryName = "fir.fine.grained.memory";
+void fir::setFineGrainedMemory(mlir::ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  mod->setAttr(fineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+}
+
+bool fir::getFineGrainedMemory(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(fineGrainedMemoryName);
+}
+static constexpr const char *remoteMemoryName = "fir.remote.memory";
+void fir::setRemoteMemory(mlir::ModuleOp mod) {
+  auto *ctx = mod.getContext();
+  mod->setAttr(remoteMemoryName, mlir::UnitAttr::get(ctx));
+}
+
+bool fir::getRemoteMemory(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(remoteMemoryName);
+}
+
 llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
   if (auto attr = mod->getAttrOfType<mlir::StringAttr>(tuneCpuName))
     return attr.getValue();

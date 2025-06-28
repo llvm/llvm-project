@@ -6653,6 +6653,12 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setKindMapping(*module, kindMap);
   fir::setTargetCPU(*module, targetMachine.getTargetCPU());
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
+  if (targetOpts.ignoreDenormalMode)
+    fir::setIgnoreDenormalMode(*module);
+  if (targetOpts.fineGrainedMemory)
+    fir::setFineGrainedMemory(*module);
+  if (targetOpts.remoteMemory)
+    fir::setRemoteMemory(*module);
   fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
   fir::support::setMLIRDataLayout(*module, targetMachine.createDataLayout());
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());

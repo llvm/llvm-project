@@ -53,6 +53,11 @@ public:
 
   /// Print verbose assembly
   bool asmVerbose = false;
+
+  /// Atomic control options for AMD gpu
+  bool ignoreDenormalMode = false;
+  bool remoteMemory = false;
+  bool fineGrainedMemory = false;
 };
 
 } // end namespace Fortran::frontend
