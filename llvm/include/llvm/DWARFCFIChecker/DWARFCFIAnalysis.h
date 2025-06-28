@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file declares DWARFCFIAnalysis class.
+/// This file declares `DWARFCFIAnalysis` class.
+/// `DWARFCFIAnalysis` is a minimal implementation of a DWARF CFI checker
+/// described in this link:
+/// https://discourse.llvm.org/t/rfc-dwarf-cfi-validation/86936
 ///
 //===----------------------------------------------------------------------===//
 
@@ -31,13 +34,38 @@
 
 namespace llvm {
 
+/// `DWARFCFIAnalysis` validates the DWARF Call Frame Information one machine
+/// instruction at a time. This class maintains an internal CFI state
+/// initialized with the prologue directives and updated with each instruction's
+/// associated directives. In each update, it checks if the CFI state
+/// modifications match the machine instruction influence on the CFI state or
+/// not. This checking may results in errors and warnings.
+///
+/// In current stage, the analysis is only aware of what registers the
+/// instruction modifies. If the modification is happening to a sub-register,
+/// the analysis considers the super-register is modified.
+///
+/// In each update, for each register (or CFA), the following cases can happen:
+/// 1. The unwinding rule is not changed:
+///   a. The registers involved in this rule are not modified: the analysis
+///   proceeds without emitting error or warning.
+///   b. The registers involved in this rule are modified: it emits an error.
+/// 2. The unwinding rule is changed:
+///   a. The rule is structurally modified (i.e., the location is changed): It
+///   emits a warning.
+///   b. The rule is structurally the same, but the registers are modified: it
+///   emits a warning.
+///   c. The rule is structurally the same, using the same set of registers, but
+///   the offset is changed:
+///      i. If the registers included in the rule are modified as well: It
+///      emits a warning.
+///     ii. If the registers included in the rule are not modified: It emits an
+///     error.
+///
+/// The analysis only checks the CFA unwinding rule when the rule is a register
+/// plus some offset. Therefore, for CFA, only cases 1 and 2.c are checked, and
+/// in all other cases, a warning is emitted.
 class DWARFCFIAnalysis {
-  MCContext *Context;
-  MCInstrInfo const &MCII;
-  MCRegisterInfo const *MCRI;
-  DWARFCFIState State;
-  bool IsEH;
-
 public:
   DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII, bool IsEH,
                    ArrayRef<MCCFIInstruction> Prologue);
@@ -55,6 +83,13 @@ private:
                     const dwarf::UnwindRow *NextRow,
                     const SmallSet<DWARFRegNum, 4> &Reads,
                     const SmallSet<DWARFRegNum, 4> &Writes);
+
+private:
+  MCContext *Context;
+  MCInstrInfo const &MCII;
+  MCRegisterInfo const *MCRI;
+  DWARFCFIState State;
+  bool IsEH;
 };
 
 } // namespace llvm

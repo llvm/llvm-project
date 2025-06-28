@@ -23,6 +23,12 @@ namespace llvm {
 
 using DWARFRegNum = uint32_t;
 
+/// This class is used to maintain a CFI state and history, referred to as an
+/// unwinding table, during CFI analysis. The table is private, meaning the only
+/// way to modify it is to append a new row by updating it with a CFI directive,
+/// and the only way to read from it is to read the last row (i.e., current CFI
+/// state) from the table. The fetched row is constant and should not be
+/// modified or deleted.
 class DWARFCFIState {
 public:
   DWARFCFIState(MCContext *Context) : Context(Context) {};

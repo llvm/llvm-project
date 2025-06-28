@@ -12,7 +12,6 @@
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
-#include <cstdio>
 #include <optional>
 
 using namespace llvm;
@@ -35,7 +34,7 @@ CFIFunctionFrameStreamer::updateDirectivesRange() {
   return CFIDirectivesRange;
 }
 
-void CFIFunctionFrameStreamer::updateAnalyzer() {
+void CFIFunctionFrameStreamer::updateReceiver() {
   if (FrameIndices.empty()) {
     auto CFIDirectivesRange = updateDirectivesRange();
     assert(CFIDirectivesRange.first == CFIDirectivesRange.second &&
@@ -56,21 +55,21 @@ void CFIFunctionFrameStreamer::updateAnalyzer() {
   }
 
   if (LastInstruction) {
-    Analyzer->emitInstructionAndDirectives(LastInstruction.value(), Directives);
+    Receiver->emitInstructionAndDirectives(LastInstruction.value(), Directives);
   } else {
-    Analyzer->startFunctionUnit(false /* TODO: should put isEH here */,
-                                Directives);
+    Receiver->startFunctionFrame(false /* TODO: should put isEH here */,
+                                 Directives);
   }
 }
 
 void CFIFunctionFrameStreamer::emitInstruction(const MCInst &Inst,
                                                const MCSubtargetInfo &STI) {
-  updateAnalyzer();
+  updateReceiver();
   LastInstruction = Inst;
 }
 
 void CFIFunctionFrameStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
-  updateAnalyzer();
+  updateReceiver();
   FrameIndices.push_back(getNumFrameInfos());
   LastInstruction = std::nullopt;
   LastDirectiveIndex = 0;
@@ -78,12 +77,12 @@ void CFIFunctionFrameStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
 }
 
 void CFIFunctionFrameStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) {
-  updateAnalyzer();
+  updateReceiver();
 
   assert(!FrameIndices.empty() && "There should be at least one frame to pop");
   FrameIndices.pop_back();
 
-  Analyzer->finishFunctionUnit();
+  Receiver->finishFunctionFrame();
 
   LastInstruction = std::nullopt;
   LastDirectiveIndex = 0;

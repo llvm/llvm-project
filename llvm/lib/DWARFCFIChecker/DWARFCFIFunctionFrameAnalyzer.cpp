@@ -10,19 +10,24 @@
 
 using namespace llvm;
 
-void CFIFunctionFrameAnalyzer::startFunctionUnit(
+CFIFunctionFrameAnalyzer::~CFIFunctionFrameAnalyzer() {
+  assert(UIAs.empty() &&
+         "all frames should be closed before the analysis finishes");
+}
+
+void CFIFunctionFrameAnalyzer::startFunctionFrame(
     bool IsEH, ArrayRef<MCCFIInstruction> Prologue) {
   UIAs.emplace_back(&getContext(), MCII, IsEH, Prologue);
 }
 
 void CFIFunctionFrameAnalyzer::emitInstructionAndDirectives(
     const MCInst &Inst, ArrayRef<MCCFIInstruction> Directives) {
-  assert(!UIAs.empty() && "If the instruction is in a frame, there should be "
+  assert(!UIAs.empty() && "if the instruction is in a frame, there should be "
                           "a analysis instantiated for it");
   UIAs.back().update(Inst, Directives);
 }
 
-void CFIFunctionFrameAnalyzer::finishFunctionUnit() {
-  assert(!UIAs.empty() && "There should be an analysis for each frame");
+void CFIFunctionFrameAnalyzer::finishFunctionFrame() {
+  assert(!UIAs.empty() && "there should be an analysis for each frame");
   UIAs.pop_back();
 }

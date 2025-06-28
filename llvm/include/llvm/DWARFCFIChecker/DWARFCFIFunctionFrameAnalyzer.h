@@ -20,6 +20,12 @@
 
 namespace llvm {
 
+/// This class implements the `CFIFunctionFrameReceiver` interface to validate
+/// Call Frame Information in a stream of function frames. For validation, it
+/// instantiates a `DWARFCFIAnalysis` for each frame. The errors/warnings are
+/// emitted through the `MCContext` instance to the constructor. If a frame
+/// finishes without being started or if all the frames are not finished before
+/// this classes is destructured, the program fails through an assertion.
 class CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 private:
   std::vector<DWARFCFIAnalysis> UIAs;
@@ -28,13 +34,14 @@ private:
 public:
   CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
       : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
+  ~CFIFunctionFrameAnalyzer();
 
-  void startFunctionUnit(bool IsEH,
-                         ArrayRef<MCCFIInstruction> Prologue) override;
+  void startFunctionFrame(bool IsEH,
+                          ArrayRef<MCCFIInstruction> Prologue) override;
   void
   emitInstructionAndDirectives(const MCInst &Inst,
                                ArrayRef<MCCFIInstruction> Directives) override;
-  void finishFunctionUnit() override;
+  void finishFunctionFrame() override;
 };
 
 } // namespace llvm

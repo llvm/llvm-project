@@ -22,6 +22,10 @@ class MCCFIInstruction;
 class MCContext;
 class MCInst;
 
+/// This abstract base class is an interface for receiving DWARF function frames
+/// Call Frame Information. `DWARFCFIFunctionFrameStreamer` channels the
+/// function frames information gathered from an `MCStreamer` using a pointer to
+/// an instance of this class for the whole program.
 class CFIFunctionFrameReceiver {
 private:
   MCContext &Context;
@@ -36,12 +40,13 @@ public:
 
   MCContext &getContext() const { return Context; }
 
-  virtual void startFunctionUnit(bool IsEH,
-                                 ArrayRef<MCCFIInstruction> Prologue) {}
+  virtual void startFunctionFrame(bool IsEH,
+                                  ArrayRef<MCCFIInstruction> Prologue) {}
+  /// Instructions are processed in the program order.
   virtual void
   emitInstructionAndDirectives(const MCInst &Inst,
                                ArrayRef<MCCFIInstruction> Directives) {}
-  virtual void finishFunctionUnit() {}
+  virtual void finishFunctionFrame() {}
 };
 
 } // namespace llvm

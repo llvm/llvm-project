@@ -22,19 +22,29 @@
 #include <memory>
 #include <optional>
 
+/*
+Missing explanation: "This is a derived class of MCStreamer which looks only at
+[particular parts of the output] and [does something with them]"
+*/
+
 namespace llvm {
 
+/// This class is an `MCStreamer` implementation that watches for machine
+/// instructions and CFI directives. It cuts the stream into function frames and
+/// channels them to `CFIFunctionFrameReceiver`. A function frame is the machine
+/// instructions and CFI directives that are between `.cfi_startproc` and
+/// `.cfi_endproc` directives.
 class CFIFunctionFrameStreamer : public MCStreamer {
 private:
   std::pair<unsigned, unsigned> updateDirectivesRange();
-  void updateAnalyzer();
+  void updateReceiver();
 
 public:
   CFIFunctionFrameStreamer(MCContext &Context,
-                           std::unique_ptr<CFIFunctionFrameReceiver> Analyzer)
+                           std::unique_ptr<CFIFunctionFrameReceiver> Receiver)
       : MCStreamer(Context), LastInstruction(std::nullopt),
-        Analyzer(std::move(Analyzer)), LastDirectiveIndex(0) {
-    assert(this->Analyzer && "Analyzer should not be null");
+        Receiver(std::move(Receiver)), LastDirectiveIndex(0) {
+    assert(this->Receiver && "Analyzer should not be null");
   }
 
   bool hasRawTextSupport() const override { return true; }
@@ -62,7 +72,7 @@ public:
 private:
   std::vector<unsigned> FrameIndices;
   std::optional<MCInst> LastInstruction;
-  std::unique_ptr<CFIFunctionFrameReceiver> Analyzer;
+  std::unique_ptr<CFIFunctionFrameReceiver> Receiver;
   unsigned LastDirectiveIndex;
 };
 
