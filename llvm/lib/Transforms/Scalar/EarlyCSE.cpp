@@ -133,7 +133,7 @@ struct SimpleValue {
         }
         }
       }
-      return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy() &&
+      return CI->doesNotAccessMemory() &&
              // FIXME: Currently the calls which may access the thread id may
              // be considered as not accessing the memory. But this is
              // problematic for coroutines, since coroutines may resume in a
@@ -492,10 +492,6 @@ struct CallValue {
   }
 
   static bool canHandle(Instruction *Inst) {
-    // Don't value number anything that returns void.
-    if (Inst->getType()->isVoidTy())
-      return false;
-
     CallInst *CI = dyn_cast<CallInst>(Inst);
     if (!CI || !CI->onlyReadsMemory() ||
         // FIXME: Currently the calls which may access the thread id may

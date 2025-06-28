@@ -104,6 +104,7 @@ def ErrorCode : Enum {
     Etor<"UNIMPLEMENTED", "generic error code for features currently unimplemented by the device/backend">,
     Etor<"UNSUPPORTED", "generic error code for features unsupported by the device/backend">,
     Etor<"ASSEMBLE_FAILURE", "assembler failure while processing binary image">,
+    Etor<"COMPILE_FAILURE", "jit compile failure while processing binary image">,
     Etor<"LINK_FAILURE", "linker failure while processing binary image">,
     Etor<"BACKEND_FAILURE", "the plugin backend is in an invalid or unsupported state">,
     Etor<"UNINITIALIZED", "not initialized">,

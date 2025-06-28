@@ -436,7 +436,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ABS, MVT::i32, Custom);
   }
 
-  if (!Subtarget.useCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.useCCMovInsn() && !Subtarget.hasVendorXTHeadCondMov() &&
+      !Subtarget.hasVendorXqcicm())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   if (Subtarget.hasVendorXqcia() && !Subtarget.is64Bit()) {
@@ -756,8 +757,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
         ISD::VP_FRINT,       ISD::VP_FNEARBYINT,  ISD::VP_IS_FPCLASS,
         ISD::VP_FMINIMUM,    ISD::VP_FMAXIMUM,    ISD::VP_LRINT,
-        ISD::VP_LLRINT,      ISD::EXPERIMENTAL_VP_REVERSE,
-        ISD::EXPERIMENTAL_VP_SPLICE, ISD::VP_REDUCE_FMINIMUM,
+        ISD::VP_LLRINT,       ISD::VP_REDUCE_FMINIMUM,
         ISD::VP_REDUCE_FMAXIMUM, ISD::EXPERIMENTAL_VP_SPLAT};
 
     static const unsigned IntegerVecReduceOps[] = {
@@ -1112,6 +1112,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
 
       setOperationAction({ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE}, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
       setOperationAction(FloatingPointVPOps, VT, Custom);
 
@@ -1156,6 +1158,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                           ISD::VECTOR_REVERSE, ISD::VECTOR_SPLICE,
                           ISD::VECTOR_COMPRESS},
                          VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
+      setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
       MVT EltVT = VT.getVectorElementType();
       if (isTypeLegal(EltVT))
         setOperationAction({ISD::SPLAT_VECTOR, ISD::EXPERIMENTAL_VP_SPLAT,
@@ -1418,6 +1422,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                             ISD::EXTRACT_SUBVECTOR, ISD::VECTOR_REVERSE,
                             ISD::VECTOR_SHUFFLE, ISD::VECTOR_COMPRESS},
                            VT, Custom);
+        setOperationAction(ISD::EXPERIMENTAL_VP_SPLICE, VT, Custom);
+        setOperationAction(ISD::EXPERIMENTAL_VP_REVERSE, VT, Custom);
 
         setOperationAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
                            VT, Custom);
@@ -6842,32 +6848,32 @@ static SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG,
   SDLoc DL(Op);
 
   // Get sign bit into an integer value.
-  SDValue SignAsInt;
   unsigned SignSize = Sign.getValueSizeInBits();
-  if (SignSize == Subtarget.getXLen()) {
-    SignAsInt = DAG.getNode(ISD::BITCAST, DL, XLenVT, Sign);
-  } else if (SignSize == 16) {
-    SignAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Sign);
-  } else if (SignSize == 32) {
-    SignAsInt = DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Sign);
-  } else if (SignSize == 64) {
-    assert(XLenVT == MVT::i32 && "Unexpected type");
-    // Copy the upper word to integer.
-    SignAsInt = DAG.getNode(RISCVISD::SplitF64, DL, {MVT::i32, MVT::i32}, Sign)
-                    .getValue(1);
-    SignSize = 32;
-  } else
-    llvm_unreachable("Unexpected sign size");
+  SDValue SignAsInt = [&]() {
+    if (SignSize == Subtarget.getXLen())
+      return DAG.getNode(ISD::BITCAST, DL, XLenVT, Sign);
+    switch (SignSize) {
+    case 16:
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Sign);
+    case 32:
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, XLenVT, Sign);
+    case 64: {
+      assert(XLenVT == MVT::i32 && "Unexpected type");
+      // Copy the upper word to integer.
+      SignSize = 32;
+      return DAG.getNode(RISCVISD::SplitF64, DL, {MVT::i32, MVT::i32}, Sign)
+          .getValue(1);
+    }
+    default:
+      llvm_unreachable("Unexpected sign size");
+    }
+  }();
 
   // Get the signbit at the right position for MagAsInt.
-  int ShiftAmount = (int)SignSize - (int)Mag.getValueSizeInBits();
-  if (ShiftAmount > 0) {
-    SignAsInt = DAG.getNode(ISD::SRL, DL, XLenVT, SignAsInt,
-                            DAG.getConstant(ShiftAmount, DL, XLenVT));
-  } else if (ShiftAmount < 0) {
-    SignAsInt = DAG.getNode(ISD::SHL, DL, XLenVT, SignAsInt,
-                            DAG.getConstant(-ShiftAmount, DL, XLenVT));
-  }
+  if (int ShiftAmount = (int)SignSize - (int)Mag.getValueSizeInBits())
+    SignAsInt = DAG.getNode(ShiftAmount > 0 ? ISD::SRL : ISD::SHL, DL, XLenVT,
+                            SignAsInt,
+                            DAG.getConstant(std::abs(ShiftAmount), DL, XLenVT));
 
   // Mask the sign bit and any bits above it. The extra bits will be dropped
   // when we convert back to FP.
@@ -13239,6 +13245,8 @@ SDValue RISCVTargetLowering::lowerVPMergeMask(SDValue Op,
 SDValue
 RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                                                SelectionDAG &DAG) const {
+  using namespace SDPatternMatch;
+
   SDLoc DL(Op);
 
   SDValue Op1 = Op.getOperand(0);
@@ -13283,6 +13291,42 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
                       SplatZeroOp2, DAG.getUNDEF(ContainerVT), EVL2);
   }
 
+  auto getVectorFirstEle = [](SDValue Vec) {
+    SDValue FirstEle;
+    if (sd_match(Vec, m_InsertElt(m_Value(), m_Value(FirstEle), m_Zero())))
+      return FirstEle;
+
+    if (Vec.getOpcode() == ISD::SPLAT_VECTOR ||
+        Vec.getOpcode() == ISD::BUILD_VECTOR)
+      return Vec.getOperand(0);
+
+    return SDValue();
+  };
+
+  if (!IsMaskVector && isNullConstant(Offset) && isOneConstant(EVL1))
+    if (auto FirstEle = getVectorFirstEle(Op->getOperand(0))) {
+      MVT EltVT = ContainerVT.getVectorElementType();
+      SDValue Result;
+      if ((EltVT == MVT::f16 && !Subtarget.hasVInstructionsF16()) ||
+          EltVT == MVT::bf16) {
+        EltVT = EltVT.changeTypeToInteger();
+        ContainerVT = ContainerVT.changeVectorElementType(EltVT);
+        Op2 = DAG.getBitcast(ContainerVT, Op2);
+        FirstEle =
+            DAG.getAnyExtOrTrunc(DAG.getBitcast(EltVT, FirstEle), DL, XLenVT);
+      }
+      Result = DAG.getNode(EltVT.isFloatingPoint() ? RISCVISD::VFSLIDE1UP_VL
+                                                   : RISCVISD::VSLIDE1UP_VL,
+                           DL, ContainerVT, DAG.getUNDEF(ContainerVT), Op2,
+                           FirstEle, Mask, EVL2);
+      Result = DAG.getBitcast(
+          ContainerVT.changeVectorElementType(VT.getVectorElementType()),
+          Result);
+      return VT.isFixedLengthVector()
+                 ? convertFromScalableVector(VT, Result, DAG, Subtarget)
+                 : Result;
+    }
+
   int64_t ImmValue = cast<ConstantSDNode>(Offset)->getSExtValue();
   SDValue DownOffset, UpOffset;
   if (ImmValue >= 0) {
@@ -13297,10 +13341,11 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
     DownOffset = DAG.getNode(ISD::SUB, DL, XLenVT, EVL1, UpOffset);
   }
 
-  SDValue SlideDown =
-      getVSlidedown(DAG, Subtarget, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                    Op1, DownOffset, Mask, UpOffset);
-  SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, SlideDown, Op2,
+  if (ImmValue != 0)
+    Op1 = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
+                        DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask,
+                        UpOffset);
+  SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, Op1, Op2,
                                UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
   if (IsMaskVector) {
@@ -21332,7 +21377,7 @@ EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
   Register FLHS = First.getOperand(1).getReg();
   Register FRHS = First.getOperand(2).getReg();
   // Insert appropriate branch.
-  BuildMI(FirstMBB, DL, TII.getBrCond(FirstCC))
+  BuildMI(FirstMBB, DL, TII.get(RISCVCC::getBrCond(FirstCC, First.getOpcode())))
       .addReg(FLHS)
       .addReg(FRHS)
       .addMBB(SinkMBB);
@@ -21344,7 +21389,8 @@ EmitLoweredCascadedSelect(MachineInstr &First, MachineInstr &Second,
 
   auto SecondCC = static_cast<RISCVCC::CondCode>(Second.getOperand(3).getImm());
   // Insert appropriate branch.
-  BuildMI(ThisMBB, DL, TII.getBrCond(SecondCC))
+  BuildMI(ThisMBB, DL,
+          TII.get(RISCVCC::getBrCond(SecondCC, Second.getOpcode())))
       .addReg(SLHS)
       .addReg(SRHS)
       .addMBB(SinkMBB);
@@ -21399,12 +21445,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   // EmitLoweredCascadedSelect.
 
   auto Next = next_nodbg(MI.getIterator(), BB->instr_end());
-  if ((MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
-       MI.getOpcode() != RISCV::Select_GPR_Using_CC_SImm5_CV &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_SImm5NonZero_QC &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_UImm5NonZero_QC &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_SImm16NonZero_QC &&
-       MI.getOpcode() != RISCV::Select_GPRNoX0_Using_CC_UImm16NonZero_QC) &&
+  if (MI.getOpcode() != RISCV::Select_GPR_Using_CC_GPR &&
+      MI.getOperand(1).isReg() && MI.getOperand(2).isReg() &&
       Next != BB->end() && Next->getOpcode() == MI.getOpcode() &&
       Next->getOperand(5).getReg() == MI.getOperand(0).getReg() &&
       Next->getOperand(5).isKill())
@@ -21483,12 +21525,12 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
 
   // Insert appropriate branch.
   if (MI.getOperand(2).isImm())
-    BuildMI(HeadMBB, DL, TII.getBrCond(CC))
+    BuildMI(HeadMBB, DL, TII.get(RISCVCC::getBrCond(CC, MI.getOpcode())))
         .addReg(LHS)
         .addImm(MI.getOperand(2).getImm())
         .addMBB(TailMBB);
   else
-    BuildMI(HeadMBB, DL, TII.getBrCond(CC))
+    BuildMI(HeadMBB, DL, TII.get(RISCVCC::getBrCond(CC, MI.getOpcode())))
         .addReg(LHS)
         .addReg(RHS)
         .addMBB(TailMBB);

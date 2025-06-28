@@ -997,6 +997,47 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
   return success();
 }
 
+static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
+  CppEmitter::Scope classScope(emitter);
+  raw_indented_ostream &os = emitter.ostream();
+  os << "class " << classOp.getSymName() << " {\n";
+  os << "public:\n";
+  os.indent();
+
+  for (Operation &op : classOp) {
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+      return failure();
+  }
+
+  os.unindent();
+  os << "};";
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, FieldOp fieldOp) {
+  raw_ostream &os = emitter.ostream();
+  if (failed(emitter.emitType(fieldOp->getLoc(), fieldOp.getType())))
+    return failure();
+  os << " " << fieldOp.getSymName() << ";";
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter,
+                                    GetFieldOp getFieldOp) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  Value result = getFieldOp.getResult();
+  if (failed(emitter.emitType(getFieldOp->getLoc(), result.getType())))
+    return failure();
+  os << " ";
+  if (failed(emitter.emitOperand(result)))
+    return failure();
+  os << " = ";
+
+  os << getFieldOp.getFieldName().str();
+  return success();
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, FileOp file) {
   if (!emitter.shouldEmitFile(file))
     return success();
@@ -1605,14 +1646,16 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
                 emitc::BitwiseAndOp, emitc::BitwiseLeftShiftOp,
                 emitc::BitwiseNotOp, emitc::BitwiseOrOp,
                 emitc::BitwiseRightShiftOp, emitc::BitwiseXorOp, emitc::CallOp,
-                emitc::CallOpaqueOp, emitc::CastOp, emitc::CmpOp,
-                emitc::ConditionalOp, emitc::ConstantOp, emitc::DeclareFuncOp,
-                emitc::DivOp, emitc::ExpressionOp, emitc::FileOp, emitc::ForOp,
-                emitc::FuncOp, emitc::GlobalOp, emitc::IfOp, emitc::IncludeOp,
-                emitc::LoadOp, emitc::LogicalAndOp, emitc::LogicalNotOp,
-                emitc::LogicalOrOp, emitc::MulOp, emitc::RemOp, emitc::ReturnOp,
-                emitc::SubOp, emitc::SwitchOp, emitc::UnaryMinusOp,
-                emitc::UnaryPlusOp, emitc::VariableOp, emitc::VerbatimOp>(
+                emitc::CallOpaqueOp, emitc::CastOp, emitc::ClassOp,
+                emitc::CmpOp, emitc::ConditionalOp, emitc::ConstantOp,
+                emitc::DeclareFuncOp, emitc::DivOp, emitc::ExpressionOp,
+                emitc::FieldOp, emitc::FileOp, emitc::ForOp, emitc::FuncOp,
+                emitc::GetFieldOp, emitc::GlobalOp, emitc::IfOp,
+                emitc::IncludeOp, emitc::LoadOp, emitc::LogicalAndOp,
+                emitc::LogicalNotOp, emitc::LogicalOrOp, emitc::MulOp,
+                emitc::RemOp, emitc::ReturnOp, emitc::SubOp, emitc::SwitchOp,
+                emitc::UnaryMinusOp, emitc::UnaryPlusOp, emitc::VariableOp,
+                emitc::VerbatimOp>(
 
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.

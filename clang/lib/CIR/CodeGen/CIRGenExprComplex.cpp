@@ -41,6 +41,7 @@ public:
 
   mlir::Value VisitBinAssign(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
+  mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
@@ -140,6 +141,10 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   return cgf.emitCallExpr(e).getValue();
 }
 
+mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
+  return Visit(e->getChosenSubExpr());
+}
+
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
   if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e))
     return emitConstant(constant, e);
@@ -190,7 +195,7 @@ ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
     realValueAttr = cir::IntAttr::get(elementTy, 0);
     imagValueAttr = cir::IntAttr::get(elementTy, imagValue);
   } else {
-    assert(mlir::isa<cir::CIRFPTypeInterface>(elementTy) &&
+    assert(mlir::isa<cir::FPTypeInterface>(elementTy) &&
            "Expected complex element type to be floating-point");
 
     llvm::APFloat imagValue =

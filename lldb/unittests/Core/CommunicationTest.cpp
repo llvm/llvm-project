@@ -41,7 +41,7 @@ static void CommunicationReadTest(bool use_read_thread) {
 
   ThreadedCommunication comm("test");
   comm.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
+      std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   comm.SetCloseOnEOF(true);
 
   if (use_read_thread) {
@@ -126,7 +126,7 @@ TEST_F(CommunicationTest, SynchronizeWhileClosing) {
 
   ThreadedCommunication comm("test");
   comm.SetConnection(
-      std::make_unique<ConnectionFileDescriptor>(pair->second.release()));
+      std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   comm.SetCloseOnEOF(true);
   ASSERT_TRUE(comm.StartReadThread());
 
@@ -141,8 +141,7 @@ TEST_F(CommunicationTest, SynchronizeWhileClosing) {
 #if LLDB_ENABLE_POSIX
 TEST_F(CommunicationTest, WriteAll) {
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
 
   // Make the write end non-blocking in order to easily reproduce a partial
   // write.
