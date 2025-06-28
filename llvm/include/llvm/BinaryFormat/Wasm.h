@@ -253,7 +253,7 @@ const unsigned WASM_SYMBOL_ABSOLUTE = 0x200;
 
 #define WASM_RELOC(name, value) name = value,
 
-enum : unsigned {
+enum WasmRelocType : unsigned {
 #include "WasmRelocs.def"
 };
 
@@ -452,6 +452,8 @@ struct WasmRelocation {
   uint32_t Index;  // Index into either symbol or type index space.
   uint64_t Offset; // Offset from the start of the section.
   int64_t Addend;  // A value to add to the symbol.
+
+  WasmRelocType getType() const { return static_cast<WasmRelocType>(Type); }
 };
 
 struct WasmInitFunc {
