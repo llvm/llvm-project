@@ -1328,6 +1328,47 @@ void Sema::AddImplicitMSFunctionNoBuiltinAttr(FunctionDecl *FD) {
     FD->addAttr(NoBuiltinAttr::CreateImplicit(Context, V.data(), V.size()));
 }
 
+void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc) {
+  SymbolLabel Label;
+  Label.NameLoc = NameLoc;
+  Label.Used = false;
+
+  NamedDecl *PrevDecl =
+      LookupSingleName(TUScope, IdentId, NameLoc, LookupOrdinaryName);
+  if (!PrevDecl) {
+    PendingExportedNames[IdentId] = Label;
+    return;
+  }
+
+  if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
+    if (getLangOpts().CPlusPlus && !FD->isExternC()) {
+      PendingExportedNames[IdentId] = Label;
+      return;
+    }
+    if (!FD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (FD->hasBody()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  } else if (auto *VD = dyn_cast<VarDecl>(PrevDecl->getCanonicalDecl())) {
+    if (!VD->hasExternalFormalLinkage()) {
+      Diag(NameLoc, diag::warn_pragma_not_applied) << "export" << PrevDecl;
+      return;
+    }
+    if (VD->hasDefinition() == VarDecl::Definition) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_defined_symbol)
+          << "export";
+      return;
+    }
+  }
+  mergeVisibilityType(PrevDecl->getCanonicalDecl(), NameLoc,
+                      VisibilityAttr::Default);
+}
+
 typedef std::vector<std::pair<unsigned, SourceLocation> > VisStack;
 enum : unsigned { NoVisibility = ~0U };
 

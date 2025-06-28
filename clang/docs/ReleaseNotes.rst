@@ -1011,6 +1011,13 @@ WebAssembly Support
 AVR Support
 ^^^^^^^^^^^
 
+SystemZ Support
+^^^^^^^^^^^^^^^
+
+- Add support for `#pragma export` for z/OS.  This is a pragma used to export function and variable
+  with external linkage from shared libraries.  It provides compatibility with the IBM XL C/C++
+  compiler.
+
 DWARF Support in Clang
 ----------------------
 
