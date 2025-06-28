@@ -834,6 +834,8 @@ enum class CCEKind {
                            ///< message.
 };
 
+void inferNoReturnAttr(Sema &S, const Decl *D);
+
 /// Sema - This implements semantic analysis and AST building for C.
 /// \nosubgrouping
 class Sema final : public SemaBase {

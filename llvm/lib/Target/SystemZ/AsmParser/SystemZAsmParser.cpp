@@ -294,7 +294,7 @@ public:
   // Override MCParsedAsmOperand.
   SMLoc getStartLoc() const override { return StartLoc; }
   SMLoc getEndLoc() const override { return EndLoc; }
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   /// getLocRange - Get the range between the first and last token of this
   /// operand.
@@ -729,22 +729,7 @@ static struct InsnMatchEntry InsnMatchTable[] = {
     { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
 };
 
-static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
-  if (!E)
-    return;
-  if (auto *CE = dyn_cast<MCConstantExpr>(E))
-    OS << *CE;
-  else if (auto *UE = dyn_cast<MCUnaryExpr>(E))
-    OS << *UE;
-  else if (auto *BE = dyn_cast<MCBinaryExpr>(E))
-    OS << *BE;
-  else if (auto *SRE = dyn_cast<MCSymbolRefExpr>(E))
-    OS << *SRE;
-  else
-    OS << *E;
-}
-
-void SystemZOperand::print(raw_ostream &OS) const {
+void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case KindToken:
     OS << "Token:" << getToken();
@@ -754,14 +739,14 @@ void SystemZOperand::print(raw_ostream &OS) const {
     break;
   case KindImm:
     OS << "Imm:";
-    printMCExpr(getImm(), OS);
+    MAI.printExpr(OS, *getImm());
     break;
   case KindImmTLS:
     OS << "ImmTLS:";
-    printMCExpr(getImmTLS().Imm, OS);
+    MAI.printExpr(OS, *getImmTLS().Imm);
     if (getImmTLS().Sym) {
       OS << ", ";
-      printMCExpr(getImmTLS().Sym, OS);
+      MAI.printExpr(OS, *getImmTLS().Sym);
     }
     break;
   case KindMem: {
