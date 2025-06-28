@@ -7168,13 +7168,15 @@ public:
     AllowStandaloneOpenMPDirectives = 0x2,
     /// This context is at the top level of a GNU statement expression.
     InStmtExpr = 0x4,
+    /// This context is the C99 secondary-block in selection-/iteration-statement.
+    SecondaryBlock = 0x8,
 
     /// The context of a regular substatement.
     SubStmt = 0,
     /// The context of a compound-statement.
     Compound = AllowDeclarationsInC | AllowStandaloneOpenMPDirectives,
 
-    LLVM_MARK_AS_BITMASK_ENUM(InStmtExpr)
+    LLVM_MARK_AS_BITMASK_ENUM(SecondaryBlock)
   };
 
   /// Act on an expression statement that might be the last statement in a
@@ -7246,337 +7248,339 @@ public:
   ParseStatementOrDeclaration(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                               SourceLocation *TrailingElseLoc = nullptr);
 
-  StmtResult ParseStatementOrDeclarationAfterAttributes(
-      StmtVector &Stmts, ParsedStmtContext StmtCtx,
-      SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
-      ParsedAttributes &DeclSpecAttrs);
+    StmtResult ParseStatementOrDeclarationAfterAttributes(
+        StmtVector &Stmts, ParsedStmtContext StmtCtx,
+        SourceLocation *TrailingElseLoc, ParsedAttributes &DeclAttrs,
+        ParsedAttributes &DeclSpecAttrs);
 
-  /// Parse an expression statement.
-  StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
+    /// Parse an expression statement.
+    StmtResult ParseExprStatement(ParsedStmtContext StmtCtx);
 
-  /// ParseLabeledStatement - We have an identifier and a ':' after it.
-  ///
-  /// \verbatim
-  ///       label:
-  ///         identifier ':'
-  /// [GNU]   identifier ':' attributes[opt]
-  ///
-  ///       labeled-statement:
-  ///         label statement
-  /// \endverbatim
-  ///
-  StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
-                                   ParsedStmtContext StmtCtx);
+    /// ParseLabeledStatement - We have an identifier and a ':' after it.
+    ///
+    /// \verbatim
+    ///       label:
+    ///         identifier ':'
+    /// [GNU]   identifier ':' attributes[opt]
+    ///
+    ///       labeled-statement:
+    ///         label statement
+    /// \endverbatim
+    ///
+    StmtResult ParseLabeledStatement(ParsedAttributes &Attrs,
+                                     ParsedStmtContext StmtCtx);
 
-  /// ParseCaseStatement
-  /// \verbatim
-  ///       labeled-statement:
-  ///         'case' constant-expression ':' statement
-  /// [GNU]   'case' constant-expression '...' constant-expression ':' statement
-  /// \endverbatim
-  ///
-  StmtResult ParseCaseStatement(ParsedStmtContext StmtCtx,
-                                bool MissingCase = false,
-                                ExprResult Expr = ExprResult());
+    /// ParseCaseStatement
+    /// \verbatim
+    ///       labeled-statement:
+    ///         'case' constant-expression ':' statement
+    /// [GNU]   'case' constant-expression '...' constant-expression ':'
+    /// statement
+    /// \endverbatim
+    ///
+    StmtResult ParseCaseStatement(ParsedStmtContext StmtCtx,
+                                  bool MissingCase = false,
+                                  ExprResult Expr = ExprResult());
 
-  /// ParseDefaultStatement
-  /// \verbatim
-  ///       labeled-statement:
-  ///         'default' ':' statement
-  /// \endverbatim
-  /// Note that this does not parse the 'statement' at the end.
-  ///
-  StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
+    /// ParseDefaultStatement
+    /// \verbatim
+    ///       labeled-statement:
+    ///         'default' ':' statement
+    /// \endverbatim
+    /// Note that this does not parse the 'statement' at the end.
+    ///
+    StmtResult ParseDefaultStatement(ParsedStmtContext StmtCtx);
 
-  StmtResult ParseCompoundStatement(bool isStmtExpr = false);
+    StmtResult ParseCompoundStatement(bool isStmtExpr = false);
 
-  /// ParseCompoundStatement - Parse a "{}" block.
-  ///
-  /// \verbatim
-  ///       compound-statement: [C99 6.8.2]
-  ///         { block-item-list[opt] }
-  /// [GNU]   { label-declarations block-item-list } [TODO]
-  ///
-  ///       block-item-list:
-  ///         block-item
-  ///         block-item-list block-item
-  ///
-  ///       block-item:
-  ///         declaration
-  /// [GNU]   '__extension__' declaration
-  ///         statement
-  ///
-  /// [GNU] label-declarations:
-  /// [GNU]   label-declaration
-  /// [GNU]   label-declarations label-declaration
-  ///
-  /// [GNU] label-declaration:
-  /// [GNU]   '__label__' identifier-list ';'
-  /// \endverbatim
-  ///
-  StmtResult ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags);
+    /// ParseCompoundStatement - Parse a "{}" block.
+    ///
+    /// \verbatim
+    ///       compound-statement: [C99 6.8.2]
+    ///         { block-item-list[opt] }
+    /// [GNU]   { label-declarations block-item-list } [TODO]
+    ///
+    ///       block-item-list:
+    ///         block-item
+    ///         block-item-list block-item
+    ///
+    ///       block-item:
+    ///         declaration
+    /// [GNU]   '__extension__' declaration
+    ///         statement
+    ///
+    /// [GNU] label-declarations:
+    /// [GNU]   label-declaration
+    /// [GNU]   label-declarations label-declaration
+    ///
+    /// [GNU] label-declaration:
+    /// [GNU]   '__label__' identifier-list ';'
+    /// \endverbatim
+    ///
+    StmtResult ParseCompoundStatement(bool isStmtExpr, unsigned ScopeFlags);
 
-  /// Parse any pragmas at the start of the compound expression. We handle these
-  /// separately since some pragmas (FP_CONTRACT) must appear before any C
-  /// statement in the compound, but may be intermingled with other pragmas.
-  void ParseCompoundStatementLeadingPragmas();
+    /// Parse any pragmas at the start of the compound expression. We handle
+    /// these separately since some pragmas (FP_CONTRACT) must appear before any
+    /// C statement in the compound, but may be intermingled with other pragmas.
+    void ParseCompoundStatementLeadingPragmas();
 
-  void DiagnoseLabelAtEndOfCompoundStatement();
+    void DiagnoseLabelAtEndOfCompoundStatement();
 
-  /// Consume any extra semi-colons resulting in null statements,
-  /// returning true if any tok::semi were consumed.
-  bool ConsumeNullStmt(StmtVector &Stmts);
+    /// Consume any extra semi-colons resulting in null statements,
+    /// returning true if any tok::semi were consumed.
+    bool ConsumeNullStmt(StmtVector &Stmts);
 
-  /// ParseCompoundStatementBody - Parse a sequence of statements optionally
-  /// followed by a label and invoke the ActOnCompoundStmt action.  This expects
-  /// the '{' to be the current token, and consume the '}' at the end of the
-  /// block.  It does not manipulate the scope stack.
-  StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
+    /// ParseCompoundStatementBody - Parse a sequence of statements optionally
+    /// followed by a label and invoke the ActOnCompoundStmt action.  This
+    /// expects the '{' to be the current token, and consume the '}' at the end
+    /// of the block.  It does not manipulate the scope stack.
+    StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
 
-  /// ParseParenExprOrCondition:
-  /// \verbatim
-  /// [C  ]     '(' expression ')'
-  /// [C++]     '(' condition ')'
-  /// [C++1z]   '(' init-statement[opt] condition ')'
-  /// \endverbatim
-  ///
-  /// This function parses and performs error recovery on the specified
-  /// condition or expression (depending on whether we're in C++ or C mode).
-  /// This function goes out of its way to recover well.  It returns true if
-  /// there was a parser error (the right paren couldn't be found), which
-  /// indicates that the caller should try to recover harder.  It returns false
-  /// if the condition is successfully parsed.  Note that a successful parse can
-  /// still have semantic errors in the condition. Additionally, it will assign
-  /// the location of the outer-most '(' and ')', to LParenLoc and RParenLoc,
-  /// respectively.
-  bool ParseParenExprOrCondition(StmtResult *InitStmt,
-                                 Sema::ConditionResult &CondResult,
-                                 SourceLocation Loc, Sema::ConditionKind CK,
-                                 SourceLocation &LParenLoc,
-                                 SourceLocation &RParenLoc);
+    /// ParseParenExprOrCondition:
+    /// \verbatim
+    /// [C  ]     '(' expression ')'
+    /// [C++]     '(' condition ')'
+    /// [C++1z]   '(' init-statement[opt] condition ')'
+    /// \endverbatim
+    ///
+    /// This function parses and performs error recovery on the specified
+    /// condition or expression (depending on whether we're in C++ or C mode).
+    /// This function goes out of its way to recover well.  It returns true if
+    /// there was a parser error (the right paren couldn't be found), which
+    /// indicates that the caller should try to recover harder.  It returns
+    /// false if the condition is successfully parsed.  Note that a successful
+    /// parse can still have semantic errors in the condition. Additionally, it
+    /// will assign the location of the outer-most '(' and ')', to LParenLoc and
+    /// RParenLoc, respectively.
+    bool ParseParenExprOrCondition(StmtResult *InitStmt,
+                                   Sema::ConditionResult &CondResult,
+                                   SourceLocation Loc, Sema::ConditionKind CK,
+                                   SourceLocation &LParenLoc,
+                                   SourceLocation &RParenLoc);
 
-  /// ParseIfStatement
-  /// \verbatim
-  ///       if-statement: [C99 6.8.4.1]
-  ///         'if' '(' expression ')' statement
-  ///         'if' '(' expression ')' statement 'else' statement
-  /// [C++]   'if' '(' condition ')' statement
-  /// [C++]   'if' '(' condition ')' statement 'else' statement
-  /// [C++23] 'if' '!' [opt] consteval compound-statement
-  /// [C++23] 'if' '!' [opt] consteval compound-statement 'else' statement
-  /// \endverbatim
-  ///
-  StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
+    /// ParseIfStatement
+    /// \verbatim
+    ///       if-statement: [C99 6.8.4.1]
+    ///         'if' '(' expression ')' statement
+    ///         'if' '(' expression ')' statement 'else' statement
+    /// [C++]   'if' '(' condition ')' statement
+    /// [C++]   'if' '(' condition ')' statement 'else' statement
+    /// [C++23] 'if' '!' [opt] consteval compound-statement
+    /// [C++23] 'if' '!' [opt] consteval compound-statement 'else' statement
+    /// \endverbatim
+    ///
+    StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
 
-  /// ParseSwitchStatement
-  /// \verbatim
-  ///       switch-statement:
-  ///         'switch' '(' expression ')' statement
-  /// [C++]   'switch' '(' condition ')' statement
-  /// \endverbatim
-  StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
+    /// ParseSwitchStatement
+    /// \verbatim
+    ///       switch-statement:
+    ///         'switch' '(' expression ')' statement
+    /// [C++]   'switch' '(' condition ')' statement
+    /// \endverbatim
+    StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
 
-  /// ParseWhileStatement
-  /// \verbatim
-  ///       while-statement: [C99 6.8.5.1]
-  ///         'while' '(' expression ')' statement
-  /// [C++]   'while' '(' condition ')' statement
-  /// \endverbatim
-  StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
+    /// ParseWhileStatement
+    /// \verbatim
+    ///       while-statement: [C99 6.8.5.1]
+    ///         'while' '(' expression ')' statement
+    /// [C++]   'while' '(' condition ')' statement
+    /// \endverbatim
+    StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);
 
-  /// ParseDoStatement
-  /// \verbatim
-  ///       do-statement: [C99 6.8.5.2]
-  ///         'do' statement 'while' '(' expression ')' ';'
-  /// \endverbatim
-  /// Note: this lets the caller parse the end ';'.
-  StmtResult ParseDoStatement();
+    /// ParseDoStatement
+    /// \verbatim
+    ///       do-statement: [C99 6.8.5.2]
+    ///         'do' statement 'while' '(' expression ')' ';'
+    /// \endverbatim
+    /// Note: this lets the caller parse the end ';'.
+    StmtResult ParseDoStatement();
 
-  /// ParseForStatement
-  /// \verbatim
-  ///       for-statement: [C99 6.8.5.3]
-  ///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
-  ///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
-  /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt] ')'
-  /// [C++]       statement
-  /// [C++0x] 'for'
-  ///             'co_await'[opt]    [Coroutines]
-  ///             '(' for-range-declaration ':' for-range-initializer ')'
-  ///             statement
-  /// [OBJC2] 'for' '(' declaration 'in' expr ')' statement
-  /// [OBJC2] 'for' '(' expr 'in' expr ')' statement
-  ///
-  /// [C++] for-init-statement:
-  /// [C++]   expression-statement
-  /// [C++]   simple-declaration
-  /// [C++23] alias-declaration
-  ///
-  /// [C++0x] for-range-declaration:
-  /// [C++0x]   attribute-specifier-seq[opt] type-specifier-seq declarator
-  /// [C++0x] for-range-initializer:
-  /// [C++0x]   expression
-  /// [C++0x]   braced-init-list            [TODO]
-  /// \endverbatim
-  StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
+    /// ParseForStatement
+    /// \verbatim
+    ///       for-statement: [C99 6.8.5.3]
+    ///         'for' '(' expr[opt] ';' expr[opt] ';' expr[opt] ')' statement
+    ///         'for' '(' declaration expr[opt] ';' expr[opt] ')' statement
+    /// [C++]   'for' '(' for-init-statement condition[opt] ';' expression[opt]
+    /// ')' [C++]       statement [C++0x] 'for'
+    ///             'co_await'[opt]    [Coroutines]
+    ///             '(' for-range-declaration ':' for-range-initializer ')'
+    ///             statement
+    /// [OBJC2] 'for' '(' declaration 'in' expr ')' statement
+    /// [OBJC2] 'for' '(' expr 'in' expr ')' statement
+    ///
+    /// [C++] for-init-statement:
+    /// [C++]   expression-statement
+    /// [C++]   simple-declaration
+    /// [C++23] alias-declaration
+    ///
+    /// [C++0x] for-range-declaration:
+    /// [C++0x]   attribute-specifier-seq[opt] type-specifier-seq declarator
+    /// [C++0x] for-range-initializer:
+    /// [C++0x]   expression
+    /// [C++0x]   braced-init-list            [TODO]
+    /// \endverbatim
+    StmtResult ParseForStatement(SourceLocation *TrailingElseLoc);
 
-  /// ParseGotoStatement
-  /// \verbatim
-  ///       jump-statement:
-  ///         'goto' identifier ';'
-  /// [GNU]   'goto' '*' expression ';'
-  /// \endverbatim
-  ///
-  /// Note: this lets the caller parse the end ';'.
-  ///
-  StmtResult ParseGotoStatement();
+    /// ParseGotoStatement
+    /// \verbatim
+    ///       jump-statement:
+    ///         'goto' identifier ';'
+    /// [GNU]   'goto' '*' expression ';'
+    /// \endverbatim
+    ///
+    /// Note: this lets the caller parse the end ';'.
+    ///
+    StmtResult ParseGotoStatement();
 
-  /// ParseContinueStatement
-  /// \verbatim
-  ///       jump-statement:
-  ///         'continue' ';'
-  /// \endverbatim
-  ///
-  /// Note: this lets the caller parse the end ';'.
-  ///
-  StmtResult ParseContinueStatement();
+    /// ParseContinueStatement
+    /// \verbatim
+    ///       jump-statement:
+    ///         'continue' ';'
+    /// \endverbatim
+    ///
+    /// Note: this lets the caller parse the end ';'.
+    ///
+    StmtResult ParseContinueStatement();
 
-  /// ParseBreakStatement
-  /// \verbatim
-  ///       jump-statement:
-  ///         'break' ';'
-  /// \endverbatim
-  ///
-  /// Note: this lets the caller parse the end ';'.
-  ///
-  StmtResult ParseBreakStatement();
+    /// ParseBreakStatement
+    /// \verbatim
+    ///       jump-statement:
+    ///         'break' ';'
+    /// \endverbatim
+    ///
+    /// Note: this lets the caller parse the end ';'.
+    ///
+    StmtResult ParseBreakStatement();
 
-  /// ParseReturnStatement
-  /// \verbatim
-  ///       jump-statement:
-  ///         'return' expression[opt] ';'
-  ///         'return' braced-init-list ';'
-  ///         'co_return' expression[opt] ';'
-  ///         'co_return' braced-init-list ';'
-  /// \endverbatim
-  StmtResult ParseReturnStatement();
+    /// ParseReturnStatement
+    /// \verbatim
+    ///       jump-statement:
+    ///         'return' expression[opt] ';'
+    ///         'return' braced-init-list ';'
+    ///         'co_return' expression[opt] ';'
+    ///         'co_return' braced-init-list ';'
+    /// \endverbatim
+    StmtResult ParseReturnStatement();
 
-  StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
-                                 SourceLocation *TrailingElseLoc,
-                                 ParsedAttributes &Attrs);
+    StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
+                                   SourceLocation *TrailingElseLoc,
+                                   ParsedAttributes &Attrs);
 
-  void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
+    void ParseMicrosoftIfExistsStatement(StmtVector &Stmts);
 
-  //===--------------------------------------------------------------------===//
-  // C++ 6: Statements and Blocks
+    //===--------------------------------------------------------------------===//
+    // C++ 6: Statements and Blocks
 
-  /// ParseCXXTryBlock - Parse a C++ try-block.
-  ///
-  /// \verbatim
-  ///       try-block:
-  ///         'try' compound-statement handler-seq
-  /// \endverbatim
-  ///
-  StmtResult ParseCXXTryBlock();
+    /// ParseCXXTryBlock - Parse a C++ try-block.
+    ///
+    /// \verbatim
+    ///       try-block:
+    ///         'try' compound-statement handler-seq
+    /// \endverbatim
+    ///
+    StmtResult ParseCXXTryBlock();
 
-  /// ParseCXXTryBlockCommon - Parse the common part of try-block and
-  /// function-try-block.
-  ///
-  /// \verbatim
-  ///       try-block:
-  ///         'try' compound-statement handler-seq
-  ///
-  ///       function-try-block:
-  ///         'try' ctor-initializer[opt] compound-statement handler-seq
-  ///
-  ///       handler-seq:
-  ///         handler handler-seq[opt]
-  ///
-  ///       [Borland] try-block:
-  ///         'try' compound-statement seh-except-block
-  ///         'try' compound-statement seh-finally-block
-  /// \endverbatim
-  ///
-  StmtResult ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry = false);
+    /// ParseCXXTryBlockCommon - Parse the common part of try-block and
+    /// function-try-block.
+    ///
+    /// \verbatim
+    ///       try-block:
+    ///         'try' compound-statement handler-seq
+    ///
+    ///       function-try-block:
+    ///         'try' ctor-initializer[opt] compound-statement handler-seq
+    ///
+    ///       handler-seq:
+    ///         handler handler-seq[opt]
+    ///
+    ///       [Borland] try-block:
+    ///         'try' compound-statement seh-except-block
+    ///         'try' compound-statement seh-finally-block
+    /// \endverbatim
+    ///
+    StmtResult ParseCXXTryBlockCommon(SourceLocation TryLoc,
+                                      bool FnTry = false);
 
-  /// ParseCXXCatchBlock - Parse a C++ catch block, called handler in the
-  /// standard
-  ///
-  /// \verbatim
-  ///   handler:
-  ///     'catch' '(' exception-declaration ')' compound-statement
-  ///
-  ///   exception-declaration:
-  ///     attribute-specifier-seq[opt] type-specifier-seq declarator
-  ///     attribute-specifier-seq[opt] type-specifier-seq abstract-declarator[opt]
-  ///     '...'
-  /// \endverbatim
-  ///
-  StmtResult ParseCXXCatchBlock(bool FnCatch = false);
+    /// ParseCXXCatchBlock - Parse a C++ catch block, called handler in the
+    /// standard
+    ///
+    /// \verbatim
+    ///   handler:
+    ///     'catch' '(' exception-declaration ')' compound-statement
+    ///
+    ///   exception-declaration:
+    ///     attribute-specifier-seq[opt] type-specifier-seq declarator
+    ///     attribute-specifier-seq[opt] type-specifier-seq
+    ///     abstract-declarator[opt]
+    ///     '...'
+    /// \endverbatim
+    ///
+    StmtResult ParseCXXCatchBlock(bool FnCatch = false);
 
-  //===--------------------------------------------------------------------===//
-  // MS: SEH Statements and Blocks
+    //===--------------------------------------------------------------------===//
+    // MS: SEH Statements and Blocks
 
-  /// ParseSEHTryBlockCommon
-  ///
-  /// \verbatim
-  /// seh-try-block:
-  ///   '__try' compound-statement seh-handler
-  ///
-  /// seh-handler:
-  ///   seh-except-block
-  ///   seh-finally-block
-  /// \endverbatim
-  ///
-  StmtResult ParseSEHTryBlock();
+    /// ParseSEHTryBlockCommon
+    ///
+    /// \verbatim
+    /// seh-try-block:
+    ///   '__try' compound-statement seh-handler
+    ///
+    /// seh-handler:
+    ///   seh-except-block
+    ///   seh-finally-block
+    /// \endverbatim
+    ///
+    StmtResult ParseSEHTryBlock();
 
-  /// ParseSEHExceptBlock - Handle __except
-  ///
-  /// \verbatim
-  /// seh-except-block:
-  ///   '__except' '(' seh-filter-expression ')' compound-statement
-  /// \endverbatim
-  ///
-  StmtResult ParseSEHExceptBlock(SourceLocation Loc);
+    /// ParseSEHExceptBlock - Handle __except
+    ///
+    /// \verbatim
+    /// seh-except-block:
+    ///   '__except' '(' seh-filter-expression ')' compound-statement
+    /// \endverbatim
+    ///
+    StmtResult ParseSEHExceptBlock(SourceLocation Loc);
 
-  /// ParseSEHFinallyBlock - Handle __finally
-  ///
-  /// \verbatim
-  /// seh-finally-block:
-  ///   '__finally' compound-statement
-  /// \endverbatim
-  ///
-  StmtResult ParseSEHFinallyBlock(SourceLocation Loc);
+    /// ParseSEHFinallyBlock - Handle __finally
+    ///
+    /// \verbatim
+    /// seh-finally-block:
+    ///   '__finally' compound-statement
+    /// \endverbatim
+    ///
+    StmtResult ParseSEHFinallyBlock(SourceLocation Loc);
 
-  StmtResult ParseSEHLeaveStatement();
+    StmtResult ParseSEHLeaveStatement();
 
-  Decl *ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope);
+    Decl *ParseFunctionStatementBody(Decl *Decl, ParseScope &BodyScope);
 
-  /// ParseFunctionTryBlock - Parse a C++ function-try-block.
-  ///
-  /// \verbatim
-  ///       function-try-block:
-  ///         'try' ctor-initializer[opt] compound-statement handler-seq
-  /// \endverbatim
-  ///
-  Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
+    /// ParseFunctionTryBlock - Parse a C++ function-try-block.
+    ///
+    /// \verbatim
+    ///       function-try-block:
+    ///         'try' ctor-initializer[opt] compound-statement handler-seq
+    /// \endverbatim
+    ///
+    Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
 
-  /// When in code-completion, skip parsing of the function/method body
-  /// unless the body contains the code-completion point.
-  ///
-  /// \returns true if the function body was skipped.
-  bool trySkippingFunctionBody();
+    /// When in code-completion, skip parsing of the function/method body
+    /// unless the body contains the code-completion point.
+    ///
+    /// \returns true if the function body was skipped.
+    bool trySkippingFunctionBody();
 
-  /// isDeclarationStatement - Disambiguates between a declaration or an
-  /// expression statement, when parsing function bodies.
-  ///
-  /// \param DisambiguatingWithExpression - True to indicate that the purpose of
-  /// this check is to disambiguate between an expression and a declaration.
-  /// Returns true for declaration, false for expression.
-  bool isDeclarationStatement(bool DisambiguatingWithExpression = false) {
-    if (getLangOpts().CPlusPlus)
-      return isCXXDeclarationStatement(DisambiguatingWithExpression);
-    return isDeclarationSpecifier(ImplicitTypenameContext::No, true);
-  }
+    /// isDeclarationStatement - Disambiguates between a declaration or an
+    /// expression statement, when parsing function bodies.
+    ///
+    /// \param DisambiguatingWithExpression - True to indicate that the purpose
+    /// of this check is to disambiguate between an expression and a
+    /// declaration. Returns true for declaration, false for expression.
+    bool isDeclarationStatement(bool DisambiguatingWithExpression = false) {
+      if (getLangOpts().CPlusPlus)
+        return isCXXDeclarationStatement(DisambiguatingWithExpression);
+      return isDeclarationSpecifier(ImplicitTypenameContext::No, true);
+    }
 
   /// isForInitDeclaration - Disambiguates between a declaration or an
   /// expression in the context of the C 'clause-1' or the C++

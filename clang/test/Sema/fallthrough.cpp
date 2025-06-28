@@ -1,7 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -std=c2x -verify %s
-
-// This is the latest version of fallthrough that we support.
-_Static_assert(__has_c_attribute(fallthrough) == 201910L);
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -verify %s
 
 void f(int n) {
   switch (n) {
@@ -15,19 +12,18 @@ void f(int n) {
       return;
     }
   case 2:
-    // FIXME: Should we emit an error {{fallthrough annotation does not directly precede switch label}}?
     for (int n = 0; n != 10; ++n)
-      [[fallthrough]]; // expected-error {{expected a statement before ';'}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
   case 3:
     while (1)
-      [[fallthrough]]; // expected-error {{expected a statement before ';'}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
   case 4:
     while (0)
-      [[fallthrough]]; // expected-error {{expected a statement before ';'}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
   case 5:
-    do [[fallthrough]]; while (1); // expected-error {{expected a statement before ';'}}
+    do [[fallthrough]]; while (1); // expected-error {{does not directly precede switch label}}
   case 6:
-    do [[fallthrough]]; while (0); // expected-error {{expected a statement before ';'}}
+    do [[fallthrough]]; while (0); // expected-error {{does not directly precede switch label}}
   case 7:
     switch (n) {
     case 0:
@@ -36,7 +32,7 @@ void f(int n) {
       [[fallthrough]];
     }
   case 8:
-    [[fallthrough]]; // FIXME: The error {{does not directly precede switch label}} cannot reproduce in this translate unit, But it can be reproduced in a separate file.
+    [[fallthrough]]; // expected-error {{does not directly precede switch label}}
     goto label;
   label:
   case 9:
