@@ -30,11 +30,10 @@ define <2 x i64> @ternary_A_and_BC_B_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %
 ; CHECK-LABEL: ternary_A_and_BC_B_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxland vs0, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, v3, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 49
 ; CHECK-NEXT:    blr
 entry:
   %and = and <2 x i64> %B, %C
@@ -63,11 +62,10 @@ define <2 x i64> @ternary_A_nor_BC_B_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %
 ; CHECK-LABEL: ternary_A_nor_BC_B_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlnor vs0, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, v3, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 56
 ; CHECK-NEXT:    blr
 entry:
   %or = or <2 x i64> %B, %C
@@ -97,48 +95,15 @@ define <2 x i64> @ternary_A_eqv_BC_B_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %
 ; CHECK-LABEL: ternary_A_eqv_BC_B_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxleqv vs0, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, v3, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 57
 ; CHECK-NEXT:    blr
 entry:
   %xor = xor <2 x i64> %B, %C
   %eqv = xor <2 x i64> %xor, <i64 -1, i64 -1>  ; Vector eqv operation
   %res = select <2 x i1> %A, <2 x i64> %eqv, <2 x i64> %B
-  ret <2 x i64> %res
-}
-
-; Function to test ternary(A, not(C), B) for <4 x i32>
-define <4 x i32> @ternary_A_not_C_B_4x32(<4 x i1> %A, <4 x i32> %B, <4 x i32> %C) {
-; CHECK-LABEL: ternary_A_not_C_B_4x32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxleqv v5, v5, v5
-; CHECK-NEXT:    vslw v2, v2, v5
-; CHECK-NEXT:    vsraw v2, v2, v5
-; CHECK-NEXT:    xxeval v2, v2, v3, v4, 58
-; CHECK-NEXT:    blr
-entry:
-  %not = xor <4 x i32> %C, <i32 -1, i32 -1, i32 -1, i32 -1>  ; Vector not operation
-  %res = select <4 x i1> %A, <4 x i32> %not, <4 x i32> %B
-  ret <4 x i32> %res
-}
-
-; Function to test ternary(A, not(C), B) for <2 x i64>
-define <2 x i64> @ternary_A_not_C_B_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> %C) {
-; CHECK-LABEL: ternary_A_not_C_B_2x64:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlnor vs0, v4, v4
-; CHECK-NEXT:    xxsplti32dx v5, 1, 63
-; CHECK-NEXT:    vsld v2, v2, v5
-; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, v3, vs0, v2
-; CHECK-NEXT:    blr
-entry:
-  %not = xor <2 x i64> %C, <i64 -1, i64 -1>  ; Vector not operation
-  %res = select <2 x i1> %A, <2 x i64> %not, <2 x i64> %B
   ret <2 x i64> %res
 }
 
@@ -163,11 +128,10 @@ define <2 x i64> @ternary_A_nand_BC_B_2x64(<2 x i1> %A, <2 x i64> %B, <2 x i64> 
 ; CHECK-LABEL: ternary_A_nand_BC_B_2x64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxlxor v5, v5, v5
-; CHECK-NEXT:    xxlnand vs0, v3, v4
 ; CHECK-NEXT:    xxsplti32dx v5, 1, 63
 ; CHECK-NEXT:    vsld v2, v2, v5
 ; CHECK-NEXT:    vsrad v2, v2, v5
-; CHECK-NEXT:    xxsel v2, v3, vs0, v2
+; CHECK-NEXT:    xxeval v2, v2, v3, v4, 62
 ; CHECK-NEXT:    blr
 entry:
   %and = and <2 x i64> %B, %C

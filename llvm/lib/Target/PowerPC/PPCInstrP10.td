@@ -2159,119 +2159,150 @@ let AddedComplexity = 400, Predicates = [IsISA3_1, HasVSX] in {
                                (COPY_TO_REGCLASS $VRB, VSRC), 2)))>;
 }
 
+  // Defines a pattern for the XXEVAL instruction with a specific value type, 
+  // pattern, and immediate.
 class XXEvalPattern <ValueType vt, dag pattern, bits<8> imm> :
   Pat<(vt pattern), (XXEVAL $vA, $vB, $vC, imm)> {}
 
-class DagCondVNot<dag d, bit negate> {
-  // Utility to define a vnot around the dag.
-  dag res = !if(!ne(negate, 0),
-               (vnot d),
-               d);
+  // Helper class to generate binary operation DAGs for various vector types.
+  // For v4i32, emits (op B C).
+  // For other types, bitcasts operands to v4i32, applies the op, then bitcasts back.
+class BinaryOpDag<ValueType vt, SDPatternOperator op > {
+  // The DAG for the binary operation.
+  dag OpDag = !if( !eq(vt, v4i32),
+                      (op vt:$vB, vt:$vC),
+                      (vt (bitconvert (op (v4i32 (bitconvert vt:$vB)), (v4i32 (bitconvert vt:$vC)))))                 
+                    );
+  // The DAG for the binary operation with a NOT applied to the result.
+  dag VnotOpDag = !if( !eq(vt, v4i32),
+                          (vnot (op vt:$vB, vt:$vC)),
+                          (vt (bitconvert (vnot (op (v4i32 (bitconvert vt:$vB)), (v4i32 (bitconvert vt:$vC))))))                 
+                        );
+
 }
 
-class XXEvalUnaryPattern<ValueType vt> {
-  // vnot Operand B
-  dag vnotB = (vnot vt:$vB);
-  // vnot Operand C
-  dag vnotC = (vnot vt:$vC);
+  // Helper class to generate unary NOT patterns for vector types.
+  // For v4i32, emits (vnot B) or (vnot C).
+  // For other types, bitcasts operand to v4i32, applies vnot, then bitcasts back.
+class XXEvalUnaryNotPattern<ValueType vt> {
+  dag vnotB = !if( !eq(vt, v4i32), 
+                   (vnot vt:$vB),
+                   (vt (bitconvert (vnot (v4i32 (bitconvert vt:$vB)))))
+                  );
+  dag vnotC = !if( !eq(vt, v4i32), 
+                   (vnot vt:$vC),
+                   (vt (bitconvert (vnot (v4i32 (bitconvert vt:$vC)))))
+                  );
 }
 
-class XXEvalBinaryPattern<ValueType vt, SDPatternOperator op, bit notResult = 0> {
-  // Defines a wrapper class for binary patterns with optional NOT on result.
-  // Generate op pattern with optional NOT wrapping for result depending on "notResult".
-  dag opPat = DagCondVNot<(op vt:$vB, vt:$vC), notResult>.res;
+  // Wrapper class for binary patterns with optional NOT on the result.
+  // If 'not' is 0, emits the binary op; if 1, emits vnot of the binary op.
+class XXEvalBinaryPattern<ValueType vt, SDPatternOperator op, bit not = 0> {
+  dag opPat = !if( !eq(not, 0),
+                    BinaryOpDag<vt, op>.OpDag,
+                    BinaryOpDag<vt, op>.VnotOpDag
+                  );
 }
 
 multiclass XXEvalVSelectWithXAnd<ValueType vt, bits<8> baseImm> {
-  // Multiclass for Ternary(A, X, and(B, C)) style patterns.
-  // Ternary(A, xor(B,C), and(B,C)) => imm: baseImm = 22
+  // Multiclass for ternary patterns of the form vselect(A, X, and(B, C)).
+  // vselect(A, xor(B,C), and(B,C)) => imm = baseImm = 22
   def : XXEvalPattern<vt, 
         (vselect vt:$vA, XXEvalBinaryPattern<vt, xor>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
         baseImm>;
-  // Ternary(A, nor(B,C), and(B,C)) => imm: baseImm + 2 = 24
+  // vselect(A, nor(B,C), and(B,C)) => imm = baseImm + 2 = 24
   def : XXEvalPattern<vt, 
         (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
         !add(baseImm, 2)>;
-  // Ternary(A, eqv(B,C), and(B,C)) => imm: baseImm + 3 = 25
+  // vselect(A, eqv(B,C), and(B,C)) => imm = baseImm + 3 = 25
   def : XXEvalPattern<vt, 
         (vselect vt:$vA, XXEvalBinaryPattern<vt, xor, 1>.opPat, XXEvalBinaryPattern<vt, and>.opPat), 
         !add(baseImm, 3)>;
-  // Ternary(A, not(C), and(B,C)) => imm: baseImm + 4 = 26
+  // vselect(A, not(C), and(B,C)) => imm = baseImm + 4 = 26
   def : XXEvalPattern<vt,
-        (vselect vt:$vA, XXEvalUnaryPattern<vt>.vnotC, XXEvalBinaryPattern<vt, and>.opPat), 
+        (vselect vt:$vA, XXEvalUnaryNotPattern<vt>.vnotC, XXEvalBinaryPattern<vt, and>.opPat), 
         !add(baseImm, 4)>;
-  // Ternary(A, not(B), and(B,C)) => imm: baseImm + 6 = 28
+  // vselect(A, not(B), and(B,C)) => imm = baseImm + 6 = 28
   def : XXEvalPattern<vt,
-        (vselect vt:$vA, XXEvalUnaryPattern<vt>.vnotB, XXEvalBinaryPattern<vt, and>.opPat), 
+        (vselect vt:$vA, XXEvalUnaryNotPattern<vt>.vnotB, XXEvalBinaryPattern<vt, and>.opPat), 
         !add(baseImm, 6)>;
 }
 
 multiclass XXEvalVSelectWithXB<ValueType vt, bits<8> baseImm>{
-  // Multiclass for Ternary(A, X, B) style patterns
-  // Ternary(A, and(B,C), B) => imm: baseImm = 49
+  // Multiclass for ternary patterns of the form vselect(A, X, B).
+  // vselect(A, and(B,C), B) => imm = baseImm = 49
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, vt:$vB), 
         baseImm>;
-  // Ternary(A, nor(B,C), B) => imm: baseImm + 7 = 56
+  // vselect(A, nor(B,C), B) => imm = baseImm + 7 = 56
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, vt:$vB), 
         !add(baseImm, 7)>;
-  // Ternary(A, eqv(B,C), B) => imm: baseImm + 8 = 57
+  // vselect(A, eqv(B,C), B) => imm = baseImm + 8 = 57
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, xor, 1>.opPat, vt:$vB), 
         !add(baseImm, 8)>;
-  // Ternary(A, not(C), B) => imm: baseImm + 9 = 58
-  def : XXEvalPattern<vt,
-        (vselect vt:$vA, XXEvalUnaryPattern<vt>.vnotC, vt:$vB), 
-        !add(baseImm, 9)>;
-  // Ternary(A, nand(B,C), B) => imm: baseImm + 13 = 62
+  // vselect(A, nand(B,C), B) => imm = baseImm + 13 = 62
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, and, 1>.opPat, vt:$vB), 
         !add(baseImm, 13)>;
 }
 
 multiclass XXEvalVSelectWithXC<ValueType vt, bits<8> baseImm>{
-  // Multiclass for Ternary(A, X, C) style patterns
-  // Ternary(A, and(B,C), C) => imm: baseImm = 81
+  // Multiclass for ternary patterns of the form vselect(A, X, C).
+  // vselect(A, and(B,C), C) => imm = baseImm = 81
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, vt:$vC), 
         baseImm>;
-  // Ternary(A, nor(B,C), C) => imm: baseImm + 7 = 88
+  // vselect(A, nor(B,C), C) => imm = baseImm + 7 = 88
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, vt:$vC), 
         !add(baseImm, 7)>;
-  // Ternary(A, eqv(B,C), C) => imm: baseImm + 8 = 89
+  // vselect(A, eqv(B,C), C) => imm = baseImm + 8 = 89
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, xor, 1>.opPat, vt:$vC), 
         !add(baseImm, 8)>;
-  // Ternary(A, nand(B,C), C) => imm: baseImm + 13 = 94
+  // vselect(A, nand(B,C), C) => imm = baseImm + 13 = 94
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, and, 1>.opPat, vt:$vC), 
         !add(baseImm, 13)>;
 }
 
 multiclass XXEvalVSelectWithXXor<ValueType vt, bits<8> baseImm>{
-  // Multiclass for Ternary(A, X, xor(B,C)) style patterns
-  // Ternary(A, and(B,C), xor(B,C)) => imm: baseImm = 97
+  // Multiclass for ternary patterns of the form vselect(A, X, xor(B,C)).
+  // vselect(A, and(B,C), xor(B,C)) => imm = baseImm = 97
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, and>.opPat, XXEvalBinaryPattern<vt, xor>.opPat), 
         baseImm>;
-  // Ternary(A, B, xor(B,C)) => imm: baseImm + 2 = 99
+  // vselect(A, B, xor(B,C)) => imm = baseImm + 2 = 99
   def : XXEvalPattern<vt,
         (vselect vt:$vA, vt:$vB, XXEvalBinaryPattern<vt, xor>.opPat), 
         !add(baseImm, 2)>;
-  // Ternary(A, C, xor(B,C)) => imm: baseImm + 4 = 101
+  // vselect(A, C, xor(B,C)) => imm = baseImm + 4 = 101
   def : XXEvalPattern<vt,
         (vselect vt:$vA, vt:$vC, XXEvalBinaryPattern<vt, xor>.opPat), 
         !add(baseImm, 4)>;
-  // Ternary(A, or(B,C), xor(B,C)) => imm: baseImm + 6 = 103
+  // vselect(A, or(B,C), xor(B,C)) => imm = baseImm + 6 = 103
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, or>.opPat, XXEvalBinaryPattern<vt, xor>.opPat), 
         !add(baseImm, 6)>;
-  // Ternary(A, nor(B,C), xor(B,C)) => imm: baseImm + 7 = 104
+  // vselect(A, nor(B,C), xor(B,C)) => imm = baseImm + 7 = 104
   def : XXEvalPattern<vt,
         (vselect vt:$vA, XXEvalBinaryPattern<vt, or, 1>.opPat, XXEvalBinaryPattern<vt, xor>.opPat), 
         !add(baseImm, 7)>; 
+}
+
+  // Instantiate XXEval patterns for vector types v4i32 and v2i64 
+  // with higher complexity for HasP10Vector.
+let Predicates = [HasP10Vector] in {
+  let AddedComplexity = 500 in {
+      foreach type = [v4i32, v2i64] in {
+          defm : XXEvalVSelectWithXAnd<type, 22>;
+          defm : XXEvalVSelectWithXB<type, 49>;
+          defm : XXEvalVSelectWithXC<type, 81>;      
+          defm : XXEvalVSelectWithXXor<type, 97>;
+      }      
+  }
 }
 
 let Predicates = [PrefixInstrs, HasP10Vector] in {
@@ -2381,15 +2412,6 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     def : XXEvalPattern<v4i32, (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
     // (xor A, (or B, C))
     def : XXEvalPattern<v4i32, (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
-
-    // Utilize xxeval instruction for ternary vector expressions.
-    defm : XXEvalVSelectWithXAnd<v4i32, 22>;
-
-    defm : XXEvalVSelectWithXB<v4i32, 49>;
-
-    defm : XXEvalVSelectWithXC<v4i32, 81>;
-    
-    defm : XXEvalVSelectWithXXor<v4i32, 97>;
 
     // Anonymous patterns to select prefixed VSX loads and stores.
     // Load / Store f128
