@@ -59,7 +59,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   bool is_neg = static_cast<bool>(x_uint >> 15);
   float16 x_abs = is_neg ? -x : x;
 
-  auto __signed_result = [is_neg](float16 r) -> float16 {
+  auto signed_result = [is_neg](float16 r) -> float16 {
     return is_neg ? -r : r;
   };
 
@@ -82,9 +82,8 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // exceptional values
-  if (auto r = ASINFPI_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value())) {
+  if (auto r = ASINFPI_EXCEPTS.lookup(x_uint); LIBC_UNLIKELY(r.has_value()))
     return r.value();
-  }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // the coefficients for the polynomial approximation of asin(x)/pi in the
@@ -121,7 +120,7 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
   // polynomial evaluation using horner's method
   // work only for |x| in [0, 0.5]
-  auto __asinpi_polyeval = [](float16 xsq) -> float16 {
+  auto asinpi_polyeval = [](float16 xsq) -> float16 {
     return fputil::polyeval(xsq, POLY_COEFFS[0], POLY_COEFFS[1], POLY_COEFFS[2],
                             POLY_COEFFS[3], POLY_COEFFS[4], POLY_COEFFS[5],
                             POLY_COEFFS[6], POLY_COEFFS[7], POLY_COEFFS[8],
@@ -132,8 +131,8 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
   if (LIBC_UNLIKELY(x_abs <= ONE_OVER_TWO)) {
     // Use polynomial approximation of asin(x)/pi in the range [0, 0.5]
     float16 xsq = x * x;
-    float16 result = x * __asinpi_polyeval(xsq);
-    return fputil::cast<float16>(__signed_result(result));
+    float16 result = x * asinpi_polyeval(xsq);
+    return fputil::cast<float16>(signed_result(result));
   }
 
   // If |x| > 0.5, we need to use the range reduction method:
@@ -165,10 +164,10 @@ LLVM_LIBC_FUNCTION(float16, asinpif16, (float16 x)) {
 
   float16 u = fputil::multiply_add(-ONE_OVER_TWO, x_abs, ONE_OVER_TWO);
   float16 u_sqrt = fputil::sqrt<float16>(u);
-  float16 asinpi_sqrt_u = u_sqrt * __asinpi_polyeval(u);
+  float16 asinpi_sqrt_u = u_sqrt * asinpi_polyeval(u);
   float16 result = fputil::multiply_add(-2.0f16, asinpi_sqrt_u, ONE_OVER_TWO);
 
-  return fputil::cast<float16>(__signed_result(result));
+  return fputil::cast<float16>(signed_result(result));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
