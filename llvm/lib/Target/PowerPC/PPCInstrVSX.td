@@ -87,6 +87,12 @@ def SDT_PPCxxperm : SDTypeProfile<1, 3, [
   SDTCisVT<0, v2f64>, SDTCisVT<1, v2f64>,
   SDTCisVT<2, v2f64>, SDTCisVT<3, v4i32>]>;
 //--------------------------- Custom PPC nodes -------------------------------//
+def PPCvecselect : SDNode<"PPCISD::VSELECT", SDTypeProfile<1, 3, [
+  SDTCisVT<0, v2i64>, // result type
+  SDTCisVT<1, v2i64>, // condition type
+  SDTCisVT<2, v2i64>, // true value type
+  SDTCisVT<3, v2i64>  // false value type
+]>,[]>;
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def PPCstxvd2x : SDNode<"PPCISD::STXVD2X", SDT_PPCstxvd2x,
