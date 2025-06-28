@@ -22,11 +22,6 @@
 #include <memory>
 #include <optional>
 
-/*
-Missing explanation: "This is a derived class of MCStreamer which looks only at
-[particular parts of the output] and [does something with them]"
-*/
-
 namespace llvm {
 
 /// This class is an `MCStreamer` implementation that watches for machine
