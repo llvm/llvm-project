@@ -1498,7 +1498,7 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) {
 
 std::optional<std::string>
 DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
-                     const struct load_command &lc,
+                     uint32_t dyld_platform, const struct load_command &lc,
                      uint64_t load_command_address, uint32_t &major_version,
                      uint32_t &minor_version, uint32_t &patch_version) {
   MachProcessSP procSP;
@@ -1507,8 +1507,8 @@ DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
     // macOS binary) is loaded with the macCatalyst dyld platform
     // override. The image info corrects for this, but qProcessInfo
     // will return what is in the binary.
-    auto info =
-        procSP->GetDeploymentInfo(lc, load_command_address, is_executable);
+    auto info = procSP->GetDeploymentInfo(dyld_platform, lc,
+                                          load_command_address, is_executable);
     major_version = info.major_version;
     minor_version = info.minor_version;
     patch_version = info.patch_version;
@@ -1519,6 +1519,13 @@ DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
     return procSP->GetPlatformString(info.platform);
   }
   return {};
+}
+
+uint32_t DNBGetPlatform(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP))
+    return procSP->GetPlatform();
+  return 0;
 }
 
 // Get the current shared library information for a process. Only return

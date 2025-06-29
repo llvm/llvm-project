@@ -638,10 +638,9 @@ nub_addr_t MachProcess::GetTSDAddressForThread(
       plo_pthread_tsd_entry_size);
 }
 
-MachProcess::DeploymentInfo
-MachProcess::GetDeploymentInfo(const struct load_command &lc,
-                               uint64_t load_command_address,
-                               bool is_executable) {
+MachProcess::DeploymentInfo MachProcess::GetDeploymentInfo(
+    uint32_t dyld_platform, const struct load_command &lc,
+    uint64_t load_command_address, bool is_executable) {
   DeploymentInfo info;
   uint32_t cmd = lc.cmd & ~LC_REQ_DYLD;
 
@@ -712,7 +711,7 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
   // DYLD_FORCE_PLATFORM=6. In that case, force the platform to
   // macCatalyst and use the macCatalyst version of the host OS
   // instead of the macOS deployment target.
-  if (is_executable && GetPlatform() == PLATFORM_MACCATALYST) {
+  if (is_executable && dyld_platform == PLATFORM_MACCATALYST) {
     info.platform = PLATFORM_MACCATALYST;
     std::string catalyst_version = GetMacCatalystVersionString();
     const char *major = catalyst_version.c_str();
@@ -883,8 +882,9 @@ bool MachProcess::GetMachOInformationFromMemory(
           sizeof(struct uuid_command))
         uuid_copy(inf.uuid, uuidcmd.uuid);
     }
-    if (DeploymentInfo deployment_info = GetDeploymentInfo(
-            lc, load_cmds_p, inf.mach_header.filetype == MH_EXECUTE)) {
+    if (DeploymentInfo deployment_info =
+            GetDeploymentInfo(dyld_platform, lc, load_cmds_p,
+                              inf.mach_header.filetype == MH_EXECUTE)) {
       std::optional<std::string> lc_platform =
           GetPlatformString(deployment_info.platform);
       if (dyld_platform != PLATFORM_MACCATALYST &&
