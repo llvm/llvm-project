@@ -78,6 +78,44 @@ lldb::ByteOrder Opcode::GetDataByteOrder() const {
   return eByteOrderInvalid;
 }
 
+// make RISC-V byte dumps look like llvm-objdump, instead of just dumping bytes
+int Opcode::DumpRISCV(Stream *s, uint32_t min_byte_width) {
+  const uint32_t previous_bytes = s->GetWrittenBytes();
+  // if m_type is not bytes, call Dump
+  if (m_type != Opcode::eTypeBytes)
+    return Dump(s, min_byte_width);
+
+  // from RISCVPrettyPrinter in llvm-objdump.cpp
+  // if size % 4 == 0, print as 1 or 2 32 bit values (32 or 64 bit inst)
+  // else if size % 2 == 0, print as 1 or 3 16 bit values (16 or 48 bit inst)
+  // else fall back and print bytes
+  for (uint32_t i = 0; i < m_data.inst.length;) {
+    if (i > 0)
+      s->PutChar(' ');
+    if (!(m_data.inst.length % 4)) {
+      s->Printf("%2.2x%2.2x%2.2x%2.2x", m_data.inst.bytes[i + 3],
+                                        m_data.inst.bytes[i + 2],
+                                        m_data.inst.bytes[i + 1],
+                                        m_data.inst.bytes[i + 0]);
+      i += 4;
+    } else if (!(m_data.inst.length % 2)) {
+      s->Printf("%2.2x%2.2x", m_data.inst.bytes[i + 1],
+                              m_data.inst.bytes[i + 0]);
+      i += 2;
+    } else {
+      s->Printf("%2.2x", m_data.inst.bytes[i]);
+      ++i;
+    }
+  }
+
+  uint32_t bytes_written_so_far = s->GetWrittenBytes() - previous_bytes;
+  // Add spaces to make sure bytes display comes out even in case opcodes aren't
+  // all the same size.
+  if (bytes_written_so_far < min_byte_width)
+    s->Printf("%*s", min_byte_width - bytes_written_so_far, "");
+  return s->GetWrittenBytes() - previous_bytes;
+}
+
 uint32_t Opcode::GetData(DataExtractor &data) const {
   uint32_t byte_size = GetByteSize();
   uint8_t swap_buf[8];

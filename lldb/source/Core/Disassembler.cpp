@@ -658,8 +658,13 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
       // the byte dump to be able to always show 15 bytes (3 chars each) plus a
       // space
       if (max_opcode_byte_size > 0)
-        m_opcode.Dump(&ss, max_opcode_byte_size * 3 + 1);
-      else
+        // make RISC-V opcode dump look like llvm-objdump
+        if (exe_ctx &&
+            exe_ctx->GetTargetSP()->GetArchitecture().GetTriple().isRISCV())
+          m_opcode.DumpRISCV(&ss, max_opcode_byte_size * 3 + 1);
+        else
+          m_opcode.Dump(&ss, max_opcode_byte_size * 3 + 1);
+       else
         m_opcode.Dump(&ss, 15 * 3 + 1);
     } else {
       // Else, we have ARM or MIPS which can show up to a uint32_t 0x00000000
@@ -685,9 +690,12 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     }
   }
   const size_t opcode_pos = ss.GetSizeOfLastLine();
-  const std::string &opcode_name =
+  std::string &opcode_name =
       show_color ? m_markup_opcode_name : m_opcode_name;
   const std::string &mnemonics = show_color ? m_markup_mnemonics : m_mnemonics;
+
+  if (opcode_name.empty())
+    opcode_name = "<unknown>";
 
   // The default opcode size of 7 characters is plenty for most architectures
   // but some like arm can pull out the occasional vqrshrun.s16.  We won't get
