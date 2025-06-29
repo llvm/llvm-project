@@ -676,7 +676,7 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
                      CmpEnd - CmpStart) < 0;
     };
     LastLow = Low;
-    std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
+    std::tie(Low, High) = std::equal_range(Low, High, Name, Cmp);
   }
   if (High - Low > 0)
     LastLow = Low;
