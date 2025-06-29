@@ -197,8 +197,7 @@ enum class LineType {
   CallSiteProfile,
   BodyProfile,
   Metadata,
-  CallTargetTypeProfile,
-  CallSiteTypeProfile,
+  VirtualCallTypeProfile,
 };
 
 static bool parseTypeCountMap(StringRef Input,
@@ -332,13 +331,9 @@ static bool ParseLine(const StringRef &Input, LineType &LineTy, uint32_t &Depth,
       n3 = n4;
     }
   } else if (Rest.starts_with(kBodySampleVTableProfPrefix)) {
-    LineTy = LineType::CallTargetTypeProfile;
+    LineTy = LineType::VirtualCallTypeProfile;
     return parseTypeCountMap(Rest.substr(strlen(kBodySampleVTableProfPrefix)),
                              TypeCountMap);
-  } else if (Rest.starts_with(kInlinedCallsiteVTablerofPrefix)) {
-    LineTy = LineType::CallSiteTypeProfile;
-    return parseTypeCountMap(
-        Rest.substr(strlen(kInlinedCallsiteVTablerofPrefix)), TypeCountMap);
   } else {
     LineTy = LineType::CallSiteProfile;
     size_t n3 = Rest.find_last_of(':');
@@ -445,24 +440,10 @@ std::error_code SampleProfileReaderText::readImpl() {
         break;
       }
 
-      case LineType::CallSiteTypeProfile: {
+      case LineType::VirtualCallTypeProfile: {
         mergeSampleProfErrors(
             Result, InlineStack.back()->addCallsiteVTableTypeProfAt(
                         LineLocation(LineOffset, Discriminator), TypeCountMap));
-        break;
-      }
-
-      case LineType::CallTargetTypeProfile: {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
-        FunctionSamples &FProfile = *InlineStack.back();
-        for (const auto &name_count : TypeCountMap) {
-          mergeSampleProfErrors(
-              Result, FProfile.addFunctionBodyTypeSamples(
-                          LineLocation(LineOffset, Discriminator),
-                          FunctionId(name_count.first), name_count.second));
-        }
         break;
       }
 
@@ -747,14 +728,6 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
 
       FProfile.addCalledTargetSamples(*LineOffset, DiscriminatorVal,
                                       *CalledFunction, *CalledFunctionSamples);
-    }
-
-    if (ReadVTableProf) {
-      // read vtable type profiles.
-      if (std::error_code EC =
-              readVTableTypeCountMap(FProfile.getFunctionBodyTypeSamples(
-                  LineLocation(*LineOffset, DiscriminatorVal))))
-        return EC;
     }
 
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);

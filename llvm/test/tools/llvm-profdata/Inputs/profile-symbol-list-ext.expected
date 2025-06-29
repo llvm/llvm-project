@@ -6,7 +6,8 @@ Samples collected in the function's body {
   5.1: 2150
   6: 4160
   7: 1068
-  9: 4128, calls: _Z3bari:2942 _Z3fooi:1262, vtables: _ZTVbar:2942 _ZTVfoo:1260
+  9: 4128, calls: _Z3bari:2942 _Z3fooi:1262
+  9: vtables: _ZTVbar:2942 _ZTVfoo:1260
 }
 Samples collected in inlined callsites {
   10: inlined callee: inline1: 2000, 0, 1 sampled lines
