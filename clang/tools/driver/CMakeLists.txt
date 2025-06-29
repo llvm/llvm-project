@@ -44,6 +44,7 @@ add_clang_tool(clang
   cc1_main.cpp
   cc1as_main.cpp
   cc1gen_reproducer_main.cpp
+  cc1modbuildd_main.cpp
 
   DEPENDS
   intrinsics_gen
@@ -60,9 +61,11 @@ clang_target_link_libraries(clang
   PRIVATE
   clangBasic
   clangCodeGen
+  clangDependencyScanning
   clangDriver
   clangFrontend
   clangFrontendTool
+  clangModuleBuildDaemon
   clangSerialization
   )
 

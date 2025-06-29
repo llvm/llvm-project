@@ -12,6 +12,7 @@ add_subdirectory(ASTDiff)
 add_subdirectory(Syntax)
 add_subdirectory(DependencyScanning)
 add_subdirectory(Transformer)
+add_subdirectory(ModuleBuildDaemon)
 
 add_clang_library(clangTooling
   AllTUsExecution.cpp
