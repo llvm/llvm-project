@@ -6052,6 +6052,12 @@ type:
 
         call void @llvm.foo(metadata i32 1)
 
+    And the first element of this ``MDTuple`` is a ``ValueAsMetadata(Value)``:
+
+    .. code-block:: llvm
+
+        !{i32 1}
+
     Whereas the first argument to this call is a ``MetadataAsValue(MDNode)``:
 
     .. code-block:: llvm
@@ -6063,12 +6069,6 @@ type:
     .. code-block:: llvm
 
         !{!0}
-
-    And the first element of this ``MDTuple`` is a ``ValueAsMetadata(Value)``:
-
-    .. code-block:: llvm
-
-        !{i32 1}
 
 .. _metadata-string:
 
