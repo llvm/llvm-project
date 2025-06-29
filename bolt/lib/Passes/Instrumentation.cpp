@@ -368,7 +368,7 @@ bool Instrumentation::instrumentOneTarget(
 
 void Instrumentation::instrumentFunction(BinaryFunction &Function,
                                          MCPlusBuilder::AllocatorIdTy AllocId) {
-  if (Function.hasUnknownControlFlow())
+  if (Function.hasUnknownControlFlow() || Function.isIgnored())
     return;
 
   BinaryContext &BC = Function.getBinaryContext();

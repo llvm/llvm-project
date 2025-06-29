@@ -3561,6 +3561,9 @@ void RewriteInstance::postProcessFunctions() {
     if (Function.empty())
       continue;
 
+    if (Function.isIgnored())
+      continue;
+
     Function.postProcessCFG();
 
     if (opts::PrintAll || opts::PrintCFG)
