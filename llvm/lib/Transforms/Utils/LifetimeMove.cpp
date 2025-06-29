@@ -29,7 +29,6 @@ class LifetimeMover : public PtrUseVisitor<LifetimeMover> {
   using Base = PtrUseVisitor<LifetimeMover>;
 
   const DominatorTree &DT;
-  const PostDominatorTree &PDT;
   const LoopInfo &LI;
 
   SmallVector<AllocaInst *, 4> Allocas;
@@ -41,11 +40,11 @@ class LifetimeMover : public PtrUseVisitor<LifetimeMover> {
   SmallVector<Instruction *, 2> LifetimeStarts;
   SmallVector<Instruction *, 2> LifetimeEnds;
   SmallVector<Instruction *, 8> OtherUsers;
+  SmallPtrSet<BasicBlock *, 2> LifetimeStartBBs;
   SmallPtrSet<BasicBlock *, 2> UserBBs;
 
 public:
-  LifetimeMover(Function &F, const DominatorTree &DT,
-                const PostDominatorTree &PDT, const LoopInfo &LI);
+  LifetimeMover(Function &F, const DominatorTree &DT, const LoopInfo &LI);
 
   bool run();
 
@@ -65,8 +64,8 @@ private:
 } // namespace
 
 LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
-                             const PostDominatorTree &PDT, const LoopInfo &LI)
-    : Base(F.getDataLayout()), DT(DT), PDT(PDT), LI(LI) {
+                             const LoopInfo &LI)
+    : Base(F.getDataLayout()), DT(DT), LI(LI) {
   for (Instruction &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I))
       Allocas.push_back(AI);
@@ -168,6 +167,7 @@ void LifetimeMover::visitIntrinsicInst(IntrinsicInst &II) {
   switch (II.getIntrinsicID()) {
   case Intrinsic::lifetime_start:
     LifetimeStarts.push_back(&II);
+    LifetimeStartBBs.insert(II.getParent());
     break;
   case Intrinsic::lifetime_end:
     LifetimeEnds.push_back(&II);
@@ -221,8 +221,7 @@ bool LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
   if (DomPoint != AI) {
     // If existing position is better, do nothing
     for (auto *P : LifetimeStarts) {
-      bool Reachable = isPotentiallyReachable(DomPoint, P, nullptr, &DT, &LI);
-      if (Reachable && (P == Update(DomPoint, P)))
+      if (P == Update(DomPoint, P))
         return false;
     }
 
@@ -231,9 +230,19 @@ bool LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
     NewStart->insertAfter(DomPoint->getIterator());
 
     // All the outsided lifetime.start markers are no longer necessary.
-    for (auto *I : LifetimeStarts)
-      if (PDT.dominates(DomPoint, I))
+    for (auto *I : LifetimeStarts) {
+      if (LI.getLoopFor(I->getParent()))
+        continue;
+
+      bool Restart = llvm::any_of(LifetimeEnds, [this, I](Instruction *End) {
+        return isPotentiallyReachable(End, I, &LifetimeStartBBs, &DT, &LI);
+      });
+
+      if (!Restart) {
+        LifetimeStartBBs.erase(I->getParent());
         I->eraseFromParent();
+      }
+    }
     return true;
   }
   return false;
@@ -275,8 +284,7 @@ bool LifetimeMover::riseLifetimeEndMarkers() {
 
   if (DomPoint != nullptr) {
     for (auto *P : LifetimeEnds) {
-      bool Reachable = isPotentiallyReachable(P, DomPoint, nullptr, &DT, &LI);
-      if (Reachable && (P == Update(DomPoint, P)))
+      if (P == Update(DomPoint, P))
         return false;
     }
 
@@ -284,7 +292,7 @@ bool LifetimeMover::riseLifetimeEndMarkers() {
     NewEnd->insertBefore(DomPoint->getIterator());
 
     for (auto *I : LifetimeEnds)
-      if (DT.dominates(DomPoint, I))
+      if (!LI.getLoopFor(I->getParent()))
         I->eraseFromParent();
     return true;
   }
@@ -299,6 +307,7 @@ void LifetimeMover::reset() {
   LifetimeStarts.clear();
   LifetimeEnds.clear();
   OtherUsers.clear();
+  LifetimeStartBBs.clear();
   UserBBs.clear();
 }
 
@@ -309,9 +318,8 @@ PreservedAnalyses LifetimeMovePass::run(Function &F,
     return PreservedAnalyses::all();
 
   const DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  const PostDominatorTree &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
   const LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-  LifetimeMover Mover(F, DT, PDT, LI);
+  LifetimeMover Mover(F, DT, LI);
   if (!Mover.run())
     return PreservedAnalyses::all();
 

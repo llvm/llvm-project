@@ -54,7 +54,7 @@ exit:
   ret void
 }
 
-; Test critical points that reachable to itself should be rejected
+; Test do not move lifetime markers into a loop
 define void @fn2() presplitcoroutine {
 ; CHECK-LABEL: define void @fn2(
 ; CHECK-SAME: ) #[[ATTR0]] {
@@ -64,8 +64,7 @@ define void @fn2() presplitcoroutine {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[UNUSED:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    [[DONE:%.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 undef, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr nonnull [[TESTVAL]])
 ; CHECK-NEXT:    ret void
@@ -77,13 +76,9 @@ entry:
 
 loop:
   %unused = call i8 @llvm.coro.suspend(token none, i1 false)
-  %done = call i1 @cond()
-  br i1 %done, label %exit, label %loop
+  br i1 undef, label %exit, label %loop
 
 exit:
   call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %testval)
   ret void
 }
-
-declare i1 @cond()
-
