@@ -20015,6 +20015,10 @@ This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
 intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
 operation can assume that NaNs are not present in the input vector.
 
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vector.reduce.fmaximum``' or '``llvm.vector.reduce.fmaximumnum``' instead.
+
 Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
@@ -20043,6 +20047,10 @@ matches the element-type of the vector input.
 This instruction has the same comparison semantics as the '``llvm.minnum.*``'
 intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
 operation can assume that NaNs are not present in the input vector.
+
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vector.reduce.fminimum``' or '``llvm.vector.reduce.fminimumnum``' instead.
 
 Arguments:
 """"""""""
@@ -23692,6 +23700,10 @@ This instruction has the same comparison semantics as the
 
 To ignore the start value, the neutral value can be used.
 
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vp.vector.reduce.fmaximum``' or '``llvm.vp.vector.reduce.fmaximumnum``' instead.
+
 Examples:
 """""""""
 
@@ -23758,6 +23770,10 @@ This instruction has the same comparison semantics as the
 '``llvm.minnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
+
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vp.vector.reduce.fminimum``' or '``llvm.vp.vector.reduce.fminimumnum``' instead.
 
 Examples:
 """""""""
