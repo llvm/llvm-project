@@ -788,14 +788,15 @@ void MetadataStreamerMsgPackV6::emitHiddenKernelArg(
     KernArgPreload::HiddenArg HiddenArg, const AMDGPUFunctionArgInfo *ArgInfo) {
   assert(ArgInfo && HiddenArg != KernArgPreload::END_HIDDEN_ARGS);
 
-  SmallString<16> PreloadStr;
-  const auto *PreloadDesc = ArgInfo->getHiddenArgPreloadDescriptor(HiddenArg);
+  SmallString<32> PreloadStr;
+  const KernArgPreload::KernArgPreloadDescriptor *PreloadDesc =
+      ArgInfo->getHiddenArgPreloadDescriptor(HiddenArg);
   if (PreloadDesc) {
-    const auto &Regs = PreloadDesc->Regs;
-    for (unsigned I = 0; I < Regs.size(); ++I) {
-      if (I > 0)
-        PreloadStr += " ";
-      PreloadStr += AMDGPUInstPrinter::getRegisterName(Regs[I]);
+    const SmallVectorImpl<MCRegister> &Regs = PreloadDesc->Regs;
+    for (const auto &Reg : Regs) {
+      if (!PreloadStr.empty())
+        PreloadStr.push_back(' ');
+      PreloadStr += AMDGPUInstPrinter::getRegisterName(Reg);
     }
   }
   emitKernelArgImpl(DL, ArgTy, Alignment, ArgName, Offset, Args, PreloadStr);
@@ -806,19 +807,20 @@ void MetadataStreamerMsgPackV6::emitKernelArg(const Argument &Arg,
                                               msgpack::ArrayDocNode Args,
                                               const MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  SmallString<8> PreloadRegisters;
+  SmallString<32> PreloadRegisters;
   if (MFI->getNumKernargPreloadedSGPRs()) {
     assert(MF.getSubtarget<GCNSubtarget>().hasKernargPreload());
-    const auto &PreloadDescs =
-        MFI->getArgInfo().getPreloadDescriptorsForArgIdx(Arg.getArgNo());
+    const SmallVectorImpl<const KernArgPreload::KernArgPreloadDescriptor *>
+        &PreloadDescs =
+            MFI->getArgInfo().getPreloadDescriptorsForArgIdx(Arg.getArgNo());
     for (auto &Desc : PreloadDescs) {
       if (!PreloadRegisters.empty())
-        PreloadRegisters += " ";
+        PreloadRegisters.push_back(' ');
 
-      for (unsigned I = 0; I < Desc->Regs.size(); ++I) {
-        if (I > 0)
-          PreloadRegisters += " ";
-        PreloadRegisters += AMDGPUInstPrinter::getRegisterName(Desc->Regs[I]);
+      for (const auto &Reg : Desc->Regs) {
+        if (!PreloadRegisters.empty())
+          PreloadRegisters.push_back(' ');
+        PreloadRegisters += AMDGPUInstPrinter::getRegisterName(Reg);
       }
     }
   }

@@ -100,7 +100,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const ArgDescriptor &Arg) {
 
 namespace KernArgPreload {
 
-enum HiddenArg {
+enum HiddenArg : unsigned {
   HIDDEN_BLOCK_COUNT_X = 0,
   HIDDEN_BLOCK_COUNT_Y = 1,
   HIDDEN_BLOCK_COUNT_Z = 2,
@@ -110,7 +110,7 @@ enum HiddenArg {
   HIDDEN_REMAINDER_X = 6,
   HIDDEN_REMAINDER_Y = 7,
   HIDDEN_REMAINDER_Z = 8,
-  END_HIDDEN_ARGS = 9
+  END_HIDDEN_ARGS = HIDDEN_REMAINDER_Z + 1
 };
 
 // Stores information about a specific hidden argument.
@@ -165,7 +165,7 @@ struct KernArgPreloadDescriptor {
   unsigned PartIdx = 0;
 
   // The registers that the argument is preloaded into. The argument may be
-  // split accross multilpe registers.
+  // split across multiple registers.
   SmallVector<MCRegister, 2> Regs;
 };
 
