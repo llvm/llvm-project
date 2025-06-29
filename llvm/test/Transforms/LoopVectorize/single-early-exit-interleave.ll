@@ -37,11 +37,11 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP3]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[E2:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[E2:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    br label [[E1:%.*]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 128, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; VF4IC4:       loop.header:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[INC:%.*]], [[LOOP_LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -132,7 +132,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP13]], i1 true)
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = add i64 12, [[TMP33]]
@@ -152,7 +152,7 @@ define i64 @same_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 67, [[MIDDLE_BLOCK]] ], [ 3, [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
 ; VF4IC4:       loop:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -204,7 +204,6 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[PTREND:%.*]] = getelementptr i8, ptr [[P1]], i64 1024
 ; VF4IC4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; VF4IC4:       vector.ph:
-; VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P1]], i64 1024
 ; VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4IC4:       vector.body:
 ; VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -232,7 +231,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP3]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[TMP28:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP17]], i1 true)
 ; VF4IC4-NEXT:    [[TMP29:%.*]] = add i64 12, [[TMP28]]
@@ -252,7 +251,7 @@ define ptr @same_exit_block_pre_inc_use1_ivptr() {
 ; VF4IC4-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[P1]], i64 [[TMP7]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP0]], [[MIDDLE_BLOCK]] ], [ [[P1]], [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[P1]], [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
 ; VF4IC4:       loop:
 ; VF4IC4-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -335,7 +334,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP13]], i1 true)
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = add i64 12, [[TMP33]]
@@ -355,7 +354,7 @@ define i64 @same_exit_block_post_inc_use() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 67, [[MIDDLE_BLOCK]] ], [ 3, [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
 ; VF4IC4:       loop:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -445,7 +444,7 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP13]], i1 true)
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = add i64 12, [[TMP33]]
@@ -465,7 +464,7 @@ define i64 @diff_exit_block_pre_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_EARLY_EXIT:%.*]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 67, [[MIDDLE_BLOCK]] ], [ 3, [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
 ; VF4IC4:       loop:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -562,7 +561,7 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[TMP33:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP13]], i1 true)
 ; VF4IC4-NEXT:    [[TMP34:%.*]] = add i64 12, [[TMP33]]
@@ -582,7 +581,7 @@ define i64 @diff_exit_block_post_inc_use1() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = add i64 3, [[TMP9]]
 ; VF4IC4-NEXT:    br label [[LOOP_EARLY_EXIT:%.*]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 67, [[MIDDLE_BLOCK]] ], [ 3, [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
 ; VF4IC4:       loop:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -695,7 +694,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP7]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 false, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[SCALAR_PH]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[TMP41:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP21]], i1 true)
 ; VF4IC4-NEXT:    [[TMP42:%.*]] = add i64 12, [[TMP41]]
@@ -713,7 +712,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[TMP10:%.*]] = select i1 [[TMP39]], i64 [[TMP40]], i64 [[TMP37]]
 ; VF4IC4-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP10]]
 ; VF4IC4-NEXT:    [[TMP12:%.*]] = sub i64 1023, [[TMP11]]
-; VF4IC4-NEXT:    br label [[LOOP_END]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       scalar.ph:
 ; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 15, [[MIDDLE_BLOCK]] ], [ 1023, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
@@ -730,7 +729,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; VF4IC4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; VF4IC4-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP]], !llvm.loop [[LOOP15:![0-9]+]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[IV]], [[LOOP]] ], [ 1024, [[LOOP_INC]] ], [ 1024, [[MIDDLE_BLOCK]] ], [ [[TMP12]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[IV]], [[LOOP]] ], [ 1024, [[LOOP_INC]] ], [ [[TMP12]], [[VECTOR_EARLY_EXIT]] ]
 ; VF4IC4-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -805,7 +804,7 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP5]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 true, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP13]], i1 true)
 ; VF4IC4-NEXT:    [[TMP20:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE1]]
@@ -824,7 +823,7 @@ define i8 @same_exit_block_use_loaded_value() {
 ; VF4IC4-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <4 x i8> [[WIDE_LOAD]], i64 [[FIRST_ACTIVE_LANE]]
 ; VF4IC4-NEXT:    br label [[LOOP_END]]
 ; VF4IC4:       scalar.ph:
-; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
 ; VF4IC4:       loop:
 ; VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
@@ -931,7 +930,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4:       middle.split:
 ; VF4IC4-NEXT:    br i1 [[TMP25]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; VF4IC4:       middle.block:
-; VF4IC4-NEXT:    br i1 false, label [[LOOP_END:%.*]], label [[SCALAR_PH]]
+; VF4IC4-NEXT:    br label [[SCALAR_PH]]
 ; VF4IC4:       vector.early.exit:
 ; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE1:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP21]], i1 true)
 ; VF4IC4-NEXT:    [[TMP28:%.*]] = add i64 12, [[FIRST_ACTIVE_LANE1]]
@@ -948,7 +947,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[TMP35:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE17]], 4
 ; VF4IC4-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = select i1 [[TMP35]], i64 [[TMP36]], i64 [[TMP34]]
 ; VF4IC4-NEXT:    [[EARLY_EXIT_VALUE:%.*]] = extractelement <4 x i8> [[REVERSE]], i64 [[FIRST_ACTIVE_LANE]]
-; VF4IC4-NEXT:    br label [[LOOP_END]]
+; VF4IC4-NEXT:    br label [[LOOP_END:%.*]]
 ; VF4IC4:       scalar.ph:
 ; VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 15, [[MIDDLE_BLOCK]] ], [ 1023, [[ENTRY:%.*]] ]
 ; VF4IC4-NEXT:    br label [[LOOP:%.*]]
@@ -965,7 +964,7 @@ define i8 @same_exit_block_reverse_use_loaded_value() {
 ; VF4IC4-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 0
 ; VF4IC4-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP]], !llvm.loop [[LOOP19:![0-9]+]]
 ; VF4IC4:       loop.end:
-; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[LD1]], [[LOOP]] ], [ -1, [[LOOP_INC]] ], [ -1, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
+; VF4IC4-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[LD1]], [[LOOP]] ], [ -1, [[LOOP_INC]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; VF4IC4-NEXT:    ret i8 [[RETVAL]]
 ;
 entry:
