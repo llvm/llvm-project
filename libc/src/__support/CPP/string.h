@@ -114,7 +114,7 @@ public:
   LIBC_INLINE constexpr const char &back() const LIBC_LIFETIMEBOUND {
     return data()[size_ - 1];
   }
-  LIBC_INLINE char &back() { return data()[size_ - 1]; }
+  LIBC_INLINE char &back() LIBC_LIFETIMEBOUND { return data()[size_ - 1]; }
 
   LIBC_INLINE constexpr const char &
   operator[](size_t index) const LIBC_LIFETIMEBOUND {
