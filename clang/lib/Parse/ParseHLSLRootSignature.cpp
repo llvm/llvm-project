@@ -76,7 +76,7 @@ static FlagType maybeOrFlag(std::optional<FlagType> Flags, FlagType Flag) {
                                llvm::to_underlying(Flag));
 }
 
-std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
+std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
   assert(CurToken.TokKind == TokenKind::kw_RootFlags &&
          "Expects to only be invoked starting at given keyword");
 
@@ -84,7 +84,7 @@ std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
                            CurToken.TokKind))
     return std::nullopt;
 
-  std::optional<RootFlags> Flags = RootFlags::None;
+  std::optional<llvm::dxbc::RootFlags> Flags = llvm::dxbc::RootFlags::None;
 
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
@@ -104,7 +104,8 @@ std::optional<RootFlags> RootSignatureParser::parseRootFlags() {
         switch (CurToken.TokKind) {
 #define ROOT_FLAG_ENUM(NAME, LIT)                                              \
   case TokenKind::en_##NAME:                                                   \
-    Flags = maybeOrFlag<RootFlags>(Flags, RootFlags::NAME);                    \
+    Flags = maybeOrFlag<llvm::dxbc::RootFlags>(Flags,                          \
+                                               llvm::dxbc::RootFlags::NAME);   \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
         default:
@@ -240,7 +241,7 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
     return std::nullopt;
 
   DescriptorTable Table;
-  std::optional<ShaderVisibility> Visibility;
+  std::optional<llvm::dxbc::ShaderVisibility> Visibility;
 
   // Iterate as many Clauses as possible
   do {
@@ -983,7 +984,7 @@ std::optional<float> RootSignatureParser::parseFloatParam() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::ShaderVisibility>
+std::optional<llvm::dxbc::ShaderVisibility>
 RootSignatureParser::parseShaderVisibility() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -999,7 +1000,7 @@ RootSignatureParser::parseShaderVisibility() {
   switch (CurToken.TokKind) {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
   case TokenKind::en_##NAME:                                                   \
-    return ShaderVisibility::NAME;                                             \
+    return llvm::dxbc::ShaderVisibility::NAME;                                 \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1009,7 +1010,7 @@ RootSignatureParser::parseShaderVisibility() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::SamplerFilter>
+std::optional<llvm::dxbc::SamplerFilter>
 RootSignatureParser::parseSamplerFilter() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1025,7 +1026,7 @@ RootSignatureParser::parseSamplerFilter() {
   switch (CurToken.TokKind) {
 #define FILTER_ENUM(NAME, LIT)                                                 \
   case TokenKind::en_##NAME:                                                   \
-    return SamplerFilter::NAME;                                                \
+    return llvm::dxbc::SamplerFilter::NAME;                                    \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1035,7 +1036,7 @@ RootSignatureParser::parseSamplerFilter() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::TextureAddressMode>
+std::optional<llvm::dxbc::TextureAddressMode>
 RootSignatureParser::parseTextureAddressMode() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1051,7 +1052,7 @@ RootSignatureParser::parseTextureAddressMode() {
   switch (CurToken.TokKind) {
 #define TEXTURE_ADDRESS_MODE_ENUM(NAME, LIT)                                   \
   case TokenKind::en_##NAME:                                                   \
-    return TextureAddressMode::NAME;                                           \
+    return llvm::dxbc::TextureAddressMode::NAME;                               \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1061,7 +1062,7 @@ RootSignatureParser::parseTextureAddressMode() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::ComparisonFunc>
+std::optional<llvm::dxbc::ComparisonFunc>
 RootSignatureParser::parseComparisonFunc() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1077,7 +1078,7 @@ RootSignatureParser::parseComparisonFunc() {
   switch (CurToken.TokKind) {
 #define COMPARISON_FUNC_ENUM(NAME, LIT)                                        \
   case TokenKind::en_##NAME:                                                   \
-    return ComparisonFunc::NAME;                                               \
+    return llvm::dxbc::ComparisonFunc::NAME;                                   \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1087,7 +1088,7 @@ RootSignatureParser::parseComparisonFunc() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::StaticBorderColor>
+std::optional<llvm::dxbc::StaticBorderColor>
 RootSignatureParser::parseStaticBorderColor() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1103,7 +1104,7 @@ RootSignatureParser::parseStaticBorderColor() {
   switch (CurToken.TokKind) {
 #define STATIC_BORDER_COLOR_ENUM(NAME, LIT)                                    \
   case TokenKind::en_##NAME:                                                   \
-    return StaticBorderColor::NAME;                                            \
+    return llvm::dxbc::StaticBorderColor::NAME;                                \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   default:
@@ -1113,7 +1114,7 @@ RootSignatureParser::parseStaticBorderColor() {
   return std::nullopt;
 }
 
-std::optional<llvm::hlsl::rootsig::RootDescriptorFlags>
+std::optional<llvm::dxbc::RootDescriptorFlags>
 RootSignatureParser::parseRootDescriptorFlags() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1124,7 +1125,7 @@ RootSignatureParser::parseRootDescriptorFlags() {
       getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
-    return RootDescriptorFlags::None;
+    return llvm::dxbc::RootDescriptorFlags::None;
   }
 
   TokenKind Expected[] = {
@@ -1132,15 +1133,15 @@ RootSignatureParser::parseRootDescriptorFlags() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  std::optional<RootDescriptorFlags> Flags;
+  std::optional<llvm::dxbc::RootDescriptorFlags> Flags;
 
   do {
     if (tryConsumeExpectedToken(Expected)) {
       switch (CurToken.TokKind) {
 #define ROOT_DESCRIPTOR_FLAG_ENUM(NAME, LIT)                                   \
   case TokenKind::en_##NAME:                                                   \
-    Flags =                                                                    \
-        maybeOrFlag<RootDescriptorFlags>(Flags, RootDescriptorFlags::NAME);    \
+    Flags = maybeOrFlag<llvm::dxbc::RootDescriptorFlags>(                      \
+        Flags, llvm::dxbc::RootDescriptorFlags::NAME);                         \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
       default:
@@ -1152,7 +1153,7 @@ RootSignatureParser::parseRootDescriptorFlags() {
   return Flags;
 }
 
-std::optional<llvm::hlsl::rootsig::DescriptorRangeFlags>
+std::optional<llvm::dxbc::DescriptorRangeFlags>
 RootSignatureParser::parseDescriptorRangeFlags() {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
@@ -1163,7 +1164,7 @@ RootSignatureParser::parseDescriptorRangeFlags() {
       getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
-    return DescriptorRangeFlags::None;
+    return llvm::dxbc::DescriptorRangeFlags::None;
   }
 
   TokenKind Expected[] = {
@@ -1171,15 +1172,15 @@ RootSignatureParser::parseDescriptorRangeFlags() {
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   };
 
-  std::optional<DescriptorRangeFlags> Flags;
+  std::optional<llvm::dxbc::DescriptorRangeFlags> Flags;
 
   do {
     if (tryConsumeExpectedToken(Expected)) {
       switch (CurToken.TokKind) {
 #define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON)                              \
   case TokenKind::en_##NAME:                                                   \
-    Flags =                                                                    \
-        maybeOrFlag<DescriptorRangeFlags>(Flags, DescriptorRangeFlags::NAME);  \
+    Flags = maybeOrFlag<llvm::dxbc::DescriptorRangeFlags>(                     \
+        Flags, llvm::dxbc::DescriptorRangeFlags::NAME);                        \
     break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
       default:

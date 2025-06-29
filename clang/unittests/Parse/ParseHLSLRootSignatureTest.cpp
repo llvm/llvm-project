@@ -167,7 +167,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -179,7 +179,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 3u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset, 32u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::None);
+            llvm::dxbc::DescriptorRangeFlags::None);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -192,7 +192,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::None);
+            llvm::dxbc::DescriptorRangeFlags::None);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -205,20 +205,22 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
+  auto ValidDescriptorRangeFlags = llvm::dxbc::DescriptorRangeFlags(0x1000f);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::ValidFlags);
+            ValidDescriptorRangeFlags);
 
   Elem = Elements[4];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, (uint32_t)4);
   ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
-            ShaderVisibility::Pixel);
+            llvm::dxbc::ShaderVisibility::Pixel);
 
   // Empty Descriptor Table
   Elem = Elements[5];
   ASSERT_TRUE(std::holds_alternative<DescriptorTable>(Elem));
   ASSERT_EQ(std::get<DescriptorTable>(Elem).NumClauses, 0u);
-  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<DescriptorTable>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -258,19 +260,25 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_TRUE(std::holds_alternative<StaticSampler>(Elem));
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Filter, SamplerFilter::Anisotropic);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Wrap);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Wrap);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Filter,
+            llvm::dxbc::SamplerFilter::Anisotropic);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU,
+            llvm::dxbc::TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV,
+            llvm::dxbc::TextureAddressMode::Wrap);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW,
+            llvm::dxbc::TextureAddressMode::Wrap);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 0.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 16u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::LessEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc,
+            llvm::dxbc::ComparisonFunc::LessEqual);
   ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
-            StaticBorderColor::OpaqueWhite);
+            llvm::dxbc::StaticBorderColor::OpaqueWhite);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 0.f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 3.402823466e+38f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
 
   // Check values can be set as expected
   Elem = Elements[1];
@@ -278,19 +286,24 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.ViewType, RegisterType::SReg);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Filter,
-            SamplerFilter::MaximumMinPointMagLinearMipPoint);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU, TextureAddressMode::Mirror);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV, TextureAddressMode::Border);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW, TextureAddressMode::Clamp);
+            llvm::dxbc::SamplerFilter::MaximumMinPointMagLinearMipPoint);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressU,
+            llvm::dxbc::TextureAddressMode::Mirror);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressV,
+            llvm::dxbc::TextureAddressMode::Border);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).AddressW,
+            llvm::dxbc::TextureAddressMode::Clamp);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MipLODBias, 230.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).MaxAnisotropy, 3u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc, ComparisonFunc::NotEqual);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).CompFunc,
+            llvm::dxbc::ComparisonFunc::NotEqual);
   ASSERT_EQ(std::get<StaticSampler>(Elem).BorderColor,
-            StaticBorderColor::OpaqueBlackUint);
+            llvm::dxbc::StaticBorderColor::OpaqueBlackUint);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MinLOD, 4.2f);
   ASSERT_FLOAT_EQ(std::get<StaticSampler>(Elem).MaxLOD, 9000.f);
   ASSERT_EQ(std::get<StaticSampler>(Elem).Space, 4u);
-  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility, ShaderVisibility::Domain);
+  ASSERT_EQ(std::get<StaticSampler>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::Domain);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -404,7 +417,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            DescriptorRangeFlags::ValidSamplerFlags);
+            llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -438,7 +451,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootConstants>(Elem));
@@ -446,7 +460,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootConstants>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootConstants>(Elem).Space, 3u);
-  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootConstants>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::Hull);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -487,16 +502,17 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_EQ(Elements.size(), 3u);
 
   RootElement Elem = Elements[0];
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+  ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
+  ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), llvm::dxbc::RootFlags::None);
 
   Elem = Elements[1];
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
+  ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
+  ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), llvm::dxbc::RootFlags::None);
 
   Elem = Elements[2];
-  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
-  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::ValidFlags);
+  ASSERT_TRUE(std::holds_alternative<llvm::dxbc::RootFlags>(Elem));
+  auto ValidRootFlags = llvm::dxbc::RootFlags(0xfff);
+  ASSERT_EQ(std::get<llvm::dxbc::RootFlags>(Elem), ValidRootFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -532,9 +548,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataStaticWhileSetAtExecute);
+            llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
@@ -543,9 +560,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 42u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
-            ShaderVisibility::Geometry);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::ValidFlags);
+            llvm::dxbc::ShaderVisibility::Geometry);
+  auto ValidRootDescriptorFlags = llvm::dxbc::RootDescriptorFlags(0xe);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, ValidRootDescriptorFlags);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
@@ -553,19 +570,22 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::UReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 34893247u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::Hull);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::Hull);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataVolatile);
+            llvm::dxbc::RootDescriptorFlags::DataVolatile);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            RootDescriptorFlags::DataVolatile);
+            llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3];
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.ViewType, RegisterType::BReg);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Reg.Number, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility, ShaderVisibility::All);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, RootDescriptorFlags::None);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
+            llvm::dxbc::ShaderVisibility::All);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            llvm::dxbc::RootDescriptorFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
