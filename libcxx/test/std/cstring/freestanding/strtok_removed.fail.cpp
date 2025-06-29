@@ -1,6 +1,3 @@
-// this test confirms that std::strtok is not available in a freestanding C++ environment.
-// it is expected to fail compilation when -ffreestanding is enabled.
-
 // UNSUPPORTED: libcpp-has-no-cstring
 // REQUIRES: freestanding
 // XFAIL: *
