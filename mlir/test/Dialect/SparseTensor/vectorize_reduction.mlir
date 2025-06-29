@@ -24,7 +24,7 @@
 // CHECK-ON:           %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xi13>) {
 // CHECK-ON:             %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:             %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi13>, vector<8xi1>, vector<8xi13> into vector<8xi13>
+// CHECK-ON:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi13>, vector<8xi13>
 // CHECK-ON:             %[[VAL_19:.*]] = arith.ori %[[VAL_15]], %[[VAL_18]] : vector<8xi13>
 // CHECK-ON:             %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xi13>
 // CHECK-ON:             scf.yield %[[VAL_20]] : vector<8xi13>
@@ -101,7 +101,7 @@ func.func @sparse_reduction_ori(%argx: tensor<i13>,
 // CHECK-ON:           %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xi13>) {
 // CHECK-ON:             %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:             %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi13>, vector<8xi1>, vector<8xi13> into vector<8xi13>
+// CHECK-ON:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi13>, vector<8xi13>
 // CHECK-ON:             %[[VAL_19:.*]] = arith.ori %[[VAL_18]], %[[VAL_15]] : vector<8xi13>
 // CHECK-ON:             %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xi13>
 // CHECK-ON:             scf.yield %[[VAL_20]] : vector<8xi13>
@@ -176,7 +176,7 @@ func.func @sparse_reduction_ori_accumulator_on_rhs(%argx: tensor<i13>,
 // CHECK-ON:           %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xi32>) {
 // CHECK-ON:             %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:             %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_4]] : memref<?xi32>, vector<8xi1>, vector<8xi32> into vector<8xi32>
+// CHECK-ON:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_4]] : memref<?xi32>, vector<8xi32>
 // CHECK-ON:             %[[VAL_19:.*]] = arith.subi %[[VAL_15]], %[[VAL_18]] : vector<8xi32>
 // CHECK-ON:             %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xi32>
 // CHECK-ON:             scf.yield %[[VAL_20]] : vector<8xi32>
@@ -251,7 +251,7 @@ func.func @sparse_reduction_subi(%argx: tensor<i32>,
 // CHECK-ON:  %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xi32>) {
 // CHECK-ON:    %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:    %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:    %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi32>, vector<8xi1>, vector<8xi32> into vector<8xi32>
+// CHECK-ON:    %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi32>, vector<8xi32>
 // CHECK-ON:    %[[VAL_19:.*]] = arith.xori %[[VAL_15]], %[[VAL_18]] : vector<8xi32>
 // CHECK-ON:    %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xi32>
 // CHECK-ON:    scf.yield %[[VAL_20]] : vector<8xi32>
@@ -327,7 +327,7 @@ func.func @sparse_reduction_xor(%argx: tensor<i32>,
 // CHECK-ON:   %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xi32>) {
 // CHECK-ON:     %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:     %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:     %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi32>, vector<8xi1>, vector<8xi32> into vector<8xi32>
+// CHECK-ON:     %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xi32>, vector<8xi32>
 // CHECK-ON:     %[[VAL_19:.*]] = arith.addi %[[VAL_15]], %[[VAL_18]] : vector<8xi32>
 // CHECK-ON:     %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xi32>
 // CHECK-ON:     scf.yield %[[VAL_20]] : vector<8xi32>
@@ -403,7 +403,7 @@ func.func @sparse_reduction_addi(%argx: tensor<i32>,
 // CHECK-ON:   %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xf32>) {
 // CHECK-ON:     %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:     %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:     %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+// CHECK-ON:     %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xf32>, vector<8xf32>
 // CHECK-ON:     %[[VAL_19:.*]] = arith.subf %[[VAL_15]], %[[VAL_18]] : vector<8xf32>
 // CHECK-ON:     %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xf32>
 // CHECK-ON:     scf.yield %[[VAL_20]] : vector<8xf32>
@@ -479,7 +479,7 @@ func.func @sparse_reduction_subf(%argx: tensor<f32>,
 // CHECK-ON:   %[[VAL_13:.*]] = scf.for %[[VAL_14:.*]] = %[[VAL_10]] to %[[VAL_11]] step %[[VAL_2]] iter_args(%[[VAL_15:.*]] = %[[VAL_12]]) -> (vector<8xf32>) {
 // CHECK-ON:     %[[VAL_16:.*]] = affine.min #map(%[[VAL_11]], %[[VAL_14]]){{\[}}%[[VAL_2]]]
 // CHECK-ON:     %[[VAL_17:.*]] = vector.create_mask %[[VAL_16]] : vector<8xi1>
-// CHECK-ON:     %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+// CHECK-ON:     %[[VAL_18:.*]] = vector.maskedload %[[VAL_7]]{{\[}}%[[VAL_14]]], %[[VAL_17]], %[[VAL_3]] : memref<?xf32>, vector<8xf32>
 // CHECK-ON:     %[[VAL_19:.*]] = arith.addf %[[VAL_15]], %[[VAL_18]] : vector<8xf32>
 // CHECK-ON:     %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_19]], %[[VAL_15]] : vector<8xi1>, vector<8xf32>
 // CHECK-ON:     scf.yield %[[VAL_20]] : vector<8xf32>
