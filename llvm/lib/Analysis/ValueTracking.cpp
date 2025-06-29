@@ -2456,11 +2456,9 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
   if (!I)
     return false;
 
-  if (Q.CxtI && match(V, m_VScale())) {
-    const Function *F = Q.CxtI->getFunction();
-    // The vscale_range indicates vscale is a power-of-two.
-    return F->hasFnAttribute(Attribute::VScaleRange);
-  }
+  // vscale is a power-of-two by definition
+  if (match(V, m_VScale()))
+    return true;
 
   // 1 << X is clearly a power of two if the one is not shifted off the end.  If
   // it is shifted off the end then the result is undefined.
