@@ -70,16 +70,10 @@ StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 LLVM_DUMP_METHOD void MCSection::dump() const {
   raw_ostream &OS = errs();
 
-  OS << "<MCSection Name:" << getName();
-  OS << " Fragments:[\n      ";
-  bool First = true;
+  OS << "MCSection Name:" << getName();
   for (auto &F : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n      ";
+    OS << '\n';
     F.dump();
   }
-  OS << "]>";
 }
 #endif
