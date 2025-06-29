@@ -543,10 +543,10 @@ public:
               ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), std::get<__index_x>(__x.__it_));
           auto __dy = ranges::distance(
               std::get<__index_y>(__y.__it_), ranges::end(std::get<__index_y>(__y.__parent_->__views_)));
-          difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& self) -> difference_type {
+          difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& __self) -> difference_type {
             if constexpr (__start < __end) {
               return ranges::size(std::get<__start>(__x.__parent_->__views_)) +
-                     self.template operator()<__start + 1, __end>();
+                     __self.template operator()<__start + 1, __end>();
             }
             return 0;
           }.template operator()<__index_y + 1, __index_x>();
@@ -581,10 +581,10 @@ public:
     return __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
       auto __dx =
           ranges::distance(std::get<__index_x>(__x.__it_), ranges::end(std::get<__index_x>(__x.__parent_->__views_)));
-      difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& self) -> difference_type {
+      difference_type __s = [&]<std::size_t __start, std::size_t __end>(this auto&& __self) -> difference_type {
         if constexpr (__start < __end) {
           return ranges::size(std::get<__start>(__x.__parent_->__views_)) +
-                 self.template operator()<__start + 1, __end>();
+                 __self.template operator()<__start + 1, __end>();
         }
         return 0;
       }.template operator()<__index_x + 1, sizeof...(_Views)>();
