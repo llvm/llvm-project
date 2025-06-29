@@ -1006,6 +1006,33 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
       HI.Size = Size->getQuantity() * 8;
     if (!RD->isDependentType() && RD->isCompleteDefinition())
       HI.Align = Ctx.getTypeAlign(RD->getTypeForDecl());
+    if (HI.Size && !RD->field_empty()) {
+      HI.Padding = 0;
+      const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
+      auto NumFields = std::distance(RD->field_begin(), RD->field_end());
+      auto FieldIt = RD->field_begin();
+      for (; --NumFields; ++FieldIt) {
+        unsigned Offset = Layout.getFieldOffset(FieldIt->getFieldIndex());
+        unsigned NextOffset =
+            Layout.getFieldOffset(FieldIt->getFieldIndex() + 1);
+        if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FieldIt->getType())) {
+          unsigned EndOfField = Offset + Size->getQuantity() * 8;
+          if (NextOffset > EndOfField)
+            HI.Padding = *HI.Padding + NextOffset - EndOfField;
+        } else {
+          HI.Padding.reset();
+          break;
+        }
+      }
+      // We've processed all but the last field. If we still have valid
+      // HI.Padding, finish the calculation
+      auto Size = Ctx.getTypeSizeInCharsIfKnown(FieldIt->getType());
+      if (HI.Padding && Size) {
+        unsigned Offset = Layout.getFieldOffset(FieldIt->getFieldIndex());
+        HI.Padding = *HI.Padding + *HI.Size - Offset - Size->getQuantity() * 8;
+      }
+    }
+
     return;
   }
 
