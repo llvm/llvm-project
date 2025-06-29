@@ -227,26 +227,24 @@ public:
   //===--------------------------------------------------------------------===//
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
-                           mlir::Type returnType, mlir::ValueRange operands,
-                           cir::SideEffect sideEffect = cir::SideEffect::All) {
-    return create<cir::CallOp>(loc, callee, returnType, operands, sideEffect);
+                           mlir::Type returnType, mlir::ValueRange operands) {
+    return create<cir::CallOp>(loc, callee, returnType, operands);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
-                           mlir::ValueRange operands,
-                           cir::SideEffect sideEffect = cir::SideEffect::All) {
+                           mlir::ValueRange operands) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                        callee.getFunctionType().getReturnType(), operands,
-                        sideEffect);
+                        callee.getFunctionType().getReturnType(), operands);
   }
 
   cir::CallOp createIndirectCallOp(mlir::Location loc,
                                    mlir::Value indirectTarget,
                                    cir::FuncType funcType,
-                                   mlir::ValueRange operands,
-                                   cir::SideEffect sideEffect) {
-    return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
-                               operands, sideEffect);
+                                   mlir::ValueRange operands) {
+    llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
+    resOperands.append(operands.begin(), operands.end());
+    return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
+                        resOperands);
   }
 
   //===--------------------------------------------------------------------===//
