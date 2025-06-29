@@ -395,7 +395,7 @@ public:
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, CallingContext *Ctx);
 
   // Translate a variable reference.
-  til::LiteralPtr *createVariable(const VarDecl *VD);
+  til::SExpr *createVariable(const VarDecl *VD, CallingContext *Ctx = nullptr);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
@@ -501,6 +501,9 @@ private:
   void mergeEntryMapBackEdge();
   void mergePhiNodesBackEdge(const CFGBlock *Blk);
 
+  // Returns true if a variable is assumed to be reassigned.
+  bool isVariableReassigned(const VarDecl *VD);
+
 private:
   // Set to true when parsing capability expressions, which get translated
   // inaccurately in order to hack around smart pointers etc.
@@ -531,6 +534,9 @@ private:
   std::vector<til::Phi *> IncompleteArgs;
   til::BasicBlock *CurrentBB = nullptr;
   BlockInfo *CurrentBlockInfo = nullptr;
+
+  // Map caching if a local variable is reassigned.
+  llvm::DenseMap<const VarDecl *, bool> LocalVariableReassigned;
 };
 
 #ifndef NDEBUG

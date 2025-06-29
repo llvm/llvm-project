@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
@@ -241,7 +242,22 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
-til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
+til::SExpr *SExprBuilder::createVariable(const VarDecl *VD,
+                                         CallingContext *Ctx) {
+  if (VD) {
+    // Substitute local pointer variables with their initializers if they are
+    // explicitly const or never reassigned.
+    QualType Ty = VD->getType();
+    if (Ty->isPointerType() && VD->hasInit() && !isVariableReassigned(VD)) {
+      const Expr *Init = VD->getInit()->IgnoreParenImpCasts();
+      // Check for self-initialization to prevent infinite recursion.
+      if (const auto *InitDRE = dyn_cast<DeclRefExpr>(Init)) {
+        if (InitDRE->getDecl()->getCanonicalDecl() == VD->getCanonicalDecl())
+          return new (Arena) til::LiteralPtr(VD);
+      }
+      return translate(Init, Ctx);
+    }
+  }
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -352,6 +368,9 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
              ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
              : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return createVariable(VarD, Ctx);
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
@@ -1010,6 +1029,63 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
   CurrentArguments.clear();
   CurrentInstructions.clear();
   IncompleteArgs.clear();
+}
+
+bool SExprBuilder::isVariableReassigned(const VarDecl *VD) {
+  // Note: The search is performed lazily per-variable and result is cached. An
+  // alternative would have been to eagerly create a set of all reassigned
+  // variables, but that would consume significantly more memory. The number of
+  // variables needing the reassignment check in a single function is expected
+  // to be small. Also see createVariable().
+  struct ReassignmentFinder : RecursiveASTVisitor<ReassignmentFinder> {
+    explicit ReassignmentFinder(const VarDecl *VD) : QueryVD(VD) {
+      assert(QueryVD->getCanonicalDecl() == QueryVD);
+    }
+
+    bool VisitBinaryOperator(BinaryOperator *BO) {
+      if (!BO->isAssignmentOp())
+        return true;
+      auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS()->IgnoreParenImpCasts());
+      if (!DRE)
+        return true;
+      auto *AssignedVD = dyn_cast<VarDecl>(DRE->getDecl());
+      if (!AssignedVD)
+        return true;
+      // Don't count the initialization itself as a reassignment.
+      if (AssignedVD->hasInit() &&
+          AssignedVD->getInit()->getBeginLoc() == BO->getBeginLoc())
+        return true;
+      // If query variable appears as LHS of assignment.
+      if (QueryVD == AssignedVD->getCanonicalDecl()) {
+        FoundReassignment = true;
+        return false; // stop
+      }
+      return true;
+    }
+
+    const VarDecl *QueryVD;
+    bool FoundReassignment = false;
+  };
+
+  if (VD->getType().isConstQualified())
+    return false; // Assume UB-freedom.
+  if (!VD->isLocalVarDecl())
+    return true; // Not a local variable (assume reassigned).
+  auto *FD = dyn_cast<FunctionDecl>(VD->getDeclContext());
+  if (!FD)
+    return true; // Assume reassigned.
+
+  // Try to look up in cache; use the canonical declaration to ensure consistent
+  // lookup in the cache.
+  VD = VD->getCanonicalDecl();
+  auto It = LocalVariableReassigned.find(VD);
+  if (It != LocalVariableReassigned.end())
+    return It->second;
+
+  ReassignmentFinder Visitor(VD);
+  // const_cast ok: FunctionDecl not modified.
+  Visitor.TraverseDecl(const_cast<FunctionDecl *>(FD));
+  return LocalVariableReassigned[VD] = Visitor.FoundReassignment;
 }
 
 #ifndef NDEBUG
