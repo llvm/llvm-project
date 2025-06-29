@@ -359,3 +359,74 @@ FunctionInfo::lookup(DataExtractor &Data, const GsymReader &GR,
     return std::move(Err);
   return LR;
 }
+
+llvm::Expected<LookupResult> FunctionInfo::lookup(const GsymReader &GR,
+                                                  uint64_t Addr) const {
+  LookupResult LR;
+  LR.LookupAddr = Addr;
+  LR.FuncRange = Range;
+  LR.FuncName = GR.getString(Name);
+
+  if (!OptLineTable) {
+    // We don't have a valid line entry for our address, fill in our source
+    // location as best we can and return.
+    SourceLocation SrcLoc;
+    SrcLoc.Name = LR.FuncName;
+    // TODO : Offset
+    LR.Locations.push_back(SrcLoc);
+    return LR;
+  }
+
+  auto LineEntry = OptLineTable->lookup(Addr);
+  if (!LineEntry)
+    return LineEntry.takeError();
+
+  const std::optional<FileEntry> LineEntryFileOpt = GR.getFile(LineEntry->File);
+  if (!LineEntryFileOpt)
+    return createStringError(std::errc::invalid_argument,
+                             "failed to extract file[%" PRIu32 "]",
+                             LineEntry->File);
+  const auto &LineEntryFile = *LineEntryFileOpt;
+
+  SourceLocation SrcLoc;
+  SrcLoc.Name = LR.FuncName;
+  // TODO : Offset
+  SrcLoc.Dir = GR.getString(LineEntryFile.Dir);
+  SrcLoc.Base = GR.getString(LineEntryFile.Base);
+  SrcLoc.Line = LineEntry->Line;
+  LR.Locations.push_back(SrcLoc);
+  if (!Inline)
+    return LR;
+
+  const auto InlineStackOpt = Inline->getInlineStack(Addr);
+  if (!InlineStackOpt)
+    return LR;
+  const auto &InlineStack = *InlineStackOpt;
+
+  LR.Locations.reserve(InlineStack.size());
+  for (std::size_t i = 0; i + 1 < InlineStack.size(); ++i) {
+    const auto &Frame = *InlineStack[i];
+
+    SourceLocation InlineSrcLoc;
+    InlineSrcLoc.Name = GR.getString(Frame.Name);
+    InlineSrcLoc.Line = Frame.CallLine;
+    // TODO : Offset
+
+    const auto FileNameOpt = GR.getFile(Frame.CallFile);
+    if (FileNameOpt) {
+      const auto &FileName = *FileNameOpt;
+      InlineSrcLoc.Dir = GR.getString(FileName.Dir);
+      InlineSrcLoc.Base = GR.getString(FileName.Base);
+    }
+
+    LR.Locations.push_back(InlineSrcLoc);
+  }
+
+  const auto Name = LR.Locations[0].Name;
+  for (std::size_t i = 1; i < LR.Locations.size(); ++i) {
+    LR.Locations[i - 1].Name = LR.Locations[i].Name;
+  }
+  LR.Locations.back().Name = Name;
+
+  return LR;
+}
