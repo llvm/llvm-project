@@ -2950,6 +2950,24 @@ TEST_P(UncheckedOptionalAccessTest, ConstructorOtherStructField) {
   )cc");
 }
 
+TEST_P(UncheckedOptionalAccessTest,
+       AggregateDefaultInitializerReferencesPriorField) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+    struct NonTrivDtor {
+      NonTrivDtor(int x);
+      ~NonTrivDtor() {}
+    };
+    struct Other {
+      $ns::$optional<int> x = $ns::nullopt;
+      NonTrivDtor y = x.has_value() ? NonTrivDtor(*x) : NonTrivDtor(-1);
+    };
+    struct target {
+      target() { Other{}; }
+    };
+  )cc");
+}
+
 TEST_P(UncheckedOptionalAccessTest, AssertTrueGtestMacro) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
