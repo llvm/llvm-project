@@ -210,7 +210,7 @@ public:
       return failure();
 
     // User controlled folding function.
-    if (!controlFn(&packOp.getSourceMutable()))
+    if (controlFn && !controlFn(&packOp.getSourceMutable()))
       return failure();
 
     Value constantPaddingValue = padOp.getConstantPaddingValue();
@@ -249,7 +249,7 @@ public:
       return failure();
 
     // User controlled folding function.
-    if (!controlFn(&sliceOp.getSourceMutable()))
+    if (controlFn && !controlFn(&sliceOp.getSourceMutable()))
       return failure();
 
     if (sliceOp.getResultType().getRank() != unpackOp.getDestType().getRank()) {
@@ -320,7 +320,7 @@ public:
       return failure();
 
     // User controlled folding function.
-    if (!controlFn(&linalgOp->getOpOperand(0)))
+    if (controlFn && !controlFn(&linalgOp->getOpOperand(0)))
       return failure();
 
     FailureOr<SmallVector<int64_t>> maybePerm =
@@ -383,7 +383,7 @@ public:
       return failure();
 
     // User controlled folding function.
-    if (!controlFn(&packOp.getSourceMutable()))
+    if (controlFn && !controlFn(&packOp.getSourceMutable()))
       return failure();
 
     FailureOr<SmallVector<int64_t>> maybePerm =
@@ -440,7 +440,7 @@ public:
       return failure();
 
     // User controlled folding function.
-    if (!controlFn(&linalgOp->getOpOperand(0)))
+    if (controlFn && !controlFn(&linalgOp->getOpOperand(0)))
       return failure();
 
     FailureOr<SmallVector<int64_t>> maybePerm =
@@ -492,7 +492,7 @@ public:
       return failure();
 
     // User controlled folding function.
-    if (!controlFn(&unPackOp.getSourceMutable()))
+    if (controlFn && !controlFn(&unPackOp.getSourceMutable()))
       return failure();
 
     FailureOr<SmallVector<int64_t>> maybePerm =

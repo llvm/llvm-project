@@ -1897,15 +1897,12 @@ void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 /// Function type which is used to control folding operations like `tensor.pad`
 /// and `tensor.extract_slice` into linalg.pack/unpack ops.
 using ControlFoldIntoPackUnpackFn = std::function<bool(OpOperand *opOperand)>;
-inline bool defaultControlFoldIntoPackUnpackFn(OpOperand *opOperand) {
-  return true;
-};
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
 /// respectively.
 void populateFoldIntoPackAndUnpackPatterns(
-    RewritePatternSet &patterns, const ControlFoldIntoPackUnpackFn &controlFn =
-                                     defaultControlFoldIntoPackUnpackFn);
+    RewritePatternSet &patterns,
+    const ControlFoldIntoPackUnpackFn &controlFn = nullptr);
 
 /// Populates `patterns` with patterns that fold operations like `linalg.pack`
 /// and `linalg.unpack` into `tensor.empty`.
