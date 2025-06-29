@@ -35,6 +35,9 @@ LLVM_ABI bool hasProfMD(const Instruction &I);
 /// Checks if an MDNode contains Branch Weight Metadata
 LLVM_ABI bool isBranchWeightMD(const MDNode *ProfileData);
 
+/// Checks if an MDNode contains value profiling Metadata
+LLVM_ABI bool isValueProfileMD(const MDNode *ProfileData);
+
 /// Checks if an instructions has Branch Weight Metadata
 ///
 /// \param I The instruction to check

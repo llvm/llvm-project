@@ -103,7 +103,7 @@ bool isBranchWeightMD(const MDNode *ProfileData) {
   return isTargetMD(ProfileData, MDProfLabels::BranchWeights, MinBWOps);
 }
 
-static bool isValueProfileMD(const MDNode *ProfileData) {
+bool isValueProfileMD(const MDNode *ProfileData) {
   return isTargetMD(ProfileData, MDProfLabels::ValueProfile, MinVPOps);
 }
 
