@@ -503,7 +503,7 @@ SourceInfo Descriptor::getLoc() const {
 }
 
 bool Descriptor::hasTrivialDtor() const {
-  if (isPrimitive() || isPrimitiveArray())
+  if (isPrimitive() || isPrimitiveArray() || isDummy())
     return true;
 
   if (isRecord()) {
