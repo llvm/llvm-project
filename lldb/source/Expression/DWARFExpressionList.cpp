@@ -54,7 +54,7 @@ bool DWARFExpressionList::ContainsAddress(lldb::addr_t func_load_addr,
   return GetExpressionAtAddress(func_load_addr, addr) != nullptr;
 }
 
-llvm::Expected<DWARFExpressionList::DWARFExpressionEntry>
+std::optional<DWARFExpressionList::DWARFExpressionEntry>
 DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
                                                 lldb::addr_t load_addr) const {
   if (const DWARFExpression *always = GetAlwaysValidExpr()) {
@@ -74,9 +74,8 @@ DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
     return DWARFExpressionEntry{range_in_file, &entry->data};
   }
 
-  return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
-      "no DWARF location list entry for PC 0x%" PRIx64, load_addr);
+  // No entry covers this PC:
+  return std::nullopt;
 }
 
 const DWARFExpression *

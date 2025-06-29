@@ -70,7 +70,7 @@ public:
   /// Returns a DWARFExpressionEntry whose file_range contains the given
   /// load‐address.  `func_load_addr` is the load‐address of the function
   /// start; `load_addr` is the full runtime PC.  On success, `expr` is non-null.
-  llvm::Expected<DWARFExpressionEntry>
+  std::optional<DWARFExpressionEntry>
   GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
                               lldb::addr_t load_addr) const;
 
