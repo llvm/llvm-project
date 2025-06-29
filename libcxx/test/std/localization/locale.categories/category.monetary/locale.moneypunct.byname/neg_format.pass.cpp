@@ -5,10 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
+//
 // NetBSD does not support LC_MONETARY at the moment
 // XFAIL: netbsd
 
@@ -149,39 +146,23 @@ int main(int, char**)
     {
         Fnf f(LOCALE_fr_FR_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#ifdef __APPLE__
-        assert_value_none_symbol_sign(p);
-#else
         assert_sign_value_none_symbol(p);
-#endif
     }
     {
         Fnt f(LOCALE_fr_FR_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#ifdef __APPLE__
-        assert_value_none_symbol_sign(p);
-#else
         assert_sign_value_none_symbol(p);
-#endif
     }
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
         Fwf f(LOCALE_fr_FR_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#ifdef __APPLE__
-        assert_value_none_symbol_sign(p);
-#else
         assert_sign_value_none_symbol(p);
-#endif
     }
     {
         Fwt f(LOCALE_fr_FR_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#ifdef __APPLE__
-        assert_value_none_symbol_sign(p);
-#else
         assert_sign_value_none_symbol(p);
-#endif
     }
 #endif // TEST_HAS_NO_WIDE_CHARACTERS
 
@@ -211,7 +192,7 @@ int main(int, char**)
     {
         Fnf f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#ifdef _AIX
+#if defined(_AIX) || defined(__APPLE__)
         assert_sign_symbol_none_value(p);
 #else
         assert_symbol_sign_none_value(p);
@@ -220,7 +201,7 @@ int main(int, char**)
     {
         Fnt f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32)
         assert_symbol_sign_none_value(p);
 #else
         assert_sign_symbol_none_value(p);
@@ -230,7 +211,7 @@ int main(int, char**)
     {
         Fwf f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#ifdef _AIX
+#if defined(_AIX) || defined(__APPLE__)
         assert_sign_symbol_none_value(p);
 #else
         assert_symbol_sign_none_value(p);
@@ -239,7 +220,7 @@ int main(int, char**)
     {
         Fwt f(LOCALE_zh_CN_UTF_8, 1);
         std::money_base::pattern p = f.neg_format();
-#if defined(_WIN32) || defined(__APPLE__)
+#if defined(_WIN32)
         assert_symbol_sign_none_value(p);
 #else
         assert_sign_symbol_none_value(p);
