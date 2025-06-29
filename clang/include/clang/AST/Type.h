@@ -2266,7 +2266,10 @@ protected:
     SignedSizeT,
 
     /// The "ptrdiff_t" type.
-    PtrdiffT
+    PtrdiffT,
+
+    // Indicates how many items the enum has.
+    Max
   };
 
   class PresefinedSugarTypeBitfields {
@@ -8060,7 +8063,7 @@ public:
   }
 };
 
-class PredefinedSugarType final : public Type, public llvm::FoldingSetNode {
+class PredefinedSugarType final : public Type {
 public:
   friend class ASTContext;
   using Kind = PredefinedSugarKind;
@@ -8088,14 +8091,6 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == PredefinedSugar;
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, llvm::to_underlying(getKind()));
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, unsigned KD) {
-    ID.AddInteger(KD);
   }
 };
 

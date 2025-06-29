@@ -258,7 +258,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
-  mutable llvm::FoldingSet<PredefinedSugarType> PredefinedSugarTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
@@ -277,6 +276,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
+
+  /// Store the unique Type corresponding to each Kind.
+  mutable std::array<Type *,
+                     llvm::to_underlying(PredefinedSugarType::Kind::Max)>
+      PredefinedSugarTypes;
 
   /// The set of nested name specifiers.
   ///
@@ -1993,12 +1997,6 @@ private:
                                                         bool IsDependent,
                                                         QualType Canon) const;
 
-  // The core language uses these types as the result types of some expressions,
-  // which are typically standard integer types and consistent with it's
-  // typedefs (if any).
-  QualType SizeType;       // __size_t
-  QualType SignedSizeType; // __signed_size_t
-  QualType PtrdiffType;    // __ptrdiff_t
 public:
   /// Return the unique reference to the type for the specified TagDecl
   /// (struct/union/class/enum) decl.

@@ -1516,16 +1516,6 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     MSGuidTagDecl = buildImplicitRecord("_GUID");
     getTranslationUnitDecl()->addDecl(MSGuidTagDecl);
   }
-
-  // size_t (C99TC3 6.5.3.4), signed size_t (C++23 5.13.2) and
-  // ptrdiff_t (C99TC3 6.5.6) Although these types are not built-in, they are
-  // part of the core language and are widely used.
-  // Using PredefinedSugarType makes these types as named sugar types rather
-  // than standard integer types, enabling better hints and diagnostics.
-  using Kind = PredefinedSugarType::Kind;
-  SizeType = getPredefinedSugarType(Kind::SizeT);
-  SignedSizeType = getPredefinedSugarType(Kind::SignedSizeT);
-  PtrdiffType = getPredefinedSugarType(Kind::PtrdiffT);
 }
 
 DiagnosticsEngine &ASTContext::getDiagnostics() const {
@@ -5232,24 +5222,27 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 
 QualType
 ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
-  llvm::FoldingSetNodeID ID;
-  PredefinedSugarType::Profile(ID, llvm::to_underlying(KD));
 
-  void *InsertPos = nullptr;
-  if (PredefinedSugarType *Existing =
-          PredefinedSugarTypes.FindNodeOrInsertPos(ID, InsertPos))
-    return QualType(Existing, 0);
+  auto Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
+  if (Target != nullptr)
+    return QualType(Target, 0);
 
   using Kind = PredefinedSugarType::Kind;
 
   auto getCanonicalType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
     switch (KDI) {
+      // size_t (C99TC3 6.5.3.4), signed size_t (C++23 5.13.2) and
+      // ptrdiff_t (C99TC3 6.5.6) Although these types are not built-in, they
+      // are part of the core language and are widely used. Using
+      // PredefinedSugarType makes these types as named sugar types rather than
+      // standard integer types, enabling better hints and diagnostics.
     case Kind::SizeT:
       return Ctx.getFromTargetType(Ctx.Target->getSizeType());
     case Kind::SignedSizeT:
       return Ctx.getFromTargetType(Ctx.Target->getSignedSizeType());
     case Kind::PtrdiffT:
       return Ctx.getFromTargetType(Ctx.Target->getPtrDiffType(LangAS::Default));
+    case Kind::Max:;
     }
     llvm_unreachable("unexpected kind");
   };
@@ -5258,7 +5251,7 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
       PredefinedSugarType(KD, &Idents.get(PredefinedSugarType::getName(KD)),
                           getCanonicalType(*this, static_cast<Kind>(KD)));
   Types.push_back(New);
-  PredefinedSugarTypes.InsertNode(New, InsertPos);
+  Target = New;
   return QualType(New, 0);
 }
 
@@ -6842,7 +6835,9 @@ QualType ASTContext::getTagDeclType(const TagDecl *Decl) const {
 /// getSizeType - Return the unique type for "size_t" (C99 7.17), the result
 /// of the sizeof operator (C99 6.5.3.4p4). The value is target dependent and
 /// needs to agree with the definition in <stddef.h>.
-QualType ASTContext::getSizeType() const { return SizeType; }
+QualType ASTContext::getSizeType() const {
+  return getPredefinedSugarType(PredefinedSugarType::Kind::SizeT);
+}
 
 CanQualType ASTContext::getCanonicalSizeType() const {
   return getFromTargetType(Target->getSizeType());
@@ -6850,11 +6845,15 @@ CanQualType ASTContext::getCanonicalSizeType() const {
 
 /// Return the unique signed counterpart of the integer type
 /// corresponding to size_t.
-QualType ASTContext::getSignedSizeType() const { return SignedSizeType; }
+QualType ASTContext::getSignedSizeType() const {
+  return getPredefinedSugarType(PredefinedSugarType::Kind::SignedSizeT);
+}
 
 /// getPointerDiffType - Return the unique type for "ptrdiff_t" (C99 7.17)
 /// defined in <stddef.h>. Pointer - pointer requires this (C99 6.5.6p9).
-QualType ASTContext::getPointerDiffType() const { return PtrdiffType; }
+QualType ASTContext::getPointerDiffType() const {
+  return getPredefinedSugarType(PredefinedSugarType::Kind::PtrdiffT);
+}
 
 /// Return the unique unsigned counterpart of "ptrdiff_t"
 /// integer type. The standard (C11 7.21.6.1p7) refers to this type
