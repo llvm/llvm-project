@@ -116,7 +116,8 @@ __cpp_lib_formatters                                    202302L <stacktrace> <th
 __cpp_lib_forward_like                                  202207L <utility>
 __cpp_lib_freestanding_algorithm                        202311L <algorithm>
 __cpp_lib_freestanding_array                            202311L <array>
-__cpp_lib_freestanding_cstring                          202306L <cstring>
+__cpp_lib_freestanding_cstring                          202306L <cstring> 
+                                                        202306L 
 __cpp_lib_freestanding_expected                         202311L <expected>
 __cpp_lib_freestanding_mdspan                           202311L <mdspan>
 __cpp_lib_freestanding_optional                         202311L <optional>
