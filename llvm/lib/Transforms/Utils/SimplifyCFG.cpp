@@ -1164,6 +1164,9 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     // Note that we expect to be in a block-closed SSA form for this to work!
     for (Use &U : make_early_inc_range(BonusInst.uses())) {
       auto *UI = cast<Instruction>(U.getUser());
+      // Avoid dangling select instructions
+      if (!UI->getParent())
+        continue;
       auto *PN = dyn_cast<PHINode>(UI);
       if (!PN) {
         assert(UI->getParent() == BB && BonusInst.comesBefore(UI) &&
@@ -3906,10 +3909,10 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
   return std::nullopt;
 }
 
-static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
-                                             DomTreeUpdater *DTU,
-                                             MemorySSAUpdater *MSSAU,
-                                             const TargetTransformInfo *TTI) {
+static bool performBranchToCommonDestFolding(
+    BranchInst *BI, BranchInst *PBI, DomTreeUpdater *DTU,
+    MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI,
+    SmallDenseMap<PHINode *, SelectInst *, 8> &InsertNewPHIs) {
   BasicBlock *BB = BI->getParent();
   BasicBlock *PredBlock = PBI->getParent();
 
@@ -3996,6 +3999,28 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
 
   ValueToValueMapTy VMap; // maps original values to cloned values
   cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(BB, PredBlock, VMap);
+  if (!InsertNewPHIs.empty()) {
+    // Fixup PHINode in the commong successor
+    for (PHINode &PN : CommonSucc->phis()) {
+      auto It = InsertNewPHIs.find(&PN);
+      if (It != InsertNewPHIs.end() && It->first == &PN) {
+        Instruction *SI = It->second;
+        // Oprands might have been promoted to bonous inst
+        RemapInstruction(SI, VMap,
+                         RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+        // Insert SelectInst as the new PHINode incoming value
+        SI->insertBefore(PredBlock->getTerminator()->getIterator());
+        // Fix PHINode
+        PN.removeIncomingValue(PredBlock);
+        PN.addIncoming(SI, PredBlock);
+        // Remove map entry
+        InsertNewPHIs.erase(It);
+      }
+    }
+    // Cleanup dangling SelectInst
+    for (SelectInst *SI : InsertNewPHIs.values())
+      delete SI;
+  }
 
   Module *M = BB->getModule();
 
@@ -4053,14 +4078,49 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
   // With which predecessors will we want to deal with?
   SmallVector<BasicBlock *, 8> Preds;
+  struct InsertPointTy {
+    InstructionCost Cost;
+    Value *TValue; // True Value
+    Value *FValue; // False Value
+    PHINode *Phi;
+  };
+  SmallDenseMap<BranchInst *, SmallVector<InsertPointTy, 8>, 8> InsertPts;
   for (BasicBlock *PredBlock : predecessors(BB)) {
     BranchInst *PBI = dyn_cast<BranchInst>(PredBlock->getTerminator());
 
-    // Check that we have two conditional branches.  If there is a PHI node in
-    // the common successor, verify that the same value flows in from both
-    // blocks.
-    if (!PBI || PBI->isUnconditional() || !safeToMergeTerminators(BI, PBI))
+    // Check that we have two conditional branches.
+    if (!PBI || PBI->isUnconditional())
       continue;
+
+    // If there is a PHI node in the common successor, verify that the same
+    // value flows in from both blocks. Otherwise, check whether we can create a
+    // SelectInst to combine the incoming values
+    if (!safeToMergeTerminators(BI, PBI)) {
+      if (BI == PBI)
+        continue;
+      for (BasicBlock *Succ : BI->successors()) {
+        if (llvm::is_contained(PBI->successors(), Succ)) {
+          for (PHINode &Phi : Succ->phis()) {
+            Value *IV0 = Phi.getIncomingValueForBlock(BB);
+            Value *IV1 = Phi.getIncomingValueForBlock(PredBlock);
+            InstructionCost PCost;
+            if (TTI) {
+              PCost = TTI->getCmpSelInstrCost(
+                  Instruction::Select, Phi.getType(),
+                  CmpInst::makeCmpResultType(Phi.getType()),
+                  CmpInst::BAD_ICMP_PREDICATE, CostKind);
+            }
+            auto &IP = InsertPts[PBI];
+            if (PBI->getSuccessor(0) == BB)
+              IP.emplace_back(InsertPointTy{PCost, IV0, IV1, &Phi});
+            else
+              IP.emplace_back(InsertPointTy{PCost, IV1, IV0, &Phi});
+          }
+        }
+      }
+      if (InsertPts.empty())
+        continue;
+    }
 
     // Determine if the two branches share a common destination.
     BasicBlock *CommonSucc;
@@ -4080,6 +4140,9 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
                              !isa<CmpInst>(PBI->getCondition())))
         Cost += TTI->getArithmeticInstrCost(Instruction::Xor, Ty, CostKind);
 
+      for (auto const &InsertPoints : InsertPts.values())
+        for (auto &InsertInfo : InsertPoints)
+          Cost += InsertInfo.Cost;
       if (Cost > BranchFoldThreshold)
         continue;
     }
@@ -4145,7 +4208,16 @@ bool llvm::foldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
   // Ok, we have the budget. Perform the transformation.
   for (BasicBlock *PredBlock : Preds) {
     auto *PBI = cast<BranchInst>(PredBlock->getTerminator());
-    return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, TTI);
+    SmallDenseMap<PHINode *, SelectInst *, 8> newPhis;
+    if (InsertPts.contains(PBI)) {
+      Value *PC = PBI->getCondition();
+      for (auto const InsertInfo : InsertPts[PBI]) {
+        SelectInst *newPhi =
+            SelectInst::Create(PC, InsertInfo.TValue, InsertInfo.FValue);
+        newPhis.insert(std::make_pair(InsertInfo.Phi, newPhi));
+      }
+    }
+    return performBranchToCommonDestFolding(BI, PBI, DTU, MSSAU, TTI, newPhis);
   }
   return false;
 }
