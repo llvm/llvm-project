@@ -2111,7 +2111,7 @@ struct CIEKey {
   unsigned LsdaEncoding = -1;
   bool IsSignalFrame = false;
   bool IsSimple = false;
-  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
 };
