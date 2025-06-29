@@ -48,8 +48,7 @@ def main():
         description=textwrap.dedent(
             """
             This script builds two versions of BOLT (with the current and
-            previous revision) and sets up symlink for llvm-bolt-wrapper.
-            Passes the options through to llvm-bolt-wrapper.
+            previous revision).
             """
         )
     )
@@ -76,7 +75,7 @@ def main():
         default="HEAD^",
         help="Revision to checkout to compare vs HEAD",
     )
-    args, wrapper_args = parser.parse_known_args()
+    args = parser.parse_args()
     bolt_path = f"{args.build_dir}/bin/llvm-bolt"
 
     source_dir = None
@@ -90,7 +89,6 @@ def main():
         sys.exit("Source directory is not found")
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    wrapper_path = f"{script_dir}/llvm-bolt-wrapper.py"
     # build the current commit
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
@@ -131,15 +129,6 @@ def main():
     )
     # rename llvm-bolt
     os.replace(bolt_path, f"{bolt_path}.old")
-    # set up llvm-bolt-wrapper.ini
-    ini = subprocess.check_output(
-        shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new") + wrapper_args,
-        text=True,
-    )
-    with open(f"{args.build_dir}/bin/llvm-bolt-wrapper.ini", "w") as f:
-        f.write(ini)
-    # symlink llvm-bolt-wrapper
-    os.symlink(wrapper_path, bolt_path)
     if args.switch_back:
         if stash:
             subprocess.run(shlex.split("git stash pop"), cwd=source_dir)
