@@ -23,7 +23,6 @@
 #include "clang/Serialization/ASTRecordWriter.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <optional>
 using namespace clang;
 using namespace serialization;
 
