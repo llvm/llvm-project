@@ -107,7 +107,7 @@ protected:
 // CHECK-NEXT:         "GlobalNamespace"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "ReturnType": {
-// CHECK-NEXT:         "IsBuiltIn": false,
+// CHECK-NEXT:         "IsBuiltIn": true,
 // CHECK-NEXT:         "IsTemplate": false,
 // CHECK-NEXT:         "Name": "int",
 // CHECK-NEXT:         "QualName": "int",
@@ -137,7 +137,7 @@ protected:
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ],
 // CHECK-NEXT:        "ReturnType": {
-// CHECK-NEXT:          "IsBuiltIn": false,
+// CHECK-NEXT:          "IsBuiltIn": true,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "int",
 // CHECK-NEXT:          "QualName": "int",
@@ -184,7 +184,7 @@ protected:
 // CHECK-NEXT:        "TypeDeclaration": "",
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}",
 // CHECK-NEXT:        "Underlying": {
-// CHECK-NEXT:          "IsBuiltIn": false,
+// CHECK-NEXT:          "IsBuiltIn": true,
 // CHECK-NEXT:          "IsTemplate": false,
 // CHECK-NEXT:          "Name": "int",
 // CHECK-NEXT:          "QualName": "int",

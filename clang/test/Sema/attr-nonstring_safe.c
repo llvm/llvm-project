@@ -1,10 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=compat,expected -Wunterminated-string-initialization %s -x c
 // RUN: %clang_cc1 -fsyntax-only -verify=cxx -Wunterminated-string-initialization %s -x c++
+// REQUIRES: !system-linux
 
 #ifndef __cplusplus
-typedef unsigned short char16_t;
-typedef unsigned int char32_t;
-typedef __WCHAR_TYPE__ wchar_t;
+typedef __CHAR16_TYPE__ char16_t;
+typedef __CHAR32_TYPE__ char32_t;
+typedef __WCHAR_TYPE__  wchar_t;
 #endif
 
 // C++ is stricter so the following cases should be warned about. In
