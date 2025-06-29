@@ -8,3 +8,12 @@ add_object_library(
   DEPENDS
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  error
+  HDRS
+    error.h
+  DEPENDS
+    libc.src.__support.common
+    libc.hdr.errno_macros
+)
