@@ -1044,7 +1044,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   // The InGlue in necessary since all emitted instructions must be
   // stuck together.
   SDValue InGlue;
-  for (const auto [OrigReg, N] : RegsToPass) {
+  for (const auto &[OrigReg, N] : RegsToPass) {
     Register Reg = isTailCall ? OrigReg : toCallerWindow(OrigReg);
     Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
@@ -1067,7 +1067,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
   Ops.push_back(Callee);
   if (hasStructRetAttr)
     Ops.push_back(DAG.getTargetConstant(SRetArgSize, dl, MVT::i32));
-  for (const auto [OrigReg, N] : RegsToPass) {
+  for (const auto &[OrigReg, N] : RegsToPass) {
     Register Reg = isTailCall ? OrigReg : toCallerWindow(OrigReg);
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
   }
@@ -1371,7 +1371,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // necessary since all emitted instructions must be stuck together in order
   // to pass the live physical registers.
   SDValue InGlue;
-  for (const auto [Reg, N] : RegsToPass) {
+  for (const auto &[Reg, N] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
@@ -1390,7 +1390,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
-  for (const auto [Reg, N] : RegsToPass)
+  for (const auto &[Reg, N] : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
