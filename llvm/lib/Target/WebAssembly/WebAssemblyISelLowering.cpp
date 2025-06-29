@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -3239,6 +3240,55 @@ static SDValue performBitcastCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
+  // any_true (setcc <X>, 0, eq) => (not (all_true X))
+  // all_true (setcc <X>, 0, eq) => (not (any_true X))
+  // any_true (setcc <X>, 0, ne) => (any_true X)
+  // all_true (setcc <X>, 0, ne) => (all_true X)
+  assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
+  using namespace llvm::SDPatternMatch;
+  SDLoc DL(N);
+  static auto SimdCombiner =
+      [&](Intrinsic::WASMIntrinsics InPre, ISD::CondCode SetType,
+          Intrinsic::WASMIntrinsics InPost, bool ShouldInvert) -> SDValue {
+    if (N->getConstantOperandVal(0) != InPre)
+      return SDValue();
+
+    SDValue LHS;
+    if (!sd_match(N->getOperand(1), m_c_SetCC(m_Value(LHS), m_Zero(),
+                                              m_SpecificCondCode(SetType))))
+      return SDValue();
+
+    EVT LT = LHS.getValueType();
+    unsigned NumElts = LT.getVectorNumElements();
+    if (LT.getScalarSizeInBits() > 128 / NumElts)
+      return SDValue();
+
+    SDValue Ret = DAG.getZExtOrTrunc(
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                    {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
+        DL, MVT::i1);
+    if (ShouldInvert)
+      Ret = DAG.getNOT(DL, Ret, MVT::i1);
+    return DAG.getZExtOrTrunc(Ret, DL, N->getValueType(0));
+  };
+
+  if (SDValue AnyTrueEQ = SimdCombiner(Intrinsic::wasm_anytrue, ISD::SETEQ,
+                                       Intrinsic::wasm_alltrue, true))
+    return AnyTrueEQ;
+  if (SDValue AllTrueEQ = SimdCombiner(Intrinsic::wasm_alltrue, ISD::SETEQ,
+                                       Intrinsic::wasm_anytrue, true))
+    return AllTrueEQ;
+  if (SDValue AnyTrueNE = SimdCombiner(Intrinsic::wasm_anytrue, ISD::SETNE,
+                                       Intrinsic::wasm_anytrue, false))
+    return AnyTrueNE;
+  if (SDValue AllTrueNE = SimdCombiner(Intrinsic::wasm_alltrue, ISD::SETNE,
+                                       Intrinsic::wasm_alltrue, false))
+    return AllTrueNE;
+
+  return SDValue();
+}
+
 template <int MatchRHS, ISD::CondCode MatchCond, bool RequiresNegate,
           Intrinsic::ID Intrin>
 static SDValue TryMatchTrue(SDNode *N, EVT VecVT, SelectionDAG &DAG) {
@@ -3427,8 +3477,11 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performVectorTruncZeroCombine(N, DCI);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);
-  case ISD::INTRINSIC_WO_CHAIN:
+  case ISD::INTRINSIC_WO_CHAIN: {
+    if (auto AnyAllCombine = performAnyAllCombine(N, DCI.DAG))
+      return AnyAllCombine;
     return performLowerPartialReduction(N, DCI.DAG);
+  }
   case ISD::MUL:
     return performMulCombine(N, DCI.DAG);
   }
