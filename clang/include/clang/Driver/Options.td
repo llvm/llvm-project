@@ -2668,6 +2668,15 @@ def fsanitize_skip_hot_cutoff_EQ
 
 } // end -f[no-]sanitize* flags
 
+def fallow_runtime_check_skip_hot_cutoff_EQ
+    : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Exclude __builtin_allow_runtime_check for the top hottest "
+               "code responsible for the given fraction of PGO counters "
+               "(0.0 [default] = skip none; 1.0 = skip all). "
+               "Argument format: <value>">;
+
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
@@ -9312,6 +9321,20 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+def fdx_rootsignature_version :
+  Joined<["-"], "fdx-rootsignature-version=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Root Signature Version">,
+  Values<"rootsig_1_0,rootsig_1_1">,
+  NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
+  NormalizedValues<["V1_0", "V1_1"]>,
+  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
+def dxc_rootsig_ver :
+  Separate<["/", "-"], "force-rootsig-ver">,
+  Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,

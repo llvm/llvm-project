@@ -36,6 +36,7 @@ struct FunctionInfo;
 struct Info;
 struct TypedefInfo;
 struct ConceptInfo;
+struct VarInfo;
 
 enum class InfoType {
   IT_default,
@@ -44,7 +45,8 @@ enum class InfoType {
   IT_function,
   IT_enum,
   IT_typedef,
-  IT_concept
+  IT_concept,
+  IT_variable
 };
 
 enum class CommentKind {
@@ -169,6 +171,7 @@ struct ScopeChildren {
   std::vector<EnumInfo> Enums;
   std::vector<TypedefInfo> Typedefs;
   std::vector<ConceptInfo> Concepts;
+  std::vector<VarInfo> Variables;
 
   void sort();
 };
@@ -374,6 +377,15 @@ struct SymbolInfo : public Info {
   std::optional<Location> DefLoc;     // Location where this decl is defined.
   llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
   bool IsStatic = false;
+};
+
+struct VarInfo : SymbolInfo {
+  VarInfo() : SymbolInfo(InfoType::IT_variable) {}
+  explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
+
+  void merge(VarInfo &&I);
+
+  TypeInfo Type;
 };
 
 // TODO: Expand to allow for documenting templating and default args.

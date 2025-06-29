@@ -748,6 +748,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   const char *ResultTokStrPtr = nullptr;
   SourceLocation StartLoc = LHSTok.getLocation();
   SourceLocation PasteOpLoc;
+  bool HasUCNs = false;
 
   auto IsAtEnd = [&TokenStream, &CurIdx] {
     return TokenStream.size() == CurIdx;
@@ -885,6 +886,9 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 
     // Finally, replace LHS with the result, consume the RHS, and iterate.
     ++CurIdx;
+
+    // Set Token::HasUCN flag if LHS or RHS contains any UCNs.
+    HasUCNs = LHSTok.hasUCN() || RHS.hasUCN() || HasUCNs;
     LHSTok = Result;
   } while (!IsAtEnd() && TokenStream[CurIdx].is(tok::hashhash));
 
@@ -913,6 +917,13 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   // token pasting re-lexes the result token in raw mode, identifier information
   // isn't looked up.  As such, if the result is an identifier, look up id info.
   if (LHSTok.is(tok::raw_identifier)) {
+
+    // If there has any UNCs in concated token, we should mark this token
+    // with Token::HasUCN flag, then LookUpIdentifierInfo will expand UCNs in
+    // token.
+    if (HasUCNs)
+      LHSTok.setFlag(Token::HasUCN);
+
     // Look up the identifier info for the token.  We disabled identifier lookup
     // by saying we're skipping contents, so we need to do this manually.
     PP.LookUpIdentifierInfo(LHSTok);
