@@ -1274,30 +1274,26 @@ void MCAssembler::flushPendingErrors() const {
 LLVM_DUMP_METHOD void MCAssembler::dump() const{
   raw_ostream &OS = errs();
 
-  OS << "<MCAssembler\n";
-  OS << "  Sections:[\n    ";
+  OS << "Sections:[";
   bool First = true;
   for (const MCSection &Sec : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n    ";
+    OS << '\n';
     Sec.dump();
   }
-  OS << "],\n";
-  OS << "  Symbols:[";
+  OS << "\n]\n";
+  OS << "Symbols:[\n";
 
   First = true;
   for (const MCSymbol &Sym : symbols()) {
     if (First)
       First = false;
     else
-      OS << ",\n           ";
+      OS << "\n";
     OS << "(";
     Sym.dump();
     OS << ", Index:" << Sym.getIndex() << ", ";
     OS << ")";
   }
-  OS << "]>\n";
+  OS << "\n]\n";
 }
 #endif
