@@ -18,7 +18,6 @@
 #ifdef MLIR_ENABLE_CATALOG_GENERATOR
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cxxabi.h>
 #include <mutex>
 #endif
 
@@ -232,22 +231,9 @@ LogicalResult PatternApplicator::matchAndRewrite(
 
 #ifdef MLIR_ENABLE_CATALOG_GENERATOR
             OpBuilder::Listener *oldListener = rewriter.getListener();
-            int status;
-            const char *mangledPatternName = typeid(*pattern).name();
-            char *demangled = abi::__cxa_demangle(mangledPatternName, nullptr,
-                                                  nullptr, &status);
-            std::string demangledPatternName;
-            if (status == 0 && demangled) {
-              demangledPatternName = demangled;
-              free(demangled);
-            } else {
-              // Fallback in case demangling fails.
-              demangledPatternName = mangledPatternName;
-            }
-
             RewriterBase::CatalogingListener *catalogingListener =
                 new RewriterBase::CatalogingListener(
-                    oldListener, demangledPatternName, catalogOs,
+                    oldListener, pattern->getDebugName(), catalogOs,
                     catalogWriteMutex);
             rewriter.setListener(catalogingListener);
 #endif

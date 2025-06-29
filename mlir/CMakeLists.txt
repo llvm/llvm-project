@@ -206,8 +206,7 @@ endif()
 
 #-------------------------------------------------------------------------------
 # MLIR Pattern Catalog Generator Configuration
-# Requires:
-#   RTTI to be enabled (set with -DLLVM_ENABLE_RTTI=ON)
+#
 # When enabled, causes all rewriter patterns to dump their type names and the
 # names of affected operations, which can be used to build a search index
 # mapping operations to patterns.
@@ -219,7 +218,6 @@ set(MLIR_ENABLE_CATALOG_GENERATOR 0 CACHE BOOL
 if (MLIR_ENABLE_CATALOG_GENERATOR)
   message(STATUS "Enabling MLIR pattern catalog generator")
   add_definitions(-DMLIR_ENABLE_CATALOG_GENERATOR)
-  add_definitions(-DLLVM_ENABLE_RTTI)
 endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
