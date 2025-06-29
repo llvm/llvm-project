@@ -751,12 +751,14 @@ void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
     break;
   case KindMem: {
     const MemOp &Op = getMem();
-    OS << "Mem:" << *cast<MCConstantExpr>(Op.Disp);
+    OS << "Mem:";
+    MAI.printExpr(OS, *cast<MCConstantExpr>(Op.Disp));
     if (Op.Base) {
       OS << "(";
-      if (Op.MemKind == BDLMem)
-        OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
-      else if (Op.MemKind == BDRMem)
+      if (Op.MemKind == BDLMem) {
+        MAI.printExpr(OS, *cast<MCConstantExpr>(Op.Length.Imm));
+        OS << ',';
+      } else if (Op.MemKind == BDRMem)
         OS << SystemZGNUInstPrinter::getRegisterName(Op.Length.Reg) << ",";
       if (Op.Index)
         OS << SystemZGNUInstPrinter::getRegisterName(Op.Index) << ",";

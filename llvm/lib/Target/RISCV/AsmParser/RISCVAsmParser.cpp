@@ -1026,8 +1026,9 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << "<imm: " << *Imm.Val << " " << (Imm.IsRV64 ? "rv64" : "rv32")
-         << ">";
+      OS << "<imm: ";
+      MAI.printExpr(OS, *Imm.Val);
+      OS << ' ' << (Imm.IsRV64 ? "rv64" : "rv32") << '>';
       break;
     case KindTy::FPImmediate:
       OS << "<fpimm: " << FPImm.Val << ">";
