@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <array>

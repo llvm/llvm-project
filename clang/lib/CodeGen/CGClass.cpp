@@ -15,6 +15,7 @@
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
+#include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
