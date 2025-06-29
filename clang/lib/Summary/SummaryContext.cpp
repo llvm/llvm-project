@@ -7,14 +7,14 @@
 
 namespace clang {
 namespace {
-SmallVector<char> GetUSR(const FunctionDecl *FD) {
-  SmallVector<char> USR;
+std::string GetUSR(const FunctionDecl *FD) {
+  SmallString<32> USR;
   index::generateUSRForDecl(FD, USR);
-  return USR;
+  return USR.str().str();
 }
 
 class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
-  std::set<SmallVector<char>> Calls;
+  std::set<std::string> Calls;
   bool callsOpaqueSymbol = false;
 
   virtual void
@@ -44,7 +44,7 @@ class CallCollector : public ast_matchers::MatchFinder::MatchCallback {
   }
 
 public:
-  std::pair<std::set<SmallVector<char>>, bool> collect(const FunctionDecl *FD) {
+  std::pair<std::set<std::string>, bool> collect(const FunctionDecl *FD) {
     using namespace ast_matchers;
     MatchFinder Finder;
 
@@ -57,9 +57,9 @@ public:
 };
 } // namespace
 
-FunctionSummary::FunctionSummary(SmallVector<char> ID,
+FunctionSummary::FunctionSummary(std::string ID,
                                  std::set<const SummaryAttr *> FunctionAttrs,
-                                 std::set<SmallVector<char>> Calls,
+                                 std::set<std::string> Calls,
                                  bool CallsOpaque)
     : ID(std::move(ID)), Attrs(std::move(FunctionAttrs)),
       Calls(std::move(Calls)), CallsOpaque(CallsOpaque) {}
@@ -79,9 +79,9 @@ SummaryContext::SummaryContext() {
   registerAttr<NoWritePtrParameterAttr>();
 }
 
-void SummaryContext::CreateSummary(SmallVector<char> ID,
+void SummaryContext::CreateSummary(std::string ID,
                                    std::set<const SummaryAttr *> Attrs,
-                                   std::set<SmallVector<char>> Calls,
+                                   std::set<std::string> Calls,
                                    bool CallsOpaque) {
   if (IDToSummary.count(ID))
     return;
@@ -116,7 +116,7 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
   for (auto it = Summary.begin(); it != Summary.end(); ++it) {
     const llvm::json::Object *FunctionSummary = it->getAsObject();
 
-    SmallString<128> ID(*FunctionSummary->getString("id"));
+    std::string ID = FunctionSummary->getString("id")->str();
     std::set<const SummaryAttr *> FunctionAttrs;
     const llvm::json::Array *FunctionAttributes =
         FunctionSummary->getObject("attrs")->getArray("function");
@@ -128,7 +128,7 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
       }
     }
 
-    std::set<SmallVector<char>> Calls;
+    std::set<std::string> Calls;
     const llvm::json::Object *CallsObject = FunctionSummary->getObject("calls");
     bool callsOpaue = *CallsObject->getBoolean("opaque");
 
@@ -136,7 +136,7 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
     for (auto callIt = CallEntries->begin(); callIt != CallEntries->end();
          ++callIt) {
       auto *Obj = callIt->getAsObject();
-      Calls.emplace(SmallString<128>(*Obj->getString("id")));
+      Calls.emplace(Obj->getString("id")->str());
     }
 
     CreateSummary(std::move(ID), std::move(FunctionAttrs), std::move(Calls),

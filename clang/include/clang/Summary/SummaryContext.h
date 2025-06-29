@@ -7,18 +7,18 @@
 
 namespace clang {
 class FunctionSummary {
-  SmallVector<char> ID;
+  std::string ID;
   std::set<const SummaryAttr *> Attrs;
-  std::set<SmallVector<char>> Calls;
+  std::set<std::string> Calls;
   bool CallsOpaque;
 
 public:
-  FunctionSummary(SmallVector<char> ID, std::set<const SummaryAttr *> Attrs,
-                  std::set<SmallVector<char>> Calls, bool CallsOpaque);
+  FunctionSummary(std::string ID, std::set<const SummaryAttr *> Attrs,
+                  std::set<std::string> Calls, bool CallsOpaque);
 
-  SmallVector<char> getID() const { return ID; }
+  StringRef getID() const { return ID; }
   const std::set<const SummaryAttr *> &getAttributes() const { return Attrs; }
-  const std::set<SmallVector<char>> &getCalls() const { return Calls; }
+  const std::set<std::string> &getCalls() const { return Calls; }
   bool callsOpaqueObject() const { return CallsOpaque; }
 
   template <typename T> bool hasAttribute() const {
@@ -37,14 +37,14 @@ public:
 
 class SummaryContext {
 public:
-  std::map<SmallVector<char>, const FunctionSummary *> IDToSummary;
+  std::map<StringRef, const FunctionSummary *> IDToSummary;
   std::vector<std::unique_ptr<FunctionSummary>> FunctionSummaries;
 
   std::map<SummaryAttrKind, const SummaryAttr *> KindToAttribute;
   std::vector<std::unique_ptr<SummaryAttr>> Attributes;
 
-  void CreateSummary(SmallVector<char> ID, std::set<const SummaryAttr *> Attrs,
-                     std::set<SmallVector<char>> Calls, bool CallsOpaque);
+  void CreateSummary(std::string ID, std::set<const SummaryAttr *> Attrs,
+                     std::set<std::string> Calls, bool CallsOpaque);
   bool ReduceFunctionSummary(FunctionSummary &FunctionSummary);
 
   template <typename T> void registerAttr();
