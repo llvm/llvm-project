@@ -155,6 +155,21 @@ void LogWriter::WriteAll(const char *Begin, const char *End) XRAY_NEVER_INSTRUME
   }
 }
 
+void LogWriter::WritePadding(int NumBytes) {
+  // TODO: There is probably a more efficient way to do this
+  const char PaddingChar = '\0';
+  while (NumBytes > 0) {
+    auto Written = write(Fd, &PaddingChar, 1);
+    if (Written < 0) {
+      if (errno == EINTR)
+        continue; // Try again.
+      Report("Failed to write; errno = %d\n", errno);
+      return;
+    }
+    NumBytes--;
+  }
+}
+
 void LogWriter::Flush() XRAY_NEVER_INSTRUMENT {
   fsync(Fd);
 }
