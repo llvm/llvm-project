@@ -746,6 +746,61 @@ For example
 }
 ```
 
+#### Early Exit
+
+In the current form loops do support an early exit as any block can branch to
+the merge block of the loop. However, the problem arises when such early exit
+is conditional and the branch is sunk into a `spirv.mlir.selection` region.
+In such structure the branch inside the selection region cannot reference block
+of the loop enclosing the selection. At the same time such pattern is not unusual.
+To support early loop exit within nested structured control flow, SPIR-V dialect
+introduces `spirv.mlir.break` operation. The semantic of this operation is to branch
+to the merge block of the first enclosing loop.
+
+For example
+
+```mlir
+spirv.mlir.loop {
+  spirv.Branch ^header(%zero: i32)
+
+^header(%i : i32):
+  %cmp = spirv.SLessThan %i, %count : i32
+  spirv.BranchConditional %cmp, ^body, ^merge_loop
+
+^body:
+  %cond = spirv.SGreaterThan %i, %five : i32
+  spirv.Branch ^selection
+
+^selection:
+  spirv.mlir.selection {
+    spirv.BranchConditional %cond, ^true, ^merge_sel
+  ^true:
+    spirv.mlir.break // Jump to ^merge_loop. Regular branch cannot reference ^merge_loop, as it is outside the region.
+  ^merge_sel:
+    spirv.mlir.merge
+  }
+
+  spirv.Branch ^continue
+
+^continue:
+  %new_i = spirv.IAdd %i, %one : i32
+  spirv.Branch ^header(%new_i: i32)
+
+^merge_loop:
+  spirv.mlir.merge
+}
+```
+
+The equivalent GLSL or C code would be
+
+```c
+for (int i = 0; i < 10; ++i) {
+  x += 1;
+  if(x > 5)
+    break;
+}
+```
+
 ### Block argument for Phi
 
 There are no direct Phi operations in the SPIR-V dialect; SPIR-V `OpPhi`
