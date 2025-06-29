@@ -26,3 +26,5 @@ mlir_target_link_libraries(MLIRTestTransformDialect PUBLIC
   MLIRTransformLoopExtension
   MLIRTransformPDLExtension
 )
+
+set_target_properties(MLIRTestTransformDialect PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

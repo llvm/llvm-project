@@ -8,3 +8,4 @@ add_mlir_library(MLIRPDLLCodeGen
   MLIRPDLDialect
   MLIRSupport
   )
+set_target_properties(obj.MLIRPDLLCodeGen PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
