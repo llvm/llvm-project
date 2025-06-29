@@ -2929,27 +2929,32 @@ static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
 }
 
 static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
-                                            Operation *op, Type expectedType) {
+                                            SubViewOp op, Type expectedType) {
   auto memrefType = llvm::cast<ShapedType>(expectedType);
   switch (result) {
   case SliceVerificationResult::Success:
     return success();
   case SliceVerificationResult::RankTooLarge:
     return op->emitError("expected result rank to be smaller or equal to ")
-           << "the source rank. ";
+           << "the source rank, but got " << op.getType();
   case SliceVerificationResult::SizeMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result sizes) ";
+           << " or a rank-reduced version. (mismatch of result sizes), but got "
+           << op.getType();
   case SliceVerificationResult::ElemTypeMismatch:
     return op->emitError("expected result element type to be ")
-           << memrefType.getElementType();
+           << memrefType.getElementType() << ", but got " << op.getType();
   case SliceVerificationResult::MemSpaceMismatch:
-    return op->emitError("expected result and source memory spaces to match.");
+    return op->emitError(
+               "expected result and source memory spaces to match, but got ")
+           << op.getType();
   case SliceVerificationResult::LayoutMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result layout) ";
+           << " or a rank-reduced version. (mismatch of result layout), but "
+              "got "
+           << op.getType();
   }
   llvm_unreachable("unexpected subview verification result");
 }

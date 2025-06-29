@@ -129,7 +129,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   if (!Expr->evaluateAsRelocatable(V, nullptr))
     return false;
 
-  if (V.getSubSym() || V.getSpecifier() != MCSymbolRefExpr::VK_None)
+  if (V.getSubSym() || V.getSpecifier())
     return false;
 
   auto *Sym = V.getAddSym();
@@ -848,10 +848,6 @@ void MCAssembler::layout() {
     if (getContext().hadError())
       return;
 
-  DEBUG_WITH_TYPE("mc-dump", {
-      errs() << "assembler backend - post-relaxation\n--\n";
-      dump(); });
-
   // Some targets might want to adjust fragment offsets. If so, perform another
   // layout iteration.
   if (getBackend().finishLayout(*this))
@@ -1274,30 +1270,11 @@ void MCAssembler::flushPendingErrors() const {
 LLVM_DUMP_METHOD void MCAssembler::dump() const{
   raw_ostream &OS = errs();
 
-  OS << "<MCAssembler\n";
-  OS << "  Sections:[\n    ";
-  bool First = true;
+  OS << "Sections:[";
   for (const MCSection &Sec : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n    ";
+    OS << '\n';
     Sec.dump();
   }
-  OS << "],\n";
-  OS << "  Symbols:[";
-
-  First = true;
-  for (const MCSymbol &Sym : symbols()) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n           ";
-    OS << "(";
-    Sym.dump();
-    OS << ", Index:" << Sym.getIndex() << ", ";
-    OS << ")";
-  }
-  OS << "]>\n";
+  OS << "\n]\n";
 }
 #endif

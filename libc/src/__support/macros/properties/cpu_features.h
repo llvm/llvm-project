@@ -61,7 +61,7 @@
 
 #if defined(__riscv_flen)
 // https://github.com/riscv-non-isa/riscv-c-api-doc/blob/main/src/c-api.adoc
-#if (__riscv_arch_test && __riscv_zfhmin)
+#if defined(__riscv_zfhmin)
 #define LIBC_TARGET_CPU_HAS_RISCV_FPU_HALF
 #define LIBC_TARGET_CPU_HAS_FPU_HALF
 #endif // LIBC_TARGET_CPU_HAS_RISCV_FPU_HALF

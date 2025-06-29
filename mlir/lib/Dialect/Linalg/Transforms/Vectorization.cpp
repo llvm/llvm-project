@@ -922,8 +922,7 @@ static bool isLoopInvariantIdx(LinalgOp &linalgOp, Value &val,
   // TODO: We could try analysing the corresponding affine map here.
   auto *block = linalgOp.getBlock();
   if (isa<BlockArgument>(val))
-    return llvm::all_of(block->getArguments(),
-                        [&val](Value v) { return (v != val); });
+    return !llvm::is_contained(block->getArguments(), val);
 
   Operation *defOp = val.getDefiningOp();
   assert(defOp && "This is neither a block argument nor an operation result");
@@ -982,8 +981,7 @@ static bool isContiguousLoadIdx(LinalgOp &linalgOp, Value &val,
   // TODO: We could try analysing the corresponding affine map here.
   auto *block = linalgOp.getBlock();
   if (isa<BlockArgument>(val))
-    return llvm::all_of(block->getArguments(),
-                        [&val](Value v) { return (v != val); });
+    return !llvm::is_contained(block->getArguments(), val);
 
   Operation *defOp = val.getDefiningOp();
   assert(defOp && "This is neither a block argument nor an operation result");
