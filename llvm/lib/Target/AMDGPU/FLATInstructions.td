@@ -2215,13 +2215,13 @@ let OtherPredicates = [isGFX12PlusNot12_50] in
   defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_ORDERED_ADD_B64", "int_amdgcn_global_atomic_ordered_add_b64", i64, i64, /* isIntr */ 1>;
 
 let WaveSizePredicate = isWave32, OtherPredicates = [isGFX12Plus] in {
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32,  int_amdgcn_global_load_tr_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w32, int_amdgcn_global_load_tr_b64, v2i32>;
   foreach vt = [v8i16, v8f16, v8bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w32, int_amdgcn_global_load_tr_b128, vt>;
 }
 
 let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
-  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64,  int_amdgcn_global_load_tr_b64, i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
   foreach vt = [v4i16, v4f16, v4bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
 }
