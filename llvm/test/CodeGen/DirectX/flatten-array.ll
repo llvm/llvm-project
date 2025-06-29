@@ -123,8 +123,7 @@ define void @gep_4d_test ()  {
 @b = internal global [2 x [3 x [4 x i32]]] zeroinitializer, align 16
 
 define void @global_gep_load() {
-  ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @a.1dim, i32 0, i32 6
-  ; CHECK-NEXT: load i32, ptr [[GEP_PTR]], align 4
+  ; CHECK: {{.*}} = load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 0, i32 6), align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 1
@@ -159,9 +158,9 @@ define void @global_gep_load_index(i32 %row, i32 %col, i32 %timeIndex) {
 define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 ; CHECK-LABEL: define void @global_incomplete_gep_chain(
 ; CHECK-SAME: i32 [[ROW:%.*]], i32 [[COL:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[COL]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[COL]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 0, [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[ROW]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[ROW]], 12
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[DOTFLAT:%.*]] = getelementptr inbounds [24 x i32], ptr @a.1dim, i32 0, i32 [[TMP4]]
 ; CHECK-NOT: getelementptr inbounds [2 x [3 x [4 x i32]]]{{.*}}
@@ -177,8 +176,7 @@ define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 }
 
 define void @global_gep_store() {
-  ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @b.1dim, i32 0, i32 13
-  ; CHECK-NEXT: store i32 1, ptr [[GEP_PTR]], align 4
+  ; CHECK: store i32 1, ptr getelementptr inbounds ([24 x i32], ptr @b.1dim, i32 0, i32 13), align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @b, i32 0, i32 1
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 0
@@ -254,6 +252,25 @@ define void @gep_4d_index_and_gep_chain_mixed() {
   %g2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 0, i32 1
   %g2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 1, i32 0
   %g2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 1, i32 1
+  ret void
+}
+
+; This test demonstrates that the collapsing of GEP chains occurs regardless of
+; the source element type given to the GEP. As long as the root pointer being
+; indexed to is an aggregate data structure, the GEP will be flattened.
+define void @gep_scalar_flatten() {
+  ; CHECK-LABEL: gep_scalar_flatten
+  ; CHECK-NEXT: [[ALLOCA:%.*]] = alloca [24 x i32]
+  ; CHECK-NEXT: getelementptr inbounds nuw [24 x i32], ptr [[ALLOCA]], i32 0, i32 17
+  ; CHECK-NEXT: getelementptr inbounds nuw [24 x i32], ptr [[ALLOCA]], i32 0, i32 17
+  ; CHECK-NEXT: getelementptr inbounds nuw [24 x i32], ptr [[ALLOCA]], i32 0, i32 23
+  ; CHECK-NEXT: ret void
+  %a = alloca [2 x [3 x [4 x i32]]], align 4
+  %i8root = getelementptr inbounds nuw i8, [2 x [3 x [4 x i32]]]* %a, i32 68 ; %a[1][1][1]
+  %i32root = getelementptr inbounds nuw i32, [2 x [3 x [4 x i32]]]* %a, i32 17 ; %a[1][1][1]
+  %c0 = getelementptr inbounds nuw [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* %a, i32 0, i32 1 ; %a[1]
+  %c1 = getelementptr inbounds nuw i32, [3 x [4 x i32]]* %c0, i32 8 ; %a[1][2]
+  %c2 = getelementptr inbounds nuw i8, [4 x i32]* %c1, i32 12 ; %a[1][2][3]
   ret void
 }
 
