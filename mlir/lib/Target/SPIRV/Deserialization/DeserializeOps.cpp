@@ -45,6 +45,12 @@ Value spirv::Deserializer::getValue(uint32_t id) {
     return opBuilder.create<spirv::ConstantOp>(unknownLoc, constInfo->second,
                                                constInfo->first);
   }
+  if (auto constCompositeReplicateInfo = getConstantCompositeReplicate(id)) {
+    auto constantId = constCompositeReplicateInfo->first;
+    auto element = getValue(constantId);
+    return opBuilder.create<spirv::EXTConstantCompositeReplicateOp>(
+        unknownLoc, constCompositeReplicateInfo->second, element);
+  }
   if (auto varOp = getGlobalVariable(id)) {
     auto addressOfOp = opBuilder.create<spirv::AddressOfOp>(
         unknownLoc, varOp.getType(), SymbolRefAttr::get(varOp.getOperation()));
@@ -56,10 +62,17 @@ Value spirv::Deserializer::getValue(uint32_t id) {
         SymbolRefAttr::get(constOp.getOperation()));
     return referenceOfOp.getReference();
   }
-  if (auto constCompositeOp = getSpecConstantComposite(id)) {
+  if (auto specConstCompositeOp = getSpecConstantComposite(id)) {
     auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
-        unknownLoc, constCompositeOp.getType(),
-        SymbolRefAttr::get(constCompositeOp.getOperation()));
+        unknownLoc, specConstCompositeOp.getType(),
+        SymbolRefAttr::get(specConstCompositeOp.getOperation()));
+    return referenceOfOp.getReference();
+  }
+  if (auto specConstCompositeReplicateOp =
+          getSpecConstantCompositeReplicate(id)) {
+    auto referenceOfOp = opBuilder.create<spirv::ReferenceOfOp>(
+        unknownLoc, specConstCompositeReplicateOp.getType(),
+        SymbolRefAttr::get(specConstCompositeReplicateOp.getOperation()));
     return referenceOfOp.getReference();
   }
   if (auto specConstOperationInfo = getSpecConstantOperation(id)) {
@@ -175,8 +188,12 @@ LogicalResult spirv::Deserializer::processInstruction(
     return processConstant(operands, /*isSpec=*/true);
   case spirv::Opcode::OpConstantComposite:
     return processConstantComposite(operands);
+  case spirv::Opcode::OpConstantCompositeReplicateEXT:
+    return processConstantCompositeReplicateEXT(operands);
   case spirv::Opcode::OpSpecConstantComposite:
     return processSpecConstantComposite(operands);
+  case spirv::Opcode::OpSpecConstantCompositeReplicateEXT:
+    return processSpecConstantCompositeReplicateEXT(operands);
   case spirv::Opcode::OpSpecConstantOp:
     return processSpecConstantOperation(operands);
   case spirv::Opcode::OpConstantTrue:

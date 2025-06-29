@@ -108,10 +108,16 @@ private:
 
   LogicalResult processConstantOp(spirv::ConstantOp op);
 
+  LogicalResult processConstantCompositeReplicateOp(
+      spirv::EXTConstantCompositeReplicateOp op);
+
   LogicalResult processSpecConstantOp(spirv::SpecConstantOp op);
 
   LogicalResult
   processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op);
+
+  LogicalResult processSpecConstantCompositeReplicateOp(
+      spirv::EXTSpecConstantCompositeReplicateOp op);
 
   LogicalResult
   processSpecConstantOperationOp(spirv::SpecConstantOperationOp op);
@@ -229,6 +235,12 @@ private:
 
   uint32_t prepareConstantFp(Location loc, FloatAttr floatAttr,
                              bool isSpec = false);
+
+  /// Prepares `spirv.EXTConstantCompositeReplicateOp` serialization. This
+  /// method emits OpConstantCompositeReplicateEXT and returns the result <id>
+  /// associated with it.
+  uint32_t
+  prepareConstantCompositeReplicate(spirv::EXTConstantCompositeReplicateOp op);
 
   //===--------------------------------------------------------------------===//
   // Control flow

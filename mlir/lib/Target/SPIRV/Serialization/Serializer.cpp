@@ -1109,6 +1109,46 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
   return resultID;
 }
 
+uint32_t Serializer::prepareConstantCompositeReplicate(
+    spirv::EXTConstantCompositeReplicateOp op) {
+  if (auto id = getValueID(op.getResult())) {
+    return id;
+  }
+
+  uint32_t typeID = 0;
+  if (failed(processType(op.getLoc(), op.getType(), typeID))) {
+    return 0;
+  }
+
+  auto definingOp = op.getConstant().getDefiningOp();
+  if (!definingOp) {
+    emitError(op.getLoc(), "op defining splat value not found");
+    return 0;
+  }
+
+  uint32_t operandID;
+  if (auto constantOp = dyn_cast_or_null<spirv::ConstantOp>(definingOp)) {
+    operandID = getConstantID(constantOp.getValue());
+
+  } else if (auto constantCompositeReplicateOp =
+                 dyn_cast_or_null<spirv::EXTConstantCompositeReplicateOp>(
+                     definingOp)) {
+    operandID = prepareConstantCompositeReplicate(constantCompositeReplicateOp);
+  } else {
+    emitError(op.getLoc(), "operand op type not supported");
+    return 0;
+  }
+
+  uint32_t resultID = getNextID();
+  SmallVector<uint32_t> operands = {typeID, resultID, operandID};
+
+  encodeInstructionInto(typesGlobalValues,
+                        spirv::Opcode::OpConstantCompositeReplicateEXT,
+                        operands);
+
+  return resultID;
+}
+
 //===----------------------------------------------------------------------===//
 // Control flow
 //===----------------------------------------------------------------------===//
@@ -1328,6 +1368,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processBranchConditionalOp(op);
       })
       .Case([&](spirv::ConstantOp op) { return processConstantOp(op); })
+      .Case([&](spirv::EXTConstantCompositeReplicateOp op) {
+        return processConstantCompositeReplicateOp(op);
+      })
       .Case([&](spirv::FuncOp op) { return processFuncOp(op); })
       .Case([&](spirv::GlobalVariableOp op) {
         return processGlobalVariableOp(op);
@@ -1338,6 +1381,9 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
       .Case([&](spirv::SpecConstantOp op) { return processSpecConstantOp(op); })
       .Case([&](spirv::SpecConstantCompositeOp op) {
         return processSpecConstantCompositeOp(op);
+      })
+      .Case([&](spirv::EXTSpecConstantCompositeReplicateOp op) {
+        return processSpecConstantCompositeReplicateOp(op);
       })
       .Case([&](spirv::SpecConstantOperationOp op) {
         return processSpecConstantOperationOp(op);
