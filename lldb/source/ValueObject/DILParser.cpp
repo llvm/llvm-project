@@ -191,41 +191,27 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     return std::make_unique<IdentifierNode>(loc, identifier);
   }
 
-  if (CurToken().Is(Token::l_paren)) {
-    // Check in case this is an anonynmous namespace
-    if (m_dil_lexer.LookAhead(1).Is(Token::identifier) &&
-        (m_dil_lexer.LookAhead(1).GetSpelling() == "anonymous") &&
-        m_dil_lexer.LookAhead(2).Is(Token::identifier) &&
-        (m_dil_lexer.LookAhead(2).GetSpelling() == "namespace") &&
-        m_dil_lexer.LookAhead(3).Is(Token::r_paren) &&
-        m_dil_lexer.LookAhead(4).Is(Token::coloncolon)) {
-      m_dil_lexer.Advance(4);
+  uint32_t loc = CurToken().GetLocation();
+  std::string nested_name_specifier;
 
-      std::string identifier = "(anonymous namespace)";
-      Expect(Token::coloncolon);
-      // Save the source location for the diagnostics message.
-      uint32_t loc = CurToken().GetLocation();
-      m_dil_lexer.Advance();
-      assert(
-          (CurToken().Is(Token::identifier) || CurToken().Is(Token::l_paren)) &&
-          "Expected an identifier or anonymous namespeace, but not found.");
-      std::string identifier2 = ParseNestedNameSpecifier();
-      if (identifier2.empty()) {
-        // There was only an identifer, no more levels of nesting. Or there
-        // was an invalid expression starting with a left parenthesis.
-        Expect(Token::identifier);
-        identifier2 = CurToken().GetSpelling();
-        m_dil_lexer.Advance();
-      }
-      identifier = identifier + "::" + identifier2;
-      return std::make_unique<IdentifierNode>(loc, identifier);
-    } else {
-      m_dil_lexer.Advance();
-      auto expr = ParseExpression();
-      Expect(Token::r_paren);
-      m_dil_lexer.Advance();
-      return expr;
+  if (CurToken().Is(Token::l_paren))
+    nested_name_specifier = ParseNestedNameSpecifier();
+
+  if (!nested_name_specifier.empty()) {
+    if (!CurToken().Is(Token::identifier)) {
+      BailOut("Expected an identifier, but not found.",
+              CurToken().GetLocation(), CurToken().GetSpelling().length());
     }
+
+    std::string unqualified_id = ParseUnqualifiedId();
+    return std::make_unique<IdentifierNode>(loc, nested_name_specifier +
+                                                     unqualified_id);
+  } else {
+    m_dil_lexer.Advance();
+    auto expr = ParseExpression();
+    Expect(Token::r_paren);
+    m_dil_lexer.Advance();
+    return expr;
   }
 
   BailOut(llvm::formatv("Unexpected token: {0}", CurToken()),
@@ -261,16 +247,16 @@ std::string DILParser::ParseNestedNameSpecifier() {
         m_dil_lexer.LookAhead(4).Is(Token::coloncolon)) {
       m_dil_lexer.Advance(4);
 
-      assert(
-          (CurToken().Is(Token::identifier) || CurToken().Is(Token::l_paren)) &&
-          "Expected an identifier or anonymous namespace, but not found.");
+      Expect(Token::coloncolon);
+      m_dil_lexer.Advance();
+      if (!CurToken().Is(Token::identifier) && !CurToken().Is(Token::l_paren)) {
+        BailOut(
+            "Expected an identifier or anonymous namespeace, but not found.",
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+      }
       // Continue parsing the nested_namespace_specifier.
       std::string identifier2 = ParseNestedNameSpecifier();
-      if (identifier2.empty()) {
-        Expect(Token::identifier);
-        identifier2 = CurToken().GetSpelling();
-        m_dil_lexer.Advance();
-      }
+
       return "(anonymous namespace)::" + identifier2;
     }
 
