@@ -210,6 +210,12 @@ struct PGOAnalysisMapEntry {
   std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
 };
 
+struct FuncMapEntry {
+  uint8_t Version;
+  llvm::yaml::Hex64 Address;
+  uint64_t DynamicInstCount;
+};
+
 struct StackSizeEntry {
   llvm::yaml::Hex64 Address;
   llvm::yaml::Hex64 Size;
@@ -244,6 +250,7 @@ struct Chunk {
     DependentLibraries,
     CallGraphProfile,
     BBAddrMap,
+    FuncMap,
 
     // Special chunks.
     SpecialChunksStart,
@@ -368,6 +375,18 @@ struct BBAddrMapSection : Section {
   static bool classof(const Chunk *S) {
     return S->Kind == ChunkKind::BBAddrMap;
   }
+};
+
+struct FuncMapSection : Section {
+  std::optional<std::vector<FuncMapEntry>> Entries;
+
+  FuncMapSection() : Section(ChunkKind::FuncMap) {}
+
+  std::vector<std::pair<StringRef, bool>> getEntries() const override {
+    return {{"Entries", Entries.has_value()}};
+  };
+
+  static bool classof(const Chunk *S) { return S->Kind == ChunkKind::FuncMap; }
 };
 
 struct StackSizesSection : Section {
@@ -777,6 +796,7 @@ bool shouldAllocateFileSpace(ArrayRef<ProgramHeader> Phdrs,
 } // end namespace llvm
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::FuncMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::BBAddrMapEntry::BBRangeEntry)
@@ -942,6 +962,10 @@ struct MappingTraits<ELFYAML::Symbol> {
 
 template <> struct MappingTraits<ELFYAML::StackSizeEntry> {
   static void mapping(IO &IO, ELFYAML::StackSizeEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::FuncMapEntry> {
+  static void mapping(IO &IO, ELFYAML::FuncMapEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::BBAddrMapEntry> {
