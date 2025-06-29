@@ -2261,6 +2261,99 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
+  SourceLocation Loc = TheCall->getBeginLoc();
+  MutableArrayRef Args(TheCall->getArgs(), TheCall->getNumArgs());
+  assert(llvm::none_of(Args, [](Expr *Arg) { return Arg->isTypeDependent(); }));
+
+  if (Args.size() == 0) {
+    S.Diag(TheCall->getBeginLoc(),
+           diag::err_typecheck_call_too_few_args_at_least)
+        << /*callee_type=*/0 << /*min_arg_count=*/1 << /*actual_arg_count=*/0
+        << /*is_non_object=*/0 << TheCall->getSourceRange();
+    return ExprError();
+  }
+
+  QualType FuncT = Args[0]->getType();
+
+  if (const auto *MPT = FuncT->getAs<MemberPointerType>()) {
+    if (Args.size() < 2) {
+      S.Diag(TheCall->getBeginLoc(),
+             diag::err_typecheck_call_too_few_args_at_least)
+          << /*callee_type=*/0 << /*min_arg_count=*/2 << /*actual_arg_count=*/1
+          << /*is_non_object=*/0 << TheCall->getSourceRange();
+      return ExprError();
+    }
+
+    const Type *MemPtrClass = MPT->getQualifier()->getAsType();
+    QualType ObjectT = Args[1]->getType();
+
+    if (MPT->isMemberDataPointer() && S.checkArgCount(TheCall, 2))
+      return ExprError();
+
+    ExprResult ObjectArg = [&]() -> ExprResult {
+      // (1.1): (t1.*f)(t2, ..., tN) when f is a pointer to a member function of
+      // a class T and is_same_v<T, remove_cvref_t<decltype(t1)>> ||
+      // is_base_of_v<T, remove_cvref_t<decltype(t1)>> is true;
+      // (1.4): t1.*f when N=1 and f is a pointer to data member of a class T
+      // and is_same_v<T, remove_cvref_t<decltype(t1)>> ||
+      // is_base_of_v<T, remove_cvref_t<decltype(t1)>> is true;
+      if (S.Context.hasSameType(QualType(MemPtrClass, 0),
+                                S.BuiltinRemoveCVRef(ObjectT, Loc)) ||
+          S.BuiltinIsBaseOf(Args[1]->getBeginLoc(), QualType(MemPtrClass, 0),
+                            S.BuiltinRemoveCVRef(ObjectT, Loc))) {
+        return Args[1];
+      }
+
+      // (t1.get().*f)(t2, ..., tN) when f is a pointer to a member function of
+      // a class T and remove_cvref_t<decltype(t1)> is a specialization of
+      // reference_wrapper;
+      if (const auto *RD = ObjectT->getAsCXXRecordDecl()) {
+        if (RD->isInStdNamespace() &&
+            RD->getDeclName().getAsString() == "reference_wrapper") {
+          CXXScopeSpec SS;
+          IdentifierInfo *GetName = &S.Context.Idents.get("get");
+          UnqualifiedId GetID;
+          GetID.setIdentifier(GetName, Loc);
+
+          ExprResult MemExpr = S.ActOnMemberAccessExpr(
+              S.getCurScope(), Args[1], Loc, tok::period, SS,
+              /*TemplateKWLoc=*/SourceLocation(), GetID, nullptr);
+
+          if (MemExpr.isInvalid())
+            return ExprError();
+
+          return S.ActOnCallExpr(S.getCurScope(), MemExpr.get(), Loc, {}, Loc);
+        }
+      }
+
+      // ((*t1).*f)(t2, ..., tN) when f is a pointer to a member function of a
+      // class T and t1 does not satisfy the previous two items;
+
+      return S.ActOnUnaryOp(S.getCurScope(), Loc, tok::star, Args[1]);
+    }();
+
+    if (ObjectArg.isInvalid())
+      return ExprError();
+
+    ExprResult BinOp = S.ActOnBinOp(S.getCurScope(), TheCall->getBeginLoc(),
+                                    tok::periodstar, ObjectArg.get(), Args[0]);
+    if (BinOp.isInvalid())
+      return ExprError();
+
+    if (MPT->isMemberDataPointer())
+      return BinOp;
+
+    auto *MemCall = new (S.Context)
+        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+
+    return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
+                           Args.drop_front(2), TheCall->getRParenLoc());
+  }
+  return S.ActOnCallExpr(S.getCurScope(), Args.front(), TheCall->getBeginLoc(),
+                         Args.drop_front(), TheCall->getRParenLoc());
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -2420,6 +2513,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return BuiltinShuffleVector(TheCall);
     // TheCall will be freed by the smart pointer here, but that's fine, since
     // BuiltinShuffleVector guts it, but then doesn't release it.
+  case Builtin::BI__builtin_invoke:
+    return BuiltinInvoke(*this, TheCall);
   case Builtin::BI__builtin_prefetch:
     if (BuiltinPrefetch(TheCall))
       return ExprError();
