@@ -29375,6 +29375,16 @@ TEST_F(FormatTest, BreakBeforeClassName) {
                "    ArenaSafeUniquePtr {};");
 }
 
+TEST_F(FormatTest, DoesNotCrashOnNonNullTerminatedStringRefs) {
+  StringRef TwoLines = "namespace foo {}\n"
+                       "namespace bar {}";
+  StringRef FirstLine = TwoLines.take_until([](char c) { return c == '\n'; });
+
+  // The internal API used to crash when passed a non-null-terminated StringRef.
+  // Check this does not happen anymore.
+  verifyNoCrash(FirstLine);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
