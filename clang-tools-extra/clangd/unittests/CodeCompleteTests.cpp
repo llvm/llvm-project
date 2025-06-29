@@ -4363,6 +4363,35 @@ TEST(CompletionTest, PreambleFromDifferentTarget) {
   EXPECT_THAT(Result.Completions, Not(testing::IsEmpty()));
   EXPECT_THAT(Signatures.signatures, Not(testing::IsEmpty()));
 }
+
+TEST(CompletionTest, DeducingThisIgnoreSelf) {
+  Annotations Test(R"cpp(
+    struct A {
+      void f(this auto&& self, int arg); 
+    };
+
+    int main() {
+      A a {};
+      a.^
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(Test.code());
+  TU.ExtraArgs = {"-std=c++23"};
+
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  CodeCompleteOptions Opts{};
+
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+  auto Result = codeComplete(testPath(TU.Filename), Test.point(),
+                             Preamble.get(), Inputs, Opts);
+
+  EXPECT_THAT(Result.Completions,
+              ElementsAre(AllOf(named("f"), snippetSuffix("(${1:int arg})"))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
