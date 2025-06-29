@@ -43,6 +43,9 @@ LogicalResult staticallyNonNegative(DataFlowSolver &solver, Value v) {
   if (!result || result->getValue().isUninitialized())
     return failure();
   const ConstantIntRanges &range = result->getValue().getValue();
+  if (!range.umin().getBitWidth() || !range.umax().getBitWidth() ||
+      !range.smin().getBitWidth() || !range.smax().getBitWidth())
+    return false;
   return success(range.smin().isNonNegative());
 }
 
