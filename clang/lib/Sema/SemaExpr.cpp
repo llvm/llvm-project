@@ -5623,8 +5623,10 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
           /*SkipImmediateInvocations=*/NestedDefaultChecking))
     return ExprError();
 
+  Expr *RewrittenExpr = (Init == Param->getDefaultArg() ? nullptr : Init);
   return CXXDefaultArgExpr::Create(Context, InitializationContext->Loc, Param,
-                                   Init, InitializationContext->Context);
+                                   RewrittenExpr,
+                                   InitializationContext->Context);
 }
 
 static FieldDecl *FindFieldDeclInstantiationPattern(const ASTContext &Ctx,
@@ -5742,10 +5744,11 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
       return ExprError();
     }
     Init = Res.get();
-
+    Expr *RewrittenInit =
+        (Init == Field->getInClassInitializer() ? nullptr : Init);
     return CXXDefaultInitExpr::Create(Context, InitializationContext->Loc,
                                       Field, InitializationContext->Context,
-                                      Init);
+                                      RewrittenInit);
   }
 
   // DR1351:

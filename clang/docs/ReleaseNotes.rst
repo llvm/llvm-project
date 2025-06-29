@@ -1064,6 +1064,9 @@ Static Analyzer
 ---------------
 - Fixed a crash when C++20 parenthesized initializer lists are used. This issue
   was causing a crash in clang-tidy. (#GH136041)
+- Clang currently support extending lifetime of object bound to 
+  reference members of aggregates in CFG and ExprEngine, that are
+  created from default member initializer.
 
 New features
 ^^^^^^^^^^^^
