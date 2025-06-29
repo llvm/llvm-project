@@ -11,22 +11,139 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         F0A0ED2C305C0BB32D02000089B21C19C99E86758F2950E06FBD46E8010100600108194302100701000101010C000E01000C010E01000C020E01000C030E01000C040E25010C000E1D010C000E15010C000E0D010C000E05010C000E100101000101010C000E01000C010E01000C020E01000C030E01000C040E4D010C000E45010C000E3D010C000E35010C000E2D010C000E100101000101010C011001000C031001000C051001000C071001000C091001000D000F69010D000F65010C011065000D000F71010D000F61010C011061000D000F79010D000F5D010C01105D000D000F8101010D000F59010C011059000D000F8901010D000F55010C011055000D000F9101010D000F100101000101010C011001000C031001000C051001000C071001000C091001000D000FAD01010D000FA901010C0110A901000D000FB501010D000FA501010C0110A501000D000FBD01010D000FA101010C0110A101000D000FC501010D000F9D01010C01109D01000D000FCD01010D000F9901010C01109901000D000FD501010D000F10010100010101070008DD010009018580808008DD0101050016E1010017028580808008E101020500161001010001E50101030E02E50100070008E9010009018580808008E90101050016ED010017028580808008ED01020500161001010001F10101030902F10100070008F5010009018580808008F50101050016F9010017028580808008F901020500161001010001FD0101030402FD01000700088102000901858080800881020105001685020017028580808008850202050016
+    CovFun:
+      - FuncName:        _Z4funcii
+        FuncHash:        0x75869EC9191CB289
+        FilenamesRef:    0xE846BD6FE050298F
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-logical-mixed.cpp
+            Regions:
+              - { dLoc: [ 8, 25, 67, 2 ], Ref: 0 }
+              - { dLoc: [ 7, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 1, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 2, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 4, 14 ], Ref: 0 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 9 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 7 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 5 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 3 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 1 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 1, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 2, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 14 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 4, 14 ], Ref: 0 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 19 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 17 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 15 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 13 }
+              - { dLoc: [ 1, 12, 0, 14 ], Ref: 11 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 5, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 7, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 9, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 0 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 26 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 25 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 25 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 28 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 24 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 24 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 30 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 23 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 23 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 32 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 22 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 22 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 34 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 21 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 21 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 36 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 3, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 5, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 7, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 12, 9, 16 ], Ref: 0 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 0 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 43 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 42 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 42 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 45 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 41 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 41 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 47 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 40 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 40 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 49 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 39 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 39 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 51 }
+              - { dLoc: [ 1, 12, 1, 16 ], Ref: 38 }
+              - { dLoc: [ 0, 13, 0, 15 ], Ref: 38 }
+              - { dLoc: [ 1, 13, 0, 15 ], Ref: 53 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 7, 0, 8 ], Ref: 0 }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 55 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 55 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Ref: 56 }
+              - { dLoc: [ 2, 5, 0, 22 ], Ref: 56 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 14, 2 ], Ref: 57 }
+              - { dLoc: [ 0, 7, 0, 8 ], Ref: 57 }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 58 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 58 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Ref: 59 }
+              - { dLoc: [ 2, 5, 0, 22 ], Ref: 59 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 9, 2 ], Ref: 60 }
+              - { dLoc: [ 0, 7, 0, 8 ], Ref: 60 }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 61 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 61 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Ref: 62 }
+              - { dLoc: [ 2, 5, 0, 22 ], Ref: 62 }
+              - { dLoc: [ 1, 1, 0, 1 ], ExtTag: Skip }
+              - { dLoc: [ 1, 3, 4, 2 ], Ref: 63 }
+              - { dLoc: [ 0, 7, 0, 8 ], Ref: 63 }
+              - { dLoc: [ 0, 9, 1, 5 ], isGap: true, Ref: 64 }
+              - { dLoc: [ 1, 5, 0, 22 ], Ref: 64 }
+              - { dLoc: [ 0, 23, 2, 5 ], isGap: true, Ref: 65 }
+              - { dLoc: [ 2, 5, 0, 22 ], Ref: 65 }
   - Name:            '__llvm_covfun (1)'
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         FAD58DE7366495DB0900000018000000000000008F2950E06FBD46E801010001014F010402
+    CovFun:
+      - FuncName:        main
+        FuncHash:        0x18
+        FilenamesRef:    0xE846BD6FE050298F
+        Expressions:     []
+        Files:
+          - Index:           0
+            Filename:        branch-logical-mixed.cpp
+            Regions:
+              - { dLoc: [ 79, 1, 4, 2 ], Ref: 0 }
   - Name:            __llvm_covmap
     Type:            SHT_PROGBITS
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
-    Content:         000000001D0000000000000006000000021A0000186272616E63682D6C6F676963616C2D6D697865642E637070000000
+    CovMap:
+      - FilenamesRef:    0xE846BD6FE050298F
+        Version:         6
   - Name:            __llvm_prf_names
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_GNU_RETAIN ]
     AddressAlign:    0x1
-    Content:         0E005F5A3466756E636969016D61696E
+    PrfNames:
+      - - _Z4funcii
+        - main
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
@@ -34,24 +151,4 @@ Sections:
       - Name:            '__llvm_covfun (1)'
       - Name:            __llvm_covmap
       - Name:            __llvm_prf_names
-      - Name:            .symtab
-Symbols:
-  - Name:            __llvm_covmap
-    Type:            STT_SECTION
-    Section:         __llvm_covmap
-  - Name:            __llvm_prf_names
-    Type:            STT_SECTION
-    Section:         __llvm_prf_names
-  - Name:            __covrec_B30B5C302CEDA0F0u
-    Type:            STT_OBJECT
-    Section:         __llvm_covfun
-    Binding:         STB_WEAK
-    Size:            0x249
-    Other:           [ STV_HIDDEN ]
-  - Name:            __covrec_DB956436E78DD5FAu
-    Type:            STT_OBJECT
-    Section:         '__llvm_covfun (1)'
-    Binding:         STB_WEAK
-    Size:            0x25
-    Other:           [ STV_HIDDEN ]
 ...
