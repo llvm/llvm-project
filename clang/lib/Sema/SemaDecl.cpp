@@ -14399,6 +14399,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->getType().getAddressSpace() == LangAS::hlsl_input)
       return;
 
+    if (getLangOpts().CPlusPlus)
+      ActOnCXXEnterDeclInitializer(/*Scope=*/nullptr, Var);
+
     // C++03 [dcl.init]p9:
     //   If no initializer is specified for an object, and the
     //   object is of (possibly cv-qualified) non-POD class type (or
@@ -14434,6 +14437,9 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     }
 
     CheckCompleteVariableDeclaration(Var);
+
+    if (getLangOpts().CPlusPlus)
+      ActOnCXXExitDeclInitializer(/*Scope=*/nullptr, Var);
   }
 }
 
