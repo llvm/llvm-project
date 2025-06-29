@@ -4364,10 +4364,10 @@ TEST(CompletionTest, PreambleFromDifferentTarget) {
   EXPECT_THAT(Signatures.signatures, Not(testing::IsEmpty()));
 }
 
-TEST(CompletionTest, DeducingThisIgnoreSelf) {
-  Annotations Test(R"cpp(
+TEST(CompletionTest, SkipExplicitObjectParameter) {
+  Annotations Code(R"cpp(
     struct A {
-      void f(this auto&& self, int arg); 
+      void foo(this auto&& self, int arg); 
     };
 
     int main() {
@@ -4376,7 +4376,7 @@ TEST(CompletionTest, DeducingThisIgnoreSelf) {
     }
   )cpp");
 
-  auto TU = TestTU::withCode(Test.code());
+  auto TU = TestTU::withCode(Code.code());
   TU.ExtraArgs = {"-std=c++23"};
 
   auto Preamble = TU.preamble();
@@ -4386,11 +4386,12 @@ TEST(CompletionTest, DeducingThisIgnoreSelf) {
 
   MockFS FS;
   auto Inputs = TU.inputs(FS);
-  auto Result = codeComplete(testPath(TU.Filename), Test.point(),
+  auto Result = codeComplete(testPath(TU.Filename), Code.point(),
                              Preamble.get(), Inputs, Opts);
 
   EXPECT_THAT(Result.Completions,
-              ElementsAre(AllOf(named("f"), snippetSuffix("(${1:int arg})"))));
+              ElementsAre(AllOf(named("foo"), signature("(int arg)"),
+                                snippetSuffix("(${1:int arg})"))));
 }
 } // namespace
 } // namespace clangd
