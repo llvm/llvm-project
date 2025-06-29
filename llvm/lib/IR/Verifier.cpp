@@ -2526,6 +2526,12 @@ void Verifier::verifyFunctionMetadata(
   for (const auto &Pair : MDs) {
     if (Pair.first == LLVMContext::MD_prof) {
       MDNode *MD = Pair.second;
+      if (isExplicitlyUnknownBranchWeightsMetadata(*MD)) {
+        CheckFailed("'unknown' !prof metadata should appear only on "
+                    "instructions supporting the 'branch_weights' metadata",
+                    MD);
+        continue;
+      }
       Check(MD->getNumOperands() >= 2,
             "!prof annotations should have no less than 2 operands", MD);
 
@@ -4982,6 +4988,30 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
 }
 
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
+  auto GetBranchingTerminatorNumOperands = [&]() {
+    unsigned ExpectedNumOperands = 0;
+    if (BranchInst *BI = dyn_cast<BranchInst>(&I))
+      ExpectedNumOperands = BI->getNumSuccessors();
+    else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
+      ExpectedNumOperands = SI->getNumSuccessors();
+    else if (isa<CallInst>(&I))
+      ExpectedNumOperands = 1;
+    else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))
+      ExpectedNumOperands = IBI->getNumDestinations();
+    else if (isa<SelectInst>(&I))
+      ExpectedNumOperands = 2;
+    else if (CallBrInst *CI = dyn_cast<CallBrInst>(&I))
+      ExpectedNumOperands = CI->getNumSuccessors();
+    return ExpectedNumOperands;
+  };
+  if (isExplicitlyUnknownBranchWeightsMetadata(*MD)) {
+    Check(GetBranchingTerminatorNumOperands() != 0 || isa<InvokeInst>(I),
+          "'unknown' !prof should only appear on instructions on which "
+          "'branch_weights' would",
+          MD);
+    return;
+  }
+
   Check(MD->getNumOperands() >= 2,
         "!prof annotations should have no less than 2 operands", MD);
 
@@ -4999,20 +5029,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(NumBranchWeights == 1 || NumBranchWeights == 2,
             "Wrong number of InvokeInst branch_weights operands", MD);
     } else {
-      unsigned ExpectedNumOperands = 0;
-      if (BranchInst *BI = dyn_cast<BranchInst>(&I))
-        ExpectedNumOperands = BI->getNumSuccessors();
-      else if (SwitchInst *SI = dyn_cast<SwitchInst>(&I))
-        ExpectedNumOperands = SI->getNumSuccessors();
-      else if (isa<CallInst>(&I))
-        ExpectedNumOperands = 1;
-      else if (IndirectBrInst *IBI = dyn_cast<IndirectBrInst>(&I))
-        ExpectedNumOperands = IBI->getNumDestinations();
-      else if (isa<SelectInst>(&I))
-        ExpectedNumOperands = 2;
-      else if (CallBrInst *CI = dyn_cast<CallBrInst>(&I))
-        ExpectedNumOperands = CI->getNumSuccessors();
-      else
+      const unsigned ExpectedNumOperands = GetBranchingTerminatorNumOperands();
+      if (ExpectedNumOperands == 0)
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
 

@@ -44,6 +44,8 @@ constexpr unsigned MinBWOps = 3;
 // the minimum number of operands for MD_prof nodes with value profiles
 constexpr unsigned MinVPOps = 5;
 
+const char *UnknownBranchWeightsMarker = "unknown";
+
 // We may want to add support for other MD_prof types, so provide an abstraction
 // for checking the metadata type.
 bool isTargetMD(const MDNode *ProfData, const char *Name, unsigned MinOps) {
@@ -239,6 +241,26 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
 
 bool extractProfTotalWeight(const Instruction &I, uint64_t &TotalVal) {
   return extractProfTotalWeight(I.getMetadata(LLVMContext::MD_prof), TotalVal);
+}
+
+void setExplicitlyUnknownBranchWeights(Instruction &I) {
+  MDBuilder MDB(I.getContext());
+  I.setMetadata(LLVMContext::MD_prof,
+                MDNode::get(I.getContext(),
+                            MDB.createString(UnknownBranchWeightsMarker)));
+}
+
+bool isExplicitlyUnknownBranchWeightsMetadata(const MDNode &MD) {
+  if (MD.getNumOperands() != 1)
+    return false;
+  return MD.getOperand(0).equalsStr(UnknownBranchWeightsMarker);
+}
+
+bool hasExplicitlyUnknownBranchWeights(const Instruction &I) {
+  auto *MD = I.getMetadata(LLVMContext::MD_prof);
+  if (!MD)
+    return false;
+  return isExplicitlyUnknownBranchWeightsMetadata(*MD);
 }
 
 void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
