@@ -11,8 +11,8 @@
 
 // CHECK-LABEL:       @base_case
 // CHECK-SAME:          %[[I:.+]]: index, %[[J:.+]]: index, %[[M:.+]]:
-// CHECK:               %[[PAD:.+]] = arith.constant 0 : i8
-// CHECK:               %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG:           %[[PAD:.+]] = arith.constant 123 : i8
+// CHECK-DAG:           %[[C0:.+]] = arith.constant 0 : index
 // CHECK:               %[[COLLAPSE:.+]] = memref.collapse_shape %[[M]]
 // CHECK-SAME{LITERAL}:   [[0], [1], [2, 3]]
 // CHECK-SAME:            : memref<?x?x?x8xi8> into memref<?x?x?xi8>
@@ -36,8 +36,8 @@ func.func @base_case(%i : index, %j : index, %M : memref<?x?x?x8xi8>) -> vector<
 
 // CHECK-LABEL:       @with_3d_vector
 // CHECK-SAME:          %[[I:.+]]: index, %[[J:.+]]: index, %[[M:.+]]:
-// CHECK:               %[[PAD:.+]] = arith.constant 0 : i8
-// CHECK:               %[[COLLAPSED:.+]] = memref.collapse_shape %[[M]]
+// CHECK-DAG:           %[[PAD:.+]] = arith.constant 123 : i8
+// CHECK-DAG:           %[[COLLAPSED:.+]] = memref.collapse_shape %[[M]]
 // CHECK-SAME{LITERAL}:   [[0], [1, 2, 3]]
 // CHECK-SAME:            : memref<?x?x2x8xi8> into memref<?x?xi8>
 // CHECK-NEXT:          %[[T0:.+]] = vector.transfer_read %[[COLLAPSED]][%[[I]], %[[J]]], %[[PAD]] {in_bounds = [true]}

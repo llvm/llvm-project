@@ -292,6 +292,11 @@ bool arith::ConstantIndexOp::classof(Operation *op) {
   return false;
 }
 
+Value mlir::arith::getZeroConstant(OpBuilder &builder, Location loc,
+                                   Type type) {
+  return builder.create<arith::ConstantOp>(loc, builder.getZeroAttr(type));
+}
+
 //===----------------------------------------------------------------------===//
 // AddIOp
 //===----------------------------------------------------------------------===//
