@@ -187,6 +187,41 @@ std::string getSymbolName(ASTContext &Ctx, const NamedDecl &ND) {
   return printName(Ctx, ND);
 }
 
+std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
+  std::vector<SymbolTag> Tags;
+  if (ND.isDeprecated())
+    Tags.push_back(SymbolTag::Deprecated);
+  if (isConst(&ND))
+    Tags.push_back(SymbolTag::ReadOnly);
+  if (isStatic(&ND))
+    Tags.push_back(SymbolTag::Static);
+  if (isVirtual(&ND))
+    Tags.push_back(SymbolTag::Virtual);
+  if (isAbstract(&ND))
+    Tags.push_back(SymbolTag::Abstract);
+
+  if (isUniqueDefinition(&ND))
+    Tags.push_back(SymbolTag::Definition);
+  else if (!isa<UnresolvedUsingValueDecl>(ND))
+    Tags.push_back(SymbolTag::Declaration);
+
+  switch (ND.getAccess()) {
+  case AS_public:
+    Tags.push_back(SymbolTag::Public);
+    break;
+  case AS_protected:
+    Tags.push_back(SymbolTag::Protected);
+    break;
+  case AS_private:
+    Tags.push_back(SymbolTag::Private);
+    break;
+  default:
+    break;
+  }
+
+  return Tags;
+}
+
 std::string getSymbolDetail(ASTContext &Ctx, const NamedDecl &ND) {
   PrintingPolicy P(Ctx.getPrintingPolicy());
   P.SuppressScope = true;
@@ -241,6 +276,7 @@ std::optional<DocumentSymbol> declToSym(ASTContext &Ctx, const NamedDecl &ND) {
   SI.range = Range{sourceLocToPosition(SM, SymbolRange->getBegin()),
                    sourceLocToPosition(SM, SymbolRange->getEnd())};
   SI.detail = getSymbolDetail(Ctx, ND);
+  SI.tags = getSymbolTags(ND);
 
   SourceLocation NameLoc = ND.getLocation();
   SourceLocation FallbackNameLoc;
