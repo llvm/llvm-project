@@ -5226,8 +5226,8 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
 
   assert(KD != Kind::Max);
 
-  auto *Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
-  if (Target != nullptr)
+  if (auto *Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
+      Target != nullptr)
     return QualType(Target, 0);
 
   auto getCanonicalType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
@@ -5252,7 +5252,7 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
       PredefinedSugarType(KD, &Idents.get(PredefinedSugarType::getName(KD)),
                           getCanonicalType(*this, static_cast<Kind>(KD)));
   Types.push_back(New);
-  Target = New;
+  PredefinedSugarTypes[llvm::to_underlying(KD)] = New;
   return QualType(New, 0);
 }
 
