@@ -59,6 +59,9 @@ public:
   /// Is this a box for a pointer?
   bool isPointer() const;
 
+  /// Does this box for a pointer or allocatable?
+  bool isPointerOrAllocatable() const;
+
   /// Is this a box describing volatile memory?
   bool isVolatile() const;
 

@@ -43,6 +43,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -96,8 +97,6 @@ using namespace llvm;
 #include "llvm/Support/Extension.def"
 
 namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
@@ -118,23 +117,17 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
 
-extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
+LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
+    ProfileCorrelate;
 } // namespace llvm
 namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
 }
 
-// Default filename used for profile generation.
-static std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
-}
-
 // Path and name of file used for profile generation
 static std::string getProfileGenName(const CodeGenOptions &CodeGenOpts) {
   std::string FileName = CodeGenOpts.InstrProfileOutput.empty()
-                             ? getDefaultProfileGenName()
+                             ? llvm::driver::getDefaultProfileGenName()
                              : CodeGenOpts.InstrProfileOutput;
   if (CodeGenOpts.ContinuousProfileSync)
     FileName = "%c" + FileName;
@@ -812,17 +805,21 @@ static void addSanitizers(const Triple &TargetTriple,
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
-
+  uint64_t AllowRuntimeCheckSkipHotCutoff =
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.value_or(0.0) * 1000000;
   // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value()) {
+  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback(
-        [ScaledCutoffs](ModulePassManager &MPM, OptimizationLevel Level,
-                        ThinOrFullLTOPhase Phase) {
+        [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff](
+            ModulePassManager &MPM, OptimizationLevel Level,
+            ThinOrFullLTOPhase Phase) {
           LowerAllowCheckPass::Options Opts;
           // TODO: after removing IsRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
             Opts.cutoffs = ScaledCutoffs.value();
+          Opts.runtime_check = AllowRuntimeCheckSkipHotCutoff;
           MPM.addPass(
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });

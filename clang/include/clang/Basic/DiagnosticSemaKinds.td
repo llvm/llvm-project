@@ -1767,7 +1767,9 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}"
+           "%TriviallyCopyable{trivially copyable}|"
+           "%Empty{empty}|"
+           "%StandardLayout{standard-layout}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1779,7 +1781,7 @@ def note_unsatisfied_trait_reason
            "%HasArcLifetime{has an ARC lifetime qualifier}|"
            "%VLA{is a variably-modified type}|"
            "%VBase{has a virtual base %1}|"
-           "%NotScalarOrClass{not %select{a|an array of objects of}1 scalar or "
+           "%NotScalarOrClass{is not %select{a|an array of objects of}1 scalar or "
            "class type}|"
            "%NTRBase{has a non-trivially-relocatable base %1}|"
            "%NTRField{has a non-trivially-relocatable member %1 of type %2}|"
@@ -1787,6 +1789,16 @@ def note_unsatisfied_trait_reason
            "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
+           "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%VirtualFunction{has a virtual function %1}|"
+           "%NonEmptyBase{has a base class %1 that is not empty}|"
+           "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
+           "%NonStandardLayoutBase{has a non-standard-layout base %1}|"
+           "%MixedAccess{has mixed access specifiers}|"
+           "%MixedAccessField{field %1 has a different access specifier than field %2}|"
+           "%MultipleDataBase{has multiple base classes with data members}|"
+           "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
+           "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
@@ -4063,6 +4075,9 @@ def warn_at_available_unchecked_use : Warning<
   "%select{@available|__builtin_available}0 does not guard availability here; "
   "use if (%select{@available|__builtin_available}0) instead">,
   InGroup<DiagGroup<"unsupported-availability-guard">>;
+def warn_availability_invalid_os_version
+    : Warning<"invalid %1 version '%0' in availability attribute">, InGroup<DiagGroup<"invalid-version-availability">>;
+def note_availability_invalid_os_version_adjusted: Note<"implicitly treating version as '%0'">;
 
 def warn_missing_sdksettings_for_availability_checking : Warning<
   "%0 availability is ignored without a valid 'SDKSettings.json' in the SDK">,
@@ -6260,14 +6275,19 @@ def warn_static_local_in_extern_inline : Warning<
 def note_convert_inline_to_static : Note<
   "use 'static' to give inline function %0 internal linkage">;
 
-def warn_possible_object_duplication_mutable : Warning<
-  "%0 may be duplicated when built into a shared library: "
-  "it is mutable, has hidden visibility, and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
-def warn_possible_object_duplication_init : Warning<
-  "initialization of %0 may run twice when built into a shared library: "
-  "it has hidden visibility and external linkage">,
-  InGroup<UniqueObjectDuplication>, DefaultIgnore;
+def warn_possible_object_duplication_mutable
+    : Warning<"%0 may be duplicated when built into a shared library: "
+              "it is mutable, with external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
+def warn_possible_object_duplication_init
+    : Warning<"initialization of %0 may run twice when built into a shared "
+              "library: "
+              "it has external linkage and "
+              "%select{hidden visibility|no import/export annotation}1">,
+      InGroup<UniqueObjectDuplication>,
+      DefaultIgnore;
 
 def ext_redefinition_of_typedef : ExtWarn<
   "redefinition of typedef %0 is a C11 feature">,
@@ -12919,6 +12939,10 @@ def err_spirv_enum_not_int : Error<
 def err_spirv_enum_not_valid : Error<
    "invalid value for %select{storage class}0 argument">;
 
+def err_specialization_const
+    : Error<"variable with 'vk::constant_id' attribute must be a const "
+            "int/float/enum/bool and be initialized with a literal">;
+
 // errors of expect.with.probability
 def err_probability_not_constant_float : Error<
    "probability argument to __builtin_expect_with_probability must be constant "
@@ -13041,6 +13065,14 @@ def err_invalid_hlsl_resource_type: Error<
 
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
+
+def subst_hlsl_format_ranges: TextSubstitution<
+  "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
+
+def err_hlsl_resource_range_overlap: Error<
+  "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
+  "overlap within space = %8 and visibility = "
+  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

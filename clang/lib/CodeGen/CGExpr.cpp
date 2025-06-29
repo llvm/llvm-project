@@ -3801,8 +3801,8 @@ void CodeGenFunction::EmitCheck(
       ArgTypes.push_back(Args.back()->getType());
     }
 
-    for (size_t i = 0, n = DynamicArgs.size(); i != n; ++i) {
-      Args.push_back(EmitCheckValue(DynamicArgs[i]));
+    for (llvm::Value *DynamicArg : DynamicArgs) {
+      Args.push_back(EmitCheckValue(DynamicArg));
       ArgTypes.push_back(IntPtrTy);
     }
   }
@@ -4932,8 +4932,8 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
   llvm::Constant *BaseElts = Base.getExtVectorElts();
   SmallVector<llvm::Constant *, 4> CElts;
 
-  for (unsigned i = 0, e = Indices.size(); i != e; ++i)
-    CElts.push_back(BaseElts->getAggregateElement(Indices[i]));
+  for (unsigned Index : Indices)
+    CElts.push_back(BaseElts->getAggregateElement(Index));
   llvm::Constant *CV = llvm::ConstantVector::get(CElts);
   return LValue::MakeExtVectorElt(Base.getExtVectorAddress(), CV, type,
                                   Base.getBaseInfo(), TBAAAccessInfo());
@@ -6660,8 +6660,8 @@ static LValueOrRValue emitPseudoObjectExpr(CodeGenFunction &CGF,
   }
 
   // Unbind all the opaques now.
-  for (unsigned i = 0, e = opaques.size(); i != e; ++i)
-    opaques[i].unbind(CGF);
+  for (CodeGenFunction::OpaqueValueMappingData &opaque : opaques)
+    opaque.unbind(CGF);
 
   return result;
 }

@@ -225,6 +225,10 @@ void MCObjectStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) {
 
 void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCStreamer::emitLabel(Symbol, Loc);
+  // If Symbol is a non-redefiniable variable, emitLabel has reported an error.
+  // Bail out.
+  if (Symbol->isVariable())
+    return;
 
   getAssembler().registerSymbol(*Symbol);
 
@@ -261,7 +265,7 @@ void MCObjectStreamer::emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc,
 
 void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
     emitULEB128IntValue(IntValue);
     return;
   }
@@ -270,7 +274,7 @@ void MCObjectStreamer::emitULEB128Value(const MCExpr *Value) {
 
 void MCObjectStreamer::emitSLEB128Value(const MCExpr *Value) {
   int64_t IntValue;
-  if (Value->evaluateAsAbsolute(IntValue, getAssemblerPtr())) {
+  if (Value->evaluateAsAbsolute(IntValue, getAssembler())) {
     emitSLEB128IntValue(IntValue);
     return;
   }
@@ -432,9 +436,8 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
                                      const MCSymbol *B, SMLoc Loc) {
   MCContext &Context = OS.getContext();
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *ARef = MCSymbolRefExpr::create(A, Variant, Context);
-  const MCExpr *BRef = MCSymbolRefExpr::create(B, Variant, Context);
+  const MCExpr *ARef = MCSymbolRefExpr::create(A, Context);
+  const MCExpr *BRef = MCSymbolRefExpr::create(B, Context);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context, Loc);
   return AddrDelta;
@@ -727,7 +730,7 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
                                 int64_t Expr, SMLoc Loc) {
   int64_t IntNumValues;
   // Do additional checking now if we can resolve the value.
-  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssemblerPtr())) {
+  if (NumValues.evaluateAsAbsolute(IntNumValues, getAssembler())) {
     if (IntNumValues < 0) {
       getContext().getSourceManager()->PrintMessage(
           Loc, SourceMgr::DK_Warning,

@@ -965,17 +965,11 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
-  ScopedDbgInfoFormatSetter FormatSetter(const_cast<Module &>(M), true);
-
   yaml::Output Out(OS);
   Out << const_cast<Module &>(M);
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
                     const MachineFunction &MF) {
-  // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
-  // in dbg.value format.
-  ScopedDbgInfoFormatSetter FormatSetter(
-      const_cast<Function &>(MF.getFunction()), true);
   printMF(OS, MMI, MF);
 }

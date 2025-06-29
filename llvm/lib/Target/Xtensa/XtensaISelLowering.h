@@ -56,6 +56,21 @@ enum {
   SRCL,
   // Shift Right Combined
   SRCR,
+
+  // Floating point unordered compare conditions
+  CMPUEQ,
+  CMPULE,
+  CMPULT,
+  CMPUO,
+  // Floating point compare conditions
+  CMPOEQ,
+  CMPOLE,
+  CMPOLT,
+  // FP multipy-add/sub
+  MADD,
+  MSUB,
+  // FP move
+  MOVS,
 };
 }
 
@@ -70,6 +85,9 @@ public:
     return LHSTy.getSizeInBits() <= 32 ? MVT::i32 : MVT::i64;
   }
 
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
   EVT getSetCCResultType(const DataLayout &, LLVMContext &,
                          EVT VT) const override {
     if (!VT.isVector())
@@ -80,6 +98,9 @@ public:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
 
   std::pair<unsigned, const TargetRegisterClass *>
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,

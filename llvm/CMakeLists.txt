@@ -109,7 +109,7 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly;pstl")
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
   # LLVM_ENABLE_RUNTIMES.
@@ -130,6 +130,14 @@ set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
+
+# The pstl project was removed. Ignore it to pacify certain buildbots.
+list(FIND LLVM_ENABLE_PROJECTS "pstl" FOUND_INDEX)
+if(NOT "${FOUND_INDEX}" STREQUAL "-1")
+  message(WARNING "The pstl project has been removed and will not be built")
+  list(REMOVE_ITEM LLVM_ENABLE_PROJECTS "pstl")
+endif()
+
 foreach(proj ${LLVM_ENABLE_PROJECTS})
   if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}. Did you mean to enable it as a runtime in LLVM_ENABLE_RUNTIMES?")
@@ -141,7 +149,7 @@ endforeach()
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
 set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
-set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc")
+set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all")
@@ -569,8 +577,8 @@ endif()
 option(LLVM_ENABLE_CRASH_DUMPS "Turn on memory dumps on crashes. Currently only implemented on Windows." OFF)
 
 set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
-  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
-set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
+  "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, COVERAGE, or COVERAGE_AND_ORIGIN.")
+set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE COVERAGE_AND_ORIGIN)
 
 option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   "Add additional fields to DILocations to support Key Instructions" OFF)
@@ -651,6 +659,13 @@ endif()
 
 if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
+endif()
+
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+   "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
+   NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
+  message(STATUS "Enabling compiler-rt as a dependency of Flang")
+  list(APPEND LLVM_ENABLE_RUNTIMES "compiler-rt")
 endif()
 
 set(LLVM_TARGETS_TO_BUILD
@@ -1049,6 +1064,13 @@ else()
 endif()
 option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default})
 
+set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS OFF)
+if (LLVM_BUILD_LLVM_DYLIB OR LLVM_BUILD_SHARED_LIBS OR LLVM_ENABLE_PLUGINS)
+  # Export annotations for LLVM must be enabled if building as a shared lib or
+  # enabling plugins.
+  set(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS ON)
+endif()
+
 set(LLVM_ENABLE_NEW_PASS_MANAGER TRUE CACHE BOOL
   "Enable the new pass manager by default.")
 if(NOT LLVM_ENABLE_NEW_PASS_MANAGER)
@@ -1313,6 +1335,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/yaml-bench)
   add_subdirectory(utils/split-file)
   add_subdirectory(utils/mlgo-utils)
+  add_subdirectory(utils/llvm-test-mustache-spec)
   if( LLVM_INCLUDE_TESTS )
     set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)

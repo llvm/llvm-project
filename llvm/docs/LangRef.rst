@@ -12627,6 +12627,9 @@ result pointer is dereferenceable, the cast is assumed to be
 reversible (i.e. casting the result back to the original address space
 should yield the original bit pattern).
 
+Which address space casts are supported depends on the target. Unsupported
+address space casts return :ref:`poison <poisonvalues>`.
+
 Example:
 """"""""
 
@@ -14597,7 +14600,7 @@ Semantics:
       compile-time-known constant value.
 
       The return value type of :ref:`llvm.get.dynamic.area.offset <int_get_dynamic_area_offset>`
-      must match the target's default address space's (address space 0) pointer type.
+      must match the target's :ref:`alloca address space <alloca_addrspace>` type.
 
 '``llvm.prefetch``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -20545,6 +20548,9 @@ More update operation types may be added in the future.
 
     declare void @llvm.experimental.vector.histogram.add.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
     declare void @llvm.experimental.vector.histogram.add.nxv2p0.i64(<vscale x 2 x ptr> %ptrs, i64 %inc, <vscale x 2 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.uadd.sat.v8p0.i32(<8 x ptr> %ptrs, i32 %inc, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.umax.v8p0.i32(<8 x ptr> %ptrs, i32 %val, <8 x i1> %mask)
+    declare void @llvm.experimental.vector.histogram.umin.v8p0.i32(<8 x ptr> %ptrs, i32 %val, <8 x i1> %mask)
 
 Arguments:
 """"""""""

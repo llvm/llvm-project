@@ -502,6 +502,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
+class AddrRegRegScale<int N>
+    : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
+class AddrRegZextRegScale<int N>
+    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<"#N#", 32>",
+                     [], [], 10>;
+
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
@@ -1445,11 +1451,7 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (N->getFlags().hasDisjoint())
-    return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  return orIsAdd(N);
 }]>;
 def : PatGprSimm12<or_is_add, ADDI>;
 
@@ -1690,7 +1692,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -2041,6 +2043,13 @@ let hasSideEffects = true in {
 def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
 def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
 }
+
+let hasPostISelHook = 1 in {
+def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+}
+
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered

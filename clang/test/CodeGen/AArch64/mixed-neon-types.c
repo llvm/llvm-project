@@ -3,23 +3,23 @@
 // RUN: %clang_cc1  -triple aarch64-linux-gnu -target-feature +neon -x c++ %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-CPP
 // REQUIRES: aarch64-registered-target
 
-typedef __Uint32x4_t X;
+typedef __Uint8x16_t X;
 
-// CHECK-C-LABEL: define dso_local <4 x i32> @test(
-// CHECK-C-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-C-LABEL: define dso_local <16 x i8> @test(
+// CHECK-C-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-C-NEXT:  [[ENTRY:.*:]]
-// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-C-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
-// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
-// CHECK-C-NEXT:    ret <4 x i32> [[TMP0]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-C-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <16 x i8> [[TMP0]]
 //
-// CHECK-CPP-LABEL: define dso_local noundef <4 x i32> @_Z4test12__Uint32x4_t(
-// CHECK-CPP-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-CPP-LABEL: define dso_local noundef <16 x i8> @_Z4test12__Uint8x16_t(
+// CHECK-CPP-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-CPP-NEXT:  [[ENTRY:.*:]]
-// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-CPP-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
-// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
-// CHECK-CPP-NEXT:    ret <4 x i32> [[TMP0]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP0]]
 //
 X test(X x) {
   return x;
@@ -28,47 +28,520 @@ X test(X x) {
 #include <arm_neon.h>
 
 // CHECK-C-LABEL: define dso_local <16 x i8> @testboth(
-// CHECK-C-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-C-NEXT:  [[ENTRY:.*:]]
 // CHECK-C-NEXT:    [[__P0_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // CHECK-C-NEXT:    [[__P1_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // CHECK-C-NEXT:    [[__RET_I:%.*]] = alloca <16 x i8>, align 16
-// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
-// CHECK-C-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
-// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
-// CHECK-C-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-C-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
-// CHECK-C-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
-// CHECK-C-NEXT:    store <16 x i8> [[TMP1]], ptr [[__P0_ADDR_I]], align 16
-// CHECK-C-NEXT:    store <16 x i8> [[TMP3]], ptr [[__P1_ADDR_I]], align 16
-// CHECK-C-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[__P0_ADDR_I]], align 16
-// CHECK-C-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr [[__P1_ADDR_I]], align 16
-// CHECK-C-NEXT:    [[ADD_I:%.*]] = add <16 x i8> [[TMP4]], [[TMP5]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-C-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    store <16 x i8> [[TMP0]], ptr [[__P0_ADDR_I]], align 16
+// CHECK-C-NEXT:    store <16 x i8> [[TMP1]], ptr [[__P1_ADDR_I]], align 16
+// CHECK-C-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[__P0_ADDR_I]], align 16
+// CHECK-C-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr [[__P1_ADDR_I]], align 16
+// CHECK-C-NEXT:    [[ADD_I:%.*]] = add <16 x i8> [[TMP2]], [[TMP3]]
 // CHECK-C-NEXT:    store <16 x i8> [[ADD_I]], ptr [[__RET_I]], align 16
-// CHECK-C-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[__RET_I]], align 16
-// CHECK-C-NEXT:    ret <16 x i8> [[TMP6]]
+// CHECK-C-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[__RET_I]], align 16
+// CHECK-C-NEXT:    ret <16 x i8> [[TMP4]]
 //
-// CHECK-CPP-LABEL: define dso_local noundef <16 x i8> @_Z8testboth12__Uint32x4_t(
-// CHECK-CPP-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-LABEL: define dso_local noundef <16 x i8> @_Z8testboth12__Uint8x16_t(
+// CHECK-CPP-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-CPP-NEXT:  [[ENTRY:.*:]]
 // CHECK-CPP-NEXT:    [[__P0_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // CHECK-CPP-NEXT:    [[__P1_ADDR_I:%.*]] = alloca <16 x i8>, align 16
 // CHECK-CPP-NEXT:    [[__RET_I:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[TMP0]], ptr [[__P0_ADDR_I]], align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[TMP1]], ptr [[__P1_ADDR_I]], align 16
+// CHECK-CPP-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[__P0_ADDR_I]], align 16
+// CHECK-CPP-NEXT:    [[TMP3:%.*]] = load <16 x i8>, ptr [[__P1_ADDR_I]], align 16
+// CHECK-CPP-NEXT:    [[ADD_I:%.*]] = add <16 x i8> [[TMP2]], [[TMP3]]
+// CHECK-CPP-NEXT:    store <16 x i8> [[ADD_I]], ptr [[__RET_I]], align 16
+// CHECK-CPP-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[__RET_I]], align 16
+// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP4]]
+//
+uint8x16_t testboth(X x) {
+   return vaddq_u8(x, x);
+}
+
+// CHECK-C-LABEL: define dso_local <8 x i8> @test__Int8x8_t(
+// CHECK-C-SAME: <8 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-C-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <8 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x i8> @_Z14test__Int8x8_t10__Int8x8_t(
+// CHECK-CPP-SAME: <8 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-CPP-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <8 x i8> [[TMP0]]
+//
+int8x8_t test__Int8x8_t(__Int8x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x i16> @test__Int16x4_t(
+// CHECK-C-SAME: <4 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i16>, align 8
+// CHECK-C-NEXT:    store <4 x i16> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <4 x i16> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x i16> @_Z15test__Int16x4_t11__Int16x4_t(
+// CHECK-CPP-SAME: <4 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i16>, align 8
+// CHECK-CPP-NEXT:    store <4 x i16> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <4 x i16> [[TMP0]]
+//
+int16x4_t test__Int16x4_t(__Int16x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x i32> @test__Int32x2_t(
+// CHECK-C-SAME: <2 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i32>, align 8
+// CHECK-C-NEXT:    store <2 x i32> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <2 x i32> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x i32> @_Z15test__Int32x2_t11__Int32x2_t(
+// CHECK-CPP-SAME: <2 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i32>, align 8
+// CHECK-CPP-NEXT:    store <2 x i32> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <2 x i32> [[TMP0]]
+//
+int32x2_t test__Int32x2_t(__Int32x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x i8> @test__Uint8x8_t(
+// CHECK-C-SAME: <8 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-C-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <8 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x i8> @_Z15test__Uint8x8_t11__Uint8x8_t(
+// CHECK-CPP-SAME: <8 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-CPP-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <8 x i8> [[TMP0]]
+//
+uint8x8_t test__Uint8x8_t(__Uint8x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x i16> @test__Uint16x4_t(
+// CHECK-C-SAME: <4 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i16>, align 8
+// CHECK-C-NEXT:    store <4 x i16> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <4 x i16> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x i16> @_Z16test__Uint16x4_t12__Uint16x4_t(
+// CHECK-CPP-SAME: <4 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i16>, align 8
+// CHECK-CPP-NEXT:    store <4 x i16> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <4 x i16> [[TMP0]]
+//
+uint16x4_t test__Uint16x4_t(__Uint16x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x i32> @test__Uint32x2_t(
+// CHECK-C-SAME: <2 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i32>, align 8
+// CHECK-C-NEXT:    store <2 x i32> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <2 x i32> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x i32> @_Z16test__Uint32x2_t12__Uint32x2_t(
+// CHECK-CPP-SAME: <2 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i32>, align 8
+// CHECK-CPP-NEXT:    store <2 x i32> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <2 x i32> [[TMP0]]
+//
+uint32x2_t test__Uint32x2_t(__Uint32x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x half> @test__Float16x4_t(
+// CHECK-C-SAME: <4 x half> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x half>, align 8
+// CHECK-C-NEXT:    store <4 x half> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x half>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <4 x half> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x half> @_Z17test__Float16x4_t13__Float16x4_t(
+// CHECK-CPP-SAME: <4 x half> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x half>, align 8
+// CHECK-CPP-NEXT:    store <4 x half> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x half>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <4 x half> [[TMP0]]
+//
+float16x4_t test__Float16x4_t(__Float16x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x float> @test__Float32x2_t(
+// CHECK-C-SAME: <2 x float> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x float>, align 8
+// CHECK-C-NEXT:    store <2 x float> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <2 x float> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x float> @_Z17test__Float32x2_t13__Float32x2_t(
+// CHECK-CPP-SAME: <2 x float> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x float>, align 8
+// CHECK-CPP-NEXT:    store <2 x float> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <2 x float> [[TMP0]]
+//
+float32x2_t test__Float32x2_t(__Float32x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x i8> @test__Poly8x8_t(
+// CHECK-C-SAME: <8 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-C-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <8 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x i8> @_Z15test__Poly8x8_t11__Poly8x8_t(
+// CHECK-CPP-SAME: <8 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-CPP-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <8 x i8> [[TMP0]]
+//
+poly8x8_t test__Poly8x8_t(__Poly8x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x i16> @test__Poly16x4_t(
+// CHECK-C-SAME: <4 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i16>, align 8
+// CHECK-C-NEXT:    store <4 x i16> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <4 x i16> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x i16> @_Z16test__Poly16x4_t12__Poly16x4_t(
+// CHECK-CPP-SAME: <4 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i16>, align 8
+// CHECK-CPP-NEXT:    store <4 x i16> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <4 x i16> [[TMP0]]
+//
+poly16x4_t test__Poly16x4_t(__Poly16x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x bfloat> @test__Bfloat16x4_t(
+// CHECK-C-SAME: <4 x bfloat> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-C-NEXT:    store <4 x bfloat> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x bfloat>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <4 x bfloat> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x bfloat> @_Z18test__Bfloat16x4_t14__Bfloat16x4_t(
+// CHECK-CPP-SAME: <4 x bfloat> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-CPP-NEXT:    store <4 x bfloat> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x bfloat>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <4 x bfloat> [[TMP0]]
+//
+bfloat16x4_t test__Bfloat16x4_t(__Bfloat16x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <16 x i8> @test__Int8x16_t(
+// CHECK-C-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-C-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <16 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <16 x i8> @_Z15test__Int8x16_t11__Int8x16_t(
+// CHECK-CPP-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP0]]
+//
+int8x16_t test__Int8x16_t(__Int8x16_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x i16> @test__Int16x8_t(
+// CHECK-C-SAME: <8 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i16>, align 16
+// CHECK-C-NEXT:    store <8 x i16> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <8 x i16> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x i16> @_Z15test__Int16x8_t11__Int16x8_t(
+// CHECK-CPP-SAME: <8 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i16>, align 16
+// CHECK-CPP-NEXT:    store <8 x i16> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <8 x i16> [[TMP0]]
+//
+int16x8_t test__Int16x8_t(__Int16x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x i32> @test__Int32x4_t(
+// CHECK-C-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-C-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <4 x i32> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x i32> @_Z15test__Int32x4_t11__Int32x4_t(
+// CHECK-CPP-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
 // CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
 // CHECK-CPP-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
 // CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
-// CHECK-CPP-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
-// CHECK-CPP-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
-// CHECK-CPP-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <16 x i8>
-// CHECK-CPP-NEXT:    store <16 x i8> [[TMP1]], ptr [[__P0_ADDR_I]], align 16
-// CHECK-CPP-NEXT:    store <16 x i8> [[TMP3]], ptr [[__P1_ADDR_I]], align 16
-// CHECK-CPP-NEXT:    [[TMP4:%.*]] = load <16 x i8>, ptr [[__P0_ADDR_I]], align 16
-// CHECK-CPP-NEXT:    [[TMP5:%.*]] = load <16 x i8>, ptr [[__P1_ADDR_I]], align 16
-// CHECK-CPP-NEXT:    [[ADD_I:%.*]] = add <16 x i8> [[TMP4]], [[TMP5]]
-// CHECK-CPP-NEXT:    store <16 x i8> [[ADD_I]], ptr [[__RET_I]], align 16
-// CHECK-CPP-NEXT:    [[TMP6:%.*]] = load <16 x i8>, ptr [[__RET_I]], align 16
-// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP6]]
+// CHECK-CPP-NEXT:    ret <4 x i32> [[TMP0]]
 //
-int8x16_t testboth(X x) {
-   return vaddq_u8(x, x);
-}
+int32x4_t test__Int32x4_t(__Int32x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x i64> @test__Int64x2_t(
+// CHECK-C-SAME: <2 x i64> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
+// CHECK-C-NEXT:    store <2 x i64> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <2 x i64> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x i64> @_Z15test__Int64x2_t11__Int64x2_t(
+// CHECK-CPP-SAME: <2 x i64> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
+// CHECK-CPP-NEXT:    store <2 x i64> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <2 x i64> [[TMP0]]
+//
+int64x2_t test__Int64x2_t(__Int64x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <16 x i8> @test__Uint8x16_t(
+// CHECK-C-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-C-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <16 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <16 x i8> @_Z16test__Uint8x16_t12__Uint8x16_t(
+// CHECK-CPP-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP0]]
+//
+uint8x16_t test__Uint8x16_t(__Uint8x16_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x i16> @test__Uint16x8_t(
+// CHECK-C-SAME: <8 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i16>, align 16
+// CHECK-C-NEXT:    store <8 x i16> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <8 x i16> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x i16> @_Z16test__Uint16x8_t12__Uint16x8_t(
+// CHECK-CPP-SAME: <8 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i16>, align 16
+// CHECK-CPP-NEXT:    store <8 x i16> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <8 x i16> [[TMP0]]
+//
+uint16x8_t test__Uint16x8_t(__Uint16x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x i32> @test__Uint32x4_t(
+// CHECK-C-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-C-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <4 x i32> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x i32> @_Z16test__Uint32x4_t12__Uint32x4_t(
+// CHECK-CPP-SAME: <4 x i32> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x i32>, align 16
+// CHECK-CPP-NEXT:    store <4 x i32> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <4 x i32> [[TMP0]]
+//
+uint32x4_t test__Uint32x4_t(__Uint32x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x i64> @test__Uint64x2_t(
+// CHECK-C-SAME: <2 x i64> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
+// CHECK-C-NEXT:    store <2 x i64> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <2 x i64> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x i64> @_Z16test__Uint64x2_t12__Uint64x2_t(
+// CHECK-CPP-SAME: <2 x i64> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
+// CHECK-CPP-NEXT:    store <2 x i64> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <2 x i64> [[TMP0]]
+//
+uint64x2_t test__Uint64x2_t(__Uint64x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x half> @test__Float16x8_t(
+// CHECK-C-SAME: <8 x half> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x half>, align 16
+// CHECK-C-NEXT:    store <8 x half> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <8 x half> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x half> @_Z17test__Float16x8_t13__Float16x8_t(
+// CHECK-CPP-SAME: <8 x half> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x half>, align 16
+// CHECK-CPP-NEXT:    store <8 x half> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x half>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <8 x half> [[TMP0]]
+//
+float16x8_t test__Float16x8_t(__Float16x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <4 x float> @test__Float32x4_t(
+// CHECK-C-SAME: <4 x float> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <4 x float>, align 16
+// CHECK-C-NEXT:    store <4 x float> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <4 x float> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <4 x float> @_Z17test__Float32x4_t13__Float32x4_t(
+// CHECK-CPP-SAME: <4 x float> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <4 x float>, align 16
+// CHECK-CPP-NEXT:    store <4 x float> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <4 x float> [[TMP0]]
+//
+float32x4_t test__Float32x4_t(__Float32x4_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x double> @test__Float64x2_t(
+// CHECK-C-SAME: <2 x double> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x double>, align 16
+// CHECK-C-NEXT:    store <2 x double> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <2 x double> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x double> @_Z17test__Float64x2_t13__Float64x2_t(
+// CHECK-CPP-SAME: <2 x double> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x double>, align 16
+// CHECK-CPP-NEXT:    store <2 x double> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <2 x double> [[TMP0]]
+//
+float64x2_t test__Float64x2_t(__Float64x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <16 x i8> @test__Poly8x16_t(
+// CHECK-C-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-C-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <16 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <16 x i8> @_Z16test__Poly8x16_t12__Poly8x16_t(
+// CHECK-CPP-SAME: <16 x i8> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP0]]
+//
+poly8x16_t test__Poly8x16_t(__Poly8x16_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x i16> @test__Poly16x8_t(
+// CHECK-C-SAME: <8 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i16>, align 16
+// CHECK-C-NEXT:    store <8 x i16> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <8 x i16> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x i16> @_Z16test__Poly16x8_t12__Poly16x8_t(
+// CHECK-CPP-SAME: <8 x i16> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i16>, align 16
+// CHECK-CPP-NEXT:    store <8 x i16> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <8 x i16> [[TMP0]]
+//
+poly16x8_t test__Poly16x8_t(__Poly16x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <2 x i64> @test__Poly64x2_t(
+// CHECK-C-SAME: <2 x i64> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
+// CHECK-C-NEXT:    store <2 x i64> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <2 x i64> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <2 x i64> @_Z16test__Poly64x2_t12__Poly64x2_t(
+// CHECK-CPP-SAME: <2 x i64> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <2 x i64>, align 16
+// CHECK-CPP-NEXT:    store <2 x i64> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <2 x i64> [[TMP0]]
+//
+poly64x2_t test__Poly64x2_t(__Poly64x2_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x bfloat> @test__Bfloat16x8_t(
+// CHECK-C-SAME: <8 x bfloat> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x bfloat>, align 16
+// CHECK-C-NEXT:    store <8 x bfloat> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <8 x bfloat> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local noundef <8 x bfloat> @_Z18test__Bfloat16x8_t14__Bfloat16x8_t(
+// CHECK-CPP-SAME: <8 x bfloat> noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x bfloat>, align 16
+// CHECK-CPP-NEXT:    store <8 x bfloat> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x bfloat>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <8 x bfloat> [[TMP0]]
+//
+bfloat16x8_t test__Bfloat16x8_t(__Bfloat16x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <8 x i8> @test__Mfloat8x8_t(
+// CHECK-C-SAME: <8 x i8> [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-C-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-C-NEXT:    ret <8 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local <8 x i8> @_Z17test__Mfloat8x8_t13__Mfloat8x8_t(
+// CHECK-CPP-SAME: <8 x i8> [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <8 x i8>, align 8
+// CHECK-CPP-NEXT:    store <8 x i8> [[X]], ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X_ADDR]], align 8
+// CHECK-CPP-NEXT:    ret <8 x i8> [[TMP0]]
+//
+mfloat8x8_t test__Mfloat8x8_t(__Mfloat8x8_t x) { return x; }
+// CHECK-C-LABEL: define dso_local <16 x i8> @test__Mfloat8x16_t(
+// CHECK-C-SAME: <16 x i8> [[X:%.*]]) #[[ATTR0]] {
+// CHECK-C-NEXT:  [[ENTRY:.*:]]
+// CHECK-C-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-C-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-C-NEXT:    ret <16 x i8> [[TMP0]]
+//
+// CHECK-CPP-LABEL: define dso_local <16 x i8> @_Z18test__Mfloat8x16_t14__Mfloat8x16_t(
+// CHECK-CPP-SAME: <16 x i8> [[X:%.*]]) #[[ATTR0]] {
+// CHECK-CPP-NEXT:  [[ENTRY:.*:]]
+// CHECK-CPP-NEXT:    [[X_ADDR:%.*]] = alloca <16 x i8>, align 16
+// CHECK-CPP-NEXT:    store <16 x i8> [[X]], ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X_ADDR]], align 16
+// CHECK-CPP-NEXT:    ret <16 x i8> [[TMP0]]
+//
+mfloat8x16_t test__Mfloat8x16_t(__Mfloat8x16_t x) { return x; }

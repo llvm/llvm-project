@@ -71,7 +71,7 @@ convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
 /// ModuleTranslation stack frame for OpenMP operations. This keeps track of the
 /// insertion points for allocas.
 class OpenMPAllocaStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPAllocaStackFrame> {
+    : public StateStackFrameBase<OpenMPAllocaStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPAllocaStackFrame)
 
@@ -84,7 +84,7 @@ public:
 /// collapsed canonical loop information corresponding to an \c omp.loop_nest
 /// operation.
 class OpenMPLoopInfoStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPLoopInfoStackFrame> {
+    : public StateStackFrameBase<OpenMPLoopInfoStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPLoopInfoStackFrame)
   llvm::CanonicalLoopInfo *loopInfo = nullptr;
@@ -432,6 +432,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       })
       .Case([&](omp::WsloopOp op) {
         checkAllocate(op, result);
+        checkLinear(op, result);
         checkOrder(op, result);
         checkReduction(op, result);
       })
@@ -497,7 +498,13 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
         allocaInsertPoint = frame.allocaInsertPoint;
         return WalkResult::interrupt();
       });
-  if (walkResult.wasInterrupted())
+  // In cases with multiple levels of outlining, the tree walk might find an
+  // alloca insertion point that is inside the original function while the
+  // builder insertion point is inside the outlined function. We need to make
+  // sure that we do not use it in those cases.
+  if (walkResult.wasInterrupted() &&
+      allocaInsertPoint.getBlock()->getParent() ==
+          builder.GetInsertBlock()->getParent())
     return allocaInsertPoint;
 
   // Otherwise, insert to the entry block of the surrounding function.
@@ -2293,8 +2300,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *taskOp.getOperation());
 
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     // TODO: this is a bit of a hack for Fortran character boxes.
     // Character boxes are passed by value into the init region and then the
@@ -4378,6 +4384,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
                                              /*SeparateBeginEndCalls=*/true);
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
+  bool isOffloadEntry =
+      isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -4467,6 +4476,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   if (failed(result))
     return failure();
+  // Pretend we have IF(false) if we're not doing offload.
+  if (!isOffloadEntry)
+    ifCond = builder.getFalse();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   MapInfoData mapData;
@@ -4518,6 +4530,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
   auto bodyGenCB = [&](InsertPointTy codeGenIP, BodyGenTy bodyGenType)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    // We must always restoreIP regardless of doing anything the caller
+    // does not restore it, leading to incorrect (no) branch generation.
     builder.restoreIP(codeGenIP);
     assert(isa<omp::TargetDataOp>(op) &&
            "BodyGen requested for non TargetDataOp");
@@ -4549,9 +4563,18 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       }
       break;
     case BodyGenTy::DupNoPriv:
-      // We must always restoreIP regardless of doing anything the caller
-      // does not restore it, leading to incorrect (no) branch generation.
-      builder.restoreIP(codeGenIP);
+      if (info.DevicePtrInfoMap.empty()) {
+        // For host device we still need to do the mapping for codegen,
+        // otherwise it may try to lookup a missing value.
+        if (!ompBuilder->Config.IsTargetDevice.value_or(false)) {
+          mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
+                       blockArgIface.getUseDeviceAddrBlockArgs(),
+                       useDeviceAddrVars, mapData);
+          mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer,
+                       blockArgIface.getUseDevicePtrBlockArgs(),
+                       useDevicePtrVars, mapData);
+        }
+      }
       break;
     case BodyGenTy::NoPriv:
       // If device info is available then region has already been generated
@@ -4808,6 +4831,7 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
                           llvm::IRBuilderBase &builder, llvm::Function *func) {
   assert(moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
          "function only supported for target device codegen");
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
   for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
     // In the case of declare target mapped variables, the basePointer is
     // the reference pointer generated by the convertDeclareTargetAttr
@@ -4842,6 +4866,7 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
       for (llvm::User *user : userVec) {
         if (auto *insn = dyn_cast<llvm::Instruction>(user)) {
           if (insn->getFunction() == func) {
+            builder.SetCurrentDebugLocation(insn->getDebugLoc());
             auto *load = builder.CreateLoad(mapData.BasePointers[i]->getType(),
                                             mapData.BasePointers[i]);
             load->moveBefore(insn->getIterator());

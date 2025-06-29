@@ -1595,6 +1595,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_objc_classlist("__objc_classlist");
   static ConstString g_sect_name_cfstring("__cfstring");
 
+  static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
+  static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
   static ConstString g_sect_name_dwarf_apple_names("__apple_names");
   static ConstString g_sect_name_dwarf_apple_types("__apple_types");
   static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
@@ -1608,6 +1610,11 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
   static ConstString g_sect_name_lldb_formatters("__lldbformatters");
   static ConstString g_sect_name_swift_ast("__swift_ast");
+
+  if (section_name == g_sect_name_dwarf_debug_str_offs)
+    return eSectionTypeDWARFDebugStrOffsets;
+  if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
+    return eSectionTypeDWARFDebugStrOffsetsDwo;
 
   llvm::StringRef stripped_name = section_name.GetStringRef();
   if (stripped_name.consume_front("__debug_"))
@@ -5787,27 +5794,8 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
-    auto lc_notes = FindLC_NOTEByName("process metadata");
-    for (auto lc_note : lc_notes) {
-      offset_t payload_offset = std::get<0>(lc_note);
-      offset_t strsize = std::get<1>(lc_note);
-      std::string buf(strsize, '\0');
-      if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
-        LLDB_LOGF(log,
-                  "Unable to read %" PRIu64
-                  " bytes of 'process metadata' LC_NOTE JSON contents",
-                  strsize);
-        return false;
-      }
-      while (buf.back() == '\0')
-        buf.resize(buf.size() - 1);
-      StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+    if (StructuredData::ObjectSP object_sp = GetCorefileProcessMetadata()) {
       StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
-      if (!dict) {
-        LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
-                       "get a dictionary.");
-        return false;
-      }
       StructuredData::Array *threads;
       if (!dict->GetValueForKeyAsArray("threads", threads) || !threads) {
         LLDB_LOGF(log,
@@ -5848,6 +5836,49 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     }
   }
   return false;
+}
+
+StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return {};
+
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  auto lc_notes = FindLC_NOTEByName("process metadata");
+  if (lc_notes.size() == 0)
+    return {};
+
+  if (lc_notes.size() > 1)
+    LLDB_LOGF(
+        log,
+        "Multiple 'process metadata' LC_NOTEs found, only using the first.");
+
+  auto [payload_offset, strsize] = lc_notes[0];
+  std::string buf(strsize, '\0');
+  if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
+    LLDB_LOGF(log,
+              "Unable to read %" PRIu64
+              " bytes of 'process metadata' LC_NOTE JSON contents",
+              strsize);
+    return {};
+  }
+  while (buf.back() == '\0')
+    buf.resize(buf.size() - 1);
+  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  if (!object_sp) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "parse as valid JSON.");
+    return {};
+  }
+  StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
+  if (!dict) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "get a dictionary.");
+    return {};
+  }
+
+  return object_sp;
 }
 
 lldb::RegisterContextSP

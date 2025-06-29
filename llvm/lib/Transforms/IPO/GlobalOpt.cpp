@@ -250,10 +250,10 @@ CleanupPointerRootUsers(GlobalVariable *GV,
     }
   }
 
-  for (int i = 0, e = Dead.size(); i != e; ++i) {
-    if (IsSafeComputationToRemove(Dead[i].first, GetTLI)) {
-      Dead[i].second->eraseFromParent();
-      Instruction *I = Dead[i].first;
+  for (const auto &[Inst, Store] : Dead) {
+    if (IsSafeComputationToRemove(Inst, GetTLI)) {
+      Store->eraseFromParent();
+      Instruction *I = Inst;
       do {
         if (isAllocationFn(I, GetTLI))
           break;
@@ -1494,8 +1494,14 @@ processInternalGlobal(GlobalVariable *GV, const GlobalStatus &GS,
     // FIXME: Pass Global's alignment when globals have alignment
     AllocaInst *Alloca = new AllocaInst(ElemTy, DL.getAllocaAddrSpace(),
                                         nullptr, GV->getName(), FirstI);
-    if (!isa<UndefValue>(GV->getInitializer()))
-      new StoreInst(GV->getInitializer(), Alloca, FirstI);
+    Alloca->setDebugLoc(DebugLoc::getCompilerGenerated());
+    if (!isa<UndefValue>(GV->getInitializer())) {
+      auto *SI = new StoreInst(GV->getInitializer(), Alloca, FirstI);
+      // FIXME: We're localizing a global and creating a store instruction for
+      // the initial value of that global. Could we logically use the global
+      // variable's (if one exists) line for this?
+      SI->setDebugLoc(DebugLoc::getCompilerGenerated());
+    }
 
     GV->replaceAllUsesWith(Alloca);
     GV->eraseFromParent();
@@ -2163,7 +2169,7 @@ static bool tryWidenGlobalArraysUsedByMemcpy(
 
     unsigned NumBytesToCopy = BytesToCopyOp->getZExtValue();
 
-    auto *Alloca = dyn_cast<AllocaInst>(CI->getArgOperand(0));
+    auto *Alloca = cast<AllocaInst>(CI->getArgOperand(0));
     uint64_t DZSize = Alloca->getAllocatedType()->getArrayNumElements();
     uint64_t SZSize = SourceDataArray->getType()->getNumElements();
     unsigned ElementByteWidth = SourceDataArray->getElementByteSize();

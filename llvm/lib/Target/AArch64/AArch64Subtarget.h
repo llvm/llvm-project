@@ -406,7 +406,7 @@ public:
   }
 
   // Return the known bit length of SVE data registers. A value of 0 means the
-  // length is unkown beyond what's implied by the architecture.
+  // length is unknown beyond what's implied by the architecture.
   unsigned getSVEVectorSizeInBits() const {
     assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");

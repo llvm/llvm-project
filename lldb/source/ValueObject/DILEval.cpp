@@ -253,6 +253,12 @@ Interpreter::Visit(const UnaryOpNode *node) {
       rhs = dynamic_rhs;
 
     lldb::ValueObjectSP child_sp = rhs->Dereference(error);
+    if (!child_sp && m_use_synthetic) {
+      if (lldb::ValueObjectSP synth_obj_sp = rhs->GetSyntheticValue()) {
+        error.Clear();
+        child_sp = synth_obj_sp->Dereference(error);
+      }
+    }
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
                                                   node->GetLocation());
@@ -280,6 +286,7 @@ Interpreter::Visit(const MemberOfNode *node) {
   auto base_or_err = Evaluate(node->GetBase());
   if (!base_or_err)
     return base_or_err;
+  bool expr_is_ptr = node->GetIsArrow();
   lldb::ValueObjectSP base = *base_or_err;
 
   // Perform some basic type & correctness checking.
@@ -319,11 +326,11 @@ Interpreter::Visit(const MemberOfNode *node) {
         return llvm::make_error<DILDiagnosticError>(
             m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
       }
+      expr_is_ptr = false;
     }
   }
 
   if (m_check_ptr_vs_member) {
-    bool expr_is_ptr = node->GetIsArrow();
     bool base_is_ptr = base->IsPointerType();
 
     if (expr_is_ptr != base_is_ptr) {
@@ -428,6 +435,38 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
 
   int64_t signed_child_idx = node->GetIndex();
   return base->GetSyntheticArrayMember(signed_child_idx, true);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BitFieldExtractionNode *node) {
+  auto lhs_or_err = Evaluate(node->GetBase());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP base = *lhs_or_err;
+  int64_t first_index = node->GetFirstIndex();
+  int64_t last_index = node->GetLastIndex();
+
+  // if the format given is [high-low], swap range
+  if (first_index > last_index)
+    std::swap(first_index, last_index);
+
+  Status error;
+  if (base->GetCompilerType().IsReferenceType()) {
+    base = base->Dereference(error);
+    if (error.Fail())
+      return error.ToError();
+  }
+  lldb::ValueObjectSP child_valobj_sp =
+      base->GetSyntheticBitFieldChild(first_index, last_index, true);
+  if (!child_valobj_sp) {
+    std::string message = llvm::formatv(
+        "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", first_index,
+        last_index, base->GetTypeName().AsCString("<invalid type>"),
+        base->GetName().AsCString());
+    return llvm::make_error<DILDiagnosticError>(m_expr, message,
+                                                node->GetLocation());
+  }
+  return child_valobj_sp;
 }
 
 } // namespace lldb_private::dil
