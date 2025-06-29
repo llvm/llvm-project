@@ -1332,6 +1332,50 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
 }
 
 //===----------------------------------------------------------------------===//
+// RotateOp
+//===----------------------------------------------------------------------===//
+
+void RotateOp::build(OpBuilder &builder, OperationState &result, Value value,
+                     int32_t offset, int32_t width) {
+  build(builder, result, value,
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(offset)),
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(width)));
+}
+
+LogicalResult RotateOp::verify() {
+  auto offsetConstOp = getOffset().getDefiningOp<arith::ConstantOp>();
+  if (!offsetConstOp)
+    return emitOpError() << "offset is not a constant value";
+
+  auto offsetIntAttr =
+      llvm::dyn_cast<mlir::IntegerAttr>(offsetConstOp.getValue());
+
+  auto widthConstOp = getWidth().getDefiningOp<arith::ConstantOp>();
+  if (!widthConstOp)
+    return emitOpError() << "width is not a constant value";
+
+  auto widthIntAttr =
+      llvm::dyn_cast<mlir::IntegerAttr>(widthConstOp.getValue());
+
+  llvm::APInt offsetValue = offsetIntAttr.getValue();
+  llvm::APInt widthValue = widthIntAttr.getValue();
+
+  if (!widthValue.isPowerOf2())
+    return emitOpError() << "width must be a power of two";
+
+  if (offsetValue.sge(widthValue) || offsetValue.slt(0)) {
+    SmallString<8> widthStr;
+    widthValue.toStringUnsigned(widthStr);
+    return emitOpError() << "offset must be in the range [0, "
+                         << std::string(std::move(widthStr)) << ")";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BarrierOp
 //===----------------------------------------------------------------------===//
 
