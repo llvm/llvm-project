@@ -35,7 +35,7 @@ using r1i2 = r1<char>; // expected-error {{constraints not satisfied for class t
 
 template<typename... Ts> requires
 false_v<requires (Ts... ts) {requires ((sizeof(ts) == 2) && ...);}>
-// expected-note@-1 {{because 'false_v<requires (short ts, unsigned short ts) { requires (sizeof (ts) == 2) && (sizeof (ts) == 2); }>'}}
+// expected-note@-1 {{because 'false_v<requires (short ts, unsigned short ts) { requires ((sizeof (ts) == 2) && (sizeof (ts) == 2)); }>'}}
 // expected-note@-2 {{because 'false_v<requires (short ts) { requires (sizeof (ts) == 2); }>' evaluated to false}}
 struct r2 {};
 
@@ -44,8 +44,8 @@ using r2i2 = r2<short>; // expected-error {{constraints not satisfied for class 
 
 template<typename... Ts> requires
 false_v<(requires (Ts ts) {requires sizeof(ts) != 0;} && ...)>
-// expected-note@-1 {{because 'false_v<requires (short ts) { requires sizeof (ts) != 0; } && requires (unsigned short ts) { requires sizeof (ts) != 0; }>' evaluated to false}}
-// expected-note@-2 {{because 'false_v<requires (short ts) { requires sizeof (ts) != 0; }>' evaluated to false}}
+// expected-note@-1 {{because 'false_v<(requires (short ts) { requires sizeof (ts) != 0; } && requires (unsigned short ts) { requires sizeof (ts) != 0; })>' evaluated to false}}
+// expected-note@-2 {{because 'false_v<(requires (short ts) { requires sizeof (ts) != 0; })>' evaluated to false}}
 struct r3 {};
 
 using r3i1 = r3<short, unsigned short>; // expected-error {{constraints not satisfied for class template 'r3' [with Ts = <short, unsigned short>]}}
@@ -93,19 +93,19 @@ namespace type_requirement {
   // Parameter pack inside expr
   template<typename... Ts> requires
   false_v<(requires { typename Ts::type; } && ...)>
-  // expected-note@-1 {{because 'false_v<requires { typename identity<short>::type; } && requires { typename identity<int>::type; } && requires { <<error-type>>; }>' evaluated to false}}
+  // expected-note@-1 {{because 'false_v<(requires { typename identity<short>::type; } && requires { typename identity<int>::type; } && requires { <<error-type>>; })>' evaluated to false}}
   struct r5 {};
 
   using r5i = r5<identity<short>, identity<int>, short>; // expected-error{{constraints not satisfied for class template 'r5' [with Ts = <identity<short>, identity<int>, short>]}}
   template<typename... Ts> requires
-  false_v<(requires { typename void_t<Ts>; } && ...)> // expected-note{{because 'false_v<requires { typename void_t<int>; } && requires { typename void_t<short>; }>' evaluated to false}}
+  false_v<(requires { typename void_t<Ts>; } && ...)> // expected-note{{because 'false_v<(requires { typename void_t<int>; } && requires { typename void_t<short>; })>' evaluated to false}}
   struct r6 {};
 
   using r6i = r6<int, short>; // expected-error{{constraints not satisfied for class template 'r6' [with Ts = <int, short>]}}
 
   template<typename... Ts> requires
   false_v<(requires { typename Ts::template aaa<Ts>; } && ...)>
-  // expected-note@-1 {{because 'false_v<requires { <<error-type>>; } && requires { <<error-type>>; }>' evaluated to false}}
+  // expected-note@-1 {{because 'false_v<(requires { <<error-type>>; } && requires { <<error-type>>; })>' evaluated to false}}
   struct r7 {};
 
   using r7i = r7<int, A>; // expected-error{{constraints not satisfied for class template 'r7' [with Ts = <int, type_requirement::A>]}}
@@ -160,7 +160,7 @@ namespace expr_requirement {
 
   template<typename... Ts> requires
   false_v<(requires { { 0 } noexcept -> C1<Ts>; } && ...)>
-  // expected-note@-1 {{because 'false_v<requires { { 0 } noexcept -> C1<int>; } && requires { { 0 } noexcept -> C1<unsigned int>; }>' evaluated to false}}
+  // expected-note@-1 {{because 'false_v<(requires { { 0 } noexcept -> C1<int>; } && requires { { 0 } noexcept -> C1<unsigned int>; })>' evaluated to false}}
   struct r3 {};
 
   using r3i = r3<int, unsigned int>; // expected-error{{constraints not satisfied for class template 'r3' [with Ts = <int, unsigned int>]}}
@@ -199,7 +199,7 @@ namespace nested_requirement {
   // Parameter pack inside expr
   template<typename... Ts> requires
   false_v<(requires { requires sizeof(Ts) == 0; } && ...)>
-  // expected-note@-1 {{because 'false_v<requires { requires sizeof(int) == 0; } && requires { requires sizeof(short) == 0; }>' evaluated to false}}
+  // expected-note@-1 {{because 'false_v<(requires { requires sizeof(int) == 0; } && requires { requires sizeof(short) == 0; })>' evaluated to false}}
   struct r2 {};
 
   using r2i = r2<int, short>; // expected-error{{constraints not satisfied for class template 'r2' [with Ts = <int, short>]}}
@@ -208,14 +208,14 @@ namespace nested_requirement {
 // Parameter pack inside multiple requirements
 template<typename... Ts> requires
 false_v<(requires { requires sizeof(Ts) == 0; sizeof(Ts); } && ...)>
-// expected-note@-1 {{because 'false_v<requires { requires sizeof(int) == 0; sizeof(Ts); } && requires { requires sizeof(short) == 0; sizeof(Ts); }>' evaluated to false}}
+// expected-note@-1 {{because 'false_v<(requires { requires sizeof(int) == 0; sizeof(Ts); } && requires { requires sizeof(short) == 0; sizeof(Ts); })>' evaluated to false}}
 struct r4 {};
 
 using r4i = r4<int, short>; // expected-error{{constraints not satisfied for class template 'r4' [with Ts = <int, short>]}}
 
 template<typename... Ts> requires
 false_v<(requires(Ts t) { requires sizeof(t) == 0; t++; } && ...)>
-// expected-note@-1 {{because 'false_v<requires (int t) { requires sizeof (t) == 0; t++; } && requires (short t) { requires sizeof (t) == 0; t++; }>' evaluated to false}}
+// expected-note@-1 {{because 'false_v<(requires (int t) { requires sizeof (t) == 0; t++; } && requires (short t) { requires sizeof (t) == 0; t++; })>' evaluated to false}}
 struct r5 {};
 
 using r5i = r5<int, short>; // expected-error{{constraints not satisfied for class template 'r5' [with Ts = <int, short>]}}
