@@ -21,10 +21,8 @@
 
 #include "test_macros.h"
 
-
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::shared_timed_mutex M;
     M m0;
     M m1;
@@ -35,8 +33,13 @@ int main(int, char**)
     assert(lk1.owns_lock() == true);
     assert(lk0.mutex() == nullptr);
     assert(lk0.owns_lock() == false);
-    }
-    {
+
+    // Test self move assignment.
+    lk1 = std::move(lk1);
+    assert(lk1.mutex() == std::addressof(m0));
+    assert(lk1.owns_lock());
+  }
+  {
     typedef nasty_mutex M;
     M m0;
     M m1;
@@ -47,7 +50,7 @@ int main(int, char**)
     assert(lk1.owns_lock() == true);
     assert(lk0.mutex() == nullptr);
     assert(lk0.owns_lock() == false);
-    }
+  }
 
   return 0;
 }
