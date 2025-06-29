@@ -2,7 +2,7 @@
 // REQUIRES: freestanding
 // XFAIL: *
 
-// RUN: %clang %s -c -o /dev/null -ffreestanding --std=c++20 2>&1 | FileCheck %s
+// RUN: %clang %s -c -o /dev/null -ffreestanding --std=c++2c 2>&1 | FileCheck %s
 
 #include <cstring> 
 
