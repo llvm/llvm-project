@@ -363,16 +363,16 @@ Error DumpOutputStyle::dumpStreamSummary() {
   for (uint32_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     P.formatLine(
         "Stream {0} ({1} bytes): [{2}]",
-        fmt_align(StreamIdx, AlignStyle::Right, NumDigits(StreamCount)),
+        fmt_align(StreamIdx, AlignStyle::Right, NumDigitsBase10(StreamCount)),
         fmt_align(getPdb().getStreamByteSize(StreamIdx), AlignStyle::Right,
-                  NumDigits(MaxStreamSize)),
+                  NumDigitsBase10(MaxStreamSize)),
         StreamPurposes[StreamIdx].getLongName());
 
     if (opts::dump::DumpStreamBlocks) {
       auto Blocks = getPdb().getStreamBlockList(StreamIdx);
       std::vector<uint32_t> BV(Blocks.begin(), Blocks.end());
       P.formatLine("       {0}  Blocks: [{1}]",
-                   fmt_repeat(' ', NumDigits(StreamCount)),
+                   fmt_repeat(' ', NumDigitsBase10(StreamCount)),
                    make_range(BV.begin(), BV.end()));
     }
   }
@@ -572,7 +572,7 @@ Error DumpOutputStyle::dumpSymbolStats() {
             if (StreamIdx == kInvalidStreamIndex) {
               P.formatLine(
                   "Mod {0} (debug info not present): [{1}]",
-                  fmt_align(Modi, AlignStyle::Right, NumDigits(ModCount)),
+                  fmt_align(Modi, AlignStyle::Right, NumDigitsBase10(ModCount)),
                   Desc.getModuleName());
               return Error::success();
             }
@@ -749,11 +749,11 @@ Error DumpOutputStyle::dumpUdtStats() {
   // separators.
   StringRef CountHeader("Count");
   StringRef SizeHeader("Size");
-  size_t CD = NumDigits(UdtStats.Totals.Count);
+  size_t CD = NumDigitsBase10(UdtStats.Totals.Count);
   CD += (CD - 1) / 3;
   CD = std::max(CD, CountHeader.size());
 
-  size_t SD = NumDigits(UdtStats.Totals.Size);
+  size_t SD = NumDigitsBase10(UdtStats.Totals.Size);
   SD += (SD - 1) / 3;
   SD = std::max(SD, SizeHeader.size());
 
@@ -1071,7 +1071,7 @@ Error DumpOutputStyle::dumpStringTableFromPdb() {
       P.formatLine("Empty");
     else {
       auto MaxID = llvm::max_element(IS->name_ids());
-      uint32_t Digits = NumDigits(*MaxID);
+      uint32_t Digits = NumDigitsBase10(*MaxID);
 
       P.formatLine("{0} | {1}", fmt_align("ID", AlignStyle::Right, Digits),
                    "String");
@@ -1205,7 +1205,8 @@ dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
                    TpiStream *Stream, bool Bytes, bool Extras) {
 
   Printer.formatLine("Showing {0:N} records", NumTypeRecords);
-  uint32_t Width = NumDigits(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
+  uint32_t Width =
+      NumDigitsBase10(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types, RefTracker,
                            NumHashBuckets, HashValues, Stream);
@@ -1221,8 +1222,8 @@ static void dumpPartialTypeStream(LinePrinter &Printer,
                                   TypeReferenceTracker *RefTracker,
                                   TpiStream &Stream, ArrayRef<TypeIndex> TiList,
                                   bool Bytes, bool Extras, bool Deps) {
-  uint32_t Width =
-      NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
+  uint32_t Width = NumDigitsBase10(TypeIndex::FirstNonSimpleIndex +
+                                   Stream.getNumTypeRecords());
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types, RefTracker,
                            Stream.getNumHashBuckets(), Stream.getHashValues(),

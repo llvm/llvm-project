@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -220,6 +221,12 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
 
     if (SO.StackID != 0)
       OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
+
+    if (SO.Alloca && !SO.Alloca->getName().empty())
+      OS << "alloca=" << SO.Alloca->getName() << ' ';
+
+    if (SO.isSpillSlot)
+      OS << "spill ";
 
     if (SO.Size == ~0ULL) {
       OS << "dead\n";
