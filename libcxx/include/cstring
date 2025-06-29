@@ -97,7 +97,7 @@ using ::strpbrk _LIBCPP_USING_IF_EXISTS;
 using ::strrchr _LIBCPP_USING_IF_EXISTS;
 using ::strspn _LIBCPP_USING_IF_EXISTS;
 using ::strstr _LIBCPP_USING_IF_EXISTS;
-#if __STDC_HOSTED__ == 1
+#if __STDC_HOSTED__ == 1 || _LIBCPP_STD_VER < 26
 using ::strtok _LIBCPP_USING_IF_EXISTS;
 #endif
 using ::memset _LIBCPP_USING_IF_EXISTS;
