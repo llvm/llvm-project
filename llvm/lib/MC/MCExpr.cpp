@@ -179,7 +179,9 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
       return MAI->printSpecifierExpr(OS, SE);
     // Used by dump features like -show-inst. Regular MCAsmStreamer output must
     // set MAI.
-    OS << "specifier(" << SE.getSpecifier() << ',' << *SE.getSubExpr() << ')';
+    OS << "specifier(" << SE.getSpecifier() << ',';
+    SE.getSubExpr()->print(OS, nullptr);
+    OS << ')';
     return;
   }
   }
@@ -189,7 +191,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCExpr::dump() const {
-  dbgs() << *this;
+  print(dbgs(), nullptr);
   dbgs() << '\n';
 }
 #endif
@@ -215,16 +217,16 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 /* *** */
 
-MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
+MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc, Kind), Symbol(Symbol) {
+    : MCExpr(MCExpr::SymbolRef, Loc, specifier), Symbol(Symbol) {
   assert(Symbol);
 }
 
 const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
-                                               VariantKind Kind,
+                                               uint16_t specifier,
                                                MCContext &Ctx, SMLoc Loc) {
-  return new (Ctx) MCSymbolRefExpr(Sym, Kind, Ctx.getAsmInfo(), Loc);
+  return new (Ctx) MCSymbolRefExpr(Sym, specifier, Ctx.getAsmInfo(), Loc);
 }
 
 /* *** */

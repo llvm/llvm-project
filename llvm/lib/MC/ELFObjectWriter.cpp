@@ -121,7 +121,7 @@ struct ELFWriter {
   } Mode;
 
   uint64_t symbolValue(const MCSymbol &Sym);
-  bool isInSymtab(const MCSymbolELF &Symbol, bool Used, bool Renamed);
+  bool isInSymtab(const MCSymbolELF &Symbol);
 
   /// Helper struct for containing some precomputed information on symbols.
   struct ELFSymbolData {
@@ -469,7 +469,7 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                      IsReserved);
 }
 
-bool ELFWriter::isInSymtab(const MCSymbolELF &Symbol, bool Used, bool Renamed) {
+bool ELFWriter::isInSymtab(const MCSymbolELF &Symbol) {
   if (Symbol.isVariable()) {
     const MCExpr *Expr = Symbol.getVariableValue();
     // Target Expressions that are always inlined do not appear in the symtab
@@ -479,27 +479,18 @@ bool ELFWriter::isInSymtab(const MCSymbolELF &Symbol, bool Used, bool Renamed) {
     // The .weakref alias does not appear in the symtab.
     if (Symbol.isWeakref())
       return false;
-  }
 
-  if (Used)
-    return true;
-
-  if (Renamed)
-    return false;
-
-  if (Symbol.isVariable() && Symbol.isUndefined()) {
-    // FIXME: this is here just to diagnose the case of a var = commmon_sym.
-    Asm.getBaseSymbol(Symbol);
-    return false;
+    if (Symbol.isUndefined()) {
+      // FIXME: this is here just to diagnose the case of a var = commmon_sym.
+      Asm.getBaseSymbol(Symbol);
+      return false;
+    }
   }
 
   if (Symbol.isTemporary())
     return false;
 
-  if (Symbol.getType() == ELF::STT_SECTION)
-    return false;
-
-  return true;
+  return Symbol.getType() != ELF::STT_SECTION;
 }
 
 void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
@@ -531,8 +522,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
     const auto &Symbol = cast<MCSymbolELF>(It.value());
     bool Used = Symbol.isUsedInReloc();
     bool isSignature = Symbol.isSignature();
-    if (!isInSymtab(Symbol, Used || isSignature,
-                    OWriter.Renames.count(&Symbol)))
+    if (!(Used || (!OWriter.Renames.count(&Symbol) && isInSymtab(Symbol))))
       continue;
 
     if (Symbol.isTemporary() && Symbol.isUndefined()) {

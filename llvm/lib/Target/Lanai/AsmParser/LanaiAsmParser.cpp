@@ -550,7 +550,7 @@ public:
       assert(false && "Operand type not supported.");
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case IMMEDIATE:
       OS << "Imm: " << getImm() << "\n";
@@ -562,10 +562,14 @@ public:
       OS << "Reg: %r" << getReg() << "\n";
       break;
     case MEMORY_IMM:
-      OS << "MemImm: " << *getMemOffset() << "\n";
+      OS << "MemImm: ";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << '\n';
       break;
     case MEMORY_REG_IMM:
-      OS << "MemRegImm: " << getMemBaseReg() << "+" << *getMemOffset() << "\n";
+      OS << "MemRegImm: " << getMemBaseReg() << "+";
+      MAI.printExpr(OS, *getMemOffset());
+      OS << '\n';
       break;
     case MEMORY_REG_REG:
       assert(getMemOffset() == nullptr);

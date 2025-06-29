@@ -1152,7 +1152,7 @@ public:
     // clang-format on
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Register:
       OS << "<register " << AMDGPUInstPrinter::getRegisterName(getReg())
@@ -1170,7 +1170,7 @@ public:
       break;
     case Expression:
       OS << "<expr ";
-      MCAsmInfo().printExpr(OS, *Expr);
+      MAI.printExpr(OS, *Expr);
       OS << '>';
       break;
     }
