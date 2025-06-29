@@ -271,7 +271,7 @@ public:
 protected:
   /// Optional passes call this function to check whether the pass should be
   /// skipped. This is the case when optimization bisect is over the limit.
-  bool skipModule(Module &M) const;
+  bool skipModule(const Module &M) const;
 };
 
 //===----------------------------------------------------------------------===//
