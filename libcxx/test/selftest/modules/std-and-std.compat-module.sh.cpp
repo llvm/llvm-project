@@ -10,6 +10,10 @@
 // UNSUPPORTED: clang-modules-build
 // UNSUPPORTED: gcc
 
+// TODO: This test is currently written in a way that is specific to libc++, but it's really trying to test a property
+//       of the test framework, which isn't libc++ specific.
+// REQUIRES: stdlib=libc++
+
 // XFAIL: has-no-cxx-module-support
 
 // Make sure that the compile flags contain the expected elements.

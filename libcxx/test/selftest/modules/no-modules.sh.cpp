@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: This test is currently written in a way that is specific to libc++, but it's really trying to test a property
+//       of the test framework, which isn't libc++ specific.
+// REQUIRES: stdlib=libc++
+
 // Make sure that the compile flags contain no module information.
 
 // MODULE_DEPENDENCIES:

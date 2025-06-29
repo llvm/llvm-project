@@ -26,7 +26,7 @@ from os.path import dirname
 
 # Allow importing 'lit' and the 'libcxx' module. Make sure we put the lit
 # path first so we don't find any system-installed version.
-monorepoRoot = dirname(dirname(dirname(dirname(dirname(dirname(__file__))))))
+monorepoRoot = dirname(dirname(dirname(dirname(dirname(__file__)))))
 sys.path = [
     os.path.join(monorepoRoot, "libcxx", "utils"),
     os.path.join(monorepoRoot, "llvm", "utils", "lit"),
