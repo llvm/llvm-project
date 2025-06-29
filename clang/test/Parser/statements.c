@@ -77,3 +77,30 @@ int test9(void) {
 
   return 4, // expected-error {{expected ';' after return statement}}
 }
+
+void attr_decl_in_selection_statement(int n) {
+  if (1)
+    [[]]; // expected-error {{expected a statement before ';'}}
+
+  if (1) {
+
+  } else
+    [[]]; // expected-error {{expected a statement before ';'}}
+
+
+  switch (n)
+    [[]]; // expected-error {{expected a statement before ';'}}
+}
+
+void attr_decl_in_iteration_statement(int n) {
+  int i;
+  for (i = 0; i < n; ++i)
+    [[]];     // expected-error {{expected a statement before ';'}}
+
+  while (i > 0)
+    [[]];     // expected-error {{expected a statement before ';'}}
+
+  do
+    [[]];     // expected-error {{expected a statement before ';'}}
+  while (i > 0);
+}
