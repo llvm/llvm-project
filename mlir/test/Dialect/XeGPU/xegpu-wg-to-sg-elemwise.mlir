@@ -1,6 +1,25 @@
 // RUN: mlir-opt --xegpu-wg-to-sg-distribute -split-input-file %s | FileCheck %s
 
 gpu.module @test_elementwise_ops {
+
+  // CHECK-LABEL: unary_ops_sg_layout_only
+  gpu.func @unary_ops_sg_layout_only(%a: memref<24x32xf32>) {
+    %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
+      -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8]>>
+    %load_a = xegpu.load_nd %tdesc_a
+      : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8]>>
+      -> vector<24x32xf32>
+    // CHECK: math.exp {{.*}} : vector<12x8xf32>
+    %exp = math.exp %load_a
+      {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8]>}
+      : vector<24x32xf32>
+    // CHECK: arith.negf {{.*}} : vector<12x8xf32>
+    %negf = arith.negf %load_a
+      {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [12, 8]>}
+      : vector<24x32xf32>
+    gpu.return
+  }
+
   // CHECK-LABEL: unary_ops
   gpu.func @unary_ops(%a: memref<24x32xf32>) {
     %tdesc_a = xegpu.create_nd_tdesc %a[0, 0] : memref<24x32xf32>
