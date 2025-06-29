@@ -476,9 +476,8 @@ public:
   };
 
   struct CatalogingListener : public RewriterBase::ForwardingListener {
-    CatalogingListener(OpBuilder::Listener *listener,
-                       const std::string &patternName, raw_ostream &os,
-                       std::mutex &writeMutex)
+    CatalogingListener(OpBuilder::Listener *listener, StringRef patternName,
+                       raw_ostream &os, std::mutex &writeMutex)
         : RewriterBase::ForwardingListener(listener), patternName(patternName),
           os(os), writeMutex(writeMutex) {}
 
@@ -544,7 +543,7 @@ public:
     }
 
   private:
-    const std::string &patternName;
+    StringRef patternName;
     raw_ostream &os;
     std::mutex &writeMutex;
   };
