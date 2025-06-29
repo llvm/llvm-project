@@ -53,8 +53,8 @@ LLVM_LIBC_FUNCTION(int, sigsetjmp, (sigjmp_buf buf)) {
       bl %c[setjmp]
       mov r1, r0
       mov r0, r4
-      ldr r4, [r0, #%c[retaddr]]
-      ldr lr, [r0, #%c[extra]]
+      ldr lr, [r0, #%c[retaddr]]
+      ldr r4, [r0, #%c[extra]]
       b %c[epilogue]
   )" ::[retaddr] "i"(offsetof(__jmp_buf, sig_retaddr)),
       [extra] "i"(offsetof(__jmp_buf, sig_extra)), [setjmp] "X"(setjmp),
