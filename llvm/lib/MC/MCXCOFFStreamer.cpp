@@ -98,7 +98,7 @@ void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
 
   MCFixupKind Kind = *MaybeKind;
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, Kind);
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
 }
 
 void MCXCOFFStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
