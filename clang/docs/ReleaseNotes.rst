@@ -71,6 +71,9 @@ C++ Specific Potentially Breaking Changes
   if it's out of range. The Boost numeric_conversion library is impacted by
   this; it was fixed in Boost 1.81. (#GH143034)
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
