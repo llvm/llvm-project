@@ -1293,6 +1293,12 @@ unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
   return TTIImpl->getAtomicMemIntrinsicMaxElementSize();
 }
 
+Value *
+TargetTransformInfo::getResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                               Type *ExpectedType) const {
+  return TTIImpl->getResultFromMemIntrinsic(Inst, ExpectedType);
+}
+
 Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
     IntrinsicInst *Inst, Type *ExpectedType) const {
   return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);

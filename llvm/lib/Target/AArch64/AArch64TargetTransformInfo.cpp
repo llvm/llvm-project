@@ -4967,12 +4967,26 @@ void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
+Value *AArch64TTIImpl::getResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                 Type *ExpectedType) const {
+  switch (Inst->getIntrinsicID()) {
+  default:
+    return nullptr;
+  case Intrinsic::aarch64_neon_ld2:
+  case Intrinsic::aarch64_neon_ld3:
+  case Intrinsic::aarch64_neon_ld4:
+    if (Inst->getType() == ExpectedType)
+      return Inst;
+    return nullptr;
+  }
+}
+
 Value *
 AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                   Type *ExpectedType) const {
   switch (Inst->getIntrinsicID()) {
   default:
-    return nullptr;
+    return getResultFromMemIntrinsic(Inst, ExpectedType);
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
@@ -4995,12 +5009,6 @@ AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
     }
     return Res;
   }
-  case Intrinsic::aarch64_neon_ld2:
-  case Intrinsic::aarch64_neon_ld3:
-  case Intrinsic::aarch64_neon_ld4:
-    if (Inst->getType() == ExpectedType)
-      return Inst;
-    return nullptr;
   }
 }
 
