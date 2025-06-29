@@ -23,6 +23,8 @@ append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic SCUDO_CFLAGS)
 
 # FIXME: find cleaner way to agree with GWPAsan flags
 append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SCUDO_CFLAGS)
+append_list_if(COMPILER_RT_HAS_FNO_WPD_FLAG -fno-whole-program-vtables SCUDO_CFLAGS)
+append_list_if(COMPILER_RT_HAS_FNO_VFE_FLAG -fno-virtual-function-elimination SCUDO_CFLAGS)
 
 if(COMPILER_RT_DEBUG)
   list(APPEND SCUDO_CFLAGS -O0 -DSCUDO_DEBUG=1 -DSCUDO_ENABLE_HOOKS=1)
