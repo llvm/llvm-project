@@ -60,4 +60,4 @@ for.end:                                          ; preds = %for.body
 ; TBAA-NEXT: {{\[\[}}
 ; TBAA-DAG:      <{ MemRef_Float0[(0)] }, { MemRef_Float0[(1024)] }>
 ; TBAA-DAG:      <{ MemRef_Float1[(0)] }, { MemRef_Float1[(1024)] }>
-; TBBA:      {{\]\]}}
+; TBAA:      {{\]\]}}
