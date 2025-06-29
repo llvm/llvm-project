@@ -146,9 +146,6 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
-  for (const auto &[TypeName, Count] : Other.getVTableAccessCounts())
-    mergeSampleProfErrors(Result,
-                          addVTableAccessCount(TypeName, Count, Weight));
 
   return Result;
 }
@@ -171,8 +168,6 @@ SampleRecord::serialize(raw_ostream &OS,
     }
     encodeULEB128(CalleeSamples, OS);
   }
-  if (SerializeVTableProf)
-    return serializeTypeMap(VTableAccessCounts, NameTable, OS);
   return sampleprof_error::success;
 }
 
@@ -193,11 +188,6 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
     for (const auto &I : getSortedCallTargets())
       OS << " " << I.first << ":" << I.second;
   }
-  if (!VTableAccessCounts.empty()) {
-    OS << ", vtables:";
-    for (const auto [Type, Count] : VTableAccessCounts)
-      OS << " " << Type << ":" << Count;
-  }
   OS << "\n";
 }
 
@@ -216,7 +206,8 @@ sampleprof_error SampleRecord::addCalledTarget(FunctionId F, uint64_t S,
 
 sampleprof_error SampleRecord::addVTableAccessCount(FunctionId F, uint64_t S,
                                                     uint64_t Weight) {
-  return addWeightSample(S, Weight, VTableAccessCounts[F]);
+  return sampleprof_error::success;
+  // return addWeightSample(S, Weight, VTableAccessCounts[F]);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -227,6 +218,18 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                           const SampleRecord &Sample) {
   Sample.print(OS, 0);
   return OS;
+}
+
+template <typename T>
+static void printTypeCountMap(raw_ostream &OS, T Loc,
+                              const TypeCountMap &TypeCountMap) {
+  if (TypeCountMap.empty()) {
+    return;
+  }
+  OS << Loc << ": vtables: ";
+  for (const auto &[Type, Count] : TypeCountMap)
+    OS << Type << ":" << Count << " ";
+  OS << "\n";
 }
 
 /// Print the samples collected for a function on stream \p OS.
@@ -243,7 +246,13 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
     SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
     for (const auto &SI : SortedBodySamples.get()) {
       OS.indent(Indent + 2);
+      const auto &Loc = SI->first;
       OS << SI->first << ": " << SI->second;
+      if (const TypeCountMap *TypeCountMap =
+              this->findCallsiteTypeSamplesAt(Loc)) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, *TypeCountMap);
+      }
     }
     OS.indent(Indent);
     OS << "}\n";
@@ -264,14 +273,10 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
         FuncSample.print(OS, Indent + 4);
       }
       const LineLocation &Loc = CS->first;
-      auto TypeSamplesIter = VirtualCallsiteTypes.find(Loc);
-      if (TypeSamplesIter != VirtualCallsiteTypes.end()) {
+      auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
         OS.indent(Indent + 2);
-        OS << Loc << ": vtables: ";
-        for (const auto &TypeSample : TypeSamplesIter->second) {
-          OS << TypeSample.first << ":" << TypeSample.second << " ";
-        }
-        OS << "\n";
+        printTypeCountMap(OS, Loc, TypeSamplesIter->second);
       }
     }
     OS.indent(Indent);

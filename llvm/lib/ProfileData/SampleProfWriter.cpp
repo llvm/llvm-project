@@ -600,16 +600,18 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       OS << " " << J.first << ":" << J.second;
     OS << "\n";
 
-    if (!Sample.getVTableAccessCounts().empty()) {
+    if (const TypeCountMap *Map = S.findCallsiteTypeSamplesAt(Loc);
+        Map && !Map->empty()) {
       OS.indent(Indent + 1);
       Loc.print(OS);
       OS << ": ";
       OS << kBodySampleVTableProfPrefix;
-      for (const auto [TypeName, Count] : Sample.getVTableAccessCounts())
+      for (const auto [TypeName, Count] : *Map) {
         OS << TypeName << ":" << Count << " ";
+      }
       OS << "\n";
+      LineCount++;
     }
-    LineCount++;
   }
 
   SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
@@ -631,7 +633,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       OS.indent(Indent);
       Loc.print(OS);
       OS << ": ";
-      OS << kInlinedCallsiteVTablerofPrefix;
+      OS << kBodySampleVTableProfPrefix;
       for (const auto [TypeId, Count] : *Map) {
         OS << TypeId << ":" << Count << " ";
       }
@@ -698,7 +700,6 @@ void SampleProfileWriterBinary::addNames(const FunctionSamples &S) {
     const SampleRecord &Sample = I.second;
     for (const auto &J : Sample.getCallTargets())
       addName(J.first);
-    addTypeNames(Sample.getVTableAccessCounts());
   }
 
   // Add all the names in callsite types.
