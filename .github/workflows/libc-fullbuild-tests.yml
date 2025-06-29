@@ -16,6 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         build_type: [Debug, Release, MinSizeRel]
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
         include:
           - os: ubuntu-24.04
             ccache-variant: sccache
