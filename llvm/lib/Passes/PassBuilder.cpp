@@ -1524,6 +1524,41 @@ Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
   return ClearVirtRegs;
 }
 
+struct FatLTOOptions {
+  OptimizationLevel OptLevel;
+  bool ThinLTO = false;
+  bool EmitSummary = false;
+};
+
+Expected<FatLTOOptions> parseFatLTOOptions(StringRef Params) {
+  FatLTOOptions Result;
+  bool HaveOptLevel = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "thinlto") {
+      Result.ThinLTO = true;
+    } else if (ParamName == "emit-summary") {
+      Result.EmitSummary = true;
+    } else if (std::optional<OptimizationLevel> OptLevel =
+                   parseOptLevel(ParamName)) {
+      Result.OptLevel = *OptLevel;
+      HaveOptLevel = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid fatlto-pre-link pass parameter '{}'", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  if (!HaveOptLevel)
+    return make_error<StringError>(
+        "missing optimization level for fatlto-pre-link pipeline",
+        inconvertibleErrorCode());
+  return Result;
+}
+
 } // namespace
 
 /// Tests whether registered callbacks will accept a given pass name.

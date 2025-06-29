@@ -276,6 +276,13 @@ MODULE_PASS_WITH_PARAMS(
       return buildLTODefaultPipeline(L, nullptr);
     },
     parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "fatlto-pre-link", "", [&](FatLTOOptions Opts) {
+      setupOptionsForPipelineAlias(PTO, Opts.OptLevel);
+      return buildFatLTODefaultPipeline(Opts.OptLevel, Opts.ThinLTO,
+                                        Opts.EmitSummary);
+    },
+    parseFatLTOOptions, "O0;O1;O2;O3;Os;Oz;thinlto;emit-summary")
 
 #undef MODULE_PASS_WITH_PARAMS
 
