@@ -5222,12 +5222,13 @@ QualType ASTContext::getDependentBitIntType(bool IsUnsigned,
 
 QualType
 ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
+  using Kind = PredefinedSugarType::Kind;
 
-  auto Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
+  assert(KD != Kind::Max);
+
+  auto *Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
   if (Target != nullptr)
     return QualType(Target, 0);
-
-  using Kind = PredefinedSugarType::Kind;
 
   auto getCanonicalType = [](const ASTContext &Ctx, Kind KDI) -> QualType {
     switch (KDI) {
