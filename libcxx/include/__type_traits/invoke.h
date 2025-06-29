@@ -157,9 +157,7 @@ template <class _Ret, class _Fn, class... _Args>
 inline constexpr bool is_nothrow_invocable_r_v = __is_nothrow_invocable_r_v<_Ret, _Fn, _Args...>;
 
 template <class _Fn, class... _Args>
-struct invoke_result {
-  using type = __invoke_result_t<_Fn, _Args...>;
-};
+struct invoke_result : __invoke_result<_Fn, _Args...> {};
 
 template <class _Fn, class... _Args>
 using invoke_result_t = __invoke_result_t<_Fn, _Args...>;
