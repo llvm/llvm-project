@@ -14,12 +14,12 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-LABEL: m:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    aghi %r15, -168
-; CHECK-NEXT:    lhrl %r1, f+4
-; CHECK-NEXT:    sll %r1, 8
-; CHECK-NEXT:    larl %r2, f
-; CHECK-NEXT:    ic %r1, 6(%r2)
-; CHECK-NEXT:    larl %r2, e
-; CHECK-NEXT:    lb %r0, 3(%r2)
+; CHECK-NEXT:    lhrl %r2, f+4
+; CHECK-NEXT:    larl %r1, f
+; CHECK-NEXT:    llc %r1, 6(%r1)
+; CHECK-NEXT:    larl %r3, e
+; CHECK-NEXT:    lb %r0, 3(%r3)
+; CHECK-NEXT:    rosbg %r1, %r2, 32, 55, 8
 ; CHECK-NEXT:    vlvgf %v1, %r1, 0
 ; CHECK-NEXT:    vlvgf %v1, %r1, 1
 ; CHECK-NEXT:    larl %r2, .LCPI0_0
@@ -29,6 +29,7 @@ define dso_local void @m() local_unnamed_addr #1 {
 ; CHECK-NEXT:    vlvgf %v0, %r1, 1
 ; CHECK-NEXT:    vperm %v4, %v1, %v0, %v2
 ; CHECK-NEXT:    vlvgf %v0, %r1, 3
+; CHECK-NEXT:    # kill: def $r1l killed $r1l killed $r1d
 ; CHECK-NEXT:    nilh %r1, 255
 ; CHECK-NEXT:    chi %r1, 128
 ; CHECK-NEXT:    ipm %r1
