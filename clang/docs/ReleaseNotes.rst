@@ -648,6 +648,8 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- An error is now emitted when ``main`` is attached to a named module. (#GH146247)
+
   
 Improvements to Clang's time-trace
 ----------------------------------

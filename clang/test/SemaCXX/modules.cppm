@@ -68,6 +68,8 @@ int n;
 //--- test3.cpp
 export module bar;
 
+int main() {} // expected-error {{'main' cannot be attached to a named module}}
+
 static int m;
 
 int n;
