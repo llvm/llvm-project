@@ -1,0 +1,56 @@
+//===- Transforms/Instrumentation/InstrumentorConfig.def ------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
+
+// No include guards
+
+/// Base configuration
+///{
+SECTION_START(Base, )
+
+/// The base name which defines the runtime call names, i.a.,
+/// <BaseName><instruction/location>(...)
+CONFIG(Base, std::string, RuntimeName, "__instrumentor_")
+
+/// Print the signatures of all used runtime functions.
+CONFIG(Base, bool, PrintRuntimeSignatures, true)
+
+SECTION_END(Base)
+///}
+
+/// AllocaInst
+///{
+SECTION_START(Alloca, AllocaInst)
+
+/// Should allocas be instrumented.
+CONFIG(Alloca, bool, Instrument, true)
+
+/// Selection of information passed to the runtime.
+///{
+/// The actual allocated pointer.
+CONFIG(Alloca, bool, Value, /*        PtrTy */ true)
+/// The size of the entire allocation.
+CONFIG(Alloca, bool, AllocationSize, /* I64 */ true)
+/// The minimal alignment requested statically.
+CONFIG(Alloca, bool, Alignment, /*      I64 */ true)
+///}
+
+/// Should the value be replaced by the runtime call result.
+CONFIG(Alloca, bool, ReplaceValue, true)
+
+/// Optional callback, see CallbackTy.
+CONFIG_INTERNAL(Alloca, CallbackTy, CB, nullptr)
+
+SECTION_END(Alloca)
+///}
+
+#undef SECTION_START
+#undef CONFIG
+#undef CONFIG_INTERNAL
+#undef SECTION_END
