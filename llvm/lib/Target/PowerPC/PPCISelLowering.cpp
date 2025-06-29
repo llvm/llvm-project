@@ -5766,7 +5766,7 @@ buildCallOperands(SmallVectorImpl<SDValue> &Ops,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (const auto [Reg, N] : RegsToPass)
+  for (const auto &[Reg, N] : RegsToPass)
     Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // We cannot add R2/X2 as an operand here for PATCHPOINT, because there is
@@ -6190,7 +6190,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
   SDValue InGlue;
-  for (const auto [Reg, N] : RegsToPass) {
+  for (const auto &[Reg, N] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
@@ -6803,7 +6803,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
   SDValue InGlue;
-  for (const auto [Reg, N] : RegsToPass) {
+  for (const auto &[Reg, N] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
