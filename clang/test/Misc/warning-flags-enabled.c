@@ -4,7 +4,7 @@
 // We just check a few to make sure it's doing something sensible.
 //
 // CHECK: ext_unterminated_char_or_string
-// CHECK: warn_condition_is_assignment
+// CHECK: warn_assignment_bool_context
 // CHECK: warn_null_arg
 
 
