@@ -30,16 +30,16 @@ LLVM_LIBC_FUNCTION(size_t, wcrtomb,
   }
 
   auto result = internal::wcrtomb(
-      s, wc,
-      ps == nullptr ? &internal_mbstate
-                    : reinterpret_cast<internal::mbstate *>(ps));
+      wc, ps == nullptr ? &internal_mbstate
+                        : reinterpret_cast<internal::mbstate *>(ps));
 
   if (!result.has_value()) {
     libc_errno = result.error();
     return -1;
   }
 
-  return result.value();
+  __builtin_memcpy(s, result.value().mbs, result.value().count);
+  return result.value().count;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
