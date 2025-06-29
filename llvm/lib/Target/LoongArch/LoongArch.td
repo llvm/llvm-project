@@ -161,6 +161,7 @@ def TunePreferWInst
 include "LoongArchRegisterInfo.td"
 include "LoongArchCallingConv.td"
 include "LoongArchInstrInfo.td"
+include "GISel/LoongArchRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // LoongArch processors supported.
