@@ -420,6 +420,7 @@ define i32 @reduce_blockstrided4x4(ptr nocapture noundef readonly %p1, i32 nound
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[P2:%.*]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[ADD_PTR64:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[IDX_EXT63]]
+; TODO: Dead code must be removed below.
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 4
 ; CHECK-NEXT:    [[ARRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR64]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[IDX_EXT]]
@@ -1015,6 +1016,7 @@ define void @store_blockstrided4x4(ptr nocapture noundef readonly %p1, i32 nound
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i8, ptr [[P2:%.*]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[ADD_PTR64:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[IDX_EXT63]]
+; TODO: Dead code must be removed below.
 ; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 4
 ; CHECK-NEXT:    [[ARRAYIDX5_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR64]], i64 4
 ; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[IDX_EXT]]
