@@ -14424,7 +14424,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       return;
 
     if (getLangOpts().CPlusPlus)
-      ActOnCXXEnterDeclInitializer(nullptr, Var);
+      ActOnCXXEnterDeclInitializer(/*Scope=*/nullptr, Var);
 
     // C++03 [dcl.init]p9:
     //   If no initializer is specified for an object, and the
@@ -14463,7 +14463,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     CheckCompleteVariableDeclaration(Var);
 
     if (getLangOpts().CPlusPlus)
-      ActOnCXXExitDeclInitializer(nullptr, Var);
+      ActOnCXXExitDeclInitializer(/*Scope=*/nullptr, Var);
   }
 }
 
