@@ -166,6 +166,10 @@ jobs:
     container: ghcr.io/llvm/libcxx-linux-builder:2b57ebb50b6d418e70382e655feaa619b558e254
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Reduce ASLR for Sanitizers
+        if: ${{ matrix.config == 'generic-tsan' || matrix.config  == 'generic-msan' }}
+        run: sudo sysctl vm.mmap_rnd_bits=28; sudo sysctl vm.mmap_rnd_bits;
       - name: ${{ matrix.config }}
         run: libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
