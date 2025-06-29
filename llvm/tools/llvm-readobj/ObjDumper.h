@@ -132,6 +132,7 @@ public:
   // If PrettyPGOAnalysis is true, prints BFI as relative frequency and BPI as
   // percentage. Otherwise raw values are displayed.
   virtual void printBBAddrMaps(bool PrettyPGOAnalysis) {}
+  virtual void printFuncAddrMaps() {}
   virtual void printAddrsig() {}
   virtual void printNotes() {}
   virtual void printELFLinkerOptions() {}
