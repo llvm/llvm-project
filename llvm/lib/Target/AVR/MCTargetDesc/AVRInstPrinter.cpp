@@ -100,7 +100,7 @@ const char *AVRInstPrinter::getPrettyRegisterName(MCRegister Reg,
 
 void AVRInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
-  const MCOperandInfo &MOI = this->MII.get(MI->getOpcode()).operands()[OpNo];
+  const MCOperandInfo MOI = this->MII.get(MI->getOpcode()).operands()[OpNo];
   if (MOI.RegClass == AVR::ZREGRegClassID) {
     // Special case for the Z register, which sometimes doesn't have an operand
     // in the MCInst.
