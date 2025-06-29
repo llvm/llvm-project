@@ -25,12 +25,17 @@ enum CXStringFlag {
   /// CXString contains a 'const char *' that it doesn't own.
   CXS_Unmanaged,
 
-  /// CXString contains a 'const char *' that it allocated with malloc().
-  CXS_Malloc,
+  /// CXString contains a 'CStringImpl' that it allocated with malloc().
+  CXS_MallocWithSize,
 
   /// CXString contains a CXStringBuf that needs to be returned to the
   /// CXStringPool.
   CXS_StringBuf
+};
+
+struct CStringImpl {
+  size_t length;
+  char buffer[sizeof(length)];
 };
 
 namespace clang {
@@ -71,10 +76,7 @@ CXString createDup(const char *String) {
   if (String[0] == '\0')
     return createEmpty();
 
-  CXString Str;
-  Str.data = strdup(String);
-  Str.private_flags = CXS_Malloc;
-  return Str;
+  return createDup(StringRef(String));
 }
 
 CXString createRef(StringRef String) {
@@ -91,12 +93,18 @@ CXString createRef(StringRef String) {
 }
 
 CXString createDup(StringRef String) {
+  auto toAllocate =
+      sizeof(size_t) + std::max(sizeof(size_t), String.size() + 1);
+  assert(toAllocate >= sizeof(CStringImpl));
+  auto ptr = static_cast<CStringImpl *>(llvm::safe_malloc(toAllocate));
+
+  ptr->length = String.size();
+  memcpy(ptr->buffer, String.data(), String.size());
+  ptr->buffer[String.size()] = 0;
+
   CXString Result;
-  char *Spelling = static_cast<char *>(llvm::safe_malloc(String.size() + 1));
-  memmove(Spelling, String.data(), String.size());
-  Spelling[String.size()] = 0;
-  Result.data = Spelling;
-  Result.private_flags = (unsigned) CXS_Malloc;
+  Result.data = ptr;
+  Result.private_flags = (unsigned)CXS_MallocWithSize;
   return Result;
 }
 
@@ -164,19 +172,38 @@ const char *clang_getCString(CXString string) {
   return static_cast<const char *>(string.data);
 }
 
+CStringInfo clang_getCStringInfo(CXString string) {
+  switch ((CXStringFlag)string.private_flags) {
+  case CXS_Unmanaged: {
+    auto ptr = static_cast<const char *>(string.data);
+    return {ptr, strlen(ptr)};
+  }
+  case CXS_MallocWithSize: {
+    auto ptr = static_cast<const CStringImpl *>(string.data);
+    return {ptr->buffer, ptr->length};
+  }
+  case CXS_StringBuf: {
+    auto ptr = static_cast<const cxstring::CXStringBuf *>(string.data);
+    return {ptr->Data.data(), ptr->Data.size()};
+  }
+  }
+  llvm_unreachable("Invalid CXString::private_flags");
+}
+
 void clang_disposeString(CXString string) {
   switch ((CXStringFlag) string.private_flags) {
     case CXS_Unmanaged:
-      break;
-    case CXS_Malloc:
+      return;
+    case CXS_MallocWithSize:
       if (string.data)
         free(const_cast<void *>(string.data));
-      break;
+      return;
     case CXS_StringBuf:
       static_cast<cxstring::CXStringBuf *>(
           const_cast<void *>(string.data))->dispose();
-      break;
+      return;
   }
+  llvm_unreachable("Invalid CXString::private_flags");
 }
 
 void clang_disposeStringSet(CXStringSet *set) {
