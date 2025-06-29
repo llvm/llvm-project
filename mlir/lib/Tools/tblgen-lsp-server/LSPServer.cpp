@@ -12,8 +12,6 @@
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "mlir/Tools/lsp-server-support/Transport.h"
-#include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include <optional>
 
 using namespace mlir;
