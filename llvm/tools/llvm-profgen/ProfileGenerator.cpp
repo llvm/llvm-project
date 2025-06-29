@@ -568,16 +568,11 @@ void ProfileGenerator::generateLineNumBasedProfile() {
           getLeafProfileAndAddTotalSamples(FrameVec, 0);
       LineLocation Loc(FrameVec.back().Location.LineOffset,
                        getBaseDiscriminator(FrameVec.back().Location.Discriminator));
-      SampleRecord *BodySampleRec = FunctionProfile.getBodySampleRecordAt(Loc);
-      FunctionSamplesMap *CallsiteSamples =
-          FunctionProfile.findFunctionSamplesMapAt(Loc);
-      // Assume inlined callsites and call targets have different
+
+            // Assume inlined callsites and call targets have different
       // discriminators.
-      if (BodySampleRec) {
-        BodySampleRec->addVTableAccessCount(DataSymbolName, Count);
-      } else {
-        FunctionProfile.getTypeSamplesAt(Loc)[DataSymbolName] += Count;
-      }
+
+      FunctionProfile.getTypeSamplesAt(Loc)[DataSymbolName] += Count;
     }
   }
 
