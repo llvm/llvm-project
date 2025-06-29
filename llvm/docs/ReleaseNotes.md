@@ -256,6 +256,10 @@ Changes to the C API
 * Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
   flag on `icmp` instructions.
 
+* Added `LLVMIntrinsicCopyName` and changed `LLVMIntrinsicCopyOverloadedName`
+  and `LLVMIntrinsicCopyOverloadedName2` to return `char *` instead of
+  `const char *`.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
