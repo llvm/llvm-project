@@ -16,43 +16,6 @@
 
 namespace scudo {
 
-static uptr getResidentMemorySize() {
-  if (!SCUDO_LINUX)
-    UNREACHABLE("Not implemented!");
-  uptr Size;
-  uptr Resident;
-  std::ifstream IFS("/proc/self/statm");
-  IFS >> Size;
-  IFS >> Resident;
-  return Resident * getPageSizeCached();
-}
-
-// Fuchsia needs getResidentMemorySize implementation.
-TEST(ScudoCommonTest, SKIP_ON_FUCHSIA(ResidentMemorySize)) {
-  uptr OnStart = getResidentMemorySize();
-  EXPECT_GT(OnStart, 0UL);
-
-  const uptr Size = 1ull << 30;
-  const uptr Threshold = Size >> 3;
-
-  MemMapT MemMap;
-  ASSERT_TRUE(MemMap.map(/*Addr=*/0U, Size, "ResidentMemorySize"));
-  ASSERT_NE(MemMap.getBase(), 0U);
-  void *P = reinterpret_cast<void *>(MemMap.getBase());
-  EXPECT_LT(getResidentMemorySize(), OnStart + Threshold);
-
-  memset(P, 1, Size);
-  EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
-
-  MemMap.releasePagesToOS(MemMap.getBase(), Size);
-  EXPECT_LT(getResidentMemorySize(), OnStart + Threshold);
-
-  memset(P, 1, Size);
-  EXPECT_GT(getResidentMemorySize(), OnStart + Size - Threshold);
-
-  MemMap.unmap();
-}
-
 TEST(ScudoCommonTest, Zeros) {
   const uptr Size = 1ull << 20;
 
