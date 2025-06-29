@@ -35,7 +35,7 @@ constexpr int how_many(Swim& swam) {
   return (p + 1 - 1)->phelps();
 }
 
-void splash(Swim& swam) {
+void splash(Swim& swam) {                 // nointerpreter-note {{declared here}}
   static_assert(swam.phelps() == 28);     // ok
   static_assert((&swam)->phelps() == 28); // ok
   Swim* pswam = &swam;                    // expected-note {{declared here}}
@@ -43,8 +43,10 @@ void splash(Swim& swam) {
                                           // expected-note {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
   static_assert(how_many(swam) == 28);    // ok
   static_assert(Swim().lochte() == 12);   // ok
-  static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
-  static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
+  static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{virtual function called on object 'swam' whose dynamic type is not constant}}
+  static_assert(swam.coughlin == 12);     // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // nointerpreter-note {{read of variable 'swam' whose value is not known}}
 }
 
 extern Swim dc;
@@ -253,12 +255,56 @@ namespace uninit_reference_used {
 
 namespace param_reference {
   constexpr int arbitrary = -12345;
-  constexpr void f(const int &x = arbitrary) { // expected-note {{declared here}}
+  constexpr void f(const int &x = arbitrary) { // nointerpreter-note 3 {{declared here}} interpreter-note {{declared here}}
     constexpr const int &v1 = x; // expected-error {{must be initialized by a constant expression}} \
     // expected-note {{reference to 'x' is not a constant expression}}
     constexpr const int &v2 = (x, arbitrary); // expected-warning {{left operand of comma operator has no effect}}
-    constexpr int v3 = x; // expected-error {{must be initialized by a constant expression}}
-    static_assert(x==arbitrary); // expected-error {{static assertion expression is not an integral constant expression}}
+    constexpr int v3 = x; // expected-error {{must be initialized by a constant expression}} \
+                          // nointerpreter-note {{read of variable 'x' whose value is not known}}
+    static_assert(x==arbitrary); // expected-error {{static assertion expression is not an integral constant expression}} \
+                                 // nointerpreter-note {{read of variable 'x' whose value is not known}}
     static_assert(&x - &x == 0);
+  }
+}
+
+namespace dropped_note {
+  extern int &x; // expected-note {{declared here}}
+  constexpr int f() { return x; } // nointerpreter-note {{read of non-constexpr variable 'x'}} \
+                                  // interpreter-note {{initializer of 'x' is unknown}}
+  constexpr int y = f(); // expected-error {{constexpr variable 'y' must be initialized by a constant expression}} expected-note {{in call to 'f()'}}
+}
+
+namespace dynamic {
+  struct A {virtual ~A();};
+  struct B : A {};
+  void f(A& a) {
+    constexpr B* b = dynamic_cast<B*>(&a); // expected-error {{must be initialized by a constant expression}} \
+                                           // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+    constexpr void* b2 = dynamic_cast<void*>(&a); // expected-error {{must be initialized by a constant expression}} \
+                                                  // nointerpreter-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}}
+  }
+}
+
+namespace pointer_comparisons {
+  extern int &extern_n; // interpreter-note 2 {{declared here}}
+  extern int &extern_n2;
+  constexpr int f1(bool b, int& n) {
+    if (b) {
+      return &extern_n == &n;
+    }
+    return f1(true, n);
+  }
+  // FIXME: interpreter incorrectly rejects; both sides are the same constexpr-unknown value.
+  static_assert(f1(false, extern_n)); // interpreter-error {{static assertion expression is not an integral constant expression}} \
+                                      // interpreter-note {{initializer of 'extern_n' is unknown}}
+  // FIXME: We should diagnose this: we don't know if the references bind
+  // to the same object.
+  static_assert(&extern_n != &extern_n2); // interpreter-error {{static assertion expression is not an integral constant expression}} \
+                                          // interpreter-note {{initializer of 'extern_n' is unknown}}
+  void f2(const int &n) {
+    // FIXME: We should not diagnose this: the two objects provably have
+    // different addresses because the lifetime of "n" extends across
+    // the initialization.
+    constexpr int x = &x == &n; // nointerpreter-error {{must be initialized by a constant expression}}
   }
 }
