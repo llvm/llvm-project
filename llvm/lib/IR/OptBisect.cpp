@@ -57,4 +57,46 @@ bool OptBisect::shouldRunPass(const StringRef PassName,
 
 const int OptBisect::Disabled;
 
-OptPassGate &llvm::getGlobalPassGate() { return getOptBisector(); }
+static OptDisable &getOptDisabler() {
+  static OptDisable OptDisabler;
+  return OptDisabler;
+}
+
+static cl::list<std::string> OptDisablePasses(
+    "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
+    cl::cb<void, std::string>([](std::string Pass) {
+      getOptDisabler().setDisabled(Pass);
+    }),
+    cl::desc("Optimization pass(es) to disable (comma-separated list)"));
+
+static cl::opt<bool>
+    OptDisableVerbose("opt-disable-enable-verbosity",
+                      cl::desc("Show verbose output when opt-disable is set"),
+                      cl::Hidden, cl::init(false), cl::Optional);
+
+static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
+                                    bool Running) {
+  StringRef Status = Running ? "" : "NOT ";
+  errs() << "DISABLE: " << Status << "running pass " << Name << " on "
+         << TargetDesc << "\n";
+}
+
+void OptDisable::setDisabled(StringRef Pass) {
+  DisabledPasses.insert(Pass.lower());
+}
+
+bool OptDisable::shouldRunPass(const StringRef PassName,
+                               StringRef IRDescription) {
+  assert(isEnabled());
+
+  bool ShouldRun = !DisabledPasses.contains(PassName.lower());
+  if (OptDisableVerbose)
+    printDisablePassMessage(PassName, IRDescription, ShouldRun);
+  return ShouldRun;
+}
+
+OptPassGate &llvm::getGlobalPassGate() {
+  if (getOptDisabler().isEnabled())
+    return getOptDisabler();
+  return getOptBisector();
+}
