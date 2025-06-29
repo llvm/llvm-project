@@ -1027,6 +1027,8 @@ AST Matchers
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
 
+Add `matchesString` for `StringLiteral` which matches literals on given `RegExp`.
+
 clang-format
 ------------
 
