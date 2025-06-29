@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <set>
 #include <utility>
+#include <variant>
 
 namespace clang {
 namespace clangd {
@@ -87,7 +88,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, RefKind);
 /// WARNING: Location does not own the underlying data - Copies are shallow.
 struct Ref {
   /// The source location where the symbol is named.
-  SymbolLocation Location;
+  SymbolNameLocation Location;
   RefKind Kind = RefKind::Unknown;
   /// The ID of the symbol whose definition contains this reference.
   /// For example, for a reference inside a function body, this would
@@ -185,12 +186,8 @@ template <> struct DenseMapInfo<clang::clangd::RefSlab::Builder::Entry> {
         Val.Reference.Location.Start.rep(), Val.Reference.Location.End.rep());
   }
   static bool isEqual(const Entry &LHS, const Entry &RHS) {
-    return std::tie(LHS.Symbol, LHS.Reference.Location.FileURI,
-                    LHS.Reference.Kind) ==
-               std::tie(RHS.Symbol, RHS.Reference.Location.FileURI,
-                        RHS.Reference.Kind) &&
-           LHS.Reference.Location.Start == RHS.Reference.Location.Start &&
-           LHS.Reference.Location.End == RHS.Reference.Location.End;
+    return std::tie(LHS.Symbol, LHS.Reference) ==
+           std::tie(RHS.Symbol, RHS.Reference);
   }
 };
 } // namespace llvm
