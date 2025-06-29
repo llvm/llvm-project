@@ -109,7 +109,7 @@ public:
   LIBC_INLINE constexpr const char &front() const LIBC_LIFETIMEBOUND {
     return data()[0];
   }
-  LIBC_INLINE char &front() { return data()[0]; }
+  LIBC_INLINE char &front() LIBC_LIFETIMEBOUND { return data()[0]; }
 
   LIBC_INLINE constexpr const char &back() const LIBC_LIFETIMEBOUND {
     return data()[size_ - 1];
