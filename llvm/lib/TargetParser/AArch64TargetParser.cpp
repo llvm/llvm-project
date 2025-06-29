@@ -50,7 +50,7 @@ std::optional<AArch64::ArchInfo> AArch64::ArchInfo::findBySubArch(StringRef SubA
 
 std::optional<AArch64::FMVInfo> lookupFMVByID(AArch64::ArchExtKind ExtID) {
   for (const AArch64::FMVInfo &Info : AArch64::getFMVInfo())
-    if (Info.ID && *Info.ID == ExtID)
+    if (Info.ID == ExtID)
       return Info;
   return {};
 }

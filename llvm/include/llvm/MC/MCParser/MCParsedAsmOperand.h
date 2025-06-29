@@ -16,6 +16,7 @@
 
 namespace llvm {
 
+class MCAsmInfo;
 class MCRegister;
 class raw_ostream;
 
@@ -89,7 +90,7 @@ public:
   virtual SMLoc getOffsetOfLoc() const { return SMLoc(); }
 
   /// print - Print a debug representation of the operand to the given stream.
-  virtual void print(raw_ostream &OS) const = 0;
+  virtual void print(raw_ostream &, const MCAsmInfo &) const = 0;
 
   /// dump - Print to the debug stream.
   virtual void dump() const;

@@ -84,9 +84,9 @@ const MCSymbol *MCFragment::getAtom() const {
 namespace llvm {
 
 raw_ostream &operator<<(raw_ostream &OS, const MCFixup &AF) {
-  OS << "<MCFixup" << " Offset:" << AF.getOffset()
-     << " Value:" << *AF.getValue()
-     << " Kind:" << AF.getKind() << ">";
+  OS << "<MCFixup" << " Offset:" << AF.getOffset() << " Value:";
+  AF.getValue()->print(OS, nullptr);
+  OS << " Kind:" << AF.getKind() << ">";
   return OS;
 }
 
@@ -158,7 +158,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     const auto *FF = cast<MCFillFragment>(this);
     OS << " Value:" << static_cast<unsigned>(FF->getValue())
        << " ValueSize:" << static_cast<unsigned>(FF->getValueSize())
-       << " NumValues:" << FF->getNumValues();
+       << " NumValues:";
+    FF->getNumValues().print(OS, nullptr);
     break;
   }
   case MCFragment::FT_Nops: {
@@ -178,27 +179,32 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_Org:  {
     const auto *OF = cast<MCOrgFragment>(this);
     OS << "\n       ";
-    OS << " Offset:" << OF->getOffset()
-       << " Value:" << static_cast<unsigned>(OF->getValue());
+    OS << " Offset:";
+    OF->getOffset().print(OS, nullptr);
+    OS << " Value:" << static_cast<unsigned>(OF->getValue());
     break;
   }
   case MCFragment::FT_Dwarf:  {
     const auto *OF = cast<MCDwarfLineAddrFragment>(this);
     OS << "\n       ";
-    OS << " AddrDelta:" << OF->getAddrDelta()
-       << " LineDelta:" << OF->getLineDelta();
+    OS << " AddrDelta:";
+    OF->getAddrDelta().print(OS, nullptr);
+    OS << " LineDelta:" << OF->getLineDelta();
     break;
   }
   case MCFragment::FT_DwarfFrame:  {
     const auto *CF = cast<MCDwarfCallFrameFragment>(this);
     OS << "\n       ";
-    OS << " AddrDelta:" << CF->getAddrDelta();
+    OS << " AddrDelta:";
+    CF->getAddrDelta().print(OS, nullptr);
     break;
   }
   case MCFragment::FT_LEB: {
     const auto *LF = cast<MCLEBFragment>(this);
     OS << "\n       ";
-    OS << " Value:" << LF->getValue() << " Signed:" << LF->isSigned();
+    OS << " Value:";
+    LF->getValue().print(OS, nullptr);
+    OS << " Signed:" << LF->isSigned();
     break;
   }
   case MCFragment::FT_BoundaryAlign: {
@@ -234,7 +240,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_PseudoProbe: {
     const auto *OF = cast<MCPseudoProbeAddrFragment>(this);
     OS << "\n       ";
-    OS << " AddrDelta:" << OF->getAddrDelta();
+    OS << " AddrDelta:";
+    OF->getAddrDelta().print(OS, nullptr);
     break;
   }
   }

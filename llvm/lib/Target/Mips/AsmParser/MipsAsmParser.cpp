@@ -1660,18 +1660,18 @@ public:
   /// getEndLoc - Get the location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Immediate:
       OS << "Imm<";
-      OS << *Imm.Val;
+      MAI.printExpr(OS, *Imm.Val);
       OS << ">";
       break;
     case k_Memory:
       OS << "Mem<";
-      Mem.Base->print(OS);
+      Mem.Base->print(OS, MAI);
       OS << ", ";
-      OS << *Mem.Off;
+      MAI.printExpr(OS, *Mem.Off);
       OS << ">";
       break;
     case k_RegisterIndex:
