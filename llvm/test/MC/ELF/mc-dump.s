@@ -22,9 +22,6 @@
 # CHECK-NEXT:4 Fill Value:0 ValueSize:1 NumValues:1
 # CHECK-NEXT:5 LEB Value:.Ltmp1-.Ltmp0 Signed:0
 # CHECK-NEXT:]
-# CHECK-NEXT:Symbols:[
-# CHECK-NEXT:(.text, Index:0, )
-# CHECK-NEXT:(.Ltmp0, Index:0, )
 
 0:
 .org 3
