@@ -24,7 +24,7 @@ still improving their support for coroutines. As such, we recommend using the
 latest available version of your toolchain.
 
 This document focuses on clang and lldb. The screenshots show
-[lldb-dap](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap)
+`lldb-dap <https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.lldb-dap>`_
 in combination with VS Code. The same techniques can also be used in other
 IDEs.
 
@@ -44,7 +44,7 @@ Debugging generators
 
 One of the two major use cases for coroutines in C++ are generators, i.e.,
 functions which can produce values via ``co_yield``. Values are produced
-lazily, on-demand. For that purpose, every time a new value is requested the
+lazily, on-demand. For this purpose, every time a new value is requested, the
 coroutine gets resumed. As soon as it reaches a ``co_yield`` and thereby
 returns the requested value, the coroutine is suspended again.
 
@@ -134,7 +134,7 @@ Inspecting variables in a coroutine
 -----------------------------------
 
 If you hit a breakpoint inside the ``fibonacci`` function, you should be able
-to inspect all local variables (``prev```, ``current```, ``next``) just like in
+to inspect all local variables (``prev``, ``current``, ``next``) just like in
 a regular function.
 
 .. image:: ./coro-generator-variables.png
@@ -215,7 +215,7 @@ the promise type:
 
 .. code-block:: c++
 
-  // For all promise_types we need a new `line_number variable`:
+  // For all promise_types we need a new `_coro_return_address` variable:
   class promise_type {
     ...
     void* _coro_return_address = nullptr;
@@ -240,8 +240,8 @@ type used below for asynchronous programming.
 
 Alternatively, we can modify the C++ code to store the line number in the
 promise type. We can use a ``std::source_location`` to get the line number of
-the await and store it inside the ``promise_type``. Since we can get the
-promise of a suspended coroutine, we thereby get access to the line_number.
+the await and store it inside the ``promise_type``. In the debugger, we can
+then read the line number from the promise of the suspended coroutine.
 
 .. code-block:: c++
 
@@ -351,8 +351,8 @@ Note how the ``task::promise_type`` has a member variable
 ``std::coroutine_handle<> continuation``. This is the handle of the coroutine
 that will be resumed when the current coroutine is finished executing (see
 ``final_suspend``). In a sense, this is the "return address" of the coroutine.
-It is as soon as the caller coroutine ``co_await`` on the called coroutine in
-``operator co_await``.
+It is set inside ``operator co_await`` when another coroutine calls our
+generator and awaits for the next value to be produced.
 
 The result value is returned via the ``int result`` member. It is written in
 ``return_value`` and read by ``Awaiter::await_resume``. Usually, the result
@@ -425,7 +425,7 @@ script, we can run ``coro bt`` to get the following stack trace:
 
 Note how the frames #1 and #2 are async frames.
 
-The ``coro bt`` frame already includes logic to identify the exact suspension
+The ``coro bt`` command already includes logic to identify the exact suspension
 point of each frame based on the ``_coro_suspension_point_addr`` stored inside
 the promise.
 
@@ -900,7 +900,7 @@ Note that this script requires LLDB 21.0 or newer.
               coro_hdl = frame.EvaluateExpression(expr)
               if not coro_hdl.error.Success():
                   result.AppendMessage(
-                      f'error: expression failed {expr} => {async_root.error}'
+                      f'error: expression failed {expr} => {coro_hdl.error}'
                   )
                   result.SetError(f"Expression `{expr}` failed to evaluate")
                   return
@@ -913,7 +913,7 @@ Note that this script requires LLDB 21.0 or newer.
                   continuation_paths = continuation_paths)
 
 
-  class Coroin-flightCommand(ParsedCommand):
+  class CoroInflightCommand(ParsedCommand):
       def get_short_help(self):
           return "Identify all in-flight coroutines"
 
@@ -974,7 +974,7 @@ Note that this script requires LLDB 21.0 or newer.
                       return
                   all_coros.append(entry)
 
-          # Remove all coroutines that have are currently waiting for other coroutines to finish
+          # Remove all coroutines that are currently waiting for other coroutines to finish
           coro_roots = {c.GetChildMemberWithName("coro_frame").GetValueAsAddress(): c for c in all_coros}
           for coro_hdl in all_coros:
               parent_coro = _get_first_var_path(coro_hdl.GetChildMemberWithName("promise"), continuation_paths)
@@ -993,7 +993,7 @@ Note that this script requires LLDB 21.0 or newer.
   def __lldb_init_module(debugger, internal_dict):
       debugger.HandleCommand("command container add -h 'Debugging utilities for C++20 coroutines' coro")
       debugger.HandleCommand(f"command script add -o -p -c {__name__}.CoroBacktraceCommand coro bt")
-      debugger.HandleCommand(f"command script add -o -p -c {__name__}.Coroin-flightCommand coro in-flight")
+      debugger.HandleCommand(f"command script add -o -p -c {__name__}.CoroInflightCommand coro in-flight")
       print("Coro debugging utilities installed. Use `help coro` to see available commands.")
 
   if __name__ == '__main__':
@@ -1012,7 +1012,7 @@ For GDB, the following script provides a couple of useful commands:
 
 .. code-block:: python
 
-    # debugging-helper.py
+  # debugging-helper.py
   import gdb
   from gdb.FrameDecorator import FrameDecorator
 
@@ -1140,7 +1140,7 @@ For GDB, the following script provides a couple of useful commands:
           addr = int(argv[0], 16)
           block = gdb.block_for_pc(long(cast_addr2long_pointer(addr).dereference()))
           if block is None:
-              print "block " + str(addr) + "  is none."
+              print "block " + str(addr) + " is None."
               return
 
           # Disable demangling since gdb will treat names starting with `_Z`(The marker for Itanium ABI) specially.
@@ -1160,12 +1160,12 @@ Further Reading
 
 The authors of the Folly libraries wrote a blog post series on how they debug coroutines:
 
-* [Async stack traces in folly: Introduction](https://developers.facebook.com/blog/post/2021/09/16/async-stack-traces-folly-Introduction/)
-* [Async stack traces in folly: Synchronous and asynchronous stack traces](https://developers.facebook.com/blog/post/2021/09/23/async-stack-traces-folly-synchronous-asynchronous-stack-traces/)
-* [Async stack traces in folly: Forming an async stack from individual frames](https://developers.facebook.com/blog/post/2021/09/30/async-stack-traces-folly-forming-async-stack-individual-frames/)
-* [Async Stack Traces for C++ Coroutines in Folly: Walking the async stack](https://developers.facebook.com/blog/post/2021/10/14/async-stack-traces-c-plus-plus-coroutines-folly-walking-async-stack/)
-* [Async stack traces in folly: Improving debugging in the developer lifecycle](https://developers.facebook.com/blog/post/2021/10/21/async-stack-traces-folly-improving-debugging-developer-lifecycle/)
+* `Async stack traces in folly: Introduction <https://developers.facebook.com/blog/post/2021/09/16/async-stack-traces-folly-Introduction/>`_
+* `Async stack traces in folly: Synchronous and asynchronous stack traces <https://developers.facebook.com/blog/post/2021/09/23/async-stack-traces-folly-synchronous-asynchronous-stack-traces/>`_
+* `Async stack traces in folly: Forming an async stack from individual frames <https://developers.facebook.com/blog/post/2021/09/30/async-stack-traces-folly-forming-async-stack-individual-frames/>`_
+* `Async Stack Traces for C++ Coroutines in Folly: Walking the async stack <https://developers.facebook.com/blog/post/2021/10/14/async-stack-traces-c-plus-plus-coroutines-folly-walking-async-stack/>`_
+* `Async stack traces in folly: Improving debugging in the developer lifecycle <https://developers.facebook.com/blog/post/2021/10/21/async-stack-traces-folly-improving-debugging-developer-lifecycle/>`_
 
 Besides some topics also covered here (stack traces from the debugger), Folly's blog post series also covers
-more additional topics, such as capturing async strack traces in performance profiles via eBPF filters
+more additional topics, such as capturing async stack traces in performance profiles via eBPF filters
 and printing async stack traces on crashes.
