@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The LifetimeMovePass identifies the precise lifetime range of allocas
+// The LifetimeMovePass identifies the precise lifetime range of allocas and
+// repositions lifetime markers to stricter positions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -69,7 +70,13 @@ LifetimeMover::LifetimeMover(Function &F, const DominatorTree &DT,
   for (Instruction &I : instructions(F)) {
     if (auto *AI = dyn_cast<AllocaInst>(&I))
       Allocas.push_back(AI);
+    else if (isa<LifetimeIntrinsic>(I))
+      continue;
     else if (isa<AnyCoroSuspendInst>(I))
+      CriticalPoints.push_back(&I);
+    else if (isa<CallInst>(I))
+      CriticalPoints.push_back(&I);
+    else if (isa<InvokeInst>(I))
       CriticalPoints.push_back(&I);
   }
 }
@@ -227,7 +234,11 @@ bool LifetimeMover::sinkLifetimeStartMarkers(AllocaInst *AI) {
 
     auto *NewStart = LifetimeStarts[0]->clone();
     NewStart->replaceUsesOfWith(NewStart->getOperand(1), AI);
-    NewStart->insertAfter(DomPoint->getIterator());
+    if (DomPoint->isTerminator())
+      NewStart->insertBefore(
+          cast<InvokeInst>(DomPoint)->getNormalDest()->getFirstNonPHIIt());
+    else
+      NewStart->insertAfter(DomPoint->getIterator());
 
     // All the outsided lifetime.start markers are no longer necessary.
     for (auto *I : LifetimeStarts) {

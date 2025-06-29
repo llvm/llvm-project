@@ -45,8 +45,8 @@ exit:
 ; CHECK:         call void @llvm.lifetime.start.p0(i64 4, ptr %testval)
 ; CHECK-NEXT:    %val = load i32, ptr %ref.tmp7
 ; CHECK-NEXT:    %test = load i32, ptr %testval
-; CHECK-NEXT:    call void @print(i32 %test)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr %testval)
+; CHECK-NEXT:    call void @print(i32 %test)
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void
 
