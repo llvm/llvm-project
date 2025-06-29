@@ -2,8 +2,8 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api --pretty-sgf --product-name=Macros -target arm64-apple-macosx \
-// RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
+// RUN: %clang -extract-api --pretty-sgf --product-name=Pointers -target arm64-apple-macosx \
+// RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
 // Generator version is not consistent across test runs, normalize it.
 // RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
@@ -14,13 +14,10 @@
 // CHECK-NOT: warning:
 
 //--- input.h
-#define HELLO 1
-#define FUNC_GEN(NAME, ...) void NAME(__VA_ARGS__);
-FUNC_GEN(foo)
-FUNC_GEN(bar, const int *, unsigned);
-#undef FUNC_GEN
-// Undefining a not previously defined macro should not result in a crash.
-#undef FOO
+void foo(int *a);
+void bar(int **a);
+void *baz();
+void **qux();
 
 //--- reference.output.json.in
 {
@@ -33,7 +30,7 @@ FUNC_GEN(bar, const int *, unsigned);
     "generator": "?"
   },
   "module": {
-    "name": "Macros",
+    "name": "Pointers",
     "platform": {
       "architecture": "arm64",
       "operatingSystem": {
@@ -67,10 +64,47 @@ FUNC_GEN(bar, const int *, unsigned);
         },
         {
           "kind": "text",
-          "spelling": "();"
+          "spelling": "("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:I",
+          "spelling": "int"
+        },
+        {
+          "kind": "text",
+          "spelling": " *"
+        },
+        {
+          "kind": "internalParam",
+          "spelling": "a"
+        },
+        {
+          "kind": "text",
+          "spelling": ");"
         }
       ],
       "functionSignature": {
+        "parameters": [
+          {
+            "declarationFragments": [
+              {
+                "kind": "typeIdentifier",
+                "preciseIdentifier": "c:I",
+                "spelling": "int"
+              },
+              {
+                "kind": "text",
+                "spelling": " *"
+              },
+              {
+                "kind": "internalParam",
+                "spelling": "a"
+              }
+            ],
+            "name": "a"
+          }
+        ],
         "returns": [
           {
             "kind": "typeIdentifier",
@@ -80,17 +114,17 @@ FUNC_GEN(bar, const int *, unsigned);
         ]
       },
       "identifier": {
-        "interfaceLanguage": "objective-c",
+        "interfaceLanguage": "c",
         "precise": "c:@F@foo"
       },
       "kind": {
         "displayName": "Function",
-        "identifier": "objective-c.func"
+        "identifier": "c.func"
       },
       "location": {
         "position": {
-          "character": 0,
-          "line": 2
+          "character": 5,
+          "line": 0
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -134,42 +168,17 @@ FUNC_GEN(bar, const int *, unsigned);
           "spelling": "("
         },
         {
-          "kind": "keyword",
-          "spelling": "const"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:I",
           "spelling": "int"
         },
         {
           "kind": "text",
-          "spelling": " *"
+          "spelling": " **"
         },
         {
           "kind": "internalParam",
-          "spelling": ""
-        },
-        {
-          "kind": "text",
-          "spelling": ", "
-        },
-        {
-          "kind": "typeIdentifier",
-          "preciseIdentifier": "c:i",
-          "spelling": "unsigned int"
-        },
-        {
-          "kind": "text",
-          "spelling": " "
-        },
-        {
-          "kind": "internalParam",
-          "spelling": ""
+          "spelling": "a"
         },
         {
           "kind": "text",
@@ -181,46 +190,20 @@ FUNC_GEN(bar, const int *, unsigned);
           {
             "declarationFragments": [
               {
-                "kind": "keyword",
-                "spelling": "const"
-              },
-              {
-                "kind": "text",
-                "spelling": " "
-              },
-              {
                 "kind": "typeIdentifier",
                 "preciseIdentifier": "c:I",
                 "spelling": "int"
               },
               {
                 "kind": "text",
-                "spelling": " *"
+                "spelling": " **"
               },
               {
                 "kind": "internalParam",
-                "spelling": ""
+                "spelling": "a"
               }
             ],
-            "name": ""
-          },
-          {
-            "declarationFragments": [
-              {
-                "kind": "typeIdentifier",
-                "preciseIdentifier": "c:i",
-                "spelling": "unsigned int"
-              },
-              {
-                "kind": "text",
-                "spelling": " "
-              },
-              {
-                "kind": "internalParam",
-                "spelling": ""
-              }
-            ],
-            "name": ""
+            "name": "a"
           }
         ],
         "returns": [
@@ -232,17 +215,17 @@ FUNC_GEN(bar, const int *, unsigned);
         ]
       },
       "identifier": {
-        "interfaceLanguage": "objective-c",
+        "interfaceLanguage": "c",
         "precise": "c:@F@bar"
       },
       "kind": {
         "displayName": "Function",
-        "identifier": "objective-c.func"
+        "identifier": "c.func"
       },
       "location": {
         "position": {
-          "character": 0,
-          "line": 3
+          "character": 5,
+          "line": 1
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -269,30 +252,48 @@ FUNC_GEN(bar, const int *, unsigned);
       "accessLevel": "public",
       "declarationFragments": [
         {
-          "kind": "keyword",
-          "spelling": "#define"
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:v",
+          "spelling": "void"
         },
         {
           "kind": "text",
-          "spelling": " "
+          "spelling": " *"
         },
         {
           "kind": "identifier",
-          "spelling": "HELLO"
+          "spelling": "baz"
+        },
+        {
+          "kind": "text",
+          "spelling": "();"
         }
       ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          },
+          {
+            "kind": "text",
+            "spelling": " *"
+          }
+        ]
+      },
       "identifier": {
-        "interfaceLanguage": "objective-c",
-        "precise": "c:input.h@8@macro@HELLO"
+        "interfaceLanguage": "c",
+        "precise": "c:@F@baz"
       },
       "kind": {
-        "displayName": "Macro",
-        "identifier": "objective-c.macro"
+        "displayName": "Function",
+        "identifier": "c.func"
       },
       "location": {
         "position": {
-          "character": 8,
-          "line": 0
+          "character": 6,
+          "line": 2
         },
         "uri": "file://INPUT_DIR/input.h"
       },
@@ -300,19 +301,87 @@ FUNC_GEN(bar, const int *, unsigned);
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "HELLO"
+            "spelling": "baz"
           }
         ],
         "subHeading": [
           {
             "kind": "identifier",
-            "spelling": "HELLO"
+            "spelling": "baz"
           }
         ],
-        "title": "HELLO"
+        "title": "baz"
       },
       "pathComponents": [
-        "HELLO"
+        "baz"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:v",
+          "spelling": "void"
+        },
+        {
+          "kind": "text",
+          "spelling": " **"
+        },
+        {
+          "kind": "identifier",
+          "spelling": "qux"
+        },
+        {
+          "kind": "text",
+          "spelling": "();"
+        }
+      ],
+      "functionSignature": {
+        "returns": [
+          {
+            "kind": "typeIdentifier",
+            "preciseIdentifier": "c:v",
+            "spelling": "void"
+          },
+          {
+            "kind": "text",
+            "spelling": " **"
+          }
+        ]
+      },
+      "identifier": {
+        "interfaceLanguage": "c",
+        "precise": "c:@F@qux"
+      },
+      "kind": {
+        "displayName": "Function",
+        "identifier": "c.func"
+      },
+      "location": {
+        "position": {
+          "character": 7,
+          "line": 3
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "qux"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "qux"
+          }
+        ],
+        "title": "qux"
+      },
+      "pathComponents": [
+        "qux"
       ]
     }
   ]
