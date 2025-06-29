@@ -66,9 +66,10 @@ C++ Specific Potentially Breaking Changes
 - A workaround for libstdc++4.7 has been removed. Note that 4.8.3 remains the oldest
   supported libstdc++ version.
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
-- Checking for int->enum conversions in constant expressions is more strict;
-  in particular, ``const E x = (E)-1;`` is not treated as a constant if it's
-  out of range. This impacts old versions of Boost.  (#GH143034)
+- Checking for integer to enum conversions in constant expressions is more
+  strict; in particular, ``const E x = (E)-1;`` is not treated as a constant
+  if it's out of range. The Boost numeric_conversion library is impacted by
+  this; it was fixed in Boost 1.81. (#GH143034)
 
 ABI Changes in This Version
 ---------------------------
@@ -222,6 +223,7 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
+    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
@@ -648,6 +650,13 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- Clang now avoids issuing `-Wreturn-type` warnings in some cases where
+  the final statement of a non-void function is a `throw` expression, or
+  a call to a function that is trivially known to always throw (i.e., its
+  body consists solely of a `throw` statement). This avoids certain
+  false positives in exception-heavy code, though only simple patterns
+  are currently recognized.
+
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -884,6 +893,7 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -1067,10 +1077,22 @@ Static Analyzer
 New features
 ^^^^^^^^^^^^
 
-A new flag - `-static-libclosure` was introduced to support statically linking
-the runtime for the Blocks extension on Windows. This flag currently only
-changes the code generation, and even then, only on Windows. This does not
-impact the linker behaviour like the other `-static-*` flags.
+- A new flag - `-static-libclosure` was introduced to support statically linking
+  the runtime for the Blocks extension on Windows. This flag currently only
+  changes the code generation, and even then, only on Windows. This does not
+  impact the linker behaviour like the other `-static-*` flags.
+- OpenACC support, enabled via `-fopenacc` has reached a level of completeness
+  to finally be at least notionally usable. Currently, the OpenACC 3.4
+  specification has been completely implemented for Sema and AST creation, so
+  nodes will show up in the AST after having been properly checked. Lowering is
+  currently a work in progress, with compute, loop, and combined constructs
+  partially implemented, plus a handful of data and executable constructs
+  implemented. Lowering will only work in Clang-IR mode (so only with a compiler
+  built with Clang-IR enabled, and with `-fclangir` used on the command line).
+  However, note that the Clang-IR implementation status is also quite partial,
+  so frequent 'not yet implemented' diagnostics should be expected.  Also, the
+  ACC MLIR dialect does not currently implement any lowering to LLVM-IR, so no
+  code generation is possible for OpenACC.
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^

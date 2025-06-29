@@ -79,7 +79,6 @@ private:
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryLoadParam(SDNode *N);
-  bool tryStoreRetval(SDNode *N);
   bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);
@@ -105,6 +104,7 @@ private:
   }
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
+  SDValue selectPossiblyImm(SDValue V);
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 

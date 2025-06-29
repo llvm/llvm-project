@@ -212,8 +212,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
                                                bool IsSourceInst,
                                                unsigned *SourceLastTiedOpPtr) {
   unsigned NumMIOperands = 0;
-  for (const auto &Op : Inst.Operands)
-    NumMIOperands += Op.MINumOperands;
+  if (!Inst.Operands.empty())
+    NumMIOperands =
+        Inst.Operands.back().MIOperandNo + Inst.Operands.back().MINumOperands;
   OperandMap.grow(NumMIOperands);
 
   // TiedCount keeps track of the number of operands skipped in Inst
@@ -228,9 +229,9 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
   for (const auto &Opnd : Inst.Operands) {
     int TiedOpIdx = Opnd.getTiedRegister();
     if (-1 != TiedOpIdx) {
+      assert((unsigned)TiedOpIdx < OpNo);
       // Set the entry in OperandMap for the tied operand we're skipping.
-      OperandMap[OpNo].Kind = OperandMap[TiedOpIdx].Kind;
-      OperandMap[OpNo].Data = OperandMap[TiedOpIdx].Data;
+      OperandMap[OpNo] = OperandMap[TiedOpIdx];
       if (IsSourceInst)
         *SourceLastTiedOpPtr = OpNo;
       ++OpNo;
@@ -298,14 +299,11 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
                              bool IsSource) {
   unsigned NumMIOperands = 0;
 
-  // Use this to count number of tied Operands in Source Inst in this function.
-  // This counter is required here to error out when there is a Source
-  // Inst with two or more tied operands.
-  unsigned SourceInstTiedOpCount = 0;
+  unsigned TiedOpCount = 0;
   for (const auto &Op : Inst.Operands) {
     NumMIOperands += Op.MINumOperands;
     if (Op.getTiedRegister() != -1)
-      SourceInstTiedOpCount++;
+      TiedOpCount++;
   }
 
   if (Dag->getNumArgs() == NumMIOperands)
@@ -313,7 +311,7 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
 
   // Source instructions are non compressed instructions and have at most one
   // tied operand.
-  if (IsSource && (SourceInstTiedOpCount >= 2))
+  if (IsSource && (TiedOpCount > 1))
     PrintFatalError(Inst.TheDef->getLoc(),
                     "Input operands for Inst '" + Inst.TheDef->getName() +
                         "' and input Dag operand count mismatch");
@@ -326,12 +324,7 @@ static bool verifyDagOpCount(const CodeGenInstruction &Inst, const DagInit *Dag,
 
   // The Instruction might have tied operands so the Dag might have
   // a fewer operand count.
-  unsigned RealCount = NumMIOperands;
-  for (const auto &Operand : Inst.Operands)
-    if (Operand.getTiedRegister() != -1)
-      --RealCount;
-
-  if (Dag->getNumArgs() != RealCount)
+  if (Dag->getNumArgs() != (NumMIOperands - TiedOpCount))
     PrintFatalError(Inst.TheDef->getLoc(),
                     "Inst '" + Inst.TheDef->getName() +
                         "' and Dag operand count mismatch");
@@ -412,8 +405,8 @@ void CompressInstEmitter::createInstOperandMapping(
     int TiedInstOpIdx = Operand.getTiedRegister();
     if (TiedInstOpIdx != -1) {
       ++TiedCount;
-      DestOperandMap[OpNo].Data = DestOperandMap[TiedInstOpIdx].Data;
-      DestOperandMap[OpNo].Kind = DestOperandMap[TiedInstOpIdx].Kind;
+      assert((unsigned)TiedInstOpIdx < OpNo);
+      DestOperandMap[OpNo] = DestOperandMap[TiedInstOpIdx];
       if (DestOperandMap[OpNo].Kind == OpData::Operand)
         // No need to fill the SourceOperandMap here since it was mapped to
         // destination operand 'TiedInstOpIdx' in a previous iteration.

@@ -344,9 +344,12 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
-       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-       : 1;
+  // For a given width return the max 0number of elements that can be combined
+  // into a wider bit value:
+  return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+                                                       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -1195,14 +1198,15 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
-  // Larger vector widths may require additional instructions, but are
-  // typically cheaper than scalarized versions.
-  unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+  unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
-      DL.getTypeSizeInBits(SrcTy->getElementType()) == 16) {
-    bool HasVOP3P = ST->hasVOP3PInsts();
+      (ScalarSize == 16 || ScalarSize == 8)) {
+    // Larger vector widths may require additional instructions, but are
+    // typically cheaper than scalarized versions.
+    unsigned NumVectorElts = cast<FixedVectorType>(SrcTy)->getNumElements();
     unsigned RequestedElts =
         count_if(Mask, [](int MaskElt) { return MaskElt != -1; });
+    unsigned EltsPerReg = 32 / ScalarSize;
     if (RequestedElts == 0)
       return 0;
     switch (Kind) {
@@ -1211,9 +1215,9 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     case TTI::SK_PermuteSingleSrc: {
       // With op_sel VOP3P instructions freely can access the low half or high
       // half of a register, so any swizzle of two elements is free.
-      if (HasVOP3P && NumVectorElts == 2)
+      if (ST->hasVOP3PInsts() && ScalarSize == 16 && NumVectorElts == 2)
         return 0;
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
       // SK_Broadcast just reuses the same mask
       unsigned NumPermMasks = Kind == TTI::SK_Broadcast ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
@@ -1225,12 +1229,12 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         return 0;
       // Insert/extract subvectors only require shifts / extract code to get the
       // relevant bits
-      return alignTo(RequestedElts, 2) / 2;
+      return alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
     }
     case TTI::SK_PermuteTwoSrc:
     case TTI::SK_Splice:
     case TTI::SK_Select: {
-      unsigned NumPerms = alignTo(RequestedElts, 2) / 2;
+      unsigned NumPerms = alignTo(RequestedElts, EltsPerReg) / EltsPerReg;
       // SK_Select just reuses the same mask
       unsigned NumPermMasks = Kind == TTI::SK_Select ? 1 : NumPerms;
       return NumPerms + NumPermMasks;
@@ -1504,4 +1508,31 @@ GCNTTIImpl::fpenvIEEEMode(const Instruction &I) const {
 
   return AMDGPU::isShader(F->getCallingConv()) ? KnownIEEEMode::Off
                                                : KnownIEEEMode::On;
+}
+
+InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                            Align Alignment,
+                                            unsigned AddressSpace,
+                                            TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueInfo OpInfo,
+                                            const Instruction *I) const {
+  if (VectorType *VecTy = dyn_cast<VectorType>(Src)) {
+    if ((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
+        VecTy->getElementType()->isIntegerTy(8)) {
+      return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
+                        getLoadStoreVecRegBitWidth(AddressSpace));
+    }
+  }
+  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
+                                OpInfo, I);
+}
+
+unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
+  if (VectorType *VecTy = dyn_cast<VectorType>(Tp)) {
+    if (VecTy->getElementType()->isIntegerTy(8)) {
+      unsigned ElementCount = VecTy->getElementCount().getFixedValue();
+      return divideCeil(ElementCount - 1, 4);
+    }
+  }
+  return BaseT::getNumberOfParts(Tp);
 }

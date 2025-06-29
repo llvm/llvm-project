@@ -67,7 +67,8 @@ namespace llvm {
     /*implicit*/ ArrayRef() = default;
 
     /// Construct an empty ArrayRef from std::nullopt.
-    /*implicit*/ ArrayRef(std::nullopt_t) {}
+    /*implicit*/ LLVM_DEPRECATED("Use {} or ArrayRef<T>() instead", "{}")
+    ArrayRef(std::nullopt_t) {}
 
     /// Construct an ArrayRef from a single element.
     /*implicit*/ ArrayRef(const T &OneElt LLVM_LIFETIME_BOUND)
@@ -97,11 +98,6 @@ namespace llvm {
             void>>
     /*implicit*/ constexpr ArrayRef(const C &V)
         : Data(V.data()), Length(V.size()) {}
-
-    /// Construct an ArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr ArrayRef(const std::array<T, N> &Arr)
-        : Data(Arr.data()), Length(N) {}
 
     /// Construct an ArrayRef from a C array.
     template <size_t N>
@@ -308,7 +304,8 @@ namespace llvm {
     /*implicit*/ MutableArrayRef() = default;
 
     /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
+    /*implicit*/ LLVM_DEPRECATED("Use {} or MutableArrayRef<T>() instead", "{}")
+    MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
 
     /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
@@ -320,18 +317,16 @@ namespace llvm {
     /// Construct a MutableArrayRef from a range.
     MutableArrayRef(T *begin, T *end) : ArrayRef<T>(begin, end) {}
 
-    /// Construct a MutableArrayRef from a SmallVector.
-    /*implicit*/ MutableArrayRef(SmallVectorImpl<T> &Vec)
-    : ArrayRef<T>(Vec) {}
-
-    /// Construct a MutableArrayRef from a std::vector.
-    /*implicit*/ MutableArrayRef(std::vector<T> &Vec)
-    : ArrayRef<T>(Vec) {}
-
-    /// Construct a MutableArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr MutableArrayRef(std::array<T, N> &Arr)
-        : ArrayRef<T>(Arr) {}
+    /// Construct a MutableArrayRef from a type that has a data() method that
+    /// returns a pointer convertible to T *.
+    template <typename C,
+              typename = std::enable_if_t<
+                  std::conjunction_v<
+                      std::is_convertible<
+                          decltype(std::declval<C &>().data()) *, T *const *>,
+                      std::is_integral<decltype(std::declval<C &>().size())>>,
+                  void>>
+    /*implicit*/ constexpr MutableArrayRef(const C &V) : ArrayRef<T>(V) {}
 
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>

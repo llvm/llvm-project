@@ -253,9 +253,8 @@ void DefGen::createParentWithTraits() {
   // method.
   std::string opAsmInterfaceTraitName =
       strfmt("::mlir::OpAsm{0}Interface::Trait", defType);
-  if (def.genMnemonicAlias() && llvm::none_of(traitNames, [&](auto &traitName) {
-        return traitName == opAsmInterfaceTraitName;
-      })) {
+  if (def.genMnemonicAlias() &&
+      !llvm::is_contained(traitNames, opAsmInterfaceTraitName)) {
     defParent.addTemplateParam(opAsmInterfaceTraitName);
   }
   defCls.addParent(std::move(defParent));
