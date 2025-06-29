@@ -741,12 +741,20 @@ merge:
   ret i32 %.0
 }
 
-define i8 @test_multiple_predecessors_phi_to_zext(i1 %cond, i1 %cond2) {
+define i8 @test_multiple_predecessors_phi_to_zext(i2 %cond, i2 %cond2) {
 ; CHECK-LABEL: @test_multiple_predecessors_phi_to_zext(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    switch i2 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i2 1, label [[IF_TRUE:%.*]]
+; CHECK-NEXT:      i2 0, label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    ]
 ; CHECK:       if.true:
-; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK-NEXT:    switch i2 [[COND2:%.*]], label [[DEFAULT]] [
+; CHECK-NEXT:      i2 1, label [[IF2_TRUE:%.*]]
+; CHECK-NEXT:      i2 0, label [[IF2_FALSE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       if2.true:
@@ -754,14 +762,23 @@ define i8 @test_multiple_predecessors_phi_to_zext(i1 %cond, i1 %cond2) {
 ; CHECK:       if2.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[COND]] to i8
+; CHECK-NEXT:    [[RET:%.*]] = zext i2 [[COND]] to i8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
-  br i1 %cond, label %if.true, label %if.false
+  switch i2 %cond, label %default [
+  i2 1, label %if.true
+  i2 0, label %if.false
+  ]
 
 if.true:
-  br i1 %cond2, label %if2.true, label %if2.false
+  switch i2 %cond2, label %default [
+  i2 1, label %if2.true
+  i2 0, label %if2.false
+  ]
+
+default:
+  unreachable
 
 if.false:
   br label %merge
@@ -866,12 +883,20 @@ merge:
   ret i32 %.0
 }
 
-define i8 @test_multiple_predecessors_phi_to_sext(i1 %cond, i1 %cond2) {
+define i8 @test_multiple_predecessors_phi_to_sext(i2 %cond, i2 %cond2) {
 ; CHECK-LABEL: @test_multiple_predecessors_phi_to_sext(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    switch i2 [[COND:%.*]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:      i2 -1, label [[IF_TRUE:%.*]]
+; CHECK-NEXT:      i2 0, label [[IF_FALSE:%.*]]
+; CHECK-NEXT:    ]
 ; CHECK:       if.true:
-; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2_TRUE:%.*]], label [[IF2_FALSE:%.*]]
+; CHECK-NEXT:    switch i2 [[COND2:%.*]], label [[DEFAULT]] [
+; CHECK-NEXT:      i2 -1, label [[IF2_TRUE:%.*]]
+; CHECK-NEXT:      i2 0, label [[IF2_FALSE:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       if2.true:
@@ -879,14 +904,23 @@ define i8 @test_multiple_predecessors_phi_to_sext(i1 %cond, i1 %cond2) {
 ; CHECK:       if2.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[RET:%.*]] = sext i1 [[COND]] to i8
+; CHECK-NEXT:    [[RET:%.*]] = sext i2 [[COND]] to i8
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
 entry:
-  br i1 %cond, label %if.true, label %if.false
+  switch i2 %cond, label %default [
+  i2 3, label %if.true
+  i2 0, label %if.false
+  ]
 
 if.true:
-  br i1 %cond2, label %if2.true, label %if2.false
+  switch i2 %cond2, label %default [
+  i2 3, label %if2.true
+  i2 0, label %if2.false
+  ]
+
+default:
+  unreachable
 
 if.false:
   br label %merge

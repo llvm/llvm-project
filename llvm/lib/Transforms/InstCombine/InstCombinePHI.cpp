@@ -1317,6 +1317,10 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
       return nullptr;
 
     Cond = BI->getCondition();
+
+    if (Cond->getType() != PN.getType())
+      return nullptr;
+
     AddSucc(ConstantInt::getTrue(Context), BI->getSuccessor(0));
     AddSucc(ConstantInt::getFalse(Context), BI->getSuccessor(1));
   } else if (auto *SI = dyn_cast<SwitchInst>(IDom->getTerminator())) {
