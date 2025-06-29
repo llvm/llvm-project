@@ -313,8 +313,7 @@ Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
-  // TODO: On Windows, use WSAEventSelect
-  return m_socket;
+  return (IOObject::WaitableHandle)m_socket;
 }
 
 Status Socket::Read(void *buf, size_t &num_bytes) {

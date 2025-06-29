@@ -31,17 +31,30 @@ public:
 
   Status Run() override;
 
+  class IOEvent {
+  public:
+    IOEvent(IOObject::WaitableHandle event) : m_event(event) {}
+    virtual ~IOEvent() {}
+    virtual void WillPoll() {}
+    virtual void DidPoll() {}
+    virtual void Disarm() {}
+    IOObject::WaitableHandle GetHandle() { return m_event; }
+
+  protected:
+    IOObject::WaitableHandle m_event;
+  };
+  using IOEventUP = std::unique_ptr<IOEvent>;
+
 protected:
   void UnregisterReadObject(IOObject::WaitableHandle handle) override;
 
   void Interrupt() override;
 
 private:
-  void ProcessReadObject(IOObject::WaitableHandle handle);
   llvm::Expected<size_t> Poll();
 
   struct FdInfo {
-    void *event;
+    IOEventUP event;
     Callback callback;
   };
   llvm::DenseMap<IOObject::WaitableHandle, FdInfo> m_read_fds;
