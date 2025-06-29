@@ -757,7 +757,7 @@ void CompilerInstance::createSummaryConsumer() {
   }
 
   TheSummaryConsumer.reset(
-      new JSONPrintingSummaryConsumer(getSummaryContext(), *SummaryOS));
+      new YAMLPrintingSummaryConsumer(getSummaryContext(), *SummaryOS));
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,

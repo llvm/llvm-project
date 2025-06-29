@@ -3,6 +3,8 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/YAMLTraits.h"
+
 namespace clang {
 class FunctionSummary;
 class SummaryContext;
@@ -39,6 +41,17 @@ public:
     JOS.arrayEnd();
     JOS.flush();
   };
+};
+
+class YAMLPrintingSummaryConsumer : public PrintingSummaryConsumer {
+  llvm::raw_ostream &OS;
+  llvm::yaml::Output YOS;
+
+public:
+   YAMLPrintingSummaryConsumer(const SummaryContext &SummaryCtx, raw_ostream &OS)
+      : PrintingSummaryConsumer(SummaryCtx, OS), OS(OS), YOS(OS) {}
+
+  void ProcessEndOfSourceFile() override;
 };
 } // namespace clang
 

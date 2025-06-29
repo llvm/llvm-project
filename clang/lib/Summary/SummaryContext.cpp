@@ -3,6 +3,7 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Summary/SummaryAttribute.h"
 #include "clang/Summary/SummaryConsumer.h"
+#include "clang/Summary/SummaryYamlMappings.h"
 #include <set>
 
 namespace clang {
@@ -142,6 +143,16 @@ void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
     CreateSummary(std::move(ID), std::move(FunctionAttrs), std::move(Calls),
                   callsOpaue);
   }
+}
+
+void SummaryContext::ParseSummaryFromYAML(StringRef content) {
+  std::vector<std::unique_ptr<clang::FunctionSummary>> summaries;
+
+  llvm::yaml::Input YIN(content, this);
+  YIN >> summaries;
+
+  for(auto &&summary : summaries)
+    CreateSummary(summary->getID().str(), summary->getAttributes(), summary->getCalls(), summary->callsOpaqueObject());
 }
 
 bool SummaryContext::ReduceFunctionSummary(FunctionSummary &Function) {

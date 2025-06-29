@@ -33,6 +33,9 @@ public:
   void replaceAttributes(std::set<const SummaryAttr *> Attrs) {
     this->Attrs = std::move(Attrs);
   }
+
+  friend struct llvm::yaml::MappingTraits<clang::FunctionSummary>;
+  friend struct llvm::yaml::MappingContextTraits<clang::FunctionSummary, clang::SummaryContext>;
 };
 
 class SummaryContext {
@@ -55,6 +58,7 @@ public:
   void SummarizeFunctionBody(const FunctionDecl *FD);
 
   void ParseSummaryFromJSON(const llvm::json::Array &Summary);
+  void ParseSummaryFromYAML(StringRef content);
   void ReduceSummaries();
 };
 } // namespace clang

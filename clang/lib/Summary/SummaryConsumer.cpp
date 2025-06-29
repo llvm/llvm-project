@@ -1,5 +1,6 @@
 #include "clang/Summary/SummaryConsumer.h"
 #include "clang/Summary/SummaryContext.h"
+#include "clang/Summary/SummaryYamlMappings.h"
 
 namespace clang {
 void JSONPrintingSummaryConsumer::ProcessFunctionSummary(
@@ -22,5 +23,10 @@ void JSONPrintingSummaryConsumer::ProcessFunctionSummary(
       });
     });
   });
+}
+
+void YAMLPrintingSummaryConsumer::ProcessEndOfSourceFile() {
+  YOS << ((SummaryContext *)SummaryCtx)->FunctionSummaries;
+  OS.flush();
 }
 } // namespace clang

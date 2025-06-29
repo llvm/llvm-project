@@ -7,6 +7,7 @@ add_clang_library(clangSummary
   SummaryAttribute.cpp
   SummaryConsumer.cpp
   SummaryContext.cpp
+  SummaryYamlMappings.cpp
 
   LINK_LIBS
   clangAST

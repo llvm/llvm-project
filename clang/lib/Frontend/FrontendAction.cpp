@@ -995,7 +995,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                            DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
-          if (llvm::sys::path::extension(Dir->path()) != ".json")
+          if (llvm::sys::path::extension(Dir->path()) != ".yaml")
             continue;
 
           paths.emplace_back(Dir->path().str());
@@ -1007,13 +1007,18 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         std::stringstream buffer;
         buffer << t.rdbuf();
 
-        auto JSON = llvm::json::parse(buffer.str());
-        if (!!JSON)
-          CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
+        llvm::outs() << buffer.str() << '\n';
 
-        llvm::handleAllErrors(
-            JSON.takeError(),
-            [](const llvm::ErrorInfoBase &EI) { std::ignore = EI.message(); });
+        CI.getSummaryContext().ParseSummaryFromYAML(buffer.str());
+
+
+        // auto JSON = llvm::json::parse(buffer.str());
+        // if (!!JSON)
+        //   CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
+
+        // llvm::handleAllErrors(
+        //     JSON.takeError(),
+        //     [](const llvm::ErrorInfoBase &EI) { std::ignore = EI.message(); });
       }
 
       CI.getSummaryContext().ReduceSummaries();
