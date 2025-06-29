@@ -812,9 +812,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
 
 void MCAssembler::layout() {
   assert(getBackendPtr() && "Expected assembler backend");
-  DEBUG_WITH_TYPE("mc-dump", {
-      errs() << "assembler backend - pre-layout\n--\n";
-      dump(); });
+  DEBUG_WITH_TYPE("mc-dump-pre", {
+    errs() << "assembler backend - pre-layout\n--\n";
+    dump();
+  });
 
   // Assign section ordinals.
   unsigned SectionIndex = 0;
@@ -1269,11 +1270,19 @@ void MCAssembler::flushPendingErrors() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCAssembler::dump() const{
   raw_ostream &OS = errs();
+  DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> FragToSyms;
+  // Scan symbols and build a map of fragments to their corresponding symbols.
+  // For variable symbols, we don't want to call their getFragment, which might
+  // modify `Fragment`.
+  for (const MCSymbol &Sym : symbols())
+    if (!Sym.isVariable())
+      if (auto *F = Sym.getFragment())
+        FragToSyms.try_emplace(F).first->second.push_back(&Sym);
 
   OS << "Sections:[";
   for (const MCSection &Sec : *this) {
     OS << '\n';
-    Sec.dump();
+    Sec.dump(&FragToSyms);
   }
   OS << "\n]\n";
 }

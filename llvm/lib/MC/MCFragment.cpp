@@ -112,7 +112,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     if (Fixups.empty())
       return;
     for (auto [I, F] : llvm::enumerate(Fixups)) {
-      OS << "\n  Fixup Offset:" << F.getOffset() << " Value:";
+      OS << "\n  Fixup @" << F.getOffset() << " Value:";
       F.getValue()->print(OS, nullptr);
       OS << " Kind:" << F.getKind();
     }
@@ -130,6 +130,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   }
   case MCFragment::FT_Data:  {
     const auto *F = cast<MCDataFragment>(this);
+    if (F->isLinkerRelaxable())
+      OS << " LinkerRelaxable";
     const SmallVectorImpl<char> &Contents = F->getContents();
     OS << " Size:" << Contents.size() << " [";
     for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
