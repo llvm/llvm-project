@@ -848,10 +848,6 @@ void MCAssembler::layout() {
     if (getContext().hadError())
       return;
 
-  DEBUG_WITH_TYPE("mc-dump", {
-      errs() << "assembler backend - post-relaxation\n--\n";
-      dump(); });
-
   // Some targets might want to adjust fragment offsets. If so, perform another
   // layout iteration.
   if (getBackend().finishLayout(*this))
@@ -1275,24 +1271,9 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
   raw_ostream &OS = errs();
 
   OS << "Sections:[";
-  bool First = true;
   for (const MCSection &Sec : *this) {
     OS << '\n';
     Sec.dump();
-  }
-  OS << "\n]\n";
-  OS << "Symbols:[\n";
-
-  First = true;
-  for (const MCSymbol &Sym : symbols()) {
-    if (First)
-      First = false;
-    else
-      OS << "\n";
-    OS << "(";
-    Sym.dump();
-    OS << ", Index:" << Sym.getIndex() << ", ";
-    OS << ")";
   }
   OS << "\n]\n";
 }
