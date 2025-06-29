@@ -280,7 +280,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Store the unique Type corresponding to each Kind.
   mutable std::array<Type *,
                      llvm::to_underlying(PredefinedSugarType::Kind::Max)>
-      PredefinedSugarTypes;
+      PredefinedSugarTypes{};
 
   /// The set of nested name specifiers.
   ///
