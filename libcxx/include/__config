@@ -1110,10 +1110,14 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_NO_DESTROY
 #  endif
 
-#  if __has_attribute(__diagnose_if__)
-#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2010
+#    define _LIBCPP_DIAGNOSE_IF(warning_group, default_severity, message, ...)                                         \
+      __attribute__((__diagnose_if__(__VA_ARGS__, message, default_severity, warning_group)))
+#  elif __has_attribute(__diagnose_if__)
+#    define _LIBCPP_DIAGNOSE_IF(warning_group, default_severity, message, ...)                                         \
+      __attribute__((__diagnose_if__(__VA_ARGS__, message, "warning")))
 #  else
-#    define _LIBCPP_DIAGNOSE_WARNING(...)
+#    define _LIBCPP_DIAGNOSE_IF(warning_group, default_severity, message, ...)
 #  endif
 
 #  if __has_cpp_attribute(_Clang::__lifetimebound__)
