@@ -19206,7 +19206,7 @@ SDValue X86TargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   // global base reg.
   unsigned char OpFlag = Subtarget.classifyLocalReference(nullptr);
 
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   SDValue Result = DAG.getTargetJumpTable(JT->getIndex(), PtrVT, OpFlag);
   SDLoc DL(JT);
   Result =
@@ -19234,7 +19234,7 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
   int64_t Offset = cast<BlockAddressSDNode>(Op)->getOffset();
   SDLoc dl(Op);
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   SDValue Result = DAG.getTargetBlockAddress(BA, PtrVT, Offset, OpFlags);
   Result =
       DAG.getNode(getGlobalWrapperKind(nullptr, OpFlags), dl, PtrVT, Result);
@@ -19277,7 +19277,7 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   bool NeedsLoad = isGlobalStubReference(OpFlags);
 
   CodeModel::Model M = DAG.getTarget().getCodeModel();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   SDValue Result;
 
   if (GV) {
@@ -19536,7 +19536,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     return LowerToTLSEmulatedModel(GA, DAG);
 
   const GlobalValue *GV = GA->getGlobal();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   bool PositionIndependent = isPositionIndependent();
 
   if (Subtarget.isTargetELF()) {
@@ -25782,7 +25782,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
   bool Is64Bit = Subtarget.is64Bit();
-  MVT SPTy = getPointerTy(DAG.getDataLayout());
+  MVT SPTy = Op.getValueType().getSimpleVT();
 
   SDValue Result;
   if (!Lower) {
@@ -25850,7 +25850,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
 SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  auto PtrVT = getPointerTy(MF.getDataLayout());
+  SDValue Ptr = Op.getOperand(1);
+  EVT PtrVT = Ptr.getValueType();
+
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
@@ -25861,8 +25863,7 @@ SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
     // vastart just stores the address of the VarArgsFrameIndex slot into the
     // memory location argument.
     SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
-    return DAG.getStore(Op.getOperand(0), DL, FR, Op.getOperand(1),
-                        MachinePointerInfo(SV));
+    return DAG.getStore(Op.getOperand(0), DL, FR, Ptr, MachinePointerInfo(SV));
   }
 
   // __va_list_tag:
@@ -25951,7 +25952,7 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
                        DAG.getTargetConstant(ArgSize, dl, MVT::i32),
                        DAG.getTargetConstant(ArgMode, dl, MVT::i8),
                        DAG.getTargetConstant(Align, dl, MVT::i32)};
-  SDVTList VTs = DAG.getVTList(getPointerTy(DAG.getDataLayout()), MVT::Other);
+  SDVTList VTs = DAG.getVTList(SrcPtr.getValueType(), MVT::Other);
   SDValue VAARG = DAG.getMemIntrinsicNode(
       Subtarget.isTarget64BitLP64() ? X86ISD::VAARG_64 : X86ISD::VAARG_X32, dl,
       VTs, InstOps, MVT::i64, MachinePointerInfo(SV),
@@ -26272,9 +26273,6 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   MachineFunction &MF = DAG.getMachineFunction();
   SDLoc dl;
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-
   // It's possible that the parent function no longer has a personality function
   // if the exceptional code was optimized away, in which case we just return
   // the incoming EBP.
@@ -26285,6 +26283,7 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   // registration, or the .set_setframe offset.
   MCSymbol *OffsetSym = MF.getContext().getOrCreateParentFrameOffsetSymbol(
       GlobalValue::dropLLVMManglingEscape(Fn->getName()));
+  MVT PtrVT = EntryEBP.getValueType().getSimpleVT();
   SDValue OffsetSymVal = DAG.getMCSymbol(OffsetSym, PtrVT);
   SDValue ParentFrameOffset =
       DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT, OffsetSymVal);
@@ -27345,7 +27344,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::thread_pointer: {
     if (Subtarget.isTargetELF()) {
       SDLoc dl(Op);
-      EVT PtrVT = getPointerTy(DAG.getDataLayout());
+      EVT PtrVT = Op.getValueType();
       // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
       Value *Ptr = Constant::getNullValue(PointerType::get(
           *DAG.getContext(), Subtarget.is64Bit() ? X86AS::FS : X86AS::GS));
@@ -28217,7 +28216,7 @@ SDValue X86TargetLowering::LowerRETURNADDR(SDValue Op,
 
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
 
   if (Depth > 0) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
