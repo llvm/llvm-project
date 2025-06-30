@@ -360,6 +360,10 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix) {
 
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
+  // A diagnostic should not be reported outside of a
+  // BeginSourceFile()/EndSourceFile() pair if it has a source location.
+  assert(InSourceFile || Info.getLocation().isInvalid());
+
   if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
     return;
 
