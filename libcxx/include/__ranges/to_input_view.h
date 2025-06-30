@@ -104,12 +104,12 @@ class to_input_view<_V>::__iterator {
   using _Base                  = __maybe_const<_Const, _V>;
   iterator_t<_Base> __current_ = iterator_t<_Base>();
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
-
 public:
   using difference_type  = range_difference_t<_Base>;
   using value_type       = range_value_t<_Base>;
   using iterator_concept = input_iterator_tag;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
 
   _LIBCPP_HIDE_FROM_ABI __iterator()
     requires default_initializable<iterator_t<_Base>>
@@ -125,6 +125,10 @@ public:
   // base
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const noexcept(noexcept(*__current_)) {
+    return *__current_;
+  }
 
   // operator ++
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
