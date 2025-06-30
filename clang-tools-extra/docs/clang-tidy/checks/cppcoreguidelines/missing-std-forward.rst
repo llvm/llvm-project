@@ -40,8 +40,7 @@ Options
 
 .. option:: ForwardFunction
 
-   Specify the function used for forwarding.
-   Default is `::std::forward`.
+   Specify the function used for forwarding. Default is `::std::forward`.
 
 This check implements `F.19
 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_
