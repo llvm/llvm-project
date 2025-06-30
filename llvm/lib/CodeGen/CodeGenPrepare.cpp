@@ -6297,11 +6297,13 @@ Value *CodeGenPrepare::splitLastVectorIndex(Instruction *MemoryInst,
   // If the final index isn't a vector, emit a scalar GEP containing all ops
   // and a vector GEP with all zeroes final index.
   if (!Ops[FinalIndex]->getType()->isVectorTy()) {
-    Value *NewAddr = Builder.CreateGEP(SourceTy, Ops[0], ArrayRef(Ops).drop_front());
+    Value *NewAddr =
+        Builder.CreateGEP(SourceTy, Ops[0], ArrayRef(Ops).drop_front());
     auto *IndexTy = VectorType::get(ScalarIndexTy, NumElts);
-    auto *SecondTy = GetElementPtrInst::getIndexedType(
-                                                       SourceTy, ArrayRef(Ops).drop_front());
-    return Builder.CreateGEP(SecondTy, NewAddr, Constant::getNullValue(IndexTy));
+    auto *SecondTy =
+        GetElementPtrInst::getIndexedType(SourceTy, ArrayRef(Ops).drop_front());
+    return Builder.CreateGEP(SecondTy, NewAddr,
+                             Constant::getNullValue(IndexTy));
   }
 
   Value *Base = Ops[0];
@@ -6311,10 +6313,10 @@ Value *CodeGenPrepare::splitLastVectorIndex(Instruction *MemoryInst,
   if (Ops.size() != 2) {
     // Replace the last index with 0.
     Ops[FinalIndex] =
-      Constant::getNullValue(Ops[FinalIndex]->getType()->getScalarType());
+        Constant::getNullValue(Ops[FinalIndex]->getType()->getScalarType());
     Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(Ops).drop_front());
-    SourceTy = GetElementPtrInst::getIndexedType(
-                                                 SourceTy, ArrayRef(Ops).drop_front());
+    SourceTy =
+        GetElementPtrInst::getIndexedType(SourceTy, ArrayRef(Ops).drop_front());
   }
 
   // Now create the GEP with scalar pointer and vector index.
@@ -6380,13 +6382,10 @@ Value *CodeGenPrepare::reassociateVectorOps(Instruction *MemoryInst,
   IRBuilder<> Builder(MemoryInst);
   Type *SourceTy = GEP->getSourceElementType();
   Value *Base = Ops[0];
-  Base =
-      Builder.CreateGEP(SourceTy, Base, ArrayRef(ScalarOps).drop_front());
-  Base =
-      Builder.CreateGEP(SourceTy, Base, ArrayRef(VectorOps).drop_front());
+  Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(ScalarOps).drop_front());
+  Base = Builder.CreateGEP(SourceTy, Base, ArrayRef(VectorOps).drop_front());
   return Base;
 }
-
 
 /// Rewrite GEP input to gather/scatter to enable SelectionDAGBuilder to find
 /// a uniform base to use for ISD::MGATHER/MSCATTER. SelectionDAGBuilder can
