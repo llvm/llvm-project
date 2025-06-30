@@ -533,6 +533,7 @@ private:
     DK_LTO_SET_CONDITIONAL,
     DK_CFI_MTE_TAGGED_FRAME,
     DK_MEMTAG,
+    DK_INLINE_ASM_MODE,
     DK_END
   };
 
@@ -702,6 +703,9 @@ private:
 
   // ".lto_discard"
   bool parseDirectiveLTODiscard();
+
+  // ".inline_asm_mode"
+  bool parseDirectiveInlineAsmMode(SMLoc DirectiveLoc);
 
   // Directives to support address-significance tables.
   bool parseDirectiveAddrsig();
@@ -2219,6 +2223,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveLTODiscard();
     case DK_MEMTAG:
       return parseDirectiveSymbolAttribute(MCSA_Memtag);
+    case DK_INLINE_ASM_MODE:
+      return parseDirectiveInlineAsmMode(IDLoc);
     }
 
     return Error(IDLoc, "unknown directive");
@@ -5587,6 +5593,7 @@ void AsmParser::initializeDirectiveKindMap() {
   DirectiveKindMap[".lto_discard"] = DK_LTO_DISCARD;
   DirectiveKindMap[".lto_set_conditional"] = DK_LTO_SET_CONDITIONAL;
   DirectiveKindMap[".memtag"] = DK_MEMTAG;
+  DirectiveKindMap[".inline_asm_mode"] = DK_INLINE_ASM_MODE;
 }
 
 MCAsmMacro *AsmParser::parseMacroLikeBody(SMLoc DirectiveLoc) {
@@ -5907,6 +5914,27 @@ bool AsmParser::parseDirectiveLTODiscard() {
 
   LTODiscardSymbols.clear();
   return parseMany(ParseOp);
+}
+
+/// parseDirectiveInlineAsmMode
+///  ::= ".inline_asm_mode" ( "strict" | "relaxed" )
+bool AsmParser::parseDirectiveInlineAsmMode(SMLoc DirectiveLoc) {
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    return Error(DirectiveLoc,
+                 "expected 'strict' or 'relaxed' after '.inline_asm_mode'");
+  }
+
+  StringRef Mode = getTok().getIdentifier();
+  if (Mode == "strict") {
+    getStreamer().setInlineAsmMode(true);
+  } else if (Mode == "relaxed") {
+    getStreamer().setInlineAsmMode(false);
+  } else {
+    return Error(getTok().getLoc(), "expected 'strict' or 'relaxed'");
+  }
+
+  Lex(); // consume mode identifier
+  return false;
 }
 
 // We are comparing pointers, but the pointers are relative to a single string.

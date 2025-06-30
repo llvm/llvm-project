@@ -260,6 +260,11 @@ class LLVM_ABI MCStreamer {
   /// discussion for future inclusion.
   bool AllowAutoPadding = false;
 
+  /// Is strict inline assembly mode enabled? When enabled, the assembler
+  /// will warn about non-local labels that could be unsafe jump targets
+  /// in inline assembly blocks.
+  bool InlineAsmStrictMode = false;
+
 protected:
   // Symbol of the current epilog for which we are processing SEH directives.
   WinEH::FrameInfo::Epilog *CurrentWinEpilog = nullptr;
@@ -324,6 +329,9 @@ public:
 
   void setAllowAutoPadding(bool v) { AllowAutoPadding = v; }
   bool getAllowAutoPadding() const { return AllowAutoPadding; }
+
+  void setInlineAsmMode(bool v) { InlineAsmStrictMode = v; }
+  bool getInlineAsmMode() const { return InlineAsmStrictMode; }
 
   MCSymbol *emitLineTableLabel();
 
