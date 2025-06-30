@@ -39,7 +39,9 @@ class TestSimulatorPlatformLaunching(TestBase):
         if expected_version:
             self.assertEqual(aout_info["min_version_os_sdk"], expected_version)
 
-    def run_with(self, arch, os, vers, env, expected_load_command):
+    def run_with(
+        self, arch, os, vers, env, expected_load_command, expected_platform=None
+    ):
         env_list = [env] if env else []
         triple = "-".join([arch, "apple", os + vers] + env_list)
         sdk = lldbutil.get_xcode_sdk(os, env)
@@ -72,11 +74,46 @@ class TestSimulatorPlatformLaunching(TestBase):
         log = self.getBuildArtifact("packets.log")
         self.expect("log enable gdb-remote packets -f " + log)
         lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("hello.c")
+            self, "break here", lldb.SBFileSpec("hello.cpp")
         )
         triple_re = "-".join([arch, "apple", os + vers + ".*"] + env_list)
         self.expect("image list -b -t", patterns=[r"a\.out " + triple_re])
         self.check_debugserver(log, os + env, vers)
+
+        if expected_platform is not None:
+            # Verify the platform name.
+            self.expect(
+                "platform status",
+                patterns=[r"Platform: " + expected_platform + "-simulator"],
+            )
+
+            # Launch exe in simulator and verify that `platform process list` can find the process.
+            # This separate launch is needed because the command ignores processes which are being debugged.
+            device_udid = lldbutil.get_latest_apple_simulator(
+                expected_platform, self.trace
+            )
+            _, matched_strings = lldbutil.launch_exe_in_apple_simulator(
+                device_udid,
+                self.getBuildArtifact("a.out"),
+                exe_args=[],
+                stderr_lines_to_read=1,  # in hello.cpp, the pid is printed first
+                stderr_patterns=[r"PID: (.*)"],
+                log=self.trace,
+            )
+
+            # Make sure we found the PID.
+            self.assertIsNotNone(matched_strings[0])
+            pid = int(matched_strings[0])
+
+            # Verify that processes on the platform can be listed.
+            self.expect(
+                "platform process list",
+                patterns=[
+                    r"\d+ matching processes were found on \"%s-simulator\""
+                    % expected_platform,
+                    r"%d .+ a.out" % pid,
+                ],
+            )
 
     @skipIfAsan
     @skipUnlessDarwin
@@ -90,6 +127,7 @@ class TestSimulatorPlatformLaunching(TestBase):
             vers="",
             env="simulator",
             expected_load_command="LC_BUILD_VERSION",
+            expected_platform="ios",
         )
 
     @skipIfAsan

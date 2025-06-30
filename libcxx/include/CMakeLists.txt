@@ -498,6 +498,7 @@ set(files
   __iterator/ostreambuf_iterator.h
   __iterator/permutable.h
   __iterator/prev.h
+  __iterator/product_iterator.h
   __iterator/projected.h
   __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
@@ -706,6 +707,7 @@ set(files
   __ranges/iota_view.h
   __ranges/istream_view.h
   __ranges/join_view.h
+  __ranges/join_with_view.h
   __ranges/lazy_split_view.h
   __ranges/movable_box.h
   __ranges/non_propagating_cache.h

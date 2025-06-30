@@ -740,7 +740,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         options::OPT_fno_sanitize_merge_handlers_EQ);
   MergeKinds &= Kinds;
 
-  // Parse -fno-sanitize-top-hot flags
+  // Parse -fno-fsanitize-skip-hot-cutoff flags
   SkipHotCutoffs = parseSanitizeSkipHotCutoffArgs(D, Args, DiagnoseErrors);
 
   // Parse -f(no-)?sanitize-annotate-debug-info flags
