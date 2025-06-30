@@ -1320,8 +1320,16 @@ class QCISELECTICCIPat<CondCode Cond, QCISELECTICCI Inst>
     : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
           (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2)>;
 
+class QCISELECTICCIPatInv<CondCode Cond, QCISELECTICCI Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), simm5:$simm2, (XLenVT GPRNoX0:$rs2)),
+          (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2)>;
+
 class QCISELECTICCPat<CondCode Cond, QCISELECTICC Inst>
     : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2)>;
+
+class QCISELECTICCPatInv<CondCode Cond, QCISELECTICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), simm5:$simm2, (XLenVT GPRNoX0:$rs2)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2)>;
 
 class QCISELECTIICCPat<CondCode Cond, QCISELECTIICC Inst>
@@ -1484,8 +1492,14 @@ def : QCISELECTCCIPat <SETNE,  QC_SELECTNEI>;
 def : QCISELECTICCIPat <SETEQ,  QC_SELECTIEQI>;
 def : QCISELECTICCIPat <SETNE,  QC_SELECTINEI>;
 
+def : QCISELECTICCIPatInv <SETEQ,  QC_SELECTINEI>;
+def : QCISELECTICCIPatInv <SETNE,  QC_SELECTIEQI>;
+
 def : QCISELECTICCPat <SETEQ,  QC_SELECTIEQ>;
 def : QCISELECTICCPat <SETNE,  QC_SELECTINE>;
+
+def : QCISELECTICCPatInv <SETEQ,  QC_SELECTINE>;
+def : QCISELECTICCPatInv <SETNE,  QC_SELECTIEQ>;
 
 def : QCISELECTIICCPat <SETEQ,  QC_SELECTIIEQ>;
 def : QCISELECTIICCPat <SETNE,  QC_SELECTIINE>;
