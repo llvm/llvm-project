@@ -1482,13 +1482,15 @@ let Command = "statistics dump" in {
     "this is turned off unless specified. "
     "In default mode, if both '--targets' and '--modules' are 'true', a list "
     "of module identifiers will be added to the 'targets' section.">;
-  def statistics_dump_transcript: Option<"transcript", "t">, Group<1>,
-    Arg<"Boolean">,
-    Desc<"If the setting interpreter.save-transcript is enabled and this "
-    "option is 'true', include a JSON array with all commands the user and/or "
-    "scripts executed during a debug session. "
-    "Defaults to true, unless the '--summary' mode is enabled, in which case "
-    "this is turned off unless specified.">;
+  def statistics_dump_transcript
+      : Option<"transcript", "t">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"If the setting interpreter.save-transcript is enabled and this "
+             "option is 'true', include a JSON array with all commands the "
+             "user and/or "
+             "scripts executed during a debug session. "
+             "Defaults to false. ">;
   def statistics_dump_plugins
       : Option<"plugins", "p">,
         Group<1>,

@@ -113,6 +113,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
+  bool foldBitOpOfBitcasts(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -800,6 +801,66 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   Worklist.pushValue(NewIns0);
   Worklist.pushValue(NewIns1);
   replaceValue(I, *NewBO);
+  return true;
+}
+
+bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
+  // Match: bitop(bitcast(x), bitcast(y)) -> bitcast(bitop(x, y))
+  Value *LHSSrc, *RHSSrc;
+  if (!match(&I, m_BitwiseLogic(m_BitCast(m_Value(LHSSrc)),
+                                m_BitCast(m_Value(RHSSrc)))))
+    return false;
+
+  // Source types must match
+  if (LHSSrc->getType() != RHSSrc->getType())
+    return false;
+  if (!LHSSrc->getType()->getScalarType()->isIntegerTy())
+    return false;
+
+  // Only handle vector types
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
+  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!SrcVecTy || !DstVecTy)
+    return false;
+
+  // Same total bit width
+  assert(SrcVecTy->getPrimitiveSizeInBits() ==
+             DstVecTy->getPrimitiveSizeInBits() &&
+         "Bitcast should preserve total bit width");
+
+  // Cost Check :
+  // OldCost = bitlogic + 2*bitcasts
+  // NewCost = bitlogic + bitcast
+  auto *BinOp = cast<BinaryOperator>(&I);
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, LHSSrc->getType(),
+                           TTI::CastContextHint::None) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, RHSSrc->getType(),
+                           TTI::CastContextHint::None);
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None);
+
+  LLVM_DEBUG(dbgs() << "Found a bitwise logic op of bitcasted values: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Create the operation on the source type
+  Value *NewOp = Builder.CreateBinOp(BinOp->getOpcode(), LHSSrc, RHSSrc,
+                                     BinOp->getName() + ".inner");
+  if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
+    NewBinOp->copyIRFlags(BinOp);
+
+  Worklist.pushValue(NewOp);
+
+  // Bitcast the result back
+  Value *Result = Builder.CreateBitCast(NewOp, I.getType());
+  replaceValue(I, *Result);
   return true;
 }
 
@@ -3628,6 +3689,11 @@ bool VectorCombine::run() {
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
+        break;
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
+        MadeChange |= foldBitOpOfBitcasts(I);
         break;
       default:
         MadeChange |= shrinkType(I);

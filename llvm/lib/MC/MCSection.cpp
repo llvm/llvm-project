@@ -67,19 +67,25 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSection::dump() const {
+LLVM_DUMP_METHOD void MCSection::dump(
+    DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
+    const {
   raw_ostream &OS = errs();
 
-  OS << "<MCSection Name:" << getName();
-  OS << " Fragments:[\n      ";
-  bool First = true;
+  OS << "MCSection Name:" << getName();
   for (auto &F : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n      ";
+    OS << '\n';
     F.dump();
+    if (!FragToSyms)
+      continue;
+    auto It = FragToSyms->find(&F);
+    if (It == FragToSyms->end())
+      continue;
+    for (auto *Sym : It->second) {
+      OS << "\n  Symbol @" << Sym->getOffset() << ' ' << Sym->getName();
+      if (Sym->isTemporary())
+        OS << " Temporary";
+    }
   }
-  OS << "]>";
 }
 #endif

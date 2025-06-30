@@ -120,7 +120,7 @@ static ResourceClass getResourceClass(RegisterType RT) {
   llvm_unreachable("unexpected RegisterType value");
 }
 
-static Builtin::ID getSpecConstBuiltinId(QualType Type) {
+static Builtin::ID getSpecConstBuiltinId(const Type *Type) {
   const auto *BT = dyn_cast<BuiltinType>(Type);
   if (!BT) {
     if (!Type->isEnumeralType())
@@ -654,7 +654,8 @@ SemaHLSL::mergeVkConstantIdAttr(Decl *D, const AttributeCommonInfo &AL,
 
   auto *VD = cast<VarDecl>(D);
 
-  if (getSpecConstBuiltinId(VD->getType()) == Builtin::NotBuiltin) {
+  if (getSpecConstBuiltinId(VD->getType()->getUnqualifiedDesugaredType()) ==
+      Builtin::NotBuiltin) {
     Diag(VD->getLocation(), diag::err_specialization_const);
     return nullptr;
   }
@@ -3972,7 +3973,8 @@ bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
     return false;
   }
 
-  Builtin::ID BID = getSpecConstBuiltinId(VDecl->getType());
+  Builtin::ID BID =
+      getSpecConstBuiltinId(VDecl->getType()->getUnqualifiedDesugaredType());
 
   // Argument 1: The ID from the attribute
   int ConstantID = ConstIdAttr->getId();
