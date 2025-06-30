@@ -40,6 +40,8 @@ namespace cwg400 { // cwg400: 2.7
   struct G : A {
     using G::A;
     // expected-error@-1 {{using declaration refers to its own class}}
+    using G::a;
+    // expected-error@-1 {{using declaration refers to its own class}}
     using F::a;
     // expected-error@-1 {{using declaration refers into 'F', which is not a base class of 'G'}}
   };
