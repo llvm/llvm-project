@@ -129,7 +129,11 @@ event_class_operator_w_body(DeviceInitialize,                                  \
        true : (Expected.Device == Observed.Device);                            \
   return isSameDeviceNum && isSameType && isSameDevice;                        \
 )
-event_class_operator_stub(DeviceFinalize)
+event_class_operator_w_body(DeviceFinalize,                                    \
+  bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
+                            true : (Expected.DeviceNum == Observed.DeviceNum); \
+  return isSameDeviceNum;
+)
 event_class_operator_w_body(DeviceLoad,                                        \
   bool isSameDeviceNum = (Expected.DeviceNum == expectedDefault(int)) ?        \
                             true : (Expected.DeviceNum == Observed.DeviceNum); \
