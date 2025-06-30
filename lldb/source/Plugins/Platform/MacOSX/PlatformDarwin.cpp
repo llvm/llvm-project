@@ -1128,8 +1128,15 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
 
   FileSpec sysroot_spec;
 
-  if (target && ResolveSDKPathFromDebugInfo(target, sysroot_spec)) {
-    return;
+  if (target) {
+    auto sysroot_spec_or_err = ResolveSDKPathFromDebugInfo(target);
+    if (!sysroot_spec_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
+                     sysroot_spec_or_err.takeError(),
+                     "Failed to resolve sysroot: {0}");
+    } else {
+      sysroot_spec = *sysroot_spec_or_err;
+    }
   }
 
   if (!FileSystem::Instance().IsDirectory(sysroot_spec.GetPath())) {
@@ -1143,16 +1150,21 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   }
 }
 
-bool lldb_private::PlatformDarwin::ResolveSDKPathFromDebugInfo(
-    lldb_private::Target *target, lldb_private::FileSpec &sysroot_spec) {
+llvm::Expected<lldb_private::FileSpec>
+lldb_private::PlatformDarwin::ResolveSDKPathFromDebugInfo(
+    lldb_private::Target *target) {
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return false;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to get module from target"));
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return true;
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to get symbol file from module"));
 
   XcodeSDK merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
@@ -1166,18 +1178,16 @@ bool lldb_private::PlatformDarwin::ResolveSDKPathFromDebugInfo(
   // from the target triple, which would be a lot cheaper.
   FileSpec sdk_path = merged_sdk.GetSysroot();
   if (FileSystem::Instance().Exists(sdk_path)) {
-    sysroot_spec = sdk_path;
-  } else {
-    auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
-    if (path_or_err) {
-      sysroot_spec = FileSpec(*path_or_err);
-    } else {
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
-                     path_or_err.takeError(),
-                     "Failed to resolve SDK path: {0}");
-    }
+    return sdk_path;
   }
-  return false;
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
+  if (path_or_err)
+    return FileSpec(*path_or_err);
+
+  return llvm::createStringError(
+      llvm::inconvertibleErrorCode(),
+      llvm::formatv("Failed to resolve SDK path: {0}",
+                    llvm::toString(path_or_err.takeError())));
 }
 
 ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
