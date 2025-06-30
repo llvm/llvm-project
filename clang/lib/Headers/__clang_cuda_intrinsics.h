@@ -479,6 +479,8 @@ inline __device__ unsigned __funnelshift_rc(unsigned low32, unsigned high32,
   return ret;
 }
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+
 #pragma push_macro("__INTRINSIC_LOAD")
 #define __INTRINSIC_LOAD(__FnName, __AsmOp, __DeclType, __TmpType, __AsmType,  \
                          __Clobber)                                            \
@@ -763,6 +765,7 @@ __INTRINSIC_STORE2(__stwt, "st.global.wt.v2.f64", double2, double2, "d");
 #pragma pop_macro("__INTRINSIC_STORE2")
 #pragma pop_macro("__INTRINSIC_STORE4")
 
+#endif // defined(__cplusplus) && (__cplusplus >= 201103L)
 #endif // !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 320
 
 #if CUDA_VERSION >= 11000

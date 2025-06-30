@@ -101,6 +101,17 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.free
 )
 
+if(LLVM_LIBC_FULL_BUILD)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+    libc.src.setjmp.siglongjmp
+    libc.src.setjmp.sigsetjmp
+  )
+endif()
+
+
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
     libc.src.complex.creal

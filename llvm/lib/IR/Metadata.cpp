@@ -1202,14 +1202,15 @@ MDNode *MDNode::mergeDirectCallProfMetadata(MDNode *A, MDNode *B,
          "first operand should be a non-null MDString");
   StringRef AProfName = AMDS->getString();
   StringRef BProfName = BMDS->getString();
-  if (AProfName == "branch_weights" && BProfName == "branch_weights") {
+  if (AProfName == MDProfLabels::BranchWeights &&
+      BProfName == MDProfLabels::BranchWeights) {
     ConstantInt *AInstrWeight = mdconst::dyn_extract<ConstantInt>(
         A->getOperand(getBranchWeightOffset(A)));
     ConstantInt *BInstrWeight = mdconst::dyn_extract<ConstantInt>(
         B->getOperand(getBranchWeightOffset(B)));
     assert(AInstrWeight && BInstrWeight && "verified by LLVM verifier");
     return MDNode::get(Ctx,
-                       {MDHelper.createString("branch_weights"),
+                       {MDHelper.createString(MDProfLabels::BranchWeights),
                         MDHelper.createConstant(ConstantInt::get(
                             Type::getInt64Ty(Ctx),
                             SaturatingAdd(AInstrWeight->getZExtValue(),

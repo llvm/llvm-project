@@ -481,7 +481,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
         MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
   }
 
-  assert((!IsStreaming || I->hasSME()) && "Expected SME to be available");
+  if (IsStreaming && !I->hasSME())
+    reportFatalUsageError("streaming SVE functions require SME");
 
   return I.get();
 }

@@ -250,8 +250,10 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
-  return mlir::failure();
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  emitOpenACCOp<EnterDataOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+                             s.clauses());
+  return mlir::success();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {

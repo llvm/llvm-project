@@ -78,6 +78,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   assert(!cir::MissingFeatures::builtinCallMathErrno());
   assert(!cir::MissingFeatures::builtinCall());
 
+  mlir::Location loc = getLoc(e->getExprLoc());
+
   switch (builtinIDIfNoAsmLabel) {
   default:
     break;
@@ -88,8 +90,41 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    builder.create<cir::AssumeOp>(getLoc(e->getExprLoc()), argValue);
+    builder.create<cir::AssumeOp>(loc, argValue);
     return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_complex: {
+    mlir::Value real = emitScalarExpr(e->getArg(0));
+    mlir::Value imag = emitScalarExpr(e->getArg(1));
+    mlir::Value complex = builder.createComplexCreate(loc, real, imag);
+    return RValue::get(complex);
+  }
+
+  case Builtin::BI__builtin_expect:
+  case Builtin::BI__builtin_expect_with_probability: {
+    mlir::Value argValue = emitScalarExpr(e->getArg(0));
+    mlir::Value expectedValue = emitScalarExpr(e->getArg(1));
+
+    mlir::FloatAttr probAttr;
+    if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_expect_with_probability) {
+      llvm::APFloat probability(0.0);
+      const Expr *probArg = e->getArg(2);
+      [[maybe_unused]] bool evalSucceeded =
+          probArg->EvaluateAsFloat(probability, cgm.getASTContext());
+      assert(evalSucceeded &&
+             "probability should be able to evaluate as float");
+      bool loseInfo = false; // ignored
+      probability.convert(llvm::APFloat::IEEEdouble(),
+                          llvm::RoundingMode::Dynamic, &loseInfo);
+      probAttr = mlir::FloatAttr::get(mlir::Float64Type::get(&getMLIRContext()),
+                                      probability);
+    }
+
+    auto result = builder.create<cir::ExpectOp>(getLoc(e->getSourceRange()),
+                                                argValue.getType(), argValue,
+                                                expectedValue, probAttr);
+    return RValue::get(result);
   }
   }
 

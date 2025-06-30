@@ -564,14 +564,17 @@ public:
   Run(const protocol::DisassembleArguments &args) const override;
 };
 
-class ReadMemoryRequestHandler : public LegacyRequestHandler {
+class ReadMemoryRequestHandler final
+    : public RequestHandler<protocol::ReadMemoryArguments,
+                            llvm::Expected<protocol::ReadMemoryResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "readMemory"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureReadMemoryRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::ReadMemoryResponseBody>
+  Run(const protocol::ReadMemoryArguments &args) const override;
 };
 
 class CancelRequestHandler : public RequestHandler<protocol::CancelArguments,

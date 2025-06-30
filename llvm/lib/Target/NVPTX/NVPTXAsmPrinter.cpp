@@ -215,15 +215,15 @@ unsigned NVPTXAsmPrinter::encodeVirtualRegister(unsigned Reg) {
     // Encode the register class in the upper 4 bits
     // Must be kept in sync with NVPTXInstPrinter::printRegName
     unsigned Ret = 0;
-    if (RC == &NVPTX::Int1RegsRegClass) {
+    if (RC == &NVPTX::B1RegClass) {
       Ret = (1 << 28);
-    } else if (RC == &NVPTX::Int16RegsRegClass) {
+    } else if (RC == &NVPTX::B16RegClass) {
       Ret = (2 << 28);
-    } else if (RC == &NVPTX::Int32RegsRegClass) {
+    } else if (RC == &NVPTX::B32RegClass) {
       Ret = (3 << 28);
-    } else if (RC == &NVPTX::Int64RegsRegClass) {
+    } else if (RC == &NVPTX::B64RegClass) {
       Ret = (4 << 28);
-    } else if (RC == &NVPTX::Int128RegsRegClass) {
+    } else if (RC == &NVPTX::B128RegClass) {
       Ret = (7 << 28);
     } else {
       report_fatal_error("Bad register class");
