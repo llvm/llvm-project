@@ -25,7 +25,7 @@ class SelectOptimizePass : public PassInfoMixin<SelectOptimizePass> {
   const TargetMachine *TM;
 
 public:
-  explicit SelectOptimizePass(const TargetMachine *TM) : TM(TM) {}
+  explicit SelectOptimizePass(const TargetMachine &TM) : TM(&TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
