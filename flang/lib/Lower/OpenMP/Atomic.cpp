@@ -284,7 +284,7 @@ genAtomicRead(lower::AbstractConverter &converter,
     // we don't emit extra code into the body of the atomic op.
     builder.restoreInsertionPoint(postAt);
     mlir::Value load = builder.create<fir::LoadOp>(loc, toAddr);
-    overrides.insert(std::make_pair(&atom, load));
+    overrides.try_emplace(&atom, load);
 
     converter.overrideExprValues(&overrides);
     mlir::Value value =
@@ -357,7 +357,7 @@ genAtomicUpdate(lower::AbstractConverter &converter,
   for (auto &arg : args) {
     if (!evaluate::IsSameOrConvertOf(arg, atom)) {
       mlir::Value val = fir::getBase(converter.genExprValue(arg, naCtx, &loc));
-      overrides.insert(std::make_pair(&arg, val));
+      overrides.try_emplace(&arg, val);
     }
   }
 
@@ -368,7 +368,7 @@ genAtomicUpdate(lower::AbstractConverter &converter,
   mlir::Region &region = updateOp->getRegion(0);
   mlir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});
   mlir::Value localAtom = fir::getBase(block->getArgument(0));
-  overrides.insert(std::make_pair(&atom, localAtom));
+  overrides.try_emplace(&atom, localAtom);
 
   converter.overrideExprValues(&overrides);
   mlir::Value updated =

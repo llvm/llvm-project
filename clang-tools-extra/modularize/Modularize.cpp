@@ -459,7 +459,7 @@ struct HeaderEntry {
     return !(X == Y);
   }
   friend bool operator<(const HeaderEntry &X, const HeaderEntry &Y) {
-    return X.Loc < Y.Loc || (X.Loc == Y.Loc && X.Name < Y.Name);
+    return std::tie(X.Loc, X.Name) < std::tie(Y.Loc, Y.Name);
   }
   friend bool operator>(const HeaderEntry &X, const HeaderEntry &Y) {
     return Y < X;

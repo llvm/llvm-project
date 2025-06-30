@@ -62,7 +62,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -12489,6 +12488,14 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
           << (RTRange.isValid() ? FixItHint::CreateReplacement(RTRange, "int")
                                 : FixItHint());
       FD->setInvalidDecl(true);
+    }
+
+    // In C++ [basic.start.main]p3, it is said a program attaching main to a
+    // named module is ill-formed.
+    if (FD->isInNamedModule()) {
+      const SourceLocation start = FD->getTypeSpecStartLoc();
+      Diag(start, diag::warn_main_in_named_module)
+          << FixItHint::CreateInsertion(start, "extern \"C++\" ", true);
     }
   }
 
