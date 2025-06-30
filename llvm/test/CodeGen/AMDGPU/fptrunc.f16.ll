@@ -196,7 +196,7 @@ define amdgpu_kernel void @fptrunc_f32_to_f16(
     ptr addrspace(1) %a) {
 entry:
   %a.val = load float, ptr addrspace(1) %a
-  %r.val = fptrunc float %a.val to half
+  %r.val = fptrunc afn float %a.val to half
   store half %r.val, ptr addrspace(1) %r
   ret void
 }
@@ -401,7 +401,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(
     ptr addrspace(1) %a) {
 entry:
   %a.val = load double, ptr addrspace(1) %a
-  %r.val = fptrunc double %a.val to half
+  %r.val = fptrunc afn double %a.val to half
   store half %r.val, ptr addrspace(1) %r
   ret void
 }
@@ -863,7 +863,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
     ptr addrspace(1) %a) {
 entry:
   %a.val = load <2 x double>, ptr addrspace(1) %a
-  %r.val = fptrunc <2 x double> %a.val to <2 x half>
+  %r.val = fptrunc afn <2 x double> %a.val to <2 x half>
   store <2 x half> %r.val, ptr addrspace(1) %r
   ret void
 }
