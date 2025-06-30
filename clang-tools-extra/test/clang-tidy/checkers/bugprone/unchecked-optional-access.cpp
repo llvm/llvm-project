@@ -141,6 +141,42 @@ void nullable_value_after_swap(BloombergLP::bdlb::NullableValue<int> &opt1, Bloo
   }
 }
 
+void assertion_handler_imp() __attribute__((analyzer_noreturn));
+
+void assertion_handler() {
+    do {
+       assertion_handler_imp();
+    } while(0);
+}
+
+void function_calling_analyzer_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      assertion_handler();
+  }
+
+  *opt; // no-warning
+}
+
+void abort();
+
+void do_fail() {
+    abort(); // acts like 'abort()' C-function
+}
+
+void invoke_assertion_handler() {
+    do_fail();
+}
+
+void function_calling_well_known_noreturn(const bsl::optional<int>& opt)
+{
+  if (!opt) {
+      invoke_assertion_handler();
+  }
+
+  *opt; // no-warning
+}
+
 template <typename T>
 void function_template_without_user(const absl::optional<T> &opt) {
   opt.value(); // no-warning

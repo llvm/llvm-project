@@ -283,7 +283,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
   JoinedStateBuilder Builder(AC, JoinBehavior);
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
-    if (!Pred || Pred->hasNoReturnElement())
+    if (!Pred || Pred->isInevitablySinking())
       continue;
 
     // Skip if `Pred` was not evaluated yet. This could happen if `Pred` has a
@@ -562,7 +562,7 @@ runTypeErasedDataflowAnalysis(
     BlockStates[Block->getBlockID()] = std::move(NewBlockState);
 
     // Do not add unreachable successor blocks to `Worklist`.
-    if (Block->hasNoReturnElement())
+    if (Block->isInevitablySinking())
       continue;
 
     Worklist.enqueueSuccessors(Block);
