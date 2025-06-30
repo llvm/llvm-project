@@ -453,28 +453,28 @@ def VSLI_N : WInst<"vsli_n", "...I",
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.14 Loads and stores of a single vector
 def VLD1      : WInst<"vld1", ".(c*!)",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
 def VLD1_X2   : WInst<"vld1_x2", "2(c*!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VLD1_X3   : WInst<"vld1_x3", "3(c*!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VLD1_X4   : WInst<"vld1_x4", "4(c*!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VLD1_LANE : WInst<"vld1_lane", ".(c*!).I",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs",
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 def VLD1_DUP  : WInst<"vld1_dup", ".(c*!)",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
 def VST1      : WInst<"vst1", "v*(.!)",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
 def VST1_X2   : WInst<"vst1_x2", "v*(2!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VST1_X3   : WInst<"vst1_x3", "v*(3!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VST1_X4   : WInst<"vst1_x4", "v*(4!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VST1_LANE : WInst<"vst1_lane", "v*(.!)I",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs",
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 
 let ArchGuard = "(__ARM_FP & 2)" in {
@@ -495,29 +495,29 @@ def VST1_LANE_F16 : WInst<"vst1_lane", "v*(.!)I", "hQh",
 
 ////////////////////////////////////////////////////////////////////////////////
 // E.3.15 Loads and stores of an N-element structure
-def VLD2 : WInst<"vld2", "2(c*!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VLD3 : WInst<"vld3", "3(c*!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VLD4 : WInst<"vld4", "4(c*!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
+def VLD2 : WInst<"vld2", "2(c*!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VLD3 : WInst<"vld3", "3(c*!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VLD4 : WInst<"vld4", "4(c*!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
 def VLD2_DUP  : WInst<"vld2_dup", "2(c*!)",
-                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
+                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUsmQm">;
 def VLD3_DUP  : WInst<"vld3_dup", "3(c*!)",
-                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
+                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUsmQm">;
 def VLD4_DUP  : WInst<"vld4_dup", "4(c*!)",
-                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUs">;
-def VLD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+                      "UcUsUiUlcsilfPcPsQcQfQiQlQsQPcQPsQUcQUiQUlQUsmQm">;
+def VLD2_LANE : WInst<"vld2_lane", "2(c*!)2I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VLD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VLD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
-def VLD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VLD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<6, ImmCheckLaneIndex, 1>]>;
-def VST2 : WInst<"vst2", "v*(2!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST3 : WInst<"vst3", "v*(3!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST4 : WInst<"vst4", "v*(4!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST2_LANE : WInst<"vst2_lane", "v*(2!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VST2 : WInst<"vst2", "v*(2!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VST3 : WInst<"vst3", "v*(3!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VST4 : WInst<"vst4", "v*(4!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VST2_LANE : WInst<"vst2_lane", "v*(2!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
-def VST3_LANE : WInst<"vst3_lane", "v*(3!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VST3_LANE : WInst<"vst3_lane", "v*(3!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VST4_LANE : WInst<"vst4_lane", "v*(4!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VST4_LANE : WInst<"vst4_lane", "v*(4!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 let ArchGuard = "(__ARM_FP & 2)" in {
 def VLD2_F16      : WInst<"vld2", "2(c*!)", "hQh">;
