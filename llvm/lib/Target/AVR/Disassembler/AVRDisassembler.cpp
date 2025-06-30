@@ -331,10 +331,23 @@ static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeAddSubWordImm(MCInst &Inst, unsigned Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder) {
-  // Get the register
-  unsigned RegVal = GPRDecoderTable[24 + 2 * ((Insn >> 4) & 0x3)];
-
   if ((Insn & 0xfe00) == 0x9600) {
+    // Get the register
+    unsigned RegVal;
+    switch ((Insn >> 4) & 0x3) {
+    case 0:
+      RegVal = AVR::R25R24;
+      break;
+    case 1:
+      RegVal = AVR::R27R26;
+      break;
+    case 2:
+      RegVal = AVR::R29R28;
+      break;
+    case 3:
+      RegVal = AVR::R31R30;
+    }
+
     Inst.setOpcode((Insn & 0xff00) == 0x9600 ? AVR::ADIWRdK : AVR::SUBIWRdK);
     Inst.addOperand(MCOperand::createReg(RegVal));
     unsigned imm = ((Insn & 0x00C0) >> 2) | (Insn & 0xF);
@@ -347,11 +360,10 @@ static DecodeStatus decodeAddSubWordImm(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeMoveWord(MCInst &Inst, unsigned Insn,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
-  // Get the registers
-  unsigned RegValD = GPRDecoderTable[2 * ((Insn >> 4) & 0xf)];
-  unsigned RegValR = GPRDecoderTable[2 * (Insn & 0xf)];
-
   if ((Insn & 0xff00) == 0x0100) {
+    // Get the registers
+    unsigned RegValD = GPRDecoderTable[2 * ((Insn >> 4) & 0xf)];
+    unsigned RegValR = GPRDecoderTable[2 * (Insn & 0xf)];
     Inst.setOpcode(AVR::MOVWRdRr);
     Inst.addOperand(MCOperand::createReg(RegValD));
     Inst.addOperand(MCOperand::createReg(RegValR));
