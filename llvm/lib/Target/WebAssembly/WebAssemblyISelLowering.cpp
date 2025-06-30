@@ -18,12 +18,14 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -3214,26 +3216,74 @@ static SDValue performTruncateCombine(SDNode *N,
 
 static SDValue performBitcastCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace llvm::SDPatternMatch;
   auto &DAG = DCI.DAG;
   SDLoc DL(N);
   SDValue Src = N->getOperand(0);
   EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
 
-  // bitcast <N x i1> to iN
+  bool Vectorizable = DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+                      SrcVT.isFixedLengthVector() &&
+                      SrcVT.getScalarType() == MVT::i1;
+
+  if (!Vectorizable)
+    return SDValue();
+
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  EVT Width = MVT::getIntegerVT(128 / NumElts);
+
+  // bitcast <N x i1> to iN, where N = 2, 4, 8, 16 (legal)
   //   ==> bitmask
-  if (DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-      SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1) {
-    unsigned NumElts = SrcVT.getVectorNumElements();
-    if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
-      return SDValue();
-    EVT Width = MVT::getIntegerVT(128 / NumElts);
+  if (NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16) {
     return DAG.getZExtOrTrunc(
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                     {DAG.getConstant(Intrinsic::wasm_bitmask, DL, MVT::i32),
                      DAG.getSExtOrTrunc(N->getOperand(0), DL,
                                         SrcVT.changeVectorElementType(Width))}),
         DL, VT);
+  }
+
+  // bitcast <N x i1>(setcc ...) to concat iN, where N = 32 and 64 (illegal)
+  if (NumElts == 32 || NumElts == 64) {
+    // Strategy: We will setcc them seperately in v16i8 -> v16i1
+    // Bitcast them to i16, extend them to either i32 or i64.
+    // Add them together, shifting left 1 by 1.
+    SDValue Concat, SetCCVector;
+    ISD::CondCode SetCond;
+
+    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat),
+                                         m_VectorVT(m_Value(SetCCVector)),
+                                         m_CondCode(SetCond)))))
+      return SDValue();
+    if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
+      return SDValue();
+    // CHECK IF VECTOR is a constant, i.e all values are the same
+    if (!ISD::isBuildVectorOfConstantSDNodes(SetCCVector.getNode()))
+      return SDValue();
+
+    SDValue SplitSetCCVec =
+        DAG.getSplat(MVT::v16i8, DL, SetCCVector->ops().front());
+
+    SmallVector<SDValue> VectorsToShuffle;
+    for (SDValue V : Concat->ops())
+      VectorsToShuffle.push_back(DAG.getBitcast(
+          MVT::i16, DAG.getSetCC(DL, MVT::v16i1, V, SplitSetCCVec, SetCond)));
+
+    MVT ReturnType = VectorsToShuffle.size() == 2 ? MVT::i32 : MVT::i64;
+    SDValue ReturningInteger = DAG.getConstant(0, DL, ReturnType);
+
+    for (SDValue V : VectorsToShuffle) {
+      ReturningInteger = DAG.getNode(
+          ISD::SHL, DL, ReturnType,
+          {DAG.getShiftAmountConstant(16, ReturnType, DL), ReturningInteger});
+
+      SDValue ExtendedV = DAG.getZExtOrTrunc(V, DL, ReturnType);
+      ReturningInteger =
+          DAG.getNode(ISD::ADD, DL, ReturnType, {ReturningInteger, ExtendedV});
+    }
+
+    return ReturningInteger;
   }
 
   return SDValue();
