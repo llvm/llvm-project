@@ -49,7 +49,7 @@ def create_release(repo, release, tag=None, name=None, message=None):
             """\
 LLVM {release} Release
 
-# Package Types
+## Package Types
 
 Each platform has one binary release package. The file name starts with either `LLVM-` or `clang+llvm-` and ends with the platform's name. For example, `LLVM-{release}-Linux-ARM64.tar.xz` contains LLVM binaries for Arm64 Linux.
 
