@@ -349,14 +349,13 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
       return;
 
   const SCEV *Res = Expr;
-  int Last = Sizes.size() - 1;
-  for (int i = Last; i >= 0; i--) {
+  for (const auto &[Idx, Sz] : enumerate(reverse(Sizes))) {
     const SCEV *Q, *R;
-    SCEVDivision::divide(SE, Res, Sizes[i], &Q, &R);
+    SCEVDivision::divide(SE, Res, Sz, &Q, &R);
 
     LLVM_DEBUG({
       dbgs() << "Res: " << *Res << "\n";
-      dbgs() << "Sizes[i]: " << *Sizes[i] << "\n";
+      dbgs() << "Sizes[i]: " << *Sz << "\n";
       dbgs() << "Res divided by Sizes[i]:\n";
       dbgs() << "Quotient: " << *Q << "\n";
       dbgs() << "Remainder: " << *R << "\n";
@@ -364,9 +363,8 @@ void llvm::computeAccessFunctions(ScalarEvolution &SE, const SCEV *Expr,
 
     Res = Q;
 
-    // Do not record the last subscript corresponding to the size of elements in
-    // the array.
-    if (i == Last) {
+    // Do not record the last subscript.
+    if (Idx == 0) {
 
       // Bail out if the byte offset is non-zero.
       if (!R->isZero()) {
@@ -489,9 +487,9 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
   assert(GEP && "getIndexExpressionsFromGEP called with a null GEP");
   Type *Ty = nullptr;
   bool DroppedFirstDim = false;
-  for (unsigned i = 1; i < GEP->getNumOperands(); i++) {
-    const SCEV *Expr = SE.getSCEV(GEP->getOperand(i));
-    if (i == 1) {
+  for (const auto [Idx, Op] : drop_begin(enumerate(GEP->operands()))) {
+    const SCEV *Expr = SE.getSCEV(Op);
+    if (Idx == 1) {
       Ty = GEP->getSourceElementType();
       if (auto *Const = dyn_cast<SCEVConstant>(Expr))
         if (Const->getValue()->isZero()) {
@@ -510,7 +508,7 @@ bool llvm::getIndexExpressionsFromGEP(ScalarEvolution &SE,
     }
 
     Subscripts.push_back(Expr);
-    if (!(DroppedFirstDim && i == 2))
+    if (!(DroppedFirstDim && Idx == 2))
       Sizes.push_back(ArrayTy->getNumElements());
 
     Ty = ArrayTy->getElementType();
@@ -596,13 +594,13 @@ void printDelinearization(raw_ostream &O, Function *F, LoopInfo *LI,
       O << "Base offset: " << *BasePointer << "\n";
       O << "ArrayDecl[UnknownSize]";
       int Size = Subscripts.size();
-      for (int i = 0; i < Size - 1; i++)
-        O << "[" << *Sizes[i] << "]";
+      for (const SCEV *Sz : drop_end(Sizes))
+        O << "[" << *Sz << "]";
       O << " with elements of " << *Sizes[Size - 1] << " bytes.\n";
 
       O << "ArrayRef";
-      for (int i = 0; i < Size; i++)
-        O << "[" << *Subscripts[i] << "]";
+      for (const SCEV *Sub : Subscripts)
+        O << "[" << *Sub << "]";
       O << "\n";
     }
   }
