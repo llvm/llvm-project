@@ -195,6 +195,40 @@ static void replaceLoad(LoadInst *LI, CBufferResource &CBR,
   DeadInsts.push_back(LI);
 }
 
+/// This function recursively copies N array elements from the cbuffer resource
+/// CBR to the MemCpy Destination. Recursion is used to unravel multidimensional
+/// arrays into a sequence of scalar/vector extracts and stores.
+static void copyArrayElemsForMemCpy(IRBuilder<> &Builder, MemCpyInst *MCI,
+                                    CBufferResource &CBR, ArrayType *ArrTy,
+                                    size_t ArrOffset, size_t N,
+                                    const Twine &Name = "") {
+  const DataLayout &DL = MCI->getDataLayout();
+  Type *ElemTy = ArrTy->getElementType();
+  size_t ElemTySize = DL.getTypeAllocSize(ElemTy);
+  for (unsigned I = 0; I < N; ++I) {
+    size_t Offset = ArrOffset + I * ElemTySize;
+
+    // Recursively copy nested arrays
+    if (ArrayType *ElemArrTy = dyn_cast<ArrayType>(ElemTy)) {
+      copyArrayElemsForMemCpy(Builder, MCI, CBR, ElemArrTy, Offset,
+                              ElemArrTy->getNumElements(), Name);
+      continue;
+    }
+
+    // Load CBuffer value and store it in Dest
+    APInt CBufArrayOffset(
+        DL.getIndexTypeSizeInBits(MCI->getSource()->getType()), Offset);
+    CBufArrayOffset =
+        hlsl::translateCBufArrayOffset(DL, CBufArrayOffset, ArrTy);
+    Value *CBufferVal =
+        CBR.loadValue(Builder, ElemTy, CBufArrayOffset.getZExtValue(), Name);
+    Value *GEP =
+        Builder.CreateInBoundsGEP(Builder.getInt8Ty(), MCI->getDest(),
+                                  {Builder.getInt32(Offset)}, Name + ".dest");
+    Builder.CreateStore(CBufferVal, GEP, MCI->isVolatile());
+  }
+}
+
 /// Replace memcpy from a cbuffer global with a memcpy from the cbuffer handle
 /// itself. Assumes the cbuffer global is an array, and the length of bytes to
 /// copy is divisible by array element allocation size.
@@ -208,10 +242,6 @@ static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR) {
   if (MCI->getSource() != CBR.Member)
     reportFatalUsageError(
         "Expected MemCpy source to be a cbuffer global variable");
-
-  const std::string Name = ("memcpy." + MCI->getDest()->getName() + "." +
-                            MCI->getSource()->getName())
-                               .str();
 
   ConstantInt *Length = dyn_cast<ConstantInt>(MCI->getLength());
   uint64_t ByteLength = Length->getZExtValue();
@@ -234,41 +264,9 @@ static void replaceMemCpy(MemCpyInst *MCI, CBufferResource &CBR) {
   IRBuilder<> Builder(MCI);
   CBR.createAndSetCurrentHandle(Builder);
 
-  // This function recursively copies N array elements from the CBuffer Resource
-  // to the MemCpy Destination. Recursion is used to unravel multidimensional
-  // arrays into a sequence of scalar/vector extracts and stores.
-  auto CopyElemsImpl = [&Builder, &MCI, &Name, &CBR,
-                        &DL](const auto &Self, ArrayType *ArrTy,
-                             size_t ArrOffset, size_t N) -> void {
-    Type *ElemTy = ArrTy->getElementType();
-    size_t ElemTySize = DL.getTypeAllocSize(ElemTy);
-    for (unsigned I = 0; I < N; ++I) {
-      size_t Offset = ArrOffset + I * ElemTySize;
-
-      // Recursively copy nested arrays
-      if (ArrayType *ElemArrTy = dyn_cast<ArrayType>(ElemTy)) {
-        Self(Self, ElemArrTy, Offset, ElemArrTy->getNumElements());
-        continue;
-      }
-
-      // Load CBuffer value and store it in Dest
-      APInt CBufArrayOffset(
-          DL.getIndexTypeSizeInBits(MCI->getSource()->getType()), Offset);
-      CBufArrayOffset =
-          hlsl::translateCBufArrayOffset(DL, CBufArrayOffset, ArrTy);
-      Value *CBufferVal =
-          CBR.loadValue(Builder, ElemTy, CBufArrayOffset.getZExtValue(), Name);
-      Value *GEP =
-          Builder.CreateInBoundsGEP(Builder.getInt8Ty(), MCI->getDest(),
-                                    {Builder.getInt32(Offset)}, Name + ".dest");
-      Builder.CreateStore(CBufferVal, GEP, MCI->isVolatile());
-    }
-  };
-  auto CopyElems = [&CopyElemsImpl](ArrayType *ArrTy, size_t N) -> void {
-    CopyElemsImpl(CopyElemsImpl, ArrTy, 0, N);
-  };
-
-  CopyElems(ArrTy, ElemsToCpy);
+  copyArrayElemsForMemCpy(Builder, MCI, CBR, ArrTy, 0, ElemsToCpy,
+                          "memcpy." + MCI->getDest()->getName() + "." +
+                              MCI->getSource()->getName());
 
   MCI->eraseFromParent();
 }
