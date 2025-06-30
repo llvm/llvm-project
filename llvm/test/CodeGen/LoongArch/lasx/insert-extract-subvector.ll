@@ -6,21 +6,7 @@ declare <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32>, <4 x i
 define <8 x i32> @insert_lo128_v8i32_1(<4 x i32> %a) {
 ; CHECK-LABEL: insert_lo128_v8i32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> %a, i64 0)
@@ -30,21 +16,8 @@ entry:
 define <8 x i32> @insert_hi128_v8i32_1(<4 x i32> %a) {
 ; CHECK-LABEL: insert_hi128_v8i32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> %a, i64 4)
@@ -54,21 +27,7 @@ entry:
 define <8 x i32> @insert_lo128_v8i32_2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: insert_lo128_v8i32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> %b, i64 0)
@@ -78,21 +37,8 @@ entry:
 define <8 x i32> @insert_hi128_v8i32_2(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: insert_hi128_v8i32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> poison, <4 x i32> %b, i64 4)
@@ -102,22 +48,8 @@ entry:
 define <8 x i32> @insert_lo128_v8i32_3(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: insert_lo128_v8i32_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> %a, <4 x i32> %b, i64 0)
@@ -127,22 +59,8 @@ entry:
 define <8 x i32> @insert_hi128_v8i32_3(<8 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: insert_hi128_v8i32_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x i32> @llvm.experimental.vector.insert.v8i32.v4i32(<8 x i32> %a, <4 x i32> %b, i64 4)
@@ -154,21 +72,7 @@ declare <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float>, <4
 define <8 x float> @insert_lo128_v8f32_1(<4 x float> %a) {
 ; CHECK-LABEL: insert_lo128_v8f32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> %a, i64 0)
@@ -178,21 +82,8 @@ entry:
 define <8 x float> @insert_hi128_v8f32_1(<4 x float> %a) {
 ; CHECK-LABEL: insert_hi128_v8f32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> %a, i64 4)
@@ -202,21 +93,7 @@ entry:
 define <8 x float> @insert_lo128_v8f32_2(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: insert_lo128_v8f32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> %b, i64 0)
@@ -226,21 +103,8 @@ entry:
 define <8 x float> @insert_hi128_v8f32_2(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: insert_hi128_v8f32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float> poison, <4 x float> %b, i64 4)
@@ -250,22 +114,8 @@ entry:
 define <8 x float> @insert_lo128_v8f32_3(<8 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: insert_lo128_v8f32_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float> %a, <4 x float> %b, i64 0)
@@ -275,22 +125,8 @@ entry:
 define <8 x float> @insert_hi128_v8f32_3(<8 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: insert_hi128_v8f32_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <8 x float> @llvm.experimental.vector.insert.v8f32.v4f32(<8 x float> %a, <4 x float> %b, i64 4)
@@ -302,21 +138,7 @@ declare <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64>, <2 x i
 define <4 x i64> @insert_lo128_v4i64_1(<2 x i64> %a) {
 ; CHECK-LABEL: insert_lo128_v4i64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> %a, i64 0)
@@ -326,21 +148,8 @@ entry:
 define <4 x i64> @insert_hi128_v4i64_1(<2 x i64> %a) {
 ; CHECK-LABEL: insert_hi128_v4i64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> %a, i64 2)
@@ -350,21 +159,7 @@ entry:
 define <4 x i64> @insert_lo128_v4i64_2(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: insert_lo128_v4i64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> %b, i64 0)
@@ -374,21 +169,8 @@ entry:
 define <4 x i64> @insert_hi128_v4i64_2(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: insert_hi128_v4i64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64> poison, <2 x i64> %b, i64 2)
@@ -398,22 +180,8 @@ entry:
 define <4 x i64> @insert_lo128_v4i64_3(<4 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: insert_lo128_v4i64_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64> %a, <2 x i64> %b, i64 0)
@@ -423,22 +191,8 @@ entry:
 define <4 x i64> @insert_hi128_v4i64_3(<4 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: insert_hi128_v4i64_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x i64> @llvm.experimental.vector.insert.v4i64.v2i64(<4 x i64> %a, <2 x i64> %b, i64 2)
@@ -450,21 +204,7 @@ declare <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double>, 
 define <4 x double> @insert_lo128_v4f64_1(<2 x double> %a) {
 ; CHECK-LABEL: insert_lo128_v4f64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double> poison, <2 x double> %a, i64 0)
@@ -474,21 +214,8 @@ entry:
 define <4 x double> @insert_hi128_v4f64_1(<2 x double> %a) {
 ; CHECK-LABEL: insert_hi128_v4f64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double> poison, <2 x double> %a, i64 2)
@@ -498,21 +225,7 @@ entry:
 define <4 x double> @insert_lo128_v4f64_2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: insert_lo128_v4f64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double> poison, <2 x double> %b, i64 0)
@@ -522,21 +235,8 @@ entry:
 define <4 x double> @insert_hi128_v4f64_2(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: insert_hi128_v4f64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double> poison, <2 x double> %b, i64 2)
@@ -546,22 +246,8 @@ entry:
 define <4 x double> @insert_lo128_v4f64_3(<4 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: insert_lo128_v4f64_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double> %a, <2 x double> %b, i64 0)
@@ -571,22 +257,8 @@ entry:
 define <4 x double> @insert_hi128_v4f64_3(<4 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: insert_hi128_v4f64_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <4 x double> @llvm.experimental.vector.insert.v4f64.v2f64(<4 x double> %a, <2 x double> %b, i64 2)
@@ -598,21 +270,7 @@ declare <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16>, <8 
 define <16 x i16> @insert_lo128_v16i16_1(<8 x i16> %a) {
 ; CHECK-LABEL: insert_lo128_v16i16_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16> poison, <8 x i16> %a, i64 0)
@@ -622,21 +280,8 @@ entry:
 define <16 x i16> @insert_hi128_v16i16_1(<8 x i16> %a) {
 ; CHECK-LABEL: insert_hi128_v16i16_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16> poison, <8 x i16> %a, i64 8)
@@ -646,21 +291,7 @@ entry:
 define <16 x i16> @insert_lo128_v16i16_2(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: insert_lo128_v16i16_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16> poison, <8 x i16> %b, i64 0)
@@ -670,21 +301,8 @@ entry:
 define <16 x i16> @insert_hi128_v16i16_2(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: insert_hi128_v16i16_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16> poison, <8 x i16> %b, i64 8)
@@ -694,22 +312,8 @@ entry:
 define <16 x i16> @insert_lo128_v16i16_3(<16 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: insert_lo128_v16i16_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16> %a, <8 x i16> %b, i64 0)
@@ -719,22 +323,8 @@ entry:
 define <16 x i16> @insert_hi128_v16i16_3(<16 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: insert_hi128_v16i16_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <16 x i16> @llvm.experimental.vector.insert.v16i16.v8i16(<16 x i16> %a, <8 x i16> %b, i64 8)
@@ -746,21 +336,7 @@ declare <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8>, <16 x 
 define <32 x i8> @insert_lo128_v32i8_1(<16 x i8> %a) {
 ; CHECK-LABEL: insert_lo128_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8> poison, <16 x i8> %a, i64 0)
@@ -770,21 +346,8 @@ entry:
 define <32 x i8> @insert_hi128_v32i8_1(<16 x i8> %a) {
 ; CHECK-LABEL: insert_hi128_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr0, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 def $xr0
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8> poison, <16 x i8> %a, i64 16)
@@ -794,21 +357,7 @@ entry:
 define <32 x i8> @insert_lo128_v32i8_2(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: insert_lo128_v32i8_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    vori.b $vr0, $vr1, 0
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8> poison, <16 x i8> %b, i64 0)
@@ -818,21 +367,8 @@ entry:
 define <32 x i8> @insert_hi128_v32i8_2(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: insert_hi128_v32i8_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8> poison, <16 x i8> %b, i64 16)
@@ -842,22 +378,8 @@ entry:
 define <32 x i8> @insert_lo128_v32i8_3(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: insert_lo128_v32i8_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 48
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8> %a, <16 x i8> %b, i64 0)
@@ -867,22 +389,8 @@ entry:
 define <32 x i8> @insert_hi128_v32i8_3(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: insert_hi128_v32i8_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vst $vr1, $sp, 16
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr1 killed $vr1 def $xr1
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    ret
 entry:
   %1 = call <32 x i8> @llvm.experimental.vector.insert.v32i8.v16i8(<32 x i8> %a, <16 x i8> %b, i64 16)
@@ -892,21 +400,7 @@ entry:
 define <4 x i32> @extract_lo128_v8i32_1(<8 x i32> %a) {
 ; CHECK-LABEL: extract_lo128_v8i32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -916,21 +410,8 @@ entry:
 define <4 x i32> @extract_hi128_v8i32_1(<8 x i32> %a) {
 ; CHECK-LABEL: extract_hi128_v8i32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x i32> %a, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -940,21 +421,8 @@ entry:
 define <4 x i32> @extract_lo128_v8i32_2(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: extract_lo128_v8i32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x i32> %b, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -964,21 +432,8 @@ entry:
 define <4 x i32> @extract_hi128_v8i32_2(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: extract_hi128_v8i32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x i32> %b, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -988,21 +443,7 @@ entry:
 define <4 x float> @extract_lo128_v8f32_1(<8 x float> %a) {
 ; CHECK-LABEL: extract_lo128_v8f32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1012,21 +453,8 @@ entry:
 define <4 x float> @extract_hi128_v8f32_1(<8 x float> %a) {
 ; CHECK-LABEL: extract_hi128_v8f32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x float> %a, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1036,21 +464,8 @@ entry:
 define <4 x float> @extract_lo128_v8f32_2(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: extract_lo128_v8f32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1060,21 +475,8 @@ entry:
 define <4 x float> @extract_hi128_v8f32_2(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: extract_hi128_v8f32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -1084,21 +486,7 @@ entry:
 define <2 x i64> @extract_lo128_v4i64_1(<4 x i64> %a) {
 ; CHECK-LABEL: extract_lo128_v4i64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x i64> %a, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
@@ -1108,21 +496,8 @@ entry:
 define <2 x i64> @extract_hi128_v4i64_1(<4 x i64> %a) {
 ; CHECK-LABEL: extract_hi128_v4i64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x i64> %a, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
@@ -1132,21 +507,8 @@ entry:
 define <2 x i64> @extract_lo128_v4i64_2(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: extract_lo128_v4i64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x i64> %b, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
@@ -1156,21 +518,8 @@ entry:
 define <2 x i64> @extract_hi128_v4i64_2(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: extract_hi128_v4i64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x i64> %b, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
@@ -1180,21 +529,7 @@ entry:
 define <2 x double> @extract_lo128_v4f64_a(<4 x double> %a) {
 ; CHECK-LABEL: extract_lo128_v4f64_a:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 1>
@@ -1204,21 +539,8 @@ entry:
 define <2 x double> @extract_hi128_v4f64_1(<4 x double> %a) {
 ; CHECK-LABEL: extract_hi128_v4f64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 2, i32 3>
@@ -1228,21 +550,8 @@ entry:
 define <2 x double> @extract_lo128_v4f64_2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: extract_lo128_v4f64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 1>
@@ -1252,21 +561,8 @@ entry:
 define <2 x double> @extract_hi128_v4f64_2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: extract_hi128_v4f64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 2, i32 3>
@@ -1276,21 +572,7 @@ entry:
 define <8 x i16> @extract_lo128_v16i16_1(<16 x i16> %a) {
 ; CHECK-LABEL: extract_lo128_v16i16_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i16> %a, <16 x i16> poison,
@@ -1301,21 +583,8 @@ entry:
 define <8 x i16> @extract_hi128_v16i16_1(<16 x i16> %a) {
 ; CHECK-LABEL: extract_hi128_v16i16_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i16> %a, <16 x i16> poison,
@@ -1326,21 +595,8 @@ entry:
 define <8 x i16> @extract_lo128_v16i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: extract_lo128_v16i16_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i16> %b, <16 x i16> poison,
@@ -1351,21 +607,8 @@ entry:
 define <8 x i16> @extract_hi128_v16i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: extract_hi128_v16i16_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <16 x i16> %b, <16 x i16> poison,
@@ -1376,21 +619,7 @@ entry:
 define <16 x i8> @extract_lo128_v32i8_1(<32 x i8> %a) {
 ; CHECK-LABEL: extract_lo128_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <32 x i8> %a, <32 x i8> poison,
@@ -1402,21 +631,8 @@ entry:
 define <16 x i8> @extract_hi128_v32i8_1(<32 x i8> %a) {
 ; CHECK-LABEL: extract_hi128_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <32 x i8> %a, <32 x i8> poison,
@@ -1428,21 +644,8 @@ entry:
 define <16 x i8> @extract_lo128_v32i8_2(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: extract_lo128_v32i8_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvori.b $xr0, $xr1, 0
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <32 x i8> %b, <32 x i8> poison,
@@ -1454,21 +657,8 @@ entry:
 define <16 x i8> @extract_hi128_v32i8_2(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: extract_hi128_v32i8_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr1, $sp, 0
-; CHECK-NEXT:    vld $vr0, $sp, 16
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
   %1 = shufflevector <32 x i8> %b, <32 x i8> poison,
