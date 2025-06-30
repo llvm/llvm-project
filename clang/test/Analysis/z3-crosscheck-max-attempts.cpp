@@ -5,7 +5,7 @@
 
 // DEFINE: %{mocked_clang} =                                      \
 // DEFINE: LD_PRELOAD="%llvmshlibdir/MockZ3SolverCheck%pluginext" \
-// DEFINE: %clang_cc1 %s -analyze -setup-static-analyzer          \
+// DEFINE: %clang_analyze_cc1 %s                                  \
 // DEFINE:   -analyzer-config crosscheck-with-z3=true             \
 // DEFINE:   -analyzer-checker=core
 
