@@ -72,9 +72,9 @@ static InstructionListType createIncMemory(const MCSymbol *Target,
   Insts.back().addOperand(MCOperand::createImm(1));               // ScaleAmt
   Insts.back().addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
 
-  Insts.back().addOperand(MCOperand::createExpr(
-      MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None,
-                              *Ctx))); // Displacement
+  Insts.back().addOperand(
+      MCOperand::createExpr(MCSymbolRefExpr::create(Target,
+                                                    *Ctx))); // Displacement
   Insts.back().addOperand(
       MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
   return Insts;
@@ -1625,9 +1625,8 @@ public:
     Inst.insert(Inst.begin(),
                 MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
     Inst.insert(Inst.begin(),
-                MCOperand::createExpr(                  // Displacement
-                    MCSymbolRefExpr::create(TargetLocation,
-                                            MCSymbolRefExpr::VK_None, *Ctx)));
+                MCOperand::createExpr( // Displacement
+                    MCSymbolRefExpr::create(TargetLocation, *Ctx)));
     Inst.insert(Inst.begin(),
                 MCOperand::createReg(X86::NoRegister)); // IndexReg
     Inst.insert(Inst.begin(),
@@ -2420,8 +2419,7 @@ public:
                           .addReg(RegNo)
                           .addImm(Imm));
     Code.emplace_back(MCInstBuilder(X86::JCC_1)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx))
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx))
                           .addImm(X86::COND_E));
     return Code;
   }
@@ -2432,8 +2430,7 @@ public:
     InstructionListType Code;
     Code.emplace_back(MCInstBuilder(X86::CMP64ri8).addReg(RegNo).addImm(Imm));
     Code.emplace_back(MCInstBuilder(X86::JCC_1)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx))
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx))
                           .addImm(X86::COND_NE));
     return Code;
   }
@@ -2738,24 +2735,23 @@ public:
     Inst.clear();
     Inst.setOpcode(X86::JMP_1);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx)));
   }
 
   void createLongUncondBranch(MCInst &Inst, const MCSymbol *Target,
                               MCContext *Ctx) const override {
     Inst.setOpcode(X86::JMP_4);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Target, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) override {
     Inst.setOpcode(X86::CALL64pcrel32);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Target, *Ctx)));
   }
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
@@ -2779,8 +2775,8 @@ public:
                         MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_1);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
@@ -2788,8 +2784,8 @@ public:
                             MCContext *Ctx) const override {
     Inst.setOpcode(X86::JCC_4);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     Inst.addOperand(MCOperand::createImm(CC));
   }
 
@@ -2798,8 +2794,8 @@ public:
     unsigned InvCC = getInvertedCondCode(getCondCode(Inst));
     assert(InvCC != X86::COND_INVALID && "invalid branch instruction");
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(InvCC);
-    Inst.getOperand(0) = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    Inst.getOperand(0) =
+        MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   bool replaceBranchCondition(MCInst &Inst, const MCSymbol *TBB, MCContext *Ctx,
@@ -2807,8 +2803,8 @@ public:
     if (CC == X86::COND_INVALID)
       return false;
     Inst.getOperand(Info->get(Inst.getOpcode()).NumOperands - 1).setImm(CC);
-    Inst.getOperand(0) = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    Inst.getOperand(0) =
+        MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
     return true;
   }
 
@@ -2846,8 +2842,8 @@ public:
                            MCContext *Ctx) const override {
     assert((isCall(Inst) || isBranch(Inst)) && !isIndirectBranch(Inst) &&
            "Invalid instruction");
-    Inst.getOperand(0) = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    Inst.getOperand(0) =
+        MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   MCPhysReg getX86R11() const override { return X86::R11; }
@@ -2894,8 +2890,8 @@ public:
                         bool IsTailCall) override {
     Inst.clear();
     Inst.setOpcode(IsTailCall ? X86::JMP_4 : X86::CALL64pcrel32);
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     if (IsTailCall)
       setTailCall(Inst);
   }
@@ -2905,8 +2901,8 @@ public:
     Seq.clear();
     MCInst Inst;
     Inst.setOpcode(X86::JMP_1);
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     if (IsTailCall)
       setTailCall(Inst);
     Seq.emplace_back(Inst);
@@ -3332,8 +3328,8 @@ public:
         Target.addOperand(MCOperand::createReg(FuncAddrReg));
         if (Targets[i].first) {
           // Is this OK?
-          Target.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(
-              Targets[i].first, MCSymbolRefExpr::VK_None, *Ctx)));
+          Target.addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(Targets[i].first, *Ctx)));
         } else {
           const uint64_t Addr = Targets[i].second;
           // Immediate address is out of sign extended 32 bit range.
@@ -3409,8 +3405,8 @@ public:
         Je.clear();
         Je.setOpcode(X86::JCC_1);
         if (Targets[i].first)
-          Je.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(
-              Targets[i].first, MCSymbolRefExpr::VK_None, *Ctx)));
+          Je.addOperand(MCOperand::createExpr(
+              MCSymbolRefExpr::create(Targets[i].first, *Ctx)));
         else
           Je.addOperand(MCOperand::createImm(Targets[i].second));
 
@@ -3422,8 +3418,8 @@ public:
         // Jump to next compare if target addresses don't match.
         Jne.clear();
         Jne.setOpcode(X86::JCC_1);
-        Jne.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(
-            NextTarget, MCSymbolRefExpr::VK_None, *Ctx)));
+        Jne.addOperand(
+            MCOperand::createExpr(MCSymbolRefExpr::create(NextTarget, *Ctx)));
         Jne.addOperand(MCOperand::createImm(X86::COND_NE));
 
         // Call specific target directly.
@@ -3442,8 +3438,8 @@ public:
           CallOrJmp.setOpcode(IsTailCall ? X86::JMP_4 : X86::CALL64pcrel32);
 
           if (Targets[i].first)
-            CallOrJmp.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(
-                Targets[i].first, MCSymbolRefExpr::VK_None, *Ctx)));
+            CallOrJmp.addOperand(MCOperand::createExpr(
+                MCSymbolRefExpr::create(Targets[i].first, *Ctx)));
           else
             CallOrJmp.addOperand(MCOperand::createImm(Targets[i].second));
         }
@@ -3545,8 +3541,8 @@ public:
 
       // Jump to target if indices match
       JEInst.setOpcode(X86::JCC_1);
-      JEInst.addOperand(MCOperand::createExpr(MCSymbolRefExpr::create(
-          Targets[i].first, MCSymbolRefExpr::VK_None, *Ctx)));
+      JEInst.addOperand(MCOperand::createExpr(
+          MCSymbolRefExpr::create(Targets[i].first, *Ctx)));
       JEInst.addOperand(MCOperand::createImm(X86::COND_E));
     }
 
@@ -3571,9 +3567,9 @@ private:
     Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
     Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Src, MCSymbolRefExpr::VK_None,
-                                *Ctx)));                    // Displacement
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Src,
+                                                      *Ctx))); // Displacement
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
   }
 
@@ -3585,9 +3581,9 @@ private:
     Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
     Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Src, MCSymbolRefExpr::VK_None,
-                                *Ctx)));                    // Displacement
+    Inst.addOperand(
+        MCOperand::createExpr(MCSymbolRefExpr::create(Src,
+                                                      *Ctx))); // Displacement
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
   }
 };

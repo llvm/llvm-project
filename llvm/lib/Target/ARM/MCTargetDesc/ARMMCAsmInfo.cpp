@@ -34,7 +34,7 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {ARM::S_GOTTPOFF, "GOTTPOFF"},
     {ARM::S_GOTTPOFF_FDPIC, "gottpoff_fdpic"},
     {ARM::S_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {ARM::S_COFF_SECREL, "SECREL32"},
     {ARM::S_TLSCALL, "tlscall"},
     {ARM::S_TLSDESC, "tlsdesc"},
     {ARM::S_TLSGD, "TLSGD"},

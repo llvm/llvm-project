@@ -355,7 +355,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
-        match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
+        match(&R, m_VPInstruction<VPInstruction::ComputeFindIVResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
@@ -493,8 +493,16 @@ static VPReplicateRecipe *cloneForLane(VPlan &Plan, VPBuilder &Builder,
 void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+
+  // Visit all VPBBs outside the loop region and directly inside the top-level
+  // loop region.
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()));
+  auto VPBBsToUnroll =
+      concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion);
+  for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (!RepR || RepR->isSingleScalar())

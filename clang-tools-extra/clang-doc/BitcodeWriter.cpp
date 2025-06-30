@@ -161,9 +161,15 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {COMMENT_ARG, {"Arg", &genStringAbbrev}},
           {FIELD_TYPE_NAME, {"Name", &genStringAbbrev}},
           {FIELD_DEFAULT_VALUE, {"DefaultValue", &genStringAbbrev}},
+          {FIELD_TYPE_IS_BUILTIN, {"IsBuiltin", &genBoolAbbrev}},
+          {FIELD_TYPE_IS_TEMPLATE, {"IsTemplate", &genBoolAbbrev}},
           {MEMBER_TYPE_NAME, {"Name", &genStringAbbrev}},
           {MEMBER_TYPE_ACCESS, {"Access", &genIntAbbrev}},
           {MEMBER_TYPE_IS_STATIC, {"IsStatic", &genBoolAbbrev}},
+          {MEMBER_TYPE_IS_BUILTIN, {"IsBuiltin", &genBoolAbbrev}},
+          {MEMBER_TYPE_IS_TEMPLATE, {"IsTemplate", &genBoolAbbrev}},
+          {TYPE_IS_BUILTIN, {"IsBuiltin", &genBoolAbbrev}},
+          {TYPE_IS_TEMPLATE, {"IsTemplate", &genBoolAbbrev}},
           {NAMESPACE_USR, {"USR", &genSymbolIdAbbrev}},
           {NAMESPACE_NAME, {"Name", &genStringAbbrev}},
           {NAMESPACE_PATH, {"Path", &genStringAbbrev}},
@@ -239,12 +245,15 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
           COMMENT_PARAMNAME, COMMENT_CLOSENAME, COMMENT_SELFCLOSING,
           COMMENT_EXPLICIT, COMMENT_ATTRKEY, COMMENT_ATTRVAL, COMMENT_ARG}},
         // Type Block
-        {BI_TYPE_BLOCK_ID, {}},
+        {BI_TYPE_BLOCK_ID, {TYPE_IS_BUILTIN, TYPE_IS_TEMPLATE}},
         // FieldType Block
-        {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
+        {BI_FIELD_TYPE_BLOCK_ID,
+         {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE, FIELD_TYPE_IS_BUILTIN,
+          FIELD_TYPE_IS_TEMPLATE}},
         // MemberType Block
         {BI_MEMBER_TYPE_BLOCK_ID,
-         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC}},
+         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC,
+          MEMBER_TYPE_IS_BUILTIN, MEMBER_TYPE_IS_TEMPLATE}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
          {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},
@@ -470,6 +479,8 @@ void ClangDocBitcodeWriter::emitBlock(const Reference &R, FieldId Field) {
 void ClangDocBitcodeWriter::emitBlock(const TypeInfo &T) {
   StreamSubBlockGuard Block(Stream, BI_TYPE_BLOCK_ID);
   emitBlock(T.Type, FieldId::F_type);
+  emitRecord(T.IsBuiltIn, TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, TYPE_IS_TEMPLATE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
@@ -491,6 +502,8 @@ void ClangDocBitcodeWriter::emitBlock(const FieldTypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, FIELD_TYPE_NAME);
   emitRecord(T.DefaultValue, FIELD_DEFAULT_VALUE);
+  emitRecord(T.IsBuiltIn, FIELD_TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, FIELD_TYPE_IS_TEMPLATE);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
@@ -499,6 +512,9 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
   emitRecord(T.IsStatic, MEMBER_TYPE_IS_STATIC);
+  emitRecord(T.IsBuiltIn, MEMBER_TYPE_IS_BUILTIN);
+  emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
+  emitRecord(T.IsTemplate, MEMBER_TYPE_IS_TEMPLATE);
   for (const auto &CI : T.Description)
     emitBlock(CI);
 }

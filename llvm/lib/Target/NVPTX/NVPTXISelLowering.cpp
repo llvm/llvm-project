@@ -2786,15 +2786,16 @@ static SDValue lowerFREM(SDValue Op, SelectionDAG &DAG,
   SDValue X = Op->getOperand(0);
   SDValue Y = Op->getOperand(1);
   EVT Ty = Op.getValueType();
+  SDNodeFlags Flags = Op->getFlags();
 
-  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y);
-  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div);
-  SDValue Mul =
-      DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y, SDNodeFlags::AllowContract);
-  SDValue Sub =
-      DAG.getNode(ISD::FSUB, DL, Ty, X, Mul, SDNodeFlags::AllowContract);
+  SDValue Div = DAG.getNode(ISD::FDIV, DL, Ty, X, Y, Flags);
+  SDValue Trunc = DAG.getNode(ISD::FTRUNC, DL, Ty, Div, Flags);
+  SDValue Mul = DAG.getNode(ISD::FMUL, DL, Ty, Trunc, Y,
+                            Flags | SDNodeFlags::AllowContract);
+  SDValue Sub = DAG.getNode(ISD::FSUB, DL, Ty, X, Mul,
+                            Flags | SDNodeFlags::AllowContract);
 
-  if (AllowUnsafeFPMath || Op->getFlags().hasNoInfs())
+  if (AllowUnsafeFPMath || Flags.hasNoInfs())
     return Sub;
 
   // If Y is infinite, return X
