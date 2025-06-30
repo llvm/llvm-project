@@ -260,29 +260,37 @@ static void CheckStringInit(Expr *Str, QualType &DeclT, const ArrayType *AT,
              diag::ext_initializer_string_for_char_array_too_long)
           << Str->getSourceRange();
     else if (StrLength - 1 == ArrayLen) {
-      // If the entity being initialized has the nonstring attribute, then
-      // silence the "missing nonstring" diagnostic. If there's no entity,
-      // check whether we're initializing an array of arrays; if so, walk the
-      // parents to find an entity.
-      auto FindCorrectEntity =
-          [](const InitializedEntity *Entity) -> const ValueDecl * {
-        while (Entity) {
-          if (const ValueDecl *VD = Entity->getDecl())
-            return VD;
-          if (!Entity->getType()->isArrayType())
-            return nullptr;
-          Entity = Entity->getParent();
-        }
+      // In C, if the string literal is null-terminated explicitly, e.g., `char
+      // a[4] = "ABC\0"`, there should be no warning:
+      const auto *SL = dyn_cast<StringLiteral>(Str->IgnoreParens());
+      bool IsSLSafe = SL && SL->getLength() > 0 &&
+                      SL->getCodeUnit(SL->getLength() - 1) == 0;
 
-        return nullptr;
-      };
-      if (const ValueDecl *D = FindCorrectEntity(&Entity);
-          !D || !D->hasAttr<NonStringAttr>())
-        S.Diag(
-            Str->getBeginLoc(),
-            diag::warn_initializer_string_for_char_array_too_long_no_nonstring)
-            << ArrayLen << StrLength << Str->getSourceRange();
+      if (!IsSLSafe) {
+        // If the entity being initialized has the nonstring attribute, then
+        // silence the "missing nonstring" diagnostic. If there's no entity,
+        // check whether we're initializing an array of arrays; if so, walk the
+        // parents to find an entity.
+        auto FindCorrectEntity =
+            [](const InitializedEntity *Entity) -> const ValueDecl * {
+          while (Entity) {
+            if (const ValueDecl *VD = Entity->getDecl())
+              return VD;
+            if (!Entity->getType()->isArrayType())
+              return nullptr;
+            Entity = Entity->getParent();
+          }
 
+          return nullptr;
+        };
+        if (const ValueDecl *D = FindCorrectEntity(&Entity);
+            !D || !D->hasAttr<NonStringAttr>())
+          S.Diag(
+              Str->getBeginLoc(),
+              diag::
+                  warn_initializer_string_for_char_array_too_long_no_nonstring)
+              << ArrayLen << StrLength << Str->getSourceRange();
+      }
       // Always emit the C++ compatibility diagnostic.
       S.Diag(Str->getBeginLoc(),
              diag::warn_initializer_string_for_char_array_too_long_for_cpp)
@@ -6620,7 +6628,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
       // initializer present. However, we only do this for structure types, not
       // union types, because an unitialized field in a union is generally
       // reasonable, especially in C where unions can be used for type punning.
-      if (!Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
+      if (Var && !Initializer && !Rec->isUnion() && !Rec->isInvalidDecl()) {
         if (const FieldDecl *FD = getConstField(Rec)) {
           unsigned DiagID = diag::warn_default_init_const_field_unsafe;
           if (Var->getStorageDuration() == SD_Static ||

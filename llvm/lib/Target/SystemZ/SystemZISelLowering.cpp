@@ -1283,6 +1283,20 @@ bool SystemZTargetLowering::allowsMisalignedMemoryAccesses(
   return true;
 }
 
+bool SystemZTargetLowering::hasAndNot(SDValue Y) const {
+  EVT VT = Y.getValueType();
+
+  // We can use NC(G)RK for types in GPRs ...
+  if (VT == MVT::i32 || VT == MVT::i64)
+    return Subtarget.hasMiscellaneousExtensions3();
+
+  // ... or VNC for types in VRs.
+  if (VT.isVector() || VT == MVT::i128)
+    return Subtarget.hasVector();
+
+  return false;
+}
+
 // Information about the addressing mode for a memory access.
 struct AddressingMode {
   // True if a long displacement is supported.
@@ -1699,11 +1713,9 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                                    : SystemZ::NoRegister)
           .Case("r15",
                 Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
-          .Default(SystemZ::NoRegister);
+          .Default(Register());
 
-  if (Reg)
-    return Reg;
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 Register SystemZTargetLowering::getExceptionPointerRegister(
@@ -2375,9 +2387,8 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Build a sequence of copy-to-reg nodes, chained and glued together.
-  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
-    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[I].first,
-                             RegsToPass[I].second, Glue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, N, Glue);
     Glue = Chain.getValue(1);
   }
 
@@ -2388,9 +2399,8 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I)
-    Ops.push_back(DAG.getRegister(RegsToPass[I].first,
-                                  RegsToPass[I].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();

@@ -254,3 +254,81 @@ def testReplicateOp(module: Module):
     # CHECK: %[[FIRST:.+]] = pdl_match
     # CHECK: %[[SECOND:.+]] = pdl_match
     # CHECK: %{{.*}} = replicate num(%[[FIRST]]) %[[SECOND]]
+
+
+# CHECK-LABEL: TEST: testApplyRegisteredPassOp
+@run
+def testApplyRegisteredPassOp(module: Module):
+    # CHECK: transform.sequence
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        # CHECK:   %{{.*}} = apply_registered_pass "canonicalize" to {{.*}} : (!transform.any_op) -> !transform.any_op
+        mod = transform.ApplyRegisteredPassOp(
+            transform.AnyOpType.get(), sequence.bodyTarget, "canonicalize"
+        )
+        # CHECK:   %{{.*}} = apply_registered_pass "canonicalize"
+        # CHECK-SAME:    with options = {"top-down" = false}
+        # CHECK-SAME:    to {{.*}} : (!transform.any_op) -> !transform.any_op
+        mod = transform.ApplyRegisteredPassOp(
+            transform.AnyOpType.get(),
+            mod.result,
+            "canonicalize",
+            options={"top-down": BoolAttr.get(False)},
+        )
+        # CHECK:   %[[MAX_ITER:.+]] = transform.param.constant
+        max_iter = transform.param_constant(
+            transform.AnyParamType.get(),
+            IntegerAttr.get(IntegerType.get_signless(64), 10),
+        )
+        # CHECK:   %[[MAX_REWRITE:.+]] = transform.param.constant
+        max_rewrites = transform.param_constant(
+            transform.AnyParamType.get(),
+            IntegerAttr.get(IntegerType.get_signless(64), 1),
+        )
+        # CHECK:   %{{.*}} = apply_registered_pass "canonicalize"
+        # NB: MLIR has sorted the dict lexicographically by key:
+        # CHECK-SAME:    with options = {"max-iterations" = %[[MAX_ITER]],
+        # CHECK-SAME:                    "max-rewrites" =  %[[MAX_REWRITE]],
+        # CHECK-SAME:                    "test-convergence" = true,
+        # CHECK-SAME:                    "top-down" = false}
+        # CHECK-SAME:    to %{{.*}} : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op
+        mod = transform.apply_registered_pass(
+            transform.AnyOpType.get(),
+            mod,
+            "canonicalize",
+            options={
+                "top-down": BoolAttr.get(False),
+                "max-iterations": max_iter,
+                "test-convergence": True,
+                "max-rewrites": max_rewrites,
+            },
+        )
+        # CHECK:   %{{.*}} = apply_registered_pass "symbol-privatize"
+        # CHECK-SAME:    with options = {"exclude" = ["a", "b"]}
+        # CHECK-SAME:    to %{{.*}} : (!transform.any_op) -> !transform.any_op
+        mod = transform.apply_registered_pass(
+            transform.AnyOpType.get(),
+            mod,
+            "symbol-privatize",
+            options={"exclude": ("a", "b")},
+        )
+        # CHECK:   %[[SYMBOL_A:.+]] = transform.param.constant
+        symbol_a = transform.param_constant(
+            transform.AnyParamType.get(), StringAttr.get("a")
+        )
+        # CHECK:   %[[SYMBOL_B:.+]] = transform.param.constant
+        symbol_b = transform.param_constant(
+            transform.AnyParamType.get(), StringAttr.get("b")
+        )
+        # CHECK:   %{{.*}} = apply_registered_pass "symbol-privatize"
+        # CHECK-SAME:    with options = {"exclude" = [%[[SYMBOL_A]], %[[SYMBOL_B]]]}
+        # CHECK-SAME:    to %{{.*}} : (!transform.any_op, !transform.any_param, !transform.any_param) -> !transform.any_op
+        mod = transform.apply_registered_pass(
+            transform.AnyOpType.get(),
+            mod,
+            "symbol-privatize",
+            options={"exclude": (symbol_a, symbol_b)},
+        )
+        transform.YieldOp()

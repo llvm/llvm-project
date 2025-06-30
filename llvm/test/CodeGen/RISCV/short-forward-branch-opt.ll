@@ -2,7 +2,9 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+c,+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=NOSFB %s
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+zbb -verify-machineinstrs < %s \
-; RUN:   | FileCheck -check-prefixes=SFB,NOZICOND,RV64SFB %s
+; RUN:   | FileCheck -check-prefixes=SFB,NOZICOND,RV64SFB,RV64SFBSIFIVEU74 %s
+; RUN: llc -mtriple=riscv64 -mcpu=andes-ax45 -mattr=+zbb -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=SFB,NOZICOND,RV64SFB,RV64SFBANDESAX45 %s
 ; RUN: llc -mtriple=riscv64 -mcpu=sifive-u74 -mattr=+zicond,+zbb \
 ; RUN:   -verify-machineinstrs < %s | FileCheck -check-prefixes=SFB,ZICOND %s
 ; RUN: llc -mtriple=riscv32 -mcpu=sifive-e76 -mattr=+zbb -verify-machineinstrs < %s \
@@ -67,18 +69,31 @@ define signext i32 @test3(i32 signext %v, i32 signext %w, i32 signext %x, i32 si
 ; NOSFB-NEXT:    addw a0, a1, a2
 ; NOSFB-NEXT:    ret
 ;
-; RV64SFB-LABEL: test3:
-; RV64SFB:       # %bb.0:
-; RV64SFB-NEXT:    beqz a4, .LBB2_2
-; RV64SFB-NEXT:  # %bb.1:
-; RV64SFB-NEXT:    mv a2, a3
-; RV64SFB-NEXT:  .LBB2_2:
-; RV64SFB-NEXT:    bnez a4, .LBB2_4
-; RV64SFB-NEXT:  # %bb.3:
-; RV64SFB-NEXT:    mv a0, a1
-; RV64SFB-NEXT:  .LBB2_4:
-; RV64SFB-NEXT:    addw a0, a0, a2
-; RV64SFB-NEXT:    ret
+; RV64SFBSIFIVEU74-LABEL: test3:
+; RV64SFBSIFIVEU74:       # %bb.0:
+; RV64SFBSIFIVEU74-NEXT:    beqz a4, .LBB2_2
+; RV64SFBSIFIVEU74-NEXT:  # %bb.1:
+; RV64SFBSIFIVEU74-NEXT:    mv a2, a3
+; RV64SFBSIFIVEU74-NEXT:  .LBB2_2:
+; RV64SFBSIFIVEU74-NEXT:    bnez a4, .LBB2_4
+; RV64SFBSIFIVEU74-NEXT:  # %bb.3:
+; RV64SFBSIFIVEU74-NEXT:    mv a0, a1
+; RV64SFBSIFIVEU74-NEXT:  .LBB2_4:
+; RV64SFBSIFIVEU74-NEXT:    addw a0, a0, a2
+; RV64SFBSIFIVEU74-NEXT:    ret
+;
+; RV64SFBANDESAX45-LABEL: test3:
+; RV64SFBANDESAX45:       # %bb.0:
+; RV64SFBANDESAX45-NEXT:    bnez a4, .LBB2_2
+; RV64SFBANDESAX45-NEXT:  # %bb.1:
+; RV64SFBANDESAX45-NEXT:    mv a0, a1
+; RV64SFBANDESAX45-NEXT:  .LBB2_2:
+; RV64SFBANDESAX45-NEXT:    beqz a4, .LBB2_4
+; RV64SFBANDESAX45-NEXT:  # %bb.3:
+; RV64SFBANDESAX45-NEXT:    mv a2, a3
+; RV64SFBANDESAX45-NEXT:  .LBB2_4:
+; RV64SFBANDESAX45-NEXT:    addw a0, a0, a2
+; RV64SFBANDESAX45-NEXT:    ret
 ;
 ; ZICOND-LABEL: test3:
 ; ZICOND:       # %bb.0:
@@ -173,14 +188,21 @@ define signext i32 @test6(i32 signext %x, i32 signext %z) {
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
-; SFB-LABEL: test6:
-; SFB:       # %bb.0:
-; SFB-NEXT:    li a2, -1
-; SFB-NEXT:    beqz a1, .LBB5_2
-; SFB-NEXT:  # %bb.1:
-; SFB-NEXT:    mv a0, a2
-; SFB-NEXT:  .LBB5_2:
-; SFB-NEXT:    ret
+; NOZICOND-LABEL: test6:
+; NOZICOND:       # %bb.0:
+; NOZICOND-NEXT:    li a2, -1
+; NOZICOND-NEXT:    beqz a1, .LBB5_2
+; NOZICOND-NEXT:  # %bb.1:
+; NOZICOND-NEXT:    mv a0, a2
+; NOZICOND-NEXT:  .LBB5_2:
+; NOZICOND-NEXT:    ret
+;
+; ZICOND-LABEL: test6:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    addi a0, a0, 1
+; ZICOND-NEXT:    czero.nez a0, a0, a1
+; ZICOND-NEXT:    addi a0, a0, -1
+; ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %b = select i1 %c, i32 %x, i32 -1
   ret i32 %b
@@ -195,14 +217,21 @@ define signext i32 @test7(i32 signext %x, i32 signext %z) {
 ; NOSFB-NEXT:    or a0, a0, a1
 ; NOSFB-NEXT:    ret
 ;
-; SFB-LABEL: test7:
-; SFB:       # %bb.0:
-; SFB-NEXT:    li a2, -1
-; SFB-NEXT:    bnez a1, .LBB6_2
-; SFB-NEXT:  # %bb.1:
-; SFB-NEXT:    mv a0, a2
-; SFB-NEXT:  .LBB6_2:
-; SFB-NEXT:    ret
+; NOZICOND-LABEL: test7:
+; NOZICOND:       # %bb.0:
+; NOZICOND-NEXT:    li a2, -1
+; NOZICOND-NEXT:    bnez a1, .LBB6_2
+; NOZICOND-NEXT:  # %bb.1:
+; NOZICOND-NEXT:    mv a0, a2
+; NOZICOND-NEXT:  .LBB6_2:
+; NOZICOND-NEXT:    ret
+;
+; ZICOND-LABEL: test7:
+; ZICOND:       # %bb.0:
+; ZICOND-NEXT:    addi a0, a0, 1
+; ZICOND-NEXT:    czero.eqz a0, a0, a1
+; ZICOND-NEXT:    addi a0, a0, -1
+; ZICOND-NEXT:    ret
   %c = icmp eq i32 %z, 0
   %b = select i1 %c, i32 -1, i32 %x
   ret i32 %b
@@ -1676,5 +1705,132 @@ entry:
  %0 = xor i64 %A, %B
  %1 = xor i64 %0, -1
  %2 = select i1 %cond, i64 %C, i64 %1
+ ret i64 %2
+}
+
+define i64 @select_bfoz(i64 %A, i64 %B, i1 zeroext %cond) {
+; NOSFB-LABEL: select_bfoz:
+; NOSFB:       # %bb.0: # %entry
+; NOSFB-NEXT:    bnez a2, .LBB39_2
+; NOSFB-NEXT:  # %bb.1: # %entry
+; NOSFB-NEXT:    slli a0, a0, 38
+; NOSFB-NEXT:    srli a1, a0, 61
+; NOSFB-NEXT:  .LBB39_2: # %entry
+; NOSFB-NEXT:    mv a0, a1
+; NOSFB-NEXT:    ret
+;
+; RV64SFBSIFIVEU74-LABEL: select_bfoz:
+; RV64SFBSIFIVEU74:       # %bb.0: # %entry
+; RV64SFBSIFIVEU74-NEXT:    slli a0, a0, 38
+; RV64SFBSIFIVEU74-NEXT:    bnez a2, .LBB39_2
+; RV64SFBSIFIVEU74-NEXT:  # %bb.1: # %entry
+; RV64SFBSIFIVEU74-NEXT:    srli a1, a0, 61
+; RV64SFBSIFIVEU74-NEXT:  .LBB39_2: # %entry
+; RV64SFBSIFIVEU74-NEXT:    mv a0, a1
+; RV64SFBSIFIVEU74-NEXT:    ret
+;
+; RV64SFBANDESAX45-LABEL: select_bfoz:
+; RV64SFBANDESAX45:       # %bb.0: # %entry
+; RV64SFBANDESAX45-NEXT:    bnez a2, .LBB39_2
+; RV64SFBANDESAX45-NEXT:  # %bb.1: # %entry
+; RV64SFBANDESAX45-NEXT:    nds.bfoz a1, a0, 25, 23
+; RV64SFBANDESAX45-NEXT:  .LBB39_2: # %entry
+; RV64SFBANDESAX45-NEXT:    mv a0, a1
+; RV64SFBANDESAX45-NEXT:    ret
+;
+; ZICOND-LABEL: select_bfoz:
+; ZICOND:       # %bb.0: # %entry
+; ZICOND-NEXT:    slli a0, a0, 38
+; ZICOND-NEXT:    bnez a2, .LBB39_2
+; ZICOND-NEXT:  # %bb.1: # %entry
+; ZICOND-NEXT:    srli a1, a0, 61
+; ZICOND-NEXT:  .LBB39_2: # %entry
+; ZICOND-NEXT:    mv a0, a1
+; ZICOND-NEXT:    ret
+;
+; RV32SFB-LABEL: select_bfoz:
+; RV32SFB:       # %bb.0: # %entry
+; RV32SFB-NEXT:    slli a0, a0, 6
+; RV32SFB-NEXT:    mv a1, a3
+; RV32SFB-NEXT:    bnez a4, .LBB39_2
+; RV32SFB-NEXT:  # %bb.1: # %entry
+; RV32SFB-NEXT:    srli a2, a0, 29
+; RV32SFB-NEXT:  .LBB39_2: # %entry
+; RV32SFB-NEXT:    bnez a4, .LBB39_4
+; RV32SFB-NEXT:  # %bb.3: # %entry
+; RV32SFB-NEXT:    li a1, 0
+; RV32SFB-NEXT:  .LBB39_4: # %entry
+; RV32SFB-NEXT:    mv a0, a2
+; RV32SFB-NEXT:    ret
+entry:
+ %0 = lshr i64 %A, 23
+ %1 = and i64 %0, 7
+ %2 = select i1 %cond, i64 %B, i64 %1
+ ret i64 %2
+}
+
+define i64 @select_bfos(i64 %A, i64 %B, i1 zeroext %cond) {
+; NOSFB-LABEL: select_bfos:
+; NOSFB:       # %bb.0: # %entry
+; NOSFB-NEXT:    bnez a2, .LBB40_2
+; NOSFB-NEXT:  # %bb.1: # %entry
+; NOSFB-NEXT:    slli a0, a0, 31
+; NOSFB-NEXT:    srai a1, a0, 17
+; NOSFB-NEXT:  .LBB40_2: # %entry
+; NOSFB-NEXT:    mv a0, a1
+; NOSFB-NEXT:    ret
+;
+; RV64SFBSIFIVEU74-LABEL: select_bfos:
+; RV64SFBSIFIVEU74:       # %bb.0: # %entry
+; RV64SFBSIFIVEU74-NEXT:    slli a0, a0, 31
+; RV64SFBSIFIVEU74-NEXT:    bnez a2, .LBB40_2
+; RV64SFBSIFIVEU74-NEXT:  # %bb.1: # %entry
+; RV64SFBSIFIVEU74-NEXT:    srai a1, a0, 17
+; RV64SFBSIFIVEU74-NEXT:  .LBB40_2: # %entry
+; RV64SFBSIFIVEU74-NEXT:    mv a0, a1
+; RV64SFBSIFIVEU74-NEXT:    ret
+;
+; RV64SFBANDESAX45-LABEL: select_bfos:
+; RV64SFBANDESAX45:       # %bb.0: # %entry
+; RV64SFBANDESAX45-NEXT:    bnez a2, .LBB40_2
+; RV64SFBANDESAX45-NEXT:  # %bb.1: # %entry
+; RV64SFBANDESAX45-NEXT:    nds.bfos a1, a0, 14, 46
+; RV64SFBANDESAX45-NEXT:  .LBB40_2: # %entry
+; RV64SFBANDESAX45-NEXT:    mv a0, a1
+; RV64SFBANDESAX45-NEXT:    ret
+;
+; ZICOND-LABEL: select_bfos:
+; ZICOND:       # %bb.0: # %entry
+; ZICOND-NEXT:    slli a0, a0, 31
+; ZICOND-NEXT:    bnez a2, .LBB40_2
+; ZICOND-NEXT:  # %bb.1: # %entry
+; ZICOND-NEXT:    srai a1, a0, 17
+; ZICOND-NEXT:  .LBB40_2: # %entry
+; ZICOND-NEXT:    mv a0, a1
+; ZICOND-NEXT:    ret
+;
+; RV32SFB-LABEL: select_bfos:
+; RV32SFB:       # %bb.0: # %entry
+; RV32SFB-NEXT:    srli a5, a0, 1
+; RV32SFB-NEXT:    slli a6, a1, 31
+; RV32SFB-NEXT:    slli a0, a0, 31
+; RV32SFB-NEXT:    slli a1, a5, 15
+; RV32SFB-NEXT:    srli a0, a0, 17
+; RV32SFB-NEXT:    or a5, a6, a5
+; RV32SFB-NEXT:    bnez a4, .LBB40_2
+; RV32SFB-NEXT:  # %bb.1: # %entry
+; RV32SFB-NEXT:    or a2, a0, a1
+; RV32SFB-NEXT:  .LBB40_2: # %entry
+; RV32SFB-NEXT:    bnez a4, .LBB40_4
+; RV32SFB-NEXT:  # %bb.3: # %entry
+; RV32SFB-NEXT:    srai a3, a5, 17
+; RV32SFB-NEXT:  .LBB40_4: # %entry
+; RV32SFB-NEXT:    mv a0, a2
+; RV32SFB-NEXT:    mv a1, a3
+; RV32SFB-NEXT:    ret
+entry:
+ %0 = shl i64 %A, 31
+ %1 = ashr i64 %0, 17
+ %2 = select i1 %cond, i64 %B, i64 %1
  ret i64 %2
 }

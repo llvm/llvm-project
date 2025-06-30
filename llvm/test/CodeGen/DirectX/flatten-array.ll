@@ -123,7 +123,8 @@ define void @gep_4d_test ()  {
 @b = internal global [2 x [3 x [4 x i32]]] zeroinitializer, align 16
 
 define void @global_gep_load() {
-  ; CHECK: load i32, ptr getelementptr inbounds ([24 x i32], ptr @a.1dim, i32 0, i32 6), align 4
+  ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @a.1dim, i32 0, i32 6
+  ; CHECK-NEXT: load i32, ptr [[GEP_PTR]], align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @a, i32 0, i32 0
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 1
@@ -176,12 +177,83 @@ define void @global_incomplete_gep_chain(i32 %row, i32 %col) {
 }
 
 define void @global_gep_store() {
-  ; CHECK: store i32 1, ptr getelementptr inbounds ([24 x i32], ptr @b.1dim, i32 0, i32 13), align 4
+  ; CHECK: [[GEP_PTR:%.*]] = getelementptr inbounds [24 x i32], ptr @b.1dim, i32 0, i32 13
+  ; CHECK-NEXT: store i32 1, ptr [[GEP_PTR]], align 4
   ; CHECK-NEXT:    ret void
   %1 = getelementptr inbounds [2 x [3 x [4 x i32]]], [2 x [3 x [4 x i32]]]* @b, i32 0, i32 1
   %2 = getelementptr inbounds [3 x [4 x i32]], [3 x [4 x i32]]* %1, i32 0, i32 0
   %3 = getelementptr inbounds [4 x i32], [4 x i32]* %2, i32 0, i32 1
   store i32 1, i32* %3, align 4
+  ret void
+}
+
+@g = local_unnamed_addr addrspace(3) global [2 x [2 x float]] zeroinitializer, align 4
+define void @two_index_gep() {
+  ; CHECK-LABEL: define void @two_index_gep(
+  ; CHECK: [[THREAD_ID:%.*]] =  tail call i32 @llvm.dx.thread.id(i32 0)
+  ; CHECK-NEXT: [[MUL:%.*]] = mul i32 [[THREAD_ID]], 2
+  ; CHECK-NEXT: [[ADD:%.*]] = add i32 1, [[MUL]]
+  ; CHECK-NEXT: [[GEP_PTR:%.*]] = getelementptr inbounds nuw [4 x float], ptr addrspace(3) @g.1dim, i32 0, i32 [[ADD]]
+  ; CHECK-NEXT: load float, ptr addrspace(3) [[GEP_PTR]], align 4
+  ; CHECK-NEXT: ret void
+  %1 = tail call i32 @llvm.dx.thread.id(i32 0)
+  %2 = getelementptr inbounds nuw [2 x [2 x float]], ptr addrspace(3) @g, i32 0, i32 %1, i32 1
+  %3 = load float, ptr addrspace(3) %2, align 4
+  ret void
+}
+
+define void @two_index_gep_const() {
+  ; CHECK-LABEL: define void @two_index_gep_const(
+  ; CHECK-NEXT: [[GEP_PTR:%.*]] = getelementptr inbounds nuw [4 x float], ptr addrspace(3) @g.1dim, i32 0, i32 3
+  ; CHECK-NEXT: load float, ptr addrspace(3) [[GEP_PTR]], align 4
+  ; CHECK-NEXT: ret void
+  %1 = getelementptr inbounds nuw [2 x [2 x float]], ptr addrspace(3) @g, i32 0, i32 1, i32 1
+  %3 = load float, ptr addrspace(3) %1, align 4
+  ret void
+}
+
+define void @gep_4d_index_test()  {
+    ; CHECK-LABEL: gep_4d_index_test
+    ; CHECK: [[a:%.*]] = alloca [16 x i32], align 4
+    ; CHECK-NEXT: getelementptr inbounds [16 x i32], ptr %.1dim, i32 0, i32 1
+    ; CHECK-NEXT: getelementptr inbounds [16 x i32], ptr %.1dim, i32 0, i32 3
+    ; CHECK-NEXT: getelementptr inbounds [16 x i32], ptr %.1dim, i32 0, i32 7
+    ; CHECK-NEXT: getelementptr inbounds [16 x i32], ptr %.1dim, i32 0, i32 15
+    ; CHECK-NEXT:    ret void
+    %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
+    %2 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0, i32 0, i32 1
+    %3 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0, i32 1, i32 1
+    %4 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 1, i32 1, i32 1
+    %5 = getelementptr inbounds [2 x [2 x[2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 1, i32 1, i32 1
+    ret void
+}
+
+define void @gep_4d_index_and_gep_chain_mixed() {
+  ; CHECK-LABEL: gep_4d_index_and_gep_chain_mixed
+  ; CHECK-NEXT: [[ALLOCA:%.*]] = alloca [16 x i32], align 4
+  ; CHECK-COUNT-16: getelementptr inbounds [16 x i32], ptr [[ALLOCA]], i32 0, i32 {{[0-9]|1[0-5]}}
+  ; CHECK-NEXT: ret void
+  %1 = alloca [2x[2 x[2 x [2 x i32]]]], align 4
+  %a4d0_0 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x[2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 0
+  %a2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 0, i32 0
+  %a2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 0, i32 1
+  %a2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 1, i32 0
+  %a2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %a4d0_0, i32 0, i32 1, i32 1
+  %b4d0_1 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 0, i32 1
+  %b2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 0, i32 0
+  %b2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 0, i32 1
+  %b2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 1, i32 0
+  %b2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %b4d0_1, i32 0, i32 1, i32 1
+  %c4d1_0 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 0
+  %c2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 0, i32 0
+  %c2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 0, i32 1
+  %c2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 1, i32 0
+  %c2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %c4d1_0, i32 0, i32 1, i32 1
+  %g4d1_1 = getelementptr inbounds [2 x [2 x [2 x [2 x i32]]]], [2 x [2 x [2 x [2 x i32]]]]* %1, i32 0, i32 1, i32 1
+  %g2d0_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 0, i32 0
+  %g2d0_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 0, i32 1
+  %g2d1_0 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 1, i32 0
+  %g2d1_1 = getelementptr inbounds [2 x [2 x i32]], [2 x [2 x i32]]* %g4d1_1, i32 0, i32 1, i32 1
   ret void
 }
 

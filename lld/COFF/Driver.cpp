@@ -706,11 +706,12 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
     if (A->getOption().getID() == OPT_winsysroot)
       path::append(diaPath, "DIA SDK");
   }
-  useWinSysRootLibPath = Args.hasArg(OPT_lldignoreenv) ||
-                         !Process::GetEnv("LIB") ||
-                         Args.getLastArg(OPT_vctoolsdir, OPT_winsysroot);
-  if (Args.hasArg(OPT_lldignoreenv) || !Process::GetEnv("LIB") ||
-      Args.getLastArg(OPT_winsdkdir, OPT_winsysroot)) {
+  useWinSysRootLibPath = !Process::GetEnv("LIB") ||
+                         Args.hasArg(OPT_lldignoreenv, OPT_vctoolsdir,
+                                     OPT_vctoolsversion, OPT_winsysroot);
+  if (!Process::GetEnv("LIB") ||
+      Args.hasArg(OPT_lldignoreenv, OPT_winsdkdir, OPT_winsdkversion,
+                  OPT_winsysroot)) {
     std::optional<StringRef> WinSdkDir, WinSdkVersion;
     if (auto *A = Args.getLastArg(OPT_winsdkdir))
       WinSdkDir = A->getValue();
@@ -1620,7 +1621,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // installations when operating in mingw mode. (This also makes LLD ignore
       // winsysroot and vctoolsdir arguments.)
       detectWinSysRoot(args);
-      if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
+      if (!args.hasArg(OPT_lldignoreenv, OPT_winsysroot, OPT_vctoolsdir,
+                       OPT_vctoolsversion, OPT_winsdkdir, OPT_winsdkversion))
         addLibSearchPaths();
     } else {
       if (args.hasArg(OPT_vctoolsdir, OPT_winsysroot))

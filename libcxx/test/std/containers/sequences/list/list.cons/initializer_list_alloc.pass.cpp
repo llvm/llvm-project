@@ -10,7 +10,7 @@
 
 // <list>
 
-// list(initializer_list<value_type> il, const Allocator& a = allocator_type());
+// list(initializer_list<value_type> il, const Allocator& a = allocator_type()); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -19,7 +19,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::list<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));
@@ -40,6 +40,15 @@ int main(int, char**) {
     assert(*i++ == 5);
     assert(*i++ == 6);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
