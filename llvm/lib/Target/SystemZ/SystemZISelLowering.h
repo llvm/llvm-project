@@ -800,7 +800,6 @@ private:
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineAND(SDNode *N, DAGCombinerInfo &DCI) const;
-  SDValue combineICMP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineOR(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineTM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineXOR(SDNode *N, DAGCombinerInfo &DCI) const;

@@ -8729,14 +8729,13 @@ SDValue SystemZTargetLowering::combineSETCC(
   return SDValue();
 }
 
-// Combine IPM sequence for flag output operands.
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   // CCMask for ICmp is equal to 0, 1, 2 or 3.
   const auto CCMaskForICmpEQCCVal = [](unsigned CC) {
     assert(CC < 4 && "CC out of range");
     return 1 << (3 - CC);
   };
-  // Convert CCVal to CCMask and update it.
+  // Convert CCVal to CCMask based on CCMask and update it.
   const auto convertCCValToCCMask = [&](int CCVal) {
     bool Invert = false;
     if (CCMask == SystemZ::CCMASK_CMP_NE)
@@ -8779,32 +8778,29 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   if (isSRL_IPM_CCSequence(CCNode))
     return true;
 
-  // This code is common to both combineBR_CCMASK and combineSELECT_CCMASK
-  // Two cases of combining already combined select_cc.
-  // a. Combining br_cc and already combined select_cc.
-  // b. Combining select_cc_a and already combines select_cc_b,
-  // select_cc_a must have both TrueVal and FalseVal Constant.
-  // We return Nested CCMask and updated link to CCReg.
-  // Cases for non-const TrueVal/False Value already have been handled
-  // in combineSELECT_CC_CCIPMMask.
+  // Combine CCMASK_TM with select_ccmask.
   if (CCNode->getOpcode() == SystemZISD::SELECT_CCMASK) {
     bool Invert = false;
-    // Outer select_cc is TM.
-    if (CCValid == SystemZ::CCMASK_TM) {
-      if (CCMask == SystemZ::CCMASK_TM_SOME_1)
-        Invert = !Invert;
-      else if (CCMask != SystemZ::CCMASK_TM_ALL_0)
-        return false;
-    } else if (CCValid != SystemZ::CCMASK_ICMP)
+
+    // Outer select_ccmask is TM.
+    if (CCValid != SystemZ::CCMASK_TM)
       return false;
+    if (CCMask == SystemZ::CCMASK_TM_SOME_1)
+      Invert = !Invert;
+    else if (CCMask != SystemZ::CCMASK_TM_ALL_0)
+      return false;
+
     auto *CCNValid = dyn_cast<ConstantSDNode>(CCNode->getOperand(2));
     auto *CCNMask = dyn_cast<ConstantSDNode>(CCNode->getOperand(3));
     if (!CCNValid || !CCNMask)
       return false;
+
+    // Update CCMask and CCValid.
     CCValid = SystemZ::CCMASK_ANY;
     CCMask = CCNMask->getZExtValue();
     if (Invert)
       CCMask ^= SystemZ::CCMASK_ANY;
+
     // Update CCReg link.
     CCReg = CCNode->getOperand(4);
     return true;
@@ -8827,7 +8823,7 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   if (!CompareRHS)
     return false;
 
-  // Optimize the case where LHS is (ICMP (SRL (IPM))).
+  // Optimize (ICMP (SRL (IPM))).
   int CmpVal = CompareRHS->getZExtValue();
   if (isSRL_IPM_CCSequence(CompareLHS)) {
     if (convertCCValToCCMask(CmpVal)) {
@@ -8837,20 +8833,22 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     return false;
   }
 
-  // Optimize the case where LHS is (ICMP (OR (SRL (IPM (CC))))).
+  // Optimize (ICMP (OR (SRL (IPM (CC))))).
   // t24: i32 = or disjoint t21, Constant:i32<-4>
   // t40: i32 = SystemZISD::ICMP t24, Constant:i32<-2>, TargetConstant:i32<1>
   if (CompareLHS->getOpcode() == ISD::OR) {
     SDValue OrOp0 = CompareLHS->getOperand(0);
     SDValue OrOp1 = CompareLHS->getOperand(1);
+
     // Op0 is (SRL (IPM (CC)). Op1 is const.
     if (isSRL_IPM_CCSequence(OrOp0.getNode())) {
-      auto *OrConst = dyn_cast<ConstantSDNode>(OrOp1);
       // Op1 is Constant:i32<-4>.
+      auto *OrConst = dyn_cast<ConstantSDNode>(OrOp1);
       if (!OrConst || (OrConst->getZExtValue() & 0x3))
         return false;
-      // setullt unsigned(-2) or  setugt unsigned(-3).
-      // mask = 0x1100 => CC != 2 && CC != 3.
+
+      // Try combining and Compute effective CC mask.
+      // setullt -2 or inverted 'setugt -3' =>  CC != 2 && CC != 3.
       CmpVal &= 0x3;
       if (convertCCValToCCMask(CmpVal)) {
         CCValid = SystemZ::CCMASK_ANY;
@@ -8859,13 +8857,12 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
     }
   }
 
-  // Optimize the case where LHS is (ICMP (ADD (SRL (IPM (CC))))).
+  // Optimize (ICMP (ADD (SRL (IPM (CC))))).
   if (CompareLHS->getOpcode() == ISD::ADD) {
     if (isSRL_IPM_CCSequence(CompareLHS->getOperand(0).getNode())) {
-      // (unsigned) CCVal - 1 or (unsigned) CCVal - 3 Inverted.
-      // CCVal <= 2 => CC == 1 || CC == 2.
-      // CCVal <= 3 => CC == 1 || CC == 2 || CC == 3.
-      // (CCVal - AddConst) < CmpVal.
+      // (unsigned)(CmpVal - 1) or (unsigned)(CmpVal - 3) Inverted.
+      // CmpVal <= 2 => CC == 1 || CC == 2.
+      // CmpVal <= 3 => CC == 1 || CC == 2 || CC == 3.
       auto *AddConstOp = dyn_cast<ConstantSDNode>((CompareLHS->getOperand(1)));
       int AddConst = AddConstOp->getZExtValue();
       if ((AddConst != -1) && (AddConst != -3))
@@ -8876,6 +8873,8 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
         AddConst = AddConst & 0x3;
       } else
         AddConst = ~AddConst + 1;
+
+      // Try combining and Compute effective CC mask.
       CmpVal &= 0x3;
       CmpVal += AddConst;
       if (convertCCValToCCMask(CmpVal)) {
@@ -8959,24 +8958,23 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   return false;
 }
 
-// Combine (select_cc_a (select_cc_b)), where select_cc_a has one of TrueVal
-// or FalseVal has nested select_cc_b(already been combined sequence)
+// Combine (select_ccmask_a (select_ccmask_b)), where select_ccmask_a has one
+// of TrueVal or FalseVal has nested select_ccmask_b.
 SDValue
 SystemZTargetLowering::combineSELECT_CC_CCIPMMask(SDNode *N,
                                                   DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  // Check if CCOp1 and CCOp2 refers to the same CC condition node.
-  const auto isSameCCIPMOp = [](SDValue &CCOp1, SDValue &CCOp2,
-                                int &CCValidVal) {
+
+  // Verify CCOp1 and CCOp2 refers to the same CC condition node.
+  const auto isSameCCIPMOp = [](SDValue &CCOp1, SDValue &CCOp2) {
     SDNode *N1 = CCOp1.getNode(), *N2 = CCOp2.getNode();
     return N1 && N2 && N1 == N2;
   };
-
   auto *OuterTrueVal = dyn_cast<ConstantSDNode>(N->getOperand(0));
   auto *OuterFalseVal = dyn_cast<ConstantSDNode>(N->getOperand(1));
 
   // Already handled the case both operands constant in combineCCMask.
-  // Not yet encountered the case where both operands are sub-expressions,
+  // Not yet encountered the case where both operands are not constants,
   // that case can be handled by removing this condition.
   if (!((OuterTrueVal != nullptr) ^ (OuterFalseVal != nullptr)))
     return SDValue();
@@ -8991,18 +8989,18 @@ SystemZTargetLowering::combineSELECT_CC_CCIPMMask(SDNode *N,
   if (!NestedTrueVal || !NestedFalseVal)
     return SDValue();
   bool Invert = false;
-  // Check if outer select_cc_a and nested select_cc_b True/False matching
-  // or inverted.
+  // Check if outer select_ccmask and nested select_ccmask True/False swapped
+  // between the two.
   if (OuterTrueVal) {
-    // OuterFalseVal points to already combined nested select_cc_b.
+    // OuterFalseVal has nested select_ccmask.
     if (OuterTrueVal->getZExtValue() == NestedFalseVal->getZExtValue())
-      Invert = !Invert; // Inverted.
+      Invert = !Invert;
     else if (OuterTrueVal->getZExtValue() != NestedTrueVal->getZExtValue())
       return SDValue();
   } else if (OuterFalseVal) {
-    // OuterTrueVal points to already combined nested select_cc_b.
+    // OuterTrueVal has nested select_ccmask.
     if (OuterFalseVal->getZExtValue() == NestedTrueVal->getZExtValue())
-      Invert = !Invert; // Inverted.
+      Invert = !Invert;
     else if (OuterFalseVal->getZExtValue() != NestedFalseVal->getZExtValue())
       return SDValue();
   }
@@ -9015,57 +9013,44 @@ SystemZTargetLowering::combineSELECT_CC_CCIPMMask(SDNode *N,
 
   int OuterCCValidVal = OuterCCValid->getZExtValue();
   int OuterCCMaskVal = OuterCCMask->getZExtValue();
-  int NestedCCValidVal = NestedCCValid->getZExtValue();
   int NestedCCMaskVal = NestedCCMask->getZExtValue();
   int CCMask = OuterCCMaskVal;
   SDValue OuterCCReg = N->getOperand(4);
   SDValue NestedCCReg = NestedCCOp->getOperand(4);
 
-  // Combine two already combined (select_cc_a (select_cc_b)), where TrueVal
-  // of select_cc_a points to select_cc_b. We return select_cc with TrueVal
-  // and FalseVal from select_cc_b with combined CCMask.
-  // One of OuterTrueVal or OuterFalseVal has select_cc_b.
-  // And both points to the same CC.
-  if ((OuterTrueVal != nullptr) ^ (OuterFalseVal != nullptr)) {
-    if (OuterCCValidVal == NestedCCValidVal &&
-        isSameCCIPMOp(OuterCCReg, NestedCCReg, NestedCCValidVal)) {
-      CCMask |= NestedCCMaskVal;
-      // NestedCCOp has both operands constants.
-      auto Op0 = NestedCCOp->getOperand(0);
-      auto Op1 = NestedCCOp->getOperand(1);
-      // Return combined select_cc.
-      return DAG.getNode(
-          SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0), Op0, Op1,
-          DAG.getTargetConstant(OuterCCValidVal, SDLoc(N), MVT::i32),
-          DAG.getTargetConstant(CCMask, SDLoc(N), MVT::i32), NestedCCReg);
-    }
-  }
-  // Now handles the case where outer select_cc_a has not yet been combined.
-  // Combine outer select_cc and check if it corresponds to the same
-  // CC as nested CC.
-  // Outer select_cc has yet not been combined.
+  // Try combining outer select_ccmask, and updated OuterCCReg points to the
+  // same CC as NestedCCReg CC.
   if (OuterCCValidVal != SystemZ::CCMASK_ICMP ||
       !combineCCMask(OuterCCReg, OuterCCValidVal, OuterCCMaskVal) ||
-      !isSameCCIPMOp(OuterCCReg, NestedCCReg, NestedCCValidVal))
+      !isSameCCIPMOp(OuterCCReg, NestedCCReg))
     return SDValue();
-  // Check if nested select_cc original CCMask was CCMASK_CMP_EQ.
-  // Only one-bit is set in NestedCCMaskVal for CCMASK_CMP_EQ.
+
+  // Try to decipher if nested select_ccmask original CCMask was CCMASK_CMP_EQ.
+  // Only one-bit sets in NestedCCMaskVal indicates CCMASK_CMP_EQ.
   bool IsNestedCMP_EQ =
       NestedCCMaskVal && !(NestedCCMaskVal & (NestedCCMaskVal - 1));
 
-  // Outer select_cc is inverted with respect to nested select_cc.
+  // Outer and nested TrueVal and FalseVal swapped between the two.
   if (Invert)
     OuterCCMaskVal ^= SystemZ::CCMASK_ANY;
 
-  // Intersection of masks.
-  if (CCMask != SystemZ::CCMASK_CMP_EQ && !IsNestedCMP_EQ)
-    OuterCCMaskVal &= NestedCCMaskVal;
-  else // Union the masks.
+  // Compute the effective CC mask for select.
+  // Generalizing into two categories.
+  // 1. If either of CCMask for outer or nested select_ccmask is
+  //    SystemZ::CCMASK_CMP_EQ, any combination will compute to union of masks.
+  // 2.a. Both are  SystemZ::CCMASK_CMP_NE, !(!a | !b) => (a & b)
+  // 2.b. Combinations of CCMask - SystemZ::CCMASK_CMP_LT or
+  //      SystemZ::CCMASK_CMP_GT with !IsNestedCMP_EQ, overlap masks.
+  if (CCMask == SystemZ::CCMASK_CMP_EQ || IsNestedCMP_EQ)
     OuterCCMaskVal |= NestedCCMaskVal;
+  else
+    OuterCCMaskVal &= NestedCCMaskVal;
 
+  // Get operands from nested select_ccmask.
   SDValue Op0 = NestedCCOp->getOperand(0);
   SDValue Op1 = NestedCCOp->getOperand(1);
 
+  // Return combined select_ccmask.
   return DAG.getNode(
       SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0), Op0, Op1,
       DAG.getTargetConstant(OuterCCValidVal, SDLoc(N), MVT::i32),
@@ -9112,20 +9097,25 @@ SDValue SystemZTargetLowering::combineTM(SDNode *N,
   auto *TMOp0Node = N->getOperand(0).getNode();
   auto *TMOp1Const = dyn_cast<ConstantSDNode>(N->getOperand(1));
   auto *TMOp2Const = dyn_cast<ConstantSDNode>(N->getOperand(2));
+  // Third operand of TM is false.
   if (!TMOp0Node || !TMOp1Const || !TMOp2Const ||
-      // Third operand of TM is false.
       TMOp2Const->getZExtValue() != 0)
     return SDValue();
+
   auto TMOp1ConstVal = TMOp1Const->getZExtValue();
   // Optimize (TM (IPM)).
   if (TMOp0Node->getOpcode() == SystemZISD::IPM) {
     int CCMask, CCValid;
+
+    // Compute the effective CC mask for select.
     if (TMOp1ConstVal == (1 << SystemZ::IPM_CC))
       CCMask = SystemZ::CCMASK_CMP_GE;
     else if (TMOp1ConstVal == (1 << (SystemZ::IPM_CC + 1)))
       CCMask = SystemZ::CCMASK_CMP_LE;
     else
       return SDValue();
+
+    // Set CCReg.
     SDValue CCReg = TMOp0Node->getOperand(0);
     CCValid = SystemZ::CCMASK_ANY;
     // Return combined node.
@@ -9138,33 +9128,38 @@ SDValue SystemZTargetLowering::combineTM(SDNode *N,
   // Optimize (TM (XOR (Op0 Op1))).
   if (TMOp0Node->getOpcode() == ISD::XOR) {
     auto *XorOp0 = TMOp0Node->getOperand(0).getNode();
-    // Op0. (SELECT_CCMASK (ICMP (SRL (IPM)))).
-    // Op1. (SRL (IPM (CC))).
+    // Op0: (SELECT_CCMASK (ICMP (SRL (IPM)))).
+    // Op1: (SRL (IPM (CC))).
     if (XorOp0 && XorOp0->getOpcode() == SystemZISD::SELECT_CCMASK) {
       auto *XorOp0CCValid = dyn_cast<ConstantSDNode>(XorOp0->getOperand(2));
       auto *XorOp0CCMask = dyn_cast<ConstantSDNode>(XorOp0->getOperand(3));
       if (!XorOp0CCValid || !XorOp0CCMask)
         return SDValue();
+
       SDValue XorOp0CCReg = XorOp0->getOperand(4);
       int XorOp0CCMaskVal = XorOp0CCMask->getZExtValue();
       int XorOp0CCValidVal = XorOp0CCValid->getZExtValue();
       int CCMask = SystemZ::CCMASK_CMP_EQ, CCValid, TMCCMask;
       SDValue CCReg = TMOp0Node->getOperand(1);
-      // (SELECT_CCMASK (ICMP (SRL (IPM)))).
+
+      // Combine (SELECT_CCMASK (ICMP (SRL (IPM)))) and get CC.
       if (!combineCCMask(XorOp0CCReg, XorOp0CCValidVal, XorOp0CCMaskVal) ||
           // (SRL (IPM (CC))).
           !combineCCMask(CCReg, CCValid, CCMask))
         return SDValue();
-      auto *N0 = XorOp0CCReg.getNode(), *N1 = CCReg.getNode();
+
       // Op0 and Op1 should point to the same CC.
+      auto *N0 = XorOp0CCReg.getNode(), *N1 = CCReg.getNode();
       if (!N0 || !N1 || N0 != N1)
         return SDValue();
+      // Compute the effective CC mask for select.
       if (TMOp1ConstVal == 1)
         TMCCMask = SystemZ::CCMASK_CMP_GE;
       else
         return SDValue();
-      // CCMask ^ XorOp0CCMaskVal = TMCCMask..
+      // CCMask ^ XorOp0CCMaskVal = TMCCMask
       CCMask = XorOp0CCMaskVal ^ TMCCMask;
+
       // Return combined node with combined CCMask.
       return DAG.getNode(
           SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
@@ -9179,10 +9174,12 @@ SDValue SystemZTargetLowering::combineTM(SDNode *N,
 SDValue SystemZTargetLowering::combineAND(SDNode *N,
                                           DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
+
   auto *AndOp0 = N->getOperand(0).getNode();
   auto *AndOp1 = N->getOperand(1).getNode();
   if (!AndOp0 || !AndOp1)
     return SDValue();
+
   // Both Operands of ISD::AND are SystemZISD::SELECT_CCMASK.
   // And CCMask of both operands and they should point to the
   // same CC and update CCReg. Return combined SDNode.
@@ -9194,48 +9191,65 @@ SDValue SystemZTargetLowering::combineAND(SDNode *N,
     auto *Op1CCMask = dyn_cast<ConstantSDNode>(AndOp1->getOperand(3));
     if (!Op0CCValid || !Op1CCValid || !Op0CCMask || !Op1CCMask)
       return SDValue();
+
     int Op0CCValidVal = Op0CCValid->getZExtValue();
     int Op1CCValidVal = Op1CCValid->getZExtValue();
     if (Op0CCValidVal != Op1CCValidVal)
       return SDValue();
+
+    // AndOp0 and AndOp1 should refer to same CC.
     SDValue Op0CCReg = AndOp0->getOperand(4), Op1CCReg = AndOp1->getOperand(4);
     auto *CCNode0 = Op0CCReg.getNode(), *CCNode1 = Op1CCReg.getNode();
-    // AndOp0 and AndOp1 should refer to same CC.
     if (!CCNode0 || !CCNode1 || CCNode0 != CCNode1)
       return SDValue();
-    // Verifying True/False of AndOp0 and AndOp1 matching or inverted.
-    bool Invert = false;
+
+    // Optimizing only the case where Op0TrueVal and Op1TrueVal are equal
+    // and at the same time Op0FalseVal and Op1FalseVal are also equal.
     auto *Op0TrueVal = dyn_cast<ConstantSDNode>(AndOp0->getOperand(0));
     auto *Op0FalseVal = dyn_cast<ConstantSDNode>(AndOp0->getOperand(1));
     auto *Op1TrueVal = dyn_cast<ConstantSDNode>(AndOp1->getOperand(0));
     auto *Op1FalseVal = dyn_cast<ConstantSDNode>(AndOp1->getOperand(1));
     if (!Op0TrueVal || !Op0FalseVal || !Op1TrueVal || !Op1FalseVal)
       return SDValue();
-    if (Op0TrueVal->getZExtValue() == Op1FalseVal->getZExtValue() ||
-        Op1TrueVal->getZExtValue() == Op0FalseVal->getZExtValue())
-      Invert = !Invert;
-    else if (Op0TrueVal->getZExtValue() != Op1TrueVal->getZExtValue() ||
-             Op0FalseVal->getZExtValue() != Op1FalseVal->getZExtValue())
+    if (Op0TrueVal->getZExtValue() != Op1TrueVal->getZExtValue() ||
+        Op0FalseVal->getZExtValue() != Op1FalseVal->getZExtValue())
       return SDValue();
+
+    // Compute the effective CC mask for select.
     int Op0CCMaskVal = Op0CCMask->getZExtValue();
     int Op1CCMaskVal = Op1CCMask->getZExtValue();
     int CCMask = Op0CCMaskVal & Op1CCMaskVal;
-    if (Invert)
-      CCMask ^= SystemZ::CCMASK_ANY;
+
+    // Check And's user's user if it it select_ccmask or br_ccmask, put it
+    // back to WorkList so that algortirm can start processing from outer
+    // select_ccmask/br_ccmask and combine with (icmp (select_ccmask)).
+    for (SDUse &IcmpUse : N->uses()) {
+      auto *Icmp = IcmpUse.getUser();
+      if (Icmp && Icmp->getOpcode() == SystemZISD::ICMP) {
+        for (SDUse &SelectBrUse : Icmp->uses()) {
+          auto *SelectBr = SelectBrUse.getUser();
+          if (SelectBr && (SelectBr->getOpcode() == SystemZISD::SELECT_CCMASK ||
+                           SelectBr->getOpcode() == SystemZISD::BR_CCMASK))
+            DCI.AddToWorklist(SelectBr);
+        }
+      }
+    }
     return DAG.getNode(SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
                        AndOp0->getOperand(0), AndOp0->getOperand(1),
                        DAG.getTargetConstant(Op0CCValidVal, SDLoc(N), MVT::i32),
                        DAG.getTargetConstant(CCMask, SDLoc(N), MVT::i32),
                        Op0CCReg);
   } else if (AndOp0->getOpcode() == SystemZISD::SELECT_CCMASK) {
-    // AndOp1 is (SRL (IPM (CC))) pattern. Second operand is CC.
+    // AndOp1: (SRL (IPM (CC))).
+    // AndOp2: CC.
     SDValue CCReg = N->getOperand(1);
     int CCMask = SystemZ::CCMASK_CMP_EQ, CCValid;
     if (!combineCCMask(CCReg, CCValid, CCMask))
       return SDValue();
+
+    // AndOp0 and AndOp1 should refer to same CC.
     SDValue Op0CCReg = AndOp0->getOperand(4);
     auto *CCNode0 = Op0CCReg.getNode(), *CCNode1 = CCReg.getNode();
-    // AndOp0 and AndOp1 should refer to same CC.
     if (!CCNode0 || !CCNode1 || CCNode0 != CCNode1)
       return SDValue();
     auto *Op0CCValid = dyn_cast<ConstantSDNode>(AndOp0->getOperand(2));
@@ -9243,11 +9257,28 @@ SDValue SystemZTargetLowering::combineAND(SDNode *N,
     int Op0CCValidVal = Op0CCValid->getZExtValue();
     if (!Op0CCMask || !Op0CCValid)
       return SDValue();
-    int Op0CCMaskVal = Op0CCMask->getZExtValue();
+
+    // Compute the effective CC mask for select.
     // Op0CCMaskVal & CCMask = 0. Invert Op0CCMaskVal.
+    int Op0CCMaskVal = Op0CCMask->getZExtValue();
     int CCMaskVal = Op0CCMaskVal ^ 0xf;
     assert(CCMaskVal < 4 && "CC out of range");
     CCMask = 1 << (3 - CCMaskVal);
+
+    // Check And's user's user if it it select_ccmask or br_ccmask, put it
+    // back to WorkList so that algortirm can start processing from outer
+    // select_ccmask/br_ccmask and combine with (icmp (select_ccmask)).
+    for (SDUse &IcmpUse : N->uses()) {
+      auto *Icmp = IcmpUse.getUser();
+      if (Icmp && Icmp->getOpcode() == SystemZISD::ICMP) {
+        for (SDUse &SelectBrUse : Icmp->uses()) {
+          auto *SelectBr = SelectBrUse.getUser();
+          if (SelectBr && (SelectBr->getOpcode() == SystemZISD::SELECT_CCMASK ||
+                           SelectBr->getOpcode() == SystemZISD::BR_CCMASK))
+            DCI.AddToWorklist(SelectBr);
+        }
+      }
+    }
     return DAG.getNode(SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
                        AndOp0->getOperand(0), AndOp0->getOperand(1),
                        DAG.getTargetConstant(Op0CCValidVal, SDLoc(N), MVT::i32),
@@ -9260,10 +9291,12 @@ SDValue SystemZTargetLowering::combineAND(SDNode *N,
 SDValue SystemZTargetLowering::combineOR(SDNode *N,
                                          DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
+
   auto *OrOp0 = N->getOperand(0).getNode();
   auto *OrOp1 = N->getOperand(1).getNode();
   if (!OrOp0 || !OrOp1)
     return SDValue();
+
   // Both Operands of ISD::OR are SystemZISD::SELECT_CCMASK.
   // And CCMask of both operands and they should point to the
   // same CC and update CCReg. Return combined SDNode.
@@ -9279,33 +9312,46 @@ SDValue SystemZTargetLowering::combineOR(SDNode *N,
     int Op1CCValidVal = Op1CCValid->getZExtValue();
     if (Op0CCValidVal != Op1CCValidVal)
       return SDValue();
+
+    // OrOp0 and OrOp0 should point to same CC.
     SDValue Op0CCReg = OrOp0->getOperand(4), Op1CCReg = OrOp1->getOperand(4);
     auto *CCNode0 = Op0CCReg.getNode(), *CCNode1 = Op1CCReg.getNode();
-    // OrOp0 and OrOp0 should point to same CC.
     if (!CCNode0 || !CCNode1 || CCNode0 != CCNode1)
       return SDValue();
-    // Checking True/False of OrOp0 and OrOp1 matching or inverted.
-    bool Invert = false;
+
+    // Optimizing only the case where Op0TrueVal and Op1TrueVal are equal
+    // and at the same time Op0FalseVal and Op1FalseVal are also equal.
     auto *Op0TrueVal = dyn_cast<ConstantSDNode>(OrOp0->getOperand(0));
     auto *Op0FalseVal = dyn_cast<ConstantSDNode>(OrOp0->getOperand(1));
     auto *Op1TrueVal = dyn_cast<ConstantSDNode>(OrOp1->getOperand(0));
     auto *Op1FalseVal = dyn_cast<ConstantSDNode>(OrOp1->getOperand(1));
     if (!Op0TrueVal || !Op0FalseVal || !Op1TrueVal || !Op1FalseVal)
       return SDValue();
-    if (Op0TrueVal->getZExtValue() == Op1FalseVal->getZExtValue() ||
-        Op1TrueVal->getZExtValue() == Op0FalseVal->getZExtValue())
-      Invert = !Invert;
-    else if (Op0TrueVal->getZExtValue() != Op1TrueVal->getZExtValue() ||
-             Op0FalseVal->getZExtValue() != Op1FalseVal->getZExtValue())
+    if (Op0TrueVal->getZExtValue() != Op1TrueVal->getZExtValue() ||
+        Op0FalseVal->getZExtValue() != Op1FalseVal->getZExtValue())
       return SDValue();
+
+    // Compute the effective CC mask for select.
     int Op0CCMaskVal = Op0CCMask->getZExtValue();
     int Op1CCMaskVal = Op1CCMask->getZExtValue();
-    // Oring Masks.
     int CCMask = Op0CCMaskVal | Op1CCMaskVal;
-    if (Invert)
-      CCMask ^= SystemZ::CCMASK_ANY;
+
+    // Check Or's user's user if it it select_ccmask or br_ccmask, put it back
+    // to WorkList so that algortirm can start processing from outer
+    // select_ccmask/br_ccmask and combine with (icmp (select_ccmask)).
+    for (SDUse &IcmpUse : N->uses()) {
+      auto *Icmp = IcmpUse.getUser();
+      if (Icmp && Icmp->getOpcode() == SystemZISD::ICMP) {
+        for (SDUse &SelectBrUse : Icmp->uses()) {
+          auto *SelectBr = SelectBrUse.getUser();
+          if (SelectBr && (SelectBr->getOpcode() == SystemZISD::SELECT_CCMASK ||
+                           SelectBr->getOpcode() == SystemZISD::BR_CCMASK))
+            DCI.AddToWorklist(SelectBr);
+        }
+      }
+    }
     return DAG.getNode(SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
-                       OrOp0->getOperand(0), OrOp1->getOperand(1),
+                       OrOp0->getOperand(0), OrOp0->getOperand(1),
                        DAG.getTargetConstant(Op0CCValidVal, SDLoc(N), MVT::i32),
                        DAG.getTargetConstant(CCMask, SDLoc(N), MVT::i32),
                        Op0CCReg);
@@ -9313,82 +9359,15 @@ SDValue SystemZTargetLowering::combineOR(SDNode *N,
   return SDValue();
 }
 
-SDValue SystemZTargetLowering::combineICMP(SDNode *N,
-                                           DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-  auto *LHS = N->getOperand(0).getNode();
-  if (!LHS)
-    return SDValue();
-  auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  // Handle the case where RHS is const.
-  // Remove redundant ICMP left after operand 0 pattern has been combined by
-  // by combineAND, combineXOR, combineOR into select_cc on the assumption
-  // CmpVal is zero.
-  // Why is redundant ICMP created?
-  // This redundant 'icmp' is created as we are combining '(icmp (and...))',
-  // 'icmp (or...))', or 'icmp (xor...))' in combineAND, combineOR, or
-  // combineXOR at 'and', 'or', 'xor' level and select_ccmask is returned.
-  // e.g t10 is returned by combineOR/XOR/AND.
-  // t10: (select_ccmask VAL1 VAL2 CCMASK_ANY CCOp)
-  // (icmp t10 0)
-  // Following code return t10, entire select_ccmask.
-  // This dangling icmp can be avoided if we combine entire sequence at 'icmp'
-  // level. But downside of this approach is most of this code will be pulled
-  // into combineICMP and might leave some of the added pattern to
-  // PerformDAGCombine useless.
-  if (RHS && LHS->getOpcode() == SystemZISD::SELECT_CCMASK) {
-    auto *CCValid = dyn_cast<ConstantSDNode>(LHS->getOperand(2));
-    int CmpVal = RHS->getZExtValue();
-    // Check CmpVal is zero.
-    if (!CCValid || CmpVal != 0)
-      return SDValue();
-    return N->getOperand(0);
-  }
-  if (RHS)
-    return SDValue();
-  // Handle the case where RHS is also expression.
-  // Optimize (ICMP (SELECT_CCMASK AND (SRL (IPM (CC))))).
-  // ICMP: Op0 - SELECT_CCMASK and Op1 - (AND (SRL (IPM (CC)))).
-  if (LHS->getOpcode() == SystemZISD::SELECT_CCMASK) {
-    auto *SelectCCValid = dyn_cast<ConstantSDNode>(LHS->getOperand(2));
-    auto *SelectCCMask = dyn_cast<ConstantSDNode>(LHS->getOperand(3));
-    if (!SelectCCValid || !SelectCCMask)
-      return SDValue();
-    auto *RHS = N->getOperand(1).getNode();
-    if (RHS && RHS->getOpcode() == ISD::AND) {
-      SDValue AndCCReg = RHS->getOperand(0);
-      auto *AndConst = dyn_cast<ConstantSDNode>(RHS->getOperand(1));
-      if (!AndConst || AndConst->getZExtValue() != 1)
-        return SDValue();
-      int AndCCMask = SystemZ::CCMASK_CMP_EQ, AndCCValid;
-      // (AND (SRL (IPM (CC)))). Anding bit 28.
-      if (!combineCCMask(AndCCReg, AndCCValid, AndCCMask))
-        return SDValue();
-      // Anding bit 28 false => CC == 0 || CC == 2.
-      AndCCMask = SystemZ::CCMASK_CMP_GE;
-      auto *N1 = AndCCReg.getNode(), *N2 = LHS->getOperand(4).getNode();
-      if (!N1 || !N2 || N1 != N2)
-        return SDValue();
-      // CCMask for comparing AndCCMask and SelectCCMasK.
-      int CCMask = AndCCMask ^ SelectCCMask->getZExtValue();
-      AndCCValid = SystemZ::CCMASK_ANY;
-      return DAG.getNode(
-          SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
-          LHS->getOperand(0), LHS->getOperand(1),
-          DAG.getTargetConstant(AndCCValid, SDLoc(N), MVT::i32),
-          DAG.getTargetConstant(CCMask, SDLoc(N), MVT::i32), AndCCReg);
-    }
-  }
-  return SDValue();
-}
-
 SDValue SystemZTargetLowering::combineXOR(SDNode *N,
                                           DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
+
   auto *XorOp0 = N->getOperand(0).getNode();
   auto *XorOp1 = N->getOperand(1).getNode();
   if (!XorOp0 || !XorOp1)
     return SDValue();
+
   // Both Operands of ISD::XOR are SystemZISD::SELECT_CCMASK.
   // And CCMask of both operands and they should point to the
   // same CC and update CCReg. Return combined SDNode.
@@ -9400,40 +9379,53 @@ SDValue SystemZTargetLowering::combineXOR(SDNode *N,
     auto *Op1CCMask = dyn_cast<ConstantSDNode>(XorOp1->getOperand(3));
     if (!Op0CCValid || !Op1CCValid || !Op0CCMask || !Op1CCMask)
       return SDValue();
+
     int Op0CCValidVal = Op0CCValid->getZExtValue();
     int Op1CCValidVal = Op1CCValid->getZExtValue();
     if (Op0CCValidVal != Op1CCValidVal)
       return SDValue();
+
+    // XorOp0 and XorOp0 should point to same CC.
     SDValue Op0CCReg = XorOp0->getOperand(4), Op1CCReg = XorOp1->getOperand(4);
     auto *CCNode0 = Op0CCReg.getNode(), *CCNode1 = Op1CCReg.getNode();
-    // Same CC node.
     if (!CCNode0 || !CCNode1 || CCNode0 != CCNode1)
       return SDValue();
-    // XorOp0 and XorOp0 should point to same CC.
     if (!CCNode0 || !CCNode1 || CCNode0 != CCNode1)
       return SDValue();
-    // Checking True/False of XorOp0 and XorOp1 matching or inverted.
-    bool Invert = false;
+
+    // Optimizing only the case where Op0TrueVal and Op1TrueVal are equal
+    // and at the same time Op0FalseVal and Op1FalseVal are also equal.
     auto *Op0TrueVal = dyn_cast<ConstantSDNode>(XorOp0->getOperand(0));
     auto *Op0FalseVal = dyn_cast<ConstantSDNode>(XorOp0->getOperand(1));
     auto *Op1TrueVal = dyn_cast<ConstantSDNode>(XorOp1->getOperand(0));
     auto *Op1FalseVal = dyn_cast<ConstantSDNode>(XorOp1->getOperand(1));
     if (!Op0TrueVal || !Op0FalseVal || !Op1TrueVal || !Op1FalseVal)
       return SDValue();
-    if (Op0TrueVal->getZExtValue() == Op1FalseVal->getZExtValue() ||
-        Op1TrueVal->getZExtValue() == Op0FalseVal->getZExtValue())
-      Invert = !Invert;
-    else if (Op0TrueVal->getZExtValue() != Op1TrueVal->getZExtValue() ||
-             Op0FalseVal->getZExtValue() != Op1FalseVal->getZExtValue())
+    if (Op0TrueVal->getZExtValue() != Op1TrueVal->getZExtValue() ||
+        Op0FalseVal->getZExtValue() != Op1FalseVal->getZExtValue())
       return SDValue();
+
+    // Compute the effective CC mask for select.
     int Op0CCMaskVal = Op0CCMask->getZExtValue();
     int Op1CCMaskVal = Op1CCMask->getZExtValue();
-    // Xor the masks.
     int CCMask = Op0CCMaskVal ^ Op1CCMaskVal;
-    if (Invert)
-      CCMask ^= SystemZ::CCMASK_ANY;
+
+    // Check Xor's user's user if it it select_ccmask or br_ccmask, put it back
+    // to WorkList so that algortirm can start processing from outer
+    // select_ccmask/br_ccmask and combine with (icmp (select_ccmask)).
+    for (SDUse &IcmpUse : N->uses()) {
+      auto *Icmp = IcmpUse.getUser();
+      if (Icmp && Icmp->getOpcode() == SystemZISD::ICMP) {
+        for (SDUse &SelectBrUse : Icmp->uses()) {
+          auto *SelectBr = SelectBrUse.getUser();
+          if (SelectBr && (SelectBr->getOpcode() == SystemZISD::SELECT_CCMASK ||
+                           SelectBr->getOpcode() == SystemZISD::BR_CCMASK))
+            DCI.AddToWorklist(SelectBr);
+        }
+      }
+    }
     return DAG.getNode(SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
-                       XorOp0->getOperand(0), XorOp1->getOperand(1),
+                       XorOp0->getOperand(0), XorOp0->getOperand(1),
                        DAG.getTargetConstant(Op0CCValidVal, SDLoc(N), MVT::i32),
                        DAG.getTargetConstant(CCMask, SDLoc(N), MVT::i32),
                        Op0CCReg);
@@ -9468,8 +9460,9 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
 SDValue SystemZTargetLowering::combineSELECT_CCMASK(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
-  // Handle the case where select_cc_outer has TrueVal or FalseVal has
-  // altredy combined select_cc_nested.
+
+  // Handle the case where select_ccmask has TrueVal or FalseVal points to
+  // nested select_ccmake.
   SDValue Res = combineSELECT_CC_CCIPMMask(N, DCI);
   if (Res != SDValue())
     return Res;
@@ -9483,6 +9476,7 @@ SDValue SystemZTargetLowering::combineSELECT_CCMASK(
   int CCValidVal = CCValid->getZExtValue();
   int CCMaskVal = CCMask->getZExtValue();
   SDValue CCReg = N->getOperand(4);
+
   if (combineCCMask(CCReg, CCValidVal, CCMaskVal))
     return DAG.getNode(SystemZISD::SELECT_CCMASK, SDLoc(N), N->getValueType(0),
                        N->getOperand(0), N->getOperand(1),
@@ -9816,8 +9810,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INTRINSIC_VOID:     return combineINTRINSIC(N, DCI);
   case ISD::AND:
     return combineAND(N, DCI);
-  case SystemZISD::ICMP:
-    return combineICMP(N, DCI);
   case ISD::OR:
     return combineOR(N, DCI);
   case SystemZISD::TM:

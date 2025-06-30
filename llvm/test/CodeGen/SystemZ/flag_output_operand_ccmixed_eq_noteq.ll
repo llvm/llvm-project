@@ -5078,7 +5078,12 @@ define i64 @bar4a_023_OR_XOR_c() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jgl dummy@PLT
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r1, %r0, 63, 191, 36
+; CHECK-NEXT:    afi %r0, 1342177280
+; CHECK-NEXT:    srl %r0, 31
+; CHECK-NEXT:    cr %r0, %r1
+; CHECK-NEXT:    jglh dummy@PLT
 ; CHECK-NEXT:  .LBB209_1: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:

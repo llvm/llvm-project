@@ -166,9 +166,14 @@ define signext range(i32 0, 43) i32 @foo_023_XOR_OR(i32 noundef signext %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    lghi %r2, 42
-; CHECK-NEXT:    bnlr %r14
-; CHECK-NEXT:  .LBB6_1: # %entry
-; CHECK-NEXT:    lghi %r2, 0
+; CHECK-NEXT:    lghi %r0, 42
+; CHECK-NEXT:    jhe .LBB6_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    lghi %r0, 0
+; CHECK-NEXT:  .LBB6_2: # %entry
+; CHECK-NEXT:    bor %r14
+; CHECK-NEXT:  .LBB6_3: # %entry
+; CHECK-NEXT:    lgr %r2, %r0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call { i32, i32 } asm sideeffect "ahi $0,42\0A", "=d,={@cc},0"(i32 %x) #2
@@ -847,7 +852,12 @@ define i64 @bar_023_OR_XOR_c() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    jgnl dummy@PLT
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r1, %r0, 63, 191, 36
+; CHECK-NEXT:    afi %r0, -805306368
+; CHECK-NEXT:    srl %r0, 31
+; CHECK-NEXT:    cr %r0, %r1
+; CHECK-NEXT:    jglh dummy@PLT
 ; CHECK-NEXT:  .LBB33_1: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:
