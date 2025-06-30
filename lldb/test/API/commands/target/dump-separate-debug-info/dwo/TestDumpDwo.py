@@ -150,9 +150,7 @@ class TestDumpDWO(lldbtest.TestBase):
         self.assertFalse(output[exe]["a.out-foo.dwo"]["loaded"])
         # Set a breakpoint in main(). All DWO files should be loaded now
         self.runCmd("b main")
-        self.runCmd(
-            "target modules dump separate-debug-info --json --force-load-all-debug-info"
-        )
+        self.runCmd("target modules dump separate-debug-info --json")
         output = self.get_dwos_from_json_output()
         self.assertTrue(output[exe]["a.out-main.dwo"]["loaded"])
         self.assertTrue(output[exe]["a.out-foo.dwo"]["loaded"])
