@@ -950,6 +950,8 @@ namespace llvm {
     /// \param Annotations   Attribute Annotations.
     /// \param TargetFuncName The name of the target function if this is
     ///                       a trampoline.
+    /// \param UseKeyInstructions Instruct DWARF emission to interpret Key
+    /// Instructions metadata on instructions to determine is_stmt placement.
     LLVM_ABI DISubprogram *createFunction(
         DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
@@ -957,7 +959,8 @@ namespace llvm {
         DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
         DITemplateParameterArray TParams = nullptr,
         DISubprogram *Decl = nullptr, DITypeArray ThrownTypes = nullptr,
-        DINodeArray Annotations = nullptr, StringRef TargetFuncName = "");
+        DINodeArray Annotations = nullptr, StringRef TargetFuncName = "",
+        bool UseKeyInstructions = false);
 
     /// Identical to createFunction,
     /// except that the resulting DbgNode is meant to be RAUWed.
@@ -988,15 +991,15 @@ namespace llvm {
     /// \param SPFlags       Additional flags specific to subprograms.
     /// \param TParams       Function template parameters.
     /// \param ThrownTypes   Exception types this function may throw.
-    LLVM_ABI DISubprogram *
-    createMethod(DIScope *Scope, StringRef Name, StringRef LinkageName,
-                 DIFile *File, unsigned LineNo, DISubroutineType *Ty,
-                 unsigned VTableIndex = 0, int ThisAdjustment = 0,
-                 DIType *VTableHolder = nullptr,
-                 DINode::DIFlags Flags = DINode::FlagZero,
-                 DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
-                 DITemplateParameterArray TParams = nullptr,
-                 DITypeArray ThrownTypes = nullptr);
+    /// \param UseKeyInstructions Enable Key Instructions debug info.
+    LLVM_ABI DISubprogram *createMethod(
+        DIScope *Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+        unsigned LineNo, DISubroutineType *Ty, unsigned VTableIndex = 0,
+        int ThisAdjustment = 0, DIType *VTableHolder = nullptr,
+        DINode::DIFlags Flags = DINode::FlagZero,
+        DISubprogram::DISPFlags SPFlags = DISubprogram::SPFlagZero,
+        DITemplateParameterArray TParams = nullptr,
+        DITypeArray ThrownTypes = nullptr, bool UseKeyInstructions = false);
 
     /// Create common block entry for a Fortran common block.
     /// \param Scope       Scope of this common block.
