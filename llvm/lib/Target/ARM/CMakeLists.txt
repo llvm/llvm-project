@@ -74,21 +74,9 @@ add_llvm_target(ARMCodeGen
   ARMDesc
   ARMInfo
   ARMUtils
-  Analysis
-  AsmPrinter
+  ${TARGET_LIBRARIES}
   CFGuard
-  CodeGen
-  CodeGenTypes
-  Core
   GlobalISel
-  IPO
-  MC
-  Scalar
-  SelectionDAG
-  Support
-  Target
-  TargetParser
-  TransformUtils
 
   ADD_TO_COMPONENT
   ARM
