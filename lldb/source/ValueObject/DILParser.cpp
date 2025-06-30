@@ -191,12 +191,28 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
     return std::make_unique<IdentifierNode>(loc, identifier);
   }
 
+  uint32_t loc = CurToken().GetLocation();
+  std::string nested_name_specifier;
+
   if (CurToken().Is(Token::l_paren)) {
-    m_dil_lexer.Advance();
-    auto expr = ParseExpression();
-    Expect(Token::r_paren);
-    m_dil_lexer.Advance();
-    return expr;
+    nested_name_specifier = ParseNestedNameSpecifier();
+
+    if (!nested_name_specifier.empty()) {
+      if (!CurToken().Is(Token::identifier)) {
+        BailOut("Expected an identifier, but not found.",
+                CurToken().GetLocation(), CurToken().GetSpelling().length());
+      }
+
+      std::string unqualified_id = ParseUnqualifiedId();
+      return std::make_unique<IdentifierNode>(loc, nested_name_specifier +
+                                                       unqualified_id);
+    } else {
+      m_dil_lexer.Advance();
+      auto expr = ParseExpression();
+      Expect(Token::r_paren);
+      m_dil_lexer.Advance();
+      return expr;
+    }
   }
 
   BailOut(llvm::formatv("Unexpected token: {0}", CurToken()),
@@ -232,16 +248,16 @@ std::string DILParser::ParseNestedNameSpecifier() {
         m_dil_lexer.LookAhead(4).Is(Token::coloncolon)) {
       m_dil_lexer.Advance(4);
 
-      assert(
-          (CurToken().Is(Token::identifier) || CurToken().Is(Token::l_paren)) &&
-          "Expected an identifier or anonymous namespace, but not found.");
+      Expect(Token::coloncolon);
+      m_dil_lexer.Advance();
+      if (!CurToken().Is(Token::identifier) && !CurToken().Is(Token::l_paren)) {
+        BailOut(
+            "Expected an identifier or anonymous namespeace, but not found.",
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+      }
       // Continue parsing the nested_namespace_specifier.
       std::string identifier2 = ParseNestedNameSpecifier();
-      if (identifier2.empty()) {
-        Expect(Token::identifier);
-        identifier2 = CurToken().GetSpelling();
-        m_dil_lexer.Advance();
-      }
+
       return "(anonymous namespace)::" + identifier2;
     }
 
