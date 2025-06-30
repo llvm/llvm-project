@@ -202,8 +202,7 @@ define void @two_index_gep() {
 
 define void @two_index_gep_const() {
   ; CHECK-LABEL: define void @two_index_gep_const(
-  ; CHECK-NEXT: [[GEP_PTR:%.*]] = getelementptr inbounds nuw [4 x float], ptr addrspace(3) @g.1dim, i32 0, i32 3
-  ; CHECK-NEXT: load float, ptr addrspace(3) [[GEP_PTR]], align 4
+  ; CHECK-NEXT: load float, ptr addrspace(3) getelementptr inbounds nuw ([4 x float], ptr addrspace(3) @g.1dim, i32 0, i32 3), align 4
   ; CHECK-NEXT: ret void
   %1 = getelementptr inbounds nuw [2 x [2 x float]], ptr addrspace(3) @g, i32 0, i32 1, i32 1
   %3 = load float, ptr addrspace(3) %1, align 4
