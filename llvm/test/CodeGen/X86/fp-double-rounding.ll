@@ -4,16 +4,25 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--"
 
-; CHECK-LABEL: double_rounding:
+; CHECK-LABEL: double_rounding_safe:
 ; SAFE: callq __trunctfdf2
 ; SAFE-NEXT: cvtsd2ss %xmm0
+define void @double_rounding_safe(ptr %x, ptr %f) {
+entry:
+  %0 = load fp128, ptr %x, align 16
+  %1 = fptrunc fp128 %0 to double
+  %2 = fptrunc double %1 to float
+  store float %2, ptr %f, align 4
+  ret void
+}
+; CHECK-LABEL: double_rounding:
 ; UNSAFE: callq __trunctfsf2
 ; UNSAFE-NOT: cvt
 define void @double_rounding(ptr %x, ptr %f) {
 entry:
   %0 = load fp128, ptr %x, align 16
-  %1 = fptrunc fp128 %0 to double
-  %2 = fptrunc double %1 to float
+  %1 = fptrunc contract fp128 %0 to double
+  %2 = fptrunc contract double %1 to float
   store float %2, ptr %f, align 4
   ret void
 }
