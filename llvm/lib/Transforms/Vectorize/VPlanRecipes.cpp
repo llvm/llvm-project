@@ -2633,7 +2633,7 @@ VPSingleDefBundleRecipe::VPSingleDefBundleRecipe(
 
 void VPSingleDefBundleRecipe::unbundle() {
   for (auto *R : BundledRecipes)
-      R->insertBefore(this);
+    R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
     BundleLiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
