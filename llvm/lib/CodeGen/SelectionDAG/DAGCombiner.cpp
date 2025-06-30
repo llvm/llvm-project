@@ -13138,6 +13138,9 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
     }
   }
 
+  assert(DAG.ComputeNumSignBits(Cond) == CondVT.getScalarSizeInBits() &&
+         "Select condition no longer all-sign bits");
+
   // select Cond, -1, 0 → bitcast Cond
   if (IsTAllOne && IsFAllZero)
     return DAG.getBitcast(VT, Cond);
