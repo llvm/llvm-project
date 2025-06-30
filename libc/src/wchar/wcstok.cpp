@@ -14,7 +14,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 bool isADelimeter(wchar_t wc, const wchar_t *delimiters) {
-  for (const wchar_t *delim_ptr = delimiters; *delim_ptr != L'\0'; delim_ptr++)
+  for (const wchar_t *delim_ptr = delimiters; *delim_ptr != L'\0'; ++delim_ptr)
     if (wc == *delim_ptr)
       return true;
   return false;
@@ -32,16 +32,16 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcstok,
 
   wchar_t *tok_start, *tok_end;
   for (tok_start = str; *tok_start != L'\0' && isADelimeter(*tok_start, delim);
-       tok_start++)
+       ++tok_start)
     ;
 
   for (tok_end = tok_start; *tok_end != L'\0' && !isADelimeter(*tok_end, delim);
-       tok_end++)
+       ++tok_end)
     ;
 
   if (*tok_end != L'\0') {
     *tok_end = L'\0';
-    tok_end++;
+    ++tok_end;
   }
   *context = tok_end;
   return *tok_start == L'\0' ? nullptr : tok_start;

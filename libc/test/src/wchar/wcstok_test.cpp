@@ -28,7 +28,7 @@ TEST(LlvmLibcWCSTokReentrantTest, NoTokenFound) {
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(empty, L"_", &reserve), nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"_", &reserve), nullptr);
   }
-  { // Same wchar_tacter source and delimiter string.
+  { // Same character source and delimiter string.
     wchar_t single[] = L"_";
     wchar_t *reserve = nullptr;
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(single, L"_", &reserve), nullptr);
@@ -36,7 +36,7 @@ TEST(LlvmLibcWCSTokReentrantTest, NoTokenFound) {
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(single, L"_", &reserve), nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"_", &reserve), nullptr);
   }
-  { // Multiple wchar_tacter source and single wchar_tacter delimiter string.
+  { // Multiple character source and single character delimiter string.
     wchar_t multiple[] = L"1,2";
     wchar_t *reserve = nullptr;
     wchar_t *tok = LIBC_NAMESPACE::wcstok(multiple, L":", &reserve);
