@@ -655,6 +655,10 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
+- Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
+  diagnostics when floating-point numbers had both width field and plus or space
+  prefix specified. (#GH143951)
+
 - Clang now avoids issuing `-Wreturn-type` warnings in some cases where
   the final statement of a non-void function is a `throw` expression, or
   a call to a function that is trivially known to always throw (i.e., its
