@@ -2582,7 +2582,7 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
       return nullptr;
     }
   }
-  return const_cast<Type*>(Agg);
+  return Agg;
 }
 
 //===----------------------------------------------------------------------===//

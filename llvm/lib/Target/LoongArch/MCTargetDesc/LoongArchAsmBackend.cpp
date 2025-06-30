@@ -287,8 +287,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
   const MCExpr &Expr = LF.getValue();
   if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.getFixups().push_back(
-      MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   return std::make_pair(true, true);
 }
 

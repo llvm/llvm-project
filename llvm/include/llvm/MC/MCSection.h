@@ -13,6 +13,7 @@
 #ifndef LLVM_MC_MCSECTION_H
 #define LLVM_MC_MCSECTION_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
@@ -182,7 +183,8 @@ public:
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }
 
-  void dump() const;
+  void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
+                *FragToSyms = nullptr) const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,

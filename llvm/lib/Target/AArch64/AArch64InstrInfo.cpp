@@ -5037,7 +5037,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
       // If either operand is WSP, expand to ADD #0.
-      if (Subtarget.hasZeroCycleRegMove()) {
+      if (Subtarget.hasZeroCycleRegMoveGPR64() &&
+          !Subtarget.hasZeroCycleRegMoveGPR32()) {
         // Cyclone recognizes "ADD Xd, Xn, #0" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
@@ -5063,7 +5064,8 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
     } else {
-      if (Subtarget.hasZeroCycleRegMove()) {
+      if (Subtarget.hasZeroCycleRegMoveGPR64() &&
+          !Subtarget.hasZeroCycleRegMoveGPR32()) {
         // Cyclone recognizes "ORR Xd, XZR, Xm" as a zero-cycle register move.
         MCRegister DestRegX = TRI->getMatchingSuperReg(
             DestReg, AArch64::sub_32, &AArch64::GPR64spRegClass);
