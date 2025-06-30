@@ -1355,6 +1355,12 @@ struct InformationCache {
   /// Return the flat address space if the associated target has.
   LLVM_ABI std::optional<unsigned> getFlatAddressSpace() const;
 
+  virtual bool shouldTrackUse(const AbstractAttribute *QueryingAA,
+                              Value &AssociatedValue, const Use *U,
+                              const Instruction *I) const {
+    return false;
+  }
+
 private:
   struct FunctionInfo {
     LLVM_ABI ~FunctionInfo();
@@ -2042,6 +2048,19 @@ public:
     SimplificationCallbacks[IRP].emplace_back(CB);
   }
 
+  using AlignmentCallbackTy =
+      std::function<void(const IRPosition &, const AbstractAttribute *,
+                         SmallVectorImpl<AA::ValueAndContext> &)>;
+  void registerAlignmentCallback(const IRPosition &IRP,
+                                 const AlignmentCallbackTy &CB) {
+    AlignmentCallBacks[IRP].emplace_back(CB);
+  }
+
+  SmallVector<AlignmentCallbackTy, 1>
+  getAlignmentCallback(const IRPosition &IRP) {
+    return AlignmentCallBacks.lookup(IRP);
+  }
+
   /// Return true if there is a simplification callback for \p IRP.
   bool hasSimplificationCallback(const IRPosition &IRP) {
     return SimplificationCallbacks.count(IRP);
@@ -2092,6 +2111,9 @@ private:
   /// The vector with all simplification callbacks registered by outside AAs.
   DenseMap<IRPosition, SmallVector<SimplifictionCallbackTy, 1>>
       SimplificationCallbacks;
+
+  /// The vector with AAAlign callbacks registered by outside AAs.
+  DenseMap<IRPosition, SmallVector<AlignmentCallbackTy, 1>> AlignmentCallBacks;
 
   /// The vector with all simplification callbacks for global variables
   /// registered by outside AAs.
