@@ -2032,8 +2032,7 @@ protected:
           }
           if (INTERRUPT_REQUESTED(GetDebugger(),
                                   "Interrupted in dump all symtabs with {0} "
-                                  "of {1} dumped.",
-                                  num_dumped, num_modules))
+                                  "of {1} dumped.", num_dumped, num_modules))
             break;
 
           num_dumped++;
@@ -2061,10 +2060,9 @@ protected:
                 result.GetOutputStream().EOL();
                 result.GetOutputStream().EOL();
               }
-              if (INTERRUPT_REQUESTED(
-                      GetDebugger(),
-                      "Interrupted in dump symtab list with {0} of {1} dumped.",
-                      num_dumped, num_matches))
+              if (INTERRUPT_REQUESTED(GetDebugger(),
+                    "Interrupted in dump symtab list with {0} of {1} dumped.",
+                    num_dumped, num_matches))
                 break;
 
               num_dumped++;
