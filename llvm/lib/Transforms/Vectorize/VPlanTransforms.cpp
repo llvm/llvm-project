@@ -2894,16 +2894,39 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
 
   // Clamp the range if using multiply-accumulate-reduction is profitable.
   auto IsMulAccValidAndClampRange =
-      [&](bool isZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
-          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt) -> bool {
+      [&](bool IsZExt, VPWidenRecipe *Mul, VPWidenCastRecipe *Ext0,
+          VPWidenCastRecipe *Ext1, VPWidenCastRecipe *OuterExt,
+          std::optional<VPWidenRecipe *> Sub = std::nullopt) -> bool {
     return LoopVectorizationPlanner::getDecisionAndClampRange(
         [&](ElementCount VF) {
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
-          Type *SrcTy =
+          Type *SrcTy0 =
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
-          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-          InstructionCost MulAccCost =
-              Ctx.TTI.getMulAccReductionCost(isZExt, RedTy, SrcVecTy, CostKind);
+          Type *SrcTy1 =
+              Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : RedTy;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy0, VF));
+          InstructionCost MulAccCost;
+          if (Red->isPartialReduction()) {
+            unsigned Opcode =
+                Sub.has_value() ? Instruction::Sub : Instruction::Add;
+            TargetTransformInfo::PartialReductionExtendKind Ext0Kind =
+                Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
+                           Ext0->getOpcode())
+                     : TargetTransformInfo::PR_None;
+            TargetTransformInfo::PartialReductionExtendKind Ext1Kind =
+                Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
+                           Ext1->getOpcode())
+                     : TargetTransformInfo::PR_None;
+            MulAccCost = Ctx.TTI.getPartialReductionCost(
+                Opcode, SrcTy0, SrcTy1, RedTy, VF, Ext0Kind, Ext1Kind,
+                Mul->getOpcode(), Ctx.CostKind);
+          } else {
+            // Currently only partial reductions support mixed extension types
+            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+              return false;
+            MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, RedTy, SrcVecTy,
+                                                        CostKind);
+          }
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
           InstructionCost ExtCost = 0;
@@ -2921,29 +2944,47 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   };
 
   VPValue *VecOp = Red->getVecOp();
+  VPValue *Mul = nullptr;
+  VPValue *Sub = nullptr;
   VPValue *A, *B;
+  // Some chained partial reductions used for complex numbers will have a
+  // negation between the mul and reduction. This extracts the mul from that
+  // pattern to use it for further checking. The sub should still be bundled.
+  if (match(VecOp,
+            m_Binary<Instruction::Sub>(m_SpecificInt(0), m_VPValue(Mul))))
+    Sub = VecOp;
+  else
+    Mul = VecOp;
   // Try to match reduce.add(mul(...)).
-  if (match(VecOp, m_Mul(m_VPValue(A), m_VPValue(B)))) {
+  if (match(Mul, m_Mul(m_VPValue(A), m_VPValue(B)))) {
     auto *RecipeA =
         dyn_cast_if_present<VPWidenCastRecipe>(A->getDefiningRecipe());
     auto *RecipeB =
         dyn_cast_if_present<VPWidenCastRecipe>(B->getDefiningRecipe());
-    auto *Mul = cast<VPWidenRecipe>(VecOp->getDefiningRecipe());
+    auto *MulR = cast<VPWidenRecipe>(Mul->getDefiningRecipe());
+    std::optional<VPWidenRecipe *> SubR =
+        Sub ? std::make_optional(cast<VPWidenRecipe>(Sub->getDefiningRecipe()))
+            : std::nullopt;
 
     // Match reduce.add(mul(ext, ext)).
+    // Mixed extensions are valid for partial reductions
     if (RecipeA && RecipeB &&
-        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B) &&
+        (RecipeA->getOpcode() == RecipeB->getOpcode() || A == B ||
+         Red->isPartialReduction()) &&
         match(RecipeA, m_ZExtOrSExt(m_VPValue())) &&
         match(RecipeB, m_ZExtOrSExt(m_VPValue())) &&
         IsMulAccValidAndClampRange(RecipeA->getOpcode() ==
                                        Instruction::CastOps::ZExt,
-                                   Mul, RecipeA, RecipeB, nullptr)) {
-      return new VPSingleDefBundleRecipe(RecipeA, RecipeB, Mul, Red);
+                                   MulR, RecipeA, RecipeB, nullptr, SubR)) {
+      if (Sub)
+        return new VPSingleDefBundleRecipe(
+            RecipeA, RecipeB, MulR,
+            cast<VPWidenRecipe>(Sub->getDefiningRecipe()), Red);
+      return new VPSingleDefBundleRecipe(RecipeA, RecipeB, MulR, Red);
     }
     // Match reduce.add(mul).
-    if (IsMulAccValidAndClampRange(true, Mul, nullptr, nullptr, nullptr)) {
-      return new VPSingleDefBundleRecipe(Mul, Red);
-    }
+    if (IsMulAccValidAndClampRange(true, MulR, nullptr, nullptr, nullptr))
+      return new VPSingleDefBundleRecipe(MulR, Red);
   }
   // Match reduce.add(ext(mul(ext(A), ext(B)))).
   // All extend recipes must have same opcode or A == B
