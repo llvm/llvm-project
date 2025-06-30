@@ -6,7 +6,7 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-LABEL: srem_i128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<22>;
-; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-NEXT:    .reg .b64 %rd<126>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
@@ -31,15 +31,15 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    setp.ne.s64 %p6, %rd6, 0;
 ; CHECK-NEXT:    clz.b64 %r1, %rd6;
 ; CHECK-NEXT:    cvt.u64.u32 %rd57, %r1;
-; CHECK-NEXT:    clz.b64 %r3, %rd5;
-; CHECK-NEXT:    cvt.u64.u32 %rd58, %r3;
+; CHECK-NEXT:    clz.b64 %r2, %rd5;
+; CHECK-NEXT:    cvt.u64.u32 %rd58, %r2;
 ; CHECK-NEXT:    add.s64 %rd59, %rd58, 64;
 ; CHECK-NEXT:    selp.b64 %rd60, %rd57, %rd59, %p6;
 ; CHECK-NEXT:    setp.ne.s64 %p7, %rd4, 0;
-; CHECK-NEXT:    clz.b64 %r5, %rd4;
-; CHECK-NEXT:    cvt.u64.u32 %rd61, %r5;
-; CHECK-NEXT:    clz.b64 %r7, %rd3;
-; CHECK-NEXT:    cvt.u64.u32 %rd62, %r7;
+; CHECK-NEXT:    clz.b64 %r3, %rd4;
+; CHECK-NEXT:    cvt.u64.u32 %rd61, %r3;
+; CHECK-NEXT:    clz.b64 %r4, %rd3;
+; CHECK-NEXT:    cvt.u64.u32 %rd62, %r4;
 ; CHECK-NEXT:    add.s64 %rd63, %rd62, 64;
 ; CHECK-NEXT:    selp.b64 %rd64, %rd61, %rd63, %p7;
 ; CHECK-NEXT:    mov.b64 %rd116, 0;
@@ -64,30 +64,30 @@ define i128 @srem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    addc.cc.s64 %rd119, %rd8, 0;
 ; CHECK-NEXT:    or.b64 %rd71, %rd118, %rd119;
 ; CHECK-NEXT:    setp.eq.s64 %p18, %rd71, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r9, %rd66;
-; CHECK-NEXT:    sub.s32 %r10, 127, %r9;
-; CHECK-NEXT:    shl.b64 %rd72, %rd4, %r10;
-; CHECK-NEXT:    sub.s32 %r11, 64, %r10;
-; CHECK-NEXT:    shr.u64 %rd73, %rd3, %r11;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd66;
+; CHECK-NEXT:    sub.s32 %r6, 127, %r5;
+; CHECK-NEXT:    shl.b64 %rd72, %rd4, %r6;
+; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
+; CHECK-NEXT:    shr.u64 %rd73, %rd3, %r7;
 ; CHECK-NEXT:    or.b64 %rd74, %rd72, %rd73;
-; CHECK-NEXT:    sub.s32 %r12, 63, %r9;
-; CHECK-NEXT:    shl.b64 %rd75, %rd3, %r12;
-; CHECK-NEXT:    setp.gt.s32 %p19, %r10, 63;
+; CHECK-NEXT:    sub.s32 %r8, 63, %r5;
+; CHECK-NEXT:    shl.b64 %rd75, %rd3, %r8;
+; CHECK-NEXT:    setp.gt.s32 %p19, %r6, 63;
 ; CHECK-NEXT:    selp.b64 %rd123, %rd75, %rd74, %p19;
-; CHECK-NEXT:    shl.b64 %rd122, %rd3, %r10;
+; CHECK-NEXT:    shl.b64 %rd122, %rd3, %r6;
 ; CHECK-NEXT:    mov.b64 %rd113, %rd116;
 ; CHECK-NEXT:    @%p18 bra $L__BB0_4;
 ; CHECK-NEXT:  // %bb.1: // %udiv-preheader
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd118;
-; CHECK-NEXT:    shr.u64 %rd78, %rd3, %r13;
-; CHECK-NEXT:    sub.s32 %r14, 64, %r13;
-; CHECK-NEXT:    shl.b64 %rd79, %rd4, %r14;
+; CHECK-NEXT:    cvt.u32.u64 %r9, %rd118;
+; CHECK-NEXT:    shr.u64 %rd78, %rd3, %r9;
+; CHECK-NEXT:    sub.s32 %r10, 64, %r9;
+; CHECK-NEXT:    shl.b64 %rd79, %rd4, %r10;
 ; CHECK-NEXT:    or.b64 %rd80, %rd78, %rd79;
-; CHECK-NEXT:    add.s32 %r15, %r13, -64;
-; CHECK-NEXT:    shr.u64 %rd81, %rd4, %r15;
-; CHECK-NEXT:    setp.gt.s32 %p20, %r13, 63;
+; CHECK-NEXT:    add.s32 %r11, %r9, -64;
+; CHECK-NEXT:    shr.u64 %rd81, %rd4, %r11;
+; CHECK-NEXT:    setp.gt.s32 %p20, %r9, 63;
 ; CHECK-NEXT:    selp.b64 %rd120, %rd81, %rd80, %p20;
-; CHECK-NEXT:    shr.u64 %rd121, %rd4, %r13;
+; CHECK-NEXT:    shr.u64 %rd121, %rd4, %r9;
 ; CHECK-NEXT:    add.cc.s64 %rd35, %rd5, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd36, %rd6, -1;
 ; CHECK-NEXT:    mov.b64 %rd113, 0;
@@ -148,7 +148,7 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-LABEL: urem_i128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<18>;
-; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-NEXT:    .reg .b64 %rd<111>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
@@ -162,15 +162,15 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    setp.ne.s64 %p4, %rd4, 0;
 ; CHECK-NEXT:    clz.b64 %r1, %rd4;
 ; CHECK-NEXT:    cvt.u64.u32 %rd47, %r1;
-; CHECK-NEXT:    clz.b64 %r3, %rd3;
-; CHECK-NEXT:    cvt.u64.u32 %rd48, %r3;
+; CHECK-NEXT:    clz.b64 %r2, %rd3;
+; CHECK-NEXT:    cvt.u64.u32 %rd48, %r2;
 ; CHECK-NEXT:    add.s64 %rd49, %rd48, 64;
 ; CHECK-NEXT:    selp.b64 %rd50, %rd47, %rd49, %p4;
 ; CHECK-NEXT:    setp.ne.s64 %p5, %rd42, 0;
-; CHECK-NEXT:    clz.b64 %r5, %rd42;
-; CHECK-NEXT:    cvt.u64.u32 %rd51, %r5;
-; CHECK-NEXT:    clz.b64 %r7, %rd41;
-; CHECK-NEXT:    cvt.u64.u32 %rd52, %r7;
+; CHECK-NEXT:    clz.b64 %r3, %rd42;
+; CHECK-NEXT:    cvt.u64.u32 %rd51, %r3;
+; CHECK-NEXT:    clz.b64 %r4, %rd41;
+; CHECK-NEXT:    cvt.u64.u32 %rd52, %r4;
 ; CHECK-NEXT:    add.s64 %rd53, %rd52, 64;
 ; CHECK-NEXT:    selp.b64 %rd54, %rd51, %rd53, %p5;
 ; CHECK-NEXT:    mov.b64 %rd101, 0;
@@ -194,30 +194,30 @@ define i128 @urem_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    addc.cc.s64 %rd104, %rd6, 0;
 ; CHECK-NEXT:    or.b64 %rd60, %rd103, %rd104;
 ; CHECK-NEXT:    setp.eq.s64 %p14, %rd60, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r9, %rd5;
-; CHECK-NEXT:    sub.s32 %r10, 127, %r9;
-; CHECK-NEXT:    shl.b64 %rd61, %rd42, %r10;
-; CHECK-NEXT:    sub.s32 %r11, 64, %r10;
-; CHECK-NEXT:    shr.u64 %rd62, %rd41, %r11;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd5;
+; CHECK-NEXT:    sub.s32 %r6, 127, %r5;
+; CHECK-NEXT:    shl.b64 %rd61, %rd42, %r6;
+; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
+; CHECK-NEXT:    shr.u64 %rd62, %rd41, %r7;
 ; CHECK-NEXT:    or.b64 %rd63, %rd61, %rd62;
-; CHECK-NEXT:    sub.s32 %r12, 63, %r9;
-; CHECK-NEXT:    shl.b64 %rd64, %rd41, %r12;
-; CHECK-NEXT:    setp.gt.s32 %p15, %r10, 63;
+; CHECK-NEXT:    sub.s32 %r8, 63, %r5;
+; CHECK-NEXT:    shl.b64 %rd64, %rd41, %r8;
+; CHECK-NEXT:    setp.gt.s32 %p15, %r6, 63;
 ; CHECK-NEXT:    selp.b64 %rd108, %rd64, %rd63, %p15;
-; CHECK-NEXT:    shl.b64 %rd107, %rd41, %r10;
+; CHECK-NEXT:    shl.b64 %rd107, %rd41, %r6;
 ; CHECK-NEXT:    mov.b64 %rd98, %rd101;
 ; CHECK-NEXT:    @%p14 bra $L__BB1_4;
 ; CHECK-NEXT:  // %bb.1: // %udiv-preheader
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd103;
-; CHECK-NEXT:    shr.u64 %rd67, %rd41, %r13;
-; CHECK-NEXT:    sub.s32 %r14, 64, %r13;
-; CHECK-NEXT:    shl.b64 %rd68, %rd42, %r14;
+; CHECK-NEXT:    cvt.u32.u64 %r9, %rd103;
+; CHECK-NEXT:    shr.u64 %rd67, %rd41, %r9;
+; CHECK-NEXT:    sub.s32 %r10, 64, %r9;
+; CHECK-NEXT:    shl.b64 %rd68, %rd42, %r10;
 ; CHECK-NEXT:    or.b64 %rd69, %rd67, %rd68;
-; CHECK-NEXT:    add.s32 %r15, %r13, -64;
-; CHECK-NEXT:    shr.u64 %rd70, %rd42, %r15;
-; CHECK-NEXT:    setp.gt.s32 %p16, %r13, 63;
+; CHECK-NEXT:    add.s32 %r11, %r9, -64;
+; CHECK-NEXT:    shr.u64 %rd70, %rd42, %r11;
+; CHECK-NEXT:    setp.gt.s32 %p16, %r9, 63;
 ; CHECK-NEXT:    selp.b64 %rd105, %rd70, %rd69, %p16;
-; CHECK-NEXT:    shr.u64 %rd106, %rd42, %r13;
+; CHECK-NEXT:    shr.u64 %rd106, %rd42, %r9;
 ; CHECK-NEXT:    add.cc.s64 %rd33, %rd3, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd34, %rd4, -1;
 ; CHECK-NEXT:    mov.b64 %rd98, 0;
@@ -308,7 +308,7 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-LABEL: sdiv_i128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<22>;
-; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-NEXT:    .reg .b64 %rd<121>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
@@ -334,15 +334,15 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    setp.ne.s64 %p6, %rd4, 0;
 ; CHECK-NEXT:    clz.b64 %r1, %rd4;
 ; CHECK-NEXT:    cvt.u64.u32 %rd58, %r1;
-; CHECK-NEXT:    clz.b64 %r3, %rd3;
-; CHECK-NEXT:    cvt.u64.u32 %rd59, %r3;
+; CHECK-NEXT:    clz.b64 %r2, %rd3;
+; CHECK-NEXT:    cvt.u64.u32 %rd59, %r2;
 ; CHECK-NEXT:    add.s64 %rd60, %rd59, 64;
 ; CHECK-NEXT:    selp.b64 %rd61, %rd58, %rd60, %p6;
 ; CHECK-NEXT:    setp.ne.s64 %p7, %rd2, 0;
-; CHECK-NEXT:    clz.b64 %r5, %rd2;
-; CHECK-NEXT:    cvt.u64.u32 %rd62, %r5;
-; CHECK-NEXT:    clz.b64 %r7, %rd1;
-; CHECK-NEXT:    cvt.u64.u32 %rd63, %r7;
+; CHECK-NEXT:    clz.b64 %r3, %rd2;
+; CHECK-NEXT:    cvt.u64.u32 %rd62, %r3;
+; CHECK-NEXT:    clz.b64 %r4, %rd1;
+; CHECK-NEXT:    cvt.u64.u32 %rd63, %r4;
 ; CHECK-NEXT:    add.s64 %rd64, %rd63, 64;
 ; CHECK-NEXT:    selp.b64 %rd65, %rd62, %rd64, %p7;
 ; CHECK-NEXT:    mov.b64 %rd111, 0;
@@ -367,30 +367,30 @@ define i128 @sdiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    addc.cc.s64 %rd114, %rd8, 0;
 ; CHECK-NEXT:    or.b64 %rd72, %rd113, %rd114;
 ; CHECK-NEXT:    setp.eq.s64 %p18, %rd72, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r9, %rd67;
-; CHECK-NEXT:    sub.s32 %r10, 127, %r9;
-; CHECK-NEXT:    shl.b64 %rd73, %rd2, %r10;
-; CHECK-NEXT:    sub.s32 %r11, 64, %r10;
-; CHECK-NEXT:    shr.u64 %rd74, %rd1, %r11;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd67;
+; CHECK-NEXT:    sub.s32 %r6, 127, %r5;
+; CHECK-NEXT:    shl.b64 %rd73, %rd2, %r6;
+; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
+; CHECK-NEXT:    shr.u64 %rd74, %rd1, %r7;
 ; CHECK-NEXT:    or.b64 %rd75, %rd73, %rd74;
-; CHECK-NEXT:    sub.s32 %r12, 63, %r9;
-; CHECK-NEXT:    shl.b64 %rd76, %rd1, %r12;
-; CHECK-NEXT:    setp.gt.s32 %p19, %r10, 63;
+; CHECK-NEXT:    sub.s32 %r8, 63, %r5;
+; CHECK-NEXT:    shl.b64 %rd76, %rd1, %r8;
+; CHECK-NEXT:    setp.gt.s32 %p19, %r6, 63;
 ; CHECK-NEXT:    selp.b64 %rd118, %rd76, %rd75, %p19;
-; CHECK-NEXT:    shl.b64 %rd117, %rd1, %r10;
+; CHECK-NEXT:    shl.b64 %rd117, %rd1, %r6;
 ; CHECK-NEXT:    mov.b64 %rd108, %rd111;
 ; CHECK-NEXT:    @%p18 bra $L__BB4_4;
 ; CHECK-NEXT:  // %bb.1: // %udiv-preheader
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd113;
-; CHECK-NEXT:    shr.u64 %rd79, %rd1, %r13;
-; CHECK-NEXT:    sub.s32 %r14, 64, %r13;
-; CHECK-NEXT:    shl.b64 %rd80, %rd2, %r14;
+; CHECK-NEXT:    cvt.u32.u64 %r9, %rd113;
+; CHECK-NEXT:    shr.u64 %rd79, %rd1, %r9;
+; CHECK-NEXT:    sub.s32 %r10, 64, %r9;
+; CHECK-NEXT:    shl.b64 %rd80, %rd2, %r10;
 ; CHECK-NEXT:    or.b64 %rd81, %rd79, %rd80;
-; CHECK-NEXT:    add.s32 %r15, %r13, -64;
-; CHECK-NEXT:    shr.u64 %rd82, %rd2, %r15;
-; CHECK-NEXT:    setp.gt.s32 %p20, %r13, 63;
+; CHECK-NEXT:    add.s32 %r11, %r9, -64;
+; CHECK-NEXT:    shr.u64 %rd82, %rd2, %r11;
+; CHECK-NEXT:    setp.gt.s32 %p20, %r9, 63;
 ; CHECK-NEXT:    selp.b64 %rd115, %rd82, %rd81, %p20;
-; CHECK-NEXT:    shr.u64 %rd116, %rd2, %r13;
+; CHECK-NEXT:    shr.u64 %rd116, %rd2, %r9;
 ; CHECK-NEXT:    add.cc.s64 %rd35, %rd3, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd36, %rd4, -1;
 ; CHECK-NEXT:    mov.b64 %rd108, 0;
@@ -445,7 +445,7 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-LABEL: udiv_i128(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<18>;
-; CHECK-NEXT:    .reg .b32 %r<16>;
+; CHECK-NEXT:    .reg .b32 %r<12>;
 ; CHECK-NEXT:    .reg .b64 %rd<105>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %_udiv-special-cases
@@ -459,15 +459,15 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    setp.ne.s64 %p4, %rd44, 0;
 ; CHECK-NEXT:    clz.b64 %r1, %rd44;
 ; CHECK-NEXT:    cvt.u64.u32 %rd47, %r1;
-; CHECK-NEXT:    clz.b64 %r3, %rd43;
-; CHECK-NEXT:    cvt.u64.u32 %rd48, %r3;
+; CHECK-NEXT:    clz.b64 %r2, %rd43;
+; CHECK-NEXT:    cvt.u64.u32 %rd48, %r2;
 ; CHECK-NEXT:    add.s64 %rd49, %rd48, 64;
 ; CHECK-NEXT:    selp.b64 %rd50, %rd47, %rd49, %p4;
 ; CHECK-NEXT:    setp.ne.s64 %p5, %rd42, 0;
-; CHECK-NEXT:    clz.b64 %r5, %rd42;
-; CHECK-NEXT:    cvt.u64.u32 %rd51, %r5;
-; CHECK-NEXT:    clz.b64 %r7, %rd41;
-; CHECK-NEXT:    cvt.u64.u32 %rd52, %r7;
+; CHECK-NEXT:    clz.b64 %r3, %rd42;
+; CHECK-NEXT:    cvt.u64.u32 %rd51, %r3;
+; CHECK-NEXT:    clz.b64 %r4, %rd41;
+; CHECK-NEXT:    cvt.u64.u32 %rd52, %r4;
 ; CHECK-NEXT:    add.s64 %rd53, %rd52, 64;
 ; CHECK-NEXT:    selp.b64 %rd54, %rd51, %rd53, %p5;
 ; CHECK-NEXT:    mov.b64 %rd95, 0;
@@ -491,30 +491,30 @@ define i128 @udiv_i128(i128 %lhs, i128 %rhs) {
 ; CHECK-NEXT:    addc.cc.s64 %rd98, %rd6, 0;
 ; CHECK-NEXT:    or.b64 %rd60, %rd97, %rd98;
 ; CHECK-NEXT:    setp.eq.s64 %p14, %rd60, 0;
-; CHECK-NEXT:    cvt.u32.u64 %r9, %rd5;
-; CHECK-NEXT:    sub.s32 %r10, 127, %r9;
-; CHECK-NEXT:    shl.b64 %rd61, %rd42, %r10;
-; CHECK-NEXT:    sub.s32 %r11, 64, %r10;
-; CHECK-NEXT:    shr.u64 %rd62, %rd41, %r11;
+; CHECK-NEXT:    cvt.u32.u64 %r5, %rd5;
+; CHECK-NEXT:    sub.s32 %r6, 127, %r5;
+; CHECK-NEXT:    shl.b64 %rd61, %rd42, %r6;
+; CHECK-NEXT:    sub.s32 %r7, 64, %r6;
+; CHECK-NEXT:    shr.u64 %rd62, %rd41, %r7;
 ; CHECK-NEXT:    or.b64 %rd63, %rd61, %rd62;
-; CHECK-NEXT:    sub.s32 %r12, 63, %r9;
-; CHECK-NEXT:    shl.b64 %rd64, %rd41, %r12;
-; CHECK-NEXT:    setp.gt.s32 %p15, %r10, 63;
+; CHECK-NEXT:    sub.s32 %r8, 63, %r5;
+; CHECK-NEXT:    shl.b64 %rd64, %rd41, %r8;
+; CHECK-NEXT:    setp.gt.s32 %p15, %r6, 63;
 ; CHECK-NEXT:    selp.b64 %rd102, %rd64, %rd63, %p15;
-; CHECK-NEXT:    shl.b64 %rd101, %rd41, %r10;
+; CHECK-NEXT:    shl.b64 %rd101, %rd41, %r6;
 ; CHECK-NEXT:    mov.b64 %rd92, %rd95;
 ; CHECK-NEXT:    @%p14 bra $L__BB5_4;
 ; CHECK-NEXT:  // %bb.1: // %udiv-preheader
-; CHECK-NEXT:    cvt.u32.u64 %r13, %rd97;
-; CHECK-NEXT:    shr.u64 %rd67, %rd41, %r13;
-; CHECK-NEXT:    sub.s32 %r14, 64, %r13;
-; CHECK-NEXT:    shl.b64 %rd68, %rd42, %r14;
+; CHECK-NEXT:    cvt.u32.u64 %r9, %rd97;
+; CHECK-NEXT:    shr.u64 %rd67, %rd41, %r9;
+; CHECK-NEXT:    sub.s32 %r10, 64, %r9;
+; CHECK-NEXT:    shl.b64 %rd68, %rd42, %r10;
 ; CHECK-NEXT:    or.b64 %rd69, %rd67, %rd68;
-; CHECK-NEXT:    add.s32 %r15, %r13, -64;
-; CHECK-NEXT:    shr.u64 %rd70, %rd42, %r15;
-; CHECK-NEXT:    setp.gt.s32 %p16, %r13, 63;
+; CHECK-NEXT:    add.s32 %r11, %r9, -64;
+; CHECK-NEXT:    shr.u64 %rd70, %rd42, %r11;
+; CHECK-NEXT:    setp.gt.s32 %p16, %r9, 63;
 ; CHECK-NEXT:    selp.b64 %rd99, %rd70, %rd69, %p16;
-; CHECK-NEXT:    shr.u64 %rd100, %rd42, %r13;
+; CHECK-NEXT:    shr.u64 %rd100, %rd42, %r9;
 ; CHECK-NEXT:    add.cc.s64 %rd33, %rd43, -1;
 ; CHECK-NEXT:    addc.cc.s64 %rd34, %rd44, -1;
 ; CHECK-NEXT:    mov.b64 %rd92, 0;
