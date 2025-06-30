@@ -107,6 +107,7 @@ class TestStatusline(PExpectTest):
 
         self.expect("set set show-statusline true", ["no target"])
 
+    @skipIfEditlineSupportMissing
     def test_resize(self):
         """Test that move the cursor when resizing."""
         self.launch(timeout=self.TIMEOUT)

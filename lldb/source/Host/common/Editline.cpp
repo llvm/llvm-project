@@ -1713,7 +1713,7 @@ void Editline::Refresh() {
   if (!m_editline || !m_output_stream_sp)
     return;
   LockedStreamFile locked_stream = m_output_stream_sp->Lock();
-  MoveCursor(CursorLocation::EditingPrompt, CursorLocation::EditingCursor);
+  MoveCursor(CursorLocation::EditingCursor, CursorLocation::EditingCursor);
 }
 
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
