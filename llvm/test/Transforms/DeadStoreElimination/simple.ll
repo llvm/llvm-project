@@ -874,4 +874,17 @@ define void @test_dead_on_return_maythrow(ptr dead_on_return %p) {
   ret void
 }
 
+define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return_ptr_returned(
+; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
+; CHECK-NEXT:    ret ptr [[P:%.*]]
+;
+  %local.var = alloca ptr
+  call void @opaque(ptr %local.var)
+  store ptr %local.var, ptr %p
+  ret ptr %p
+}
+
+declare void @opaque(ptr)
 declare void @maythrow() memory(none)
