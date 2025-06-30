@@ -2081,8 +2081,8 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
 
   // There may be a mixture of scopes using and not using Key Instructions.
   // Not-Key-Instructions functions inlined into Key Instructions functions
-  // should use not-key is_stmt handling. Key instructions functions inlined
-  // into not-key-instructions functions should use Key Instructions is_stmt
+  // should use not-key is_stmt handling. Key Instructions functions inlined
+  // into Not-Key-Instructions functions should use Key Instructions is_stmt
   // handling.
   bool ScopeUsesKeyInstructions =
       KeyInstructionsAreStmts && DL &&
@@ -2663,7 +2663,7 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
   // Run both `findForceIsStmtInstrs` and `computeKeyInstructions` because
-  // not-key-instructions functions may be inlined into key-instructions
+  // Not-Key-Instructions functions may be inlined into Key Instructions
   // functions and vice versa.
   if (KeyInstructionsAreStmts)
     computeKeyInstructions(MF);
