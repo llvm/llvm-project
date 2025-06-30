@@ -328,6 +328,22 @@ static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeMoveWord(MCInst &Inst, unsigned Insn,
+                                   uint64_t Address,
+                                   const MCDisassembler *Decoder) {
+  // Get the registers
+  unsigned RegValD = GPRDecoderTable[2 * ((Insn >> 4) & 0xf)];
+  unsigned RegValR = GPRDecoderTable[2 * (Insn & 0xf)];
+
+  if ((Insn & 0xff00) == 0x0100) {
+    Inst.setOpcode(AVR::MOVWRdRr);
+    Inst.addOperand(MCOperand::createReg(RegValD));
+    Inst.addOperand(MCOperand::createReg(RegValR));
+    return MCDisassembler::Success;
+  }
+  return MCDisassembler::Fail;
+}
+
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
@@ -499,6 +515,11 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     // Try to auto-decode a 16-bit instruction.
     Result = decodeInstruction(getDecoderTable(Size), Instr, Insn, Address,
                                this, STI);
+    if (Result != MCDisassembler::Fail)
+      return Result;
+
+    // Try to decode to a MOVW instruction
+    Result = decodeMoveWord(Instr, Insn, Address, this);
     if (Result != MCDisassembler::Fail)
       return Result;
 
