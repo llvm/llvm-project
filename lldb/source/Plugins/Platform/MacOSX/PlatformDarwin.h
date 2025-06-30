@@ -187,9 +187,6 @@ protected:
                                              std::vector<std::string> &options,
                                              XcodeSDK::Type sdk_type);
 
-  static llvm::Expected<FileSpec>
-  ResolveSDKPathFromDebugInfo(lldb_private::Target *target);
-
   Status FindBundleBinaryInExecSearchPaths(
       const ModuleSpec &module_spec, Process *process,
       lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
