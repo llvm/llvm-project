@@ -268,7 +268,7 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
   llvm_unreachable("Empty Modifier");
 }
 
-void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
+void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
                                      raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
@@ -286,6 +286,12 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     case NVPTX::Ordering::Release:
       O << ".release";
       return;
+    case NVPTX::Ordering::AcquireRelease:
+      O << ".acq_rel";
+      return;
+    case NVPTX::Ordering::SequentiallyConsistent:
+      O << ".seq_cst";
+      return;
     case NVPTX::Ordering::Volatile:
       O << ".volatile";
       return;
@@ -294,8 +300,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       return;
     default:
       report_fatal_error(formatv(
-          "NVPTX LdStCode Printer does not support \"{}\" sem modifier. "
-          "Loads/Stores cannot be AcquireRelease or SequentiallyConsistent.",
+          "NVPTX AtomicCode Printer does not support \"{}\" sem modifier. ",
           OrderingToString(Ordering)));
     }
   } else if (Modifier == "scope") {
@@ -317,7 +322,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       return;
     }
     report_fatal_error(
-        formatv("NVPTX LdStCode Printer does not support \"{}\" sco modifier.",
+        formatv("NVPTX AtomicCode Printer does not support \"{}\" scope modifier.",
                 ScopeToString(S)));
   } else if (Modifier == "addsp") {
     auto A = NVPTX::AddressSpace(Imm);
@@ -334,7 +339,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
       return;
     }
     report_fatal_error(formatv(
-        "NVPTX LdStCode Printer does not support \"{}\" addsp modifier.",
+        "NVPTX AtomicCode Printer does not support \"{}\" addsp modifier.",
         AddressSpaceToString(A)));
   } else if (Modifier == "sign") {
     switch (Imm) {

@@ -102,6 +102,9 @@ private:
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
   }
+  unsigned int getAddrSpace(const MemSDNode *N) const;
+  unsigned int getMemOrder(const MemSDNode *N) const;
+  unsigned int getAtomicScope(const MemSDNode *N) const;
 
   bool SelectADDR(SDValue Addr, SDValue &Base, SDValue &Offset);
   SDValue getPTXCmpMode(const CondCodeSDNode &CondCode);

@@ -1873,6 +1873,54 @@ multiclass F_ATOMIC_3<RegTyInfo t, string sem_str, string as_str, string op_str,
   }
 }
 
+multiclass F_ATOMIC_3_MANYOPERAND<RegTyInfo t, string op_str> {
+  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # op_str # " \t$dst, [$addr], $b, $c;";
+
+  let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+    def _rr : NVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b, t.RC:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      asm_str, []>;
+
+    def _ir : NVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.Imm:$b, t.RC:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      asm_str, []>;
+
+    def _ri : NVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.RC:$b, t.Imm:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      asm_str, []>;
+
+    def _ii : NVPTXInst<(outs t.RC:$dst),
+      (ins ADDR:$addr, t.Imm:$b, t.Imm:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
+      asm_str, []>;
+  }
+}
+
+multiclass F_ATOMIC_3_MANYOPERAND_PATTERN<RegTyInfo t, string InstructionName, SDPatternOperator op, SDNode atomic> {
+  defvar GetSem = SDNodeXForm<atomic, [{
+    return getI32Imm(getMemOrder(cast<MemSDNode>(N)), SDLoc(N));
+  }]>;
+
+  defvar GetScope = SDNodeXForm<atomic, [{
+    return getI32Imm(getAtomicScope(cast<MemSDNode>(N)), SDLoc(N));
+  }]>;
+
+  defvar GetAddSp = SDNodeXForm<atomic, [{
+    return getI32Imm(getAddrSpace(cast<MemSDNode>(N)), SDLoc(N));
+  }]>;
+
+  def : Pat<(op:$this addr:$addr, t.Ty:$b, t.Ty:$c),
+        (!cast<Instruction>(InstructionName#_rr) ADDR:$addr, t.Ty:$b, t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+
+  def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c),
+        (!cast<Instruction>(InstructionName#_ir) ADDR:$addr, (t.Ty t.ImmNode:$b), t.Ty:$c, (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+
+  def : Pat<(op:$this addr:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c)),
+        (!cast<Instruction>(InstructionName#_#ri) ADDR:$addr, t.Ty:$b, (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+
+  def : Pat<(op:$this addr:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c)),
+        (!cast<Instruction>(InstructionName#_#ii) ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), (GetSem $this), (GetScope $this), (GetAddSp $this))>;
+}
+
 multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, list<Predicate> preds = []> {
   defvar frag_pat = (frag node:$a, node:$b);
   defm _G : F_ATOMIC_2<t, "", ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
@@ -1934,29 +1982,11 @@ defm INT_PTX_ATOM_XOR_64 : F_ATOMIC_2_AS<I64RT, atomic_load_xor_i64, "xor.b64", 
 // Define atom.cas for all combinations of size x addrspace x memory order
 // supported in PTX *and* on the hardware.
 foreach t = [I32RT, I64RT] in {
-  foreach order = ["acquire", "release", "acq_rel", "monotonic"] in {
-    defvar cas_order_string = !if(!eq(order, "monotonic"), ".relaxed", "."#order);
-    defvar atomic_cmp_swap_pat = !cast<PatFrag>("atomic_cmp_swap_i"#t.Size#_#order);
+    defvar atomic_cmp_swap_pat = !cast<PatFrag>("atomic_cmp_swap_i"#t.Size);
+    defm INT_PTX_ATOM_CAS_#t.Size
+     : F_ATOMIC_3_MANYOPERAND<t, ".cas.b"#t.Size>;
 
-    // Instantiate scoped versions of the atomic compare and swap pattern
-    defm atomic_cmp_swap_i#t.Size#_#order: nvvm_ternary_atomic_op_scoped<atomic_cmp_swap_pat>;
-
-    foreach scope = ["cta", "cluster", "gpu", "sys"] in {
-      defvar atomic_cmp_swap_pat_scoped = !cast<PatFrag>("atomic_cmp_swap_i"#t.Size#_#order#_#scope);
-
-      // Syncscope is only supported for SM70+
-      defm INT_PTX_ATOM_CAS_#t.Size#_#order#_#scope
-        : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat_scoped, "."#scope, cas_order_string, "cas.b"#t.Size, [hasSM<70>, hasPTX<63>]>;
-    }
-
-    // Note that AtomicExpand will convert cmpxchg seq_cst to a cmpxchg monotonic with fences around it.
-    // Memory orders are only supported for SM70+, PTX63+- so we have two sets of instruction definitions-
-    // for SM70+, and "old" ones which lower to "atom.cas", for earlier archs.
-    defm INT_PTX_ATOM_CAS_#t.Size#_#order
-      : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat, "", cas_order_string, "cas.b"#t.Size, [hasSM<70>, hasPTX<63>]>;
-    defm INT_PTX_ATOM_CAS_#t.Size#_#order#_old
-      : F_ATOMIC_3_AS<t, atomic_cmp_swap_pat, "", "", "cas.b"#t.Size, []>;
-  }
+    defm INT_PTX_ATOM_CAS_PAT_#t.Size : F_ATOMIC_3_MANYOPERAND_PATTERN<t, "INT_PTX_ATOM_CAS_"#t.Size, atomic_cmp_swap_pat, atomic_cmp_swap>;
 }
 
 // Note that 16-bit CAS support in PTX is emulated.
