@@ -92,6 +92,7 @@ private:
 } // namespace
 
 bool DXILFlattenArraysVisitor::finish() {
+  GEPChainInfoMap.clear();
   RecursivelyDeleteTriviallyDeadInstructionsPermissive(PotentiallyDeadInstrs);
   return true;
 }
