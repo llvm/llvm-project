@@ -962,7 +962,7 @@ void SCCPInstVisitor::pushToWorkList(Instruction *I) {
     return;
   // Only push instructions in already visited blocks. Otherwise we'll handle
   // it when we visit the block for the first time.
-  if (BBVisited.count(I->getParent()))
+  if (BBVisited.contains(I->getParent()))
     InstWorkList.insert(I);
 }
 
