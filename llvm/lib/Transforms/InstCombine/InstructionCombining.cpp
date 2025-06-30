@@ -2089,11 +2089,7 @@ Instruction *InstCombinerImpl::foldBinopWithRecurrence(BinaryOperator &BO) {
   eraseInstFromFunction(*PN0);
   eraseInstFromFunction(*PN1);
 
-  // Create a trivial phi to receive the value of NewBO and replace BO. We can't
-  // return NewBO directly because BO may be in a different block.
-  auto *ReplacementPhi = PHINode::Create(BO.getType(), 1);
-  ReplacementPhi->addIncoming(NewBO, NewBO->getParent());
-  return ReplacementPhi;
+  return replaceInstUsesWith(BO, NewBO);
 }
 
 Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
