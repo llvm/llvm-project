@@ -41,10 +41,26 @@ Statusline::Statusline(Debugger &debugger)
 Statusline::~Statusline() { Disable(); }
 
 void Statusline::TerminalSizeChanged() {
-  UpdateTerminalProperties();
+  const uint64_t terminal_width = m_debugger.GetTerminalWidth();
+  const uint64_t terminal_height = m_debugger.GetTerminalHeight();
 
-  // This definitely isn't signal safe, but the best we can do, until we
-  // have proper signal-catching thread.
+  // Remember whether the terminal height changed.
+  const bool terminal_height_changed = terminal_height != m_terminal_height;
+
+  // Avoid clearing the old statusline if it's not visible (i.e. when the
+  // terminal height decreases), unless the width changed and the old statusline
+  // wrapped.
+  if (terminal_height > m_terminal_height || terminal_width < m_terminal_width)
+    UpdateScrollWindow(DisableStatusline);
+
+  // Update the terminal dimensions.
+  m_terminal_width = terminal_width;
+  m_terminal_height = terminal_height;
+
+  // Update the scroll window if the terminal height changed.
+  if (terminal_height_changed)
+    UpdateScrollWindow(EnableStatusline);
+
   Redraw(/*update=*/false);
 }
 
@@ -83,13 +99,6 @@ void Statusline::Draw(std::string str) {
   locked_stream << str;
   locked_stream << ANSI_NORMAL;
   locked_stream << ANSI_RESTORE_CURSOR;
-}
-
-void Statusline::UpdateTerminalProperties() {
-  UpdateScrollWindow(DisableStatusline);
-  m_terminal_width = m_debugger.GetTerminalWidth();
-  m_terminal_height = m_debugger.GetTerminalHeight();
-  UpdateScrollWindow(EnableStatusline);
 }
 
 void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
