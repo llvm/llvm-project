@@ -190,8 +190,6 @@ body:             |
     liveins: $esi
 
     frame-setup PUSH32r killed $esi, implicit-def $esp, implicit $esp
-    CFI_INSTRUCTION def_cfa_offset 8
-    CFI_INSTRUCTION offset $esi, -8
     $esi = MOV32rm $esp, 1, _, 8, _ :: (load (s32) from %fixed-stack.2)
     DBG_VALUE $esp, 0, !26, !10, debug-location !25
     DBG_VALUE $esp, 0, !23, !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref), debug-location !25
