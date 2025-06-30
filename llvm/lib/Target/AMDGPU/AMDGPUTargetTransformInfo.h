@@ -288,6 +288,20 @@ public:
   /// "amdgpu-ieee"="true" and KnownIEEEMode::Off if we can assume
   /// "amdgpu-ieee"="false".
   KnownIEEEMode fpenvIEEEMode(const Instruction &I) const;
+
+  /// Account for loads of i8 vector types to have reduced cost. For
+  /// example the cost of load 4 i8s values is one is the cost of loading
+  /// a single i32 value.
+  InstructionCost getMemoryOpCost(
+      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
+      TTI::TargetCostKind CostKind,
+      TTI::OperandValueInfo OpInfo = {TTI::OK_AnyValue, TTI::OP_None},
+      const Instruction *I = nullptr) const override;
+
+  /// When counting parts on AMD GPUs, account for i8s being grouped
+  /// together under a single i32 value. Otherwise fall back to base
+  /// implementation.
+  unsigned getNumberOfParts(Type *Tp) const override;
 };
 
 } // end namespace llvm

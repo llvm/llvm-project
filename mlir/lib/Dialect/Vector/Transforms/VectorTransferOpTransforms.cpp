@@ -581,7 +581,6 @@ static SmallVector<Value> getCollapsedIndices(RewriterBase &rewriter,
 }
 
 namespace {
-
 /// Rewrites contiguous row-major vector.transfer_read ops by inserting
 /// memref.collapse_shape on the source so that the resulting
 /// vector.transfer_read has a 1D source. Requires the source shape to be
@@ -630,7 +629,11 @@ public:
     if (transferReadOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determine the first memref dimension to collapse - just enough so we can
+    // read a flattened vector.
+    int64_t firstDimToCollapse =
+        sourceType.getRank() -
+        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
 
     // 1. Collapse the source memref
     Value collapsedSource =
@@ -657,7 +660,8 @@ public:
     VectorType flatVectorType = VectorType::get({vectorType.getNumElements()},
                                                 vectorType.getElementType());
     vector::TransferReadOp flatRead = rewriter.create<vector::TransferReadOp>(
-        loc, flatVectorType, collapsedSource, collapsedIndices, collapsedMap);
+        loc, flatVectorType, collapsedSource, collapsedIndices,
+        transferReadOp.getPadding(), collapsedMap);
     flatRead.setInBoundsAttr(rewriter.getBoolArrayAttr({true}));
 
     // 4. Replace the old transfer_read with the new one reading from the
@@ -722,7 +726,11 @@ public:
     if (transferWriteOp.getMask())
       return failure();
 
-    int64_t firstDimToCollapse = sourceType.getRank() - vectorType.getRank();
+    // Determine the first memref dimension to collapse - just enough so we can
+    // read a flattened vector.
+    int64_t firstDimToCollapse =
+        sourceType.getRank() -
+        vectorType.getShape().drop_while([](auto v) { return v == 1; }).size();
 
     // 1. Collapse the source memref
     Value collapsedSource =

@@ -1140,6 +1140,24 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Look through ExtractLastElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+    return;
+  }
+
+  // Look through ExtractPenultimateElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 2));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -1202,9 +1220,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
         continue;
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
@@ -2180,6 +2198,11 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
+  assert(all_of(Plan.getVF().users(),
+                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe>) &&
+         "User of VF that we can't transform to EVL.");
+  Plan.getVF().replaceAllUsesWith(&EVL);
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
   VPInstruction *PrevEVL = nullptr;
@@ -2196,11 +2219,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
-  }
-
-  for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
-      R->setOperand(1, &EVL);
   }
 
   SmallVector<VPRecipeBase *> ToErase;
@@ -3115,7 +3133,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
                           unsigned OpIdx, VPValue *OpV, unsigned Idx) {
   auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
-    return false;
+    return WideMember0->getOperand(OpIdx) == OpV;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
     return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
 
@@ -3233,7 +3251,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
@@ -3251,7 +3269,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
-  auto NarrowOp = [](VPRecipeBase *R) -> VPValue * {
+  auto NarrowOp = [](VPValue *V) -> VPValue * {
+    auto *R = V->getDefiningRecipe();
+    if (!R)
+      return V;
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
       // process one original iteration.
@@ -3280,11 +3301,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(
             StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
       for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
-        WideMember0->setOperand(
-            Idx, NarrowOp(WideMember0->getOperand(Idx)->getDefiningRecipe()));
+        WideMember0->setOperand(Idx, NarrowOp(WideMember0->getOperand(Idx)));
       Res = WideMember0;
     } else {
-      Res = NarrowOp(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+      Res = NarrowOp(StoreGroup->getStoredValues()[0]);
     }
 
     auto *S = new VPWidenStoreRecipe(

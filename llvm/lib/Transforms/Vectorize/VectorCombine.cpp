@@ -113,6 +113,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
+  bool foldBitOpOfBitcasts(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -800,6 +801,66 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   Worklist.pushValue(NewIns0);
   Worklist.pushValue(NewIns1);
   replaceValue(I, *NewBO);
+  return true;
+}
+
+bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
+  // Match: bitop(bitcast(x), bitcast(y)) -> bitcast(bitop(x, y))
+  Value *LHSSrc, *RHSSrc;
+  if (!match(&I, m_BitwiseLogic(m_BitCast(m_Value(LHSSrc)),
+                                m_BitCast(m_Value(RHSSrc)))))
+    return false;
+
+  // Source types must match
+  if (LHSSrc->getType() != RHSSrc->getType())
+    return false;
+  if (!LHSSrc->getType()->getScalarType()->isIntegerTy())
+    return false;
+
+  // Only handle vector types
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
+  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!SrcVecTy || !DstVecTy)
+    return false;
+
+  // Same total bit width
+  assert(SrcVecTy->getPrimitiveSizeInBits() ==
+             DstVecTy->getPrimitiveSizeInBits() &&
+         "Bitcast should preserve total bit width");
+
+  // Cost Check :
+  // OldCost = bitlogic + 2*bitcasts
+  // NewCost = bitlogic + bitcast
+  auto *BinOp = cast<BinaryOperator>(&I);
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, LHSSrc->getType(),
+                           TTI::CastContextHint::None) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, RHSSrc->getType(),
+                           TTI::CastContextHint::None);
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None);
+
+  LLVM_DEBUG(dbgs() << "Found a bitwise logic op of bitcasted values: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Create the operation on the source type
+  Value *NewOp = Builder.CreateBinOp(BinOp->getOpcode(), LHSSrc, RHSSrc,
+                                     BinOp->getName() + ".inner");
+  if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
+    NewBinOp->copyIRFlags(BinOp);
+
+  Worklist.pushValue(NewOp);
+
+  // Bitcast the result back
+  Value *Result = Builder.CreateBitCast(NewOp, I.getType());
+  replaceValue(I, *Result);
   return true;
 }
 
@@ -2282,6 +2343,17 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   if (!Match0 && !Match1)
     return false;
 
+  // If the outer shuffle is a permute, then create a fake inner all-poison
+  // shuffle. This is easier than accounting for length-changing shuffles below.
+  SmallVector<int, 16> PoisonMask1;
+  if (!Match1 && isa<PoisonValue>(OuterV1)) {
+    X1 = X0;
+    Y1 = Y0;
+    PoisonMask1.append(InnerMask0.size(), PoisonMaskElem);
+    InnerMask1 = PoisonMask1;
+    Match1 = true; // fake match
+  }
+
   X0 = Match0 ? X0 : OuterV0;
   Y0 = Match0 ? Y0 : OuterV0;
   X1 = Match1 ? X1 : OuterV1;
@@ -2356,11 +2428,11 @@ bool VectorCombine::foldShuffleOfShuffles(Instruction &I) {
   // Try to merge the shuffles if the new shuffle is not costly.
   InstructionCost InnerCost0 = 0;
   if (Match0)
-    InnerCost0 = TTI.getInstructionCost(cast<Instruction>(OuterV0), CostKind);
+    InnerCost0 = TTI.getInstructionCost(cast<User>(OuterV0), CostKind);
 
   InstructionCost InnerCost1 = 0;
   if (Match1)
-    InnerCost1 = TTI.getInstructionCost(cast<Instruction>(OuterV1), CostKind);
+    InnerCost1 = TTI.getInstructionCost(cast<User>(OuterV1), CostKind);
 
   InstructionCost OuterCost = TTI.getInstructionCost(&I, CostKind);
 
@@ -3071,10 +3143,10 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SSV = cast<ShuffleVectorInst>(SVOp0);
       SVOp0 = SSV->getOperand(0);
       SVOp1 = SSV->getOperand(1);
-      for (unsigned I = 0, E = Mask.size(); I != E; I++) {
-        if (Mask[I] >= static_cast<int>(SSV->getShuffleMask().size()))
+      for (int &Elem : Mask) {
+        if (Elem >= static_cast<int>(SSV->getShuffleMask().size()))
           return false;
-        Mask[I] = Mask[I] < 0 ? Mask[I] : SSV->getMaskValue(Mask[I]);
+        Elem = Elem < 0 ? Elem : SSV->getMaskValue(Elem);
       }
     }
     if (SVOp0 == Op1 && SVOp1 == Op0) {
@@ -3617,6 +3689,11 @@ bool VectorCombine::run() {
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
+        break;
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
+        MadeChange |= foldBitOpOfBitcasts(I);
         break;
       default:
         MadeChange |= shrinkType(I);

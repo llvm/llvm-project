@@ -1739,4 +1739,18 @@ namespace WithinLifetime {
                                            // both-warning {{expression result unused}}
   }
 }
+
+#ifdef __SIZEOF_INT128__
+namespace I128Mul {
+  constexpr int mul() {
+    __int128 A = 10;
+    __int128 B = 10;
+    __int128 R;
+    __builtin_mul_overflow(A, B, &R);
+    return 1;
+  }
+  static_assert(mul() == 1);
+}
+#endif
+
 #endif

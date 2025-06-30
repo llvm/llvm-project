@@ -2993,10 +2993,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         return replaceInstUsesWith(GEP, V);
       return &GEP;
     }
-
-    // TODO: 1) Scalarize splat operands, 2) scalarize entire instruction if
-    // possible (decide on canonical form for pointer broadcast), 3) exploit
-    // undef elements to decrease demanded bits
   }
 
   // Eliminate unneeded casts for indices, and replace indices which displace
@@ -3056,6 +3052,32 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
     return replaceInstUsesWith(GEP, NewGEP);
+  }
+
+  // Scalarize vector operands; prefer splat-of-gep.as canonical form.
+  // Note that this looses information about undef lanes; we run it after
+  // demanded bits to partially mitigate that loss.
+  if (GEPType->isVectorTy() && llvm::any_of(GEP.operands(), [](Value *Op) {
+        return Op->getType()->isVectorTy() && getSplatValue(Op);
+      })) {
+    SmallVector<Value *> NewOps;
+    for (auto &Op : GEP.operands()) {
+      if (Op->getType()->isVectorTy())
+        if (Value *Scalar = getSplatValue(Op)) {
+          NewOps.push_back(Scalar);
+          continue;
+        }
+      NewOps.push_back(Op);
+    }
+
+    Value *Res = Builder.CreateGEP(GEP.getSourceElementType(), NewOps[0],
+                                   ArrayRef(NewOps).drop_front(), GEP.getName(),
+                                   GEP.getNoWrapFlags());
+    if (!Res->getType()->isVectorTy()) {
+      ElementCount EC = cast<VectorType>(GEPType)->getElementCount();
+      Res = Builder.CreateVectorSplat(EC, Res);
+    }
+    return replaceInstUsesWith(GEP, Res);
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -3472,13 +3494,13 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   auto Removable =
       isAllocSiteRemovable(&MI, Users, TLI, KnowInitZero | KnowInitUndef);
   if (Removable) {
-    for (unsigned i = 0, e = Users.size(); i != e; ++i) {
+    for (WeakTrackingVH &User : Users) {
       // Lowering all @llvm.objectsize and MTI calls first because they may use
       // a bitcast/GEP of the alloca we are removing.
-      if (!Users[i])
-       continue;
+      if (!User)
+        continue;
 
-      Instruction *I = cast<Instruction>(&*Users[i]);
+      Instruction *I = cast<Instruction>(&*User);
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
@@ -3489,7 +3511,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
             Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
-          Users[i] = nullptr; // Skip examining in the next loop.
+          User = nullptr; // Skip examining in the next loop.
           continue;
         }
         if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
@@ -3505,11 +3527,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
         }
       }
     }
-    for (unsigned i = 0, e = Users.size(); i != e; ++i) {
-      if (!Users[i])
+    for (WeakTrackingVH &User : Users) {
+      if (!User)
         continue;
 
-      Instruction *I = cast<Instruction>(&*Users[i]);
+      Instruction *I = cast<Instruction>(&*User);
 
       if (ICmpInst *C = dyn_cast<ICmpInst>(I)) {
         replaceInstUsesWith(*C,
