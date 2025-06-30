@@ -263,3 +263,4 @@ define i64 @func2() {
   %fp = call ptr @llvm.adjust.trampoline(ptr @trampg)
   ret i64 0
 }
+; CHECK-LINUX:         .section        ".note.GNU-stack","x",@progbits

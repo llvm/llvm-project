@@ -471,6 +471,12 @@ public:
     return nullptr;
   }
 
+  /// Targets can implement this method to specify a section to switch to if the
+  /// translation has trampolines that require an executable stack.
+  virtual MCSection *getExecutableStackSection(MCContext &Ctx) const {
+    return nullptr;
+  }
+
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;
