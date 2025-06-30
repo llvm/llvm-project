@@ -90,6 +90,10 @@ def FeatureWideArithmetic :
       SubtargetFeature<"wide-arithmetic", "HasWideArithmetic", "true",
                        "Enable wide-arithmetic instructions">;
 
+def FeatureBranchHinting :
+      SubtargetFeature<"branch-hinting", "HasBranchHinting", "true",
+                       "Enable branch hints for branch instructions">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//
@@ -142,7 +146,7 @@ def : ProcessorModel<"bleeding-edge", NoSchedModel,
                        FeatureMultivalue, FeatureMutableGlobals,
                        FeatureNontrappingFPToInt, FeatureRelaxedSIMD,
                        FeatureReferenceTypes, FeatureSIMD128, FeatureSignExt,
-                       FeatureTailCall]>;
+                       FeatureTailCall, FeatureBranchHinting]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration
