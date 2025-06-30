@@ -4,7 +4,8 @@ modernize-use-override
 ======================
 
 Adds ``override`` (introduced in C++11) to overridden virtual functions and
-removes ``virtual`` from those functions as it is not required.
+removes ``virtual`` from those functions (unless the `AllowVirtual` option is
+used).
 
 ``virtual`` on non base class implementations was used to help indicate to the
 user that a function was virtual. C++ compilers did not use the presence of
@@ -39,6 +40,11 @@ Options
    warning/error checking flags requiring ``override`` explicitly on overridden
    members, such as ``gcc -Wsuggest-override``/``gcc -Werror=suggest-override``.
    Default is `false`.
+
+.. option:: AllowVirtual
+
+   If set to `true`, ``virtual`` will not be removed by this check when adding
+   ``override`` or ``final``. Default is `false`.
 
 .. option:: OverrideSpelling
 
