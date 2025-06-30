@@ -1158,7 +1158,7 @@ def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const,
 
 def urem_by_const : GICombineRule<
   (defs root:$root),
-  (match (wip_match_opcode G_UREM):$root,
+  (match (G_UREM $dst, $x, $y):$root,
    [{ return Helper.matchUDivorURemByConst(*${root}); }]),
   (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
 
