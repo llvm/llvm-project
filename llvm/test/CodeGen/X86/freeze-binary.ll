@@ -802,6 +802,66 @@ define i32 @freeze_fshr(i32 %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
+define i32 @freeze_saddo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
+; X86-LABEL: freeze_saddo:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_saddo:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    addb %cl, %dl
+; X64-NEXT:    adcl $0, %edi
+; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    retq
+  %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
+  %b.o = extractvalue {i8, i1} %b, 1
+  %x = zext i1 %b.o to i32
+
+  %f0 = freeze i32 %a0
+  %o = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %f0, i32 %x)
+  %f = freeze {i32, i1} %o
+  %v = extractvalue {i32, i1} %f, 0
+  %r = add i32 %v, %a1
+  ret i32 %r
+}
+
+define i32 @freeze_uaddo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
+; X86-LABEL: freeze_uaddo:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_uaddo:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    addb %cl, %dl
+; X64-NEXT:    adcl $0, %edi
+; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    retq
+  %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
+  %b.o = extractvalue {i8, i1} %b, 1
+  %x = zext i1 %b.o to i32
+
+  %f0 = freeze i32 %a0
+  %o = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %f0, i32 %x)
+  %f = freeze {i32, i1} %o
+  %v = extractvalue {i32, i1} %f, 0
+  %r = add i32 %v, %a1
+  ret i32 %r
+}
+
 define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
 ; X86-LABEL: pr59676_frozen:
 ; X86:       # %bb.0:

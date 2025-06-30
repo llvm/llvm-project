@@ -1271,7 +1271,7 @@ def Arith_ScalingExtFOp
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_TruncIOp : Op<Arith_Dialect, "trunci",
+def Arith_TruncIOp : Arith_Op<"trunci",
     [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
      DeclareOpInterfaceMethods<CastOpInterface>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
@@ -1688,8 +1688,7 @@ def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
-    DeclareOpInterfaceMethods<SelectLikeOpInterface>,
-  ] # ElementwiseMappable.traits> {
+    DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
   let summary = "select operation";
   let description = [{
     The `arith.select` operation chooses one value based on a binary condition

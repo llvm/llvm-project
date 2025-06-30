@@ -58,10 +58,10 @@ define void @buildvec_vid_plus_imm_v16i8(ptr %x) {
 define void @buildvec_vid_plus_nonimm_v16i8(ptr %x) {
 ; CHECK-LABEL: buildvec_vid_plus_nonimm_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI4_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI4_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a1)
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    li a1, 100
+; CHECK-NEXT:    vadd.vx v8, v8, a1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   store <16 x i8> <i8 100, i8 101, i8 102, i8 103, i8 104, i8 105, i8 106, i8 107, i8 108, i8 109, i8 110, i8 111, i8 112, i8 113, i8 114, i8 115>, ptr %x

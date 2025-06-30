@@ -2822,10 +2822,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegRegScale(SDValue Addr,
       Base = Addr.getOperand(0);
       return true;
     }
-  } else if (UnwrapShl(Addr, Index, Scale)) {
-    EVT VT = Addr.getValueType();
-    Base = CurDAG->getRegister(RISCV::X0, VT);
-    return true;
   }
 
   return false;

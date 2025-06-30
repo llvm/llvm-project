@@ -94,7 +94,7 @@ bool isReductionIterator(utils::IteratorType iteratorType);
 /// ```
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value padding, bool nofold,
-                            ValueRange typeDynDims = std::nullopt);
+                            ValueRange typeDynDims = {});
 
 /// Returns GenericOp that copies an n-D memref. Unlike the current
 /// implementation of memref::CopyOp, this op can further tile, lower to loops
