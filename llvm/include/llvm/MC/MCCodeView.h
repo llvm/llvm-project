@@ -18,7 +18,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include <deque>
 #include <map>
 #include <vector>
 
@@ -269,9 +268,6 @@ private:
   /// Indicate whether we have already laid out the checksum table addresses or
   /// not.
   bool ChecksumOffsetsAssigned = false;
-
-  /// Storage of MCCVDefRangeFragment::Ranges.
-  std::deque<std::pair<const MCSymbol *, const MCSymbol *>> DefRangeStorage;
 };
 
 } // end namespace llvm

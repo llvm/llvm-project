@@ -71,6 +71,11 @@ C++ Specific Potentially Breaking Changes
   if it's out of range. The Boost numeric_conversion library is impacted by
   this; it was fixed in Boost 1.81. (#GH143034)
 
+- Fully implemented `CWG400 Using-declarations and the `
+  `"struct hack" <https://wg21.link/CWG400>`_. Invalid member using-declaration
+  whose nested-name-specifier doesn't refer to a base class such as
+  ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -893,7 +898,9 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- The ODR checker now correctly hashes the names of conversion operators. (#GH143152)
 - Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
+- Fixed a crash when performing an ``IgnoreUnlessSpelledInSource`` traversal of ASTs containing ``catch(...)`` statements. (#GH146103)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
