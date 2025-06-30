@@ -34,6 +34,9 @@ let Definition = "target_experimental" in {
   def SwiftUseTasksPlugin: Property<"swift-tasks-plugin-enabled", "Boolean">,
     DefaultTrue,
     Desc<"Enables the swift plugin converting tasks into threads">;
+  def SwiftCacheTaskPointerLocation: Property<"swift-cache-task-pointer-location", "Boolean">,
+    DefaultTrue,
+    Desc<"Enables caching of task pointers inside the swift tasks plugin">;
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultFalse,
     Desc<"If true, use the alternative DIL implementation for frame variable evaluation.">;

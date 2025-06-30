@@ -902,9 +902,17 @@ struct AsyncUnwindRegisterNumbers {
 std::optional<AsyncUnwindRegisterNumbers>
 GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple);
 
-/// Inspects thread local storage to find the address of the currently executing
-/// task.
-llvm::Expected<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread);
+/// A helper class to find and cache the location of Task pointer inside TLS.
+class TaskInspector {
+public:
+  /// Inspects thread local storage to find the address of the currently
+  /// executing task, if any.
+  llvm::Expected<lldb::addr_t>
+  GetTaskAddrFromThreadLocalStorage(Thread &thread);
+
+private:
+  llvm::DenseMap<uint64_t, lldb::addr_t> m_tid_to_task_addr_location;
+};
 
 llvm::Expected<std::optional<std::string>> GetTaskName(lldb::addr_t task,
                                                        Process &process);

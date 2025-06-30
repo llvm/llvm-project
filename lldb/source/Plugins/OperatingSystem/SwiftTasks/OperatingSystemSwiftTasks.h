@@ -11,6 +11,7 @@
 
 #if LLDB_ENABLE_SWIFT
 
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Target/OperatingSystem.h"
 
 namespace lldb_private {
@@ -49,8 +50,11 @@ private:
   /// If a thread for task_id had been created in the last stop, return it.
   /// Otherwise, create a new MemoryThread for it.
   lldb::ThreadSP FindOrCreateSwiftThread(ThreadList &old_thread_list,
-                                         uint64_t task_id,
-                                         std::optional<std::string> task_name);
+                                         uint64_t task_id);
+
+  /// A cache for task addr locations, which are expensive to compute but
+  /// immutable.
+  TaskInspector m_task_inspector;
 };
 } // namespace lldb_private
 
