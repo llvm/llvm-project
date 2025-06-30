@@ -15,6 +15,15 @@ void test_setprio_inc_wg() {
   __builtin_amdgcn_s_setprio_inc_wg(10);
 }
 
+// CHECK-LABEL: @test_s_monitor_sleep(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    call void @llvm.amdgcn.s.monitor.sleep(i16 10)
+// CHECK-NEXT:    ret void
+//
+void test_s_monitor_sleep() {
+  __builtin_amdgcn_s_monitor_sleep(10);
+}
+
 // CHECK-LABEL: @test_cvt_pk_f16_fp8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)

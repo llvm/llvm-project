@@ -1016,7 +1016,7 @@ public:
     return Fence.Val;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return RISCVInstPrinter::getRegisterName(Reg);
@@ -1026,8 +1026,9 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << "<imm: " << *Imm.Val << " " << (Imm.IsRV64 ? "rv64" : "rv32")
-         << ">";
+      OS << "<imm: ";
+      MAI.printExpr(OS, *Imm.Val);
+      OS << ' ' << (Imm.IsRV64 ? "rv64" : "rv32") << '>';
       break;
     case KindTy::FPImmediate:
       OS << "<fpimm: " << FPImm.Val << ">";

@@ -91,7 +91,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindLastIVResult:
+  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult: {
     auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
     auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
