@@ -194,24 +194,25 @@ ASTNodeUP DILParser::ParsePrimaryExpression() {
   uint32_t loc = CurToken().GetLocation();
   std::string nested_name_specifier;
 
-  if (CurToken().Is(Token::l_paren))
+  if (CurToken().Is(Token::l_paren)) {
     nested_name_specifier = ParseNestedNameSpecifier();
 
-  if (!nested_name_specifier.empty()) {
-    if (!CurToken().Is(Token::identifier)) {
-      BailOut("Expected an identifier, but not found.",
-              CurToken().GetLocation(), CurToken().GetSpelling().length());
-    }
+    if (!nested_name_specifier.empty()) {
+      if (!CurToken().Is(Token::identifier)) {
+        BailOut("Expected an identifier, but not found.",
+                CurToken().GetLocation(), CurToken().GetSpelling().length());
+      }
 
-    std::string unqualified_id = ParseUnqualifiedId();
-    return std::make_unique<IdentifierNode>(loc, nested_name_specifier +
-                                                     unqualified_id);
-  } else {
-    m_dil_lexer.Advance();
-    auto expr = ParseExpression();
-    Expect(Token::r_paren);
-    m_dil_lexer.Advance();
-    return expr;
+      std::string unqualified_id = ParseUnqualifiedId();
+      return std::make_unique<IdentifierNode>(loc, nested_name_specifier +
+                                                       unqualified_id);
+    } else {
+      m_dil_lexer.Advance();
+      auto expr = ParseExpression();
+      Expect(Token::r_paren);
+      m_dil_lexer.Advance();
+      return expr;
+    }
   }
 
   BailOut(llvm::formatv("Unexpected token: {0}", CurToken()),
