@@ -43,6 +43,60 @@
   #define LIBUNWIND_AVAIL
 #endif
 
+#if __has_include(<ptrauth.h>)
+#include <ptrauth.h>
+#endif
+
+#if defined(__APPLE__) && __has_feature(ptrauth_qualifier)
+#define _LIBUNWIND_PTRAUTH(__key, __address_discriminated, __discriminator)    \
+  __ptrauth(__key, __address_discriminated,                                    \
+            ptrauth_string_discriminator(__discriminator))
+// This work around is required to support divergence in spelling
+// developed during the ptrauth upstreaming process.
+#if __has_feature(ptrauth_restricted_intptr_qualifier)
+#define _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(__key, __address_discriminated,   \
+                                             __discriminator)                  \
+  __ptrauth_restricted_intptr(__key, __address_discriminated,                  \
+                              ptrauth_string_discriminator(__discriminator))
+#else
+#define _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(__key, __address_discriminated,   \
+                                             __discriminator)                  \
+  __ptrauth(__key, __address_discriminated,                                    \
+            ptrauth_string_discriminator(__discriminator))
+#endif
+#else
+#define _LIBUNWIND_PTRAUTH(__key, __address_discriminated, __discriminator)
+#define _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(__key, __address_discriminated,   \
+                                             __discriminator)
+#endif
+
+// Helper wrappers for pointer auth qualifiers because we use a lot of variants
+// Suffixes:
+//  * RI_*: __ptrauth_restricted_intptr
+//  * PDD : ptrauth_key_process_dependent_data
+//  * PIC : ptrauth_key_process_independent_code
+//  * PDC : ptrauth_key_process_dependent_code
+//  * FN  : ptrauth_key_function_pointer
+#define __LIBUNWIND_PTRAUTH_RI_PDD(__discriminator)                            \
+  _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(ptrauth_key_process_dependent_data,     \
+                                       /*__address_discriminated=*/1,          \
+                                       __discriminator)
+#define __LIBUNWIND_PTRAUTH_RI_PIC(__discriminator)                            \
+  _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(ptrauth_key_process_independent_code,   \
+                                       /*__address_discriminated=*/1,          \
+                                       __discriminator)
+#define __LIBUNWIND_PTRAUTH_RI_PDC(__discriminator)                            \
+  _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(ptrauth_key_process_dependent_code,     \
+                                       /*__address_discriminated=*/1,          \
+                                       __discriminator)
+#define __LIBUNWIND_PTRAUTH_RI_FN(__discriminator)                             \
+  _LIBUNWIND_PTRAUTH_RESTRICTED_INTPTR(ptrauth_key_function_pointer,           \
+                                       /*__address_discriminated=*/1,          \
+                                       __discriminator)
+#define __LIBUNWIND_PTRAUTH_FN(__discriminator)                                \
+  _LIBUNWIND_PTRAUTH(ptrauth_key_function_pointer,                             \
+                     /*__address_discriminated=*/1, __discriminator)
+
 #if defined(_WIN32) && defined(__SEH__)
   #define LIBUNWIND_CURSOR_ALIGNMENT_ATTR __attribute__((__aligned__(16)))
 #else
@@ -88,17 +142,24 @@ typedef double unw_fpreg_t;
 #endif
 
 struct unw_proc_info_t {
-  unw_word_t  start_ip;         /* start address of function */
-  unw_word_t  end_ip;           /* address after end of function */
-  unw_word_t  lsda;             /* address of language specific data area, */
-                                /*  or zero if not used */
-  unw_word_t  handler;          /* personality routine, or zero if not used */
+  unw_word_t __LIBUNWIND_PTRAUTH_RI_PIC(
+      "unw_proc_info_t::start_ip") start_ip; /* start address of function */
+  unw_word_t __LIBUNWIND_PTRAUTH_RI_PIC(
+      "unw_proc_info_t::end_ip") end_ip; /* address after end of function */
+  unw_word_t __LIBUNWIND_PTRAUTH_RI_PDD("unw_proc_info_t::lsda")
+      lsda; /* address of language specific data area, */
+            /* or zero if not used */
+  unw_word_t __LIBUNWIND_PTRAUTH_RI_FN("unw_proc_info_t::handler")
+      handler;                  /* personality routine, or zero if not used */
   unw_word_t  gp;               /* not used */
-  unw_word_t  flags;            /* not used */
+  unw_word_t
+      __LIBUNWIND_PTRAUTH_RI_PDD("unw_proc_info_t::flags") flags; /* not used */
   uint32_t    format;           /* compact unwind encoding, or zero if none */
   uint32_t    unwind_info_size; /* size of DWARF unwind info, or zero if none */
-  unw_word_t  unwind_info;      /* address of DWARF unwind info, or zero */
-  unw_word_t  extra;            /* mach_header of mach-o image containing func */
+  unw_word_t __LIBUNWIND_PTRAUTH_RI_PDD("unw_proc_info_t::unwind_info")
+      unwind_info; /* address of DWARF unwind info, or zero */
+  unw_word_t __LIBUNWIND_PTRAUTH_RI_PDD("unw_proc_info_t::extra")
+      extra; /* mach_header of mach-o image containing func */
 };
 typedef struct unw_proc_info_t unw_proc_info_t;
 

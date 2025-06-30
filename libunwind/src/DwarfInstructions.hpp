@@ -22,6 +22,9 @@
 #include "dwarf2.h"
 #include "libunwind_ext.h"
 
+#if __has_include(<ptrauth.h>)
+#include <ptrauth.h>
+#endif
 
 namespace libunwind {
 
@@ -34,8 +37,9 @@ public:
   typedef typename A::pint_t pint_t;
   typedef typename A::sint_t sint_t;
 
-  static int stepWithDwarf(A &addressSpace, pint_t pc, pint_t fdeStart,
-                           R &registers, bool &isSignalFrame, bool stage2);
+  static int stepWithDwarf(A &addressSpace, typename R::link_reg_t &pc,
+                           pint_t fdeStart, R &registers, bool &isSignalFrame,
+                           bool stage2);
 
 private:
 
@@ -207,7 +211,8 @@ bool DwarfInstructions<A, R>::isReturnAddressSignedWithPC(A &addressSpace,
 #endif
 
 template <typename A, typename R>
-int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
+int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
+                                           typename R::link_reg_t &pc,
                                            pint_t fdeStart, R &registers,
                                            bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
