@@ -1,3 +1,5 @@
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | fir-opt -pass-pipeline='builtin.module(test-fir-openacc-interfaces)' --mlir-disable-threading 2>&1 | FileCheck %s
+
 module mm
   type, public :: polyty
     real :: field
@@ -9,7 +11,6 @@ contains
   end subroutine
 end module
 
-! RUN: bbc -fopenacc -emit-hlfir %s -o - | fir-opt -pass-pipeline='builtin.module(test-fir-openacc-interfaces)' --mlir-disable-threading 2>&1 | FileCheck %s
 ! CHECK: Visiting: {{.*}} acc.copyin {{.*}} {name = "this", structured = false}
 ! CHECK: Mappable: !fir.class<!fir.type<_QMmmTpolyty{field:f32}>>
 ! CHECK: Type category: composite
