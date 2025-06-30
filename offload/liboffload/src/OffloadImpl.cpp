@@ -96,7 +96,9 @@ struct AllocInfo {
 
 // Global shared state for liboffload
 struct OffloadContext;
-static OffloadContext *OffloadContextVal;
+// This pointer is non-null if and only if the context is valid and fully
+// initialized
+static std::atomic<OffloadContext *> OffloadContextVal;
 std::mutex OffloadContextValMutex;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
@@ -147,9 +149,7 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
-Error initPlugins() {
-  auto &Context = OffloadContext::get();
-
+Error initPlugins(OffloadContext &Context) {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
@@ -199,8 +199,11 @@ Error olInit_impl() {
     return Plugin::success();
   }
 
-  OffloadContextVal = new OffloadContext{};
-  Error InitResult = initPlugins();
+  // Use a temporary to ensure that entry points querying OffloadContextVal do
+  // not get a partially initialized context
+  auto *NewContext = new OffloadContext{};
+  Error InitResult = initPlugins(*NewContext);
+  OffloadContextVal.store(NewContext);
   OffloadContext::get().RefCount++;
 
   return InitResult;
@@ -213,8 +216,9 @@ Error olShutDown_impl() {
     return Error::success();
 
   llvm::Error Result = Error::success();
+  auto *OldContext = OffloadContextVal.exchange(nullptr);
 
-  for (auto &P : OffloadContext::get().Platforms) {
+  for (auto &P : OldContext->Platforms) {
     // Host plugin is nullptr and has no deinit
     if (!P.Plugin)
       continue;
@@ -222,9 +226,8 @@ Error olShutDown_impl() {
     if (auto Res = P.Plugin->deinit())
       Result = llvm::joinErrors(std::move(Result), std::move(Res));
   }
-  delete OffloadContextVal;
-  OffloadContextVal = nullptr;
 
+  delete OldContext;
   return Result;
 }
 
