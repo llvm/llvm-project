@@ -289,7 +289,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   // Find the info if it exists under any of the given names
   auto getInfoString =
       [&](std::vector<std::string> Names) -> llvm::Expected<const char *> {
-    for (auto Name : Names) {
+    for (auto &Name : Names) {
       if (auto Entry = Device->Info.get(Name)) {
         if (!std::holds_alternative<std::string>((*Entry)->Value))
           return makeError(ErrorCode::BACKEND_FAILURE,
