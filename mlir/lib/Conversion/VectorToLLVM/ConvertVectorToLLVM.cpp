@@ -1208,7 +1208,7 @@ public:
 };
 
 /// Conversion pattern that turns a vector.fma on a 1-D vector
-/// into an llvm.intr.fmuladd. This is a trivial 1-1 conversion.
+/// into an llvm.intr.fma. This is a trivial 1-1 conversion.
 /// This does not match vectors of n >= 2 rank.
 ///
 /// Example:
@@ -1217,7 +1217,7 @@ public:
 /// ```
 /// is converted to:
 /// ```
-///  llvm.intr.fmuladd %va, %va, %va:
+///  llvm.intr.fma %va, %va, %va:
 ///    (!llvm."<8 x f32>">, !llvm<"<8 x f32>">, !llvm<"<8 x f32>">)
 ///    -> !llvm."<8 x f32>">
 /// ```
@@ -1232,7 +1232,7 @@ public:
     if (vType.getRank() > 1)
       return failure();
 
-    rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
+    rewriter.replaceOpWithNewOp<LLVM::FMAOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
     return success();
   }
