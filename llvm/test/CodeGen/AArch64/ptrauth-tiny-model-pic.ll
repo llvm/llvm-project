@@ -34,7 +34,6 @@ define dso_preemptable void @foo1() {
 ; TRAP-NEXT:     brk   #0xc472
 ; TRAP-NEXT:   .Lauth_success_0:
 ; TRAP-NEXT:     mov   x8,  x16
-; CHECK-NEXT:    ldrb  w8,  [x8]
 ; CHECK-NEXT:    adr   x17, :got_auth:dst
 ; NOTRAP-NEXT:   ldr   x9,  [x17]
 ; NOTRAP-NEXT:   autda x9,  x17
@@ -47,6 +46,7 @@ define dso_preemptable void @foo1() {
 ; TRAP-NEXT:     brk   #0xc472
 ; TRAP-NEXT:   .Lauth_success_1:
 ; TRAP-NEXT:     mov   x9,  x16
+; CHECK-NEXT:    ldrb  w8,  [x8]
 ; CHECK-NEXT:    strb  w8,  [x9]
 ; CHECK-NEXT:    ret
 
@@ -106,7 +106,6 @@ define dso_preemptable void @foo3() {
 ; TRAP-NEXT:     brk   #0xc472
 ; TRAP-NEXT:   .Lauth_success_4:
 ; TRAP-NEXT:     mov   x8,  x16
-; CHECK-NEXT:    ldrb  w8,  [x8]
 ; CHECK-NEXT:    adr   x17, :got_auth:ptr
 ; NOTRAP-NEXT:   ldr   x9,  [x17]
 ; NOTRAP-NEXT:   autda x9,  x17
@@ -119,6 +118,7 @@ define dso_preemptable void @foo3() {
 ; TRAP-NEXT:     brk   #0xc472
 ; TRAP-NEXT:   .Lauth_success_5:
 ; TRAP-NEXT:     mov   x9,  x16
+; CHECK-NEXT:    ldrb  w8,  [x8]
 ; CHECK-NEXT:    ldr   x9,  [x9]
 ; CHECK-NEXT:    strb  w8,  [x9]
 ; CHECK-NEXT:    ret
