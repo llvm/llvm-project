@@ -566,40 +566,40 @@ func.func @insert_extract_transpose_2d(
 // -----
 
 // CHECK-LABEL: insert_extract_chain
-//  CHECK-SAME: %[[V234:[a-zA-Z0-9]*]]: vector<2x3x4xf32>
+//  CHECK-SAME: %[[V334:[a-zA-Z0-9]*]]: vector<3x3x4xf32>
 //  CHECK-SAME: %[[V34:[a-zA-Z0-9]*]]: vector<3x4xf32>
 //  CHECK-SAME: %[[V4:[a-zA-Z0-9]*]]: vector<4xf32>
-func.func @insert_extract_chain(%v234: vector<2x3x4xf32>, %v34: vector<3x4xf32>, %v4: vector<4xf32>)
+func.func @insert_extract_chain(%v334: vector<3x3x4xf32>, %v34: vector<3x4xf32>, %v4: vector<4xf32>)
     -> (vector<4xf32>, vector<4xf32>, vector<3x4xf32>, vector<3x4xf32>) {
   // CHECK-NEXT: %[[A34:.*]] = vector.insert
-  %A34 = vector.insert %v34, %v234[0]: vector<3x4xf32> into vector<2x3x4xf32>
+  %A34 = vector.insert %v34, %v334[0]: vector<3x4xf32> into vector<3x3x4xf32>
   // CHECK-NEXT: %[[B34:.*]] = vector.insert
-  %B34 = vector.insert %v34, %A34[1]: vector<3x4xf32> into vector<2x3x4xf32>
+  %B34 = vector.insert %v34, %A34[1]: vector<3x4xf32> into vector<3x3x4xf32>
   // CHECK-NEXT: %[[A4:.*]] = vector.insert
-  %A4 = vector.insert %v4, %B34[1, 0]: vector<4xf32> into vector<2x3x4xf32>
+  %A4 = vector.insert %v4, %B34[1, 0]: vector<4xf32> into vector<3x3x4xf32>
   // CHECK-NEXT: %[[B4:.*]] = vector.insert
-  %B4 = vector.insert %v4, %A4[1, 1]: vector<4xf32> into vector<2x3x4xf32>
+  %B4 = vector.insert %v4, %A4[1, 1]: vector<4xf32> into vector<3x3x4xf32>
 
   // Case 2.a. [1, 1] == insertpos ([1, 1])
   // Match %A4 insertionpos and fold to its source(i.e. %V4).
-   %r0 = vector.extract %B4[1, 1]: vector<4xf32> from vector<2x3x4xf32>
+   %r0 = vector.extract %B4[1, 1]: vector<4xf32> from vector<3x3x4xf32>
 
   // Case 3.a. insertpos ([1]) is a prefix of [1, 0].
   // Traverse %B34 to its source(i.e. %V34@[*0*]).
   // CHECK-NEXT: %[[R1:.*]] = vector.extract %[[V34]][0]
-   %r1 = vector.extract %B34[1, 0]: vector<4xf32> from vector<2x3x4xf32>
+   %r1 = vector.extract %B34[1, 0]: vector<4xf32> from vector<3x3x4xf32>
 
   // Case 4. [1] is a prefix of insertpos ([1, 1]).
   // Cannot traverse %B4.
   // CHECK-NEXT: %[[R2:.*]] = vector.extract %[[B4]][1]
-   %r2 = vector.extract %B4[1]: vector<3x4xf32> from vector<2x3x4xf32>
+   %r2 = vector.extract %B4[1]: vector<3x4xf32> from vector<3x3x4xf32>
 
   // Case 5. [0] is disjoint from insertpos ([1, 1]).
   // Traverse %B4 to its dest(i.e. %A4@[0]).
   // Traverse %A4 to its dest(i.e. %B34@[0]).
   // Traverse %B34 to its dest(i.e. %A34@[0]).
   // Match %A34 insertionpos and fold to its source(i.e. %V34).
-   %r3 = vector.extract %B4[0]: vector<3x4xf32> from vector<2x3x4xf32>
+   %r3 = vector.extract %B4[0]: vector<3x4xf32> from vector<3x3x4xf32>
 
   // CHECK: return %[[V4]], %[[R1]], %[[R2]], %[[V34]]
   return %r0, %r1, %r2, %r3:
@@ -946,8 +946,8 @@ func.func @insert_fold_same_rank(%v: vector<2x2xf32>) -> vector<2x2xf32> {
 
 // CHECK-LABEL: func @insert_no_fold_scalar_to_0d(
 //  CHECK-SAME:     %[[v:.*]]: vector<f32>)
-//       CHECK:   %[[extract:.*]] = vector.insert %{{.*}}, %[[v]] [] : f32 into vector<f32>
-//       CHECK:   return %[[extract]]
+//       CHECK:   %[[cst:.*]] = arith.constant dense<0.000000e+00> : vector<f32>
+//       CHECK:   return %[[cst]]
 func.func @insert_no_fold_scalar_to_0d(%v: vector<f32>) -> vector<f32> {
   %cst = arith.constant 0.000000e+00 : f32
   %0 = vector.insert %cst, %v [] : f32 into vector<f32>
@@ -2320,34 +2320,40 @@ func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3
 
 // -----
 
-// CHECK-LABEL: func.func @fully_insert_scalar_constant_to_poison_vector
-//       CHECK: %[[VAL0:.+]] = arith.constant dense<[10, 20]> : vector<2xi64>
-//  CHECK-NEXT: return %[[VAL0]]
-func.func @fully_insert_scalar_constant_to_poison_vector() -> vector<2xi64> {
-  %poison = ub.poison : vector<2xi64>
+// CHECK-LABEL: func.func @fully_insert_scalar_to_vector(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2xi64>)
+//       CHECK: %[[CST10:.+]] = arith.constant 10 : i64
+//       CHECK: %[[CST20:.+]] = arith.constant 20 : i64
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[CST10]], %[[CST20]] : vector<2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_scalar_to_vector(%arg0 : vector<2xi64>) -> vector<2xi64> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %e0 = arith.constant 10 : i64
   %e1 = arith.constant 20 : i64
-  %v1 = vector.insert %e0, %poison[%c0] : i64 into vector<2xi64>
+  %v1 = vector.insert %e0, %arg0[%c0] : i64 into vector<2xi64>
   %v2 = vector.insert %e1, %v1[%c1] : i64 into vector<2xi64>
   return %v2 : vector<2xi64>
 }
 
 // -----
 
-// CHECK-LABEL: func.func @fully_insert_vector_constant_to_poison_vector
-//       CHECK: %[[VAL0:.+]] = arith.constant dense<{{\[\[1, 2, 3\], \[4, 5, 6\]\]}}> : vector<2x3xi64>
-//  CHECK-NEXT: return %[[VAL0]]
-func.func @fully_insert_vector_constant_to_poison_vector() -> vector<2x3xi64> {
-  %poison = ub.poison : vector<2x3xi64>
-  %cv0 = arith.constant dense<[1, 2, 3]> : vector<3xi64>
-  %cv1 = arith.constant dense<[4, 5, 6]> : vector<3xi64>
+// CHECK-LABEL: func.func @fully_insert_vector_to_vector(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2x2xi64>
+//       CHECK: %[[CST1:.+]] = arith.constant 1 : i64
+//       CHECK: %[[CST2:.+]] = arith.constant 2 : i64
+//       CHECK: %[[CST3:.+]] = arith.constant 3 : i64
+//       CHECK: %[[CST4:.+]] = arith.constant 4 : i64
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[CST1]], %[[CST2]], %[[CST3]], %[[CST4]] : vector<2x2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_vector_to_vector(%arg0 : vector<2x2xi64>) -> vector<2x2xi64> {
+  %cv0 = arith.constant dense<[1, 2]> : vector<2xi64>
+  %cv1 = arith.constant dense<[3, 4]> : vector<2xi64>
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  %v1 = vector.insert %cv0, %poison[%c0] : vector<3xi64> into vector<2x3xi64>
-  %v2 = vector.insert %cv1, %v1[%c1] : vector<3xi64> into vector<2x3xi64>
-  return %v2 : vector<2x3xi64>
+  %v1 = vector.insert %cv0, %arg0[%c0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %cv1, %v1[%c1] : vector<2xi64> into vector<2x2xi64>
+  return %v2 : vector<2x2xi64>
 }
 
 // -----
