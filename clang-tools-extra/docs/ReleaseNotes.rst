@@ -70,6 +70,8 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
+- Improved diagnostics code actions to better remove leftover commas and colons.
+
 Signature help
 ^^^^^^^^^^^^^^
 
