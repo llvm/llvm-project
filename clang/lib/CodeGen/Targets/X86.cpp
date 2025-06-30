@@ -2534,14 +2534,10 @@ GetINTEGERTypeAtOffset(llvm::Type *IRType, unsigned IROffset,
   }
 
   // if we have a 128-bit integer, we can pass it safely using an i128
-  // so we return that if the IROffset is 0 and no type otherwise
+  // so we return that
   if (IRType->isIntegerTy(128)) {
-    if (IROffset == 0) {
-      return IRType;
-    } else {
-      assert(IROffset == 8);
-      return nullptr;
-    }
+    assert(IROffset <= 8);
+    return IRType;
   }
 
   // Okay, we don't have any better idea of what to pass, so we pass this in an
@@ -2647,6 +2643,12 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
       if (RetTy->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(RetTy))
         return ABIArgInfo::getExtend(RetTy);
+    }
+
+    if (ResType->isIntegerTy(128)) {
+      // i128 are passed directly
+      assert(Hi == Integer);
+      return ABIArgInfo::getDirect(ResType);
     }
     break;
 
@@ -2793,6 +2795,11 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
         return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     }
 
+    if (ResType->isIntegerTy(128)) {
+      assert(Hi == Integer);
+      ++neededInt;
+      return ABIArgInfo::getDirect(ResType);
+    }
     break;
 
     // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next
