@@ -31,6 +31,7 @@ LLVM and API reference documentation.
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
    InAlloca
+   InlineAsmSafetyDirective
    InterfaceExportAnnotations
    LangRef
    LibFuzzer
