@@ -212,10 +212,11 @@ LogicalResult PatternApplicator::matchAndRewrite(
 #ifndef NDEBUG
             OpBuilder::Listener *oldListener = rewriter.getListener();
             auto catalogingListener =
-                std::make_unique<RewriterBase::CatalogingListener>(oldListener,
-                                                     pattern->getDebugName());
+                std::make_unique<RewriterBase::CatalogingListener>(
+                    oldListener, pattern->getDebugName());
             rewriter.setListener(catalogingListener.get());
-            llvm::make_scope_exit([&] { rewriter.setListener(oldListener); };
+            llvm::make_scope_exit([&] {
+          rewriter.setListener(oldListener); };
 #endif
             result = pattern->matchAndRewrite(op, rewriter);
             LLVM_DEBUG(llvm::dbgs()
