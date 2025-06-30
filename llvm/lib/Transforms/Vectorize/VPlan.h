@@ -946,7 +946,7 @@ public:
     /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
     /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
-    ComputeFindLastIVResult,
+    ComputeFindIVResult,
     ComputeReductionResult,
     // Extracts the last lane from its operand if it is a vector, or the last
     // part if scalar. In the latter case, the recipe will be removed during
@@ -966,7 +966,9 @@ public:
     // all unrolled iterations. Unrolling will add all copies of its original
     // operand as additional operands.
     AnyOf,
-    // Calculates the first active lane index of the vector predicate operand.
+    // Calculates the first active lane index of the vector predicate operands.
+    // It produces the lane index across all unrolled iterations. Unrolling will
+    // add all copies of its original operand as additional operands.
     FirstActiveLane,
 
     // The opcodes below are used for VPInstructionWithType.

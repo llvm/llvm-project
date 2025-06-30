@@ -727,10 +727,8 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
 
   if (auto stringAttr = dyn_cast<StringAttr>(attr)) {
-    return llvm::ConstantDataArray::get(
-        moduleTranslation.getLLVMContext(),
-        ArrayRef<char>{stringAttr.getValue().data(),
-                       stringAttr.getValue().size()});
+    return llvm::ConstantDataArray::get(moduleTranslation.getLLVMContext(),
+                                        ArrayRef<char>{stringAttr.getValue()});
   }
 
   // Handle arrays of structs that cannot be represented as DenseElementsAttr
