@@ -529,7 +529,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_ICMP})
       .Any({{UniS1, _, S32}, {{Sgpr32Trunc}, {None, Sgpr32, Sgpr32}}})
-      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}});
+      .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}})
+      .Any({{DivS1, _, S64}, {{Vcc}, {None, Vgpr64, Vgpr64}}});
 
   addRulesForGOpcs({G_FCMP})
       .Any({{UniS1, _, S32}, {{UniInVcc}, {None, Vgpr32, Vgpr32}}})
@@ -666,6 +667,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   // clang-format off
   addRulesForGOpcs({G_LOAD})
       .Any({{DivB32, DivP0}, {{VgprB32}, {VgprP0}}})
+      .Any({{DivB32, UniP0}, {{VgprB32}, {VgprP0}}})
 
       .Any({{DivB32, DivP1}, {{VgprB32}, {VgprP1}}})
       .Any({{{UniB256, UniP1}, isAlign4 && isUL}, {{SgprB256}, {SgprP1}}})
@@ -687,6 +689,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniB96, UniP4}, isAlign16 && isUL}, {{SgprB96}, {SgprP4}, WidenLoad}}, !hasUnalignedLoads)
       .Any({{{UniB96, UniP4}, isAlign4 && !isAlign16 && isUL}, {{SgprB96}, {SgprP4}, SplitLoad}}, !hasUnalignedLoads)
       .Any({{{UniB96, UniP4}, isAlign4 && isUL}, {{SgprB96}, {SgprP4}}}, hasUnalignedLoads)
+      .Any({{{UniB128, UniP4}, isAlign4 && isUL}, {{SgprB128}, {SgprP4}}})
       .Any({{{UniB256, UniP4}, isAlign4 && isUL}, {{SgprB256}, {SgprP4}}})
       .Any({{{UniB512, UniP4}, isAlign4 && isUL}, {{SgprB512}, {SgprP4}}})
       .Any({{{UniB32, UniP4}, !isNaturalAlignedSmall || !isUL}, {{UniInVgprB32}, {VgprP4}}}, hasSMRDSmall) // i8 and i16 load
@@ -701,11 +704,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniB32, UniP4}, !isAlign4 || !isUL}, {{UniInVgprB32}, {VgprP4}}});
   // clang-format on
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, Vector)
-      .Div(S32, {{Vgpr32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}})
-      .Uni(S32, {{UniInVgprS32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}})
-      .Div(V4S32, {{VgprV4S32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}})
-      .Uni(V4S32, {{UniInVgprV4S32}, {SgprV4S32, Vgpr32, Vgpr32, Sgpr32}});
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD}, StandardB)
+      .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B96, {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B96, {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
   addRulesForGOpcs({G_STORE})
       .Any({{S32, P0}, {{}, {Vgpr32, VgprP0}}})
@@ -719,7 +726,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniP1}, {{SgprP1}, {SgprP1, Sgpr64}}})
       .Any({{DivP1}, {{VgprP1}, {VgprP1, Vgpr64}}})
-      .Any({{DivP0}, {{VgprP0}, {VgprP0, Vgpr64}}});
+      .Any({{DivP0}, {{VgprP0}, {VgprP0, Vgpr64}}})
+      .Any({{UniP4}, {{SgprP4}, {SgprP4, Sgpr64}}});
 
   addRulesForGOpcs({G_INTTOPTR})
       .Any({{UniPtr32}, {{SgprPtr32}, {Sgpr32}}})
