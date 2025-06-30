@@ -254,12 +254,6 @@ public:
   /// above. This is indexed by opcode.
   LLVM_ABI static ArrayRef<OperandType[MaxOperands]> getOperandTypes();
 
-private:
-  std::vector<Instruction> Instructions;
-  const uint64_t CodeAlignmentFactor;
-  const int64_t DataAlignmentFactor;
-  Triple::ArchType Arch;
-
   /// Convenience method to add a new instruction with the given opcode.
   void addInstruction(uint8_t Opcode) {
     Instructions.push_back(Instruction(Opcode));
@@ -286,6 +280,12 @@ private:
     Instructions.back().Ops.push_back(Operand2);
     Instructions.back().Ops.push_back(Operand3);
   }
+
+private:
+  std::vector<Instruction> Instructions;
+  const uint64_t CodeAlignmentFactor;
+  const int64_t DataAlignmentFactor;
+  Triple::ArchType Arch;
 };
 
 } // end namespace dwarf

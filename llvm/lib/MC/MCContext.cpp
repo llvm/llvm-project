@@ -75,6 +75,8 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
   SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+  if (SaveTempLabels)
+    setUseNamesOnTempLabels(true);
   SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())

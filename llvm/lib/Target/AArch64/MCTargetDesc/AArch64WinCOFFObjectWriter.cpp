@@ -102,8 +102,6 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
       return COFF::IMAGE_REL_ARM64_ADDR32;
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
       return COFF::IMAGE_REL_ARM64_ADDR32NB;
-    case MCSymbolRefExpr::VK_SECREL:
-      return COFF::IMAGE_REL_ARM64_SECREL;
     }
 
   case FK_Data_8:
