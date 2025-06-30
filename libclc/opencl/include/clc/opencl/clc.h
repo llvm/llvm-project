@@ -41,8 +41,14 @@
 #include <clc/opencl/workitem/get_global_size.h>
 #include <clc/opencl/workitem/get_group_id.h>
 #include <clc/opencl/workitem/get_local_id.h>
+#include <clc/opencl/workitem/get_local_linear_id.h>
 #include <clc/opencl/workitem/get_local_size.h>
+#include <clc/opencl/workitem/get_max_sub_group_size.h>
 #include <clc/opencl/workitem/get_num_groups.h>
+#include <clc/opencl/workitem/get_num_sub_groups.h>
+#include <clc/opencl/workitem/get_sub_group_id.h>
+#include <clc/opencl/workitem/get_sub_group_local_id.h>
+#include <clc/opencl/workitem/get_sub_group_size.h>
 #include <clc/opencl/workitem/get_work_dim.h>
 
 /* 6.11.2 Math Functions */
