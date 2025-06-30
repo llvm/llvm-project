@@ -544,8 +544,8 @@ void deallocate(void *ptr) {
     return impl::rpc_free(ptr);
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
-  Slab *slab = reinterpret_cast<Slab *>(
-      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT));
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
   slab->deallocate(ptr);
   release_slab(slab);
 }

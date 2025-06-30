@@ -443,6 +443,36 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMComplexRealOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexRealOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexRealOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexRealOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexImagOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexImagOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexImagOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexImagOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexEqualOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexEqualOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexEqualOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexEqualOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 

@@ -4855,7 +4855,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   auto *Latch = L->getLoopLatch();
   SmallVector<BasicBlock *> Preds(predecessors(Latch));
   if (!Term || !Term->isConditional() || Preds.size() == 1 ||
-      none_of(Preds, [Header](BasicBlock *Pred) { return Header == Pred; }) ||
+      !llvm::is_contained(Preds, Header) ||
       none_of(Preds, [L](BasicBlock *Pred) { return L->contains(Pred); }))
     return;
 
@@ -5597,6 +5597,23 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   if (Kind == TTI::SK_InsertSubvector) {
     LT = getTypeLegalizationCost(DstTy);
     SrcTy = DstTy;
+  }
+
+  // Segmented shuffle matching.
+  if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
+      ST->isSVEorStreamingSVEAvailable() && Kind == TTI::SK_PermuteSingleSrc &&
+      isa<FixedVectorType>(SrcTy) && !Mask.empty() &&
+      SrcTy->getPrimitiveSizeInBits().isKnownMultipleOf(
+          AArch64::SVEBitsPerBlock)) {
+
+    FixedVectorType *VTy = cast<FixedVectorType>(SrcTy);
+    unsigned Segments =
+        VTy->getPrimitiveSizeInBits() / AArch64::SVEBitsPerBlock;
+    unsigned SegmentElts = VTy->getNumElements() / Segments;
+
+    // dupq zd.t, zn.t[idx]
+    if (isDUPQMask(Mask, Segments, SegmentElts))
+      return LT.first;
   }
 
   // Check for broadcast loads, which are supported by the LD1R instruction.

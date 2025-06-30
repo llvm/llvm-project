@@ -824,7 +824,11 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
         M.getGlobalVariable("__openmp_nvptx_data_transfer_temporary_storage")};
     emitUsed("llvm.compiler.used", LLVMCompilerUsed);
   }
+
+  IsFinalized = true;
 }
+
+bool OpenMPIRBuilder::isFinalized() { return IsFinalized; }
 
 OpenMPIRBuilder::~OpenMPIRBuilder() {
   assert(OutlineInfos.empty() && "There must be no outstanding outlinings");
@@ -9842,7 +9846,7 @@ void OffloadEntriesInfoManager::getTargetRegionEntryFnName(
 TargetRegionEntryInfo
 OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
                                           StringRef ParentName) {
-  sys::fs::UniqueID ID;
+  sys::fs::UniqueID ID(0xdeadf17e, 0);
   auto FileIDInfo = CallBack();
   uint64_t FileID = 0;
   std::error_code EC = sys::fs::getUniqueID(std::get<0>(FileIDInfo), ID);
