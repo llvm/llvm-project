@@ -476,7 +476,7 @@ void foo23(int _Complex a, int _Complex b) {
 
 void foo24() {
   int _Complex arr[2];
-  int _Complex  r = arr[1];
+  int _Complex r = arr[1];
 }
 
 // CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.complex<!s32i> x 2>, !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>>, ["arr"]
