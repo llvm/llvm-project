@@ -50,44 +50,44 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit to_input_view(_V __base) : __base_(std::move(__base)) {}
 
   // base
-  _LIBCPP_HIDE_FROM_ABI constexpr _V base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _V base() const&
     requires copy_constructible<_V>
   {
     return __base_;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr _V base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _V base() && { return std::move(__base_); }
 
   // begin
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!__simple_view<_V>)
   {
     return __iterator<false>(ranges::begin(__base_));
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _V>
   {
     return __iterator<true>(ranges::begin(__base_));
   }
 
   // end
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!__simple_view<_V>)
   {
     return ranges::end(__base_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _V>
   {
     return ranges::end(__base_);
   }
 
   // size
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_V>
   {
     return ranges::size(__base_);
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _V>
   {
     return ranges::size(__base_);
@@ -123,34 +123,37 @@ public:
       : __current_(std::move(__i.__current_)) {}
 
   // base
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() &&;
-  _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() &&;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept;
 
   // operator ++
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     ++__current_;
     return *this;
   }
   _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
 
   // operator==
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const sentinel_t<_Base>& __y) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator==(const __iterator& __x, const sentinel_t<_Base>& __y) {
     return __x.__current_ == __y;
   }
 
   // operator --
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const sentinel_t<_Base>& __y, const __iterator& __x)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(const sentinel_t<_Base>& __y, const __iterator& __x)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return __y - __x.__current_;
   }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const sentinel_t<_Base>& __y)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(const __iterator& __x, const sentinel_t<_Base>& __y)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
     return __x.__current_ - __y;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_Base>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_Base>
   iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_))) {
     return ranges::iter_move(__i.__current_);
   }
@@ -180,7 +183,6 @@ struct __to_input_range_adaptor {
 namespace views {
 inline constexpr auto to_input = ranges::__cpo::__to_input_range_adaptor{};
 } // namespace views
-
 
 } // namespace ranges
 
