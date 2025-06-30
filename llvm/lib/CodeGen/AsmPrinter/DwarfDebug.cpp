@@ -2082,12 +2082,11 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   // There may be a mixture of scopes using and not using Key Instructions.
   // Not-Key-Instructions functions inlined into Key Instructions functions
   // should use not-key is_stmt handling. Key Instructions functions inlined
-  // into not-key-instructions functions currently fall back to not-key
-  // handling to avoid having to run computeKeyInstructions for all functions
-  // (which will impact non-key-instructions builds).
-  // TODO: Investigate the performance impact of doing that.
+  // into Not-Key-Instructions functions should use Key Instructions is_stmt
+  // handling.
   bool ScopeUsesKeyInstructions =
-      KeyInstructionsAreStmts && DL && SP->getKeyInstructionsEnabled();
+      KeyInstructionsAreStmts && DL &&
+      DL->getScope()->getSubprogram()->getKeyInstructionsEnabled();
 
   bool IsKey = false;
   if (ScopeUsesKeyInstructions && DL && DL.getLine())
@@ -2663,17 +2662,12 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
-  // If this function wasn't built with Key Instructions but has a function
-  // inlined into it that was, we treat the inlined instance as if it wasn't
-  // built with Key Instructions. If this function was built with Key
-  // Instructions but a function inlined into it wasn't then we continue to use
-  // Key Instructions for this function and fall back to non-key behaviour for
-  // the inlined function (except it doesn't benefit from
-  // findForceIsStmtInstrs).
-  if (KeyInstructionsAreStmts && SP->getKeyInstructionsEnabled())
+  // Run both `findForceIsStmtInstrs` and `computeKeyInstructions` because
+  // Not-Key-Instructions functions may be inlined into Key Instructions
+  // functions and vice versa.
+  if (KeyInstructionsAreStmts)
     computeKeyInstructions(MF);
-  else
-    findForceIsStmtInstrs(MF);
+  findForceIsStmtInstrs(MF);
 }
 
 unsigned

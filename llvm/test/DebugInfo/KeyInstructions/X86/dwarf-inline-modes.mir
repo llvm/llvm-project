@@ -79,18 +79,12 @@ body:             |
     ; OBJ-NEXT: 2a: movl $0x3, %eax
     ; OBJ-NEXT: 2f: retq
     ;
-    ; TODO: Currently key inlined into not-key is treated as not-key. Investigate
-    ; performance implications of honouring the flag in this scenario.
-    ;
     ;           Address            Line   Column File   ISA Discriminator OpIndex Flags
     ;           ------------------ ------ ------ ------ --- ------------- ------- -------------
     ; DBG-NEXT: 0x0000000000000020      1      0      0   0             0       0  is_stmt prologue_end
-    ; DBG-NEXT: 0x0000000000000025      2      0      0   0             0       0  is_stmt
+    ; DBG-NEXT: 0x0000000000000025      2      0      0   0             0       0
     ; DBG-NEXT: 0x000000000000002a      3      0      0   0             0       0  is_stmt
     ; DBG-NEXT: 0x000000000000002f      3      0      0   0             0       0
-    ;
-    ; NOTE: The `is_stmt` comments at the end of the lines reflects what we want
-    ; to see if the TODO above is resolved.
     ;
     $eax = MOV32ri 1,  debug-location !DILocation(line: 1, scope: !9)                                            ; is_stmt (prologue_end)
     $eax = MOV32ri 2,  debug-location !DILocation(line: 2, scope: !5, inlinedAt: !11, atomGroup: 1, atomRank: 2)
