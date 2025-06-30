@@ -35,6 +35,8 @@ struct EnumInfo;
 struct FunctionInfo;
 struct Info;
 struct TypedefInfo;
+struct ConceptInfo;
+struct VarInfo;
 
 enum class InfoType {
   IT_default,
@@ -42,7 +44,10 @@ enum class InfoType {
   IT_record,
   IT_function,
   IT_enum,
-  IT_typedef
+  IT_typedef,
+  IT_concept,
+  IT_variable,
+  IT_friend
 };
 
 enum class CommentKind {
@@ -166,6 +171,8 @@ struct ScopeChildren {
   std::vector<FunctionInfo> Functions;
   std::vector<EnumInfo> Enums;
   std::vector<TypedefInfo> Typedefs;
+  std::vector<ConceptInfo> Concepts;
+  std::vector<VarInfo> Variables;
 
   void sort();
 };
@@ -211,6 +218,15 @@ struct TemplateSpecializationInfo {
   std::vector<TemplateParamInfo> Params;
 };
 
+struct ConstraintInfo {
+  ConstraintInfo() = default;
+  ConstraintInfo(SymbolID USR, StringRef Name)
+      : ConceptRef(USR, Name, InfoType::IT_concept) {}
+  Reference ConceptRef;
+
+  SmallString<16> ConstraintExpr;
+};
+
 // Records the template information for a struct or function that is a template
 // or an explicit template specialization.
 struct TemplateInfo {
@@ -219,6 +235,7 @@ struct TemplateInfo {
 
   // Set when this is a specialization of another record/function.
   std::optional<TemplateSpecializationInfo> Specialization;
+  std::vector<ConstraintInfo> Constraints;
 };
 
 // Info for field types.
@@ -363,6 +380,31 @@ struct SymbolInfo : public Info {
   bool IsStatic = false;
 };
 
+struct FriendInfo : SymbolInfo {
+  FriendInfo() : SymbolInfo(InfoType::IT_friend) {}
+  FriendInfo(SymbolID USR) : SymbolInfo(InfoType::IT_friend, USR) {}
+  FriendInfo(const InfoType IT, const SymbolID &USR,
+             const StringRef Name = StringRef())
+      : SymbolInfo(IT, USR, Name) {}
+  bool mergeable(const FriendInfo &Other);
+  void merge(FriendInfo &&Other);
+
+  Reference Ref;
+  std::optional<TemplateInfo> Template;
+  std::optional<TypeInfo> ReturnType;
+  std::optional<SmallVector<FieldTypeInfo, 4>> Params;
+  bool IsClass = false;
+};
+
+struct VarInfo : SymbolInfo {
+  VarInfo() : SymbolInfo(InfoType::IT_variable) {}
+  explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
+
+  void merge(VarInfo &&I);
+
+  TypeInfo Type;
+};
+
 // TODO: Expand to allow for documenting templating and default args.
 // Info for functions.
 struct FunctionInfo : public SymbolInfo {
@@ -428,6 +470,8 @@ struct RecordInfo : public SymbolInfo {
   std::vector<BaseRecordInfo>
       Bases; // List of base/parent records; this includes inherited methods and
              // attributes
+
+  std::vector<FriendInfo> Friends;
 
   ScopeChildren Children;
 };
@@ -511,6 +555,17 @@ struct EnumInfo : public SymbolInfo {
   std::optional<TypeInfo> BaseType;
 
   llvm::SmallVector<EnumValueInfo, 4> Members; // List of enum members.
+};
+
+struct ConceptInfo : public SymbolInfo {
+  ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
+  ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
+
+  void merge(ConceptInfo &&I);
+
+  bool IsType;
+  TemplateInfo Template;
+  SmallString<16> ConstraintExpression;
 };
 
 struct Index : public Reference {

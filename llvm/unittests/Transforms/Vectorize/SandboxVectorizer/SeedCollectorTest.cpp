@@ -185,7 +185,7 @@ bb:
   Function &LLVMF = *M->getFunction("foo");
 
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -240,7 +240,7 @@ bb:
   Function &LLVMF = *M->getFunction("foo");
 
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -305,7 +305,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -315,7 +315,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 4);
@@ -349,7 +350,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -359,7 +360,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 4);
@@ -409,7 +411,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -419,7 +421,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 3);
@@ -450,7 +453,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -460,7 +463,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/true,
+                              /*CollectLoads=*/false);
 
   // Find the stores
   auto It = std::next(BB->begin(), 3);
@@ -493,7 +497,7 @@ bb:
 )IR");
   Function &LLVMF = *M->getFunction("foo");
   DominatorTree DT(LLVMF);
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   DataLayout DL(M->getDataLayout());
   LoopInfo LI(DT);
@@ -503,7 +507,8 @@ bb:
   sandboxir::Context Ctx(C);
   auto &F = *Ctx.createFunction(&LLVMF);
   auto BB = F.begin();
-  sandboxir::SeedCollector SC(&*BB, SE);
+  sandboxir::SeedCollector SC(&*BB, SE, /*CollectStores=*/false,
+                              /*CollectLoads=*/true);
 
   // Find the loads
   auto It = std::next(BB->begin(), 2);

@@ -21,15 +21,4 @@ const AVRMCExpr *AVRMCExpr::create(Specifier Kind, const MCExpr *Expr,
   return new (Ctx) AVRMCExpr(Kind, Expr, Negated);
 }
 
-void AVRMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
-  assert(specifier != AVR::S_AVR_NONE);
-  OS << getName() << '(';
-  if (isNegated())
-    OS << '-' << '(';
-  MAI->printExpr(OS, *getSubExpr());
-  if (isNegated())
-    OS << ')';
-  OS << ')';
-}
-
 } // namespace llvm

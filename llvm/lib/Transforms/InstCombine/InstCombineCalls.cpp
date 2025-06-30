@@ -1404,11 +1404,6 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
       !II->getCalledFunction()->isSpeculatable())
     return nullptr;
 
-  // fabs is canonicalized to fabs (shuffle ...) in foldShuffleOfUnaryOps, so
-  // avoid undoing it.
-  if (match(II, m_FAbs(m_Value())))
-    return nullptr;
-
   Value *X;
   Constant *C;
   ArrayRef<int> Mask;
@@ -1970,6 +1965,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if ((IID == Intrinsic::umax || IID == Intrinsic::smin) &&
         II->getType()->isIntOrIntVectorTy(1)) {
       return BinaryOperator::CreateOr(I0, I1);
+    }
+
+    // smin(smax(X, -1), 1) -> scmp(X, 0)
+    // smax(smin(X, 1), -1) -> scmp(X, 0)
+    // At this point, smax(smin(X, 1), -1) is changed to smin(smax(X, -1)
+    // And i1's have been changed to and/ors
+    // So we only need to check for smin
+    if (IID == Intrinsic::smin) {
+      if (match(I0, m_OneUse(m_SMax(m_Value(X), m_AllOnes()))) &&
+          match(I1, m_One())) {
+        Value *Zero = ConstantInt::get(X->getType(), 0);
+        return replaceInstUsesWith(
+            CI,
+            Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {X, Zero}));
+      }
     }
 
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
@@ -3554,34 +3564,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::vector_reverse: {
-    Value *BO0, *BO1, *X, *Y;
+  case Intrinsic::experimental_vp_reverse: {
+    Value *X;
     Value *Vec = II->getArgOperand(0);
-    if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {
-      auto *OldBinOp = cast<BinaryOperator>(Vec);
-      if (match(BO0, m_VecReverse(m_Value(X)))) {
-        // rev(binop rev(X), rev(Y)) --> binop X, Y
-        if (match(BO1, m_VecReverse(m_Value(Y))))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, Y,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-        // rev(binop rev(X), BO1Splat) --> binop X, BO1Splat
-        if (isSplatValue(BO1))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, BO1,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-      }
-      // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
-      if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
-        return replaceInstUsesWith(CI,
-                                   BinaryOperator::CreateWithCopiedFlags(
-                                       OldBinOp->getOpcode(), BO0, Y, OldBinOp,
-                                       OldBinOp->getName(), II->getIterator()));
-    }
+    Value *Mask = II->getArgOperand(1);
+    if (!match(Mask, m_AllOnes()))
+      break;
+    Value *EVL = II->getArgOperand(2);
+    // TODO: Canonicalize experimental.vp.reverse after unop/binops?
     // rev(unop rev(X)) --> unop X
-    if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
+    if (match(Vec,
+              m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                  m_Value(X), m_AllOnes(), m_Specific(EVL)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
           OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),

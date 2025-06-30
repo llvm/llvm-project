@@ -4388,12 +4388,11 @@ define <2 x bfloat> @v_copysign_out_v2bf16_mag_v2bf16_sign_v2f32(<2 x bfloat> %m
 ; GFX8-LABEL: v_copysign_out_v2bf16_mag_v2bf16_sign_v2f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_bfe_u32 v4, v1, 16, 1
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, v4, v1
-; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 0x7fff, v4
-; GFX8-NEXT:    v_or_b32_e32 v3, 0x400000, v1
+; GFX8-NEXT:    v_bfe_u32 v3, v1, 16, 1
+; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v3, v1
+; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x7fff, v3
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v1, v1
-; GFX8-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
 ; GFX8-NEXT:    v_bfe_u32 v3, v2, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v3, v2
 ; GFX8-NEXT:    v_add_u32_e32 v3, vcc, 0x7fff, v3
@@ -5267,13 +5266,12 @@ define amdgpu_ps i32 @s_copysign_out_v2bf16_mag_v2bf16_sign_v2f32(<2 x bfloat> i
 ;
 ; GFX8-LABEL: s_copysign_out_v2bf16_mag_v2bf16_sign_v2f32:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_bfe_u32 s4, s1, 0x10010
-; GFX8-NEXT:    s_add_i32 s4, s4, s1
-; GFX8-NEXT:    s_or_b32 s3, s1, 0x400000
-; GFX8-NEXT:    s_add_i32 s6, s4, 0x7fff
+; GFX8-NEXT:    s_bfe_u32 s3, s1, 0x10010
+; GFX8-NEXT:    s_add_i32 s3, s3, s1
+; GFX8-NEXT:    s_addk_i32 s3, 0x7fff
 ; GFX8-NEXT:    v_cmp_u_f32_e64 s[4:5], s1, s1
 ; GFX8-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX8-NEXT:    s_cselect_b32 s1, s3, s6
+; GFX8-NEXT:    s_cselect_b32 s1, s1, s3
 ; GFX8-NEXT:    s_bfe_u32 s3, s2, 0x10010
 ; GFX8-NEXT:    s_add_i32 s3, s3, s2
 ; GFX8-NEXT:    s_addk_i32 s3, 0x7fff
@@ -6340,18 +6338,16 @@ define <3 x bfloat> @v_copysign_out_v3bf16_mag_v3bf16_sign_v3f32(<3 x bfloat> %m
 ; GFX8-LABEL: v_copysign_out_v3bf16_mag_v3bf16_sign_v3f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_bfe_u32 v6, v2, 16, 1
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, v6, v2
-; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6
-; GFX8-NEXT:    v_or_b32_e32 v5, 0x400000, v2
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v6, v5, vcc
 ; GFX8-NEXT:    v_bfe_u32 v5, v4, 16, 1
-; GFX8-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX8-NEXT:    v_add_u32_e32 v5, vcc, v5, v4
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, s4, v5
+; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 0x7fff, v5
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
 ; GFX8-NEXT:    v_cndmask_b32_e32 v4, v5, v4, vcc
+; GFX8-NEXT:    v_bfe_u32 v5, v2, 16, 1
+; GFX8-NEXT:    v_add_u32_e32 v5, vcc, v5, v2
+; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 0x7fff, v5
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; GFX8-NEXT:    v_bfe_u32 v5, v3, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v5, vcc, v5, v3
 ; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 0x7fff, v5
@@ -7687,24 +7683,22 @@ define <4 x bfloat> @v_copysign_out_v4bf16_mag_v4bf16_sign_v4f32(<4 x bfloat> %m
 ; GFX8-LABEL: v_copysign_out_v4bf16_mag_v4bf16_sign_v4f32:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_bfe_u32 v7, v4, 16, 1
-; GFX8-NEXT:    v_add_u32_e32 v7, vcc, v7, v4
-; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 0x7fff, v7
-; GFX8-NEXT:    v_or_b32_e32 v6, 0x400000, v4
+; GFX8-NEXT:    v_bfe_u32 v6, v4, 16, 1
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, v6, v4
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v4, v4
-; GFX8-NEXT:    v_cndmask_b32_e32 v4, v7, v6, vcc
-; GFX8-NEXT:    v_bfe_u32 v7, v2, 16, 1
-; GFX8-NEXT:    s_movk_i32 s4, 0x7fff
-; GFX8-NEXT:    v_add_u32_e32 v7, vcc, v7, v2
-; GFX8-NEXT:    v_add_u32_e32 v7, vcc, s4, v7
-; GFX8-NEXT:    v_or_b32_e32 v6, 0x400000, v2
-; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
-; GFX8-NEXT:    v_cndmask_b32_e32 v2, v7, v6, vcc
+; GFX8-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; GFX8-NEXT:    v_bfe_u32 v6, v5, 16, 1
+; GFX8-NEXT:    s_movk_i32 s4, 0x7fff
 ; GFX8-NEXT:    v_add_u32_e32 v6, vcc, v6, v5
 ; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v6
 ; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v5, v5
 ; GFX8-NEXT:    v_cndmask_b32_e32 v5, v6, v5, vcc
+; GFX8-NEXT:    v_bfe_u32 v6, v2, 16, 1
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, v6, v2
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, s4, v6
+; GFX8-NEXT:    v_cmp_u_f32_e32 vcc, v2, v2
+; GFX8-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; GFX8-NEXT:    v_bfe_u32 v6, v3, 16, 1
 ; GFX8-NEXT:    v_add_u32_e32 v6, vcc, v6, v3
 ; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 0x7fff, v6

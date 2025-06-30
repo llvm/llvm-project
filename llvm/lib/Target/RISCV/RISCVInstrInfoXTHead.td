@@ -743,32 +743,30 @@ def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
 def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
 }
 
-def AddrRegRegScale : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<3>">;
-def AddrRegZextRegScale
-    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<3, 32>",
-                     [], [], 10>;
+def AddrRegRegScale3 : AddrRegRegScale<3>;
+def AddrRegZextRegScale3 : AddrRegZextRegScale<3>;
 
 multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-def : Pat<(vt (LoadOp (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegRegScale3 (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = i64> {
-def : Pat<(vt (LoadOp (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegZextRegScale3 (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                     ValueType vt = XLenVT> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
+            (AddrRegRegScale3 (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                         ValueType vt = i64> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
+            (AddrRegZextRegScale3 (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 

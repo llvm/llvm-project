@@ -1275,6 +1275,8 @@ SelectionDAG::AddModifiedNodeToCSEMaps(SDNode *N) {
       // to replace the dead one with the existing one.  This can cause
       // recursive merging of other unrelated nodes down the line.
       Existing->intersectFlagsWith(N->getFlags());
+      if (auto *MemNode = dyn_cast<MemSDNode>(Existing))
+        MemNode->refineRanges(cast<MemSDNode>(N)->getMemOperand());
       ReplaceAllUsesWith(N, Existing);
 
       // N is now dead. Inform the listeners and delete it.
@@ -5541,6 +5543,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FSHL:
   case ISD::FSHR:
   case ISD::BSWAP:
+  case ISD::CTTZ:
+  case ISD::CTLZ:
   case ISD::CTPOP:
   case ISD::BITREVERSE:
   case ISD::PARITY:
@@ -5553,7 +5557,23 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
-  case ISD::VSELECT:
+    return false;
+
+  case ISD::ADDC:
+  case ISD::SUBC:
+  case ISD::ADDE:
+  case ISD::SUBE:
+  case ISD::SADDO:
+  case ISD::SSUBO:
+  case ISD::SMULO:
+  case ISD::SADDO_CARRY:
+  case ISD::SSUBO_CARRY:
+  case ISD::UADDO:
+  case ISD::USUBO:
+  case ISD::UMULO:
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
+    // No poison on result or overflow flags.
     return false;
 
   case ISD::SELECT_CC:
@@ -5577,6 +5597,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
 
   case ISD::OR:
   case ISD::ZERO_EXTEND:
+  case ISD::SELECT:
+  case ISD::VSELECT:
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
@@ -6474,8 +6496,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         OpOpcode == ISD::ANY_EXTEND) {
       // If the source is smaller than the dest, we still need an extend.
       if (N1.getOperand(0).getValueType().getScalarType().bitsLT(
-              VT.getScalarType()))
-        return getNode(OpOpcode, DL, VT, N1.getOperand(0));
+              VT.getScalarType())) {
+        SDNodeFlags Flags;
+        if (OpOpcode == ISD::ZERO_EXTEND)
+          Flags.setNonNeg(N1->getFlags().hasNonNeg());
+        return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
+      }
       if (N1.getOperand(0).getValueType().bitsGT(VT))
         return getNode(ISD::TRUNCATE, DL, VT, N1.getOperand(0));
       return N1.getOperand(0);
@@ -7377,6 +7403,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if ((Opcode == ISD::ADD || Opcode == ISD::SUB) &&
         VT.getScalarType() == MVT::i1)
       return getNode(ISD::XOR, DL, VT, N1, N2);
+    // Fold (add (vscale * C0), (vscale * C1)) to (vscale * (C0 + C1)).
+    if (Opcode == ISD::ADD && N1.getOpcode() == ISD::VSCALE &&
+        N2.getOpcode() == ISD::VSCALE) {
+      const APInt &C1 = N1->getConstantOperandAPInt(0);
+      const APInt &C2 = N2->getConstantOperandAPInt(0);
+      return getVScale(DL, VT, C1 + C2);
+    }
     break;
   case ISD::MUL:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
@@ -8765,11 +8798,12 @@ SDValue SelectionDAG::getMemcpy(
   // FIXME: pass in SDLoc
   TargetLowering::CallLoweringInfo CLI(*this);
   bool IsTailCall = false;
+  const char *MemCpyName = TLI->getMemcpyName();
+
   if (OverrideTailCall.has_value()) {
     IsTailCall = *OverrideTailCall;
   } else {
-    bool LowersToMemcpy =
-        TLI->getLibcallName(RTLIB::MEMCPY) == StringRef("memcpy");
+    bool LowersToMemcpy = StringRef(MemCpyName) == StringRef("memcpy");
     bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
     IsTailCall = CI && CI->isTailCall() &&
                  isInTailCallPosition(*CI, getTarget(),
@@ -8778,11 +8812,11 @@ SDValue SelectionDAG::getMemcpy(
 
   CLI.setDebugLoc(dl)
       .setChain(Chain)
-      .setLibCallee(TLI->getLibcallCallingConv(RTLIB::MEMCPY),
-                    Dst.getValueType().getTypeForEVT(*getContext()),
-                    getExternalSymbol(TLI->getLibcallName(RTLIB::MEMCPY),
-                                      TLI->getPointerTy(getDataLayout())),
-                    std::move(Args))
+      .setLibCallee(
+          TLI->getLibcallCallingConv(RTLIB::MEMCPY),
+          Dst.getValueType().getTypeForEVT(*getContext()),
+          getExternalSymbol(MemCpyName, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
       .setDiscardResult()
       .setTailCall(IsTailCall);
 
@@ -9097,8 +9131,9 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void* IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
-    cast<AtomicSDNode>(E)->refineAlignment(MMO);
+  if (auto *E = cast_or_null<AtomicSDNode>(FindNodeOrInsertPos(ID, dl, IP))) {
+    E->refineAlignment(MMO);
+    E->refineRanges(MMO);
     return SDValue(E, 0);
   }
 
@@ -9389,8 +9424,9 @@ SDValue SelectionDAG::getLoad(ISD::MemIndexedMode AM, ISD::LoadExtType ExtType,
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
-    cast<LoadSDNode>(E)->refineAlignment(MMO);
+  if (auto *E = cast_or_null<LoadSDNode>(FindNodeOrInsertPos(ID, dl, IP))) {
+    E->refineAlignment(MMO);
+    E->refineRanges(MMO);
     return SDValue(E, 0);
   }
   auto *N = newSDNode<LoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,
@@ -9610,8 +9646,9 @@ SDValue SelectionDAG::getLoadVP(ISD::MemIndexedMode AM,
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
-    cast<VPLoadSDNode>(E)->refineAlignment(MMO);
+  if (auto *E = cast_or_null<VPLoadSDNode>(FindNodeOrInsertPos(ID, dl, IP))) {
+    E->refineAlignment(MMO);
+    E->refineRanges(MMO);
     return SDValue(E, 0);
   }
   auto *N = newSDNode<VPLoadSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs, AM,

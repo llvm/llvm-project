@@ -27,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -503,7 +504,8 @@ static MCInstrAnalysis *createAArch64InstrAnalysis(const MCInstrInfo *Info) {
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64TargetMC() {
   for (Target *T : {&getTheAArch64leTarget(), &getTheAArch64beTarget(),
                     &getTheAArch64_32Target(), &getTheARM64Target(),
                     &getTheARM64_32Target()}) {

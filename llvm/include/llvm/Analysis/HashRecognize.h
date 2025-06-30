@@ -53,7 +53,7 @@ struct PolynomialInfo {
   // division in the case of CRC. Since polynomial division is an XOR in
   // GF(2^m), this variable must be XOR'ed with RHS in a loop to yield the
   // ComputedValue.
-  const Value *LHS;
+  Value *LHS;
 
   // The generating polynomial, or the RHS of the polynomial division in the
   // case of CRC.
@@ -61,7 +61,7 @@ struct PolynomialInfo {
 
   // The final computed value. This is a remainder of a polynomial division in
   // the case of CRC, which must be zero.
-  const Value *ComputedValue;
+  Value *ComputedValue;
 
   // Set to true in the case of big-endian.
   bool ByteOrderSwapped;
@@ -69,11 +69,11 @@ struct PolynomialInfo {
   // An optional auxiliary checksum that augments the LHS. In the case of CRC,
   // it is XOR'ed with the LHS, so that the computation's final remainder is
   // zero.
-  const Value *LHSAux;
+  Value *LHSAux;
 
-  PolynomialInfo(unsigned TripCount, const Value *LHS, const APInt &RHS,
-                 const Value *ComputedValue, bool ByteOrderSwapped,
-                 const Value *LHSAux = nullptr);
+  PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
+                 Value *ComputedValue, bool ByteOrderSwapped,
+                 Value *LHSAux = nullptr);
 };
 
 /// The analysis.
@@ -84,12 +84,13 @@ class HashRecognize {
 public:
   HashRecognize(const Loop &L, ScalarEvolution &SE);
 
-  // The main analysis entry point.
+  // The main analysis entry points.
   std::variant<PolynomialInfo, ErrBits, StringRef> recognizeCRC() const;
+  std::optional<PolynomialInfo> getResult() const;
 
   // Auxilary entry point after analysis to interleave the generating polynomial
   // and return a 256-entry CRC table.
-  CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) const;
+  static CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped);
 
   void print(raw_ostream &OS) const;
 
@@ -106,15 +107,6 @@ public:
   explicit HashRecognizePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &);
-};
-
-class HashRecognizeAnalysis : public AnalysisInfoMixin<HashRecognizeAnalysis> {
-  friend AnalysisInfoMixin<HashRecognizeAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  using Result = HashRecognize;
-  Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 };
 } // namespace llvm
 
