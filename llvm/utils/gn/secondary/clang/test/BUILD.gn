@@ -48,6 +48,7 @@ write_lit_config("lit_site_cfg") {
     "LLVM_LINK_LLVM_DYLIB=0",
     "CLANG_LINK_CLANG_DYLIB=0",
     "LLVM_WITH_Z3=0",
+    "TEST_WITH_Z3_DEVEL=0",
     "Z3_INCLUDE_DIR=",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_BUILT_STANDALONE=0",

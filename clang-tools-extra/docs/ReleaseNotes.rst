@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check.
+
+  Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
+  alternative ``std::scoped_lock``.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
