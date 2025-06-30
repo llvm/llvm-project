@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`misc-visibility-change-to-virtual-function
+  <clang-tidy/checks/misc/visibility-change-to-virtual-function>` check.
+
+  Finds virtual function overrides with different visibility than the function
+  in the base class.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
