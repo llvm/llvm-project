@@ -2464,13 +2464,6 @@ entry:
   ret <vscale x 4 x double> %a
 }
 
-declare <vscale x 1 x bfloat> @llvm.riscv.vslidedown.nxv1bf16(
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x bfloat>,
-  iXLen,
-  iXLen,
-  iXLen);
-
 define <vscale x 1 x bfloat> @intrinsic_vslidedown_vx_nxv1bf16_nxv1bf16(<vscale x 1 x bfloat> %0, <vscale x 1 x bfloat> %1, iXLen %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_vx_nxv1bf16_nxv1bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -2487,13 +2480,6 @@ entry:
 
   ret <vscale x 1 x bfloat> %a
 }
-
-declare <vscale x 1 x bfloat> @llvm.riscv.vslidedown.mask.nxv1bf16(
-  <vscale x 1 x bfloat>,
-  <vscale x 1 x bfloat>,
-  iXLen,
-  <vscale x 1 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 1 x bfloat> @intrinsic_vslidedown_mask_vx_nxv1bf16_nxv1bf16(<vscale x 1 x bfloat> %0, <vscale x 1 x bfloat> %1, iXLen %2, <vscale x 1 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_mask_vx_nxv1bf16_nxv1bf16:
@@ -2546,13 +2532,6 @@ entry:
   ret <vscale x 1 x bfloat> %a
 }
 
-declare <vscale x 2 x bfloat> @llvm.riscv.vslidedown.nxv2bf16(
-  <vscale x 2 x bfloat>,
-  <vscale x 2 x bfloat>,
-  iXLen,
-  iXLen,
-  iXLen);
-
 define <vscale x 2 x bfloat> @intrinsic_vslidedown_vx_nxv2bf16_nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x bfloat> %1, iXLen %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_vx_nxv2bf16_nxv2bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -2569,13 +2548,6 @@ entry:
 
   ret <vscale x 2 x bfloat> %a
 }
-
-declare <vscale x 2 x bfloat> @llvm.riscv.vslidedown.mask.nxv2bf16(
-  <vscale x 2 x bfloat>,
-  <vscale x 2 x bfloat>,
-  iXLen,
-  <vscale x 2 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 2 x bfloat> @intrinsic_vslidedown_mask_vx_nxv2bf16_nxv2bf16(<vscale x 2 x bfloat> %0, <vscale x 2 x bfloat> %1, iXLen %2, <vscale x 2 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_mask_vx_nxv2bf16_nxv2bf16:
@@ -2628,13 +2600,6 @@ entry:
   ret <vscale x 2 x bfloat> %a
 }
 
-declare <vscale x 4 x bfloat> @llvm.riscv.vslidedown.nxv4bf16(
-  <vscale x 4 x bfloat>,
-  <vscale x 4 x bfloat>,
-  iXLen,
-  iXLen,
-  iXLen);
-
 define <vscale x 4 x bfloat> @intrinsic_vslidedown_vx_nxv4bf16_nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x bfloat> %1, iXLen %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_vx_nxv4bf16_nxv4bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -2651,13 +2616,6 @@ entry:
 
   ret <vscale x 4 x bfloat> %a
 }
-
-declare <vscale x 4 x bfloat> @llvm.riscv.vslidedown.mask.nxv4bf16(
-  <vscale x 4 x bfloat>,
-  <vscale x 4 x bfloat>,
-  iXLen,
-  <vscale x 4 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 4 x bfloat> @intrinsic_vslidedown_mask_vx_nxv4bf16_nxv4bf16(<vscale x 4 x bfloat> %0, <vscale x 4 x bfloat> %1, iXLen %2, <vscale x 4 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_mask_vx_nxv4bf16_nxv4bf16:
@@ -2710,13 +2668,6 @@ entry:
   ret <vscale x 4 x bfloat> %a
 }
 
-declare <vscale x 8 x bfloat> @llvm.riscv.vslidedown.nxv8bf16(
-  <vscale x 8 x bfloat>,
-  <vscale x 8 x bfloat>,
-  iXLen,
-  iXLen,
-  iXLen);
-
 define <vscale x 8 x bfloat> @intrinsic_vslidedown_vx_nxv8bf16_nxv8bf16(<vscale x 8 x bfloat> %0, <vscale x 8 x bfloat> %1, iXLen %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_vx_nxv8bf16_nxv8bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -2733,13 +2684,6 @@ entry:
 
   ret <vscale x 8 x bfloat> %a
 }
-
-declare <vscale x 8 x bfloat> @llvm.riscv.vslidedown.mask.nxv8bf16(
-  <vscale x 8 x bfloat>,
-  <vscale x 8 x bfloat>,
-  iXLen,
-  <vscale x 8 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 8 x bfloat> @intrinsic_vslidedown_mask_vx_nxv8bf16_nxv8bf16(<vscale x 8 x bfloat> %0, <vscale x 8 x bfloat> %1, iXLen %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_mask_vx_nxv8bf16_nxv8bf16:
@@ -2792,13 +2736,6 @@ entry:
   ret <vscale x 8 x bfloat> %a
 }
 
-declare <vscale x 16 x bfloat> @llvm.riscv.vslidedown.nxv16bf16(
-  <vscale x 16 x bfloat>,
-  <vscale x 16 x bfloat>,
-  iXLen,
-  iXLen,
-  iXLen);
-
 define <vscale x 16 x bfloat> @intrinsic_vslidedown_vx_nxv16bf16_nxv16bf16(<vscale x 16 x bfloat> %0, <vscale x 16 x bfloat> %1, iXLen %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_vx_nxv16bf16_nxv16bf16:
 ; CHECK:       # %bb.0: # %entry
@@ -2815,13 +2752,6 @@ entry:
 
   ret <vscale x 16 x bfloat> %a
 }
-
-declare <vscale x 16 x bfloat> @llvm.riscv.vslidedown.mask.nxv16bf16(
-  <vscale x 16 x bfloat>,
-  <vscale x 16 x bfloat>,
-  iXLen,
-  <vscale x 16 x i1>,
-  iXLen, iXLen);
 
 define <vscale x 16 x bfloat> @intrinsic_vslidedown_mask_vx_nxv16bf16_nxv16bf16(<vscale x 16 x bfloat> %0, <vscale x 16 x bfloat> %1, iXLen %2, <vscale x 16 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vslidedown_mask_vx_nxv16bf16_nxv16bf16:
