@@ -124,6 +124,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcstok_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcstok_test.cpp
+  DEPENDS
+    libc.src.wchar.wcstok
+)
+
+add_libc_test(
   wcsncmp_test
   SUITE
     libc_wchar_unittests
