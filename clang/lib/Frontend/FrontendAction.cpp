@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Summary/SummaryContext.h"
+#include "clang/Summary/SummarySerialization.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
@@ -970,6 +971,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (ProcessesSummaries && !CI.hasSummaryContext())
     CI.createSummaryContext();
 
+  if (ProcessesSummaries && !CI.hasSummarySerializer())
+    CI.createSummarySerializer();
+
   // FIXME: cleanup and lookup dirs recursively
   if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
     // FIXME: this is a quick shortcut so large summaries are only evaluated
@@ -995,7 +999,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                            DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
-          if (llvm::sys::path::extension(Dir->path()) != ".yaml")
+          if (llvm::sys::path::extension(Dir->path()) != ".json")
             continue;
 
           paths.emplace_back(Dir->path().str());
@@ -1007,18 +1011,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         std::stringstream buffer;
         buffer << t.rdbuf();
 
-        llvm::outs() << buffer.str() << '\n';
-
-        CI.getSummaryContext().ParseSummaryFromYAML(buffer.str());
-
-
-        // auto JSON = llvm::json::parse(buffer.str());
-        // if (!!JSON)
-        //   CI.getSummaryContext().ParseSummaryFromJSON(*JSON->getAsArray());
-
-        // llvm::handleAllErrors(
-        //     JSON.takeError(),
-        //     [](const llvm::ErrorInfoBase &EI) { std::ignore = EI.message(); });
+        CI.getSummarySerializer().parse(buffer.str());
       }
 
       CI.getSummaryContext().ReduceSummaries();
@@ -1026,12 +1019,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       if (!FS.exists(cacheFile)) {
         // FIXME: very quick printing of the summary to the cache file
         llvm::raw_fd_ostream fd(cacheFile, EC, llvm::sys::fs::CD_CreateAlways);
-
-        JSONPrintingSummaryConsumer printer(CI.getSummaryContext(), fd);
-        printer.ProcessStartOfSourceFile();
-        for (auto &&Summary : CI.getSummaryContext().FunctionSummaries)
-          printer.ProcessFunctionSummary(*Summary);
-        printer.ProcessEndOfSourceFile();
+        CI.getSummarySerializer().serialize(
+            CI.getSummaryContext().FunctionSummaries, fd);
       }
     }
   }

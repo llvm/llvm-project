@@ -42,6 +42,7 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Summary/SummaryConsumer.h"
+#include "clang/Summary/SummarySerialization.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -756,8 +757,15 @@ void CompilerInstance::createSummaryConsumer() {
     return;
   }
 
+  if (!hasSummarySerializer())
+    createSummarySerializer();
+
   TheSummaryConsumer.reset(
-      new YAMLPrintingSummaryConsumer(getSummaryContext(), *SummaryOS));
+      new SerializingSummaryConsumer(getSummarySerializer(), *SummaryOS));
+}
+
+void CompilerInstance::createSummarySerializer() {
+  TheSummarySerializer.reset(new JSONSummarySerializer(getSummaryContext()));
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,

@@ -3,6 +3,8 @@
 
 #include "clang/Summary/SummaryAttribute.h"
 #include "clang/Summary/SummaryConsumer.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <set>
 
 namespace clang {
@@ -35,7 +37,8 @@ public:
   }
 
   friend struct llvm::yaml::MappingTraits<clang::FunctionSummary>;
-  friend struct llvm::yaml::MappingContextTraits<clang::FunctionSummary, clang::SummaryContext>;
+  friend struct llvm::yaml::MappingContextTraits<clang::FunctionSummary,
+                                                 clang::SummaryContext>;
 };
 
 class SummaryContext {
@@ -56,9 +59,6 @@ public:
 
   const FunctionSummary *GetSummary(const FunctionDecl *FD) const;
   void SummarizeFunctionBody(const FunctionDecl *FD);
-
-  void ParseSummaryFromJSON(const llvm::json::Array &Summary);
-  void ParseSummaryFromYAML(StringRef content);
   void ReduceSummaries();
 };
 } // namespace clang

@@ -124,6 +124,9 @@ class CompilerInstance : public ModuleLoader {
   /// The code completion consumer.
   std::unique_ptr<CodeCompleteConsumer> CompletionConsumer;
 
+  /// The summary serializer.
+  std::unique_ptr<SummarySerializer> TheSummarySerializer;
+
   /// The summary consumer.
   std::unique_ptr<SummaryConsumer> TheSummaryConsumer;
 
@@ -645,6 +648,16 @@ public:
   }
 
   void createSummaryConsumer();
+
+  bool hasSummarySerializer() const { return (bool)TheSummarySerializer; }
+
+  SummarySerializer &getSummarySerializer() const {
+    assert(TheSummarySerializer &&
+           "Compiler instance has no code summary serializer!");
+    return *TheSummarySerializer;
+  }
+
+  void createSummarySerializer();
 
   /// @}
   /// @name Frontend timer

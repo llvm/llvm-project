@@ -3,7 +3,6 @@
 #include "clang/Index/USRGeneration.h"
 #include "clang/Summary/SummaryAttribute.h"
 #include "clang/Summary/SummaryConsumer.h"
-#include "clang/Summary/SummaryYamlMappings.h"
 #include <set>
 
 namespace clang {
@@ -60,8 +59,7 @@ public:
 
 FunctionSummary::FunctionSummary(std::string ID,
                                  std::set<const SummaryAttr *> FunctionAttrs,
-                                 std::set<std::string> Calls,
-                                 bool CallsOpaque)
+                                 std::set<std::string> Calls, bool CallsOpaque)
     : ID(std::move(ID)), Attrs(std::move(FunctionAttrs)),
       Calls(std::move(Calls)), CallsOpaque(CallsOpaque) {}
 
@@ -110,49 +108,6 @@ void SummaryContext::SummarizeFunctionBody(const FunctionDecl *FD) {
   auto [calls, opaque] = CallCollector().collect(FD);
 
   CreateSummary(GetUSR(FD), std::move(Attrs), std::move(calls), opaque);
-}
-
-// FIXME: this needs proper error handling
-void SummaryContext::ParseSummaryFromJSON(const llvm::json::Array &Summary) {
-  for (auto it = Summary.begin(); it != Summary.end(); ++it) {
-    const llvm::json::Object *FunctionSummary = it->getAsObject();
-
-    std::string ID = FunctionSummary->getString("id")->str();
-    std::set<const SummaryAttr *> FunctionAttrs;
-    const llvm::json::Array *FunctionAttributes =
-        FunctionSummary->getObject("attrs")->getArray("function");
-    for (auto attrIt = FunctionAttributes->begin();
-         attrIt != FunctionAttributes->end(); ++attrIt) {
-      for (auto &&Attr : Attributes) {
-        if (Attr->parse(*attrIt->getAsString()))
-          FunctionAttrs.emplace(Attr.get());
-      }
-    }
-
-    std::set<std::string> Calls;
-    const llvm::json::Object *CallsObject = FunctionSummary->getObject("calls");
-    bool callsOpaue = *CallsObject->getBoolean("opaque");
-
-    const llvm::json::Array *CallEntries = CallsObject->getArray("functions");
-    for (auto callIt = CallEntries->begin(); callIt != CallEntries->end();
-         ++callIt) {
-      auto *Obj = callIt->getAsObject();
-      Calls.emplace(Obj->getString("id")->str());
-    }
-
-    CreateSummary(std::move(ID), std::move(FunctionAttrs), std::move(Calls),
-                  callsOpaue);
-  }
-}
-
-void SummaryContext::ParseSummaryFromYAML(StringRef content) {
-  std::vector<std::unique_ptr<clang::FunctionSummary>> summaries;
-
-  llvm::yaml::Input YIN(content, this);
-  YIN >> summaries;
-
-  for(auto &&summary : summaries)
-    CreateSummary(summary->getID().str(), summary->getAttributes(), summary->getCalls(), summary->callsOpaqueObject());
 }
 
 bool SummaryContext::ReduceFunctionSummary(FunctionSummary &Function) {

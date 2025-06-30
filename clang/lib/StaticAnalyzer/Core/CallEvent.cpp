@@ -238,11 +238,11 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
 
   if (const Decl *callee = getDecl()) {
     const SummaryContext *SummaryCtx =
-      State->getStateManager().getOwningEngine().getSummaryCtx();
+        State->getStateManager().getOwningEngine().getSummaryCtx();
     const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(callee);
     if (SummaryCtx && FD)
       Summary = SummaryCtx->GetSummary(FD);
-    
+
     // Don't invalidate anything if the callee is marked pure/const.
     if (callee->hasAttr<PureAttr>() || callee->hasAttr<ConstAttr>())
       return Result;
@@ -259,7 +259,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     findPtrToConstParams(PreserveArgs, *this);
 
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
-    if(Summary && Summary->hasAttribute<NoWritePtrParameterAttr>())
+    if (Summary && Summary->hasAttribute<NoWritePtrParameterAttr>())
       continue;
 
     // Mark this region for invalidation.  We batch invalidate regions
@@ -288,7 +288,8 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
             ValuesToInvalidate.push_back(loc::MemRegionVal(TVR));
   }
 
-  bool ShouldPreserveGlobals = Summary && Summary->hasAttribute<NoWriteGlobalAttr>();
+  bool ShouldPreserveGlobals =
+      Summary && Summary->hasAttribute<NoWriteGlobalAttr>();
 
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
