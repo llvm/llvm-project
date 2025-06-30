@@ -622,7 +622,7 @@ public:
   /// This function will union lattice anchor to same equivalent class if the
   /// analysis can determine the lattice content of lattice anchor is
   /// necessarily identical under the corrensponding lattice type.
-  virtual void initializeEquivalentLatticeAnchor(Operation *top) { return; }
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) {}
 
 protected:
   /// Create a dependency between the given analysis state and lattice anchor

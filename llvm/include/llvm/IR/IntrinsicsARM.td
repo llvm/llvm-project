@@ -682,7 +682,6 @@ def int_arm_neon_vrintn : Neon_1FloatArg_Intrinsic;
 def int_arm_neon_vrintx : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrinta : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrintz : Neon_1Arg_Intrinsic;
-def int_arm_neon_vrintm : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrintp : Neon_1Arg_Intrinsic;
 
 // De-interleaving vector loads from N-element structures.
@@ -1306,8 +1305,6 @@ foreach suffix = ["a","n","p","m"] in {
     [llvm_anyvector_ty /* input */], LLVMMatchType<0>, llvm_anyvector_ty>;
 }
 
-def int_arm_mve_vrintn: DefaultAttrsIntrinsic<
-  [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_arm_mve_vcls: DefaultAttrsIntrinsic<
   [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 

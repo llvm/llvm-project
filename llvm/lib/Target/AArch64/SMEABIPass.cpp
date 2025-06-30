@@ -20,7 +20,6 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
 using namespace llvm;

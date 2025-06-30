@@ -133,8 +133,7 @@ void InstructionSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   ISel = MF.getSubtarget().getInstructionSelector();
@@ -307,7 +306,7 @@ bool InstructionSelect::selectMachineFunction(MachineFunction &MF) {
 
   if (!DebugCounter::shouldExecute(GlobalISelCounter)) {
     dbgs() << "Falling back for function " << MF.getName() << "\n";
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    MF.getProperties().setFailedISel();
     return false;
   }
 

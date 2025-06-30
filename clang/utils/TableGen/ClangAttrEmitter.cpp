@@ -3739,7 +3739,8 @@ static void GenerateHasAttrSpellingStringSwitch(
                       : '(' + itostr(Version) + ')';
 
     if (Scope.empty() || Scope == Spelling.nameSpace()) {
-      if (TestStringMap.contains(Spelling.name()))
+      if (TestStringMap.contains(Spelling.name()) &&
+          TestStringMap[Spelling.name()] != TestStr)
         TestStringMap[Spelling.name()] += " || " + TestStr;
       else
         TestStringMap[Spelling.name()] = TestStr;
@@ -4123,6 +4124,41 @@ void EmitClangAttrParsedAttrList(const RecordKeeper &Records, raw_ostream &OS) {
   for (const auto &I : Names) {
     OS << "PARSED_ATTR(" << I.first << ")\n";
   }
+}
+
+void EmitAttributeSpellingList(const RecordKeeper &Records, raw_ostream &OS) {
+  emitSourceFileHeader("List of attribute names", OS, Records);
+
+  std::set<StringRef> AttrSpellingList;
+  std::set<StringRef> AttrScopeSpellingList;
+
+  for (const auto *A : Records.getAllDerivedDefinitions("Attr")) {
+    for (const auto &S : GetFlattenedSpellings(*A)) {
+      AttrSpellingList.insert(S.name());
+      if (S.nameSpace().size())
+        AttrScopeSpellingList.insert(S.nameSpace());
+    }
+  }
+
+  OS << "#ifndef ATTR_NAME" << "\n";
+  OS << "#define ATTR_NAME(NAME) NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
+  for (const auto &AttrName : AttrSpellingList) {
+    OS << "ATTR_NAME(\"" << AttrName << "\")\n";
+  }
+  OS << "\n";
+  OS << "#undef ATTR_NAME" << "\n";
+  OS << "\n";
+
+  OS << "#ifndef ATTR_SCOPE_NAME" << "\n";
+  OS << "#define ATTR_SCOPE_NAME(SCOPE_NAME) SCOPE_NAME" << "\n";
+  OS << "#endif" << "\n" << "\n";
+  for (const auto &AttrScopeName : AttrScopeSpellingList) {
+    OS << "ATTR_SCOPE_NAME(\"" << AttrScopeName << "\")\n";
+  }
+  OS << "\n";
+  OS << "#undef ATTR_SCOPE_NAME" << "\n";
+  OS << "\n";
 }
 
 static bool isArgVariadic(const Record &R, StringRef AttrName) {
@@ -5370,7 +5406,7 @@ void EmitClangAttrDocs(const RecordKeeper &Records, raw_ostream &OS) {
       // Handle Undocumented category separately - no content merging
       if (Cat == "Undocumented" && UndocumentedCategory) {
         UndocumentedDocs.push_back(
-            DocumentationData(Doc, Attr, HeadingAndSpellings));
+            DocumentationData(Doc, Attr, std::move(HeadingAndSpellings)));
         continue;
       }
 
@@ -5446,14 +5482,12 @@ void EmitTestPragmaAttributeSupportedAttributes(const RecordKeeper &Records,
     }
     const Record *SubjectObj = I.second->getValueAsDef("Subjects");
     OS << " (";
-    bool PrintComma = false;
+    ListSeparator LS;
     for (const auto &Subject :
          enumerate(SubjectObj->getValueAsListOfDefs("Subjects"))) {
       if (!isSupportedPragmaClangAttributeSubject(*Subject.value()))
         continue;
-      if (PrintComma)
-        OS << ", ";
-      PrintComma = true;
+      OS << LS;
       PragmaClangAttributeSupport::RuleOrAggregateRuleSet &RuleSet =
           Support.SubjectsToRules.find(Subject.value())->getSecond();
       if (RuleSet.isRule()) {

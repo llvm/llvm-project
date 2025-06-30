@@ -130,6 +130,13 @@ static bool TypeHasMayAlias(QualType QTy) {
       return true;
     QTy = TT->desugar();
   }
+
+  // Also consider an array type as may_alias when its element type (at
+  // any level) is marked as such.
+  if (auto *ArrayTy = QTy->getAsArrayTypeUnsafe())
+    if (TypeHasMayAlias(ArrayTy->getElementType()))
+      return true;
+
   return false;
 }
 

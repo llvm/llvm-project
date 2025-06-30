@@ -1018,9 +1018,13 @@ void LVScope::printExtra(raw_ostream &OS, bool Full) const {
   // Do not print any type or name for a lexical block.
   if (!getIsBlock()) {
     OS << " " << formattedName(getName());
-    if (!getIsAggregate())
+    if (!getIsAggregate()) {
       OS << " -> " << typeOffsetAsString()
          << formattedNames(getTypeQualifiedName(), typeAsString());
+    }
+    if (options().getAttributeSize())
+      if (uint32_t Size = getStorageSizeInBytes())
+        OS << " [Size = " << Size << "]";
   }
   OS << "\n";
 
@@ -1713,11 +1717,19 @@ void LVScopeCompileUnit::print(raw_ostream &OS, bool Full) const {
 
 void LVScopeCompileUnit::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " '" << getName() << "'\n";
-  if (options().getPrintFormatting() && options().getAttributeProducer())
-    printAttributes(OS, Full, "{Producer} ",
-                    const_cast<LVScopeCompileUnit *>(this), getProducer(),
-                    /*UseQuotes=*/true,
-                    /*PrintRef=*/false);
+  if (options().getPrintFormatting()) {
+    if (options().getAttributeProducer())
+      printAttributes(OS, Full, "{Producer} ",
+                      const_cast<LVScopeCompileUnit *>(this), getProducer(),
+                      /*UseQuotes=*/true,
+                      /*PrintRef=*/false);
+    if (options().getAttributeLanguage())
+      if (auto SL = getSourceLanguage(); SL.isValid())
+        printAttributes(OS, Full, "{Language} ",
+                        const_cast<LVScopeCompileUnit *>(this), SL.getName(),
+                        /*UseQuotes=*/true,
+                        /*PrintRef=*/false);
+  }
 
   // Reset file index, to allow its children to print the correct filename.
   options().resetFilenameIndex();
@@ -2085,7 +2097,7 @@ Error LVScopeRoot::doPrintMatches(bool Split, raw_ostream &OS,
     print(OS);
 
     for (LVScope *Scope : *Scopes) {
-      getReader().setCompileUnit(const_cast<LVScope *>(Scope));
+      getReader().setCompileUnit(Scope);
 
       // If 'Split', we use the scope name (CU name) as the ouput file; the
       // delimiters in the pathname, must be replaced by a normal character.

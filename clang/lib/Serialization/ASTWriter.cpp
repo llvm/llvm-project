@@ -81,27 +81,21 @@
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/DJB.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -336,19 +330,13 @@ public:
 };
 
 class TypeLocWriter : public TypeLocVisitor<TypeLocWriter> {
-  using LocSeq = SourceLocationSequence;
-
   ASTRecordWriter &Record;
-  LocSeq *Seq;
 
-  void addSourceLocation(SourceLocation Loc) {
-    Record.AddSourceLocation(Loc, Seq);
-  }
-  void addSourceRange(SourceRange Range) { Record.AddSourceRange(Range, Seq); }
+  void addSourceLocation(SourceLocation Loc) { Record.AddSourceLocation(Loc); }
+  void addSourceRange(SourceRange Range) { Record.AddSourceRange(Range); }
 
 public:
-  TypeLocWriter(ASTRecordWriter &Record, LocSeq *Seq)
-      : Record(Record), Seq(Seq) {}
+  TypeLocWriter(ASTRecordWriter &Record) : Record(Record) {}
 
 #define ABSTRACT_TYPELOC(CLASS, PARENT)
 #define TYPELOC(CLASS, PARENT) \
@@ -601,6 +589,10 @@ void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
 
 void TypeLocWriter::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
+  // Nothing to do.
+}
+
+void TypeLocWriter::VisitHLSLInlineSpirvTypeLoc(HLSLInlineSpirvTypeLoc TL) {
   // Nothing to do.
 }
 
@@ -2451,13 +2443,12 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
       Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      LocSeq::State Seq;
-      AddSourceLocation(Expansion.getSpellingLoc(), Record, Seq);
-      AddSourceLocation(Expansion.getExpansionLocStart(), Record, Seq);
+      AddSourceLocation(Expansion.getSpellingLoc(), Record);
+      AddSourceLocation(Expansion.getExpansionLocStart(), Record);
       AddSourceLocation(Expansion.isMacroArgExpansion()
                             ? SourceLocation()
                             : Expansion.getExpansionLocEnd(),
-                        Record, Seq);
+                        Record);
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
@@ -4071,6 +4062,10 @@ void ASTWriter::handleVTable(CXXRecordDecl *RD) {
   PendingEmittingVTables.push_back(RD);
 }
 
+void ASTWriter::addTouchedModuleFile(serialization::ModuleFile *MF) {
+  TouchedModuleFiles.insert(MF);
+}
+
 //===----------------------------------------------------------------------===//
 // DeclContext's Name Lookup Table Serialization
 //===----------------------------------------------------------------------===//
@@ -4091,11 +4086,9 @@ public:
   using hash_value_type = unsigned;
   using offset_type = unsigned;
 
-protected:
   explicit ASTDeclContextNameLookupTraitBase(ASTWriter &Writer)
       : Writer(Writer) {}
 
-public:
   data_type getData(const DeclIDsTy &LocalIDs) {
     unsigned Start = DeclIDs.size();
     for (auto ID : LocalIDs)
@@ -4117,7 +4110,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
-
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4233,6 +4226,38 @@ public:
   }
 };
 
+class ASTDeclContextNameTrivialLookupTrait
+    : public ASTDeclContextNameLookupTraitBase {
+public:
+  using key_type = DeclarationNameKey;
+  using key_type_ref = key_type;
+
+public:
+  using ASTDeclContextNameLookupTraitBase::ASTDeclContextNameLookupTraitBase;
+
+  using ASTDeclContextNameLookupTraitBase::getData;
+
+  static bool EqualKey(key_type_ref a, key_type_ref b) { return a == b; }
+
+  hash_value_type ComputeHash(key_type Name) { return Name.getHash(); }
+
+  std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &Out,
+                                                  DeclarationNameKey Name,
+                                                  data_type_ref Lookup) {
+    auto [KeyLen, DataLen] = EmitKeyDataLengthBase(Out, Name, Lookup);
+    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
+  }
+
+  void EmitKey(raw_ostream &Out, DeclarationNameKey Name, unsigned) {
+    return EmitKeyBase(Out, Name);
+  }
+
+  void EmitData(raw_ostream &Out, key_type_ref, data_type Lookup,
+                unsigned DataLen) {
+    EmitDataBase(Out, Lookup, DataLen);
+  }
+};
+
 static bool isModuleLocalDecl(NamedDecl *D) {
   // For decls not in a file context, they should have the same visibility
   // with their parent.
@@ -4275,25 +4300,73 @@ static bool isTULocalInNamedModules(NamedDecl *D) {
   return D->getLinkageInternal() == Linkage::Internal;
 }
 
-// Trait used for the on-disk hash table used in the method pool.
-template <bool CollectingTULocalDecls>
-class ASTDeclContextNameLookupTrait : public ASTDeclContextNameLookupTraitBase {
+class ASTDeclContextNameLookupTrait
+    : public ASTDeclContextNameTrivialLookupTrait {
 public:
+  using TULocalDeclsMapTy = llvm::DenseMap<key_type, DeclIDsTy>;
+
   using ModuleLevelDeclsMapTy =
       llvm::DenseMap<ModuleLevelNameLookupTrait::key_type, DeclIDsTy>;
 
-  using key_type = DeclarationNameKey;
-  using key_type_ref = key_type;
-
-  using TULocalDeclsMapTy = llvm::DenseMap<key_type, DeclIDsTy>;
-
 private:
+  enum class LookupVisibility {
+    GenerallyVisibile,
+    // The decls can only be found by other TU in the same module.
+    // Note a clang::Module models a module unit instead of logical module
+    // in C++20.
+    ModuleLocalVisible,
+    // The decls can only be found by the TU itself that defines it.
+    TULocal,
+  };
+
+  LookupVisibility getLookupVisibility(NamedDecl *D) const {
+    // Only named modules have other lookup visibility.
+    if (!Writer.isWritingStdCXXNamedModules())
+      return LookupVisibility::GenerallyVisibile;
+
+    if (isModuleLocalDecl(D))
+      return LookupVisibility::ModuleLocalVisible;
+    if (isTULocalInNamedModules(D))
+      return LookupVisibility::TULocal;
+
+    // A trick to handle enum constants. The enum constants is special since
+    // they can be found directly without their parent context. This makes it
+    // tricky to decide if an EnumConstantDecl is visible or not by their own
+    // visibilities. E.g., for a class member, we can assume it is visible if
+    // the user get its parent somehow. But for an enum constant, the users may
+    // access if without its parent context. Although we can fix the problem in
+    // Sema lookup process, it might be too complex, we just make a trick here.
+    // Note that we only removes enum constant from the lookup table from its
+    // parent of parent. We DON'T remove the enum constant from its parent. So
+    // we don't need to care about merging problems here.
+    if (auto *ECD = dyn_cast<EnumConstantDecl>(D);
+        ECD && DC.isFileContext() && ECD->getOwningModule() &&
+        ECD->getTopLevelOwningNamedModule()->isNamedModule()) {
+      if (llvm::all_of(
+              DC.noload_lookup(
+                  cast<EnumDecl>(ECD->getDeclContext())->getDeclName()),
+              [](auto *Found) {
+                return Found->isInvisibleOutsideTheOwningModule();
+              }))
+        return ECD->isFromExplicitGlobalModule() ||
+                       ECD->isInAnonymousNamespace()
+                   ? LookupVisibility::TULocal
+                   : LookupVisibility::ModuleLocalVisible;
+    }
+
+    return LookupVisibility::GenerallyVisibile;
+  }
+
+  DeclContext &DC;
   ModuleLevelDeclsMapTy ModuleLocalDeclsMap;
   TULocalDeclsMapTy TULocalDeclsMap;
 
 public:
-  explicit ASTDeclContextNameLookupTrait(ASTWriter &Writer)
-      : ASTDeclContextNameLookupTraitBase(Writer) {}
+  using ASTDeclContextNameTrivialLookupTrait::
+      ASTDeclContextNameTrivialLookupTrait;
+
+  ASTDeclContextNameLookupTrait(ASTWriter &Writer, DeclContext &DC)
+      : ASTDeclContextNameTrivialLookupTrait(Writer), DC(DC) {}
 
   template <typename Coll> data_type getData(const Coll &Decls) {
     unsigned Start = DeclIDs.size();
@@ -4314,7 +4387,8 @@ public:
 
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
-      if (isModuleLocalDecl(D)) {
+      switch (getLookupVisibility(DeclForLocalLookup)) {
+      case LookupVisibility::ModuleLocalVisible:
         if (UnsignedOrNone PrimaryModuleHash =
                 getPrimaryModuleHash(D->getOwningModule())) {
           auto Key = std::make_pair(D->getDeclName(), *PrimaryModuleHash);
@@ -4325,17 +4399,18 @@ public:
             Iter->second.push_back(ID);
           continue;
         }
+        break;
+      case LookupVisibility::TULocal: {
+        auto Iter = TULocalDeclsMap.find(D->getDeclName());
+        if (Iter == TULocalDeclsMap.end())
+          TULocalDeclsMap.insert({D->getDeclName(), DeclIDsTy{ID}});
+        else
+          Iter->second.push_back(ID);
+        continue;
       }
-
-      if constexpr (CollectingTULocalDecls) {
-        if (isTULocalInNamedModules(D)) {
-          auto Iter = TULocalDeclsMap.find(D->getDeclName());
-          if (Iter == TULocalDeclsMap.end())
-            TULocalDeclsMap.insert({D->getDeclName(), DeclIDsTy{ID}});
-          else
-            Iter->second.push_back(ID);
-          continue;
-        }
+      case LookupVisibility::GenerallyVisibile:
+        // Generally visible decls go into the general lookup table.
+        break;
       }
 
       DeclIDs.push_back(ID);
@@ -4343,33 +4418,11 @@ public:
     return std::make_pair(Start, DeclIDs.size());
   }
 
-  using ASTDeclContextNameLookupTraitBase::getData;
-
   const ModuleLevelDeclsMapTy &getModuleLocalDecls() {
     return ModuleLocalDeclsMap;
   }
 
   const TULocalDeclsMapTy &getTULocalDecls() { return TULocalDeclsMap; }
-
-  static bool EqualKey(key_type_ref a, key_type_ref b) { return a == b; }
-
-  hash_value_type ComputeHash(key_type Name) { return Name.getHash(); }
-
-  std::pair<unsigned, unsigned> EmitKeyDataLength(raw_ostream &Out,
-                                                  DeclarationNameKey Name,
-                                                  data_type_ref Lookup) {
-    auto [KeyLen, DataLen] = EmitKeyDataLengthBase(Out, Name, Lookup);
-    return emitULEBKeyDataLength(KeyLen, DataLen, Out);
-  }
-
-  void EmitKey(raw_ostream &Out, DeclarationNameKey Name, unsigned) {
-    return EmitKeyBase(Out, Name);
-  }
-
-  void EmitData(raw_ostream &Out, key_type_ref, data_type Lookup,
-                unsigned DataLen) {
-    EmitDataBase(Out, Lookup, DataLen);
-  }
 };
 
 } // namespace
@@ -4424,6 +4477,7 @@ public:
            "have reference to loaded module file but no chain?");
 
     using namespace llvm::support;
+    Writer.addTouchedModuleFile(F);
     endian::write<uint32_t>(Out, Writer.getChain()->getModuleFileID(F),
                             llvm::endianness::little);
   }
@@ -4583,11 +4637,10 @@ void ASTWriter::GenerateNameLookupTable(
   assert(DC == DC->getPrimaryContext() && "only primary DC has lookup table");
 
   // Create the on-disk hash table representation.
-  MultiOnDiskHashTableGenerator<
-      reader::ASTDeclContextNameLookupTrait,
-      ASTDeclContextNameLookupTrait</*CollectingTULocal=*/true>>
+  MultiOnDiskHashTableGenerator<reader::ASTDeclContextNameLookupTrait,
+                                ASTDeclContextNameLookupTrait>
       Generator;
-  ASTDeclContextNameLookupTrait</*CollectingTULocal=*/true> Trait(*this);
+  ASTDeclContextNameLookupTrait Trait(*this, *DC);
 
   // The first step is to collect the declaration names which we need to
   // serialize into the name lookup table, and to collect them in a stable
@@ -4745,12 +4798,10 @@ void ASTWriter::GenerateNameLookupTable(
 
   const auto &TULocalDecls = Trait.getTULocalDecls();
   if (!TULocalDecls.empty() && !isGeneratingReducedBMI()) {
-    MultiOnDiskHashTableGenerator<
-        reader::ASTDeclContextNameLookupTrait,
-        ASTDeclContextNameLookupTrait</*CollectingTULocal=*/false>>
+    MultiOnDiskHashTableGenerator<reader::ASTDeclContextNameLookupTrait,
+                                  ASTDeclContextNameTrivialLookupTrait>
         TULookupGenerator;
-    ASTDeclContextNameLookupTrait</*CollectingTULocal=*/false> TULocalTrait(
-        *this);
+    ASTDeclContextNameTrivialLookupTrait TULocalTrait(*this);
 
     for (const auto &TULocalIter : TULocalDecls) {
       const auto &Key = TULocalIter.first;
@@ -4769,14 +4820,9 @@ void ASTWriter::GenerateNameLookupTable(
 ///
 /// \returns the offset of the DECL_CONTEXT_VISIBLE block within the
 /// bitstream, or 0 if no block was written.
-void ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
-                                             DeclContext *DC,
-                                             uint64_t &VisibleBlockOffset,
-                                             uint64_t &ModuleLocalBlockOffset,
-                                             uint64_t &TULocalBlockOffset) {
-  assert(VisibleBlockOffset == 0);
-  assert(ModuleLocalBlockOffset == 0);
-  assert(TULocalBlockOffset == 0);
+void ASTWriter::WriteDeclContextVisibleBlock(
+    ASTContext &Context, DeclContext *DC, VisibleLookupBlockOffsets &Offsets) {
+  assert(!Offsets);
 
   // If we imported a key declaration of this namespace, write the visible
   // lookup results as an update record for it rather than including them
@@ -4860,7 +4906,7 @@ void ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
   if (!Map || Map->empty())
     return;
 
-  VisibleBlockOffset = Stream.GetCurrentBitNo();
+  Offsets.VisibleOffset = Stream.GetCurrentBitNo();
   // Create the on-disk hash table in a buffer.
   SmallString<4096> LookupTable;
   SmallString<4096> ModuleLocalLookupTable;
@@ -4875,8 +4921,8 @@ void ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
   ++NumVisibleDeclContexts;
 
   if (!ModuleLocalLookupTable.empty()) {
-    ModuleLocalBlockOffset = Stream.GetCurrentBitNo();
-    assert(ModuleLocalBlockOffset > VisibleBlockOffset);
+    Offsets.ModuleLocalOffset = Stream.GetCurrentBitNo();
+    assert(Offsets.ModuleLocalOffset > Offsets.VisibleOffset);
     // Write the lookup table
     RecordData::value_type ModuleLocalRecord[] = {
         DECL_CONTEXT_MODULE_LOCAL_VISIBLE};
@@ -4886,7 +4932,7 @@ void ASTWriter::WriteDeclContextVisibleBlock(ASTContext &Context,
   }
 
   if (!TULookupTable.empty()) {
-    TULocalBlockOffset = Stream.GetCurrentBitNo();
+    Offsets.TULocalOffset = Stream.GetCurrentBitNo();
     // Write the lookup table
     RecordData::value_type TULocalDeclsRecord[] = {
         DECL_CONTEXT_TU_LOCAL_VISIBLE};
@@ -4974,6 +5020,9 @@ void ASTWriter::WriteCUDAPragmas(Sema &SemaRef) {
 }
 
 void ASTWriter::WriteObjCCategories() {
+  if (ObjCClassesWithCategories.empty())
+    return;
+
   SmallVector<ObjCCategoriesInfo, 2> CategoriesMap;
   RecordData Categories;
 
@@ -5166,8 +5215,9 @@ void ASTRecordWriter::AddAttr(const Attr *A) {
   // FIXME: Clang can't handle the serialization/deserialization of
   // preferred_name properly now. See
   // https://github.com/llvm/llvm-project/issues/56490 for example.
-  if (!A || (isa<PreferredNameAttr>(A) &&
-             Writer->isWritingStdCXXNamedModules()))
+  if (!A ||
+      (isa<PreferredNameAttr>(A) && (Writer->isWritingStdCXXNamedModules() ||
+                                     Writer->isWritingStdCXXHeaderUnit())))
     return Record.push_back(0);
 
   Record.push_back(A->getKind() + 1); // FIXME: stable encoding, target attrs
@@ -6201,31 +6251,26 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   assert(DelayedNamespace.empty() || GeneratingReducedBMI);
   RecordData DelayedNamespaceRecord;
   for (NamespaceDecl *NS : DelayedNamespace) {
-    uint64_t LexicalOffset = WriteDeclContextLexicalBlock(Context, NS);
-    uint64_t VisibleOffset = 0;
-    uint64_t ModuleLocalOffset = 0;
-    uint64_t TULocalOffset = 0;
-    WriteDeclContextVisibleBlock(Context, NS, VisibleOffset, ModuleLocalOffset,
-                                 TULocalOffset);
+    LookupBlockOffsets Offsets;
+
+    Offsets.LexicalOffset = WriteDeclContextLexicalBlock(Context, NS);
+    WriteDeclContextVisibleBlock(Context, NS, Offsets);
+
+    if (Offsets.LexicalOffset)
+      Offsets.LexicalOffset -= DeclTypesBlockStartOffset;
 
     // Write the offset relative to current block.
-    if (LexicalOffset)
-      LexicalOffset -= DeclTypesBlockStartOffset;
+    if (Offsets.VisibleOffset)
+      Offsets.VisibleOffset -= DeclTypesBlockStartOffset;
 
-    if (VisibleOffset)
-      VisibleOffset -= DeclTypesBlockStartOffset;
+    if (Offsets.ModuleLocalOffset)
+      Offsets.ModuleLocalOffset -= DeclTypesBlockStartOffset;
 
-    if (ModuleLocalOffset)
-      ModuleLocalOffset -= DeclTypesBlockStartOffset;
-
-    if (TULocalOffset)
-      TULocalOffset -= DeclTypesBlockStartOffset;
+    if (Offsets.TULocalOffset)
+      Offsets.TULocalOffset -= DeclTypesBlockStartOffset;
 
     AddDeclRef(NS, DelayedNamespaceRecord);
-    DelayedNamespaceRecord.push_back(LexicalOffset);
-    DelayedNamespaceRecord.push_back(VisibleOffset);
-    DelayedNamespaceRecord.push_back(ModuleLocalOffset);
-    DelayedNamespaceRecord.push_back(TULocalOffset);
+    AddLookupOffsets(Offsets, DelayedNamespaceRecord);
   }
 
   // The process of writing lexical and visible block for delayed namespace
@@ -6606,7 +6651,7 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
 }
 
 SourceLocationEncoding::RawLocEncoding
-ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
+ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
   unsigned BaseOffset = 0;
   unsigned ModuleFileIndex = 0;
 
@@ -6625,19 +6670,17 @@ ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc, LocSeq *Seq) {
     assert(&getChain()->getModuleManager()[F->Index] == F);
   }
 
-  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex, Seq);
+  return SourceLocationEncoding::encode(Loc, BaseOffset, ModuleFileIndex);
 }
 
-void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
-                                  SourceLocationSequence *Seq) {
+void ASTWriter::AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record) {
   Loc = getAdjustedLocation(Loc);
-  Record.push_back(getRawSourceLocationEncoding(Loc, Seq));
+  Record.push_back(getRawSourceLocationEncoding(Loc));
 }
 
-void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record,
-                               SourceLocationSequence *Seq) {
-  AddSourceLocation(Range.getBegin(), Record, Seq);
-  AddSourceLocation(Range.getEnd(), Record, Seq);
+void ASTWriter::AddSourceRange(SourceRange Range, RecordDataImpl &Record) {
+  AddSourceLocation(Range.getBegin(), Record);
+  AddSourceLocation(Range.getEnd(), Record);
 }
 
 void ASTRecordWriter::AddAPFloat(const llvm::APFloat &Value) {
@@ -6757,9 +6800,8 @@ void ASTRecordWriter::AddTypeSourceInfo(TypeSourceInfo *TInfo) {
   AddTypeLoc(TInfo->getTypeLoc());
 }
 
-void ASTRecordWriter::AddTypeLoc(TypeLoc TL, LocSeq *OuterSeq) {
-  LocSeq::State Seq(OuterSeq);
-  TypeLocWriter TLW(*this, Seq);
+void ASTRecordWriter::AddTypeLoc(TypeLoc TL) {
+  TypeLocWriter TLW(*this);
   for (; !TL.isNull(); TL = TL.getNextTypeLoc())
     TLW.Visit(TL);
 }
@@ -6814,6 +6856,14 @@ TypeID ASTWriter::GetOrCreateTypeID(ASTContext &Context, QualType T) {
     }
     return Idx;
   });
+}
+
+void ASTWriter::AddLookupOffsets(const LookupBlockOffsets &Offsets,
+                                 RecordDataImpl &Record) {
+  Record.push_back(Offsets.LexicalOffset);
+  Record.push_back(Offsets.VisibleOffset);
+  Record.push_back(Offsets.ModuleLocalOffset);
+  Record.push_back(Offsets.TULocalOffset);
 }
 
 void ASTWriter::AddEmittedDeclRef(const Decl *D, RecordDataImpl &Record) {
@@ -7747,7 +7797,9 @@ void OMPClauseWriter::VisitOMPFinalClause(OMPFinalClause *C) {
 
 void OMPClauseWriter::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
   VisitOMPClauseWithPreInit(C);
+  Record.writeEnum(C->getModifier());
   Record.AddStmt(C->getNumThreads());
+  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
 }
 

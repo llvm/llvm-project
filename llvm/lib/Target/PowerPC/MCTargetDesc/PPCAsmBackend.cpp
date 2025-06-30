@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PPCFixupKinds.h"
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -134,22 +134,20 @@ public:
                 : InfosBE)[Kind - FirstTargetFixupKind];
   }
 
-  bool addReloc(MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
-                const MCValue &TargetVal, uint64_t &FixedValue, bool IsResolved,
-                const MCSubtargetInfo *STI) override {
+  bool addReloc(const MCFragment &F, const MCFixup &Fixup,
+                const MCValue &TargetVal, uint64_t &FixedValue,
+                bool IsResolved) override {
     // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
     // reference the null symbol.
     auto Target = TargetVal;
-    if (Target.getSpecifier() == PPCMCExpr::VK_TOCBASE)
+    if (Target.getSpecifier() == PPC::S_TOCBASE)
       Target.setAddSym(nullptr);
-    return MCAsmBackend::addReloc(Asm, F, Fixup, Target, FixedValue, IsResolved,
-                                  STI);
+    return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
   }
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+                  uint64_t Value, bool IsResolved) override {
     MCFixupKind Kind = Fixup.getKind();
     if (mc::isRelocation(Kind))
       return;
@@ -169,9 +167,8 @@ public:
     }
   }
 
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
-                             const MCSubtargetInfo *STI) override {
+  bool shouldForceRelocation(const MCFixup &Fixup,
+                             const MCValue &Target) override {
     // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
     // force a relocation.
     if (Target.getSpecifier())

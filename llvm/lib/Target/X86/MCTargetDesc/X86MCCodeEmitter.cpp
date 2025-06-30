@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -451,7 +451,18 @@ static MCFixupKind getImmFixupKind(uint64_t TSFlags) {
       return MCFixupKind(X86::reloc_signed_4byte);
     }
   }
-  return MCFixup::getKindForSize(Size, isPCRel);
+  switch (Size) {
+  default:
+    llvm_unreachable("Invalid generic fixup size!");
+  case 1:
+    return isPCRel ? FK_PCRel_1 : FK_Data_1;
+  case 2:
+    return isPCRel ? FK_PCRel_2 : FK_Data_2;
+  case 4:
+    return isPCRel ? FK_PCRel_4 : FK_Data_4;
+  case 8:
+    return isPCRel ? FK_PCRel_8 : FK_Data_8;
+  }
 }
 
 enum GlobalOffsetTableExprKind { GOT_None, GOT_Normal, GOT_SymDiff };
@@ -485,7 +496,7 @@ startsWithGlobalOffsetTable(const MCExpr *Expr) {
 static bool hasSecRelSymbolRef(const MCExpr *Expr) {
   if (Expr->getKind() == MCExpr::SymbolRef) {
     auto *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
-    return Ref->getKind() == MCSymbolRefExpr::VK_SECREL;
+    return Ref->getSpecifier() == X86::S_COFF_SECREL;
   }
   return false;
 }
@@ -504,7 +515,7 @@ static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
     return false;
 
   auto *Ref = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-  return Ref && getSpecifier(Ref) == X86MCExpr::VK_None;
+  return Ref && Ref->getSpecifier() == X86::S_None;
 }
 
 unsigned X86MCCodeEmitter::getX86RegNum(const MCOperand &MO) const {
@@ -798,7 +809,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       // If the displacement is @tlscall, treat it as a zero.
       if (Disp.isExpr()) {
         auto *Sym = dyn_cast<MCSymbolRefExpr>(Disp.getExpr());
-        if (Sym && getSpecifier(Sym) == X86MCExpr::VK_TLSCALL) {
+        if (Sym && Sym->getSpecifier() == X86::S_TLSCALL) {
           // This is exclusively used by call *a@tlscall(base). The relocation
           // (R_386_TLSCALL or R_X86_64_TLSCALL) applies to the beginning.
           Fixups.push_back(MCFixup::create(0, Sym, FK_NONE, MI.getLoc()));
@@ -1374,8 +1385,8 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
       // handled as a special case here so that it also works for hand-written
       // assembly without the user needing to write REX, as with GNU as.
       const auto *Ref = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
-      if (Ref && (getSpecifier(Ref) == X86MCExpr::VK_GOTTPOFF ||
-                  getSpecifier(Ref) == X86MCExpr::VK_TLSDESC)) {
+      if (Ref && (Ref->getSpecifier() == X86::S_GOTTPOFF ||
+                  Ref->getSpecifier() == X86::S_TLSDESC)) {
         Prefix.setLowerBound(REX);
       }
     }

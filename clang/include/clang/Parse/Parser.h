@@ -290,9 +290,7 @@ public:
     return ConsumeToken();
   }
 
-  SourceLocation getEndOfPreviousToken() {
-    return PP.getLocForEndOfToken(PrevTokLocation);
-  }
+  SourceLocation getEndOfPreviousToken() const;
 
   /// GetLookAheadToken - This peeks ahead N tokens and returns that token
   /// without consuming any tokens.  LookAhead(0) returns 'Tok', LookAhead(1)
@@ -2598,8 +2596,7 @@ private:
   void ParseTypeQualifierListOpt(
       DeclSpec &DS, unsigned AttrReqs = AR_AllAttributesParsed,
       bool AtomicOrPtrauthAllowed = true, bool IdentifierRequired = false,
-      std::optional<llvm::function_ref<void()>> CodeCompletionHandler =
-          std::nullopt);
+      llvm::function_ref<void()> CodeCompletionHandler = {});
 
   /// ParseDirectDeclarator
   /// \verbatim
@@ -3037,11 +3034,11 @@ private:
 
   /// Parse the argument to C++23's [[assume()]] attribute. Returns true on
   /// error.
-  bool ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs,
-                                  IdentifierInfo *AttrName,
-                                  SourceLocation AttrNameLoc,
-                                  SourceLocation *EndLoc,
-                                  ParsedAttr::Form Form);
+  bool
+  ParseCXXAssumeAttributeArg(ParsedAttributes &Attrs, IdentifierInfo *AttrName,
+                             SourceLocation AttrNameLoc,
+                             IdentifierInfo *ScopeName, SourceLocation ScopeLoc,
+                             SourceLocation *EndLoc, ParsedAttr::Form Form);
 
   /// Try to parse an 'identifier' which appears within an attribute-token.
   ///
@@ -3601,7 +3598,7 @@ private:
   /// keyword.
   bool isClassCompatibleKeyword(Token Tok) const;
 
-  void ParseMicrosoftRootSignatureAttributeArgs(ParsedAttributes &Attrs);
+  void ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs);
 
   ///@}
 
@@ -4172,8 +4169,7 @@ private:
   bool ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                            llvm::function_ref<void()> ExpressionStarts =
                                llvm::function_ref<void()>(),
-                           bool FailImmediatelyOnInvalidExpr = false,
-                           bool EarlyTypoCorrection = false);
+                           bool FailImmediatelyOnInvalidExpr = false);
 
   /// ParseSimpleExpressionList - A simple comma-separated list of expressions,
   /// used for misc language extensions.
@@ -7073,6 +7069,10 @@ private:
   // #pragma optimize("gsty", on|off)
   bool HandlePragmaMSOptimize(StringRef PragmaName,
                               SourceLocation PragmaLocation);
+
+  // #pragma intrinsic("foo")
+  bool HandlePragmaMSIntrinsic(StringRef PragmaName,
+                               SourceLocation PragmaLocation);
 
   /// Handle the annotation token produced for
   /// #pragma align...

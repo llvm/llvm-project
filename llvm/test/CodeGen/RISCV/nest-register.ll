@@ -3,6 +3,10 @@
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfilp -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefix=RV64I-ZICFILP %s
+; RUN: not llc -mtriple=riscv64 -target-abi=lp64e -mattr=+experimental-zicfilp \
+; RUN:   -verify-machineinstrs < %s 2>&1 | FileCheck -check-prefix=LP64E-ZICFILP %s
 
 ; Tests that the 'nest' parameter attribute causes the relevant parameter to be
 ; passed in the right register.
@@ -17,6 +21,12 @@ define ptr @nest_receiver(ptr nest %arg) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    mv a0, t2
 ; RV64I-NEXT:    ret
+;
+; RV64I-ZICFILP-LABEL: nest_receiver:
+; RV64I-ZICFILP:       # %bb.0:
+; RV64I-ZICFILP-NEXT:    lpad 0
+; RV64I-ZICFILP-NEXT:    mv a0, t3
+; RV64I-ZICFILP-NEXT:    ret
   ret ptr %arg
 }
 
@@ -40,6 +50,22 @@ define ptr @nest_caller(ptr %arg) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV64I-ZICFILP-LABEL: nest_caller:
+; RV64I-ZICFILP:       # %bb.0:
+; RV64I-ZICFILP-NEXT:    lpad 0
+; RV64I-ZICFILP-NEXT:    addi sp, sp, -16
+; RV64I-ZICFILP-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-ZICFILP-NEXT:    mv t3, a0
+; RV64I-ZICFILP-NEXT:    call nest_receiver
+; RV64I-ZICFILP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-ZICFILP-NEXT:    addi sp, sp, 16
+; RV64I-ZICFILP-NEXT:    ret
   %result = call ptr @nest_receiver(ptr nest %arg)
   ret ptr %result
 }
+
+; LP64E-ZICFILP: LLVM ERROR: Nested functions with control flow protection are not usable with ILP32E or LP64E ABI.
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 8, !"cf-protection-branch", i32 1}

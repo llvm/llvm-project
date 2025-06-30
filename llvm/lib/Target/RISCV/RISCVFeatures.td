@@ -75,7 +75,8 @@ def FeatureStdExtI
       RISCVExtensionBitmask<0, 8>;
 
 def FeatureStdExtE
-    : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">;
+    : RISCVExtension<2, 0, "Embedded Instruction Set with 16 GPRs">,
+      RISCVExtensionBitmask<0, 4>;
 
 def FeatureStdExtZic64b
     : RISCVExtension<1, 0, "Cache Block Size Is 64 Bytes">;
@@ -372,18 +373,18 @@ def HasStdExtZhinx : Predicate<"Subtarget->hasStdExtZhinx()">,
 def NoStdExtZhinx : Predicate<"!Subtarget->hasStdExtZhinx()">;
 
 // Compressed Extensions
-def FeatureNoRVCHints
-    : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
-                       "Disable RVC Hint Instructions.">;
-def HasRVCHints : Predicate<"Subtarget->enableRVCHintInstrs()">,
-                  AssemblerPredicate<(all_of(not FeatureNoRVCHints)),
-                                     "RVC Hint Instructions">;
-
 def FeatureStdExtZca
     : RISCVExtension<1, 0,
                      "part of the C extension, excluding compressed "
                      "floating point loads/stores">,
       RISCVExtensionBitmask<1, 2>;
+// FIXME: Update this message - Zca always implies C.
+def HasStdExtZca
+    : Predicate<"Subtarget->hasStdExtZca()">,
+      AssemblerPredicate<(any_of FeatureStdExtZca),
+                         "'C' (Compressed Instructions) or "
+                         "'Zca' (part of the C extension, excluding "
+                         "compressed floating point loads/stores)">;
 
 def FeatureStdExtC
     : RISCVExtension<2, 0, "Compressed Instructions", [FeatureStdExtZca]>,
@@ -391,14 +392,6 @@ def FeatureStdExtC
 def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
                  AssemblerPredicate<(all_of FeatureStdExtC),
                                     "'C' (Compressed Instructions)">;
-
-
-def HasStdExtCOrZca
-    : Predicate<"Subtarget->hasStdExtCOrZca()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZca),
-                         "'C' (Compressed Instructions) or "
-                         "'Zca' (part of the C extension, excluding "
-                         "compressed floating point loads/stores)">;
 
 def FeatureStdExtZcb
     : RISCVExtension<1, 0, "Compressed basic bit manipulation instructions",
@@ -455,10 +448,11 @@ def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
 def FeatureStdExtZce
     : RISCVExtension<1, 0,
                      "Compressed extensions for microcontrollers",
-                     [FeatureStdExtZcb, FeatureStdExtZcmp, FeatureStdExtZcmt]>;
+                     [FeatureStdExtZca, FeatureStdExtZcb, FeatureStdExtZcmp,
+                      FeatureStdExtZcmt]>;
 
 def HasStdExtCOrZcfOrZce
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() "
+    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() ||"
                 "Subtarget->hasStdExtZce()">,
       AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
                                  FeatureStdExtZce),
@@ -510,7 +504,8 @@ def HasStdExtZbs : Predicate<"Subtarget->hasStdExtZbs()">,
 
 def FeatureStdExtB
     : RISCVExtension<1, 0, "the collection of the Zba, Zbb, Zbs extensions",
-                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>;
+                     [FeatureStdExtZba, FeatureStdExtZbb, FeatureStdExtZbs]>,
+      RISCVExtensionBitmask<0, 1>;
 
 def FeatureStdExtZbkb
     : RISCVExtension<1, 0, "Bitmanip instructions for Cryptography">,
@@ -887,8 +882,8 @@ def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMul
 
 // Hypervisor Extensions
 
-def FeatureStdExtH : RISCVExtension<1, 0, "Hypervisor">;
-
+def FeatureStdExtH : RISCVExtension<1, 0, "Hypervisor">,
+                     RISCVExtensionBitmask<0, 7>;
 def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
                  AssemblerPredicate<(all_of FeatureStdExtH),
                                     "'H' (Hypervisor)">;
@@ -906,6 +901,10 @@ def FeatureStdExtShvsatpa
     : RISCVExtension<1, 0,
                      "vsatp supports all modes supported by satp">;
 
+def FeatureStdExtShlcofideleg
+    : RISCVExtension<1, 0,
+                     "Delegating LCOFI Interrupts to VS-mode">;
+
 def FeatureStdExtSmaia
     : RISCVExtension<1, 0,
                      "Advanced Interrupt Architecture Machine Level">;
@@ -922,9 +921,9 @@ def FeatureStdExtSscsrind
     : RISCVExtension<1, 0, "Indirect CSR Access Supervisor Level">;
 
 def FeatureStdExtSmdbltrp
-    : RISCVExtension<1, 0, "Double Trap Machine Level">;
+    : RISCVExtension<1, 0, "Double Trap Machine Level", [FeatureStdExtZicsr]>;
 def FeatureStdExtSsdbltrp
-    : RISCVExtension<1, 0, "Double Trap Supervisor Level">;
+    : RISCVExtension<1, 0, "Double Trap Supervisor Level", [FeatureStdExtZicsr]>;
 
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
@@ -1292,12 +1291,12 @@ def HasVendorXSfvqmaccqoq
 
 def FeatureVendorXSfvfwmaccqqq
     : RISCVExtension<1, 0,
-                     "SiFive Matrix Multiply Accumulate Instruction and 4-by-4)",
+                     "SiFive Matrix Multiply Accumulate Instruction (4-by-4)",
                      [FeatureStdExtZvfbfmin]>;
 def HasVendorXSfvfwmaccqqq
     : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
       AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
-                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))">;
+                         "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))">;
 
 def FeatureVendorXSfvfnrclipxfqf
     : RISCVExtension<1, 0,
@@ -1420,7 +1419,8 @@ def HasVendorXwchc
 // Qualcomm Extensions
 
 def FeatureVendorXqccmp
-    : RISCVExperimentalExtension<0, 1, "Qualcomm 16-bit Push/Pop and Double Moves",
+    : RISCVExperimentalExtension<0, 3,
+                                 "Qualcomm 16-bit Push/Pop and Double Moves",
                                  [FeatureStdExtZca]>;
 def HasVendorXqccmp
     : Predicate<"Subtarget->hasVendorXqccmp()">,
@@ -1482,14 +1482,14 @@ def HasVendorXqcics
                          "'Xqcics' (Qualcomm uC Conditional Select Extension)">;
 
 def FeatureVendorXqcicsr
-    : RISCVExperimentalExtension<0, 3, "Qualcomm uC CSR Extension">;
+    : RISCVExperimentalExtension<0, 4, "Qualcomm uC CSR Extension">;
 def HasVendorXqcicsr
     : Predicate<"Subtarget->hasVendorXqcicsr()">,
       AssemblerPredicate<(all_of FeatureVendorXqcicsr),
                          "'Xqcicsr' (Qualcomm uC CSR Extension)">;
 
 def FeatureVendorXqciint
-    : RISCVExperimentalExtension<0, 7, "Qualcomm uC Interrupts Extension",
+    : RISCVExperimentalExtension<0, 10, "Qualcomm uC Interrupts Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqciint
     : Predicate<"Subtarget->hasVendorXqciint()">,
@@ -1536,7 +1536,7 @@ def HasVendorXqcilo
                          "'Xqcilo' (Qualcomm uC Large Offset Load Store Extension)">;
 
 def FeatureVendorXqcilsm
-    : RISCVExperimentalExtension<0, 5,
+    : RISCVExperimentalExtension<0, 6,
                                  "Qualcomm uC Load Store Multiple Extension">;
 def HasVendorXqcilsm
     : Predicate<"Subtarget->hasVendorXqcilsm()">,
@@ -1591,6 +1591,15 @@ def HasVendorXAndesPerf
     : Predicate<"Subtarget->hasVendorXAndesPerf()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesPerf),
                          "'XAndesPerf' (Andes Performance Extension)">;
+
+def FeatureVendorXAndesVBFHCvt
+    : RISCVExtension<5, 0, "Andes Vector BFLOAT16 Conversion Extension",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXAndesVBFHCvt
+    : Predicate<"Subtarget->hasVendorXAndesVBFHCvt()">,
+      AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
+                         "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
+
 
 def FeatureVendorXAndesVPackFPH
     : RISCVExtension<5, 0, "Andes Vector Packed FP16 Extension",
@@ -1735,6 +1744,9 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
+
+def TuneAndes45 : SubtargetFeature<"andes45", "RISCVProcFamily", "Andes45",
+                                   "Andes 45-Series processors">;
 
 def TuneVXRMPipelineFlush : SubtargetFeature<"vxrm-pipeline-flush", "HasVXRMPipelineFlush",
                                              "true", "VXRM writes causes pipeline flush">;

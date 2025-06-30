@@ -21,7 +21,7 @@ define i32 @PR63108() {
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    testb %al, %al
-; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    jne .LBB0_3
 ; SSE-NEXT:  # %bb.4: # %middle.block
 ; SSE-NEXT:    pxor %xmm2, %xmm0
@@ -117,7 +117,7 @@ define i32 @PR63108() {
 ; AVX512-NEXT:    testb %al, %al
 ; AVX512-NEXT:    je .LBB0_2
 ; AVX512-NEXT:  # %bb.1:
-; AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [251,223,251,223,251,223,251,223,251,223,251,223,251,223,251,223]
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
 ; AVX512-NEXT:    jmp .LBB0_5
 ; AVX512-NEXT:  .LBB0_2: # %vector.body.preheader
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = [57339,0,0,0]
