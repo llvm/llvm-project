@@ -102,6 +102,8 @@ namespace std {
   class optional {
   public:
     using value_type = T;
+        using iterator               = implementation-defined; // see [optional.iterators] // since C++26
+    using const_iterator         = implementation-defined; // see [optional.iterators] // since C++26
 
     // [optional.ctor], constructors
     constexpr optional() noexcept;
@@ -134,6 +136,12 @@ namespace std {
 
     // [optional.swap], swap
     void swap(optional &) noexcept(see below ); // constexpr in C++20
+
+        // [optional.iterators], iterator support
+    constexpr iterator begin() noexcept; // since C++26
+    constexpr const_iterator begin() const noexcept; // since C++26
+    constexpr iterator end() noexcept; // since C++26
+    constexpr const_iterator end() const noexcept; // since C++26
 
     // [optional.observe], observers
     constexpr T const *operator->() const noexcept;
@@ -173,6 +181,11 @@ namespace std {
   template<class T>
     optional(T) -> optional<T>;
 
+  template<class T>
+   constexpr bool ranges::enable_view<optional<T>> = true; // since C++26
+  template<class T>
+   constexpr auto format_kind<optional<T>> = range_format::disabled;  // since C++26
+
 } // namespace std
 
 */
@@ -187,6 +200,7 @@ namespace std {
 #  include <__concepts/invocable.h>
 #  include <__config>
 #  include <__exception/exception.h>
+#  include <__format/range_default_formatter.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
 #  include <__functional/unary_function.h>
@@ -577,6 +591,14 @@ template <class _Tp>
 struct __is_std_optional : false_type {};
 template <class _Tp>
 struct __is_std_optional<optional<_Tp>> : true_type {};
+
+#    if _LIBCPP_STD_VER >= 26
+template <class _T>
+constexpr bool ranges::enable_view<optional<_T>> = true;
+
+template <class _T>
+constexpr auto format_kind<optional<_T>> = range_format::disabled;
+#    endif
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
