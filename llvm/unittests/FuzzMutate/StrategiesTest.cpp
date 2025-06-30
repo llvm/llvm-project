@@ -89,9 +89,10 @@ void IterateOnSource(StringRef Source, IRMutator &Mutator) {
   }
 }
 
-static void mutateAndVerifyModule(StringRef Source,
-                                  std::unique_ptr<IRMutator> &Mutator,
-                                  int repeat = 100) {
+static void
+mutateAndVerifyModule(StringRef Source, std::unique_ptr<IRMutator> &Mutator,
+                      int repeat = 100,
+                      const std::function<void(Module &)> *Check = nullptr) {
   LLVMContext Ctx;
   auto M = parseAssembly(Source.data(), Ctx);
   std::mt19937 mt(Seed);
@@ -99,13 +100,19 @@ static void mutateAndVerifyModule(StringRef Source,
   for (int i = 0; i < repeat; i++) {
     Mutator->mutateModule(*M, RandInt(mt), IRMutator::getModuleSize(*M) + 1024);
     ASSERT_FALSE(verifyModule(*M, &errs()));
+    if (Check) {
+      (*Check)(*M);
+    }
   }
 }
+
 template <class Strategy>
-static void mutateAndVerifyModule(StringRef Source, int repeat = 100) {
+static void
+mutateAndVerifyModule(StringRef Source, int repeat = 100,
+                      const std::function<void(Module &)> *Check = nullptr) {
   auto Mutator = createMutator<Strategy>();
   ASSERT_TRUE(Mutator);
-  mutateAndVerifyModule(Source, Mutator, repeat);
+  mutateAndVerifyModule(Source, Mutator, repeat, Check);
 }
 
 TEST(InjectorIRStrategyTest, EmptyModule) {
@@ -761,6 +768,37 @@ TEST(AllStrategies, SpecialTerminator) {
   mutateAndVerifyModule<InstModificationIRStrategy>(Source);
   mutateAndVerifyModule<ShuffleBlockStrategy>(Source);
   mutateAndVerifyModule<SinkInstructionStrategy>(Source);
+}
+
+TEST(AllStrategies, AMDGCNLegalAddrspace) {
+  StringRef Source = "\n\
+    target triple = \"amdgcn-amd-amdhsa\"\n\
+    ; minimum values required by the fuzzer (e.g., default addrspace for allocas and globals)\n\
+    target datalayout = \"A5-G1\"\n\
+    define amdgpu_gfx void @strict_wwm_amdgpu_cs_main(<4 x i32> inreg %desc, i32 %index) {\n\
+    %desc.int = bitcast <4 x i32> %desc to i128\n\
+    %desc.ptr = inttoptr i128 %desc.int to ptr addrspace(8)\n\
+    ret void\n\
+  }\n\
+  ";
+
+  std::function<void(Module &)> AddrSpaceCheck = [](Module &M) {
+    Function *F = M.getFunction("strict_wwm_amdgpu_cs_main");
+    EXPECT_TRUE(F != nullptr);
+    for (BasicBlock &BB : *F) {
+      for (Instruction &I : BB) {
+        if (StoreInst *S = dyn_cast<StoreInst>(&I)) {
+          EXPECT_TRUE(S->getPointerAddressSpace() != 8);
+        } else if (LoadInst *L = dyn_cast<LoadInst>(&I)) {
+          EXPECT_TRUE(L->getPointerAddressSpace() != 8);
+        }
+      }
+    }
+  };
+
+  int Repeat = 100;
+  mutateAndVerifyModule<SinkInstructionStrategy>(Source, Repeat,
+                                                 &AddrSpaceCheck);
 }
 
 } // namespace
