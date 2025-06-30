@@ -1967,6 +1967,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return BinaryOperator::CreateOr(I0, I1);
     }
 
+    // smin(smax(X, -1), 1) -> scmp(X, 0)
+    // smax(smin(X, 1), -1) -> scmp(X, 0)
+    // At this point, smax(smin(X, 1), -1) is changed to smin(smax(X, -1)
+    // And i1's have been changed to and/ors
+    // So we only need to check for smin
+    if (IID == Intrinsic::smin) {
+      if (match(I0, m_OneUse(m_SMax(m_Value(X), m_AllOnes()))) &&
+          match(I1, m_One())) {
+        Value *Zero = ConstantInt::get(X->getType(), 0);
+        return replaceInstUsesWith(
+            CI,
+            Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {X, Zero}));
+      }
+    }
+
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
       // smax (neg nsw X), (neg nsw Y) --> neg nsw (smin X, Y)
       // smin (neg nsw X), (neg nsw Y) --> neg nsw (smax X, Y)
