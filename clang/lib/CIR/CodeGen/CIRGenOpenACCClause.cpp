@@ -627,7 +627,7 @@ public:
     }
   }
 
-  void VisitHostClause(const OpenACCHostClause &clause){
+  void VisitHostClause(const OpenACCHostClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
@@ -637,7 +637,8 @@ public:
       llvm_unreachable("Unknown construct kind in VisitHostClause");
     }
   }
-  void VisitDeviceClause(const OpenACCDeviceClause &clause){
+
+  void VisitDeviceClause(const OpenACCDeviceClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::UpdateDeviceOp>(
