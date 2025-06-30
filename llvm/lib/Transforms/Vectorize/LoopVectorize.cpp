@@ -7050,8 +7050,8 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
       // The VPlan-based cost model is more accurate for partial reduction and
       // comparing against the legacy cost isn't desirable.
-      if (auto *VPR = dyn_cast<VPReductionRecipe>(&R); VPR &&
-          VPR->isPartialReduction())
+      if (auto *VPR = dyn_cast<VPReductionRecipe>(&R);
+          VPR && VPR->isPartialReduction())
         return true;
 
       /// If a VPlan transform folded a recipe to one producing a single-scalar,

@@ -2570,15 +2570,19 @@ InstructionCost VPSingleDefBundleRecipe::computeCost(ElementCount VF,
   case BundleTypes::MulAccumulateReduction:
     return Ctx.TTI.getMulAccReductionCost(false, RedTy, SrcVecTy, Ctx.CostKind);
 
+  case BundleTypes::ExtNegatedMulAccumulateReduction:
   case BundleTypes::ExtMulAccumulateReduction: {
+    unsigned Opcode =
+        BundleType == BundleTypes::ExtNegatedMulAccumulateReduction
+            ? Instruction::Sub
+            : Instruction::Add;
     if (auto *RedR = dyn_cast<VPReductionRecipe>(BundledRecipes.back());
         RedR->isPartialReduction() && BundledRecipes.size() >= 4) {
       auto *Ext0R = cast<VPWidenCastRecipe>(BundledRecipes[0]);
       auto *Ext1R = cast<VPWidenCastRecipe>(BundledRecipes[1]);
       auto *Mul = cast<VPWidenRecipe>(BundledRecipes[2]);
       return Ctx.TTI.getPartialReductionCost(
-          RecurrenceDescriptor::getOpcode(RedR->getRecurrenceKind()),
-          Ctx.Types.inferScalarType(getOperand(0)),
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)),
           Ctx.Types.inferScalarType(getOperand(1)), RedTy, VF,
           TargetTransformInfo::getPartialReductionExtendKind(
               Ext0R->getOpcode()),
@@ -2631,6 +2635,33 @@ void VPSingleDefBundleRecipe::print(raw_ostream &O, const Twine &Indent,
       Red->getCondOp()->printAsOperand(O, SlotTracker);
     }
     O << ")";
+    break;
+  }
+  case BundleTypes::ExtNegatedMulAccumulateReduction: {
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    O << " + ";
+    if (Red->isPartialReduction())
+      O << "partial.";
+    O << "reduce."
+      << Instruction::getOpcodeName(
+             RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
+      << " (sub (0, mul";
+    auto *Mul = cast<VPWidenRecipe>(BundledRecipes[2]);
+    Mul->printFlags(O);
+    O << "(";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
+    O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+      << *Ext0->getResultType() << "), (";
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    auto *Ext1 = cast<VPWidenCastRecipe>(BundledRecipes[1]);
+    O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
+      << *Ext1->getResultType() << ")";
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << "))";
     break;
   }
   case BundleTypes::MulAccumulateReduction:

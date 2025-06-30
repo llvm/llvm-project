@@ -2702,6 +2702,12 @@ class VPSingleDefBundleRecipe : public VPSingleDefRecipe {
     /// vector operands, performing a reduction.add on the result, and adding
     /// the scalar result to a chain.
     MulAccumulateReduction,
+    /// Represent an inloop multiply-accumulate reduction, multiplying the
+    /// extended vector operands, negating the multiplication, performing a
+    /// reduction.add
+    /// on the result, and adding
+    /// the scalar result to a chain.
+    ExtNegatedMulAccumulateReduction,
   };
 
   /// Type of the bundle.
@@ -2729,7 +2735,7 @@ public:
   VPSingleDefBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
                           VPWidenRecipe *Mul, VPWidenRecipe *Sub,
                           VPReductionRecipe *Red)
-      : VPSingleDefBundleRecipe(BundleTypes::ExtMulAccumulateReduction,
+      : VPSingleDefBundleRecipe(BundleTypes::ExtNegatedMulAccumulateReduction,
                                 {Ext0, Ext1, Mul, Sub, Red}) {}
 
   ~VPSingleDefBundleRecipe() override {
