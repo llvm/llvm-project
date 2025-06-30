@@ -1105,24 +1105,31 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
     // On Power10, we can use SETNBC to spill all CR bits. SETNBC will set all
     // bits (specifically, it produces a -1 if the CR bit is set). Ultimately,
     // the bit that is of importance to us is bit 32 (bit 0 of a 32-bit
-    // register), and SETNBC will set this.
+    // register), and SETNBC will set this. Also, in order to preserve the kill
+    // flag on the CR bit, we add it as an implicit use.
     if (Subtarget.isISA3_1()) {
       BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETNBC8 : PPC::SETNBC), Reg)
-          .addReg(SrcReg, RegState::Undef);
+          .addReg(SrcReg, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit |
+                              getKillRegState(MI.getOperand(0).isKill()));
       break;
     }
 
     // On Power9, we can use SETB to extract the LT bit. This only works for
     // the LT bit since SETB produces -1/1/0 for LT/GT/<neither>. So the value
     // of the bit we care about (32-bit sign bit) will be set to the value of
-    // the LT bit (regardless of the other bits in the CR field).
+    // the LT bit (regardless of the other bits in the CR field). Also, in
+    // order to preserve the kill flag on the CR bit, we add it as an implicit
+    // use.
     if (Subtarget.isISA3_0()) {
       if (SrcReg == PPC::CR0LT || SrcReg == PPC::CR1LT ||
           SrcReg == PPC::CR2LT || SrcReg == PPC::CR3LT ||
           SrcReg == PPC::CR4LT || SrcReg == PPC::CR5LT ||
           SrcReg == PPC::CR6LT || SrcReg == PPC::CR7LT) {
         BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETB8 : PPC::SETB), Reg)
-          .addReg(getCRFromCRBit(SrcReg), RegState::Undef);
+            .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
+            .addReg(SrcReg, RegState::Implicit |
+                                getKillRegState(MI.getOperand(0).isKill()));
         break;
       }
     }
