@@ -891,40 +891,6 @@ def calloc : RuntimeLibcallImpl<CALLOC>;
 } // End let IsDefault = true
 } // End defset AllDefaultRuntimeLibcallImpls
 
-
-// FIXME: Should move to explicit opt-in to different sets of libcalls
-// instead of trying to remove from a default set. We have
-// unreasonable defaults like reporting f80 calls on most targets when
-// they are relevant to only one.
-
-defvar AllDefaultLibCalls =
-    !foreach(entry, AllDefaultRuntimeLibcallImpls, entry.Provides);
-
-// These libcalls are only available in compiler-rt, not libgcc for
-// 32-bit arch. They are available on both for 64-bit.
-defvar LibCallsCompilerRT64OrLibGCC = [
-   __ashlti3, __lshrti3, __ashrti3, __multi3, __mulodi4
-];
-
-defvar DefaultRuntimeLibcallImpls =
-  !listremove(AllDefaultRuntimeLibcallImpls,
-              LibCallsCompilerRT64OrLibGCC);
-
-defvar DefaultRuntimeLibcallImpls_f128 =
-    !filter(entry, DefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "_F128"));
-
-defvar DefaultRuntimeLibcallImpls_atomic =
-    !filter(entry, DefaultRuntimeLibcallImpls,
-            !match(!cast<string>(entry.Provides), "ATOMIC"));
-
-/// Default set of libcall impls for 32-bit architectures.
-defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
-
-/// Default set of libcall impls for 64-bit architectures.
-defvar DefaultLibcallImpls64 = !listconcat(DefaultRuntimeLibcallImpls,
-                                           LibCallsCompilerRT64OrLibGCC);
-
 //--------------------------------------------------------------------
 // Define implementation other libcalls
 //--------------------------------------------------------------------
@@ -1004,6 +970,43 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
   def __exp10f128_finite : RuntimeLibcallImpl<EXP10_FINITE_F128>;
   def __powf128_finite : RuntimeLibcallImpl<POW_FINITE_F128>;
 }
+
+//===----------------------------------------------------------------------===//
+// Common Libcall Sets
+//===----------------------------------------------------------------------===//
+
+// FIXME: Should move to explicit opt-in to different sets of libcalls
+// instead of trying to remove from a default set. We have
+// unreasonable defaults like reporting f80 calls on most targets when
+// they are relevant to only one.
+
+defvar AllDefaultLibCalls =
+    !foreach(entry, AllDefaultRuntimeLibcallImpls, entry.Provides);
+
+// These libcalls are only available in compiler-rt, not libgcc for
+// 32-bit arch. They are available on both for 64-bit.
+defvar LibCallsCompilerRT64OrLibGCC = [
+   __ashlti3, __lshrti3, __ashrti3, __multi3, __mulodi4
+];
+
+defvar DefaultRuntimeLibcallImpls =
+  !listremove(AllDefaultRuntimeLibcallImpls,
+              LibCallsCompilerRT64OrLibGCC);
+
+defvar DefaultRuntimeLibcallImpls_f128 =
+    !filter(entry, DefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry.Provides), "_F128"));
+
+defvar DefaultRuntimeLibcallImpls_atomic =
+    !filter(entry, DefaultRuntimeLibcallImpls,
+            !match(!cast<string>(entry.Provides), "ATOMIC"));
+
+/// Default set of libcall impls for 32-bit architectures.
+defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
+
+/// Default set of libcall impls for 64-bit architectures.
+defvar DefaultLibcallImpls64 = !listconcat(DefaultRuntimeLibcallImpls,
+                                           LibCallsCompilerRT64OrLibGCC);
 
 //===----------------------------------------------------------------------===//
 // AArch64 Runtime Libcalls
