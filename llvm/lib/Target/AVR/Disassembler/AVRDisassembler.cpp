@@ -328,6 +328,22 @@ static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeAddWordImm(MCInst &Inst, unsigned Insn,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder) {
+  // Get the register
+  unsigned RegVal = GPRDecoderTable[24 + 2 * ((Insn >> 4) & 0x3)];
+
+  if ((Insn & 0xff00) == 0x9600) {
+    Inst.setOpcode(AVR::ADIWRdK);
+    Inst.addOperand(MCOperand::createReg(RegVal));
+    Inst.addOperand(
+        MCOperand::createImm(((Insn & 0x00C0) >> 2) | (Insn & 0xF)));
+    return MCDisassembler::Success;
+  }
+  return MCDisassembler::Fail;
+}
+
 static DecodeStatus decodeMoveWord(MCInst &Inst, unsigned Insn,
                                    uint64_t Address,
                                    const MCDisassembler *Decoder) {
@@ -520,6 +536,11 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
     // Try to decode to a MOVW instruction
     Result = decodeMoveWord(Instr, Insn, Address, this);
+    if (Result != MCDisassembler::Fail)
+      return Result;
+    
+    // Try to decode to a ADIW instruction
+    Result = decodeAddWordImm(Instr, Insn, Address, this);
     if (Result != MCDisassembler::Fail)
       return Result;
 
