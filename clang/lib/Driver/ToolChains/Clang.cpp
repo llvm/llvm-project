@@ -2917,6 +2917,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       } else {
         if (GccRangeComplexOption != "-fno-cx-limited-range")
           EmitComplexRangeDiag(D, GccRangeComplexOption, "-fcx-limited-range");
+        // Warn about complex range option overrides incompatible with GCC.
+        if (GccRangeComplexOption == "-fcx-fortran-rules" ||
+            GccRangeComplexOption == "-fno-cx-fortran-rules")
+          D.Diag(clang::diag::warn_drv_gcc_incompatible_complex_range_override)
+              << GccRangeComplexOption << A->getSpelling();
       }
       GccRangeComplexOption = "-fcx-limited-range";
       LastComplexRangeOption = A->getSpelling();
@@ -2931,6 +2936,10 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
             GccRangeComplexOption != "-fno-cx-fortran-rules")
           EmitComplexRangeDiag(D, GccRangeComplexOption,
                                "-fno-cx-limited-range");
+        // Warn about complex range option overrides incompatible with GCC.
+        if (GccRangeComplexOption == "-fcx-fortran-rules")
+          D.Diag(clang::diag::warn_drv_gcc_incompatible_complex_range_override)
+              << GccRangeComplexOption << A->getSpelling();
       }
       GccRangeComplexOption = "-fno-cx-limited-range";
       LastComplexRangeOption = A->getSpelling();
@@ -3233,6 +3242,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     case options::OPT_ffast_math:
       applyFastMath(true);
       LastComplexRangeOption = A->getSpelling();
+      // Warn about complex range option overrides incompatible with GCC.
+      if (GccRangeComplexOption == "-fcx-fortran-rules" ||
+          GccRangeComplexOption == "-fno-cx-fortran-rules")
+        D.Diag(clang::diag::warn_drv_gcc_incompatible_complex_range_override)
+            << GccRangeComplexOption << A->getSpelling();
       if (A->getOption().getID() == options::OPT_Ofast)
         LastFpContractOverrideOption = "-Ofast";
       else
@@ -3257,6 +3271,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
           Range != LangOptions::ComplexRangeKind::CX_Full)
         EmitComplexRangeDiag(D, LastComplexRangeOption, "-fno-fast-math");
       Range = LangOptions::ComplexRangeKind::CX_None;
+      // Warn about complex range option overrides incompatible with GCC.
+      if (GccRangeComplexOption == "-fcx-fortran-rules" ||
+          GccRangeComplexOption == "-fcx-limited-range")
+        D.Diag(clang::diag::warn_drv_gcc_incompatible_complex_range_override)
+            << GccRangeComplexOption << A->getSpelling();
       LastComplexRangeOption = "";
       GccRangeComplexOption = "";
       LastFpContractOverrideOption = "";

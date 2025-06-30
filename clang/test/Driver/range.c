@@ -255,6 +255,31 @@
 // RUN: %clang -### -Werror --target=x86_64 -fno-fast-math -ffp-model=strict \
 // RUN:   -c %s 2>&1 | FileCheck --check-prefixes=FULL %s
 
+
+// Test incompatibility of complex range override with GCC 14.2.0.
+
+// RUN: %clang -### --target=x86_64 -fcx-limited-range -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT1 %s
+
+// RUN: %clang -### --target=x86_64 -fcx-fortran-rules -fcx-limited-range \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT2 %s
+
+// RUN: %clang -### --target=x86_64 -fcx-fortran-rules -fno-cx-limited-range \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT3 %s
+
+// RUN: %clang -### --target=x86_64 -fcx-fortran-rules -ffast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT4 %s
+
+// RUN: %clang -### --target=x86_64 -fcx-fortran-rules -fno-fast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT5 %s
+
+// RUN: %clang -### --target=x86_64 -fno-cx-fortran-rules -fcx-limited-range \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT6 %s
+
+// RUN: %clang -### --target=x86_64 -fno-cx-fortran-rules -ffast-math \
+// RUN:   -c %s 2>&1 | FileCheck --check-prefixes=WARN_INCOMPAT7 %s
+
+
 // WARN1: warning: overriding '-fcx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN2: warning: overriding '-fno-cx-limited-range' option with '-fcx-fortran-rules' [-Woverriding-option]
 // WARN3: warning: overriding '-fcx-fortran-rules' option with '-fno-cx-limited-range' [-Woverriding-option]
@@ -280,5 +305,13 @@
 // IMPRVD-NOT: -complex-range=basic
 // CHECK-NOT: -complex-range=improved
 // RANGE-NOT: -complex-range=
+
+// WARN_INCOMPAT1: warning: combination of '-fcx-limited-range' and '-fno-fast-math' results in complex number calculations incompatible with GCC [-Wgcc-compat]
+// WARN_INCOMPAT2: warning: combination of '-fcx-fortran-rules' and '-fcx-limited-range' results in complex number calculations incompatible with GCC [-Wgcc-compat]
+// WARN_INCOMPAT3: warning: combination of '-fcx-fortran-rules' and '-fno-cx-limited-range' results in complex number calculations incompatible with GCC [-Wgcc-compat]
+// WARN_INCOMPAT4: warning: combination of '-fcx-fortran-rules' and '-ffast-math' results in complex number calculations incompatible with GCC [-Wgcc-compat]
+// WARN_INCOMPAT5: warning: combination of '-fcx-fortran-rules' and '-fno-fast-math' results in complex number calculations incompatible with GCC [-Wgcc-compat]
+// WARN_INCOMPAT6: warning: combination of '-fno-cx-fortran-rules' and '-fcx-limited-range' results in complex number calculations incompatible with GCC [-Wgcc-compat]
+// WARN_INCOMPAT7: warning: combination of '-fno-cx-fortran-rules' and '-ffast-math' results in complex number calculations incompatible with GCC [-Wgcc-compat]
 
 // ERR: error: unsupported argument 'foo' to option '-fcomplex-arithmetic='
