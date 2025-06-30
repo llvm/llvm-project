@@ -920,6 +920,17 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
+  } else if (Dec == SPIRV::Decoration::ConduitKernelArgumentINTEL ||
+             Dec == SPIRV::Decoration::RegisterMapKernelArgumentINTEL ||
+             Dec == SPIRV::Decoration::MMHostInterfaceAddressWidthINTEL ||
+             Dec == SPIRV::Decoration::MMHostInterfaceDataWidthINTEL ||
+             Dec == SPIRV::Decoration::MMHostInterfaceLatencyINTEL ||
+             Dec == SPIRV::Decoration::MMHostInterfaceReadWriteModeINTEL ||
+             Dec == SPIRV::Decoration::MMHostInterfaceMaxBurstINTEL ||
+             Dec == SPIRV::Decoration::MMHostInterfaceWaitRequestINTEL ||
+             Dec == SPIRV::Decoration::StableKernelArgumentINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPGAArgumentInterfacesINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_argument_interfaces);
   }
 }
 
