@@ -3,8 +3,26 @@
 // Check that omp.simd as a leaf of a composite construct still generates
 // the appropriate loop vectorization attribute.
 
+// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par.2
+// CHECK: teams.body:
+// CHECK: omp.teams.region:
+
+// CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par.1
+// CHECK: omp.par.entry:
+// CHECK: omp.par.region:
+// CHECK: distribute.exit:
+
 // CHECK-LABEL: define internal void @test_teams_distribute_parallel_do_simd..omp_par
-// CHECK: ![[VAL:.*]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: distribute.body:
+// CHECK: omp.distribute.region:
+// CHECK: omp_loop.header:
+// CHECK: omp_loop.inc:
+// CHECK-NEXT:   %omp_loop.next = add nuw i32 %omp_loop.iv, 1
+// CHECK-NEXT:   br label %omp_loop.header, !llvm.loop ![[LOOP_ATTR:.*]]
+
+// CHECK: ![[LOOP_ATTR]] = distinct !{![[LOOP_ATTR]], ![[LPAR:.*]], ![[LVEC:.*]]}
+// CHECK: ![[LPAR]] = !{!"llvm.loop.parallel_accesses", ![[PAR_ACC:.*]]}
+// CHECK: ![[LVEC]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
 omp.private {type = private} @_QFEi_private_i32 : i32
 llvm.func @test_teams_distribute_parallel_do_simd() {

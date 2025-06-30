@@ -4,7 +4,15 @@
 // the appropriate loop vectorization attribute.
 
 // CHECK-LABEL: define internal void @test_parallel_do_simd..omp_par
-// CHECK: ![[VAL:.*]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: omp.par.entry:
+// CHECK: omp.par.region:
+// CHECK: omp_loop.header:
+// CHECK: omp_loop.inc:
+// CHECK-NEXT:   %omp_loop.next = add nuw i32 %omp_loop.iv, 1
+// CHECK-NEXT:   br label %omp_loop.header, !llvm.loop ![[LOOP_ATTR:.*]]
+// CHECK: ![[LOOP_ATTR]] = distinct !{![[LOOP_ATTR]], ![[LPAR:.*]], ![[LVEC:.*]]}
+// CHECK: ![[LPAR]] = !{!"llvm.loop.parallel_accesses", ![[PAR_ACC:.*]]}
+// CHECK: ![[LVEC]] = !{!"llvm.loop.vectorize.enable", i1 true}
 
 llvm.func @test_parallel_do_simd() {
   %0 = llvm.mlir.constant(1 : i64) : i64
