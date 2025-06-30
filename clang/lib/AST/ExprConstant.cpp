@@ -4475,7 +4475,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     // a null BaseVal. Any constexpr-unknown variable seen here is an error:
     // we can't access a constexpr-unknown object.
     if (!BaseVal) {
-      Info.FFDiag(E, diag::note_constexpr_access_unknown_variable, 1) << AK << VD;
+      Info.FFDiag(E, diag::note_constexpr_access_unknown_variable, 1)
+          << AK << VD;
       Info.Note(VD->getLocation(), diag::note_declared_at);
       return CompleteObject();
     }
