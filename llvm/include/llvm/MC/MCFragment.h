@@ -190,6 +190,7 @@ public:
   void appendContents(size_t Num, char Elt) { Contents.append(Num, Elt); }
   void setContents(ArrayRef<char> C) { Contents.assign(C.begin(), C.end()); }
 
+  void addFixup(MCFixup Fixup) { Fixups.push_back(Fixup); }
   SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
   const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
 
