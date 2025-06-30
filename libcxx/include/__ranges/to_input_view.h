@@ -123,8 +123,8 @@ public:
       : __current_(std::move(__i.__current_)) {}
 
   // base
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() &&;
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
 
   // operator ++
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
