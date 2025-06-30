@@ -18835,8 +18835,8 @@ If the result value cannot be precisely represented in the given scale, the
 value is rounded up or down to the closest representable value. The rounding
 direction is unspecified.
 
-It is undefined behavior if the result value does not fit within the range of
-the fixed point type.
+If the result value does not fit within the range of the fixed point type, the
+result is poison.
 
 
 Examples
@@ -18895,8 +18895,8 @@ If the result value cannot be precisely represented in the given scale, the
 value is rounded up or down to the closest representable value. The rounding
 direction is unspecified.
 
-It is undefined behavior if the result value does not fit within the range of
-the fixed point type.
+If the result value does not fit within the range of the fixed point type, the
+result is poison.
 
 
 Examples
@@ -19091,8 +19091,10 @@ If the result value cannot be precisely represented in the given scale, the
 value is rounded up or down to the closest representable value. The rounding
 direction is unspecified.
 
-It is undefined behavior if the result value does not fit within the range of
-the fixed point type, or if the second argument is zero.
+If the result value does not fit within the range of the fixed point type, the
+result is poison.
+
+It is undefined behavior if the second argument is zero.
 
 
 Examples
@@ -19151,8 +19153,10 @@ If the result value cannot be precisely represented in the given scale, the
 value is rounded up or down to the closest representable value. The rounding
 direction is unspecified.
 
-It is undefined behavior if the result value does not fit within the range of
-the fixed point type, or if the second argument is zero.
+If the result value does not fit within the range of the fixed point type, the
+result is poison.
+
+It is undefined behavior if the second argument is zero.
 
 
 Examples
