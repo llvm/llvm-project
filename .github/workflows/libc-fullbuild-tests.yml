@@ -15,8 +15,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Build linux configuration with Debug, Release, and MinSizeRel.
+        # Build all other configurations in only Debug.
         build_type: [Debug, Release, MinSizeRel]
-        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        os: [ubuntu-24.04]
         include:
           - os: ubuntu-24.04
             ccache-variant: sccache
