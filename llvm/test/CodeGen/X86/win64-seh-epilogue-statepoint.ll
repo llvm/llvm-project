@@ -9,7 +9,6 @@ define i32 @foobar() gc "statepoint-example" personality ptr @__gxx_personality_
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    nop
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .seh_endepilogue
