@@ -81,8 +81,7 @@ Options
 
 .. option:: MoveFunction
 
-   Specify the function used for moving.
-   Default is `::std::move`.
+   Specify the function used for moving. Default is `::std::move`.
 
 This check implements `F.18
 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f18-for-will-move-from-parameters-pass-by-x-and-stdmove-the-parameter>`_
