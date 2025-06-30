@@ -441,6 +441,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setStackRepackArrays(stackRepackArrays);
   loweringOptions.setRepackArrays(repackArrays);
   loweringOptions.setRepackArraysWhole(repackArraysWhole);
+  loweringOptions.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
   if (enableCUDA)
     loweringOptions.setCUDARuntimeCheck(true);
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
