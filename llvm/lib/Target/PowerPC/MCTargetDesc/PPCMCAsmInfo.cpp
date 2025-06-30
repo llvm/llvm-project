@@ -19,7 +19,7 @@ using namespace llvm;
 
 void PPCELFMCAsmInfo::anchor() { }
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier elfAtSpecifiers[] = {
     {PPC::S_DTPREL, "DTPREL"},
     {PPC::S_GOT, "GOT"},
     {PPC::S_GOT_HA, "got@ha"},
@@ -34,7 +34,6 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {PPC::S_HIGHEST, "highest"},
     {PPC::S_HIGHESTA, "highesta"},
     {PPC::S_LO, "l"},
-    {PPC::S_L, "l"}, // FIXME: share the name with VK_LO
     {PPC::S_PCREL, "PCREL"},
     {PPC::S_PLT, "PLT"},
     {PPC::S_TLSGD, "tlsgd"},
@@ -95,7 +94,19 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {PPC::S_TPREL_HIGHEST, "tprel@highest"},
     {PPC::S_TPREL_HIGHESTA, "tprel@highesta"},
     {PPC::S_TPREL_LO, "tprel@l"},
+};
+
+const MCAsmInfo::AtSpecifier xcoffAtSpecifiers[] = {
+    // clang-format off
+    {PPC::S_AIX_TLSGD, "gd"},
+    {PPC::S_AIX_TLSGDM, "m"},
+    {PPC::S_AIX_TLSIE, "ie"},
+    {PPC::S_AIX_TLSLD, "ld"},
+    {PPC::S_AIX_TLSLE, "le"},
+    {PPC::S_AIX_TLSML, "ml"},
+    {PPC::S_L, "l"},
     {PPC::S_U, "u"},
+    // clang-format on
 };
 
 static std::optional<int64_t> evaluateAsInt64(uint16_t specifier,
@@ -193,7 +204,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   AssemblerDialect = 1;           // New-Style mnemonics.
   LCOMMDirectiveAlignmentType = LCOMM::ByteAlignment;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(elfAtSpecifiers);
 }
 
 void PPCELFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
@@ -229,7 +240,7 @@ PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
 
   UsesSetToEquateSymbol = true;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeAtSpecifiers(xcoffAtSpecifiers);
 }
 
 void PPCXCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,
