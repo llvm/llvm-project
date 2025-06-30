@@ -4184,7 +4184,12 @@ private:
   /// ParseParenExpression - This parses the unit that starts with a '(' token,
   /// based on what is allowed by ExprType.  The actual thing parsed is returned
   /// in ExprType. If stopIfCastExpr is true, it will only return the parsed
-  /// type, not the parsed cast-expression.
+  /// type, not the parsed cast-expression. If ParenKnownToBeNonCast is true,
+  /// the initial open paren and its matching close paren are known to be part
+  /// of another grammar production and not part of the operand. e.g., the
+  /// typeof and typeof_unqual operators in C. If it is false, then the function
+  /// has to parse the parens to determine whether they're part of a cast or
+  /// compound literal expression rather than a parenthesized type.
   ///
   /// \verbatim
   ///       primary-expression: [C99 6.5.1]
@@ -4210,6 +4215,7 @@ private:
   /// \endverbatim
   ExprResult ParseParenExpression(ParenParseOption &ExprType,
                                   bool stopIfCastExpr, bool isTypeCast,
+                                  bool ParenKnownToBeNonCast,
                                   ParsedType &CastTy,
                                   SourceLocation &RParenLoc);
 

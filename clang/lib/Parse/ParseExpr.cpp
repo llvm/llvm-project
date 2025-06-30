@@ -758,7 +758,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     ParsedType CastTy;
     SourceLocation RParenLoc;
     Res = ParseParenExpression(ParenExprType, false /*stopIfCastExr*/,
-                               isTypeCast == TypeCastState::IsTypeCast, CastTy,
+                               isTypeCast == TypeCastState::IsTypeCast,
+                               false /*ParenKnownToBeNonCast*/, CastTy,
                                RParenLoc);
 
     // FIXME: What should we do if a vector literal is followed by a
@@ -2110,12 +2111,24 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // If it starts with a '(', we know that it is either a parenthesized
     // type-name, or it is a unary-expression that starts with a compound
     // literal, or starts with a primary-expression that is a parenthesized
-    // expression.
+    // expression. Most unary operators have an expression form without parens
+    // as part of the grammar for the operator, and a type form with the parens
+    // as part of the grammar for the operator. However, typeof and
+    // typeof_unqual require parens for both forms. This means that we *know*
+    // that the open and close parens cannot be part of a cast expression,
+    // which means we definitely are not parsing a compound literal expression.
+    // This disambiguates a case like enum E : typeof(int) { }; where we've
+    // parsed typeof and need to handle the (int){} tokens properly despite
+    // them looking like a compound literal, as in sizeof (int){}; where the
+    // parens could be part of a parenthesized type name or for a cast
+    // expression of some kind.
+    bool ParenKnownToBeNonCast =
+        OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual);
     ParenParseOption ExprType = ParenParseOption::CastExpr;
     SourceLocation LParenLoc = Tok.getLocation(), RParenLoc;
 
-    Operand = ParseParenExpression(ExprType, true/*stopIfCastExpr*/,
-                                   false, CastTy, RParenLoc);
+    Operand = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
+                                   ParenKnownToBeNonCast, CastTy, RParenLoc);
     CastRange = SourceRange(LParenLoc, RParenLoc);
 
     // If ParseParenExpression parsed a '(typename)' sequence only, then this is
@@ -2589,10 +2602,11 @@ bool Parser::tryParseOpenMPArrayShapingCastPart() {
   return !ErrorFound;
 }
 
-ExprResult
-Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
-                             bool isTypeCast, ParsedType &CastTy,
-                             SourceLocation &RParenLoc) {
+ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
+                                        bool stopIfCastExpr, bool isTypeCast,
+                                        bool ParenKnownToBeNonCast,
+                                        ParsedType &CastTy,
+                                        SourceLocation &RParenLoc) {
   assert(Tok.is(tok::l_paren) && "Not a paren expr!");
   ColonProtectionRAIIObject ColonProtection(*this, false);
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -2747,7 +2761,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
       T.consumeClose();
       ColonProtection.restore();
       RParenLoc = T.getCloseLocation();
-      if (Tok.is(tok::l_brace)) {
+      if (!ParenKnownToBeNonCast && Tok.is(tok::l_brace)) {
         ExprType = ParenParseOption::CompoundLiteral;
         TypeResult Ty;
         {
@@ -2757,7 +2771,7 @@ Parser::ParseParenExpression(ParenParseOption &ExprType, bool stopIfCastExpr,
         return ParseCompoundLiteralExpression(Ty.get(), OpenLoc, RParenLoc);
       }
 
-      if (Tok.is(tok::l_paren)) {
+      if (!ParenKnownToBeNonCast && Tok.is(tok::l_paren)) {
         // This could be OpenCL vector Literals
         if (getLangOpts().OpenCL)
         {

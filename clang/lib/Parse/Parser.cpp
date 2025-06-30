@@ -1607,7 +1607,8 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     EnterExpressionEvaluationContext ConstantEvaluated(
         Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
     AsmString = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
-                                     CastTy, RParenLoc);
+                                     false /*ParenKnownToBeNonCast*/, CastTy,
+                                     RParenLoc);
     if (!AsmString.isInvalid())
       AsmString = Actions.ActOnConstantExpression(AsmString);
 
