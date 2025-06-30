@@ -133,6 +133,8 @@ public:
 
   void SetAsyncExecution(bool async);
 
+  CursorPosition GetIOHandlerCursorPosition();
+
   lldb::FileSP GetInputFileSP() { return m_input_file_sp; }
   File &GetInputFile() { return *m_input_file_sp; }
 

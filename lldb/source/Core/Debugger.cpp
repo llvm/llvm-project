@@ -1240,6 +1240,14 @@ void Debugger::DispatchInputEndOfFile() {
     reader_sp->GotEOF();
 }
 
+CursorPosition Debugger::GetIOHandlerCursorPosition() {
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  IOHandlerSP reader_sp(m_io_handler_stack.Top());
+  if (reader_sp)
+    return reader_sp->GetCursorPosition();
+  return {std::nullopt, std::nullopt};
+}
+
 void Debugger::ClearIOHandlers() {
   // The bottom input reader should be the main debugger input reader.  We do
   // not want to close that one here.
