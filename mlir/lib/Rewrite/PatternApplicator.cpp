@@ -221,10 +221,6 @@ LogicalResult PatternApplicator::matchAndRewrite(
             LLVM_DEBUG(llvm::dbgs()
                        << "\"" << bestPattern->getDebugName() << "\" result "
                        << succeeded(result) << "\n");
-#ifndef NDEBUG
-            rewriter.setListener(oldListener);
-            delete catalogingListener;
-#endif
           }
 
           // Process the result of the pattern application.
