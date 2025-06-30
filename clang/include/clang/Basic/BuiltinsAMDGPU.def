@@ -654,6 +654,7 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8f16, "V8hV8h*3", "nc", "gfx1
 TARGET_BUILTIN(__builtin_amdgcn_ds_load_tr16_b128_v8bf16, "V8yV8y*3", "nc", "gfx1250-insts,wavefrontsize32")
 
 TARGET_BUILTIN(__builtin_amdgcn_s_setprio_inc_wg, "vIs", "n", "setprio-inc-wg-inst")
+TARGET_BUILTIN(__builtin_amdgcn_s_monitor_sleep,  "vIs", "n", "gfx1250-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_fp8, "V2hs", "nc", "gfx1250-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_f16_bf8, "V2hs", "nc", "gfx1250-insts")

@@ -3501,6 +3501,15 @@ def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
             [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
+// gfx1250 intrinsics
+// ===----------------------------------------------------------------------===//
+
+def int_amdgcn_s_monitor_sleep :
+  ClangBuiltin<"__builtin_amdgcn_s_monitor_sleep">,
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                            IntrHasSideEffects]>;
+
+//===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.
 // ===----------------------------------------------------------------------===//
