@@ -58,10 +58,13 @@
 #include "clang/Sema/SemaSwift.h"
 #include "clang/Sema/SemaWasm.h"
 #include "clang/Sema/Template.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -804,6 +807,52 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     assert(SS && SS->isInvalid() &&
            "Invalid scope specifier has already been diagnosed");
   }
+
+  // don't note standard include files for OpenCL and Objective C
+  if ((getLangOpts().CPlusPlus || getLangOpts().C99) && !getLangOpts().OpenCL &&
+      !getLangOpts().ObjC)
+    NoteStandardIncludes(II->getName(), IILoc, SS);
+}
+
+void Sema::NoteStandardIncludes(StringRef SymbolName, SourceLocation IILoc,
+                                StringRef Namespace) {
+  using clang::tooling::stdlib::Lang;
+
+  llvm::StringRef HeaderName = "";
+  tooling::stdlib::Lang LangOption = tooling::stdlib::Lang::C;
+  if (getLangOpts().CPlusPlus)
+    LangOption = clang::tooling::stdlib::Lang::CXX;
+
+  if (auto StdSym =
+          tooling::stdlib::Symbol::named(Namespace, SymbolName, LangOption)) {
+    if (auto Header = StdSym->header()) {
+      HeaderName = Header->name();
+      Diag(IILoc, diag::note_standard_lib_include_suggestion)
+          << HeaderName << (Namespace + SymbolName).str();
+
+      // Noting the C/C++ version as well
+      if (StdSym->version() != tooling::stdlib::Unknown) {
+        llvm::StringRef CPlusPlusVersion =
+            tooling::stdlib::GetAsString(StdSym->version());
+
+        Diag(IILoc, diag::note_standard_lib_version)
+            << (Namespace + SymbolName).str() << CPlusPlusVersion;
+      }
+    }
+  }
+}
+
+void Sema::NoteStandardIncludes(StringRef SymbolName, SourceLocation IILoc,
+                                const CXXScopeSpec *SS) {
+  std::string Namespace = "";
+  if (SS) {
+    llvm::raw_string_ostream Stream(Namespace);
+    if (SS->isValid())
+      SS->getScopeRep()->dump(Stream);
+    Stream.flush();
+  }
+
+  NoteStandardIncludes(SymbolName, IILoc, Namespace);
 }
 
 /// Determine whether the given result set contains either a type name
@@ -16783,6 +16832,7 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   }
 
   Diag(Loc, diag_id) << &II;
+  NoteStandardIncludes(II.getName(), Loc, "");
   if (Corrected) {
     // If the correction is going to suggest an implicitly defined function,
     // skip the correction as not being a particularly good idea.

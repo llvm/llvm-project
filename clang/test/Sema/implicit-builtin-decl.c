@@ -24,7 +24,8 @@ void h() {
 
 void f2() {
   fprintf(0, "foo"); // expected-warning{{declaration of built-in function 'fprintf' requires inclusion of the header <stdio.h>}} \
-   expected-error {{call to undeclared function 'fprintf'; ISO C99 and later do not support implicit function declarations}}
+   expected-error {{call to undeclared function 'fprintf'; ISO C99 and later do not support implicit function declarations}} \
+   expected-note {{maybe try to include <stdio.h>; 'fprintf' is defined in <stdio.h>}}
 }
 
 // PR2892

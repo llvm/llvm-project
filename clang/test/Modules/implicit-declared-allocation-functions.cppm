@@ -17,14 +17,20 @@ export void alloc_wrapper() {
   //   std::align_­val_­t is ill-formed unless a standard library declaration
   //   ([cstddef.syn], [new.syn], [std.modules]) of that name precedes
   //   ([basic.lookup.general]) the use of that name.
-  void *b = ::operator new((std::size_t)32); // expected-error {{use of undeclared identifier 'std'}}
-  void *c = ::operator new((std::size_t)32, // expected-error {{use of undeclared identifier 'std'}}
-                           (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}}
+  void *b = ::operator new((std::size_t)32); // expected-error {{use of undeclared identifier 'std'}} expected-note {{maybe try to include <cstddef>; 'std::size_t' is defined in <cstddef>}}
+  void *c = ::operator new((std::size_t)32, // expected-error {{use of undeclared identifier 'std'}} expected-note {{maybe try to include <cstddef>; 'std::size_t' is defined in <cstddef>}}
+                           (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}} \
+                                                     expected-note {{maybe try to include <new>; 'std::align_val_t' is defined in <new>}} \
+                                                     expected-note {{'std::align_val_t' is a c++17 feature}}
 
   ::operator delete(a);
-  ::operator delete(b, (std::size_t)32); // expected-error {{use of undeclared identifier 'std'}}
-  ::operator delete(c, (std::size_t)32,  // expected-error {{use of undeclared identifier 'std'}}
-                       (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}}
+  ::operator delete(b, (std::size_t)32); // expected-error {{use of undeclared identifier 'std'}} \
+                                            expected-note {{maybe try to include <cstddef>; 'std::size_t' is defined in <cstddef>}}
+  ::operator delete(c, (std::size_t)32,  // expected-error {{use of undeclared identifier 'std'}} \
+                                            expected-note {{maybe try to include <cstddef>; 'std::size_t' is defined in <cstddef>}}
+                       (std::align_val_t)64); // expected-error {{use of undeclared identifier 'std'}} \
+                                                 expected-note {{maybe try to include <new>; 'std::align_val_t' is defined in <new>}} \
+                                                 expected-note {{'std::align_val_t' is a c++17 feature}}
 }
 
 //--- new
