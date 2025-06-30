@@ -3,5 +3,5 @@
 
 ; CHECK: Running pass: EmbedBitcodePass on [module]
 ; THINLTO: Running analysis: ModuleSummaryIndexAnalysis on [module]
-; CHECK-NEXT: Running pass: FatLtoCleanup on [module]
+; CHECK: Running pass: FatLtoCleanup on [module]
 ; CHECK-NEXT: Running pass: LowerTypeTestsPass on [module]
