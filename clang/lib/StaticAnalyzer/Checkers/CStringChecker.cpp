@@ -272,8 +272,7 @@ public:
   static ProgramStateRef
   invalidateDestinationBufferBySize(CheckerContext &C, ProgramStateRef S,
                                     const Expr *BufE, ConstCFGElementRef Elem,
-                                    SVal BufV, SVal SizeV, QualType SizeTy,
-                                    bool CouldAccessOutOfBound = true);
+                                    SVal BufV, SVal SizeV, QualType SizeTy);
 
   /// Operation never overflows, do not invalidate the super region.
   static ProgramStateRef invalidateDestinationBufferNeverOverflows(
@@ -1212,17 +1211,14 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
 
 ProgramStateRef CStringChecker::invalidateDestinationBufferBySize(
     CheckerContext &C, ProgramStateRef S, const Expr *BufE,
-    ConstCFGElementRef Elem, SVal BufV, SVal SizeV, QualType SizeTy,
-    bool CouldAccessOutOfBound) {
+    ConstCFGElementRef Elem, SVal BufV, SVal SizeV, QualType SizeTy) {
   auto InvalidationTraitOperations =
-      [&C, S, BufTy = BufE->getType(), BufV, SizeV, SizeTy,
-       CouldAccessOutOfBound](RegionAndSymbolInvalidationTraits &ITraits,
-                              const MemRegion *R) {
+      [&C, S, BufTy = BufE->getType(), BufV, SizeV,
+       SizeTy](RegionAndSymbolInvalidationTraits &ITraits, const MemRegion *R) {
         // If destination buffer is a field region and access is in bound, do
         // not invalidate its super region.
         if (MemRegion::FieldRegionKind == R->getKind() &&
-            (!CouldAccessOutOfBound ||
-             isFirstBufInBound(C, S, BufV, BufTy, SizeV, SizeTy))) {
+            isFirstBufInBound(C, S, BufV, BufTy, SizeV, SizeTy)) {
           ITraits.setTrait(
               R,
               RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
@@ -2295,9 +2291,13 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // can use LazyCompoundVals to copy the source values into the destination.
     // This would probably remove any existing bindings past the end of the
     // string, but that's still an improvement over blank invalidation.
-    state = invalidateDestinationBufferBySize(
-        C, state, Dst.Expression, Call.getCFGElementRef(), *dstRegVal,
-        amountCopied, C.getASTContext().getSizeType(), CouldAccessOutOfBound);
+    if (CouldAccessOutOfBound)
+      state = invalidateDestinationBufferBySize(
+          C, state, Dst.Expression, Call.getCFGElementRef(), *dstRegVal,
+          amountCopied, C.getASTContext().getSizeType());
+    else
+      state = invalidateDestinationBufferNeverOverflows(
+          C, state, Call.getCFGElementRef(), *dstRegVal);
 
     // Invalidate the source (const-invalidation without const-pointer-escaping
     // the address of the top-level region).
