@@ -33,6 +33,10 @@ class MCSymbolRefExpr;
 /// needed for parsing.
 class MCExpr {
 public:
+  // Allow MC classes to access the private `print` function.
+  friend class MCAsmInfo;
+  friend class MCFragment;
+  friend class MCOperand;
   enum ExprKind : uint8_t {
     Binary,    ///< Binary expressions.
     Constant,  ///< Constant expressions.
@@ -53,6 +57,8 @@ private:
   unsigned SubclassData : NumSubclassDataBits;
   SMLoc Loc;
 
+  void print(raw_ostream &OS, const MCAsmInfo *MAI,
+             int SurroundingPrec = 0) const;
   bool evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
                           bool InSet) const;
 
@@ -83,9 +89,6 @@ public:
   /// \name Utility Methods
   /// @{
 
-  // TODO: Make this private. Users should call MCAsmInfo::printExpr instead.
-  LLVM_ABI void print(raw_ostream &OS, const MCAsmInfo *MAI,
-                      int SurroundingPrec = 0) const;
   LLVM_ABI void dump() const;
 
   /// @}
