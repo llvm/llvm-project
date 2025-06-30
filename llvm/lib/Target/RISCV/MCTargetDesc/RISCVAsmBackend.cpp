@@ -395,8 +395,7 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF,
     return std::make_pair(false, false);
   const MCExpr &Expr = LF.getValue();
   if (ULEB128Reloc) {
-    LF.getFixups().push_back(
-        MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+    LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   }
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm), false);
 }
@@ -425,11 +424,9 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     Count -= 1;
   }
 
-  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
-                          STI->hasFeature(RISCV::FeatureStdExtZca);
-  // The canonical nop on RVC is c.nop.
   if (Count % 4 == 2) {
-    OS.write(UseCompressedNop ? "\x01\0" : "\0\0", 2);
+    // The canonical nop with Zca is c.nop.
+    OS.write(STI->hasFeature(RISCV::FeatureStdExtZca) ? "\x01\0" : "\0\0", 2);
     Count -= 2;
   }
 
@@ -857,9 +854,7 @@ bool RISCVAsmBackend::shouldInsertExtraNopBytesForCodeAlign(
   if (!STI->hasFeature(RISCV::FeatureRelax))
     return false;
 
-  bool UseCompressedNop = STI->hasFeature(RISCV::FeatureStdExtC) ||
-                          STI->hasFeature(RISCV::FeatureStdExtZca);
-  unsigned MinNopLen = UseCompressedNop ? 2 : 4;
+  unsigned MinNopLen = STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
 
   if (AF.getAlignment() <= MinNopLen) {
     return false;

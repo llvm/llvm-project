@@ -12,16 +12,12 @@
 define void @iv32(ptr noalias %a, ptr noalias %b, i32 %N) {
 ; IF-EVL-LABEL: @iv32(
 ; IF-EVL-NEXT:  entry:
-; IF-EVL-NEXT:    [[TMP19:%.*]] = sub i32 -1, [[N:%.*]]
-; IF-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vscale.i32()
-; IF-EVL-NEXT:    [[TMP2:%.*]] = mul nuw i32 [[TMP1]], 4
-; IF-EVL-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP19]], [[TMP2]]
-; IF-EVL-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
+; IF-EVL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; IF-EVL:       vector.ph:
 ; IF-EVL-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
 ; IF-EVL-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 4
 ; IF-EVL-NEXT:    [[TMP8:%.*]] = sub i32 [[TMP5]], 1
-; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], [[TMP8]]
+; IF-EVL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N:%.*]], [[TMP8]]
 ; IF-EVL-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], [[TMP5]]
 ; IF-EVL-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vscale.i32()

@@ -1567,11 +1567,23 @@ LogicalResult GlobalOp::verify() {
     // Check that the type of the initial value is compatible with the type of
     // the global variable.
     if (auto elementsAttr = llvm::dyn_cast<ElementsAttr>(initValue)) {
-      Type initType = elementsAttr.getType();
-      Type tensorType = getTensorTypeFromMemRefType(memrefType);
-      if (initType != tensorType)
-        return emitOpError("initial value expected to be of type ")
-               << tensorType << ", but was of type " << initType;
+      // Check the element types match.
+      auto initElementType =
+          cast<TensorType>(elementsAttr.getType()).getElementType();
+      auto memrefElementType = memrefType.getElementType();
+
+      if (initElementType != memrefElementType)
+        return emitOpError("initial value element expected to be of type ")
+               << memrefElementType << ", but was of type " << initElementType;
+
+      // Check the shapes match, given that memref globals can only produce
+      // statically shaped memrefs and elements literal type must have a static
+      // shape we can assume both types are shaped.
+      auto initShape = elementsAttr.getShapedType().getShape();
+      auto memrefShape = memrefType.getShape();
+      if (initShape != memrefShape)
+        return emitOpError("initial value shape expected to be ")
+               << memrefShape << " but was " << initShape;
     }
   }
 
@@ -2917,27 +2929,32 @@ static bool haveCompatibleStrides(MemRefType t1, MemRefType t2,
 }
 
 static LogicalResult produceSubViewErrorMsg(SliceVerificationResult result,
-                                            Operation *op, Type expectedType) {
+                                            SubViewOp op, Type expectedType) {
   auto memrefType = llvm::cast<ShapedType>(expectedType);
   switch (result) {
   case SliceVerificationResult::Success:
     return success();
   case SliceVerificationResult::RankTooLarge:
     return op->emitError("expected result rank to be smaller or equal to ")
-           << "the source rank. ";
+           << "the source rank, but got " << op.getType();
   case SliceVerificationResult::SizeMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result sizes) ";
+           << " or a rank-reduced version. (mismatch of result sizes), but got "
+           << op.getType();
   case SliceVerificationResult::ElemTypeMismatch:
     return op->emitError("expected result element type to be ")
-           << memrefType.getElementType();
+           << memrefType.getElementType() << ", but got " << op.getType();
   case SliceVerificationResult::MemSpaceMismatch:
-    return op->emitError("expected result and source memory spaces to match.");
+    return op->emitError(
+               "expected result and source memory spaces to match, but got ")
+           << op.getType();
   case SliceVerificationResult::LayoutMismatch:
     return op->emitError("expected result type to be ")
            << expectedType
-           << " or a rank-reduced version. (mismatch of result layout) ";
+           << " or a rank-reduced version. (mismatch of result layout), but "
+              "got "
+           << op.getType();
   }
   llvm_unreachable("unexpected subview verification result");
 }

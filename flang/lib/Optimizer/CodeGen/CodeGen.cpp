@@ -1294,6 +1294,51 @@ genCUFAllocDescriptor(mlir::Location loc,
       .getResult();
 }
 
+/// Get the address of the type descriptor global variable that was created by
+/// lowering for derived type \p recType.
+template <typename ModOpTy>
+static mlir::Value
+getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
+                  mlir::Location loc, fir::RecordType recType,
+                  const fir::FIRToLLVMPassOptions &options) {
+  std::string name =
+      options.typeDescriptorsRenamedForAssembly
+          ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
+          : fir::NameUniquer::getTypeDescriptorName(recType.getName());
+  mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
+  if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name))
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                    global.getSymName());
+  // The global may have already been translated to LLVM.
+  if (auto global = mod.template lookupSymbol<mlir::LLVM::GlobalOp>(name))
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                    global.getSymName());
+  // Type info derived types do not have type descriptors since they are the
+  // types defining type descriptors.
+  if (options.ignoreMissingTypeDescriptors ||
+      fir::NameUniquer::belongsToModule(
+          name, Fortran::semantics::typeInfoBuiltinModule))
+    return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
+
+  if (!options.skipExternalRttiDefinition)
+    fir::emitFatalError(loc,
+                        "runtime derived type info descriptor was not "
+                        "generated and skipExternalRttiDefinition and "
+                        "ignoreMissingTypeDescriptors options are not set");
+
+  // Rtti for a derived type defined in another compilation unit and for which
+  // rtti was not defined in lowering because of the skipExternalRttiDefinition
+  // option. Generate the object declaration now.
+  auto insertPt = rewriter.saveInsertionPoint();
+  rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
+  mlir::LLVM::GlobalOp global = rewriter.create<mlir::LLVM::GlobalOp>(
+      loc, llvmPtrTy, /*constant=*/true, mlir::LLVM::Linkage::External, name,
+      mlir::Attribute());
+  rewriter.restoreInsertionPoint(insertPt);
+  return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                  global.getSymName());
+}
+
 /// Common base class for embox to descriptor conversion.
 template <typename OP>
 struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
@@ -1406,36 +1451,6 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                        stride);
   }
 
-  /// Get the address of the type descriptor global variable that was created by
-  /// lowering for derived type \p recType.
-  template <typename ModOpTy>
-  mlir::Value
-  getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
-                    mlir::Location loc, fir::RecordType recType) const {
-    std::string name =
-        this->options.typeDescriptorsRenamedForAssembly
-            ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
-            : fir::NameUniquer::getTypeDescriptorName(recType.getName());
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
-    if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name)) {
-      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
-                                                      global.getSymName());
-    }
-    if (auto global = mod.template lookupSymbol<mlir::LLVM::GlobalOp>(name)) {
-      // The global may have already been translated to LLVM.
-      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
-                                                      global.getSymName());
-    }
-    // Type info derived types do not have type descriptors since they are the
-    // types defining type descriptors.
-    if (!this->options.ignoreMissingTypeDescriptors &&
-        !fir::NameUniquer::belongsToModule(
-            name, Fortran::semantics::typeInfoBuiltinModule))
-      fir::emitFatalError(
-          loc, "runtime derived type info descriptor was not generated");
-    return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
-  }
-
   template <typename ModOpTy>
   mlir::Value populateDescriptor(mlir::Location loc, ModOpTy mod,
                                  fir::BaseBoxType boxTy, mlir::Type inputType,
@@ -1500,7 +1515,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
           mlir::Type innerType = fir::unwrapInnerType(inputType);
           if (innerType && mlir::isa<fir::RecordType>(innerType)) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(innerType);
-            typeDesc = getTypeDescriptor(mod, rewriter, loc, recTy);
+            typeDesc =
+                getTypeDescriptor(mod, rewriter, loc, recTy, this->options);
           } else {
             // Unlimited polymorphic type descriptor with no record type. Set
             // type descriptor address to a clean state.
@@ -1508,8 +1524,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                 loc, ::getLlvmPtrType(mod.getContext()));
           }
         } else {
-          typeDesc = getTypeDescriptor(mod, rewriter, loc,
-                                       fir::unwrapIfDerived(boxTy));
+          typeDesc = getTypeDescriptor(
+              mod, rewriter, loc, fir::unwrapIfDerived(boxTy), this->options);
         }
       }
       if (typeDesc)
@@ -3021,22 +3037,10 @@ struct TypeDescOpConversion : public fir::FIROpConversion<fir::TypeDescOp> {
     assert(mlir::isa<fir::RecordType>(inTy) && "expecting fir.type");
     auto recordType = mlir::dyn_cast<fir::RecordType>(inTy);
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
-    std::string typeDescName =
-        this->options.typeDescriptorsRenamedForAssembly
-            ? fir::NameUniquer::getTypeDescriptorAssemblyName(
-                  recordType.getName())
-            : fir::NameUniquer::getTypeDescriptorName(recordType.getName());
-    auto llvmPtrTy = ::getLlvmPtrType(typeDescOp.getContext());
-    if (auto global = module.lookupSymbol<mlir::LLVM::GlobalOp>(typeDescName)) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
-          typeDescOp, llvmPtrTy, global.getSymName());
-      return mlir::success();
-    } else if (auto global = module.lookupSymbol<fir::GlobalOp>(typeDescName)) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
-          typeDescOp, llvmPtrTy, global.getSymName());
-      return mlir::success();
-    }
-    return mlir::failure();
+    mlir::Value typeDesc = getTypeDescriptor(
+        module, rewriter, typeDescOp.getLoc(), recordType, this->options);
+    rewriter.replaceOp(typeDescOp, typeDesc);
+    return mlir::success();
   }
 };
 

@@ -7,7 +7,7 @@ target datalayout="p:16:16"
 
 ; Test cases for https://github.com/llvm/llvm-project/issues/142957
 
-; FIXME: Cannot speculatively execute %l, because %div may trigger UB and must be
+; Cannot speculatively execute %l, because %div may trigger UB and must be
 ; predicated.
 define void @ptr_depends_on_sdiv(ptr noalias %dst, i16 noundef %off) {
 ; CHECK-LABEL: define void @ptr_depends_on_sdiv(
@@ -26,36 +26,40 @@ define void @ptr_depends_on_sdiv(ptr noalias %dst, i16 noundef %off) {
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv i16 24316, [[OFF]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i16 [ poison, %[[VECTOR_BODY]] ], [ [[TMP2]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i16> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_SDIV_IF]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = sdiv i16 24316, [[OFF]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i16> [[TMP4]], i16 [[TMP18]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = add i16 [[OFFSET_IDX]], 16383
-; CHECK-NEXT:    [[TMP7:%.*]] = shl i16 [[TMP3]], 14
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i16 [[TMP13]], [[TMP7]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr @src, i16 [[TMP8]]
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i64, ptr [[TMP20]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP21]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i16> [ [[TMP4]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP7]], %[[PRED_SDIV_IF1]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = add <2 x i16> [[VEC_IND]], splat (i16 16383)
+; CHECK-NEXT:    [[TMP22:%.*]] = shl <2 x i16> [[TMP8]], splat (i16 14)
+; CHECK-NEXT:    [[TMP23:%.*]] = sub <2 x i16> [[TMP21]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[TMP0]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP19]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i16> [[TMP23]], i32 0
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP13]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP24]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP10]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP11]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP0]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_IF3]]:
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x i16> [[TMP23]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP25]]
+; CHECK-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP20]], align 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP16]]
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP17]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; CHECK:       [[PRED_STORE_CONTINUE4]]:
@@ -94,15 +98,17 @@ exit:
   ret void
 }
 
-; FIXME: Cannot speculatively execute %l, because %off may be poison.
+; Cannot speculatively execute %l, because %off may be poison.
 define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-LABEL: define void @ptr_depends_on_possibly_poison_value(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], i16 [[OFF:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i16 1, [[OFF]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[TMP0]], [[OFF]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[OFF]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = sub <2 x i16> splat (i16 1), [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i16> [[TMP0]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
@@ -110,25 +116,26 @@ define void @ptr_depends_on_possibly_poison_value(ptr noalias %dst, i16 %off) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 9, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i16> [[VEC_IND]], splat (i16 10)
-; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr @src, i16 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP2]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i16> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP9]], ptr [[TMP8]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP2]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x i16> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP15]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP16]], align 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP13]], ptr [[TMP12]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
@@ -237,7 +244,7 @@ exit:
   ret void
 }
 
-; FIXME: Cannot speculatively execute %l, because %off may be poison.
+; Cannot speculatively execute %l, because %off may be poison.
 define void @ptr_depends_on_possibly_poison_value_from_load(ptr noalias %dst) {
 ; CHECK-LABEL: define void @ptr_depends_on_possibly_poison_value_from_load(
 ; CHECK-SAME: ptr noalias [[DST:%.*]]) {
@@ -251,28 +258,31 @@ define void @ptr_depends_on_possibly_poison_value_from_load(ptr noalias %dst) {
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i16 9, [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @src, align 1
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i16> [[VEC_IND]], splat (i16 10)
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i16 1, [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[OFFSET_IDX]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr @src, i16 [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i16> splat (i16 1), [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i16> [[TMP2]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i16> [[VEC_IND]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP1]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i16> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP15]], align 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 0
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP1]], i32 1
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x i16> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr @src, i16 [[TMP16]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP17]], align 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[OFFSET_IDX]], 1
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[DST]], i16 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[WIDE_LOAD]], i32 1
 ; CHECK-NEXT:    store i64 [[TMP14]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:

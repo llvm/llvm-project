@@ -445,10 +445,15 @@ static Value createPrivateMemRef(AffineForOp forOp,
   // Replace all users of 'oldMemRef' with 'newMemRef'.
   Operation *domFilter =
       getDominanceFilterForPrivateMemRefRepl(sliceInsertionBlock, storeOps);
+  auto userFilterFn = [&](Operation *user) {
+    auto domInfo = std::make_unique<DominanceInfo>(
+        domFilter->getParentOfType<FunctionOpInterface>());
+    return domInfo->dominates(domFilter, user);
+  };
   LogicalResult res = replaceAllMemRefUsesWith(
       oldMemRef, newMemRef, /*extraIndices=*/{}, indexRemap,
       /*extraOperands=*/outerIVs,
-      /*symbolOperands=*/{}, domFilter);
+      /*symbolOperands=*/{}, userFilterFn);
   assert(succeeded(res) &&
          "replaceAllMemrefUsesWith should always succeed here");
   (void)res;

@@ -9,6 +9,22 @@ from lldbsuite.test import lldbutil
 
 
 class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
+    def check_reference(self, var_name: str, expected_type: str):
+        self.expect_var_path(
+            var_name,
+            summary="size=1",
+            type=expected_type,
+            children=[
+                ValueCheck(
+                    name="[0]",
+                    children=[
+                        ValueCheck(name="first", summary='"Hello"'),
+                        ValueCheck(name="second", summary='"World"'),
+                    ],
+                ),
+            ],
+        )
+
     @add_test_categories(["libc++"])
     def test_iterator_formatters(self):
         """Test that std::unordered_map related structures are formatted correctly when printed.
@@ -63,4 +79,21 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
                 ValueCheck(name="first", summary='"Baz"'),
                 ValueCheck(name="second", summary='"Qux"'),
             ],
+        )
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        # Test references to std::unordered_map
+        self.check_reference("ref1", "const StringMapT &")
+        self.check_reference("ref2", "StringMapT &")
+        self.check_reference("ref3", "StringMapTRef")
+        self.check_reference("ref4", "const StringMapT &")
+        self.check_reference("ref5", "const StringMapT &&")
+        self.check_reference("ref6", "StringMapT &&")
+
+        # FIXME: we're getting this wrong.
+        self.expect_var_path(
+            "ref7",
+            summary="size=0",
+            type="const StringMapT *const &",
         )

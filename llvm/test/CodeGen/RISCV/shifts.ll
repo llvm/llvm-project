@@ -779,3 +779,78 @@ define i128 @shl128_shamt32(i128 %a, i32 signext %b) nounwind {
   %1 = shl i128 %a, %zext
   ret i128 %1
 }
+
+; Do some arithmetic on the i32 shift amount before the zext nneg. This
+; arithmetic will be promoted using a W instruction RV64. Make sure we can use
+; this to avoid an unncessary zext of the shift amount.
+define i128 @shl128_shamt32_arith(i128 %a, i32 signext %b) nounwind {
+; RV32I-LABEL: shl128_shamt32_arith:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    lw a3, 0(a1)
+; RV32I-NEXT:    lw a4, 4(a1)
+; RV32I-NEXT:    lw a5, 8(a1)
+; RV32I-NEXT:    lw a1, 12(a1)
+; RV32I-NEXT:    addi a2, a2, 1
+; RV32I-NEXT:    sw zero, 0(sp)
+; RV32I-NEXT:    sw zero, 4(sp)
+; RV32I-NEXT:    sw zero, 8(sp)
+; RV32I-NEXT:    sw zero, 12(sp)
+; RV32I-NEXT:    addi a6, sp, 16
+; RV32I-NEXT:    srli a7, a2, 3
+; RV32I-NEXT:    andi t0, a2, 31
+; RV32I-NEXT:    andi a7, a7, 12
+; RV32I-NEXT:    sub a6, a6, a7
+; RV32I-NEXT:    sw a3, 16(sp)
+; RV32I-NEXT:    sw a4, 20(sp)
+; RV32I-NEXT:    sw a5, 24(sp)
+; RV32I-NEXT:    sw a1, 28(sp)
+; RV32I-NEXT:    lw a1, 0(a6)
+; RV32I-NEXT:    lw a3, 4(a6)
+; RV32I-NEXT:    lw a4, 8(a6)
+; RV32I-NEXT:    lw a5, 12(a6)
+; RV32I-NEXT:    xori a6, t0, 31
+; RV32I-NEXT:    sll a7, a3, a2
+; RV32I-NEXT:    srli t0, a1, 1
+; RV32I-NEXT:    sll a5, a5, a2
+; RV32I-NEXT:    sll a1, a1, a2
+; RV32I-NEXT:    sll a2, a4, a2
+; RV32I-NEXT:    srli a3, a3, 1
+; RV32I-NEXT:    srli a4, a4, 1
+; RV32I-NEXT:    srl t0, t0, a6
+; RV32I-NEXT:    srl a3, a3, a6
+; RV32I-NEXT:    srl a4, a4, a6
+; RV32I-NEXT:    or a6, a7, t0
+; RV32I-NEXT:    or a2, a2, a3
+; RV32I-NEXT:    or a4, a5, a4
+; RV32I-NEXT:    sw a1, 0(a0)
+; RV32I-NEXT:    sw a6, 4(a0)
+; RV32I-NEXT:    sw a2, 8(a0)
+; RV32I-NEXT:    sw a4, 12(a0)
+; RV32I-NEXT:    addi sp, sp, 32
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: shl128_shamt32_arith:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addiw a4, a2, 1
+; RV64I-NEXT:    addi a3, a4, -64
+; RV64I-NEXT:    sll a2, a0, a4
+; RV64I-NEXT:    bltz a3, .LBB17_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a1, a2
+; RV64I-NEXT:    j .LBB17_3
+; RV64I-NEXT:  .LBB17_2:
+; RV64I-NEXT:    sll a1, a1, a4
+; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    not a4, a4
+; RV64I-NEXT:    srl a0, a0, a4
+; RV64I-NEXT:    or a1, a1, a0
+; RV64I-NEXT:  .LBB17_3:
+; RV64I-NEXT:    srai a0, a3, 63
+; RV64I-NEXT:    and a0, a0, a2
+; RV64I-NEXT:    ret
+  %c = add i32 %b, 1
+  %zext = zext nneg i32 %c to i128
+  %1 = shl i128 %a, %zext
+  ret i128 %1
+}
