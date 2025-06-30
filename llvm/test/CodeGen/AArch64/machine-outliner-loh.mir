@@ -1,0 +1,50 @@
+# RUN: llc %s -mtriple=aarch64-apple-ios -run-pass=aarch64-collect-loh -run-pass=machine-outliner -stats -o - 2>%t | FileCheck %s
+# RUN: FileCheck %s --input-file=%t --check-prefix=STATS
+# REQUIRES: asserts
+
+--- |
+  define void  @func0() noredzone minsize { ret void }
+
+  @g0 = external global i32
+...
+---
+# CHECK-LABEL: name: func0
+name: func0
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: bb.0:
+  bb.0:
+    ; CHECK: BL @OUTLINED_FUNCTION_0
+    $x10 = ADRP target-flags(aarch64-page) @g0
+    $x11 = ADDXri $x10, target-flags(aarch64-pageoff) @g0, 0
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+
+  ; CHECK-LABEL: bb.1:
+  bb.1:
+    ; CHECK: BL @OUTLINED_FUNCTION_0
+    ; MCLOH_AdrpAdd is not generated because $x11 is still live. If we want to
+    ; outline these instructions, we must remove the MCLOH_AdrpAdd from bb.0.
+    $x10 = ADRP target-flags(aarch64-page) @g0
+    $x11 = ADDXri $x10, target-flags(aarch64-pageoff) @g0, 0
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    $w0 = ORRWri $wzr, 1
+    ; CHECK: $x12 = ADDXri $x11, target-flags(aarch64-pageoff) @g0, 0
+    $x12 = ADDXri $x11, target-flags(aarch64-pageoff) @g0, 0
+
+...
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK:           $x10 = ADRP target-flags(aarch64-page) @g0
+# CHECK:           $x11 = ADDXri $x10, target-flags(aarch64-pageoff) @g0, 0
+# CHECK:           $w0 = ORRWri $wzr, 1
+# CHECK:           $w0 = ORRWri $wzr, 1
+# CHECK:           $w0 = ORRWri $wzr, 1
+# CHECK:           $w0 = ORRWri $wzr, 1
+
+# STATS: 1 aarch64-collect-loh - Number of simplifiable ADRP + ADD
+# STATS: 1 machine-outliner    - Total number of Linker Optimization Hints removed
