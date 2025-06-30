@@ -1319,6 +1319,9 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
     `cir.bool` result. The kinds of comparison available are:
     [lt,gt,ge,eq,ne]
 
+    Note: The 'complex' dialect has separate complex.eq and complex.neq
+    operations
+
     ```mlir
     %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
     ```
