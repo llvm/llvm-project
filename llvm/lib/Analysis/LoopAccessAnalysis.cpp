@@ -948,6 +948,7 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   TypeSize AllocSize = DL.getTypeAllocSize(AccessTy);
   int64_t Size = AllocSize.getFixedValue();
 
+  // Huge step value - give up.
   std::optional<int64_t> StepVal = APStepVal->trySExtValue();
   if (!StepVal)
     return std::nullopt;
