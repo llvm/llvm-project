@@ -105,9 +105,9 @@ static cl::list<std::string> ReflectList(
     cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
     cl::ValueRequired);
 
-static cl::opt<bool> NVVMReflectDCE("nvvm-reflect-dce", cl::init(false),
-                                    cl::Hidden,
-                                    cl::desc("Delete dead blocks introduced by reflect call elimination"));
+static cl::opt<bool> NVVMReflectDCE(
+    "nvvm-reflect-dce", cl::init(false), cl::Hidden,
+    cl::desc("Delete dead blocks introduced by reflect call elimination"));
 
 // Set the ReflectMap with, first, the value of __CUDA_FTZ from module metadata,
 // and then the key/value pairs from the command line.
@@ -245,7 +245,7 @@ void NVVMReflect::replaceReflectCalls(
 
   for (auto &[Call, NewValue] : ReflectReplacements)
     ReplaceInstructionWithConst(Call, NewValue);
-  
+
   // Constant fold reflect results. If NVVMReflectDCE is enabled, we will
   // alternate between constant folding/propagation and dead block elimination.
   // Terminator folding may create new dead blocks. When those dead blocks are
@@ -261,8 +261,8 @@ void NVVMReflect::replaceReflectCalls(
         BasicBlock *BB = I->getParent();
         SmallVector<BasicBlock *, 8> Succs(successors(BB));
         // Some blocks may become dead if the terminator is folded because
-        // a conditional branch is turned into a direct branch. Add those dead blocks
-        // to the dead blocks set if NVVMReflectDCE is enabled.
+        // a conditional branch is turned into a direct branch. Add those dead
+        // blocks to the dead blocks set if NVVMReflectDCE is enabled.
         if (ConstantFoldTerminator(BB)) {
           for (BasicBlock *Succ : Succs) {
             if (pred_empty(Succ) &&
