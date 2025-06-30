@@ -64,8 +64,8 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
         "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(m_bp.GetTarget()));
     breakpoint.instructionReference = formatted_addr;
 
-    auto source = CreateSource(bp_addr, m_dap.target);
-    if (!IsAssemblySource(source)) {
+    std::optional<protocol::Source> source = m_dap.ResolveSource(bp_addr);
+    if (source && !IsAssemblySource(*source)) {
       auto line_entry = bp_addr.GetLineEntry();
       const auto line = line_entry.GetLine();
       if (line != LLDB_INVALID_LINE_NUMBER)

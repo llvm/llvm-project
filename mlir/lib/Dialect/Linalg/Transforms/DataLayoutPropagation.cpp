@@ -876,11 +876,8 @@ public:
       return failure();
     }
     // Currently only support static inner tile sizes.
-    if (llvm::any_of(packOp.getStaticTiles(), [](int64_t size) {
-          return ShapedType::isDynamic(size);
-        })) {
+    if (llvm::any_of(packOp.getStaticTiles(), ShapedType::isDynamic))
       return failure();
-    }
 
     // User controlled propagation function.
     if (!controlFn(&packOp.getSourceMutable()))
@@ -1002,11 +999,8 @@ public:
       return failure();
     }
     // Currently only support static inner tile sizes.
-    if (llvm::any_of(unPackOp.getStaticTiles(), [](int64_t size) {
-          return ShapedType::isDynamic(size);
-        })) {
+    if (llvm::any_of(unPackOp.getStaticTiles(), ShapedType::isDynamic))
       return failure();
-    }
 
     Operation *consumerOp = *result.user_begin();
     return TypeSwitch<Operation *, LogicalResult>(consumerOp)

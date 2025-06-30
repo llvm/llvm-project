@@ -225,7 +225,7 @@ bool SMEPeepholeOpt::optimizeStartStopPairs(
 }
 
 // Using the FORM_TRANSPOSED_REG_TUPLE pseudo can improve register allocation
-// of multi-vector intrinsics. However, the psuedo should only be emitted if
+// of multi-vector intrinsics. However, the pseudo should only be emitted if
 // the input registers of the REG_SEQUENCE are copy nodes where the source
 // register is in a StridedOrContiguous class. For example:
 //

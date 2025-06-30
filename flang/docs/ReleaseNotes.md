@@ -54,6 +54,11 @@ page](https://llvm.org/releases/).
    now be emitted into Clang's per-target resource directory
    (next to libclang_rt.*.*) where it is also found by Flang's driver.
 
+  * Flang on AArch64 now always depends on compiler-rt to provide the
+    `__trampoline_setup` function. This dependency will be automatically added
+    in in-tree builds with the AArch64 target, but compiler-rt will need to be
+    manually added to LLVM builds when building flang out-of-tree.
+
 ## New Issues Found
 
 

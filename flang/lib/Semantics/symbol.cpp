@@ -292,8 +292,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
   return common::visit(
-      common::visitors{
-          [](const UnknownDetails &) { return "Unknown"; },
+      common::visitors{[](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
           [](const ModuleDetails &) { return "Module"; },
           [](const SubprogramDetails &) { return "Subprogram"; },
@@ -312,7 +311,7 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-      },
+          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
       details);
 }
 
@@ -345,6 +344,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
             },
             [&](const HostAssocDetails &) {
               return this->has<HostAssocDetails>();
+            },
+            [&](const UserReductionDetails &) {
+              return this->has<UserReductionDetails>();
             },
             [](const auto &) { return false; },
         },
@@ -643,6 +645,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           },
           [&](const MiscDetails &x) {
             os << ' ' << MiscDetails::EnumToString(x.kind());
+          },
+          [&](const UserReductionDetails &x) {
+            for (auto &type : x.GetTypeList()) {
+              DumpType(os, type);
+            }
           },
           [&](const auto &x) { os << x; },
       },

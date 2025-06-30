@@ -482,15 +482,6 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   return event;
 }
 
-protocol::ExceptionBreakpointsFilter
-CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
-  protocol::ExceptionBreakpointsFilter filter;
-  filter.filter = bp.GetFilter();
-  filter.label = bp.GetLabel();
-  filter.defaultState = ExceptionBreakpoint::kDefaultValue;
-  return filter;
-}
-
 // "StackFrame": {
 //   "type": "object",
 //   "description": "A Stackframe contains the source location.",
@@ -552,7 +543,7 @@ CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
 //   },
 //   "required": [ "id", "name", "line", "column" ]
 // }
-llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
+llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
                                    lldb::SBFormat &format) {
   llvm::json::Object object;
   int64_t frame_id = MakeDAPFrameID(frame);
@@ -582,8 +573,10 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
   EmplaceSafeString(object, "name", frame_name);
 
   auto target = frame.GetThread().GetProcess().GetTarget();
-  auto source = CreateSource(frame.GetPCAddress(), target);
-  if (!IsAssemblySource(source)) {
+  std::optional<protocol::Source> source =
+      dap.ResolveSource(frame.GetPCAddress());
+
+  if (source && !IsAssemblySource(*source)) {
     // This is a normal source with a valid line entry.
     auto line_entry = frame.GetLineEntry();
     object.try_emplace("line", line_entry.GetLine());
@@ -607,7 +600,8 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame,
     object.try_emplace("column", 1);
   }
 
-  object.try_emplace("source", std::move(source));
+  if (source)
+    object.try_emplace("source", std::move(source).value());
 
   const auto pc = frame.GetPC();
   if (pc != LLDB_INVALID_ADDRESS) {
@@ -641,70 +635,6 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
   return llvm::json::Value(llvm::json::Object{{"id", thread.GetThreadID() + 1},
                                               {"name", name},
                                               {"presentationHint", "label"}});
-}
-
-// "Thread": {
-//   "type": "object",
-//   "description": "A Thread",
-//   "properties": {
-//     "id": {
-//       "type": "integer",
-//       "description": "Unique identifier for the thread."
-//     },
-//     "name": {
-//       "type": "string",
-//       "description": "A name of the thread."
-//     }
-//   },
-//   "required": [ "id", "name" ]
-// }
-llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format) {
-  llvm::json::Object object;
-  object.try_emplace("id", (int64_t)thread.GetThreadID());
-  std::string thread_str;
-  lldb::SBStream stream;
-  if (format && thread.GetDescriptionWithFormat(format, stream).Success()) {
-    thread_str = stream.GetData();
-  } else {
-    llvm::StringRef thread_name(thread.GetName());
-    llvm::StringRef queue_name(thread.GetQueueName());
-
-    if (!thread_name.empty()) {
-      thread_str = thread_name.str();
-    } else if (!queue_name.empty()) {
-      auto kind = thread.GetQueue().GetKind();
-      std::string queue_kind_label = "";
-      if (kind == lldb::eQueueKindSerial) {
-        queue_kind_label = " (serial)";
-      } else if (kind == lldb::eQueueKindConcurrent) {
-        queue_kind_label = " (concurrent)";
-      }
-
-      thread_str =
-          llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
-                        queue_name, queue_kind_label)
-              .str();
-    } else {
-      thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
-    }
-  }
-
-  EmplaceSafeString(object, "name", thread_str);
-
-  return llvm::json::Value(std::move(object));
-}
-
-llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format) {
-  lldb::SBMutex lock = process.GetTarget().GetAPIMutex();
-  std::lock_guard<lldb::SBMutex> guard(lock);
-
-  llvm::json::Array threads;
-  const uint32_t num_threads = process.GetNumThreads();
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    threads.emplace_back(CreateThread(thread, format));
-  }
-  return threads;
 }
 
 // "StoppedEvent": {

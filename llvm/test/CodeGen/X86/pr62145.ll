@@ -5,41 +5,36 @@
 define void @f(i64 %a, i64 %b) nounwind {
 ; X86-LABEL: f:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $-65536, %ebx # imm = 0xFFFF0000
-; X86-NEXT:    movl $-589824, %edi # imm = 0xFFF70000
+; X86-NEXT:    movl $-65536, %edi # imm = 0xFFFF0000
 ; X86-NEXT:    cmpl $65527, %eax # imm = 0xFFF7
 ; X86-NEXT:    jne .LBB0_2
 ; X86-NEXT:  # %bb.1: # %if.then
 ; X86-NEXT:    calll ext1@PLT
 ; X86-NEXT:  .LBB0_2: # %if.end
 ; X86-NEXT:    calll ext2@PLT
-; X86-NEXT:    andl %ebx, %esi
-; X86-NEXT:    xorl %edi, %esi
+; X86-NEXT:    andl %edi, %esi
+; X86-NEXT:    cmpl $-589824, %esi # imm = 0xFFF70000
 ; X86-NEXT:    jne .LBB0_3
 ; X86-NEXT:  # %bb.4: # %if.then2
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    jmp ext1@PLT # TAILCALL
 ; X86-NEXT:  .LBB0_3: # %if.end3
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %r15
 ; X64-NEXT:    pushq %r14
 ; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movabsq $-281474976710656, %r14 # imm = 0xFFFF000000000000
-; X64-NEXT:    movabsq $-2533274790395904, %r15 # imm = 0xFFF7000000000000
 ; X64-NEXT:    shrq $48, %rdi
 ; X64-NEXT:    cmpl $65527, %edi # imm = 0xFFF7
 ; X64-NEXT:    jne .LBB0_2
@@ -48,17 +43,17 @@ define void @f(i64 %a, i64 %b) nounwind {
 ; X64-NEXT:  .LBB0_2: # %if.end
 ; X64-NEXT:    callq ext2@PLT
 ; X64-NEXT:    andq %r14, %rbx
-; X64-NEXT:    cmpq %r15, %rbx
+; X64-NEXT:    movabsq $-2533274790395904, %rax # imm = 0xFFF7000000000000
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    cmpq %rax, %rbx
 ; X64-NEXT:    jne .LBB0_3
 ; X64-NEXT:  # %bb.4: # %if.then2
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r14
-; X64-NEXT:    popq %r15
 ; X64-NEXT:    jmp ext1@PLT # TAILCALL
 ; X64-NEXT:  .LBB0_3: # %if.end3
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    popq %r14
-; X64-NEXT:    popq %r15
 ; X64-NEXT:    retq
 entry:
   %shr.mask.i = and i64 %a, -281474976710656

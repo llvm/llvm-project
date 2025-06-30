@@ -70,8 +70,6 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
@@ -137,7 +135,7 @@ std::string llvm::computeLTOCacheKey(
     Hasher.update(Data);
   };
   auto AddUint8 = [&](const uint8_t I) {
-    Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&I, 1));
+    Hasher.update(ArrayRef<uint8_t>(&I, 1));
   };
   AddString(Conf.CPU);
   // FIXME: Hash more of Options. For now all clients initialize Options from
@@ -601,9 +599,7 @@ LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
       Ctx(Conf), CombinedModule(std::make_unique<Module>("ld-temp.o", Ctx)),
-      Mover(std::make_unique<IRMover>(*CombinedModule)) {
-  CombinedModule->IsNewDbgInfoFormat = UseNewDbgInfoFormat;
-}
+      Mover(std::make_unique<IRMover>(*CombinedModule)) {}
 
 LTO::ThinLTOState::ThinLTOState(ThinBackend BackendParam)
     : Backend(std::move(BackendParam)), CombinedIndex(/*HaveGVs*/ false) {
@@ -1393,8 +1389,14 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   SmallVector<const char *> LibcallSymbols;
-  copy_if(Libcalls.getLibcallNames(), std::back_inserter(LibcallSymbols),
-          [](const char *Name) { return Name; });
+  ArrayRef<RTLIB::LibcallImpl> LibcallImpls = Libcalls.getLibcallImpls();
+  LibcallSymbols.reserve(LibcallImpls.size());
+
+  for (RTLIB::LibcallImpl Impl : LibcallImpls) {
+    if (Impl != RTLIB::Unsupported)
+      LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl));
+  }
+
   return LibcallSymbols;
 }
 

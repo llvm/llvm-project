@@ -263,6 +263,13 @@ def libc_generated_header(name, hdr, yaml_template, other_srcs = []):
         yaml = yaml_template,
     )
 
+    if not hdr.startswith("staging/"):
+        fail(
+            "Generated headers should be placed in a 'staging/' directory " +
+            "so that they can be treated differently from constant source files " +
+            "when bootstrapping builds.",
+        )
+
     native.genrule(
         name = name,
         outs = [hdr],
