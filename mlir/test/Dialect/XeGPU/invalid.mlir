@@ -200,6 +200,15 @@ func.func @create_tdesc_vc_1(%src: ui64) {
 }
 
 // -----
+func.func @create_tdesc_vc_2(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
+  // expected-error@+1 {{invalid chunk size}}
+          -> !xegpu.tensor_desc<4xf32, #xegpu.scatter_tdesc_attr<chunk_size = 0>>
+  return
+}
+
+// -----
 func.func @create_tdesc_vc_3(%src: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   // expected-error@+1 {{Memory space mismatch}}
