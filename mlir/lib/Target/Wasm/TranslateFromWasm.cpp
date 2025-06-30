@@ -705,6 +705,11 @@ public:
     if (failed(parsingTables))
       return;
 
+    auto parsingMems = parseSection<WasmSectionType::MEMORY>();
+    if (failed(parsingMems))
+      return;
+
+
     // Copy over sizes of containers into statistics.
     numFunctionSectionItems = symbols.funcSymbols.size();
     numGlobalSectionItems = symbols.globalSymbols.size();
@@ -796,6 +801,21 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::TYPE>(ParserHead &ph,
     return failure();
   LLVM_DEBUG(llvm::dbgs() << "Parsed function type " << *funcType << '\n');
   symbols.moduleFuncTypes.push_back(*funcType);
+  return success();
+}
+
+template <>
+LogicalResult
+WasmBinaryParser::parseSectionItem<WasmSectionType::MEMORY>(ParserHead &ph, size_t) {
+  auto opLocation = ph.getLocation();
+  auto memory = ph.parseLimit(ctx);
+  if (failed(memory))
+    return failure();
+
+  LLVM_DEBUG(llvm::dbgs() << "  Registering memory " << *memory << '\n');
+  auto symbol = symbols.getNewMemorySymbolName();
+  auto memOp = builder.create<MemOp>(opLocation, symbol, *memory);
+  symbols.memSymbols.push_back({SymbolRefAttr::get(memOp)});
   return success();
 }
 } // namespace
