@@ -33,6 +33,10 @@ void genMinMaxlocReductionLoop(fir::FirOpBuilder &builder, mlir::Value array,
                                mlir::Type maskElemType, mlir::Value resultArr,
                                bool maskMayBeLogicalScalar);
 
+std::pair<mlir::Block *, mlir::Block *>
+convertDoLoopToCFG(DoLoopOp loop, mlir::PatternRewriter &rewriter, bool setNSW,
+                   bool forceLoopToExecuteOnce);
+
 } // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_TRANSFORMS_UTILS_H

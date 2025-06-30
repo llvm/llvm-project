@@ -297,6 +297,7 @@ bool CodeGenAction::beginSourceFileAction() {
   bool isOpenMPEnabled =
       ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP);
+  bool isOpenMPSimd = ci.getInvocation().getLangOpts().OpenMPSimd;
 
   fir::OpenMPFIRPassPipelineOpts opts;
 
@@ -328,12 +329,13 @@ bool CodeGenAction::beginSourceFileAction() {
     if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
             mlirModule->getOperation()))
       opts.isTargetDevice = offloadMod.getIsTargetDevice();
-
-    // WARNING: This pipeline must be run immediately after the lowering to
-    // ensure that the FIR is correct with respect to OpenMP operations/
-    // attributes.
-    fir::createOpenMPFIRPassPipeline(pm, opts);
   }
+
+  // WARNING: This pipeline must be run immediately after the lowering to
+  // ensure that the FIR is correct with respect to OpenMP operations/
+  // attributes.
+  if (isOpenMPEnabled || isOpenMPSimd)
+    fir::createOpenMPFIRPassPipeline(pm, opts);
 
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
@@ -616,12 +618,14 @@ void CodeGenAction::lowerHLFIRToFIR() {
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
   pm.enableVerifier(/*verifyPasses=*/true);
 
+  fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP))
+    enableOpenMP = fir::EnableOpenMP::Full;
+  if (ci.getInvocation().getLangOpts().OpenMPSimd)
+    enableOpenMP = fir::EnableOpenMP::Simd;
   // Create the pass pipeline
-  fir::createHLFIRToFIRPassPipeline(
-      pm,
-      ci.getInvocation().getFrontendOpts().features.IsEnabled(
-          Fortran::common::LanguageFeature::OpenMP),
-      level);
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, level);
   (void)mlir::applyPassManagerCLOptions(pm);
 
   mlir::TimingScope timingScopeMLIRPasses = timingScopeRoot.nest(
@@ -746,6 +750,9 @@ void CodeGenAction::generateLLVMIR() {
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP))
     config.EnableOpenMP = true;
+
+  if (ci.getInvocation().getLangOpts().OpenMPSimd)
+    config.EnableOpenMPSimd = true;
 
   if (ci.getInvocation().getLoweringOpts().getIntegerWrapAround())
     config.NSWOnLoopVarInc = false;
