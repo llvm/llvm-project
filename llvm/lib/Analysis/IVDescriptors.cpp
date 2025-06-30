@@ -51,6 +51,7 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
     return true;
@@ -741,10 +742,9 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                   : APInt::getMinValue(NumBits);
         ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       } else {
-        assert(IsSigned && "Only FindFirstIV with SMax is supported currently");
-        ValidRange =
-            ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                       APInt::getSignedMaxValue(NumBits) - 1);
+        APInt Sentinel = IsSigned ? APInt::getSignedMaxValue(NumBits)
+                                  : APInt::getMaxValue(NumBits);
+        ValidRange = ConstantRange::getNonEmpty(Sentinel, Sentinel - 1);
       }
 
       LLVM_DEBUG(dbgs() << "LV: "
@@ -770,6 +770,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
 
     if (CheckRange(true))
       return RecurKind::FindFirstIVSMin;
+    if (CheckRange(false))
+      return RecurKind::FindFirstIVUMin;
     return std::nullopt;
   };
 
@@ -1183,6 +1185,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Mul;
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
