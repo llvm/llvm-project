@@ -346,8 +346,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     if (TT.isX86()) {
       if (TT.isMacOSX() && !TT.isMacOSXVersionLT(10, 6))
         setLibcallImpl(RTLIB::BZERO, RTLIB::__bzero);
-    } else if (TT.isAArch64())
-      setLibcallImpl(RTLIB::BZERO, RTLIB::bzero);
+    }
 
     if (darwinHasSinCosStret(TT)) {
       setLibcallImpl(RTLIB::SINCOS_STRET_F32, RTLIB::__sincosf_stret);

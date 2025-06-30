@@ -15,6 +15,13 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
     : RuntimeLibcallImpl<Impl.Provides, prefix#Impl.LibCallFuncName>;
 
+/// Libcall Predicates
+def isOSDarwin : RuntimeLibcallPredicate<"TT.isOSDarwin()">;
+
+def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
+def darwinHasExp10 : RuntimeLibcallPredicate<"darwinHasExp10(TT)">;
+def hasSinCos : RuntimeLibcallPredicate<"hasSinCos(TT)">;
+
 //--------------------------------------------------------------------
 // Declare all kinds of used libcalls
 //--------------------------------------------------------------------
@@ -1046,7 +1053,8 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
   (add DefaultRuntimeLibcallImpls,
        AArch64LibcallImpls,
-       LibcallImpls<(add LibCallsCompilerRT64OrLibGCC), isAArch64_ILP64>)
+       LibcallImpls<(add LibCallsCompilerRT64OrLibGCC), isAArch64_ILP64>,
+       LibcallImpls<(add bzero), isOSDarwin>)
 >;
 
 // Prepend a # to every name
