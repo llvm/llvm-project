@@ -149,7 +149,9 @@ private:
   static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
 
   static bool darwinHasSinCosStret(const Triple &TT) {
-    assert(TT.isOSDarwin() && "should be called with darwin triple");
+    if (!TT.isOSDarwin())
+      return false;
+
     // Don't bother with 32 bit x86.
     if (TT.getArch() == Triple::x86)
       return false;

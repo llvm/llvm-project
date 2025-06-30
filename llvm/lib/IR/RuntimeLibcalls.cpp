@@ -494,8 +494,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 }
 
 bool RuntimeLibcallsInfo::darwinHasExp10(const Triple &TT) {
-  assert(TT.isOSDarwin() && "should be called with darwin triple");
-
   switch (TT.getOS()) {
   case Triple::MacOSX:
     return !TT.isMacOSXVersionLT(10, 9);

@@ -1015,6 +1015,16 @@ defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
 defvar DefaultLibcallImpls64 = !listconcat(DefaultRuntimeLibcallImpls,
                                            LibCallsCompilerRT64OrLibGCC);
 
+defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
+                                        darwinHasSinCosStret>;
+defvar DarwinExp10 = LibcallImpls<(add __exp10f, __exp10), darwinHasExp10>;
+
+defvar LibmHasSinCosF32 = LibcallImpls<(add sincosf), hasSinCos>;
+defvar LibmHasSinCosF64 =  LibcallImpls<(add sincos), hasSinCos>;
+defvar LibmHasSinCosF80 = LibcallImpls<(add sincos_f80), hasSinCos>;
+defvar LibmHasSinCosF128 = LibcallImpls<(add sincos_f128), hasSinCos>;
+defvar LibmHasSinCosPPCF128 = LibcallImpls<(add sincos_ppcf128), hasSinCos>;
+
 //===----------------------------------------------------------------------===//
 // AArch64 Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -1054,7 +1064,9 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
   (add DefaultRuntimeLibcallImpls,
        AArch64LibcallImpls,
        LibcallImpls<(add LibCallsCompilerRT64OrLibGCC), isAArch64_ILP64>,
-       LibcallImpls<(add bzero), isOSDarwin>)
+       LibcallImpls<(add bzero), isOSDarwin>,
+       DarwinExp10, DarwinSinCosStret,
+       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
 >;
 
 // Prepend a # to every name
