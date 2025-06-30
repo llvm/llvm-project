@@ -85,8 +85,14 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
-inline bool Isv2x16VT(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
+inline bool isPackedVectorTy(EVT VT) {
+  return (VT == MVT::v4i8 || VT == MVT::v2f16 || VT == MVT::v2bf16 ||
+          VT == MVT::v2i16 || VT == MVT::v2f32);
+}
+
+inline bool isPackedElementTy(EVT VT) {
+  return (VT == MVT::i8 || VT == MVT::f16 || VT == MVT::bf16 ||
+          VT == MVT::i16 || VT == MVT::f32);
 }
 
 inline bool shouldPassAsArray(Type *Ty) {
