@@ -497,29 +497,49 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-/// A small helper for arePHIsIntertwined that is asymmetric in \p L and \p R,
-/// and hence needs to be called twice.
-static bool isXoredWith(const Value *L, const Value *R) {
-  return count_if(L->users(), [L, R](const User *U) {
-           return match(U, m_c_Xor(m_Specific(L),
-                                   m_CombineOr(m_ZExtOrSelf(m_Specific(R)),
-                                               m_Trunc(m_Specific(R)))));
-         }) == 1;
-}
-
-/// Checks that \p L and \p R are used together in an XOR, which is a recurrence
-/// over both, ignoring zext and trunc. In other words, it checks for the
-/// following pattern:
+/// Checks that \p L and \p R are used together in an XOR in the use-def chain
+/// of \p SI's condition, ignoring any casts. The purpose of this function is to
+/// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
+/// computation. We cannot check the correctness of casts at this point, and
+/// rely on the KnownBits propagation to check correctness of the CRC
+/// computation.
+///
+/// In other words, it checks for the following pattern:
 ///
 /// loop:
 ///   %L = phi [_, %entry], [%L.next, %loop]
 ///   %R = phi [_, %entry], [%R.next, %loop]
 ///   ...
-///   _ = xor ((trunc|zext|self) %L) ((trunc|zext|self) %R)
+///   %xor = xor (CastOrSelf %L), (CastOrSelf %R)
 ///
-///  where at least one cast is self.
-static bool arePHIsIntertwined(const PHINode *L, const PHINode *R) {
-  return isXoredWith(L, R) || isXoredWith(R, L);
+/// where %xor is in the use-def chain of \p SI's condition.
+static bool isConditionalOnXorOfPHIs(SelectInst *SI, const PHINode *P1,
+                                     const PHINode *P2, const Loop &L) {
+  SmallVector<Instruction *> Worklist;
+
+  // matchConditionalRecurrence has already ensured that the SelectInst's
+  // condition is an Instruction.
+  Worklist.push_back(cast<Instruction>(SI->getCondition()));
+
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+
+    // Don't add a PHI's operands to the Worklist.
+    if (isa<PHINode>(I))
+      continue;
+
+    // If we match an XOR of the two PHIs ignoring casts, we're done.
+    if (match(I, m_c_Xor(m_CastOrSelf(m_Specific(P1)),
+                         m_CastOrSelf(m_Specific(P2)))))
+      return true;
+
+    // Continue along the use-def chain.
+    for (Use &U : I->operands())
+      if (auto *UI = dyn_cast<Instruction>(U))
+        if (L.contains(UI))
+          Worklist.push_back(UI);
+  }
+  return false;
 }
 
 // Recognizes a multiplication or division by the constant two, using SCEV. By
@@ -570,7 +590,12 @@ HashRecognize::recognizeCRC() const {
   if (SimpleRecurrence) {
     if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != ByteOrderSwapped)
       return "Loop with non-unit bitshifts";
-    if (!arePHIsIntertwined(SimpleRecurrence.Phi, ConditionalRecurrence.Phi))
+
+    // Check that the SelectInst ConditionalRecurrence.Step is conditional on
+    // the XOR of SimpleRecurrence.Phi and ConditionalRecurrence.Phi.
+    if (!isConditionalOnXorOfPHIs(cast<SelectInst>(ConditionalRecurrence.Step),
+                                  SimpleRecurrence.Phi,
+                                  ConditionalRecurrence.Phi, L))
       return "Recurrences not intertwined with XOR";
   }
 
