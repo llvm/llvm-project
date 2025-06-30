@@ -470,7 +470,8 @@ define void @fcmp_ueq_vv_v32f32(ptr %x, ptr %y, ptr %z) {
 ; CHECK-NEXT:    vle32.v v16, (a1)
 ; CHECK-NEXT:    vmflt.vv v24, v8, v16
 ; CHECK-NEXT:    vmflt.vv v25, v16, v8
-; CHECK-NEXT:    vmnor.mm v8, v25, v24
+; CHECK-NEXT:    vmor.mm v8, v25, v24
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vsm.v v8, (a2)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %x
@@ -1102,7 +1103,8 @@ define void @fcmp_ueq_vf_v32f32(ptr %x, float %y, ptr %z) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmflt.vf v16, v8, fa0
 ; CHECK-NEXT:    vmfgt.vf v17, v8, fa0
-; CHECK-NEXT:    vmnor.mm v8, v17, v16
+; CHECK-NEXT:    vmor.mm v8, v17, v16
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %x
@@ -1743,7 +1745,8 @@ define void @fcmp_ueq_fv_v32f32(ptr %x, float %y, ptr %z) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vmfgt.vf v16, v8, fa0
 ; CHECK-NEXT:    vmflt.vf v17, v8, fa0
-; CHECK-NEXT:    vmnor.mm v8, v17, v16
+; CHECK-NEXT:    vmor.mm v8, v17, v16
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vsm.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %x

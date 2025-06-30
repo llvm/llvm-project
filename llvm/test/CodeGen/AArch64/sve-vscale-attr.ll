@@ -24,6 +24,8 @@ define void @func_vscale_none(ptr %a, ptr %b) #0 {
 ; CHECK-ARG-NEXT:    ptrue p0.s, vl16
 ; CHECK-ARG-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-ARG-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-ARG-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-ARG-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-ARG-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-ARG-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-ARG-NEXT:    ret
@@ -89,6 +91,10 @@ define void @func_vscale2_4(ptr %a, ptr %b) #3 {
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
 ; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    sel z2.s, p0, z2.s, z0.s
+; CHECK-NEXT:    sel z3.s, p0, z3.s, z0.s
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    add z1.s, z2.s, z3.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
@@ -126,6 +132,8 @@ define void @func_vscale8_8(ptr %a, ptr %b) #5 {
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret

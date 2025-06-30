@@ -304,9 +304,12 @@ define <16 x i1> @lane_mask_v16i1_i8(i8 %index, i8 %TC) {
 ;
 ; CHECK-STREAMING-LABEL: lane_mask_v16i1_i8:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    index z0.b, w0, #1
-; CHECK-STREAMING-NEXT:    mov z1.b, w0
+; CHECK-STREAMING-NEXT:    index z0.b, #0, #1
 ; CHECK-STREAMING-NEXT:    ptrue p0.b, vl16
+; CHECK-STREAMING-NEXT:    mov z1.b, w0
+; CHECK-STREAMING-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-STREAMING-NEXT:    sel z1.b, p0, z1.b, z0.b
+; CHECK-STREAMING-NEXT:    add z0.b, z1.b, z0.b
 ; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
 ; CHECK-STREAMING-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    orr z0.d, z0.d, z1.d
@@ -331,9 +334,12 @@ define <8 x i1> @lane_mask_v8i1_i8(i8 %index, i8 %TC) {
 ;
 ; CHECK-STREAMING-LABEL: lane_mask_v8i1_i8:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    index z0.b, w0, #1
-; CHECK-STREAMING-NEXT:    mov z1.b, w0
+; CHECK-STREAMING-NEXT:    index z0.b, #0, #1
 ; CHECK-STREAMING-NEXT:    ptrue p0.b, vl8
+; CHECK-STREAMING-NEXT:    mov z1.b, w0
+; CHECK-STREAMING-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-STREAMING-NEXT:    sel z1.b, p0, z1.b, z0.b
+; CHECK-STREAMING-NEXT:    add z0.b, z1.b, z0.b
 ; CHECK-STREAMING-NEXT:    cmphi p1.b, p0/z, z1.b, z0.b
 ; CHECK-STREAMING-NEXT:    mov z1.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    orr z0.d, z0.d, z1.d
@@ -362,15 +368,20 @@ define <4 x i1> @lane_mask_v4i1_i8(i8 %index, i8 %TC) {
 ;
 ; CHECK-STREAMING-LABEL: lane_mask_v4i1_i8:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    mov z1.h, w0
-; CHECK-STREAMING-NEXT:    index z0.h, #0, #1
+; CHECK-STREAMING-NEXT:    mov z0.h, #255 // =0xff
 ; CHECK-STREAMING-NEXT:    ptrue p0.h, vl4
-; CHECK-STREAMING-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-STREAMING-NEXT:    add z0.h, z1.h, z0.h
-; CHECK-STREAMING-NEXT:    mov z1.h, w1
-; CHECK-STREAMING-NEXT:    umin z0.h, z0.h, #255
-; CHECK-STREAMING-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-STREAMING-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
+; CHECK-STREAMING-NEXT:    index z2.h, #0, #1
+; CHECK-STREAMING-NEXT:    mov z1.h, w0
+; CHECK-STREAMING-NEXT:    mov z3.h, w1
+; CHECK-STREAMING-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-STREAMING-NEXT:    sel z1.h, p0, z1.h, z0.h
+; CHECK-STREAMING-NEXT:    sel z2.h, p0, z2.h, z0.h
+; CHECK-STREAMING-NEXT:    sel z3.h, p0, z3.h, z0.h
+; CHECK-STREAMING-NEXT:    and z1.d, z1.d, z0.d
+; CHECK-STREAMING-NEXT:    add z1.h, z1.h, z2.h
+; CHECK-STREAMING-NEXT:    and z2.d, z3.d, z0.d
+; CHECK-STREAMING-NEXT:    umin z0.h, p0/m, z0.h, z1.h
+; CHECK-STREAMING-NEXT:    cmphi p0.h, p0/z, z2.h, z0.h
 ; CHECK-STREAMING-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-STREAMING-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-STREAMING-NEXT:    ret
@@ -394,10 +405,14 @@ define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ;
 ; CHECK-STREAMING-LABEL: lane_mask_v2i1_i8:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    and w8, w0, #0xff
+; CHECK-STREAMING-NEXT:    index z0.s, #0, #1
 ; CHECK-STREAMING-NEXT:    ptrue p0.s, vl2
-; CHECK-STREAMING-NEXT:    index z0.s, w8, #1
+; CHECK-STREAMING-NEXT:    and w8, w0, #0xff
+; CHECK-STREAMING-NEXT:    mov z1.s, w8
 ; CHECK-STREAMING-NEXT:    and w8, w1, #0xff
+; CHECK-STREAMING-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-STREAMING-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-STREAMING-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-STREAMING-NEXT:    mov z1.s, w8
 ; CHECK-STREAMING-NEXT:    umin z0.s, z0.s, #255
 ; CHECK-STREAMING-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s

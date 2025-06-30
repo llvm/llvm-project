@@ -1217,11 +1217,15 @@ define void @smulh_v4i64(ptr %a, ptr %b) {
 define <4 x i8> @umulh_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; SVE-LABEL: umulh_v4i8:
 ; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.h, vl4
 ; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE-NEXT:    ptrue p0.h, vl4
-; SVE-NEXT:    and z0.h, z0.h, #0xff
-; SVE-NEXT:    and z1.h, z1.h, #0xff
+; SVE-NEXT:    mov z2.h, #255 // =0xff
+; SVE-NEXT:    sel z1.h, p0, z1.h, z0.h
+; SVE-NEXT:    mov z0.h, p0/m, z0.h
+; SVE-NEXT:    sel z2.h, p0, z2.h, z0.h
+; SVE-NEXT:    and z0.d, z0.d, z2.d
+; SVE-NEXT:    and z1.d, z1.d, z2.d
 ; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
 ; SVE-NEXT:    lsr z0.h, z0.h, #4
 ; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -1229,10 +1233,15 @@ define <4 x i8> @umulh_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ;
 ; SVE2-LABEL: umulh_v4i8:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.h, vl4
 ; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE2-NEXT:    and z0.h, z0.h, #0xff
-; SVE2-NEXT:    and z1.h, z1.h, #0xff
+; SVE2-NEXT:    mov z2.h, #255 // =0xff
+; SVE2-NEXT:    sel z1.h, p0, z1.h, z0.h
+; SVE2-NEXT:    mov z0.h, p0/m, z0.h
+; SVE2-NEXT:    sel z2.h, p0, z2.h, z0.h
+; SVE2-NEXT:    and z0.d, z0.d, z2.d
+; SVE2-NEXT:    and z1.d, z1.d, z2.d
 ; SVE2-NEXT:    mul z0.h, z0.h, z1.h
 ; SVE2-NEXT:    lsr z0.h, z0.h, #4
 ; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -1770,11 +1779,15 @@ define void @umulh_v32i8(ptr %a, ptr %b) {
 define <2 x i16> @umulh_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; SVE-LABEL: umulh_v2i16:
 ; SVE:       // %bb.0:
+; SVE-NEXT:    ptrue p0.s, vl2
 ; SVE-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE-NEXT:    ptrue p0.s, vl2
-; SVE-NEXT:    and z0.s, z0.s, #0xffff
-; SVE-NEXT:    and z1.s, z1.s, #0xffff
+; SVE-NEXT:    mov z2.s, #65535 // =0xffff
+; SVE-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE-NEXT:    mov z0.s, p0/m, z0.s
+; SVE-NEXT:    sel z2.s, p0, z2.s, z0.s
+; SVE-NEXT:    and z0.d, z0.d, z2.d
+; SVE-NEXT:    and z1.d, z1.d, z2.d
 ; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
 ; SVE-NEXT:    lsr z0.s, z0.s, #16
 ; SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -1782,10 +1795,15 @@ define <2 x i16> @umulh_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ;
 ; SVE2-LABEL: umulh_v2i16:
 ; SVE2:       // %bb.0:
+; SVE2-NEXT:    ptrue p0.s, vl2
 ; SVE2-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE2-NEXT:    and z0.s, z0.s, #0xffff
-; SVE2-NEXT:    and z1.s, z1.s, #0xffff
+; SVE2-NEXT:    mov z2.s, #65535 // =0xffff
+; SVE2-NEXT:    sel z1.s, p0, z1.s, z0.s
+; SVE2-NEXT:    mov z0.s, p0/m, z0.s
+; SVE2-NEXT:    sel z2.s, p0, z2.s, z0.s
+; SVE2-NEXT:    and z0.d, z0.d, z2.d
+; SVE2-NEXT:    and z1.d, z1.d, z2.d
 ; SVE2-NEXT:    mul z0.s, z0.s, z1.s
 ; SVE2-NEXT:    lsr z0.s, z0.s, #16
 ; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0

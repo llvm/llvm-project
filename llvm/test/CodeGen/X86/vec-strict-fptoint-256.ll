@@ -1517,28 +1517,32 @@ define <8 x i8> @strict_vector_fptosi_v8f32_to_v8i8(<8 x float> %a) #0 {
 ; AVX512F-LABEL: strict_vector_fptosi_v8f32_to_v8i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VL-LABEL: strict_vector_fptosi_v8f32_to_v8i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512VL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512VL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512DQ-LABEL: strict_vector_fptosi_v8f32_to_v8i8:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512DQVL-LABEL: strict_vector_fptosi_v8f32_to_v8i8:
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512DQVL-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512DQVL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512DQVL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i8> @llvm.experimental.constrained.fptosi.v8i8.v8f32(<8 x float> %a,
@@ -1559,28 +1563,32 @@ define <8 x i8> @strict_vector_fptoui_v8f32_to_v8i8(<8 x float> %a) #0 {
 ; AVX512F-LABEL: strict_vector_fptoui_v8f32_to_v8i8:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512F-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512VL-LABEL: strict_vector_fptoui_v8f32_to_v8i8:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512VL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512VL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512DQ-LABEL: strict_vector_fptoui_v8f32_to_v8i8:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512DQ-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512DQ-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512DQVL-LABEL: strict_vector_fptoui_v8f32_to_v8i8:
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vcvttps2dq %ymm0, %ymm0
-; AVX512DQVL-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512DQVL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512DQVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vzeroupper
 ; AVX512DQVL-NEXT:    ret{{[l|q]}}
   %ret = call <8 x i8> @llvm.experimental.constrained.fptoui.v8i8.v8f32(<8 x float> %a,

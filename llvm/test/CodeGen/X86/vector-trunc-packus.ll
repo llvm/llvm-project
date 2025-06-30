@@ -3030,32 +3030,33 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(ptr %p0) "min-legal-vector-width"="256"
 ;
 ; AVX1-LABEL: trunc_packus_v8i64_v8i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
-; AVX1-NEXT:    vpmovzxbq {{.*#+}} xmm4 = [255,255]
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm5
-; AVX1-NEXT:    vpand %xmm1, %xmm5, %xmm1
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqa 32(%rdi), %ymm1
+; AVX1-NEXT:    vpmovzxbq {{.*#+}} xmm2 = [255,255]
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm4
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm4
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm5
 ; AVX1-NEXT:    vpand %xmm0, %xmm5, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm1
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm2, %xmm3
-; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
+; AVX1-NEXT:    vpand %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpackusdw %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_packus_v8i64_v8i8:
@@ -3317,33 +3318,34 @@ define void @trunc_packus_v8i64_v8i8_store(ptr %p0, ptr%p1) "min-legal-vector-wi
 ;
 ; AVX1-LABEL: trunc_packus_v8i64_v8i8_store:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
-; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
-; AVX1-NEXT:    vpmovzxbq {{.*#+}} xmm4 = [255,255]
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm5
-; AVX1-NEXT:    vpand %xmm1, %xmm5, %xmm1
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
+; AVX1-NEXT:    vmovdqa 32(%rdi), %ymm1
+; AVX1-NEXT:    vpmovzxbq {{.*#+}} xmm2 = [255,255]
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm1, %xmm2, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm2, %xmm4
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm4
+; AVX1-NEXT:    vblendvpd %xmm4, %xmm0, %xmm2, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm2, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm0, %xmm5
 ; AVX1-NEXT:    vpand %xmm0, %xmm5, %xmm0
-; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm1
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm2, %xmm3
-; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
+; AVX1-NEXT:    vpand %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpackusdw %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm1, %xmm4
+; AVX1-NEXT:    vpand %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpand %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovq %xmm0, (%rsi)
+; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: trunc_packus_v8i64_v8i8_store:

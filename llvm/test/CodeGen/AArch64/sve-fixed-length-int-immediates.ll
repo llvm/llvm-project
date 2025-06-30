@@ -16,6 +16,7 @@ define void @add_v64i8(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    add z0.b, z0.b, #7 // =0x7
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -30,6 +31,7 @@ define void @add_v32i16(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    add z0.h, z0.h, #15 // =0xf
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -44,6 +46,7 @@ define void @add_v16i32(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    add z0.s, z0.s, #31 // =0x1f
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -58,6 +61,7 @@ define void @add_v8i64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
 ; CHECK-NEXT:    add z0.d, z0.d, #63 // =0x3f
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -76,6 +80,7 @@ define void @and_v64i8(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    and z0.b, z0.b, #0x7
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -90,6 +95,7 @@ define void @and_v32i16(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0xf
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -104,6 +110,7 @@ define void @and_v16i32(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0x1f
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -118,6 +125,7 @@ define void @and_v8i64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0x3f
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -384,6 +392,7 @@ define void @or_v64i8(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    orr z0.b, z0.b, #0x7
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -398,6 +407,7 @@ define void @or_v32i16(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    orr z0.h, z0.h, #0xf
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -412,6 +422,7 @@ define void @or_v16i32(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    orr z0.s, z0.s, #0x1f
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -426,6 +437,7 @@ define void @or_v8i64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
 ; CHECK-NEXT:    orr z0.d, z0.d, #0x3f
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -624,6 +636,7 @@ define void @sub_v64i8(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    sub z0.b, z0.b, #7 // =0x7
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -638,6 +651,7 @@ define void @sub_v32i16(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    sub z0.h, z0.h, #15 // =0xf
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -652,6 +666,7 @@ define void @sub_v16i32(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    sub z0.s, z0.s, #31 // =0x1f
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -666,6 +681,7 @@ define void @sub_v8i64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
 ; CHECK-NEXT:    sub z0.d, z0.d, #63 // =0x3f
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -804,6 +820,7 @@ define void @xor_v64i8(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    eor z0.b, z0.b, #0x7
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -818,6 +835,7 @@ define void @xor_v32i16(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    eor z0.h, z0.h, #0xf
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -832,6 +850,7 @@ define void @xor_v16i32(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    eor z0.s, z0.s, #0x1f
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -846,6 +865,7 @@ define void @xor_v8i64(ptr %a) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
 ; CHECK-NEXT:    eor z0.d, z0.d, #0x3f
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret

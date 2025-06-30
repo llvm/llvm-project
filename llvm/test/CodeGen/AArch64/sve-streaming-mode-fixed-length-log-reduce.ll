@@ -127,6 +127,8 @@ define i8 @andv_v32i8(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -295,6 +297,8 @@ define i16 @andv_v16i16(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -393,6 +397,8 @@ define i32 @andv_v8i32(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -446,6 +452,8 @@ define i64 @andv_v4i64(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    andv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
@@ -588,6 +596,8 @@ define i8 @eorv_v32i8(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -756,6 +766,8 @@ define i16 @eorv_v16i16(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -854,6 +866,8 @@ define i32 @eorv_v8i32(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -907,6 +921,8 @@ define i64 @eorv_v4i64(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    eor z0.d, z1.d, z0.d
 ; CHECK-NEXT:    eorv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0
@@ -1049,6 +1065,8 @@ define i8 @orv_v32i8(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv b0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -1217,6 +1235,8 @@ define i16 @orv_v16i16(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv h0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -1315,6 +1335,8 @@ define i32 @orv_v8i32(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv s0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -1368,6 +1390,8 @@ define i64 @orv_v4i64(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    orv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0

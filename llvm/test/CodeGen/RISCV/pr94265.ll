@@ -11,8 +11,9 @@ define <8 x i16> @PR94265(<8 x i32> %a0) #0 {
 ; RV32I-NEXT:    vsra.vi v10, v8, 31
 ; RV32I-NEXT:    vsrl.vi v10, v10, 26
 ; RV32I-NEXT:    vadd.vv v8, v8, v10
+; RV32I-NEXT:    vsrl.vi v8, v8, 6
 ; RV32I-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32I-NEXT:    vnsrl.wi v10, v8, 6
+; RV32I-NEXT:    vnsrl.wi v10, v8, 0
 ; RV32I-NEXT:    vsll.vi v8, v10, 10
 ; RV32I-NEXT:    ret
 ;
@@ -22,8 +23,9 @@ define <8 x i16> @PR94265(<8 x i32> %a0) #0 {
 ; RV64I-NEXT:    vsra.vi v10, v8, 31
 ; RV64I-NEXT:    vsrl.vi v10, v10, 26
 ; RV64I-NEXT:    vadd.vv v8, v8, v10
+; RV64I-NEXT:    vsrl.vi v8, v8, 6
 ; RV64I-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV64I-NEXT:    vnsrl.wi v10, v8, 6
+; RV64I-NEXT:    vnsrl.wi v10, v8, 0
 ; RV64I-NEXT:    vsll.vi v8, v10, 10
 ; RV64I-NEXT:    ret
   %t1 = sdiv <8 x i32> %a0, <i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64, i32 64>

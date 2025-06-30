@@ -293,11 +293,11 @@ define <2 x half> @vfmin_v2f16_vv_nnan(<2 x half> %a, <2 x half> %b) {
 define <2 x half> @vfmin_v2f16_vv_nnana(<2 x half> %a, <2 x half> %b) {
 ; ZVFH-LABEL: vfmin_v2f16_vv_nnana:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vmfeq.vv v0, v9, v9
-; ZVFH-NEXT:    vmv1r.v v10, v9
-; ZVFH-NEXT:    vfadd.vv v10, v8, v8, v0.t
-; ZVFH-NEXT:    vfmin.vv v8, v10, v9
+; ZVFH-NEXT:    vfadd.vv v8, v8, v8
+; ZVFH-NEXT:    vmerge.vvm v8, v9, v8, v0
+; ZVFH-NEXT:    vfmin.vv v8, v8, v9
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfmin_v2f16_vv_nnana:
@@ -327,11 +327,11 @@ define <2 x half> @vfmin_v2f16_vv_nnana(<2 x half> %a, <2 x half> %b) {
 define <2 x half> @vfmin_v2f16_vv_nnanb(<2 x half> %a, <2 x half> %b) {
 ; ZVFH-LABEL: vfmin_v2f16_vv_nnanb:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFH-NEXT:    vmfeq.vv v0, v8, v8
-; ZVFH-NEXT:    vmv1r.v v10, v8
-; ZVFH-NEXT:    vfadd.vv v10, v9, v9, v0.t
-; ZVFH-NEXT:    vfmin.vv v8, v8, v10
+; ZVFH-NEXT:    vfadd.vv v9, v9, v9
+; ZVFH-NEXT:    vmerge.vvm v9, v8, v9, v0
+; ZVFH-NEXT:    vfmin.vv v8, v8, v9
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfmin_v2f16_vv_nnanb:

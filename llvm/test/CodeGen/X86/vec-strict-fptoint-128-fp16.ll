@@ -428,6 +428,17 @@ define <4 x i1> @strict_vector_fptosi_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
 ; NOVL-NEXT:    andl $1, %eax
 ; NOVL-NEXT:    kmovw %eax, %k0
+; NOVL-NEXT:    kshiftrw $1, %k0, %k1
+; NOVL-NEXT:    kshiftlw $1, %k1, %k1
+; NOVL-NEXT:    korw %k0, %k1, %k0
+; NOVL-NEXT:    kshiftlw $12, %k0, %k0
+; NOVL-NEXT:    kshiftrw $12, %k0, %k0
+; NOVL-NEXT:    kshiftrw $4, %k0, %k1
+; NOVL-NEXT:    kshiftlw $4, %k1, %k1
+; NOVL-NEXT:    korw %k0, %k1, %k0
+; NOVL-NEXT:    movw $-3, %ax
+; NOVL-NEXT:    kmovd %eax, %k1
+; NOVL-NEXT:    kandw %k1, %k0, %k0
 ; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
 ; NOVL-NEXT:    kmovd %eax, %k1
@@ -440,7 +451,8 @@ define <4 x i1> @strict_vector_fptosi_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; NOVL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
 ; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $2, %k1, %k1
+; NOVL-NEXT:    kshiftlw $15, %k1, %k1
+; NOVL-NEXT:    kshiftrw $13, %k1, %k1
 ; NOVL-NEXT:    korw %k1, %k0, %k0
 ; NOVL-NEXT:    kshiftlw $13, %k0, %k0
 ; NOVL-NEXT:    kshiftrw $13, %k0, %k0
@@ -474,6 +486,17 @@ define <4 x i1> @strict_vector_fptoui_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; NOVL-NEXT:    vcvttsh2si %xmm0, %eax
 ; NOVL-NEXT:    andl $1, %eax
 ; NOVL-NEXT:    kmovw %eax, %k0
+; NOVL-NEXT:    kshiftrw $1, %k0, %k1
+; NOVL-NEXT:    kshiftlw $1, %k1, %k1
+; NOVL-NEXT:    korw %k0, %k1, %k0
+; NOVL-NEXT:    kshiftlw $12, %k0, %k0
+; NOVL-NEXT:    kshiftrw $12, %k0, %k0
+; NOVL-NEXT:    kshiftrw $4, %k0, %k1
+; NOVL-NEXT:    kshiftlw $4, %k1, %k1
+; NOVL-NEXT:    korw %k0, %k1, %k0
+; NOVL-NEXT:    movw $-3, %ax
+; NOVL-NEXT:    kmovd %eax, %k1
+; NOVL-NEXT:    kandw %k1, %k0, %k0
 ; NOVL-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
 ; NOVL-NEXT:    kmovd %eax, %k1
@@ -486,7 +509,8 @@ define <4 x i1> @strict_vector_fptoui_v4f16_to_v4i1(<4 x half> %a) #0 {
 ; NOVL-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; NOVL-NEXT:    vcvttsh2si %xmm1, %eax
 ; NOVL-NEXT:    kmovd %eax, %k1
-; NOVL-NEXT:    kshiftlw $2, %k1, %k1
+; NOVL-NEXT:    kshiftlw $15, %k1, %k1
+; NOVL-NEXT:    kshiftrw $13, %k1, %k1
 ; NOVL-NEXT:    korw %k1, %k0, %k0
 ; NOVL-NEXT:    kshiftlw $13, %k0, %k0
 ; NOVL-NEXT:    kshiftrw $13, %k0, %k0

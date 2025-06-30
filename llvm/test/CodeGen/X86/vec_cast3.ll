@@ -79,7 +79,7 @@ define <2 x i16> @cvt_v2f32_v2i16(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2i16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    retl
   %res = fptosi <2 x float> %src to <2 x i16>
   ret <2 x i16> %res
@@ -109,7 +109,7 @@ define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
-; CHECK-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i16>
   ret <2 x i16> %res

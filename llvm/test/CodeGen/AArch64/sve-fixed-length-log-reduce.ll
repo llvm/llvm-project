@@ -55,6 +55,8 @@ define i8 @andv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.b, p0/m, z0.b
+; VBITS_GE_256-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    andv b0, p0, z0.b
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -144,6 +146,8 @@ define i16 @andv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z0.h
+; VBITS_GE_256-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    andv h0, p0, z0.h
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -233,6 +237,8 @@ define i32 @andv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z0.s
+; VBITS_GE_256-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    andv s0, p0, z0.s
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -320,6 +326,8 @@ define i64 @andv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.d, p0/m, z0.d
+; VBITS_GE_256-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    and z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    andv d0, p0, z0.d
 ; VBITS_GE_256-NEXT:    fmov x0, d0
@@ -413,6 +421,8 @@ define i8 @eorv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.b, p0/m, z0.b
+; VBITS_GE_256-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    eorv b0, p0, z0.b
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -502,6 +512,8 @@ define i16 @eorv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z0.h
+; VBITS_GE_256-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    eorv h0, p0, z0.h
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -591,6 +603,8 @@ define i32 @eorv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z0.s
+; VBITS_GE_256-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    eorv s0, p0, z0.s
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -678,6 +692,8 @@ define i64 @eorv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.d, p0/m, z0.d
+; VBITS_GE_256-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    eor z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    eorv d0, p0, z0.d
 ; VBITS_GE_256-NEXT:    fmov x0, d0
@@ -771,6 +787,8 @@ define i8 @orv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.b, p0/m, z0.b
+; VBITS_GE_256-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    orv b0, p0, z0.b
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -860,6 +878,8 @@ define i16 @orv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z0.h
+; VBITS_GE_256-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    orv h0, p0, z0.h
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -949,6 +969,8 @@ define i32 @orv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z0.s
+; VBITS_GE_256-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    orv s0, p0, z0.s
 ; VBITS_GE_256-NEXT:    fmov w0, s0
@@ -1036,6 +1058,8 @@ define i64 @orv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.d, p0/m, z0.d
+; VBITS_GE_256-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    orr z0.d, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    orv d0, p0, z0.d
 ; VBITS_GE_256-NEXT:    fmov x0, d0

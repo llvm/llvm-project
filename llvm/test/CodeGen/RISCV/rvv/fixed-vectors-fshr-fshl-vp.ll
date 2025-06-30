@@ -384,9 +384,9 @@ define <2 x i32> @fshr_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -402,9 +402,9 @@ define <2 x i32> @fshl_v2i32(<2 x i32> %a, <2 x i32> %b, <2 x i32> %c, <2 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v11, v0.t
+; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -420,9 +420,9 @@ define <4 x i32> @fshr_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -438,9 +438,9 @@ define <4 x i32> @fshl_v4i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v11, v0.t
+; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -456,9 +456,9 @@ define <8 x i32> @fshr_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vand.vx v14, v12, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v10, v10, v14, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v12, v12, v0.t
 ; CHECK-NEXT:    vand.vx v12, v12, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
@@ -474,9 +474,9 @@ define <8 x i32> @fshl_v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vand.vx v14, v12, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v14, v0.t
+; CHECK-NEXT:    vsrl.vi v10, v10, 1, v0.t
 ; CHECK-NEXT:    vnot.v v12, v12, v0.t
 ; CHECK-NEXT:    vand.vx v12, v12, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v10, v10, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v10, v10, v12, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
@@ -492,9 +492,9 @@ define <16 x i32> @fshr_v16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v12, v12, v20, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v16, v16, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
@@ -510,9 +510,9 @@ define <16 x i32> @fshl_v16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v20, v0.t
+; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vnot.v v16, v16, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v12, v12, v16, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
@@ -528,9 +528,9 @@ define <2 x i64> @fshr_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -546,9 +546,9 @@ define <2 x i64> @fshl_v2i64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v11, v0.t
+; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vnot.v v10, v10, v0.t
 ; CHECK-NEXT:    vand.vx v10, v10, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v9, v9, v10, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
@@ -564,9 +564,9 @@ define <4 x i64> @fshr_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vand.vx v14, v12, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v10, v10, v14, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v12, v12, v0.t
 ; CHECK-NEXT:    vand.vx v12, v12, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
@@ -582,9 +582,9 @@ define <4 x i64> @fshl_v4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64> %c, <4 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vand.vx v14, v12, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v14, v0.t
+; CHECK-NEXT:    vsrl.vi v10, v10, 1, v0.t
 ; CHECK-NEXT:    vnot.v v12, v12, v0.t
 ; CHECK-NEXT:    vand.vx v12, v12, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v10, v10, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v10, v10, v12, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
@@ -600,9 +600,9 @@ define <7 x i64> @fshr_v7i64(<7 x i64> %a, <7 x i64> %b, <7 x i64> %c, <7 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v12, v12, v20, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v16, v16, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
@@ -618,9 +618,9 @@ define <7 x i64> @fshl_v7i64(<7 x i64> %a, <7 x i64> %b, <7 x i64> %c, <7 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v20, v0.t
+; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vnot.v v16, v16, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v12, v12, v16, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
@@ -636,9 +636,9 @@ define <8 x i64> @fshr_v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
 ; CHECK-NEXT:    vsrl.vv v12, v12, v20, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vnot.v v16, v16, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
@@ -654,9 +654,9 @@ define <8 x i64> @fshl_v8i64(<8 x i64> %a, <8 x i64> %b, <8 x i64> %c, <8 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vand.vx v20, v16, a1, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v8, v20, v0.t
+; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vnot.v v16, v16, v0.t
 ; CHECK-NEXT:    vand.vx v16, v16, a1, v0.t
-; CHECK-NEXT:    vsrl.vi v12, v12, 1, v0.t
 ; CHECK-NEXT:    vsrl.vv v12, v12, v16, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
@@ -682,12 +682,12 @@ define <16 x i64> @fshr_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vand.vx v8, v24, a0, v0.t
 ; CHECK-NEXT:    vsrl.vv v16, v16, v8, v0.t
-; CHECK-NEXT:    vnot.v v8, v24, v0.t
-; CHECK-NEXT:    vand.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsll.vi v24, v24, 1, v0.t
-; CHECK-NEXT:    vsll.vv v8, v24, v8, v0.t
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vnot.v v24, v24, v0.t
+; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v24, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -719,12 +719,12 @@ define <16 x i64> @fshl_v16i64(<16 x i64> %a, <16 x i64> %b, <16 x i64> %c, <16 
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vand.vx v8, v24, a0, v0.t
 ; CHECK-NEXT:    vsll.vv v8, v16, v8, v0.t
-; CHECK-NEXT:    vnot.v v16, v24, v0.t
-; CHECK-NEXT:    vand.vx v16, v16, a0, v0.t
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsrl.vi v24, v24, 1, v0.t
-; CHECK-NEXT:    vsrl.vv v16, v24, v16, v0.t
+; CHECK-NEXT:    addi a1, sp, 16
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vsrl.vi v16, v16, 1, v0.t
+; CHECK-NEXT:    vnot.v v24, v24, v0.t
+; CHECK-NEXT:    vand.vx v24, v24, a0, v0.t
+; CHECK-NEXT:    vsrl.vv v16, v16, v24, v0.t
 ; CHECK-NEXT:    vor.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3

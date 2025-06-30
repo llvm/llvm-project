@@ -2227,8 +2227,16 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ; X64-KNL-LABEL: test30:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; X64-KNL-NEXT:    movw $-3, %ax
+; X64-KNL-NEXT:    kmovw %eax, %k0
 ; X64-KNL-NEXT:    andl $1, %edi
-; X64-KNL-NEXT:    kmovw %edi, %k0
+; X64-KNL-NEXT:    kmovw %edi, %k1
+; X64-KNL-NEXT:    kshiftrw $1, %k0, %k2
+; X64-KNL-NEXT:    kshiftlw $1, %k2, %k2
+; X64-KNL-NEXT:    korw %k1, %k2, %k1
+; X64-KNL-NEXT:    kshiftlw $4, %k0, %k2
+; X64-KNL-NEXT:    korw %k1, %k2, %k1
+; X64-KNL-NEXT:    kandw %k0, %k1, %k0
 ; X64-KNL-NEXT:    kmovw %esi, %k1
 ; X64-KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; X64-KNL-NEXT:    kshiftrw $14, %k1, %k1
@@ -2256,9 +2264,17 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ; X86-KNL-LABEL: test30:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; X86-KNL-NEXT:    movw $-3, %ax
+; X86-KNL-NEXT:    kmovw %eax, %k0
 ; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-KNL-NEXT:    andl $1, %eax
-; X86-KNL-NEXT:    kmovw %eax, %k0
+; X86-KNL-NEXT:    kmovw %eax, %k1
+; X86-KNL-NEXT:    kshiftrw $1, %k0, %k2
+; X86-KNL-NEXT:    kshiftlw $1, %k2, %k2
+; X86-KNL-NEXT:    korw %k1, %k2, %k1
+; X86-KNL-NEXT:    kshiftlw $4, %k0, %k2
+; X86-KNL-NEXT:    korw %k1, %k2, %k1
+; X86-KNL-NEXT:    kandw %k0, %k1, %k0
 ; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-KNL-NEXT:    kmovw %eax, %k1
 ; X86-KNL-NEXT:    kshiftlw $15, %k1, %k1
@@ -2286,13 +2302,21 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ;
 ; X64-SKX-LABEL: test30:
 ; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    kmovw %esi, %k0
-; X64-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X64-SKX-NEXT:    kshiftrb $6, %k0, %k0
+; X64-SKX-NEXT:    movb $-3, %al
+; X64-SKX-NEXT:    kmovw %eax, %k0
 ; X64-SKX-NEXT:    kmovw %edi, %k1
 ; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
 ; X64-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X64-SKX-NEXT:    korw %k0, %k1, %k0
+; X64-SKX-NEXT:    kshiftrb $1, %k0, %k2
+; X64-SKX-NEXT:    kshiftlb $1, %k2, %k2
+; X64-SKX-NEXT:    korw %k1, %k2, %k1
+; X64-SKX-NEXT:    kshiftlb $4, %k0, %k2
+; X64-SKX-NEXT:    korw %k1, %k2, %k1
+; X64-SKX-NEXT:    kandw %k0, %k1, %k0
+; X64-SKX-NEXT:    kmovw %esi, %k1
+; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
+; X64-SKX-NEXT:    kshiftrb $6, %k1, %k1
+; X64-SKX-NEXT:    korw %k1, %k0, %k0
 ; X64-SKX-NEXT:    movb $-5, %al
 ; X64-SKX-NEXT:    kmovw %eax, %k1
 ; X64-SKX-NEXT:    kandw %k1, %k0, %k0
@@ -2313,15 +2337,23 @@ define <3 x i32> @test30(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i
 ;
 ; X86-SKX-LABEL: test30:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SKX-NEXT:    movb $-3, %al
 ; X86-SKX-NEXT:    kmovw %eax, %k0
-; X86-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X86-SKX-NEXT:    kshiftrb $6, %k0, %k0
 ; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    kmovw %eax, %k1
 ; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
 ; X86-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X86-SKX-NEXT:    korw %k0, %k1, %k0
+; X86-SKX-NEXT:    kshiftrb $1, %k0, %k2
+; X86-SKX-NEXT:    kshiftlb $1, %k2, %k2
+; X86-SKX-NEXT:    korw %k1, %k2, %k1
+; X86-SKX-NEXT:    kshiftlb $4, %k0, %k2
+; X86-SKX-NEXT:    korw %k1, %k2, %k1
+; X86-SKX-NEXT:    kandw %k0, %k1, %k0
+; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SKX-NEXT:    kmovw %eax, %k1
+; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
+; X86-SKX-NEXT:    kshiftrb $6, %k1, %k1
+; X86-SKX-NEXT:    korw %k1, %k0, %k0
 ; X86-SKX-NEXT:    movb $-5, %al
 ; X86-SKX-NEXT:    kmovw %eax, %k1
 ; X86-SKX-NEXT:    kandw %k1, %k0, %k0
@@ -2350,8 +2382,16 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ; X64-KNL-LABEL: test30b:
 ; X64-KNL:       # %bb.0:
 ; X64-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; X64-KNL-NEXT:    movw $-3, %ax
+; X64-KNL-NEXT:    kmovw %eax, %k0
 ; X64-KNL-NEXT:    andl $1, %edi
-; X64-KNL-NEXT:    kmovw %edi, %k0
+; X64-KNL-NEXT:    kmovw %edi, %k1
+; X64-KNL-NEXT:    kshiftrw $1, %k0, %k2
+; X64-KNL-NEXT:    kshiftlw $1, %k2, %k2
+; X64-KNL-NEXT:    korw %k1, %k2, %k1
+; X64-KNL-NEXT:    kshiftlw $4, %k0, %k2
+; X64-KNL-NEXT:    korw %k1, %k2, %k1
+; X64-KNL-NEXT:    kandw %k0, %k1, %k0
 ; X64-KNL-NEXT:    kmovw %esi, %k1
 ; X64-KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; X64-KNL-NEXT:    kshiftrw $14, %k1, %k1
@@ -2378,9 +2418,17 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ; X86-KNL-LABEL: test30b:
 ; X86-KNL:       # %bb.0:
 ; X86-KNL-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; X86-KNL-NEXT:    movw $-3, %ax
+; X86-KNL-NEXT:    kmovw %eax, %k0
 ; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-KNL-NEXT:    andl $1, %eax
-; X86-KNL-NEXT:    kmovw %eax, %k0
+; X86-KNL-NEXT:    kmovw %eax, %k1
+; X86-KNL-NEXT:    kshiftrw $1, %k0, %k2
+; X86-KNL-NEXT:    kshiftlw $1, %k2, %k2
+; X86-KNL-NEXT:    korw %k1, %k2, %k1
+; X86-KNL-NEXT:    kshiftlw $4, %k0, %k2
+; X86-KNL-NEXT:    korw %k1, %k2, %k1
+; X86-KNL-NEXT:    kandw %k0, %k1, %k0
 ; X86-KNL-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-KNL-NEXT:    kmovw %eax, %k1
 ; X86-KNL-NEXT:    kshiftlw $15, %k1, %k1
@@ -2407,13 +2455,21 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ;
 ; X64-SKX-LABEL: test30b:
 ; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    kmovw %esi, %k0
-; X64-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X64-SKX-NEXT:    kshiftrb $6, %k0, %k0
+; X64-SKX-NEXT:    movb $-3, %al
+; X64-SKX-NEXT:    kmovw %eax, %k0
 ; X64-SKX-NEXT:    kmovw %edi, %k1
 ; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
 ; X64-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X64-SKX-NEXT:    korw %k0, %k1, %k0
+; X64-SKX-NEXT:    kshiftrb $1, %k0, %k2
+; X64-SKX-NEXT:    kshiftlb $1, %k2, %k2
+; X64-SKX-NEXT:    korw %k1, %k2, %k1
+; X64-SKX-NEXT:    kshiftlb $4, %k0, %k2
+; X64-SKX-NEXT:    korw %k1, %k2, %k1
+; X64-SKX-NEXT:    kandw %k0, %k1, %k0
+; X64-SKX-NEXT:    kmovw %esi, %k1
+; X64-SKX-NEXT:    kshiftlb $7, %k1, %k1
+; X64-SKX-NEXT:    kshiftrb $6, %k1, %k1
+; X64-SKX-NEXT:    korw %k1, %k0, %k0
 ; X64-SKX-NEXT:    movb $-5, %al
 ; X64-SKX-NEXT:    kmovw %eax, %k1
 ; X64-SKX-NEXT:    kandw %k1, %k0, %k0
@@ -2433,15 +2489,23 @@ define void @test30b(<3 x ptr> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x i32> 
 ;
 ; X86-SKX-LABEL: test30b:
 ; X86-SKX:       # %bb.0:
-; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SKX-NEXT:    movb $-3, %al
 ; X86-SKX-NEXT:    kmovw %eax, %k0
-; X86-SKX-NEXT:    kshiftlb $7, %k0, %k0
-; X86-SKX-NEXT:    kshiftrb $6, %k0, %k0
 ; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-SKX-NEXT:    kmovw %eax, %k1
 ; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
 ; X86-SKX-NEXT:    kshiftrb $7, %k1, %k1
-; X86-SKX-NEXT:    korw %k0, %k1, %k0
+; X86-SKX-NEXT:    kshiftrb $1, %k0, %k2
+; X86-SKX-NEXT:    kshiftlb $1, %k2, %k2
+; X86-SKX-NEXT:    korw %k1, %k2, %k1
+; X86-SKX-NEXT:    kshiftlb $4, %k0, %k2
+; X86-SKX-NEXT:    korw %k1, %k2, %k1
+; X86-SKX-NEXT:    kandw %k0, %k1, %k0
+; X86-SKX-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SKX-NEXT:    kmovw %eax, %k1
+; X86-SKX-NEXT:    kshiftlb $7, %k1, %k1
+; X86-SKX-NEXT:    kshiftrb $6, %k1, %k1
+; X86-SKX-NEXT:    korw %k1, %k0, %k0
 ; X86-SKX-NEXT:    movb $-5, %al
 ; X86-SKX-NEXT:    kmovw %eax, %k1
 ; X86-SKX-NEXT:    kandw %k1, %k0, %k0

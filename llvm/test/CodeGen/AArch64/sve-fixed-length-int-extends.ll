@@ -75,6 +75,7 @@ define void @sext_v32i8_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.b, p0/m, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    add z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    sunpklo z1.h, z0.b
@@ -88,6 +89,7 @@ define void @sext_v32i8_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z0.b, p0/m, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    add z0.b, z0.b, z0.b
 ; VBITS_GE_512-NEXT:    sunpklo z0.h, z0.b
@@ -105,6 +107,7 @@ define void @sext_v64i8_v64i16(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
@@ -122,6 +125,7 @@ define void @sext_v128i8_v128i16(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
@@ -185,6 +189,7 @@ define void @sext_v32i8_v32i32(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
@@ -203,6 +208,7 @@ define void @sext_v64i8_v64i32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
@@ -287,6 +293,7 @@ define void @sext_v32i8_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
@@ -324,6 +331,7 @@ define void @sext_v16i16_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z0.h
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    add z0.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    sunpklo z1.s, z0.h
@@ -337,6 +345,7 @@ define void @sext_v16i16_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    add z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    sunpklo z0.s, z0.h
@@ -354,6 +363,7 @@ define void @sext_v32i16_v32i32(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -371,6 +381,7 @@ define void @sext_v64i16_v64i32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -434,6 +445,7 @@ define void @sext_v16i16_v16i64(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -452,6 +464,7 @@ define void @sext_v32i16_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -488,6 +501,7 @@ define void @sext_v8i32_v8i64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    add z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    sunpklo z1.d, z0.s
@@ -501,6 +515,7 @@ define void @sext_v8i32_v8i64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    add z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    sunpklo z0.d, z0.s
@@ -518,6 +533,7 @@ define void @sext_v16i32_v16i64(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
@@ -535,6 +551,7 @@ define void @sext_v32i32_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
@@ -571,6 +588,7 @@ define void @zext_v32i8_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.b, p0/m, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    add z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    uunpklo z1.h, z0.b
@@ -584,6 +602,7 @@ define void @zext_v32i8_v32i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_512-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z0.b, p0/m, z0.b
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    add z0.b, z0.b, z0.b
 ; VBITS_GE_512-NEXT:    uunpklo z0.h, z0.b
@@ -601,6 +620,7 @@ define void @zext_v64i8_v64i16(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -618,6 +638,7 @@ define void @zext_v128i8_v128i16(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -681,6 +702,7 @@ define void @zext_v32i8_v32i32(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -699,6 +721,7 @@ define void @zext_v64i8_v64i32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl64
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -783,6 +806,7 @@ define void @zext_v32i8_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    add z0.b, z0.b, z0.b
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
@@ -820,6 +844,7 @@ define void @zext_v16i16_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z0.h
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    add z0.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    uunpklo z1.s, z0.h
@@ -833,6 +858,7 @@ define void @zext_v16i16_v16i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z0.h, p0/m, z0.h
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    add z0.h, z0.h, z0.h
 ; VBITS_GE_512-NEXT:    uunpklo z0.s, z0.h
@@ -850,6 +876,7 @@ define void @zext_v32i16_v32i32(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -867,6 +894,7 @@ define void @zext_v64i16_v64i32(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -930,6 +958,7 @@ define void @zext_v16i16_v16i64(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -948,6 +977,7 @@ define void @zext_v32i16_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    add z0.h, z0.h, z0.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -984,6 +1014,7 @@ define void @zext_v8i32_v8i64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    add z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uunpklo z1.d, z0.s
@@ -997,6 +1028,7 @@ define void @zext_v8i32_v8i64(ptr %in, ptr %out) #0 {
 ; VBITS_GE_512:       // %bb.0:
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; VBITS_GE_512-NEXT:    mov z0.s, p0/m, z0.s
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    add z0.s, z0.s, z0.s
 ; VBITS_GE_512-NEXT:    uunpklo z0.d, z0.s
@@ -1014,6 +1046,7 @@ define void @zext_v16i32_v16i64(ptr %in, ptr %out) vscale_range(8,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
@@ -1031,6 +1064,7 @@ define void @zext_v32i32_v32i64(ptr %in, ptr %out) vscale_range(16,0) #0 {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    add z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uunpklo z0.d, z0.s

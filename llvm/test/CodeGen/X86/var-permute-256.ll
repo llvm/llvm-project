@@ -1566,11 +1566,11 @@ define <16 x i16> @var_shuffle_v16i16_from_v8i16(<8 x i16> %v, <16 x i16> %indic
 ; AVX512VLF-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLF-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [514,514,514,514,514,514,514,514,514,514,514,514,514,514,514,514]
 ; AVX512VLF-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLF-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512VLF-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
+; AVX512VLF-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
 ; AVX512VLF-NEXT:    vpshufb %ymm1, %ymm0, %ymm3
 ; AVX512VLF-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
-; AVX512VLF-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm2 ^ (ymm0 & (ymm3 ^ ymm2))
+; AVX512VLF-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm3 ^ (ymm0 & (ymm2 ^ ymm3))
 ; AVX512VLF-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v16i16_from_v8i16:

@@ -4,16 +4,19 @@
 define void @PR48727() {
 ; CHECK-LABEL: PR48727:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    vcvttpd2dqy 0, %xmm0
 ; CHECK-NEXT:    vcvttpd2dqy 128, %xmm1
-; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    vcvttpd2dqy 160, %xmm2
+; CHECK-NEXT:    vpackssdw %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpackssdw %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; CHECK-NEXT:    vcvttpd2dqy (%rax), %xmm2
 ; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; CHECK-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; CHECK-NEXT:    vpmovdw %zmm0, %ymm0
-; CHECK-NEXT:    vmovdqu %ymm0, 16(%rax)
+; CHECK-NEXT:    vpackssdw %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2,4,6]
+; CHECK-NEXT:    vpermi2q %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vmovdqu %ymm2, 16(%rax)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:

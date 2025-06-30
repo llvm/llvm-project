@@ -907,6 +907,7 @@ define <16 x i8> @test_remconstant_16i8(<16 x i8> %a) nounwind {
 ; AVX2NOBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
 ; AVX2NOBW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [64,256,128,32,32,32,64,64,64,64,32,32,32,128,128,64]
 ; AVX2NOBW-NEXT:    vpsrlw $8, %ymm1, %ymm1
+; AVX2NOBW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5,6,7]
 ; AVX2NOBW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [7,8,9,10,11,12,13,14,14,13,12,11,10,9,9,7]
 ; AVX2NOBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX2NOBW-NEXT:    vextracti128 $1, %ymm1, %xmm2

@@ -99,6 +99,8 @@ define i8 @uaddv_v32i8(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; CHECK-NEXT:    add z0.b, z1.b, z0.b
 ; CHECK-NEXT:    uaddv d0, p0, z0.b
 ; CHECK-NEXT:    fmov w0, s0
@@ -245,6 +247,8 @@ define i16 @uaddv_v16i16(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    add z0.h, z1.h, z0.h
 ; CHECK-NEXT:    uaddv d0, p0, z0.h
 ; CHECK-NEXT:    fmov w0, s0
@@ -343,6 +347,8 @@ define i32 @uaddv_v8i32(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    add z0.s, z1.s, z0.s
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
@@ -396,6 +402,8 @@ define i64 @uaddv_v4i64(ptr %a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q1, q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    add z0.d, z1.d, z0.d
 ; CHECK-NEXT:    uaddv d0, p0, z0.d
 ; CHECK-NEXT:    fmov x0, d0

@@ -7,7 +7,18 @@
 define void @spam() local_unnamed_addr {
 ; CHECK-LABEL: spam:
 ; CHECK:       ## %bb.0: ## %bb
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq _global@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movzbl (%rax), %eax
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    movzbl %al, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm2, %xmm2
+; CHECK-NEXT:    pcmpgtb %xmm0, %xmm2
+; CHECK-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-NEXT:    pmovmskb %xmm2, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb9

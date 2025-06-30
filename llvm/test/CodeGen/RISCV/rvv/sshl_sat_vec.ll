@@ -64,9 +64,9 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: vec_v16i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmsle.vi v0, v8, -1
-; CHECK-NEXT:    li a0, 127
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vmerge.vxm v10, v10, a0, v0

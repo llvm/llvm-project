@@ -13,8 +13,9 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    index z1.d, #1, #1
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
-; CHECK-NEXT:    index z0.d, #1, #1
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    mov z1.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and z0.d, z1.d, z0.d
 ; CHECK-NEXT:    ldr q1, [x1]
@@ -106,6 +107,7 @@ define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    index z1.d, #1, #1
 ; CHECK-NEXT:    cmpeq p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    mov z2.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and z1.d, z2.d, z1.d
 ; CHECK-NEXT:    uaddv d2, p0, z1.d

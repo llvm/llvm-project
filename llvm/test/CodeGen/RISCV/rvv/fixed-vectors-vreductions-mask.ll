@@ -902,7 +902,8 @@ define zeroext i1 @vreduce_and_v256i1(<256 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vmand.mm v8, v0, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -932,7 +933,8 @@ define zeroext i1 @vreduce_smax_v256i1(<256 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vmand.mm v8, v0, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -947,7 +949,8 @@ define zeroext i1 @vreduce_umin_v256i1(<256 x i1> %v) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vmnand.mm v8, v0, v8
+; CHECK-NEXT:    vmand.mm v8, v0, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -1013,7 +1016,8 @@ define zeroext i1 @vreduce_and_v512i1(<512 x i1> %v) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmand.mm v8, v8, v10
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
-; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vmand.mm v8, v9, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -1047,7 +1051,8 @@ define zeroext i1 @vreduce_smax_v512i1(<512 x i1> %v) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmand.mm v8, v8, v10
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
-; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vmand.mm v8, v9, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -1064,7 +1069,8 @@ define zeroext i1 @vreduce_umin_v512i1(<512 x i1> %v) {
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmand.mm v8, v8, v10
 ; CHECK-NEXT:    vmand.mm v9, v0, v9
-; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vmand.mm v8, v9, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -1144,7 +1150,8 @@ define zeroext i1 @vreduce_and_v1024i1(<1024 x i1> %v) {
 ; CHECK-NEXT:    vmand.mm v11, v0, v11
 ; CHECK-NEXT:    vmand.mm v8, v8, v10
 ; CHECK-NEXT:    vmand.mm v9, v11, v9
-; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vmand.mm v8, v9, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -1186,7 +1193,8 @@ define zeroext i1 @vreduce_smax_v1024i1(<1024 x i1> %v) {
 ; CHECK-NEXT:    vmand.mm v11, v0, v11
 ; CHECK-NEXT:    vmand.mm v8, v8, v10
 ; CHECK-NEXT:    vmand.mm v9, v11, v9
-; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vmand.mm v8, v9, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret
@@ -1207,7 +1215,8 @@ define zeroext i1 @vreduce_umin_v1024i1(<1024 x i1> %v) {
 ; CHECK-NEXT:    vmand.mm v11, v0, v11
 ; CHECK-NEXT:    vmand.mm v8, v8, v10
 ; CHECK-NEXT:    vmand.mm v9, v11, v9
-; CHECK-NEXT:    vmnand.mm v8, v9, v8
+; CHECK-NEXT:    vmand.mm v8, v9, v8
+; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    ret

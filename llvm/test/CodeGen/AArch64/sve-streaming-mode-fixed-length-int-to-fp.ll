@@ -196,9 +196,12 @@ define void @ucvtf_v16i16_v16f16(ptr %a, ptr %b) {
 define <2 x float> @ucvtf_v2i16_v2f32(<2 x i16> %op1) {
 ; CHECK-LABEL: ucvtf_v2i16_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z1.s, #65535 // =0xffff
 ; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ucvtf z0.s, p0/m, z0.s
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -411,9 +414,13 @@ define <1 x double> @ucvtf_v1i16_v1f64(<1 x i16> %op1) {
 define <2 x double> @ucvtf_v2i16_v2f64(<2 x i16> %op1) {
 ; CHECK-LABEL: ucvtf_v2i16_v2f64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z1.s, #65535 // =0xffff
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    and z0.s, z0.s, #0xffff
+; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ucvtf z0.d, p0/m, z0.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0

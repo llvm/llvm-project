@@ -27641,7 +27641,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
 
   // If inserting an UNDEF, just return the original vector.
   if (N1.isUndef())
-    return N0;
+    return DAG.getFreeze(N0);
 
   // If this is an insert of an extracted vector into an undef vector, we can
   // just use the input to the extract if the types match, and can simplify

@@ -88,11 +88,12 @@ define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v10, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, zero
-; CHECK-NEXT:    vredsum.vs v8, v10, v8
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v10, v8
+; CHECK-NEXT:    vzext.vf2 v12, v9
+; CHECK-NEXT:    vadd.vv v8, v10, v12
+; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v10
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %ae = zext <16 x i8> %a to <16 x i16>
@@ -106,14 +107,16 @@ define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 define i16 @add_ext_v32i16(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_v32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v11, zero
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vwredsumu.vs v10, v10, v11
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
-; CHECK-NEXT:    vwredsumu.vs v8, v8, v10
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vzext.vf2 v16, v10
+; CHECK-NEXT:    vmv.s.x v10, zero
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vzext.vf2 v12, v8
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vredsum.vs v8, v16, v10
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-NEXT:    vredsum.vs v8, v12, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %ae = zext <32 x i8> %a to <32 x i16>

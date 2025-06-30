@@ -545,7 +545,8 @@ define <8 x i1> @fcmp_ueq_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, 
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFH-NEXT:    vmflt.vv v10, v8, v9, v0.t
 ; ZVFH-NEXT:    vmflt.vv v8, v9, v8, v0.t
-; ZVFH-NEXT:    vmnor.mm v0, v8, v10
+; ZVFH-NEXT:    vmor.mm v8, v8, v10
+; ZVFH-NEXT:    vmnot.m v0, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_ueq_vv_v8f16:
@@ -556,7 +557,8 @@ define <8 x i1> @fcmp_ueq_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, 
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v8, v12, v10, v0.t
 ; ZVFHMIN-NEXT:    vmflt.vv v9, v10, v12, v0.t
-; ZVFHMIN-NEXT:    vmnor.mm v0, v9, v8
+; ZVFHMIN-NEXT:    vmor.mm v8, v9, v8
+; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.fcmp.v8f16(<8 x half> %va, <8 x half> %vb, metadata !"ueq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
@@ -568,7 +570,8 @@ define <8 x i1> @fcmp_ueq_vf_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i32 zer
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFH-NEXT:    vmflt.vf v9, v8, fa0, v0.t
 ; ZVFH-NEXT:    vmfgt.vf v8, v8, fa0, v0.t
-; ZVFH-NEXT:    vmnor.mm v0, v8, v9
+; ZVFH-NEXT:    vmor.mm v8, v8, v9
+; ZVFH-NEXT:    vmnot.m v0, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_ueq_vf_v8f16:
@@ -581,7 +584,8 @@ define <8 x i1> @fcmp_ueq_vf_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i32 zer
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v12, v10, v8, v0.t
 ; ZVFHMIN-NEXT:    vmflt.vv v13, v8, v10, v0.t
-; ZVFHMIN-NEXT:    vmnor.mm v0, v13, v12
+; ZVFHMIN-NEXT:    vmor.mm v8, v13, v12
+; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <8 x half> poison, half %b, i32 0
   %vb = shufflevector <8 x half> %elt.head, <8 x half> poison, <8 x i32> zeroinitializer
@@ -595,7 +599,8 @@ define <8 x i1> @fcmp_ueq_vf_swap_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i3
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; ZVFH-NEXT:    vmfgt.vf v9, v8, fa0, v0.t
 ; ZVFH-NEXT:    vmflt.vf v8, v8, fa0, v0.t
-; ZVFH-NEXT:    vmnor.mm v0, v8, v9
+; ZVFH-NEXT:    vmor.mm v8, v8, v9
+; ZVFH-NEXT:    vmnot.m v0, v8
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: fcmp_ueq_vf_swap_v8f16:
@@ -608,7 +613,8 @@ define <8 x i1> @fcmp_ueq_vf_swap_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i3
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vmflt.vv v12, v8, v10, v0.t
 ; ZVFHMIN-NEXT:    vmflt.vv v13, v10, v8, v0.t
-; ZVFHMIN-NEXT:    vmnor.mm v0, v13, v12
+; ZVFHMIN-NEXT:    vmor.mm v8, v13, v12
+; ZVFHMIN-NEXT:    vmnot.m v0, v8
 ; ZVFHMIN-NEXT:    ret
   %elt.head = insertelement <8 x half> poison, half %b, i32 0
   %vb = shufflevector <8 x half> %elt.head, <8 x half> poison, <8 x i32> zeroinitializer
@@ -3651,7 +3657,8 @@ define <8 x i1> @fcmp_ueq_vv_v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1> 
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vmflt.vv v16, v8, v12, v0.t
 ; CHECK-NEXT:    vmflt.vv v17, v12, v8, v0.t
-; CHECK-NEXT:    vmnor.mm v0, v17, v16
+; CHECK-NEXT:    vmor.mm v8, v17, v16
+; CHECK-NEXT:    vmnot.m v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.fcmp.v8f64(<8 x double> %va, <8 x double> %vb, metadata !"ueq", <8 x i1> %m, i32 %evl)
   ret <8 x i1> %v
@@ -3663,7 +3670,8 @@ define <8 x i1> @fcmp_ueq_vf_v8f64(<8 x double> %va, double %b, <8 x i1> %m, i32
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vmflt.vf v12, v8, fa0, v0.t
 ; CHECK-NEXT:    vmfgt.vf v13, v8, fa0, v0.t
-; CHECK-NEXT:    vmnor.mm v0, v13, v12
+; CHECK-NEXT:    vmor.mm v8, v13, v12
+; CHECK-NEXT:    vmnot.m v0, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x double> poison, double %b, i32 0
   %vb = shufflevector <8 x double> %elt.head, <8 x double> poison, <8 x i32> zeroinitializer
@@ -3677,7 +3685,8 @@ define <8 x i1> @fcmp_ueq_vf_swap_v8f64(<8 x double> %va, double %b, <8 x i1> %m
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vmfgt.vf v12, v8, fa0, v0.t
 ; CHECK-NEXT:    vmflt.vf v13, v8, fa0, v0.t
-; CHECK-NEXT:    vmnor.mm v0, v13, v12
+; CHECK-NEXT:    vmor.mm v8, v13, v12
+; CHECK-NEXT:    vmnot.m v0, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x double> poison, double %b, i32 0
   %vb = shufflevector <8 x double> %elt.head, <8 x double> poison, <8 x i32> zeroinitializer

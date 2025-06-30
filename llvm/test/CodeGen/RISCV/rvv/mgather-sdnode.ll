@@ -2386,11 +2386,12 @@ define <4 x i32> @scalar_prefix(ptr %base, i32 signext %index, <4 x i32> %vecidx
 ;
 ; RV64-LABEL: scalar_prefix:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, 4
 ; RV64-NEXT:    slli a1, a1, 10
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vwmulsu.vx v10, v8, a2
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v10, v8
 ; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    vsll.vi v10, v10, 2
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, i32 %index, <4 x i32> %vecidx
@@ -2412,14 +2413,16 @@ define <4 x i32> @scalar_prefix_with_splat(ptr %base, i32 %index, <4 x i32> %vec
 ;
 ; RV64-LABEL: scalar_prefix_with_splat:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a2, 1024
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v10, a0
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v12, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v10, v8
+; RV64-NEXT:    vsext.vf2 v8, v12
+; RV64-NEXT:    vsll.vi v8, v8, 10
+; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsll.vi v10, v10, 2
+; RV64-NEXT:    vadd.vv v10, v8, v10
 ; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a2
-; RV64-NEXT:    vwmaccsu.vx v10, a1, v9
-; RV64-NEXT:    li a0, 4
-; RV64-NEXT:    vwmaccus.vx v10, a0, v8
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %index, i32 0
@@ -2442,11 +2445,12 @@ define <4 x i32> @scalar_prefix_with_constant_splat(ptr %base, <4 x i32> %vecidx
 ;
 ; RV64-LABEL: scalar_prefix_with_constant_splat:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 4
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vwmulsu.vx v10, v8, a1
 ; RV64-NEXT:    lui a1, 5
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v10, v8
 ; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    vsll.vi v10, v10, 2
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> splat (i32 20), <4 x i32> %vecidx
@@ -2469,12 +2473,16 @@ define <4 x i32> @reassociate(ptr %base, i32 %index, <4 x i32> %vecidx) {
 ; RV64-LABEL: reassociate:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v10, a0
-; RV64-NEXT:    li a0, 1024
+; RV64-NEXT:    vsext.vf2 v10, v8
 ; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64-NEXT:    vwmaccus.vx v10, a0, v8
-; RV64-NEXT:    vmv.v.i v8, 4
-; RV64-NEXT:    vwmaccsu.vx v10, a1, v8
+; RV64-NEXT:    vmv.v.x v12, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vsll.vi v8, v10, 10
+; RV64-NEXT:    vsext.vf2 v10, v12
+; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsll.vi v10, v10, 2
+; RV64-NEXT:    vadd.vv v10, v8, v10
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> %vecidx, i32 %index
@@ -2496,13 +2504,16 @@ define <4 x i32> @reassociate_with_splat(ptr %base, i32 %index, <4 x i32> %vecid
 ;
 ; RV64-LABEL: reassociate_with_splat:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v10, a0
-; RV64-NEXT:    li a0, 1024
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v12, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v10, v8
+; RV64-NEXT:    vsll.vi v8, v10, 10
+; RV64-NEXT:    vsext.vf2 v10, v12
+; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsll.vi v10, v10, 2
+; RV64-NEXT:    vadd.vv v10, v8, v10
 ; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; RV64-NEXT:    vwmaccus.vx v10, a0, v8
-; RV64-NEXT:    vmv.v.i v8, 4
-; RV64-NEXT:    vwmaccsu.vx v10, a1, v8
 ; RV64-NEXT:    vluxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %broadcast.splatinsert = insertelement <4 x i32> poison, i32 %index, i32 0
@@ -2524,10 +2535,11 @@ define <4 x i32> @reassociate_with_constant_splat(ptr %base, i32 %index, <4 x i3
 ;
 ; RV64-LABEL: reassociate_with_constant_splat:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, 1024
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vwmulsu.vx v10, v8, a1
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v10, v8
+; RV64-NEXT:    vsll.vi v10, v10, 10
 ; RV64-NEXT:    addi a0, a0, 80
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vluxei64.v v8, (a0), v10
 ; RV64-NEXT:    ret
   %gep = getelementptr [256 x i32], ptr %base, <4 x i32> %vecidx, <4 x i32> splat (i32 20)

@@ -20,8 +20,8 @@ define <512 x i8> @single_source(<512 x i8> %a) {
 ; CHECK-NEXT:    vmv8r.v v16, v8
 ; CHECK-NEXT:    li a0, 512
 ; CHECK-NEXT:    addi a1, sp, 512
-; CHECK-NEXT:    vmv.x.s a2, v16
 ; CHECK-NEXT:    vslidedown.vi v24, v16, 5
+; CHECK-NEXT:    vmv.x.s a2, v16
 ; CHECK-NEXT:    li a3, 432
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
