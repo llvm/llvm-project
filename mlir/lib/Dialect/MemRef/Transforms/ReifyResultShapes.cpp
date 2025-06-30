@@ -17,6 +17,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/Support/InterleavedRange.h"
 
@@ -134,8 +135,10 @@ struct ReifyResultShapesPass final
 void ReifyResultShapesPass::runOnOperation() {
   SmallVector<ReifyRankedShapedTypeOpInterface> ops;
   getOperation()->walk([&](ReifyRankedShapedTypeOpInterface op) {
-    // Some ops have rigid type checkers and need to update their operands.
-    // Only admit the ones that are explicitly supported for now.
+    // Handle ops that are not DPS and that do not carry an tied operand shapes.
+    // For now, limit to tensor::PadOp and tensor::ConcatOp.
+    if (isa<DestinationStyleOpInterface>(op.getOperation()))
+      return;
     if (!isa<tensor::PadOp, tensor::ConcatOp>(op.getOperation()))
       return;
     ops.push_back(op);
