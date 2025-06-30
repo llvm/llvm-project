@@ -255,11 +255,15 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
                              s.clauses());
   return mlir::success();
 }
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
-  return mlir::failure();
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  emitOpenACCOp<ExitDataOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+                            s.clauses());
+  return mlir::success();
 }
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s) {
   cgm.errorNYI(s.getSourceRange(), "OpenACC Update Construct");
