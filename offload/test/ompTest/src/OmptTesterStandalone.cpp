@@ -30,8 +30,8 @@ Error TestCase::exec() {
   // We remove subscribers to not be notified of events after our test case
   // finished.
   OmptCallbackHandler::get().clearSubscribers();
-  omptest::AssertState SequenceResultState = SequenceAsserter->getState();
-  omptest::AssertState SetResultState = SetAsserter->getState();
+  omptest::AssertState SequenceResultState = SequenceAsserter->checkState();
+  omptest::AssertState SetResultState = SetAsserter->checkState();
   bool AnyFail = SequenceResultState == omptest::AssertState::fail ||
                  SetResultState == omptest::AssertState::fail;
   bool AllPass = SequenceResultState == omptest::AssertState::pass &&

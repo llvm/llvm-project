@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <map>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -31,7 +32,10 @@ enum class Level : uint32_t {
   Default,
   ExpectedEvent,
   ObservedEvent,
-  OffendingEvent
+  OffendingEvent,
+
+  // Suppress all prints
+  SILENT = 0xFFFFFFFF
 };
 
 enum class FormatOption : uint32_t {
@@ -98,12 +102,9 @@ std::string format(const std::string &Message, std::set<FormatOption> Options);
 
 class Logger {
 public:
+  Logger(Level LogLevel = Level::WARNING, std::ostream &OutStream = std::cerr,
+         bool FormatOutput = true);
   ~Logger();
-
-  /// Retrieve the singleton logger (and initialize, if not done already)
-  static Logger &get(Level LogLevel = Level::WARNING,
-                     std::ostream &OutStream = std::cerr,
-                     bool FormatOutput = true);
 
   /// Log the given message to the output.
   void log(Level LogLevel, const std::string &Message) const;
@@ -119,7 +120,7 @@ public:
                      const std::string &Message,
                      Level LogLevel = Level::ERROR) const;
 
-  /// Set if output is being formatted.
+  /// Set if output is being formatted (e.g. colored).
   void setFormatOutput(bool Enabled);
 
   /// Return the current (minimum) Logging Level.
@@ -129,9 +130,6 @@ public:
   void setLoggingLevel(Level LogLevel);
 
 private:
-  Logger(Level LogLevel = Level::WARNING, std::ostream &OutStream = std::cerr,
-         bool FormatOutput = true);
-
   /// The minimum logging level that is considered by the logger instance.
   Level LoggingLevel;
 
@@ -140,12 +138,12 @@ private:
 
   /// Determine if log messages are formatted using control sequences.
   bool FormatOutput;
+
+  /// Mutex to ensure serialized logging
+  mutable std::mutex LogMutex;
 };
 
 } // namespace logging
 } // namespace omptest
-
-// Pointer to global logger
-extern omptest::logging::Logger *Log;
 
 #endif

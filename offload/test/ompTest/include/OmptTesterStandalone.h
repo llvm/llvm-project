@@ -12,7 +12,7 @@
 namespace omptest {
 struct OmptEventAsserter;
 class OmptEventReporter;
-struct OmptSequencedAsserter;
+class OmptSequencedAsserter;
 } // namespace omptest
 
 struct Error {
@@ -21,8 +21,7 @@ struct Error {
 };
 
 /// A pretty crude test case abstraction
-class TestCase : public omptest::OmptEventGroupInterface {
-public:
+struct TestCase {
   TestCase(const std::string &name)
       : IsDisabled(name.rfind("DISABLED_", 0) == 0), Name(name) {}
   TestCase(const std::string &name, const omptest::AssertState &expected)
@@ -36,6 +35,13 @@ public:
   std::string Name;
   omptest::AssertState ExpectedState{omptest::AssertState::pass};
   omptest::AssertState ResultState{omptest::AssertState::pass};
+
+  std::unique_ptr<omptest::OmptSequencedAsserter> SequenceAsserter =
+      std::make_unique<omptest::OmptSequencedAsserter>();
+  std::unique_ptr<omptest::OmptEventAsserter> SetAsserter =
+      std::make_unique<omptest::OmptEventAsserter>();
+  std::unique_ptr<omptest::OmptEventReporter> EventReporter =
+      std::make_unique<omptest::OmptEventReporter>();
 };
 /// A pretty crude test suite abstraction
 struct TestSuite {
@@ -51,7 +57,8 @@ struct TestSuite {
   TestCaseVec TestCases;
 };
 /// Static class used to register all test cases and provide them to the driver
-struct TestRegistrar {
+class TestRegistrar {
+public:
   static TestRegistrar &get();
   static std::vector<TestSuite> getTestSuites();
   static void addCaseToSuite(TestCase *TC, std::string TSName);
