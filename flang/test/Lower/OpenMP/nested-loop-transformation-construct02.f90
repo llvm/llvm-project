@@ -1,6 +1,6 @@
 ! Test to ensure TODO message is emitted for unroll OpenMP 5.1 Directives when they are nested.
 
-!RUN: not %flang -fopenmp -fopenmp-version=51 %s 2<&1 | FileCheck %s
+!RUN: not %flang -fopenmp -fopenmp-version=51 %s 2>&1 | FileCheck %s
 
 program loop_transformation_construct
   implicit none
