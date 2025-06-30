@@ -2803,7 +2803,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
     case AMDGPU::S_ADD_I32:
     case AMDGPU::S_ADD_U32: {
-      // TODO: Handle s_or_b32, s_and_b32.
+    case AMDGPU::S_OR_B32: {
+      // TODO: Handle s_and_b32 for ptrmask
       unsigned OtherOpIdx = FIOperandNum == 1 ? 2 : 1;
       MachineOperand &OtherOp = MI->getOperand(OtherOpIdx);
 
