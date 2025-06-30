@@ -163,6 +163,25 @@ public:
   }
 };
 
+inline namespace __cpo {
+struct __to_input_range_adaptor {
+  template <ranges::input_range _V>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr auto operator()(_V&& __r) const {
+    return to_input_view<ranges::views::all_t<_V>>(std::forward<_V>(__r));
+  }
+
+  template <ranges::input_range _V>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend inline constexpr auto operator|(_V&& __r, __to_input_range_adaptor) {
+    return to_input_view<ranges::views::all_t<_V>>(std::forward<_V>(__r));
+  }
+};
+} // namespace __cpo
+
+namespace views {
+inline constexpr auto to_input = ranges::__cpo::__to_input_range_adaptor{};
+} // namespace views
+
+
 } // namespace ranges
 
 #endif // _LIBCPP_STD_VER >= 26
