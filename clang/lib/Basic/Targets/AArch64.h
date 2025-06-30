@@ -158,8 +158,6 @@ public:
     return false;
   }
 
-  void setArchFeatures();
-
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
   void getTargetDefinesARMV82A(const LangOptions &Opts,
