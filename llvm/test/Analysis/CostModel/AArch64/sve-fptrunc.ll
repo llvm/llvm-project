@@ -8,13 +8,13 @@ define void @sve_fptruncs() {
 ; CHECK-LABEL: 'sve_fptruncs'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> undef to <vscale x 2 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> undef to <vscale x 4 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> undef to <vscale x 8 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> undef to <vscale x 8 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> undef to <vscale x 2 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> undef to <vscale x 4 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> undef to <vscale x 8 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> undef to <vscale x 4 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> undef to <vscale x 8 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f32_from_f64 = fptrunc <vscale x 2 x double> undef to <vscale x 2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f32_from_f64 = fptrunc <vscale x 4 x double> undef to <vscale x 4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f32_from_f64 = fptrunc <vscale x 8 x double> undef to <vscale x 8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4_f32_from_f64 = fptrunc <vscale x 4 x double> undef to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %nxv8_f32_from_f64 = fptrunc <vscale x 8 x double> undef to <vscale x 8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> undef to <vscale x 2 x half>
