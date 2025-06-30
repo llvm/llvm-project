@@ -475,8 +475,10 @@ public:
     RewriterBase::Listener *rewriteListener;
   };
 
-  struct CatalogingListener : public RewriterBase::ForwardingListener {
-    CatalogingListener(OpBuilder::Listener *listener, StringRef patternName)
+  /// A listener that logs notification events to llvm::dbgs() before
+  /// forwarding to the base listener.
+  struct PatternLoggingListener : public RewriterBase::ForwardingListener {
+    PatternLoggingListener(OpBuilder::Listener *listener, StringRef patternName)
         : RewriterBase::ForwardingListener(listener), patternName(patternName) {
     }
 

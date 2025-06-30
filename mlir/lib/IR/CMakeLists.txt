@@ -18,7 +18,6 @@ add_mlir_library(MLIRIR
   BuiltinDialectBytecode.cpp
   BuiltinTypes.cpp
   BuiltinTypeInterfaces.cpp
-  CatalogingListener.cpp
   Diagnostics.cpp
   Dialect.cpp
   DialectResourceBlobManager.cpp
@@ -30,6 +29,7 @@ add_mlir_library(MLIRIR
   ODSSupport.cpp
   Operation.cpp
   OperationSupport.cpp
+  PatternLoggingListener.cpp
   PatternMatch.cpp
   Region.cpp
   RegionKindInterface.cpp

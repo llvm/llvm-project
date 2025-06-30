@@ -306,7 +306,7 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
         [
             ToolSubst(
                 "mlir-opt",
-                "mlir-opt --debug-only=generate-pattern-catalog --mlir-disable-threading",
+                "mlir-opt --debug-only=pattern-logging-listener --mlir-disable-threading",
                 unresolved="fatal",
             ),
             ToolSubst("FileCheck", "FileCheck --dump-input=always", unresolved="fatal"),
