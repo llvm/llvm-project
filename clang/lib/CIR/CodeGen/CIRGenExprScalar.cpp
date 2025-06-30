@@ -125,6 +125,10 @@ public:
     return {};
   }
 
+  mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
+    return Visit(e->getSelectedExpr());
+  }
+
   mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
 
   /// Emits the address of the l-value, then loads and returns the result.
