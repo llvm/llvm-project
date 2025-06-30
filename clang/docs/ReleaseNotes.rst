@@ -227,6 +227,9 @@ New features
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
 
+- Fixed a crash when analyzing default bindings as compound literals in
+  designated initializers for bitfields in unions. (#GH146050)
+
 Improvements
 ^^^^^^^^^^^^
 
