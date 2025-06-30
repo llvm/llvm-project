@@ -433,6 +433,22 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeLoadStore32(MCInst &Inst, unsigned Insn,
+                                      uint64_t Address,
+                                      const MCDisassembler *Decoder) {
+  // Get the register that will be loaded or stored.
+  unsigned RegVal = GPRDecoderTable[(Insn >> 20) & 0x1f];
+
+  // Decode LDS/STS
+  if ((Insn & 0xfc0f0000) == 0x90000000) {
+    Inst.setOpcode((Insn & 0x02000000) ? AVR::STSKRr : AVR::LDSRdK);
+    Inst.addOperand(MCOperand::createReg(RegVal));
+    Inst.addOperand(MCOperand::createImm(Insn & 0xFFFF));
+    return MCDisassembler::Success;
+  }
+  return MCDisassembler::Fail;
+}
+
 static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn) {
   if (Bytes.size() < 2) {
@@ -522,6 +538,10 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     if (Result != MCDisassembler::Fail) {
       return Result;
     }
+
+    Result = decodeLoadStore32(Instr, Insn, Address, this);
+    if (Result != MCDisassembler::Fail)
+      return Result;
 
     return MCDisassembler::Fail;
   }
