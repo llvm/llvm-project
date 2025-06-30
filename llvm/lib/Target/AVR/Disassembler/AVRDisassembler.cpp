@@ -370,8 +370,29 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
   // LD Rd, -Y : 1001 000d dddd 1010
   // LD Rd, Z+ : 1001 000d dddd 0001
   // LD Rd, -Z : 1001 000d dddd 0010
+  //
+  // and 3 ELPM instructions
+  // ELPM Rd,Z : 1001 000d dddd 0110
+  // ELPM Rd,Z+: 1001 000d dddd 0111
+  // ELPM R0,Z : 1001 0101 1101 1000
+  if (Insn == 0x95d8) {
+    Inst.setOpcode(AVR::ELPM);
+    return MCDisassembler::Success;
+  }
+
   if ((Insn & 0xfc00) != 0x9000 || (Insn & 0xf) == 0)
     return MCDisassembler::Fail;
+
+  // ELPM Rd,Z(+)
+  if ((Insn & 0xfe00) == 0x9000) {
+    switch (Insn & 0xf) {
+    case 0x6:
+    case 0x7:
+      Inst.setOpcode((Insn & 0xf) == 6 ? AVR::ELPMRdZ : AVR::ELPMRdZPi);
+      Inst.addOperand(MCOperand::createReg(RegVal));
+      return MCDisassembler::Success;
+    }
+  }
 
   // Get the base address register.
   unsigned RegBase;
