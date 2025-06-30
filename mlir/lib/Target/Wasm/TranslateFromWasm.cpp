@@ -701,6 +701,9 @@ public:
     if (failed(parsingFunctions))
       return;
 
+    auto parsingTables = parseSection<WasmSectionType::TABLE>();
+    if (failed(parsingTables))
+      return;
 
     // Copy over sizes of containers into statistics.
     numFunctionSectionItems = symbols.funcSymbols.size();
@@ -742,6 +745,21 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::IMPORT>(ParserHead &ph, size
         return visitImport(importLoc, *moduleName, *importName, import);
       },
       *import);
+}
+
+template <>
+LogicalResult
+WasmBinaryParser::parseSectionItem<WasmSectionType::TABLE>(ParserHead &ph, size_t) {
+  auto opLocation = ph.getLocation();
+  auto tableType = ph.parseTableType(ctx);
+  if (failed(tableType))
+    return failure();
+  LLVM_DEBUG(llvm::dbgs() << "  Parsed table description: " << *tableType
+                          << '\n');
+  auto symbol = builder.getStringAttr(symbols.getNewTableSymbolName());
+  auto tableOp = builder.create<TableOp>(opLocation, symbol.strref(), *tableType);
+  symbols.tableSymbols.push_back({SymbolRefAttr::get(tableOp)});
+  return success();
 }
 
 template <>
