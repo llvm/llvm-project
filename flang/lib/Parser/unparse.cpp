@@ -2926,7 +2926,8 @@ public:
     Walk(std::get<OmpBeginLoopDirective>(x.t));
     Put("\n");
     EndOpenMP();
-    Walk(std::get<std::optional<DoConstruct>>(x.t));
+    Walk(std::get<std::optional<std::variant<DoConstruct,
+            common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t));
     Walk(std::get<std::optional<OmpEndLoopDirective>>(x.t));
   }
   void Unparse(const BasedPointer &x) {
