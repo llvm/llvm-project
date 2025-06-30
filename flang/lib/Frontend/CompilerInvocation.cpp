@@ -1162,8 +1162,15 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
   llvm::opt::Arg *arg = args.getLastArg(clang::driver::options::OPT_fopenmp,
                                         clang::driver::options::OPT_fno_openmp);
-  if (!arg || arg->getOption().matches(clang::driver::options::OPT_fno_openmp))
-    return true;
+  if (!arg ||
+      arg->getOption().matches(clang::driver::options::OPT_fno_openmp)) {
+    bool isSimdSpecified = args.hasFlag(
+        clang::driver::options::OPT_fopenmp_simd,
+        clang::driver::options::OPT_fno_openmp_simd, /*Default=*/false);
+    if (!isSimdSpecified)
+      return true;
+    res.getLangOpts().OpenMPSimd = 1;
+  }
 
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
