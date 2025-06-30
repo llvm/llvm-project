@@ -41,6 +41,7 @@ private:
       }
     }
 
+    // if we aren't able to read a full character from the source string
     if (src_idx == src_len && !cr.isFull()) {
       // src points to the beginning of the character
       src_idx = original_idx;
@@ -64,7 +65,7 @@ public:
     auto out = cr.pop_utf32();
     if (out.has_value() && out.value() == L'\0')
       src_len = src_idx;
-    
+
     return out;
   }
 
@@ -76,7 +77,7 @@ public:
     auto out = cr.pop_utf8();
     if (out.has_value() && out.value() == '\0')
       src_len = src_idx;
-    
+
     return out;
   }
 };

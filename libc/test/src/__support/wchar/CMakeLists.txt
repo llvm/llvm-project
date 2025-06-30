@@ -28,4 +28,8 @@ add_libc_test(
     string_converter_test.cpp
   DEPENDS
     libc.src.__support.wchar.string_converter
+    libc.src.__support.wchar.mbstate
+    libc.src.__support.wchar.error_or
+    libc.hdr.errno_macros
+    libc.hdr.types.char32_t
 )

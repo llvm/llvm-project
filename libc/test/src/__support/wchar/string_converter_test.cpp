@@ -15,7 +15,7 @@
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStringConverterTest, UTF8To32) {
-  // first 4 bytes are clown emoji, then next 3 are sigma symbol
+  // first 4 bytes are clown emoji (🤡), then next 3 are sigma symbol (∑)
   const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
@@ -39,7 +39,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8) {
-  const wchar_t *src = L"\x1f921\x2211";
+  const wchar_t *src = L"\x1f921\x2211"; // clown emoji, sigma symbol
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), &state);
@@ -82,7 +82,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
-  const wchar_t *src = L"\x1f921\x2211";
+  const wchar_t *src = L"\x1f921\x2211"; // clown emoji, sigma symbol
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), 1, &state);
@@ -114,7 +114,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
       reinterpret_cast<const char8_t *>(src), 5, &state);
- 
+
   auto res = sc.popUTF32();
   ASSERT_TRUE(res.has_value());
   ASSERT_EQ(static_cast<int>(res.value()), 0x1f921);
@@ -125,7 +125,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
-  const wchar_t *src = L"\x1f921\xffffff";
+  const wchar_t *src = L"\x1f921\xffffff"; // clown emoji, invalid utf32
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char32_t> sc(
       reinterpret_cast<const char32_t *>(src), &state);
@@ -152,6 +152,8 @@ TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling) {
+  // first 4 bytes are clown emoji (🤡)
+  // next 2 don't form a complete character
   const char *src = "\xF0\x9F\xA4\xA1\xE2\x88";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
