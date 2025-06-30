@@ -43,8 +43,8 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
 
   let parameters = (ins
     OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check
+    OptionalParameter<"IntegerAttr">: $array_length,
+    OptionalParameter<"BoolAttr">: $boundary_check
   );
 
   let builders = [
@@ -67,8 +67,11 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
 
-    2.  `chunk_size`: indicates number of contiguous elements accessed for each
-        offset, default is 1. It is used with `scattered` attr only.
+    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
+      The default value is 1. While XeGPU supports a range of chunk sizes, hardware
+      may only allow specific values (e.g., 1, 2, 3, 4, 8, 16, 32, 64, 128, 256).
+      Therefore, XeGPU will legalize the chunk size as needed prior to lowering to
+      hardware instructions.
   }];
 
   let parameters = (ins
@@ -91,7 +94,11 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
     )>
   ];
 
-  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    int64_t getChunkSizeAsInt() {
+      return getChunkSize().getInt();
+    }
+  }];
  }
 
 //===----------------------------------------------------------------------===//

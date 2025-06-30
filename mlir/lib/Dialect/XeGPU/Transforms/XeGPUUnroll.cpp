@@ -625,9 +625,6 @@ struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
     Location loc = op.getLoc();
     xegpu::TensorDescType tdescTy = op.getTensorDescType();
 
-    if (tdescTy.getRank() > 2)
-      return failure();
-
     if (!tdescTy.isScattered())
       return failure();
 
