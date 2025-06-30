@@ -337,8 +337,8 @@ static DecodeStatus decodeAddSubWordImm(MCInst &Inst, unsigned Insn,
   if ((Insn & 0xfe00) == 0x9600) {
     Inst.setOpcode((Insn & 0xff00) == 0x9600 ? AVR::ADIWRdK : AVR::SUBIWRdK);
     Inst.addOperand(MCOperand::createReg(RegVal));
-    Inst.addOperand(
-        MCOperand::createImm(((Insn & 0x00C0) >> 2) | (Insn & 0xF)));
+    unsigned imm = ((Insn & 0x00C0) >> 2) | (Insn & 0xF);
+    Inst.addOperand(MCOperand::createImm(imm));
     return MCDisassembler::Success;
   }
   return MCDisassembler::Fail;
@@ -538,8 +538,8 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
     Result = decodeMoveWord(Instr, Insn, Address, this);
     if (Result != MCDisassembler::Fail)
       return Result;
-    
-    // Try to decode to a ADIW instruction
+
+    // Try to decode to a ADIW /SBIW instruction
     Result = decodeAddSubWordImm(Instr, Insn, Address, this);
     if (Result != MCDisassembler::Fail)
       return Result;
