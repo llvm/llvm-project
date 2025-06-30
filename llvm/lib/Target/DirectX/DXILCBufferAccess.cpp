@@ -143,6 +143,7 @@ struct CBufferResource {
     Value *Result = nullptr;
     unsigned int Remaining =
         ((DL.getTypeSizeInBits(Ty) / 8) / Intrin.EltSize) - 1;
+
     if (Remaining == 0) {
       // We only have a single element, so we're done.
       Result = Elt;
@@ -154,30 +155,30 @@ struct CBufferResource {
         Result = Builder.CreateInsertElement(PoisonValue::get(VT), Result,
                                              Builder.getInt32(0), Name);
       }
-    } else {
-      // Walk each element and extract it, wrapping to new rows as needed.
-      SmallVector<Value *> Extracts{Elt};
-      while (Remaining--) {
-        CurrentIndex %= Intrin.NumElts;
-
-        if (CurrentIndex == 0)
-          CBufLoad = Builder.CreateIntrinsic(
-              Intrin.RetTy, Intrin.IID,
-              {Handle, ConstantInt::get(Builder.getInt32Ty(), ++CurrentRow)},
-              nullptr, Name + ".load");
-
-        Extracts.push_back(Builder.CreateExtractValue(
-            CBufLoad, {CurrentIndex++}, Name + ".extract"));
-      }
-
-      // Finally, we build up the original loaded value.
-      Result = PoisonValue::get(Ty);
-      for (int I = 0, E = Extracts.size(); I < E; ++I)
-        Result = Builder.CreateInsertElement(Result, Extracts[I],
-                                             Builder.getInt32(I),
-                                             Name + formatv(".upto{}", I));
+      return Result;
     }
 
+    // Walk each element and extract it, wrapping to new rows as needed.
+    SmallVector<Value *> Extracts{Elt};
+    while (Remaining--) {
+      CurrentIndex %= Intrin.NumElts;
+
+      if (CurrentIndex == 0)
+        CBufLoad = Builder.CreateIntrinsic(
+            Intrin.RetTy, Intrin.IID,
+            {Handle, ConstantInt::get(Builder.getInt32Ty(), ++CurrentRow)},
+            nullptr, Name + ".load");
+
+      Extracts.push_back(Builder.CreateExtractValue(
+          CBufLoad, {CurrentIndex++}, Name + ".extract"));
+    }
+
+    // Finally, we build up the original loaded value.
+    Result = PoisonValue::get(Ty);
+    for (int I = 0, E = Extracts.size(); I < E; ++I)
+      Result = Builder.CreateInsertElement(Result, Extracts[I],
+                                           Builder.getInt32(I),
+                                           Name + formatv(".upto{}", I));
     return Result;
   }
 };
