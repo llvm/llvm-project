@@ -956,36 +956,24 @@ void test_builtin_os_log_errno(void) {
 void test_builtin_os_log_long_double(void *buf, long double ld) {
   // CHECK: %[[BUF_ADDR:.*]] = alloca ptr, align 8
   // CHECK: %[[LD_ADDR:.*]] = alloca x86_fp80, align 16
-  // CHECK: %[[COERCE:.*]] = alloca i128, align 16
   // CHECK: store ptr %[[BUF]], ptr %[[BUF_ADDR]], align 8
   // CHECK: store x86_fp80 %[[LD]], ptr %[[LD_ADDR]], align 16
   // CHECK: %[[V0:.*]] = load ptr, ptr %[[BUF_ADDR]], align 8
   // CHECK: %[[V1:.*]] = load x86_fp80, ptr %[[LD_ADDR]], align 16
   // CHECK: %[[V2:.*]] = bitcast x86_fp80 %[[V1]] to i80
   // CHECK: %[[V3:.*]] = zext i80 %[[V2]] to i128
-  // CHECK: store i128 %[[V3]], ptr %[[COERCE]], align 16
-  // CHECK: %[[V5:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[COERCE]], i32 0, i32 0
-  // CHECK: %[[V6:.*]] = load i64, ptr %[[V5]], align 16
-  // CHECK: %[[V7:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[COERCE]], i32 0, i32 1
-  // CHECK: %[[V8:.*]] = load i64, ptr %[[V7]], align 8
-  // CHECK: call void @__os_log_helper_1_0_1_16_0(ptr noundef %[[V0]], i64 noundef %[[V6]], i64 noundef %[[V8]])
+  // CHECK: call void @__os_log_helper_1_0_1_16_0(ptr noundef %[[V0]], i128 noundef %[[V3]])
 
   __builtin_os_log_format(buf, "%Lf", ld);
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_0_1_16_0
-// CHECK: (ptr noundef %[[BUFFER:.*]], i64 noundef %[[ARG0_COERCE0:.*]], i64 noundef %[[ARG0_COERCE1:.*]])
+// CHECK: (ptr noundef %[[BUFFER:.*]], i128 noundef %[[ARG0:.*]])
 
-// CHECK: %[[ARG0:.*]] = alloca i128, align 16
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca ptr, align 8
 // CHECK: %[[ARG0_ADDR:.*]] = alloca i128, align 16
-// CHECK: %[[V1:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[ARG0]], i32 0, i32 0
-// CHECK: store i64 %[[ARG0_COERCE0]], ptr %[[V1]], align 16
-// CHECK: %[[V2:.*]] = getelementptr inbounds nuw { i64, i64 }, ptr %[[ARG0]], i32 0, i32 1
-// CHECK: store i64 %[[ARG0_COERCE1]], ptr %[[V2]], align 8
-// CHECK: %[[ARG01:.*]] = load i128, ptr %[[ARG0]], align 16
 // CHECK: store ptr %[[BUFFER]], ptr %[[BUFFER_ADDR]], align 8
-// CHECK: store i128 %[[ARG01]], ptr %[[ARG0_ADDR]], align 16
+// CHECK: store i128 %[[ARG0]], ptr %[[ARG0_ADDR]], align 16
 // CHECK: %[[BUF:.*]] = load ptr, ptr %[[BUFFER_ADDR]], align 8
 // CHECK: %[[SUMMARY:.*]] = getelementptr i8, ptr %[[BUF]], i64 0
 // CHECK: store i8 0, ptr %[[SUMMARY]], align 1
