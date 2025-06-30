@@ -44,7 +44,7 @@ public:
             /*bInitialState=*/FALSE, NULL)),
         m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
                                                /*bInitialState=*/FALSE, NULL)) {
-    assert(event && ready);
+    assert(m_event && m_ready);
   }
 
   ~PipeEvent() override {
