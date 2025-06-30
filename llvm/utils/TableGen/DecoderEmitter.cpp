@@ -275,7 +275,6 @@ struct BitValue {
       return static_cast<uint64_t>(V);
     return std::nullopt;
   }
-  bit_value_t getRawValue() const { return V; }
 
   // For printing a bit value.
   operator StringRef() const {
