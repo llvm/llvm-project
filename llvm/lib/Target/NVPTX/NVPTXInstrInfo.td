@@ -2001,9 +2001,6 @@ def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
-def SDTStoreRetvalProfile : SDTypeProfile<0, 2, [SDTCisInt<0>]>;
-def SDTStoreRetvalV2Profile : SDTypeProfile<0, 3, [SDTCisInt<0>]>;
-def SDTStoreRetvalV4Profile : SDTypeProfile<0, 5, [SDTCisInt<0>]>;
 def SDTProxyRegProfile : SDTypeProfile<1, 1, []>;
 
 def DeclareParam :
@@ -2040,15 +2037,6 @@ def StoreParamV4 :
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
-def StoreRetval :
-  SDNode<"NVPTXISD::StoreRetval", SDTStoreRetvalProfile,
-         [SDNPHasChain, SDNPSideEffect]>;
-def StoreRetvalV2 :
-  SDNode<"NVPTXISD::StoreRetvalV2", SDTStoreRetvalV2Profile,
-         [SDNPHasChain, SDNPSideEffect]>;
-def StoreRetvalV4 :
-  SDNode<"NVPTXISD::StoreRetvalV4", SDTStoreRetvalV4Profile,
-         [SDNPHasChain, SDNPSideEffect]>;
 def ProxyReg :
   SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
@@ -2123,25 +2111,6 @@ let mayStore = true in {
                           " \t[param$a$b], {{$val1, $val2, $val3, $val4}};",
                           []>;
   }
-
-  class StoreRetvalInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, Offseti32imm:$a),
-                  !strconcat("st.param", opstr, " \t[func_retval0$a], $val;"),
-                  []>;
-
-  class StoreRetvalV2Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2, Offseti32imm:$a),
-                  !strconcat("st.param.v2", opstr,
-                             " \t[func_retval0$a], {{$val, $val2}};"),
-                  []>;
-
-  class StoreRetvalV4Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs),
-                  (ins regclass:$val, regclass:$val2, regclass:$val3,
-                       regclass:$val4, Offseti32imm:$a),
-                  !strconcat("st.param.v4", opstr,
-                             " \t[func_retval0$a], {{$val, $val2, $val3, $val4}};"),
-                  []>;
 }
 
 /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
@@ -2218,20 +2187,6 @@ defm StoreParamV2F32  : StoreParamV2Inst<B32, f32imm, ".b32">;
 defm StoreParamV2F64  : StoreParamV2Inst<B64, f64imm, ".b64">;
 
 defm StoreParamV4F32  : StoreParamV4Inst<B32, f32imm, ".b32">;
-
-def StoreRetvalI64    : StoreRetvalInst<B64, ".b64">;
-def StoreRetvalI32    : StoreRetvalInst<B32, ".b32">;
-def StoreRetvalI16    : StoreRetvalInst<B16, ".b16">;
-def StoreRetvalI8     : StoreRetvalInst<B16, ".b8">;
-def StoreRetvalI8TruncI32 : StoreRetvalInst<B32, ".b8">;
-def StoreRetvalI8TruncI64 : StoreRetvalInst<B64, ".b8">;
-def StoreRetvalV2I64  : StoreRetvalV2Inst<B64, ".b64">;
-def StoreRetvalV2I32  : StoreRetvalV2Inst<B32, ".b32">;
-def StoreRetvalV2I16  : StoreRetvalV2Inst<B16, ".b16">;
-def StoreRetvalV2I8   : StoreRetvalV2Inst<B16, ".b8">;
-def StoreRetvalV4I32  : StoreRetvalV4Inst<B32, ".b32">;
-def StoreRetvalV4I16  : StoreRetvalV4Inst<B16, ".b16">;
-def StoreRetvalV4I8   : StoreRetvalV4Inst<B16, ".b8">;
 
 def DeclareRetMemInst :
   NVPTXInst<(outs), (ins i32imm:$align, i32imm:$size),

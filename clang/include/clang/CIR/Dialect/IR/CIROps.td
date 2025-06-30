@@ -1772,7 +1772,8 @@ def FuncOp : CIR_Op<"func", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee);
 
   let regions = (region AnyRegion:$body);
 
@@ -2453,6 +2454,31 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexEqualOp
+//===----------------------------------------------------------------------===//
+
+def ComplexEqualOp : CIR_Op<"complex.eq", [Pure, SameTypeOperands]> {
+
+  let summary = "Computes whether two complex values are equal";
+  let description = [{
+   The `complex.equal` op takes two complex numbers and returns whether
+   they are equal.
+
+    ```mlir
+    %r = cir.complex.eq %a, %b : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let results = (outs CIR_BoolType:$result);
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs
+    `:` qualified(type($lhs)) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//
