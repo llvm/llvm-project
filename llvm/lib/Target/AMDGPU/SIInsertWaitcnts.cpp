@@ -771,12 +771,12 @@ public:
   bool isVmemAccess(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
-                                 MachineInstr *&OldWaitcntInstr,
+                                 MachineInstr *OldWaitcntInstr,
                                  bool FlushVmCnt);
   bool generateWaitcnt(AMDGPU::Waitcnt Wait,
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
-                       MachineInstr *&OldWaitcntInstr);
+                       MachineInstr *OldWaitcntInstr);
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -1782,7 +1782,7 @@ static bool callWaitsOnFunctionReturn(const MachineInstr &MI) { return true; }
 ///  flush the vmcnt counter here.
 bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                                  WaitcntBrackets &ScoreBrackets,
-                                                 MachineInstr *&OldWaitcntInstr,
+                                                 MachineInstr *OldWaitcntInstr,
                                                  bool FlushVmCnt) {
   setForceEmitWaitcnt();
 
@@ -2048,16 +2048,14 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
                                        MachineBasicBlock::instr_iterator It,
                                        MachineBasicBlock &Block,
                                        WaitcntBrackets &ScoreBrackets,
-                                       MachineInstr *&OldWaitcntInstr) {
+                                       MachineInstr *OldWaitcntInstr) {
   bool Modified = false;
 
-  if (OldWaitcntInstr) {
+  if (OldWaitcntInstr)
     // Try to merge the required wait with preexisting waitcnt instructions.
     // Also erase redundant waitcnt.
     Modified =
         WCG->applyPreexistingWaitcnt(ScoreBrackets, *OldWaitcntInstr, Wait, It);
-    OldWaitcntInstr = nullptr;
-  }
 
   // Any counts that could have been applied to any existing waitcnt
   // instructions will have been done so, now deal with any remaining.
@@ -2227,7 +2225,6 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
                                              WaitcntBrackets &ScoreBrackets) {
   AMDGPU::Waitcnt Wait;
   bool NeedsEndPGMCheck = false;
-  MachineInstr *IgnoredOldWaitcnt = nullptr;
 
   if (ST->isPreciseMemoryEnabled() && Inst.mayLoadOrStore())
     Wait = WCG->getAllZeroWaitcnt(Inst.mayStore() &&
@@ -2242,7 +2239,7 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
 
   auto SuccessorIt = std::next(Inst.getIterator());
   bool Result = generateWaitcnt(Wait, SuccessorIt, Block, ScoreBrackets,
-                                IgnoredOldWaitcnt);
+                                /*OldWaitcntInstr=*/nullptr);
 
   if (Result && NeedsEndPGMCheck && isNextENDPGM(SuccessorIt, &Block)) {
     BuildMI(Block, SuccessorIt, Inst.getDebugLoc(), TII->get(AMDGPU::S_NOP))
@@ -2477,6 +2474,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E;) {
     MachineInstr &Inst = *Iter;
+    if (Inst.isMetaInstruction()) {
+      ++Iter;
+      continue;
+    }
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
@@ -2493,6 +2494,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
                                           FlushVmCnt);
+    OldWaitcntInstr = nullptr;
 
     // Restore vccz if it's not known to be correct already.
     bool RestoreVCCZ = !VCCZCorrect && readsVCCZ(Inst);
