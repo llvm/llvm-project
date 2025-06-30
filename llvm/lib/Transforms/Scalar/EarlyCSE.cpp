@@ -493,7 +493,7 @@ struct CallValue {
 
   static bool canHandle(Instruction *Inst) {
     CallInst *CI = dyn_cast<CallInst>(Inst);
-    if (!CI || !CI->onlyReadsMemory() ||
+    if (!CI || (!CI->onlyReadsMemory() && !CI->onlyWritesMemory()) ||
         // FIXME: Currently the calls which may access the thread id may
         // be considered as not accessing the memory. But this is
         // problematic for coroutines, since coroutines may resume in a
@@ -1626,14 +1626,19 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         !(MemInst.isValid() && !MemInst.mayReadFromMemory()))
       LastStore = nullptr;
 
-    // If this is a read-only call, process it.
-    if (CallValue::canHandle(&Inst)) {
+    // If this is a read-only or write-only call, process it. Skip store
+    // MemInsts, as they will be more precisely handled later on. Also skip
+    // memsets, as DSE may be able to optimize them better by removing the
+    // earlier rather than later store.
+    if (CallValue::canHandle(&Inst) &&
+        (!MemInst.isValid() || !MemInst.isStore()) && !isa<MemSetInst>(&Inst)) {
       // If we have an available version of this call, and if it is the right
       // generation, replace this instruction.
       std::pair<Instruction *, unsigned> InVal = AvailableCalls.lookup(&Inst);
       if (InVal.first != nullptr &&
           isSameMemGeneration(InVal.second, CurrentGeneration, InVal.first,
-                              &Inst)) {
+                              &Inst) &&
+          InVal.first->mayReadFromMemory() == Inst.mayReadFromMemory()) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE CALL: " << Inst
                           << "  to: " << *InVal.first << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
@@ -1650,6 +1655,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         ++NumCSECall;
         continue;
       }
+
+      // Increase memory generation for writes. Do this before inserting
+      // the call, so it has the generation after the write occurred.
+      if (Inst.mayWriteToMemory())
+        ++CurrentGeneration;
 
       // Otherwise, remember that we have this instruction.
       AvailableCalls.insert(&Inst, std::make_pair(&Inst, CurrentGeneration));
