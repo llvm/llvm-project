@@ -9254,6 +9254,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         !RecurrenceDescriptor::isAnyOfRecurrenceKind(
             RdxDesc.getRecurrenceKind())) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
+      assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(
+                 RdxDesc.getRecurrenceKind()) &&
+             "Unexpected truncated min-max recurrence!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
       auto *Trunc =
           new VPWidenCastRecipe(Instruction::Trunc, NewExitingVPV, RdxTy);
