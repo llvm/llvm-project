@@ -3983,6 +3983,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpif16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinpif16_test.cpp
+  DEPENDS
+  libc.src.math.fabs
+  libc.src.math.asinpif16  
+  libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   acoshf_test
   SUITE
     libc-math-smoke-tests
