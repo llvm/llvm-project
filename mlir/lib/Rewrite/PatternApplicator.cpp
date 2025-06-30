@@ -15,17 +15,7 @@
 #include "ByteCode.h"
 #include "llvm/Support/Debug.h"
 
-#ifdef MLIR_ENABLE_CATALOG_GENERATOR
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/raw_ostream.h"
-#include <mutex>
-#endif
-
 #define DEBUG_TYPE "pattern-application"
-
-#ifdef MLIR_ENABLE_CATALOG_GENERATOR
-static std::mutex catalogWriteMutex;
-#endif
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -162,16 +152,6 @@ LogicalResult PatternApplicator::matchAndRewrite(
   unsigned anyIt = 0, anyE = anyOpPatterns.size();
   unsigned pdlIt = 0, pdlE = pdlMatches.size();
   LogicalResult result = failure();
-#ifdef MLIR_ENABLE_CATALOG_GENERATOR
-  std::error_code ec;
-  llvm::raw_fd_ostream catalogOs("pattern_catalog.txt", ec,
-                                 llvm::sys::fs::OF_Append);
-  if (ec) {
-    op->emitError("Failed to open pattern catalog file: " + ec.message());
-    return failure();
-  }
-#endif
-
   do {
     // Find the next pattern with the highest benefit.
     const Pattern *bestPattern = nullptr;
@@ -229,19 +209,18 @@ LogicalResult PatternApplicator::matchAndRewrite(
             const auto *pattern =
                 static_cast<const RewritePattern *>(bestPattern);
 
-#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+#ifndef NDEBUG
             OpBuilder::Listener *oldListener = rewriter.getListener();
             RewriterBase::CatalogingListener *catalogingListener =
-                new RewriterBase::CatalogingListener(
-                    oldListener, pattern->getDebugName(), catalogOs,
-                    catalogWriteMutex);
+                new RewriterBase::CatalogingListener(oldListener,
+                                                     pattern->getDebugName());
             rewriter.setListener(catalogingListener);
 #endif
             result = pattern->matchAndRewrite(op, rewriter);
             LLVM_DEBUG(llvm::dbgs()
                        << "\"" << bestPattern->getDebugName() << "\" result "
                        << succeeded(result) << "\n");
-#ifdef MLIR_ENABLE_CATALOG_GENERATOR
+#ifndef NDEBUG
             rewriter.setListener(oldListener);
             delete catalogingListener;
 #endif

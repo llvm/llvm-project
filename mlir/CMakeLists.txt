@@ -204,22 +204,6 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   mlir_configure_python_dev_packages()
 endif()
 
-#-------------------------------------------------------------------------------
-# MLIR Pattern Catalog Generator Configuration
-#
-# When enabled, causes all rewriter patterns to dump their type names and the
-# names of affected operations, which can be used to build a search index
-# mapping operations to patterns.
-#-------------------------------------------------------------------------------
-
-set(MLIR_ENABLE_CATALOG_GENERATOR 0 CACHE BOOL
-       "Enables construction of a catalog of rewrite patterns.")
-
-if (MLIR_ENABLE_CATALOG_GENERATOR)
-  message(STATUS "Enabling MLIR pattern catalog generator")
-  add_definitions(-DMLIR_ENABLE_CATALOG_GENERATOR)
-endif()
-
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include_directories(BEFORE
@@ -340,4 +324,3 @@ endif()
 if(MLIR_STANDALONE_BUILD)
   llvm_distribution_add_targets()
 endif()
-
