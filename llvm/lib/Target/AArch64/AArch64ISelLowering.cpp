@@ -2392,6 +2392,15 @@ static bool isIntImmediate(const SDNode *N, uint64_t &Imm) {
   return false;
 }
 
+bool isVectorizedBinOp(unsigned Opcode) {
+  switch (Opcode) {
+  case AArch64ISD::SQDMULH:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // isOpcWithIntImmediate - This method tests to see if the node is a specific
 // opcode and that it has a immediate integer right operand.
 // If so Imm will receive the value.
@@ -20126,8 +20135,9 @@ static SDValue performConcatVectorsCombine(SDNode *N,
   // size, combine into an binop of two contacts of the source vectors. eg:
   // concat(uhadd(a,b), uhadd(c, d)) -> uhadd(concat(a, c), concat(b, d))
   if (N->getNumOperands() == 2 && N0Opc == N1Opc && VT.is128BitVector() &&
-      DAG.getTargetLoweringInfo().isBinOp(N0Opc) && N0->hasOneUse() &&
-      N1->hasOneUse()) {
+      (DAG.getTargetLoweringInfo().isBinOp(N0Opc) ||
+       isVectorizedBinOp(N0Opc)) &&
+      N0->hasOneUse() && N1->hasOneUse()) {
     SDValue N00 = N0->getOperand(0);
     SDValue N01 = N0->getOperand(1);
     SDValue N10 = N1->getOperand(0);
@@ -20986,7 +20996,7 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
-// A special combine for the vqdmulh family of instructions.
+// A special combine for the sqdmulh family of instructions.
 // smin( sra ( mul( sext v0, sext v1 ) ), SHIFT_AMOUNT ),
 // SATURATING_VAL ) can be reduced to sext(sqdmulh(...))
 static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
@@ -21043,24 +21053,20 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue SExt0 = Mul.getOperand(0);
   SDValue SExt1 = Mul.getOperand(1);
 
-  if (SExt0.getOpcode() != ISD::SIGN_EXTEND ||
-      SExt1.getOpcode() != ISD::SIGN_EXTEND ||
-      SExt0.getValueType() != SExt1.getValueType())
-    return SDValue();
+  EVT SExt0Type = SExt0.getOperand(0).getValueType();
+  EVT SExt1Type = SExt1.getOperand(0).getValueType();
 
-  if ((ShiftAmt == 16 && (SExt0.getValueType() != MVT::v8i32 &&
-                          SExt0.getValueType() != MVT::v4i32)) ||
-      (ShiftAmt == 32 && (SExt0.getValueType() != MVT::v4i64 &&
-                          SExt0.getValueType() != MVT::v2i64)))
+  if (SExt0.getOpcode() != ISD::SIGN_EXTEND ||
+      SExt1.getOpcode() != ISD::SIGN_EXTEND || SExt0Type != SExt1Type ||
+      SExt0Type.getScalarType() != ScalarType ||
+      SExt0Type.getFixedSizeInBits() > 128)
     return SDValue();
 
   SDValue V0 = SExt0.getOperand(0);
   SDValue V1 = SExt1.getOperand(0);
 
   SDLoc DL(SMin);
-  EVT VecVT = N->getValueType(0);
-  SDValue SQDMULH = DAG.getNode(AArch64ISD::SQDMULH, DL, VecVT, V0, V1);
-  return DAG.getNode(ISD::SIGN_EXTEND, DL, N->getValueType(0), SQDMULH);
+  return DAG.getNode(AArch64ISD::SQDMULH, DL, SExt0Type, V0, V1);
 }
 
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,

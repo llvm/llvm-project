@@ -60,16 +60,8 @@ define <4 x i32> @saturating_4xi32(<4 x i32> %a, <4 x i32> %b) {
 define <8 x i32> @saturating_8xi32(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: saturating_8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v4.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    ext v5.16b, v3.16b, v3.16b, #8
-; CHECK-NEXT:    ext v6.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    ext v7.16b, v2.16b, v2.16b, #8
-; CHECK-NEXT:    sqdmulh v1.2s, v3.2s, v1.2s
-; CHECK-NEXT:    sqdmulh v0.2s, v2.2s, v0.2s
-; CHECK-NEXT:    sqdmulh v4.2s, v5.2s, v4.2s
-; CHECK-NEXT:    sqdmulh v3.2s, v7.2s, v6.2s
-; CHECK-NEXT:    mov v1.d[1], v4.d[0]
-; CHECK-NEXT:    mov v0.d[1], v3.d[0]
+; CHECK-NEXT:    sqdmulh v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    sqdmulh v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    ret
   %as = sext <8 x i32> %a to <8 x i64>
   %bs = sext <8 x i32> %b to <8 x i64>
