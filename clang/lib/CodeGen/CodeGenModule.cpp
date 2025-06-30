@@ -4689,6 +4689,13 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   if (FD->isTargetMultiVersion() || FD->isTargetClonesMultiVersion())
     AddDeferredMultiVersionResolverToEmit(GD);
 
+  auto SetResolverAttrs = [&](llvm::Function *Resolver) {
+    // Set the default target-specific attributes, such as PAC and BTI ones on
+    // AArch64. Not passing Decl to prevent setting unrelated attributes,
+    // as Resolver can be shared by multiple declarations.
+    getTargetCodeGenInfo().setTargetAttributes(/*D=*/nullptr, Resolver, *this);
+  };
+
   // For cpu_specific, don't create an ifunc yet because we don't know if the
   // cpu_dispatch will be emitted in this translation unit.
   if (ShouldReturnIFunc) {
@@ -4703,6 +4710,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
                                   "", Resolver, &getModule());
     GIF->setName(ResolverName);
     SetCommonAttributes(FD, GIF);
+    SetResolverAttrs(cast<llvm::Function>(Resolver));
     if (ResolverGV)
       replaceDeclarationWith(ResolverGV, GIF);
     return GIF;
@@ -4713,6 +4721,7 @@ llvm::Constant *CodeGenModule::GetOrCreateMultiVersionResolver(GlobalDecl GD) {
   assert(isa<llvm::GlobalValue>(Resolver) && !ResolverGV &&
          "Resolver should be created for the first time");
   SetCommonAttributes(FD, cast<llvm::GlobalValue>(Resolver));
+  SetResolverAttrs(cast<llvm::Function>(Resolver));
   return Resolver;
 }
 
