@@ -222,6 +222,12 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   // Prevents reads and writes during shutdown.
   m_shutting_down = true;
 
+  if (!m_io_sp) {
+    if (error_ptr)
+      *error_ptr = Status::FromErrorString("not connected");
+    return eConnectionStatusNoConnection;
+  }
+
   Status error = m_io_sp->Close();
   if (error.Fail())
     status = eConnectionStatusError;

@@ -73,16 +73,18 @@ protected:
   GetLibdlFunctionDeclarations(lldb_private::Process *process) override;
 
   typedef std::unique_ptr<AdbClient> AdbClientUP;
-  virtual AdbClientUP GetAdbClient(Status &error);
-
-  virtual llvm::StringRef GetPropertyPackageName();
 
   std::string GetRunAs();
 
-private:
-  AdbClient::SyncService *GetSyncService(Status &error);
+public:
+  // Exposed for testing
+  virtual AdbClientUP GetAdbClient(Status &error);
+  virtual llvm::StringRef GetPropertyPackageName();
 
-  std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
+protected:
+  virtual std::unique_ptr<AdbClient::SyncService> GetSyncService(Status &error);
+
+private:
   std::string m_device_id;
   uint32_t m_sdk_version;
 };

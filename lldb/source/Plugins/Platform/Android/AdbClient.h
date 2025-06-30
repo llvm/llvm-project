@@ -36,30 +36,31 @@ public:
     friend class AdbClient;
 
   public:
+    explicit SyncService(std::unique_ptr<Connection> conn, const std::string &device_id);
+    
     virtual ~SyncService();
 
     virtual Status PullFile(const FileSpec &remote_file,
                             const FileSpec &local_file);
 
-    Status PushFile(const FileSpec &local_file, const FileSpec &remote_file);
+    virtual Status PushFile(const FileSpec &local_file, const FileSpec &remote_file);
 
     virtual Status Stat(const FileSpec &remote_file, uint32_t &mode,
                         uint32_t &size, uint32_t &mtime);
 
-    bool IsConnected() const;
+    virtual bool IsConnected() const;
+    
+    const std::string &GetDeviceId() const { return m_device_id; }
 
   protected:
-    explicit SyncService(std::unique_ptr<Connection> &&conn);
+    virtual Status SendSyncRequest(const char *request_id, const uint32_t data_len,
+                                   const void *data);
+    virtual Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
+    virtual Status ReadAllBytes(void *buffer, size_t size);
 
   private:
-    Status SendSyncRequest(const char *request_id, const uint32_t data_len,
-                           const void *data);
-
-    Status ReadSyncHeader(std::string &response_id, uint32_t &data_len);
 
     Status PullFileChunk(std::vector<char> &buffer, bool &eof);
-
-    Status ReadAllBytes(void *buffer, size_t size);
 
     Status internalPullFile(const FileSpec &remote_file,
                             const FileSpec &local_file);
@@ -72,7 +73,11 @@ public:
 
     Status executeCommand(const std::function<Status()> &cmd);
 
+    // Internal connection setup methods
+    Status SetupSyncConnection(const std::string &device_id);
+
     std::unique_ptr<Connection> m_conn;
+    std::string m_device_id;
   };
 
   static Status CreateByDeviceID(const std::string &device_id, AdbClient &adb);
@@ -102,14 +107,14 @@ public:
                              std::chrono::milliseconds timeout,
                              const FileSpec &output_file_spec);
 
-  virtual std::unique_ptr<SyncService> GetSyncService(Status &error);
+  Status SelectTargetDevice();
 
-  Status SwitchDeviceTransport();
+  Status EnterSyncMode();
 
 private:
-  Status Connect();
-
   void SetDeviceID(const std::string &device_id);
+
+  Status Connect();
 
   Status SendMessage(const std::string &packet, const bool reconnect = true);
 
@@ -124,14 +129,12 @@ private:
 
   Status ReadResponseStatus();
 
-  Status Sync();
-
-  Status StartSync();
-
   Status internalShell(const char *command, std::chrono::milliseconds timeout,
                        std::vector<char> &output_buf);
 
   Status ReadAllBytes(void *buffer, size_t size);
+
+  Status ConnectToAdb(Connection &conn);
 
   std::string m_device_id;
   std::unique_ptr<Connection> m_conn;
