@@ -568,6 +568,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+
   CmdArgs.push_back("-Bstatic");
 
   if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
