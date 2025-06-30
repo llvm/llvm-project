@@ -155,6 +155,7 @@ add_llvm_component_library(LLVMAnalysis
   TypeBasedAliasAnalysis.cpp
   TypeMetadataUtils.cpp
   UniformityAnalysis.cpp
+  UnknownIntrinsicPrinter.cpp
   ScopedNoAliasAA.cpp
   ValueLattice.cpp
   ValueLatticeUtils.cpp
