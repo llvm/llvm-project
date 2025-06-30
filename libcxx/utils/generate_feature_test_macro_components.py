@@ -1474,7 +1474,7 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
 		{
-			"name:": "__cpp_lib_freestanding_cstring",
+			"name": "__cpp_lib_freestanding_cstring",
 			"values": {"c++26": 202306L},
 			"headers": ["cstring"],
 		}
