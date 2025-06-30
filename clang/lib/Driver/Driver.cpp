@@ -4411,7 +4411,6 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   }
 }
 
-namespace {
 static void skipWhitespace(const char *&Ptr) {
   while (isWhitespace(*Ptr))
     ++Ptr;
@@ -4558,8 +4557,6 @@ static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
   };
   return llvm::any_of(Inputs, IsTypeCXXModule);
 }
-
-} // anonymous namespace
 
 llvm::ErrorOr<bool>
 Driver::ScanInputsForCXXModuleUsage(const InputList &Inputs) const {
