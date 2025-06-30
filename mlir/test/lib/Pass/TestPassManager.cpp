@@ -135,7 +135,7 @@ struct TestOptionsSuperPass
 
 struct TestOptionsPassA
     : public PassWrapper<TestOptionsPassA, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPass)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPassA)
 
   struct Options : public PassPipelineOptions<Options> {
     Option<bool> foo{*this, "foo", llvm::cl::desc("Example boolean option")};
@@ -156,7 +156,7 @@ struct TestOptionsPassA
 
 struct TestOptionsPassB
     : public PassWrapper<TestOptionsPassB, OperationPass<func::FuncOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPass)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestOptionsPassB)
 
   struct Options : public PassPipelineOptions<Options> {
     Option<bool> bar{*this, "bar", llvm::cl::desc("Example boolean option")};
