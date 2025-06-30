@@ -1177,10 +1177,9 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
     if (flatExprs[numDims + numSymbols + it.index()] == 0)
       continue;
     AffineExpr expr = it.value();
-    auto binaryExpr = dyn_cast<AffineBinaryOpExpr>(expr);
-    if (!binaryExpr)
-      continue;
-
+    // A local expression cannot be a dimension, symbol or a constant -- it
+    // should be a binary op expression.
+    auto binaryExpr = cast<AffineBinaryOpExpr>(expr);
     AffineExpr lhs = binaryExpr.getLHS();
     AffineExpr rhs = binaryExpr.getRHS();
     if (!((isa<AffineDimExpr>(lhs) || isa<AffineSymbolExpr>(lhs)) &&
@@ -1274,6 +1273,27 @@ SimpleAffineExprFlattener::SimpleAffineExprFlattener(unsigned numDims,
   operandExprStack.reserve(8);
 }
 
+LogicalResult SimpleAffineExprFlattener::addExprToFlattenedList(
+    AffineExpr expr, ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs,
+    SmallVectorImpl<int64_t> &result) {
+  if (auto constExpr = dyn_cast<AffineConstantExpr>(expr)) {
+    std::fill(result.begin(), result.end(), 0);
+    result[getConstantIndex()] = constExpr.getValue();
+    return success();
+  }
+  if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
+    std::fill(result.begin(), result.end(), 0);
+    result[getDimStartIndex() + dimExpr.getPosition()] = 1;
+    return success();
+  }
+  if (auto symExpr = dyn_cast<AffineSymbolExpr>(expr)) {
+    std::fill(result.begin(), result.end(), 0);
+    result[getSymbolStartIndex() + symExpr.getPosition()] = 1;
+    return success();
+  }
+  return addLocalVariableSemiAffine(lhs, rhs, expr, result, result.size());
+}
+
 // In pure affine t = expr * c, we multiply each coefficient of lhs with c.
 //
 // In case of semi affine multiplication expressions, t = expr * symbolic_expr,
@@ -1295,7 +1315,7 @@ LogicalResult SimpleAffineExprFlattener::visitMulExpr(AffineBinaryOpExpr expr) {
                                              localExprs, context);
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
-    return addLocalVariableSemiAffine(mulLhs, rhs, a * b, lhs, lhs.size());
+    return addExprToFlattenedList(a * b, mulLhs, rhs, lhs);
   }
 
   // Get the RHS constant.
@@ -1347,8 +1367,7 @@ LogicalResult SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
         lhs, numDims, numSymbols, localExprs, context);
     AffineExpr divisorExpr = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                                        localExprs, context);
-    AffineExpr modExpr = dividendExpr % divisorExpr;
-    return addLocalVariableSemiAffine(modLhs, rhs, modExpr, lhs, lhs.size());
+    return addExprToFlattenedList(dividendExpr % divisorExpr, modLhs, rhs, lhs);
   }
 
   int64_t rhsConst = rhs[getConstantIndex()];
@@ -1482,7 +1501,7 @@ LogicalResult SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
     AffineExpr b = getAffineExprFromFlatForm(rhs, numDims, numSymbols,
                                              localExprs, context);
     AffineExpr divExpr = isCeil ? a.ceilDiv(b) : a.floorDiv(b);
-    return addLocalVariableSemiAffine(divLhs, rhs, divExpr, lhs, lhs.size());
+    return addExprToFlattenedList(divExpr, divLhs, rhs, lhs);
   }
 
   // This is a pure affine expr; the RHS is a positive constant.

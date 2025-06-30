@@ -418,6 +418,14 @@ protected:
                                              AffineExpr localExpr);
 
 private:
+  /// Flatten binary expression `expr` and add it to `result`. If `expr` is a
+  /// dimension, symbol or constant, we add it to appropriate index in `result`.
+  /// Otherwise we add it in the local variable section. `lhs` and `rhs` are the
+  /// LHS and RHS expressions of `expr`.
+  LogicalResult addExprToFlattenedList(AffineExpr expr, ArrayRef<int64_t> lhs,
+                                       ArrayRef<int64_t> rhs,
+                                       SmallVectorImpl<int64_t> &result);
+
   /// Adds `localExpr`, which may be mod, ceildiv, floordiv or mod expression
   /// representing the affine expression corresponding to the quantifier
   /// introduced as the local variable corresponding to `localExpr`. If the
