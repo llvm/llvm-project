@@ -24,6 +24,9 @@
 #  include <cwchar>
 #  include <wctype.h>
 #endif
+#if __has_include(<langinfo.h>)
+#  include <langinfo.h>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -77,6 +80,13 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
   __locale_guard __current(__loc);
   return std::localeconv();
 }
+
+#  if __has_include(<langinfo.h>)
+inline _LIBCPP_HIDE_FROM_ABI char* __nl_langinfo_l(int __category_mask, __locale_t __l) {
+  return ::nl_langinfo_l(__category_mask, __l);
+}
+#  endif
+
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
