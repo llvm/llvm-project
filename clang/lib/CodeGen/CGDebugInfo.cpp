@@ -4852,14 +4852,11 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(D);
   llvm::DISubroutineType *STy = getOrCreateFunctionType(D, FnType, Unit);
-<<<<<<< HEAD
   if (getIsTransparentStepping(D))
     SPFlags |= llvm::DISubprogram::SPFlagIsTransparentStepping;
 
-=======
   // Key Instructions: Don't set flag on declarations.
   assert(~SPFlags & llvm::DISubprogram::SPFlagDefinition);
->>>>>>> refs/am/changes/140e1894f245896752d06a7f5c405a465b492e73_next
   llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo, STy, ScopeLine, Flags,
       SPFlags, TParamsArray.get(), nullptr, nullptr, Annotations,
