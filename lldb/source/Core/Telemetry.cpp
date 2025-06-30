@@ -166,7 +166,7 @@ void TelemetryManager::DispatchClientTelemetry(
 
   if (auto maybe_end_time = GetAsNanosec(dict, "end_time")) {
     SteadyTimePoint epoch;
-    client_info.end_time = epoch + maybe_end_time.value();
+    client_info.end_time = epoch + *maybe_end_time;
   }
 
   llvm::StringRef error_msg;
