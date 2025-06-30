@@ -141,11 +141,11 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       if (!isa<Instruction>(I))
         return false;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
-        if (!Ld->isSimple())
+        if (!Ld->isUnordered())
           return false;
         MemInstr.push_back(&I);
       } else if (auto *St = dyn_cast<StoreInst>(&I)) {
-        if (!St->isSimple())
+        if (!St->isUnordered())
           return false;
         MemInstr.push_back(&I);
       }
