@@ -137,6 +137,7 @@
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;         // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;         // (shared)ptr
+def llvm_constant_ptr_ty: LLVMQualPointerType<4>;         // (const)ptr
 def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
@@ -2092,6 +2093,9 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
     def int_nvvm_prefetch_local_ # level : Intrinsic<[], [llvm_local_ptr_ty]>;
   }
 
+  def int_nvvm_prefetch_tensormap_p0: DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
+  def int_nvvm_prefetch_tensormap_p4 : DefaultAttrsIntrinsic<[], [llvm_constant_ptr_ty]>;
+  
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : Intrinsic<[], [llvm_global_ptr_ty]>;
 
