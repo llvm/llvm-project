@@ -37,9 +37,9 @@ def uimmlog2xlennonzero : RISCVOp, ImmLeaf<XLenVT, [{
 def simm6 : RISCVSImmLeafOp<6> {
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return isInt<6>(Imm);
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<6>(Imm);
   }];
 }
 
@@ -51,9 +51,9 @@ def simm6nonzero : RISCVOp,
   let OperandType = "OPERAND_SIMM6_NONZERO";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return (Imm != 0) && isInt<6>(Imm);
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (Imm != 0) && isInt<6>(Imm);
   }];
 }
 
