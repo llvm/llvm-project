@@ -584,7 +584,7 @@ class optional;
 
 enum class __optional_iterator_kind { not_as_const, as_const };
 
-template <__optional_iterator_kind _Kind>
+template <typename _Tp, __optional_iterator_kind _Kind>
 class __optional_iterator;
 
 #    endif // _LIBCPP_STD_VER >= 26
@@ -608,6 +608,59 @@ constexpr bool ranges::enable_view<optional<_T>> = true;
 
 template <class _T>
 constexpr auto format_kind<optional<_T>> = range_format::disabled;
+
+template <typename _Tp, __optional_iterator_kind _Kind>
+class __optional_iterator {
+public:
+  using value_type        = _Tp;
+  using difference_type   = std::ptrdiff_t;
+  using pointer           = _Tp*;
+  using reference         = _Tp&;
+  using iterator_category = std::forward_iterator_tag;
+
+private:
+  pointer __ptr_;
+  _LIBCPP_HIDE_FROM_ABI explicit __optional_iterator(pointer __ptr) : __ptr_(__ptr) {}
+  _LIBCPP_HIDE_FROM_ABI friend class optional<std::remove_const_t<_Tp>>;
+  _LIBCPP_HIDE_FROM_ABI friend class optional<const _Tp>;
+
+public:
+  _LIBCPP_HIDE_FROM_ABI __optional_iterator() : __ptr_(nullptr) {}
+
+  _LIBCPP_HIDE_FROM_ABI __optional_iterator(const __optional_iterator&)            = default;
+  _LIBCPP_HIDE_FROM_ABI __optional_iterator& operator=(const __optional_iterator&) = default;
+
+  _LIBCPP_HIDE_FROM_ABI reference operator*() const {
+    if (__ptr_ == nullptr)
+      throw std::runtime_error("dereferencing end iterator");
+    return *__ptr_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI reference operator->() const {
+    if (__ptr_ == nullptr)
+      throw std::runtime_error("dereferencing end iterator");
+    return *__ptr_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI __optional_iterator operator++() {
+    __ptr_ = nullptr;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI __optional_iterator operator++(int) {
+    __optional_iterator __tmp = *this;
+    __ptr_                    = nullptr;
+    return __tmp;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI bool operator==(const __optional_iterator& __other) const { return __ptr_ == __other.__ptr_; }
+  _LIBCPP_HIDE_FROM_ABI bool operator!=(const __optional_iterator& __other) const { return __ptr_ != __other.__ptr_; }
+
+  template <typename _Ut = _Tp, __optional_iterator_kind _UKind = _Kind>
+  _LIBCPP_HIDE_FROM_ABI operator __optional_iterator<const _Tp, _UKind>() const {
+    return __optional_iterator<const _Tp, _UKind>(static_cast<const _Tp*>(__ptr_));
+  }
+};
 
 #    endif // _LIBCPP_STD_VER >= 26
 
