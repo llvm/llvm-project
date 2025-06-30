@@ -2556,32 +2556,32 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; EG-NEXT:    Fetch clause starting at 12:
 ; EG-NEXT:     VTX_READ_64 T0.XY, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 14:
-; EG-NEXT:     OR_INT T0.W, KC0[2].W, KC0[3].X,
-; EG-NEXT:     MOV * T1.W, literal.x,
+; EG-NEXT:     OR_INT T1.W, KC0[2].W, KC0[3].X,
+; EG-NEXT:     MOV * T0.W, literal.x,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     SETNE_INT * T0.W, PV.W, 0.0,
+; EG-NEXT:     SETNE_INT * T1.W, PV.W, 0.0,
 ; EG-NEXT:     PRED_SETNE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
 ; EG-NEXT:    ALU clause starting at 19:
-; EG-NEXT:     MOV T0.W, KC0[2].W,
-; EG-NEXT:     MOV * T1.W, KC0[3].Z,
+; EG-NEXT:     MOV T1.W, KC0[2].W,
+; EG-NEXT:     MOV * T0.W, KC0[3].Z,
 ; EG-NEXT:     MOV T2.W, KC0[3].Y,
 ; EG-NEXT:     MULLO_INT * T0.X, PV.W, PS,
-; EG-NEXT:     MOV T1.W, KC0[3].X,
-; EG-NEXT:     MULHI * T0.Y, T0.W, PV.W,
+; EG-NEXT:     MOV T0.W, KC0[3].X,
+; EG-NEXT:     MULHI * T0.Y, T1.W, PV.W,
 ; EG-NEXT:     ADD_INT T3.W, PS, T0.X,
 ; EG-NEXT:     MULLO_INT * T0.X, PV.W, T2.W,
 ; EG-NEXT:     ADD_INT T0.Y, PV.W, PS,
-; EG-NEXT:     MOV T1.W, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T0.W, T2.W,
+; EG-NEXT:     MOV T0.W, literal.x,
+; EG-NEXT:     MULLO_INT * T0.X, T1.W, T2.W,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 ; EG-NEXT:    ALU clause starting at 31:
-; EG-NEXT:     MOV T0.W, KC0[2].Y,
-; EG-NEXT:     SETE_INT * T1.W, T1.W, 0.0,
+; EG-NEXT:     MOV T1.W, KC0[2].Y,
+; EG-NEXT:     SETE_INT * T0.W, T0.W, 0.0,
 ; EG-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PS, 0.0,
 ; EG-NEXT:    ALU clause starting at 34:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 35:
-; EG-NEXT:     LSHR * T1.X, T0.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, T1.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %0 = icmp eq i64 %a, 0
@@ -2689,45 +2689,45 @@ define amdgpu_kernel void @s_mul_i128(ptr addrspace(1) %out, [8 x i32], i128 %a,
 ;
 ; GFX9-LABEL: s_mul_i128:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x4c
-; GFX9-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x7c
+; GFX9-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x7c
+; GFX9-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x4c
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_mul_i32 s4, s12, s11
-; GFX9-NEXT:    s_mul_hi_u32 s5, s12, s10
-; GFX9-NEXT:    s_mul_i32 s6, s14, s9
-; GFX9-NEXT:    s_mul_hi_u32 s7, s14, s8
+; GFX9-NEXT:    s_mul_i32 s4, s8, s15
+; GFX9-NEXT:    s_mul_hi_u32 s5, s8, s14
+; GFX9-NEXT:    s_mul_i32 s6, s10, s13
+; GFX9-NEXT:    s_mul_hi_u32 s7, s10, s12
 ; GFX9-NEXT:    s_add_i32 s4, s5, s4
-; GFX9-NEXT:    s_mul_i32 s5, s13, s10
+; GFX9-NEXT:    s_mul_i32 s5, s9, s14
 ; GFX9-NEXT:    s_add_i32 s6, s7, s6
-; GFX9-NEXT:    s_mul_i32 s7, s15, s8
+; GFX9-NEXT:    s_mul_i32 s7, s11, s12
 ; GFX9-NEXT:    s_add_i32 s4, s4, s5
-; GFX9-NEXT:    s_mul_i32 s5, s12, s10
+; GFX9-NEXT:    s_mul_i32 s5, s8, s14
 ; GFX9-NEXT:    s_add_i32 s6, s6, s7
-; GFX9-NEXT:    s_mul_i32 s7, s14, s8
+; GFX9-NEXT:    s_mul_i32 s7, s10, s12
 ; GFX9-NEXT:    s_add_u32 s7, s7, s5
 ; GFX9-NEXT:    s_addc_u32 s6, s6, s4
-; GFX9-NEXT:    s_mul_i32 s14, s9, s12
-; GFX9-NEXT:    s_mul_hi_u32 s15, s8, s12
-; GFX9-NEXT:    s_mul_hi_u32 s11, s9, s12
+; GFX9-NEXT:    s_mul_i32 s14, s13, s8
+; GFX9-NEXT:    s_mul_hi_u32 s15, s12, s8
+; GFX9-NEXT:    s_mul_hi_u32 s11, s13, s8
 ; GFX9-NEXT:    s_add_u32 s14, s14, s15
-; GFX9-NEXT:    s_mul_i32 s5, s8, s13
+; GFX9-NEXT:    s_mul_i32 s5, s12, s9
 ; GFX9-NEXT:    s_addc_u32 s11, s11, 0
-; GFX9-NEXT:    s_mul_hi_u32 s10, s8, s13
+; GFX9-NEXT:    s_mul_hi_u32 s10, s12, s9
 ; GFX9-NEXT:    s_add_u32 s5, s5, s14
 ; GFX9-NEXT:    s_addc_u32 s10, s10, 0
 ; GFX9-NEXT:    s_add_u32 s10, s11, s10
 ; GFX9-NEXT:    s_addc_u32 s11, 0, 0
-; GFX9-NEXT:    s_mul_hi_u32 s14, s9, s13
-; GFX9-NEXT:    s_mul_i32 s9, s9, s13
+; GFX9-NEXT:    s_mul_hi_u32 s14, s13, s9
+; GFX9-NEXT:    s_mul_i32 s9, s13, s9
 ; GFX9-NEXT:    s_add_u32 s9, s9, s10
 ; GFX9-NEXT:    s_addc_u32 s10, s14, s11
 ; GFX9-NEXT:    s_mov_b32 s4, 0
 ; GFX9-NEXT:    s_add_u32 s9, s9, s7
 ; GFX9-NEXT:    s_addc_u32 s10, s10, s6
-; GFX9-NEXT:    s_mul_i32 s6, s8, s12
+; GFX9-NEXT:    s_mul_i32 s6, s12, s8
 ; GFX9-NEXT:    s_mov_b32 s7, s4
 ; GFX9-NEXT:    s_or_b64 s[4:5], s[6:7], s[4:5]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4

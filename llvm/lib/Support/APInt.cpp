@@ -349,9 +349,9 @@ void APInt::clearBitsSlowCase(unsigned LoBit, unsigned HiBit) {
     // Create a high mask with ones above HiBit.
     uint64_t HiMask = ~(WORDTYPE_MAX >> (APINT_BITS_PER_WORD - HiShiftAmt));
     // If LoWord and HiWord are equal, then we combine the masks. Otherwise,
-    // set the bits in HiWord.
+    // clear the bits in HiWord.
     if (HiWord == LoWord)
-      LoMask &= HiMask;
+      LoMask |= HiMask;
     else
       U.pVal[HiWord] &= HiMask;
   }

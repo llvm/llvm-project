@@ -56,7 +56,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -557,13 +556,14 @@ static void DoInitialMatch(const SCEV *S, Loop *L,
 
   // Look at addrec operands.
   const SCEV *Start, *Step;
-  if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step))) &&
+  const Loop *ARLoop;
+  if (match(S,
+            m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(ARLoop))) &&
       !Start->isZero()) {
     DoInitialMatch(Start, L, Good, Bad, SE);
     DoInitialMatch(SE.getAddRecExpr(SE.getConstant(S->getType(), 0), Step,
                                     // FIXME: AR->getNoWrapFlags()
-                                    cast<SCEVAddRecExpr>(S)->getLoop(),
-                                    SCEV::FlagAnyWrap),
+                                    ARLoop, SCEV::FlagAnyWrap),
                    L, Good, Bad, SE);
     return;
   }
@@ -923,10 +923,11 @@ static const SCEV *getExactSDiv(const SCEV *LHS, const SCEV *RHS,
 /// If S involves the addition of a constant integer value, return that integer
 /// value, and mutate S to point to a new SCEV with that value excluded.
 static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
-  if (const SCEVConstant *C = dyn_cast<SCEVConstant>(S)) {
-    if (C->getAPInt().getSignificantBits() <= 64) {
-      S = SE.getConstant(C->getType(), 0);
-      return Immediate::getFixed(C->getValue()->getSExtValue());
+  const APInt *C;
+  if (match(S, m_scev_APInt(C))) {
+    if (C->getSignificantBits() <= 64) {
+      S = SE.getConstant(S->getType(), 0);
+      return Immediate::getFixed(C->getSExtValue());
     }
   } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     SmallVector<const SCEV *, 8> NewOps(Add->operands());
@@ -942,14 +943,10 @@ static Immediate ExtractImmediate(const SCEV *&S, ScalarEvolution &SE) {
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                            SCEV::FlagAnyWrap);
     return Result;
-  } else if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(S)) {
-    if (EnableVScaleImmediates && M->getNumOperands() == 2) {
-      if (const SCEVConstant *C = dyn_cast<SCEVConstant>(M->getOperand(0)))
-        if (isa<SCEVVScale>(M->getOperand(1))) {
-          S = SE.getConstant(M->getType(), 0);
-          return Immediate::getScalable(C->getValue()->getSExtValue());
-        }
-    }
+  } else if (EnableVScaleImmediates &&
+             match(S, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
+    S = SE.getConstant(S->getType(), 0);
+    return Immediate::getScalable(C->getSExtValue());
   }
   return Immediate::getZero();
 }
@@ -1133,23 +1130,22 @@ static bool isHighCostExpansion(const SCEV *S,
     return false;
   }
 
-  if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
-    if (Mul->getNumOperands() == 2) {
-      // Multiplication by a constant is ok
-      if (isa<SCEVConstant>(Mul->getOperand(0)))
-        return isHighCostExpansion(Mul->getOperand(1), Processed, SE);
+  const SCEV *Op0, *Op1;
+  if (match(S, m_scev_Mul(m_SCEV(Op0), m_SCEV(Op1)))) {
+    // Multiplication by a constant is ok
+    if (isa<SCEVConstant>(Op0))
+      return isHighCostExpansion(Op1, Processed, SE);
 
-      // If we have the value of one operand, check if an existing
-      // multiplication already generates this expression.
-      if (const SCEVUnknown *U = dyn_cast<SCEVUnknown>(Mul->getOperand(1))) {
-        Value *UVal = U->getValue();
-        for (User *UR : UVal->users()) {
-          // If U is a constant, it may be used by a ConstantExpr.
-          Instruction *UI = dyn_cast<Instruction>(UR);
-          if (UI && UI->getOpcode() == Instruction::Mul &&
-              SE.isSCEVable(UI->getType())) {
-            return SE.getSCEV(UI) == Mul;
-          }
+    // If we have the value of one operand, check if an existing
+    // multiplication already generates this expression.
+    if (const auto *U = dyn_cast<SCEVUnknown>(Op1)) {
+      Value *UVal = U->getValue();
+      for (User *UR : UVal->users()) {
+        // If U is a constant, it may be used by a ConstantExpr.
+        Instruction *UI = dyn_cast<Instruction>(UR);
+        if (UI && UI->getOpcode() == Instruction::Mul &&
+            SE.isSCEVable(UI->getType())) {
+          return SE.getSCEV(UI) == S;
         }
       }
     }
@@ -2788,7 +2784,7 @@ std::pair<size_t, Immediate> LSRInstance::getUse(const SCEV *&Expr,
   }
 
   std::pair<UseMapTy::iterator, bool> P =
-    UseMap.insert(std::make_pair(LSRUse::SCEVUseKindPair(Expr, Kind), 0));
+      UseMap.try_emplace(LSRUse::SCEVUseKindPair(Expr, Kind));
   if (!P.second) {
     // A use already existed with this base.
     size_t LUIdx = P.first->second;
@@ -3333,14 +3329,11 @@ static bool canFoldIVIncExpr(const SCEV *IncExpr, Instruction *UserInst,
     IncOffset = Immediate::getFixed(IncConst->getValue()->getSExtValue());
   } else {
     // Look for mul(vscale, constant), to detect a scalable offset.
-    auto *IncVScale = dyn_cast<SCEVMulExpr>(IncExpr);
-    if (!IncVScale || IncVScale->getNumOperands() != 2 ||
-        !isa<SCEVVScale>(IncVScale->getOperand(1)))
+    const APInt *C;
+    if (!match(IncExpr, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale())) ||
+        C->getSignificantBits() > 64)
       return false;
-    auto *Scale = dyn_cast<SCEVConstant>(IncVScale->getOperand(0));
-    if (!Scale || Scale->getType()->getScalarSizeInBits() > 64)
-      return false;
-    IncOffset = Immediate::getScalable(Scale->getValue()->getSExtValue());
+    IncOffset = Immediate::getScalable(C->getSExtValue());
   }
 
   if (!isAddressUse(TTI, UserInst, Operand))
@@ -3818,6 +3811,8 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
     return nullptr;
   }
   const SCEV *Start, *Step;
+  const SCEVConstant *Op0;
+  const SCEV *Op1;
   if (match(S, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step)))) {
     // Split a non-zero base out of an addrec.
     if (Start->isZero())
@@ -3839,19 +3834,13 @@ static const SCEV *CollectSubexprs(const SCEV *S, const SCEVConstant *C,
                               // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)
                               SCEV::FlagAnyWrap);
     }
-  } else if (const SCEVMulExpr *Mul = dyn_cast<SCEVMulExpr>(S)) {
+  } else if (match(S, m_scev_Mul(m_SCEVConstant(Op0), m_SCEV(Op1)))) {
     // Break (C * (a + b + c)) into C*a + C*b + C*c.
-    if (Mul->getNumOperands() != 2)
-      return S;
-    if (const SCEVConstant *Op0 =
-        dyn_cast<SCEVConstant>(Mul->getOperand(0))) {
-      C = C ? cast<SCEVConstant>(SE.getMulExpr(C, Op0)) : Op0;
-      const SCEV *Remainder =
-        CollectSubexprs(Mul->getOperand(1), C, Ops, L, SE, Depth+1);
-      if (Remainder)
-        Ops.push_back(SE.getMulExpr(C, Remainder));
-      return nullptr;
-    }
+    C = C ? cast<SCEVConstant>(SE.getMulExpr(C, Op0)) : Op0;
+    const SCEV *Remainder = CollectSubexprs(Op1, C, Ops, L, SE, Depth + 1);
+    if (Remainder)
+      Ops.push_back(SE.getMulExpr(C, Remainder));
+    return nullptr;
   }
   return S;
 }
@@ -5613,8 +5602,7 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
     }
   }
 
-  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad()
-         && !isa<DbgInfoIntrinsic>(LowestIP) &&
+  assert(!isa<PHINode>(LowestIP) && !LowestIP->isEHPad() &&
          "Insertion point must be a normal instruction");
 
   // Then, climb up the immediate dominator tree as far as we can go while
@@ -5626,9 +5614,6 @@ BasicBlock::iterator LSRInstance::AdjustInsertPositionForExpand(
 
   // Ignore landingpad instructions.
   while (IP->isEHPad()) ++IP;
-
-  // Ignore debug intrinsics.
-  while (isa<DbgInfoIntrinsic>(IP)) ++IP;
 
   // Set IP below instructions recently inserted by SCEVExpander. This keeps the
   // IP consistent across expansions and allows the previously inserted
@@ -5880,7 +5865,7 @@ void LSRInstance::RewriteForPHI(PHINode *PN, const LSRUse &LU,
       }
 
       std::pair<DenseMap<BasicBlock *, Value *>::iterator, bool> Pair =
-        Inserted.insert(std::make_pair(BB, static_cast<Value *>(nullptr)));
+          Inserted.try_emplace(BB);
       if (!Pair.second)
         PN->setIncomingValue(i, Pair.first->second);
       else {
@@ -6008,9 +5993,8 @@ static bool canHoistIVInc(const TargetTransformInfo &TTI, const LSRFixup &Fixup,
 
   Instruction *I = Fixup.UserInst;
   Type *Ty = I->getType();
-  return Ty->isIntegerTy() &&
-         ((isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
-          (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty)));
+  return (isa<LoadInst>(I) && TTI.isIndexedLoadLegal(TTI.MIM_PostInc, Ty)) ||
+         (isa<StoreInst>(I) && TTI.isIndexedStoreLegal(TTI.MIM_PostInc, Ty));
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen

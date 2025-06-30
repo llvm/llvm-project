@@ -66,7 +66,8 @@ DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      llvm::Error &error)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic) {}
+      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
+      m_check_ptr_vs_member(check_ptr_vs_member) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
@@ -79,15 +80,15 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    primary_expression
+//    unary_expression
 //
 ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
 
 // Parse an unary_expression.
 //
 //  unary_expression:
+//    postfix_expression
 //    unary_operator expression
-//    primary_expression
 //
 //  unary_operator:
 //    "&"
@@ -111,7 +112,68 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
       llvm_unreachable("invalid token kind");
     }
   }
-  return ParsePrimaryExpression();
+  return ParsePostfixExpression();
+}
+
+// Parse a postfix_expression.
+//
+//  postfix_expression:
+//    primary_expression
+//    postfix_expression "[" integer_literal "]"
+//    postfix_expression "[" integer_literal "-" integer_literal "]"
+//    postfix_expression "." id_expression
+//    postfix_expression "->" id_expression
+//
+ASTNodeUP DILParser::ParsePostfixExpression() {
+  ASTNodeUP lhs = ParsePrimaryExpression();
+  while (CurToken().IsOneOf({Token::l_square, Token::period, Token::arrow})) {
+    uint32_t loc = CurToken().GetLocation();
+    Token token = CurToken();
+    switch (token.GetKind()) {
+    case Token::l_square: {
+      m_dil_lexer.Advance();
+      std::optional<int64_t> index = ParseIntegerConstant();
+      if (!index) {
+        BailOut(
+            llvm::formatv("failed to parse integer constant: {0}", CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+        return std::make_unique<ErrorNode>();
+      }
+      if (CurToken().GetKind() == Token::minus) {
+        m_dil_lexer.Advance();
+        std::optional<int64_t> last_index = ParseIntegerConstant();
+        if (!last_index) {
+          BailOut(llvm::formatv("failed to parse integer constant: {0}",
+                                CurToken()),
+                  CurToken().GetLocation(), CurToken().GetSpelling().length());
+          return std::make_unique<ErrorNode>();
+        }
+        lhs = std::make_unique<BitFieldExtractionNode>(
+            loc, std::move(lhs), std::move(*index), std::move(*last_index));
+      } else {
+        lhs = std::make_unique<ArraySubscriptNode>(loc, std::move(lhs),
+                                                   std::move(*index));
+      }
+      Expect(Token::r_square);
+      m_dil_lexer.Advance();
+      break;
+    }
+    case Token::period:
+    case Token::arrow: {
+      m_dil_lexer.Advance();
+      Token member_token = CurToken();
+      std::string member_id = ParseIdExpression();
+      lhs = std::make_unique<MemberOfNode>(
+          member_token.GetLocation(), std::move(lhs),
+          token.GetKind() == Token::arrow, member_id);
+      break;
+    }
+    default:
+      llvm_unreachable("invalid token");
+    }
+  }
+
+  return lhs;
 }
 
 // Parse a primary_expression.
@@ -278,6 +340,30 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
       llvm::make_error<DILDiagnosticError>(m_input_expr, error, loc, err_len);
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
+}
+
+// Parse a integer_literal.
+//
+//  integer_literal:
+//    ? Integer constant ?
+//
+std::optional<int64_t> DILParser::ParseIntegerConstant() {
+  std::string number_spelling;
+  if (CurToken().GetKind() == Token::minus) {
+    // StringRef::getAsInteger<>() can parse negative numbers.
+    // FIXME: Remove this once unary minus operator is added.
+    number_spelling = "-";
+    m_dil_lexer.Advance();
+  }
+  number_spelling.append(CurToken().GetSpelling());
+  llvm::StringRef spelling_ref = number_spelling;
+  int64_t raw_value;
+  if (!spelling_ref.getAsInteger<int64_t>(0, raw_value)) {
+    m_dil_lexer.Advance();
+    return raw_value;
+  }
+
+  return std::nullopt;
 }
 
 void DILParser::Expect(Token::Kind kind) {

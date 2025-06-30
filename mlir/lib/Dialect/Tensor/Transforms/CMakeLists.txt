@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MergeConsecutiveInsertExtractSlicePatterns.cpp
   ReshapePatterns.cpp
   RewriteAsConstant.cpp
+  RuntimeOpVerification.cpp
   SwapExtractSliceWithProducerPatterns.cpp
   SubsetInsertionOpInterfaceImpl.cpp
 
@@ -28,6 +29,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRLinalgDialect
   MLIRMemRefDialect
   MLIRPass
+  MLIRRuntimeVerifiableOpInterface
   MLIRSCFDialect
   MLIRSubsetOpInterface
   MLIRTensorDialect

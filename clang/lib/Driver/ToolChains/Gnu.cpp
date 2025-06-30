@@ -15,12 +15,10 @@
 #include "Arch/RISCV.h"
 #include "Arch/Sparc.h"
 #include "Arch/SystemZ.h"
-#include "CommonArgs.h"
-#include "Linux.h"
 #include "clang/Config/config.h" // for GCC_INSTALL_PREFIX
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
@@ -228,6 +226,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
       return "elf_iamcu";
     return "elf_i386";
   case llvm::Triple::aarch64:
+    if (T.isOSManagarm())
+      return "aarch64managarm";
     return "aarch64linux";
   case llvm::Triple::aarch64_be:
     return "aarch64linuxb";
@@ -404,7 +404,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.
-  if (Arch == llvm::Triple::aarch64 && (isAndroid || isOHOSFamily)) {
+  if (Arch == llvm::Triple::aarch64 && (isAndroid || isOHOSFamily) &&
+      Args.hasFlag(options::OPT_mfix_cortex_a53_843419,
+                   options::OPT_mno_fix_cortex_a53_843419, true)) {
     std::string CPU = getCPUName(D, Args, Triple);
     if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
       CmdArgs.push_back("--fix-cortex-a53-843419");
@@ -521,19 +523,9 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");

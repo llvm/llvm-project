@@ -198,8 +198,16 @@ class SemaOpenACCClauseVisitor {
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::AlwaysOut);
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Readonly);
       Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Zero);
+      Mods = CheckSingle(Mods, ValidKinds, OpenACCModifierKind::Capture);
       return Mods;
     };
+
+    // The 'capture' modifier is only valid on copyin, copyout, and create on
+    // structured data or compute constructs (which also includes combined).
+    bool IsStructuredDataOrCompute =
+        Clause.getDirectiveKind() == OpenACCDirectiveKind::Data ||
+        isOpenACCComputeDirectiveKind(Clause.getDirectiveKind()) ||
+        isOpenACCCombinedDirectiveKind(Clause.getDirectiveKind());
 
     switch (Clause.getClauseKind()) {
     default:
@@ -207,22 +215,33 @@ class SemaOpenACCClauseVisitor {
     case OpenACCClauseKind::Copy:
     case OpenACCClauseKind::PCopy:
     case OpenACCClauseKind::PresentOrCopy:
+      // COPY: Capture always
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::AlwaysOut);
+                   OpenACCModifierKind::AlwaysOut |
+                   OpenACCModifierKind::Capture);
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
+      // COPYIN: Capture only struct.data & compute
       return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Readonly);
+                   OpenACCModifierKind::Readonly |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::CopyOut:
     case OpenACCClauseKind::PCopyOut:
     case OpenACCClauseKind::PresentOrCopyOut:
-      return Check(OpenACCModifierKind::Always | OpenACCModifierKind::AlwaysIn |
-                   OpenACCModifierKind::Zero);
+      // COPYOUT: Capture only struct.data & compute
+      return Check(OpenACCModifierKind::Always |
+                   OpenACCModifierKind::AlwaysOut | OpenACCModifierKind::Zero |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     case OpenACCClauseKind::Create:
     case OpenACCClauseKind::PCreate:
     case OpenACCClauseKind::PresentOrCreate:
-      return Check(OpenACCModifierKind::Zero);
+      // CREATE: Capture only struct.data & compute
+      return Check(OpenACCModifierKind::Zero |
+                   (IsStructuredDataOrCompute ? OpenACCModifierKind::Capture
+                                              : OpenACCModifierKind::Invalid));
     }
     llvm_unreachable("didn't return from switch above?");
   }

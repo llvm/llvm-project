@@ -147,6 +147,7 @@ public:
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
   Instruction *foldItoFPtoI(CastInst &FI);
   Instruction *visitSelectInst(SelectInst &SI);
+  Instruction *foldShuffledIntrinsicOperands(IntrinsicInst *II);
   Instruction *visitCallInst(CallInst &CI);
   Instruction *visitInvokeInst(InvokeInst &II);
   Instruction *visitCallBrInst(CallBrInst &CBI);
@@ -203,8 +204,8 @@ public:
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
     return llvm::computeKnownFPClass(
-        Val, FMF, Interested, Depth,
-        getSimplifyQuery().getWithInstruction(CtxI));
+        Val, FMF, Interested, getSimplifyQuery().getWithInstruction(CtxI),
+        Depth);
   }
 
   KnownFPClass computeKnownFPClass(Value *Val,
@@ -212,7 +213,7 @@ public:
                                    const Instruction *CtxI = nullptr,
                                    unsigned Depth = 0) const {
     return llvm::computeKnownFPClass(
-        Val, Interested, Depth, getSimplifyQuery().getWithInstruction(CtxI));
+        Val, Interested, getSimplifyQuery().getWithInstruction(CtxI), Depth);
   }
 
   /// Check if fmul \p MulVal, +0.0 will yield +0.0 (or signed zero is
@@ -377,6 +378,10 @@ private:
   }
 
   Value *EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP = false);
+  /// Emit sum of multiple GEP offsets. The GEPs are processed in reverse
+  /// order.
+  Value *EmitGEPOffsets(ArrayRef<GEPOperator *> GEPs, GEPNoWrapFlags NW,
+                        Type *IdxTy, bool RewriteGEPs);
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Instruction *foldBitcastExtElt(ExtractElementInst &ExtElt);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
@@ -557,20 +562,22 @@ public:
   /// Attempts to replace I with a simpler value based on the demanded
   /// bits.
   Value *SimplifyDemandedUseBits(Instruction *I, const APInt &DemandedMask,
-                                 KnownBits &Known, unsigned Depth,
-                                 const SimplifyQuery &Q);
+                                 KnownBits &Known, const SimplifyQuery &Q,
+                                 unsigned Depth = 0);
   using InstCombiner::SimplifyDemandedBits;
   bool SimplifyDemandedBits(Instruction *I, unsigned Op,
                             const APInt &DemandedMask, KnownBits &Known,
-                            unsigned Depth, const SimplifyQuery &Q) override;
+                            const SimplifyQuery &Q,
+                            unsigned Depth = 0) override;
 
   /// Helper routine of SimplifyDemandedUseBits. It computes KnownZero/KnownOne
   /// bits. It also tries to handle simplifications that can be done based on
   /// DemandedMask, but without modifying the Instruction.
   Value *SimplifyMultipleUseDemandedBits(Instruction *I,
                                          const APInt &DemandedMask,
-                                         KnownBits &Known, unsigned Depth,
-                                         const SimplifyQuery &Q);
+                                         KnownBits &Known,
+                                         const SimplifyQuery &Q,
+                                         unsigned Depth = 0);
 
   /// Helper routine of SimplifyDemandedUseBits. It tries to simplify demanded
   /// bit for "r1 = shr x, c1; r2 = shl r1, c2" instruction sequence.
@@ -590,8 +597,8 @@ public:
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
   Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
-                                    KnownFPClass &Known, unsigned Depth,
-                                    Instruction *CxtI);
+                                    KnownFPClass &Known, Instruction *CxtI,
+                                    unsigned Depth = 0);
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
@@ -604,6 +611,8 @@ public:
   Instruction *foldVectorBinop(BinaryOperator &Inst);
   Instruction *foldVectorSelect(SelectInst &Sel);
   Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf);
+  Constant *unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
+                              VectorType *NewCTy);
 
   /// Given a binary operator, cast instruction, or select which has a PHI node
   /// as operand #0, see if we can fold the instruction into the PHI (which is
@@ -762,6 +771,8 @@ public:
                             Value *A, Value *B, Instruction &Outer,
                             SelectPatternFlavor SPF2, Value *C);
   Instruction *foldSelectInstWithICmp(SelectInst &SI, ICmpInst *ICI);
+  Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
+                                      Value *FalseVal);
   Instruction *foldSelectValueEquivalence(SelectInst &SI, CmpInst &CI);
   bool replaceInInstruction(Value *V, Value *Old, Value *New,
                             unsigned Depth = 0);
@@ -855,6 +866,21 @@ public:
   /// otherwise returns negated value.
   [[nodiscard]] static Value *Negate(bool LHSIsZero, bool IsNSW, Value *Root,
                                      InstCombinerImpl &IC);
+};
+
+struct CommonPointerBase {
+  /// Common base pointer.
+  Value *Ptr = nullptr;
+  /// LHS GEPs until common base.
+  SmallVector<GEPOperator *> LHSGEPs;
+  /// RHS GEPs until common base.
+  SmallVector<GEPOperator *> RHSGEPs;
+  /// LHS GEP NoWrapFlags until common base.
+  GEPNoWrapFlags LHSNW = GEPNoWrapFlags::all();
+  /// RHS GEP NoWrapFlags until common base.
+  GEPNoWrapFlags RHSNW = GEPNoWrapFlags::all();
+
+  static CommonPointerBase compute(Value *LHS, Value *RHS);
 };
 
 } // end namespace llvm

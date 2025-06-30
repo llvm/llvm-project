@@ -11,12 +11,14 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -26,7 +28,9 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/MathExtras.h"
+#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -38,6 +42,7 @@ using llvm::divideFloorSigned;
 using llvm::mod;
 
 #define DEBUG_TYPE "affine-ops"
+#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
 
 #include "mlir/Dialect/Affine/IR/AffineOpsDialect.cpp.inc"
 
@@ -294,10 +299,12 @@ bool mlir::affine::isValidDim(Value value) {
     return isValidDim(value, getAffineScope(defOp));
 
   // This value has to be a block argument for an op that has the
-  // `AffineScope` trait or for an affine.for or affine.parallel.
+  // `AffineScope` trait or an induction var of an affine.for or
+  // affine.parallel.
+  if (isAffineInductionVar(value))
+    return true;
   auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
-  return parentOp && (parentOp->hasTrait<OpTrait::AffineScope>() ||
-                      isa<AffineForOp, AffineParallelOp>(parentOp));
+  return parentOp && parentOp->hasTrait<OpTrait::AffineScope>();
 }
 
 // Value can be used as a dimension id iff it meets one of the following
@@ -318,10 +325,9 @@ bool mlir::affine::isValidDim(Value value, Region *region) {
 
   auto *op = value.getDefiningOp();
   if (!op) {
-    // This value has to be a block argument for an affine.for or an
+    // This value has to be an induction var for an affine.for or an
     // affine.parallel.
-    auto *parentOp = llvm::cast<BlockArgument>(value).getOwner()->getParentOp();
-    return isa<AffineForOp, AffineParallelOp>(parentOp);
+    return isAffineInductionVar(value);
   }
 
   // Affine apply operation is ok if all of its operands are ok.
@@ -1041,6 +1047,88 @@ simplifyMapWithOperands(AffineMap &map, ArrayRef<Value> operands) {
                        map.getContext());
 }
 
+/// Assuming `dimOrSym` is a quantity in the apply op map `map` and defined by
+/// `minOp = affine_min(x_1, ..., x_n)`. This function checks that:
+/// `0 < affine_min(x_1, ..., x_n)` and proceeds with replacing the patterns:
+/// ```
+///   dimOrSym.ceildiv(x_k)
+///   (dimOrSym + x_k - 1).floordiv(x_k)
+/// ```
+/// by `1` for all `k` in `1, ..., n`. This is possible because `x / x_k <= 1`.
+///
+///
+/// Warning: ValueBoundsConstraintSet::computeConstantBound is needed to check
+/// `minOp` is positive.
+static LogicalResult replaceAffineMinBoundingBoxExpression(AffineMinOp minOp,
+                                                           AffineExpr dimOrSym,
+                                                           AffineMap *map,
+                                                           ValueRange dims,
+                                                           ValueRange syms) {
+  AffineMap affineMinMap = minOp.getAffineMap();
+
+  LLVM_DEBUG({
+    DBGS() << "replaceAffineMinBoundingBoxExpression: `" << minOp << "`\n";
+  });
+
+  // Check the value is positive.
+  for (unsigned i = 0, e = affineMinMap.getNumResults(); i < e; ++i) {
+    // Compare each expression in the minimum against 0.
+    if (!ValueBoundsConstraintSet::compare(
+            getAsIndexOpFoldResult(minOp.getContext(), 0),
+            ValueBoundsConstraintSet::ComparisonOperator::LT,
+            ValueBoundsConstraintSet::Variable(affineMinMap.getSliceMap(i, 1),
+                                               minOp.getOperands())))
+      return failure();
+  }
+
+  /// Convert affine symbols and dimensions in minOp to symbols or dimensions in
+  /// the apply op affine map.
+  DenseMap<AffineExpr, AffineExpr> dimSymConversionTable;
+  SmallVector<unsigned> unmappedDims, unmappedSyms;
+  for (auto [i, dim] : llvm::enumerate(minOp.getDimOperands())) {
+    auto it = llvm::find(dims, dim);
+    if (it == dims.end()) {
+      unmappedDims.push_back(i);
+      continue;
+    }
+    dimSymConversionTable[getAffineDimExpr(i, minOp.getContext())] =
+        getAffineDimExpr(it.getIndex(), minOp.getContext());
+  }
+  for (auto [i, sym] : llvm::enumerate(minOp.getSymbolOperands())) {
+    auto it = llvm::find(syms, sym);
+    if (it == syms.end()) {
+      unmappedSyms.push_back(i);
+      continue;
+    }
+    dimSymConversionTable[getAffineSymbolExpr(i, minOp.getContext())] =
+        getAffineSymbolExpr(it.getIndex(), minOp.getContext());
+  }
+
+  // Create the replacement map.
+  DenseMap<AffineExpr, AffineExpr> repl;
+  AffineExpr c1 = getAffineConstantExpr(1, minOp.getContext());
+  for (AffineExpr expr : affineMinMap.getResults()) {
+    // If we cannot express the result in terms of the apply map symbols and
+    // sims then continue.
+    if (llvm::any_of(unmappedDims,
+                     [&](unsigned i) { return expr.isFunctionOfDim(i); }) ||
+        llvm::any_of(unmappedSyms,
+                     [&](unsigned i) { return expr.isFunctionOfSymbol(i); }))
+      continue;
+
+    AffineExpr convertedExpr = expr.replace(dimSymConversionTable);
+
+    // dimOrSym.ceilDiv(expr) -> 1
+    repl[dimOrSym.ceilDiv(convertedExpr)] = c1;
+    // (dimOrSym + expr - 1).floorDiv(expr) -> 1
+    repl[(dimOrSym + convertedExpr - 1).floorDiv(convertedExpr)] = c1;
+  }
+  AffineMap initialMap = *map;
+  *map = initialMap.replace(repl, initialMap.getNumDims(),
+                            initialMap.getNumSymbols());
+  return success(*map != initialMap);
+}
+
 /// Replace all occurrences of AffineExpr at position `pos` in `map` by the
 /// defining AffineApplyOp expression and operands.
 /// When `dimOrSymbolPosition < dims.size()`, AffineDimExpr@[pos] is replaced.
@@ -1051,10 +1139,13 @@ simplifyMapWithOperands(AffineMap &map, ArrayRef<Value> operands) {
 ///   2. `map` dim and symbols are gradually shifted to higher positions.
 ///   3. Old `dim` and `sym` entries are replaced by nullptr
 /// This avoids the need for any bookkeeping.
+/// If `replaceAffineMin` is set to true, additionally triggers more expensive
+/// replacements involving affine_min operations.
 static LogicalResult replaceDimOrSym(AffineMap *map,
                                      unsigned dimOrSymbolPosition,
                                      SmallVectorImpl<Value> &dims,
-                                     SmallVectorImpl<Value> &syms) {
+                                     SmallVectorImpl<Value> &syms,
+                                     bool replaceAffineMin) {
   MLIRContext *ctx = map->getContext();
   bool isDimReplacement = (dimOrSymbolPosition < dims.size());
   unsigned pos = isDimReplacement ? dimOrSymbolPosition
@@ -1062,6 +1153,13 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
   Value &v = isDimReplacement ? dims[pos] : syms[pos];
   if (!v)
     return failure();
+
+  if (auto minOp = v.getDefiningOp<AffineMinOp>(); minOp && replaceAffineMin) {
+    AffineExpr dimOrSym = isDimReplacement ? getAffineDimExpr(pos, ctx)
+                                           : getAffineSymbolExpr(pos, ctx);
+    return replaceAffineMinBoundingBoxExpression(minOp, dimOrSym, map, dims,
+                                                 syms);
+  }
 
   auto affineApply = v.getDefiningOp<AffineApplyOp>();
   if (!affineApply)
@@ -1100,7 +1198,8 @@ static LogicalResult replaceDimOrSym(AffineMap *map,
 /// iteratively. Perform canonicalization of map and operands as well as
 /// AffineMap simplification. `map` and `operands` are mutated in place.
 static void composeAffineMapAndOperands(AffineMap *map,
-                                        SmallVectorImpl<Value> *operands) {
+                                        SmallVectorImpl<Value> *operands,
+                                        bool composeAffineMin = false) {
   if (map->getNumResults() == 0) {
     canonicalizeMapAndOperands(map, operands);
     *map = simplifyAffineMap(*map);
@@ -1121,7 +1220,8 @@ static void composeAffineMapAndOperands(AffineMap *map,
   while (true) {
     bool changed = false;
     for (unsigned pos = 0; pos != dims.size() + syms.size(); ++pos)
-      if ((changed |= succeeded(replaceDimOrSym(map, pos, dims, syms))))
+      if ((changed |=
+           succeeded(replaceDimOrSym(map, pos, dims, syms, composeAffineMin))))
         break;
     if (!changed)
       break;
@@ -1162,38 +1262,47 @@ static void composeAffineMapAndOperands(AffineMap *map,
 }
 
 void mlir::affine::fullyComposeAffineMapAndOperands(
-    AffineMap *map, SmallVectorImpl<Value> *operands) {
+    AffineMap *map, SmallVectorImpl<Value> *operands, bool composeAffineMin) {
   while (llvm::any_of(*operands, [](Value v) {
     return isa_and_nonnull<AffineApplyOp>(v.getDefiningOp());
   })) {
-    composeAffineMapAndOperands(map, operands);
+    composeAffineMapAndOperands(map, operands, composeAffineMin);
+  }
+  // Additional trailing step for AffineMinOps in case no chains of AffineApply.
+  if (composeAffineMin && llvm::any_of(*operands, [](Value v) {
+        return isa_and_nonnull<AffineMinOp>(v.getDefiningOp());
+      })) {
+    composeAffineMapAndOperands(map, operands, composeAffineMin);
   }
 }
 
 AffineApplyOp
 mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
-                                      ArrayRef<OpFoldResult> operands) {
+                                      ArrayRef<OpFoldResult> operands,
+                                      bool composeAffineMin) {
   SmallVector<Value> valueOperands;
   map = foldAttributesIntoMap(b, map, operands, valueOperands);
-  composeAffineMapAndOperands(&map, &valueOperands);
+  composeAffineMapAndOperands(&map, &valueOperands, composeAffineMin);
   assert(map);
   return b.create<AffineApplyOp>(loc, map, valueOperands);
 }
 
 AffineApplyOp
 mlir::affine::makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
-                                      ArrayRef<OpFoldResult> operands) {
+                                      ArrayRef<OpFoldResult> operands,
+                                      bool composeAffineMin) {
   return makeComposedAffineApply(
       b, loc,
       AffineMap::inferFromExprList(ArrayRef<AffineExpr>{e}, b.getContext())
           .front(),
-      operands);
+      operands, composeAffineMin);
 }
 
 /// Composes the given affine map with the given list of operands, pulling in
 /// the maps from any affine.apply operations that supply the operands.
 static void composeMultiResultAffineMap(AffineMap &map,
-                                        SmallVectorImpl<Value> &operands) {
+                                        SmallVectorImpl<Value> &operands,
+                                        bool composeAffineMin = false) {
   // Compose and canonicalize each expression in the map individually because
   // composition only applies to single-result maps, collecting potentially
   // duplicate operands in a single list with shifted dimensions and symbols.
@@ -1202,7 +1311,8 @@ static void composeMultiResultAffineMap(AffineMap &map,
   for (unsigned i : llvm::seq<unsigned>(0, map.getNumResults())) {
     SmallVector<Value> submapOperands(operands.begin(), operands.end());
     AffineMap submap = map.getSubMap({i});
-    fullyComposeAffineMapAndOperands(&submap, &submapOperands);
+    fullyComposeAffineMapAndOperands(&submap, &submapOperands,
+                                     composeAffineMin);
     canonicalizeMapAndOperands(&submap, &submapOperands);
     unsigned numNewDims = submap.getNumDims();
     submap = submap.shiftDims(dims.size()).shiftSymbols(symbols.size());
@@ -1220,10 +1330,9 @@ static void composeMultiResultAffineMap(AffineMap &map,
   canonicalizeMapAndOperands(&map, &operands);
 }
 
-OpFoldResult
-mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
-                                            AffineMap map,
-                                            ArrayRef<OpFoldResult> operands) {
+OpFoldResult mlir::affine::makeComposedFoldedAffineApply(
+    OpBuilder &b, Location loc, AffineMap map, ArrayRef<OpFoldResult> operands,
+    bool composeAffineMin) {
   assert(map.getNumResults() == 1 && "building affine.apply with !=1 result");
 
   // Create new builder without a listener, so that no notification is
@@ -1235,7 +1344,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
 
   // Create op.
   AffineApplyOp applyOp =
-      makeComposedAffineApply(newBuilder, loc, map, operands);
+      makeComposedAffineApply(newBuilder, loc, map, operands, composeAffineMin);
 
   // Get constant operands.
   SmallVector<Attribute> constOperands(applyOp->getNumOperands());
@@ -1255,26 +1364,25 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   return llvm::getSingleElement(foldResults);
 }
 
-OpFoldResult
-mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
-                                            AffineExpr expr,
-                                            ArrayRef<OpFoldResult> operands) {
+OpFoldResult mlir::affine::makeComposedFoldedAffineApply(
+    OpBuilder &b, Location loc, AffineExpr expr,
+    ArrayRef<OpFoldResult> operands, bool composeAffineMin) {
   return makeComposedFoldedAffineApply(
       b, loc,
       AffineMap::inferFromExprList(ArrayRef<AffineExpr>{expr}, b.getContext())
           .front(),
-      operands);
+      operands, composeAffineMin);
 }
 
 SmallVector<OpFoldResult>
 mlir::affine::makeComposedFoldedMultiResultAffineApply(
-    OpBuilder &b, Location loc, AffineMap map,
-    ArrayRef<OpFoldResult> operands) {
-  return llvm::map_to_vector(llvm::seq<unsigned>(0, map.getNumResults()),
-                             [&](unsigned i) {
-                               return makeComposedFoldedAffineApply(
-                                   b, loc, map.getSubMap({i}), operands);
-                             });
+    OpBuilder &b, Location loc, AffineMap map, ArrayRef<OpFoldResult> operands,
+    bool composeAffineMin) {
+  return llvm::map_to_vector(
+      llvm::seq<unsigned>(0, map.getNumResults()), [&](unsigned i) {
+        return makeComposedFoldedAffineApply(b, loc, map.getSubMap({i}),
+                                             operands, composeAffineMin);
+      });
 }
 
 template <typename OpTy>
@@ -2366,7 +2474,7 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     if (forOp.getNumResults() == 0)
       return success();
     std::optional<uint64_t> tripCount = getTrivialConstantTripCount(forOp);
-    if (tripCount && *tripCount == 0) {
+    if (tripCount == 0) {
       // The initial values of the iteration arguments would be the op's
       // results.
       rewriter.replaceOp(forOp, forOp.getInits());
@@ -2446,7 +2554,7 @@ void AffineForOp::getSuccessorRegions(
 
   // From the loop body, if the trip count is one, we can only branch back to
   // the parent.
-  if (!point.isParent() && tripCount && *tripCount == 1) {
+  if (!point.isParent() && tripCount == 1) {
     regions.push_back(RegionSuccessor(getResults()));
     return;
   }
@@ -2459,8 +2567,7 @@ void AffineForOp::getSuccessorRegions(
 
 /// Returns true if the affine.for has zero iterations in trivial cases.
 static bool hasTrivialZeroTripCount(AffineForOp op) {
-  std::optional<uint64_t> tripCount = getTrivialConstantTripCount(op);
-  return tripCount && *tripCount == 0;
+  return getTrivialConstantTripCount(op) == 0;
 }
 
 LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
@@ -2666,7 +2773,7 @@ AffineParallelOp mlir::affine::getAffineParallelInductionVarOwner(Value val) {
   if (!ivArg || !ivArg.getOwner())
     return nullptr;
   Operation *containingOp = ivArg.getOwner()->getParentOp();
-  auto parallelOp = dyn_cast<AffineParallelOp>(containingOp);
+  auto parallelOp = dyn_cast_if_present<AffineParallelOp>(containingOp);
   if (parallelOp && llvm::is_contained(parallelOp.getIVs(), val))
     return parallelOp;
   return nullptr;
@@ -2742,7 +2849,7 @@ buildAffineLoopFromConstants(OpBuilder &builder, Location loc, int64_t lb,
                              int64_t ub, int64_t step,
                              AffineForOp::BodyBuilderFn bodyBuilderFn) {
   return builder.create<AffineForOp>(loc, lb, ub, step,
-                                     /*iterArgs=*/std::nullopt, bodyBuilderFn);
+                                     /*iterArgs=*/ValueRange(), bodyBuilderFn);
 }
 
 /// Creates an affine loop from the bounds that may or may not be constants.
@@ -2757,7 +2864,7 @@ buildAffineLoopFromValues(OpBuilder &builder, Location loc, Value lb, Value ub,
                                         ubConst.value(), step, bodyBuilderFn);
   return builder.create<AffineForOp>(loc, lb, builder.getDimIdentityMap(), ub,
                                      builder.getDimIdentityMap(), step,
-                                     /*iterArgs=*/std::nullopt, bodyBuilderFn);
+                                     /*iterArgs=*/ValueRange(), bodyBuilderFn);
 }
 
 void mlir::affine::buildAffineLoopNest(
@@ -3024,7 +3131,8 @@ void AffineIfOp::build(OpBuilder &builder, OperationState &result,
 /// `set` by composing the maps of such affine.apply ops with the integer
 /// set constraints.
 static void composeSetAndOperands(IntegerSet &set,
-                                  SmallVectorImpl<Value> &operands) {
+                                  SmallVectorImpl<Value> &operands,
+                                  bool composeAffineMin = false) {
   // We will simply reuse the API of the map composition by viewing the LHSs of
   // the equalities and inequalities of `set` as the affine exprs of an affine
   // map. Convert to equivalent map, compose, and convert back to set.
@@ -3035,7 +3143,7 @@ static void composeSetAndOperands(IntegerSet &set,
                     [](Value v) { return v.getDefiningOp<AffineApplyOp>(); }))
     return;
 
-  composeAffineMapAndOperands(&map, &operands);
+  composeAffineMapAndOperands(&map, &operands, composeAffineMin);
   set = IntegerSet::get(map.getNumDims(), map.getNumSymbols(), map.getResults(),
                         set.getEqFlags());
 }
@@ -4788,7 +4896,7 @@ struct DropUnitExtentBasis
          llvm::enumerate(delinearizeOp.getPaddedBasis())) {
       std::optional<int64_t> basisVal =
           basis ? getConstantIntValue(basis) : std::nullopt;
-      if (basisVal && *basisVal == 1)
+      if (basisVal == 1)
         replacements[index] = getZero();
       else
         newBasis.push_back(basis);

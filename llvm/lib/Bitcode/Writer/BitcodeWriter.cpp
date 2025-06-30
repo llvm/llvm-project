@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -61,12 +62,12 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRSymtab.h"
-#include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -120,8 +121,6 @@ static cl::opt<bool>
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -1900,10 +1899,11 @@ void ModuleBitcodeWriter::writeDIEnumerator(const DIEnumerator *N,
 void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
                                            SmallVectorImpl<uint64_t> &Record,
                                            unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned SizeIsMetadata = 0x2;
+  Record.push_back(SizeIsMetadata | (unsigned)N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
-  Record.push_back(N->getSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
@@ -1916,10 +1916,11 @@ void ModuleBitcodeWriter::writeDIBasicType(const DIBasicType *N,
 void ModuleBitcodeWriter::writeDIFixedPointType(
     const DIFixedPointType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned SizeIsMetadata = 0x2;
+  Record.push_back(SizeIsMetadata | (unsigned)N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
-  Record.push_back(N->getSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
   Record.push_back(N->getFlags());
@@ -1945,13 +1946,14 @@ void ModuleBitcodeWriter::writeDIFixedPointType(
 void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
                                             SmallVectorImpl<uint64_t> &Record,
                                             unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned SizeIsMetadata = 0x2;
+  Record.push_back(SizeIsMetadata | (unsigned)N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getStringLength()));
   Record.push_back(VE.getMetadataOrNullID(N->getStringLengthExp()));
   Record.push_back(VE.getMetadataOrNullID(N->getStringLocationExp()));
-  Record.push_back(N->getSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getEncoding());
 
@@ -1962,16 +1964,17 @@ void ModuleBitcodeWriter::writeDIStringType(const DIStringType *N,
 void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
                                              SmallVectorImpl<uint64_t> &Record,
                                              unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned SizeIsMetadata = 0x2;
+  Record.push_back(SizeIsMetadata | (unsigned)N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getBaseType()));
-  Record.push_back(N->getSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
-  Record.push_back(N->getOffsetInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawOffsetInBits()));
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getExtraData()));
 
@@ -1996,12 +1999,13 @@ void ModuleBitcodeWriter::writeDIDerivedType(const DIDerivedType *N,
 void ModuleBitcodeWriter::writeDISubrangeType(const DISubrangeType *N,
                                               SmallVectorImpl<uint64_t> &Record,
                                               unsigned Abbrev) {
-  Record.push_back(N->isDistinct());
+  const unsigned SizeIsMetadata = 0x2;
+  Record.push_back(SizeIsMetadata | (unsigned)N->isDistinct());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
-  Record.push_back(N->getSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getBaseType()));
@@ -2018,16 +2022,18 @@ void ModuleBitcodeWriter::writeDICompositeType(
     const DICompositeType *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
   const unsigned IsNotUsedInOldTypeRef = 0x2;
-  Record.push_back(IsNotUsedInOldTypeRef | (unsigned)N->isDistinct());
+  const unsigned SizeIsMetadata = 0x4;
+  Record.push_back(SizeIsMetadata | IsNotUsedInOldTypeRef |
+                   (unsigned)N->isDistinct());
   Record.push_back(N->getTag());
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(VE.getMetadataOrNullID(N->getScope()));
   Record.push_back(VE.getMetadataOrNullID(N->getBaseType()));
-  Record.push_back(N->getSizeInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawSizeInBits()));
   Record.push_back(N->getAlignInBits());
-  Record.push_back(N->getOffsetInBits());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawOffsetInBits()));
   Record.push_back(N->getFlags());
   Record.push_back(VE.getMetadataOrNullID(N->getElements().get()));
   Record.push_back(N->getRuntimeLang());
@@ -4585,14 +4591,23 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_STACK_IDS, Vals, StackIdAbbvId);
   }
 
-  // n x context id
-  auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
-  ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
-  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  // The context ids are hashes that are close to 64 bits in size, so emitting
-  // as a pair of 32-bit fixed-width values is more efficient than a VBR.
-  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  unsigned ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
+  unsigned ContextIdAbbvId = 0;
+  if (metadataMayIncludeContextSizeInfo()) {
+    // n x context id
+    auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
+    ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
+    ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    // The context ids are hashes that are close to 64 bits in size, so emitting
+    // as a pair of 32-bit fixed-width values is more efficient than a VBR if we
+    // are emitting them for all MIBs. Otherwise we use VBR to better compress 0
+    // values that are expected to more frequently occur in an alloc's memprof
+    // summary.
+    if (metadataIncludesAllContextSizeInfo())
+      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+    else
+      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
+  }
 
   // Abbrev for FS_PERMODULE_PROFILE.
   Abbv = std::make_shared<BitCodeAbbrev>();

@@ -32,8 +32,11 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
         with:
           script: |
-            const failure_regex = /Process completed with exit code 1./
-            const preemption_regex = /The runner has received a shutdown signal/
+            // The "The run was canceled by" message comes from a user manually canceling a workflow
+            // the "higher priority" message comes from github canceling a workflow because the user updated the change.
+            // And the "exit code 1" message indicates a genuine failure.
+            const failure_regex = /(Process completed with exit code 1.)|(Canceling since a higher priority waiting request)|(The run was canceled by)/
+            const preemption_regex = /(The runner has received a shutdown signal)/
 
             const wf_run = context.payload.workflow_run
             core.notice(`Running on "${wf_run.display_title}" by @${wf_run.actor.login} (event: ${wf_run.event})\nWorkflow run URL: ${wf_run.html_url}`)
@@ -167,7 +170,7 @@ jobs:
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
         with:
           script: |
-            const FAILURE_REGEX = /Process completed with exit code 1./
+            const FAILURE_REGEX = /(Process completed with exit code 1.)|(Canceling since a higher priority waiting request)|(The run was canceled by)/
             const PREEMPTION_REGEX = /(The runner has received a shutdown signal)|(The operation was canceled)/
 
             function log(msg) {

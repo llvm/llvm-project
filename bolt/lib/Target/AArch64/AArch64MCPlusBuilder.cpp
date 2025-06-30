@@ -14,7 +14,7 @@
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/BinaryBasicBlock.h"
@@ -177,15 +177,12 @@ public:
     return true;
   }
 
-  bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
+  bool equals(const MCSpecifierExpr &A, const MCSpecifierExpr &B,
               CompFuncTy Comp) const override {
-    const auto &AArch64ExprA = cast<AArch64MCExpr>(A);
-    const auto &AArch64ExprB = cast<AArch64MCExpr>(B);
-    if (AArch64ExprA.getKind() != AArch64ExprB.getKind())
+    if (A.getSpecifier() != B.getSpecifier())
       return false;
 
-    return MCPlusBuilder::equals(*AArch64ExprA.getSubExpr(),
-                                 *AArch64ExprB.getSubExpr(), Comp);
+    return MCPlusBuilder::equals(*A.getSubExpr(), *B.getSubExpr(), Comp);
   }
 
   bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
@@ -196,7 +193,10 @@ public:
     return {AArch64::LR};
   }
 
-  ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
+  std::optional<MCPhysReg>
+  getWrittenAuthenticatedReg(const MCInst &Inst,
+                             bool &IsChecked) const override {
+    IsChecked = false;
     switch (Inst.getOpcode()) {
     case AArch64::AUTIAZ:
     case AArch64::AUTIBZ:
@@ -206,33 +206,12 @@ public:
     case AArch64::AUTIBSPPCi:
     case AArch64::AUTIASPPCr:
     case AArch64::AUTIBSPPCr:
-    case AArch64::RETAA:
-    case AArch64::RETAB:
-    case AArch64::RETAASPPCi:
-    case AArch64::RETABSPPCi:
-    case AArch64::RETAASPPCr:
-    case AArch64::RETABSPPCr:
       return AArch64::LR;
-
     case AArch64::AUTIA1716:
     case AArch64::AUTIB1716:
     case AArch64::AUTIA171615:
     case AArch64::AUTIB171615:
       return AArch64::X17;
-
-    case AArch64::ERETAA:
-    case AArch64::ERETAB:
-      // The ERETA{A,B} instructions use either register ELR_EL1, ELR_EL2 or
-      // ELR_EL3, depending on the current Exception Level at run-time.
-      //
-      // Furthermore, these registers are not modelled by LLVM as a regular
-      // MCPhysReg.... So there is no way to indicate that through the current
-      // API.
-      //
-      // Therefore, return an error to indicate that LLVM/BOLT cannot model
-      // this.
-      return make_error_code(std::errc::result_out_of_range);
-
     case AArch64::AUTIA:
     case AArch64::AUTIB:
     case AArch64::AUTDA:
@@ -242,22 +221,18 @@ public:
     case AArch64::AUTDZA:
     case AArch64::AUTDZB:
       return Inst.getOperand(0).getReg();
-
-      // FIXME: BL?RA(A|B)Z? and LDRA(A|B) should probably be handled here too.
-
+    case AArch64::LDRAAwriteback:
+    case AArch64::LDRABwriteback:
+      // Note that LDRA(A|B)indexed are not listed here, as they do not write
+      // an authenticated pointer back to the register.
+      IsChecked = true;
+      return Inst.getOperand(2).getReg();
     default:
-      return getNoRegister();
+      return std::nullopt;
     }
   }
 
-  bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
-    if (Reg == getNoRegister())
-      return false;
-    ErrorOr<MCPhysReg> AuthenticatedReg = getAuthenticatedReg(Inst);
-    return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
-  }
-
-  MCPhysReg getSignedReg(const MCInst &Inst) const override {
+  std::optional<MCPhysReg> getSignedReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::PACIA:
     case AArch64::PACIB:
@@ -283,26 +258,36 @@ public:
     case AArch64::PACIB171615:
       return AArch64::X17;
     default:
-      return getNoRegister();
+      return std::nullopt;
     }
   }
 
-  ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
+  std::optional<MCPhysReg>
+  getRegUsedAsRetDest(const MCInst &Inst,
+                      bool &IsAuthenticatedInternally) const override {
     assert(isReturn(Inst));
     switch (Inst.getOpcode()) {
     case AArch64::RET:
+      IsAuthenticatedInternally = false;
       return Inst.getOperand(0).getReg();
+
     case AArch64::RETAA:
     case AArch64::RETAB:
     case AArch64::RETAASPPCi:
     case AArch64::RETABSPPCi:
     case AArch64::RETAASPPCr:
     case AArch64::RETABSPPCr:
+      IsAuthenticatedInternally = true;
       return AArch64::LR;
     case AArch64::ERET:
     case AArch64::ERETAA:
     case AArch64::ERETAB:
-      return make_error_code(std::errc::result_out_of_range);
+      // The ERET* instructions use either register ELR_EL1, ELR_EL2 or
+      // ELR_EL3, depending on the current Exception Level at run-time.
+      //
+      // Furthermore, these registers are not modelled by LLVM as a regular
+      // MCPhysReg, so there is no way to indicate that through the current API.
+      return std::nullopt;
     default:
       llvm_unreachable("Unhandled return instruction");
     }
@@ -332,7 +317,7 @@ public:
     }
   }
 
-  MCPhysReg
+  std::optional<MCPhysReg>
   getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::ADR:
@@ -343,7 +328,7 @@ public:
       // this instruction), so the produced value is not attacker-controlled.
       return Inst.getOperand(0).getReg();
     default:
-      return getNoRegister();
+      return std::nullopt;
     }
   }
 
@@ -483,8 +468,8 @@ public:
     }
   }
 
-  MCPhysReg getAuthCheckedReg(const MCInst &Inst,
-                              bool MayOverwrite) const override {
+  std::optional<MCPhysReg> getAuthCheckedReg(const MCInst &Inst,
+                                             bool MayOverwrite) const override {
     // Cannot trivially reuse AArch64InstrInfo::getMemOperandWithOffsetWidth()
     // method as it accepts an instance of MachineInstr, not MCInst.
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
@@ -545,6 +530,10 @@ public:
       return false;
     };
 
+    // FIXME: Not all load instructions are handled by this->mayLoad(Inst).
+    //        On the other hand, MCInstrDesc::mayLoad() is permitted to return
+    //        true for non-load instructions (such as AArch64::HINT) which
+    //        would result in false negatives.
     if (mayLoad(Inst)) {
       // The first Use operand is the base address register.
       unsigned BaseRegIndex = Desc.getNumDefs();
@@ -553,10 +542,10 @@ public:
       // the resulting address arbitrarily.
       for (unsigned I = BaseRegIndex + 1, E = Desc.getNumOperands(); I < E; ++I)
         if (Inst.getOperand(I).isReg())
-          return getNoRegister();
+          return std::nullopt;
 
       if (!MayOverwrite && ClobbersBaseRegExceptWriteback(BaseRegIndex))
-        return getNoRegister();
+        return std::nullopt;
 
       return Inst.getOperand(BaseRegIndex).getReg();
     }
@@ -564,7 +553,7 @@ public:
     // Store instructions are not handled yet, as they are not important for
     // pauthtest ABI. Though, they could be handled similar to loads, if needed.
 
-    return getNoRegister();
+    return std::nullopt;
   }
 
   bool isADRP(const MCInst &Inst) const override {
@@ -854,6 +843,8 @@ public:
   }
 
   bool mayLoad(const MCInst &Inst) const override {
+    // FIXME: Probably this could be tablegen-erated not to miss any existing
+    //        or future opcodes.
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst) ||
            isLDRQ(Inst) || isLDRD(Inst) || isLDRS(Inst);
   }
@@ -1090,7 +1081,7 @@ public:
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
-      return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS, Ctx);
     } else if (isADRP(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21 ||
                RelType == ELF::R_AARCH64_ADR_PREL_PG_HI21_NC ||
                RelType == ELF::R_AARCH64_TLSDESC_ADR_PAGE21 ||
@@ -1098,7 +1089,7 @@ public:
                RelType == ELF::R_AARCH64_ADR_GOT_PAGE) {
       // Never emit a GOT reloc, we handled this in
       // RewriteInstance::readRelocations().
-      return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_PAGE, Ctx);
+      return MCSpecifierExpr::create(Expr, AArch64::S_ABS_PAGE, Ctx);
     } else {
       switch (RelType) {
       case ELF::R_AARCH64_ADD_ABS_LO12_NC:
@@ -1112,18 +1103,18 @@ public:
       case ELF::R_AARCH64_TLSDESC_LD64_LO12:
       case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
       case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_LO12, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_LO12, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G3:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G3, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G3, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G2:
       case ELF::R_AARCH64_MOVW_UABS_G2_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G2_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G2_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G1:
       case ELF::R_AARCH64_MOVW_UABS_G1_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G1_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G1_NC, Ctx);
       case ELF::R_AARCH64_MOVW_UABS_G0:
       case ELF::R_AARCH64_MOVW_UABS_G0_NC:
-        return AArch64MCExpr::create(Expr, AArch64MCExpr::VK_ABS_G0_NC, Ctx);
+        return MCSpecifierExpr::create(Expr, AArch64::S_ABS_G0_NC, Ctx);
       default:
         break;
       }
@@ -1148,7 +1139,7 @@ public:
   }
 
   const MCSymbol *getTargetSymbol(const MCExpr *Expr) const override {
-    auto *AArchExpr = dyn_cast<AArch64MCExpr>(Expr);
+    auto *AArchExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetSymbol(AArchExpr->getSubExpr());
 
@@ -1168,7 +1159,7 @@ public:
   }
 
   int64_t getTargetAddend(const MCExpr *Expr) const override {
-    auto *AArchExpr = dyn_cast<AArch64MCExpr>(Expr);
+    auto *AArchExpr = dyn_cast<MCSpecifierExpr>(Expr);
     if (AArchExpr && AArchExpr->getSubExpr())
       return getTargetAddend(AArchExpr->getSubExpr());
 
@@ -1215,8 +1206,7 @@ public:
       OI = Inst.begin() + 2;
     }
 
-    *OI = MCOperand::createExpr(
-        MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx));
+    *OI = MCOperand::createExpr(MCSymbolRefExpr::create(TBB, *Ctx));
   }
 
   /// Matches indirect branch patterns in AArch64 related to a jump table (JT),
@@ -1642,8 +1632,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::EQ)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1665,8 +1654,7 @@ public:
                           .addImm(0));
     Code.emplace_back(MCInstBuilder(AArch64::Bcc)
                           .addImm(AArch64CC::NE)
-                          .addExpr(MCSymbolRefExpr::create(
-                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+                          .addExpr(MCSymbolRefExpr::create(Target, *Ctx)));
     return Code;
   }
 
@@ -1966,8 +1954,7 @@ public:
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+        Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
   }
@@ -2036,9 +2023,8 @@ public:
     MCInst Inst;
     Inst.setOpcode(AArch64::MOVZXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G3, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G3, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x30));
     Seq.emplace_back(Inst);
 
@@ -2046,9 +2032,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G2_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G2_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x20));
     Seq.emplace_back(Inst);
 
@@ -2056,9 +2041,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G1_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G1_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0x10));
     Seq.emplace_back(Inst);
 
@@ -2066,9 +2050,8 @@ public:
     Inst.setOpcode(AArch64::MOVKXi);
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
     Inst.addOperand(MCOperand::createReg(AArch64::X16));
-    Inst.addOperand(MCOperand::createExpr(AArch64MCExpr::create(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        AArch64MCExpr::VK_ABS_G0_NC, *Ctx)));
+    Inst.addOperand(MCOperand::createExpr(
+        MCSpecifierExpr::create(Target, AArch64::S_ABS_G0_NC, *Ctx)));
     Inst.addOperand(MCOperand::createImm(0));
     Seq.emplace_back(Inst);
 
@@ -2241,9 +2224,8 @@ public:
                           MCContext *Ctx) const override {
     Inst.setOpcode(AArch64::B);
     Inst.clear();
-    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(TBB, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
+    Inst.addOperand(MCOperand::createExpr(
+        getTargetExprFor(Inst, MCSymbolRefExpr::create(TBB, *Ctx), *Ctx, 0)));
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {

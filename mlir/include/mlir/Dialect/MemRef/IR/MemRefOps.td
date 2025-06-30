@@ -174,6 +174,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment", [
   }];
 
   let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -338,7 +339,7 @@ def MemRef_AllocaOp : AllocLikeOp<"alloca", AutomaticAllocationScopeResource,[
     The `alloca` operation allocates memory on the stack, to be automatically
     released when control transfers back from the region of its closest
     surrounding operation with an
-    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
+    [`AutomaticAllocationScope`](../Traits/#automaticallocationscope) trait.
     The amount of memory allocated is specified by its memref and additional
     operands. For example:
 
@@ -1077,8 +1078,7 @@ def GenericAtomicRMWOp : MemRef_Op<"generic_atomic_rmw", [
 
 def AtomicYieldOp : MemRef_Op<"atomic_yield", [
       HasParent<"GenericAtomicRMWOp">,
-      Pure,
-      Terminator
+      Pure, Terminator, ReturnLike
     ]> {
   let summary = "yield operation for GenericAtomicRMWOp";
   let description = [{

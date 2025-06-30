@@ -13,6 +13,7 @@
 #define CLANG_CIR_LOWERTOLLVM_H
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
@@ -27,6 +28,21 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
                                 const mlir::TypeConverter *converter);
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
+
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
+
+class CIRToLLVMAssumeOpLowering
+    : public mlir::OpConversionPattern<cir::AssumeOp> {
+public:
+  using mlir::OpConversionPattern<cir::AssumeOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::AssumeOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
 
 class CIRToLLVMBrCondOpLowering
     : public mlir::OpConversionPattern<cir::BrCondOp> {
@@ -51,6 +67,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::CastOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMExpectOpLowering
+    : public mlir::OpConversionPattern<cir::ExpectOp> {
+public:
+  using mlir::OpConversionPattern<cir::ExpectOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ExpectOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -149,6 +175,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMSwitchFlatOpLowering
+    : public mlir::OpConversionPattern<cir::SwitchFlatOp> {
+public:
+  using mlir::OpConversionPattern<cir::SwitchFlatOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::SwitchFlatOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMGetGlobalOpLowering
     : public mlir::OpConversionPattern<cir::GetGlobalOp> {
 public:
@@ -182,6 +218,10 @@ private:
 
   void setupRegionInitializedLLVMGlobalOp(
       cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
+
+  mutable mlir::LLVM::ComdatOp comdatOp = nullptr;
+  mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
+                                    mlir::OpBuilder &builder) const;
 };
 
 class CIRToLLVMUnaryOpLowering
@@ -282,6 +322,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMBaseClassAddrOpLowering
+    : public mlir::OpConversionPattern<cir::BaseClassAddrOp> {
+public:
+  using mlir::OpConversionPattern<cir::BaseClassAddrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BaseClassAddrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMStackSaveOpLowering
     : public mlir::OpConversionPattern<cir::StackSaveOp> {
 public:
@@ -329,6 +379,97 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::VecInsertOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecCmpOpLowering
+    : public mlir::OpConversionPattern<cir::VecCmpOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecCmpOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecCmpOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecSplatOpLowering
+    : public mlir::OpConversionPattern<cir::VecSplatOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecSplatOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecSplatOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecShuffleOpLowering
+    : public mlir::OpConversionPattern<cir::VecShuffleOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecShuffleOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecShuffleOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecShuffleDynamicOpLowering
+    : public mlir::OpConversionPattern<cir::VecShuffleDynamicOp> {
+public:
+  using mlir::OpConversionPattern<
+      cir::VecShuffleDynamicOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecShuffleDynamicOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMVecTernaryOpLowering
+    : public mlir::OpConversionPattern<cir::VecTernaryOp> {
+public:
+  using mlir::OpConversionPattern<cir::VecTernaryOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::VecTernaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexCreateOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexCreateOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexCreateOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexCreateOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexRealOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexRealOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexRealOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexRealOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexImagOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexImagOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexImagOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexImagOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexEqualOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexEqualOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexEqualOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexEqualOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

@@ -658,6 +658,7 @@ const HeaderMapCollector::RegexHeaderMap *getSTLPostfixHeaderMap() {
       {"bits/syslog-path.h$", "<sys/syslog.h>"},
       {"bits/termios.h$", "<termios.h>"},
       {"bits/types.h$", "<sys/types.h>"},
+      {"bits/types/struct_iovec.h$", "<sys/uio.h>"},
       {"bits/typesizes.h$", "<sys/types.h>"},
       {"bits/uio.h$", "<sys/uio.h>"},
       {"bits/ustat.h$", "<sys/ustat.h>"},

@@ -358,6 +358,11 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_constexpr_forward_list",
+            "values": {"c++26": 202502},
+            "headers": ["forward_list"],
+        },
+        {
             "name": "__cpp_lib_constexpr_functional",
             "values": {"c++20": 201907},
             "headers": ["functional"],
@@ -366,6 +371,11 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_iterator",
             "values": {"c++20": 201811},
             "headers": ["iterator"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_list",
+            "values": {"c++26": 202502},
+            "headers": ["list"],
         },
         {
             "name": "__cpp_lib_constexpr_memory",
@@ -383,6 +393,11 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_numeric",
             "values": {"c++20": 201911},
             "headers": ["numeric"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_queue",
+            "values": {"c++26": 202502},
+            "headers": ["queue"],
         },
         {
             "name": "__cpp_lib_constexpr_string",
@@ -416,8 +431,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_constrained_equality",
-            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
-            "headers": ["optional", "tuple", "utility", "variant"],
+            "values": {
+                # "c++26": 202403,  # P2944R3: Comparisons for reference_wrapper
+                "c++26": 202411,  # P3379R0: Constrain std::expected equality operators
+            },
+            "headers": ["expected", "optional", "tuple", "utility", "variant"],
             "unimplemented": True,
         },
         {
@@ -1097,7 +1115,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_join_with",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_repeat",

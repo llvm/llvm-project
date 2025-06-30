@@ -452,7 +452,7 @@ public:
     IntOperands[NumIntOperands++] = IntOperand;
   }
 
-  virtual void allocateIntOperands(BumpPtrAllocator &Allocator) {
+  void allocateIntOperands(BumpPtrAllocator &Allocator) {
     assert(!IntOperands && "Operands already allocated");
     IntOperands = Allocator.Allocate<unsigned>(MaxIntOperands);
   }

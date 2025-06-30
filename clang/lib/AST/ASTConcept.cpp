@@ -13,6 +13,7 @@
 
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -107,3 +108,61 @@ void ConceptReference::print(llvm::raw_ostream &OS,
     OS << ">";
   }
 }
+
+concepts::ExprRequirement::ExprRequirement(
+    Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+    ReturnTypeRequirement Req, SatisfactionStatus Status,
+    ConceptSpecializationExpr *SubstitutedConstraintExpr)
+    : Requirement(IsSimple ? RK_Simple : RK_Compound, Status == SS_Dependent,
+                  Status == SS_Dependent &&
+                      (E->containsUnexpandedParameterPack() ||
+                       Req.containsUnexpandedParameterPack()),
+                  Status == SS_Satisfied),
+      Value(E), NoexceptLoc(NoexceptLoc), TypeReq(Req),
+      SubstitutedConstraintExpr(SubstitutedConstraintExpr), Status(Status) {
+  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
+         "Simple requirement must not have a return type requirement or a "
+         "noexcept specification");
+  assert((Status > SS_TypeRequirementSubstitutionFailure &&
+          Req.isTypeConstraint()) == (SubstitutedConstraintExpr != nullptr));
+}
+
+concepts::ExprRequirement::ExprRequirement(
+    SubstitutionDiagnostic *ExprSubstDiag, bool IsSimple,
+    SourceLocation NoexceptLoc, ReturnTypeRequirement Req)
+    : Requirement(IsSimple ? RK_Simple : RK_Compound, Req.isDependent(),
+                  Req.containsUnexpandedParameterPack(), /*IsSatisfied=*/false),
+      Value(ExprSubstDiag), NoexceptLoc(NoexceptLoc), TypeReq(Req),
+      Status(SS_ExprSubstitutionFailure) {
+  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
+         "Simple requirement must not have a return type requirement or a "
+         "noexcept specification");
+}
+
+concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
+    TemplateParameterList *TPL)
+    : TypeConstraintInfo(TPL, false) {
+  assert(TPL->size() == 1);
+  const TypeConstraint *TC =
+      cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint();
+  assert(TC &&
+         "TPL must have a template type parameter with a type constraint");
+  auto *Constraint =
+      cast<ConceptSpecializationExpr>(TC->getImmediatelyDeclaredConstraint());
+  bool Dependent =
+      Constraint->getTemplateArgsAsWritten() &&
+      TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
+          Constraint->getTemplateArgsAsWritten()->arguments().drop_front(1));
+  TypeConstraintInfo.setInt(Dependent ? true : false);
+}
+
+concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T)
+    : Requirement(RK_Type, T->getType()->isInstantiationDependentType(),
+                  T->getType()->containsUnexpandedParameterPack(),
+                  // We reach this ctor with either dependent types (in which
+                  // IsSatisfied doesn't matter) or with non-dependent type in
+                  // which the existence of the type indicates satisfaction.
+                  /*IsSatisfied=*/true),
+      Value(T),
+      Status(T->getType()->isInstantiationDependentType() ? SS_Dependent
+                                                          : SS_Satisfied) {}

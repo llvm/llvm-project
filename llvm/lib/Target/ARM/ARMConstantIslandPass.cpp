@@ -183,9 +183,6 @@ namespace {
     /// base address.
     DenseMap<int, int> JumpTableUserIndices;
 
-    // Maps a MachineBasicBlock to the number of jump tables entries.
-    DenseMap<const MachineBasicBlock *, int> BlockJumpTableRefCount;
-
     /// ImmBranch - One per immediate branch, keeping the machine instruction
     /// pointer, conditional or unconditional, the max displacement,
     /// and (if isCond is true) the corresponding unconditional branch
@@ -234,8 +231,7 @@ namespace {
     }
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     StringRef getPassName() const override {
@@ -523,7 +519,6 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   CPEntries.clear();
   JumpTableEntryIndices.clear();
   JumpTableUserIndices.clear();
-  BlockJumpTableRefCount.clear();
   ImmBranches.clear();
   PushPopMIs.clear();
   T2JumpTables.clear();
@@ -736,14 +731,6 @@ Align ARMConstantIslands::getCPEAlign(const MachineInstr *CPEMI) {
   return MCP->getConstants()[CPI].getAlign();
 }
 
-// Exception landing pads, blocks that has their adress taken, and function
-// entry blocks will always be (potential) indirect jump targets, regardless of
-// whether they are referenced by or not by jump tables.
-static bool isAlwaysIndirectTarget(const MachineBasicBlock &MBB) {
-  return MBB.isEHPad() || MBB.hasAddressTaken() ||
-         &MBB == &MBB.getParent()->front();
-}
-
 /// scanFunctionJumpTables - Do a scan of the function, building up
 /// information about the sizes of each block and the locations of all
 /// the jump tables.
@@ -754,20 +741,6 @@ void ARMConstantIslands::scanFunctionJumpTables() {
           (I.getOpcode() == ARM::t2BR_JT || I.getOpcode() == ARM::tBR_JTr))
         T2JumpTables.push_back(&I);
   }
-
-  if (!MF->getInfo<ARMFunctionInfo>()->branchTargetEnforcement())
-    return;
-
-  if (const MachineJumpTableInfo *JTI = MF->getJumpTableInfo())
-    for (const MachineJumpTableEntry &JTE : JTI->getJumpTables())
-      for (const MachineBasicBlock *MBB : JTE.MBBs) {
-        if (isAlwaysIndirectTarget(*MBB))
-          // Set the reference count essentially to infinity, it will never
-          // reach zero and the BTI Instruction will never be removed.
-          BlockJumpTableRefCount[MBB] = std::numeric_limits<int>::max();
-        else
-          ++BlockJumpTableRefCount[MBB];
-      }
 }
 
 /// initializeFunctionInfo - Do the initial scan of the function, building up
