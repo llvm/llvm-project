@@ -138,7 +138,7 @@
 
 // AARCH64-BAREMETAL-COMPILER-RT: "{{.*}}crt0.o"
 // AARCH64-BAREMETAL-COMPILER-RT: "{{.*}}clang_rt.crtbegin.o"
-// AARCH64-BAREMETAL-COMPILER-RT: "--start-group" "{{.*}}libclang_rt.builtins.a" "-lc" "-lgloss" "--end-group"
+// AARCH64-BAREMETAL-COMPILER-RT: "--start-group" "{{.*}}libclang_rt.builtins{{.*}}.a" "-lc" "-lgloss" "--end-group"
 // AARCH64-BAREMETAL-COMPILER-RT: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -155,5 +155,5 @@
 
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}crt0.o"
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtbegin.o"
-// AARCH64-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins.a" "--as-needed" "-lunwind" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// AARCH64-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins{{.*}}.a" "--as-needed" "-lunwind" "--no-as-needed" "-lc" "-lgloss" "--end-group"
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtend.o"
