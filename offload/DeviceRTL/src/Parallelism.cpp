@@ -45,9 +45,9 @@ using namespace ompx;
 
 namespace {
 
-void num_threads_strict_error(int32_t nt_strict, int32_t nt_severity,
-                              const char *nt_message, int32_t requested,
-                              int32_t actual) {
+void numThreadsStrictError(int32_t nt_strict, int32_t nt_severity,
+                           const char *nt_message, int32_t requested,
+                           int32_t actual) {
   if (nt_message)
     printf("%s\n", nt_message);
   else
@@ -81,8 +81,8 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause,
 
   if (NumThreadsClause != -1 && nt_strict &&
       NumThreads != static_cast<uint32_t>(NumThreadsClause))
-    num_threads_strict_error(nt_strict, nt_severity, nt_message,
-                             NumThreadsClause, NumThreads);
+    numThreadsStrictError(nt_strict, nt_severity, nt_message, NumThreadsClause,
+                          NumThreads);
 
   return NumThreads;
 }
@@ -184,8 +184,7 @@ __kmpc_parallel_spmd(IdentTy *ident, int32_t num_threads, void *fn, void **args,
     // effect when parallel execution is disabled by a corresponding if clause
     // attached to the parallel directive.
     if (nt_strict && num_threads > 1)
-      num_threads_strict_error(nt_strict, nt_severity, nt_message, num_threads,
-                               1);
+      numThreadsStrictError(nt_strict, nt_severity, nt_message, num_threads, 1);
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
