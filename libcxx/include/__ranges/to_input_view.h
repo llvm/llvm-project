@@ -10,12 +10,18 @@
 #ifndef _LIBCPP___RANGES_TO_INPUT_VIEW_H
 #define _LIBCPP___RANGES_TO_INPUT_VIEW_H
 
+#include <__algorithm/iter_swap.h>
 #include <__concepts/constructible.h>
 #include <__config>
+#include <__iterator/indirectly_comparable.h>
+#include <__iterator/iter_move.h>
+#include <__iterator/iter_swap.h>
+#include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/maybe_const.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -91,10 +97,76 @@ public:
 template <class _R>
 to_input_view(_R&&) -> to_input_view<ranges::views::all_t<_R>>;
 
+template <input_range _V>
+  requires view<_V>
+template <bool _Const>
+class to_input_view<_V>::__iterator {
+  using _Base                  = __maybe_const<_Const, _V>;
+  iterator_t<_Base> __current_ = iterator_t<_Base>();
+
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(iterator_t<_Base> __current) : __current_(std::move(__current)) {}
+
+public:
+  using difference_type  = range_difference_t<_Base>;
+  using value_type       = range_value_t<_Base>;
+  using iterator_concept = input_iterator_tag;
+
+  _LIBCPP_HIDE_FROM_ABI __iterator()
+    requires default_initializable<iterator_t<_Base>>
+  = default;
+
+  _LIBCPP_HIDE_FROM_ABI __iterator(__iterator&&)            = default;
+  _LIBCPP_HIDE_FROM_ABI __iterator& operator=(__iterator&&) = default;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
+    requires _Const && convertible_to<iterator_t<_V>, iterator_t<_Base>>
+      : __current_(std::move(__i.__current_)) {}
+
+  // base
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() &&;
+  _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept;
+
+  // operator ++
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+    ++__current_;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+
+  // operator==
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const sentinel_t<_Base>& __y) {
+    return __x.__current_ == __y;
+  }
+
+  // operator --
+  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const sentinel_t<_Base>& __y, const __iterator& __x)
+    requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
+  {
+    return __y - __x.__current_;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const sentinel_t<_Base>& __y)
+    requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
+  {
+    return __x.__current_ - __y;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr range_rvalue_reference_t<_Base>
+  iter_move(const __iterator& __i) noexcept(noexcept(ranges::iter_move(__i.__current_))) {
+    return ranges::iter_move(__i.__current_);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr void
+  iter_swap(const __iterator& __x, const __iterator& __y) noexcept(noexcept(iter_swap(__x.__current_, __y.__current_)))
+    requires indirectly_swappable<iterator_t<_Base>>
+  {
+    ranges::iter_swap(__x.__current_, __y.__current_);
+  }
+};
+
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_FROM_RANGE_H
+#endif // _LIBCPP___RANGES_TO_INPUT_VIEW_H
