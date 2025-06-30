@@ -976,6 +976,54 @@ exit:                                              ; preds = %loop
   ret i32 %crc.next
 }
 
+define i16 @not.crc.dead.msg.xor.notin.select.chain(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.dead.msg.xor.notin.select.chain'
+; CHECK-NEXT:  Found little-endian CRC-16 loop with trip count 16
+; CHECK-NEXT:    Initial CRC: i16 %checksum
+; CHECK-NEXT:    Generating polynomial: 40961
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i16 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 49345 49537 320 49921 960 640 49729 50689 1728 1920 51009 1280 50625 50305 1088
+; CHECK-NEXT:  52225 3264 3456 52545 3840 53185 52865 3648 2560 51905 52097 2880 51457 2496 2176 51265
+; CHECK-NEXT:  55297 6336 6528 55617 6912 56257 55937 6720 7680 57025 57217 8000 56577 7616 7296 56385
+; CHECK-NEXT:  5120 54465 54657 5440 55041 6080 5760 54849 53761 4800 4992 54081 4352 53697 53377 4160
+; CHECK-NEXT:  61441 12480 12672 61761 13056 62401 62081 12864 13824 63169 63361 14144 62721 13760 13440 62529
+; CHECK-NEXT:  15360 64705 64897 15680 65281 16320 16000 65089 64001 15040 15232 64321 14592 63937 63617 14400
+; CHECK-NEXT:  10240 59585 59777 10560 60161 11200 10880 59969 60929 11968 12160 61249 11520 60865 60545 11328
+; CHECK-NEXT:  58369 9408 9600 58689 9984 59329 59009 9792 8704 58049 58241 9024 57601 8640 8320 57409
+; CHECK-NEXT:  40961 24768 24960 41281 25344 41921 41601 25152 26112 42689 42881 26432 42241 26048 25728 42049
+; CHECK-NEXT:  27648 44225 44417 27968 44801 28608 28288 44609 43521 27328 27520 43841 26880 43457 43137 26688
+; CHECK-NEXT:  30720 47297 47489 31040 47873 31680 31360 47681 48641 32448 32640 48961 32000 48577 48257 31808
+; CHECK-NEXT:  46081 29888 30080 46401 30464 47041 46721 30272 29184 45761 45953 29504 45313 29120 28800 45121
+; CHECK-NEXT:  20480 37057 37249 20800 37633 21440 21120 37441 38401 22208 22400 38721 21760 38337 38017 21568
+; CHECK-NEXT:  39937 23744 23936 40257 24320 40897 40577 24128 23040 39617 39809 23360 39169 22976 22656 38977
+; CHECK-NEXT:  34817 18624 18816 35137 19200 35777 35457 19008 19968 36545 36737 20288 36097 19904 19584 35905
+; CHECK-NEXT:  17408 33985 34177 17728 34561 18368 18048 34369 33281 17088 17280 33601 16640 33217 32897 16448
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %or.crc.data = or i16 %crc, %data
+  %and.crc.data = and i16 %or.crc.data, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i16 @not.crc.float.simple.recurrence(float %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.float.simple.recurrence'
 ; CHECK-NEXT:  Did not find a hash algorithm
