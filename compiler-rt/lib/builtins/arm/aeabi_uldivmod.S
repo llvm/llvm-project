@@ -45,7 +45,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uldivmod)
         add	sp, sp, #16
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop     {r6, r12, lr}
-        bxaut   r12, lr, sp
+        PAC_RETURN
 #else
         pop     {r6, pc}
 #endif

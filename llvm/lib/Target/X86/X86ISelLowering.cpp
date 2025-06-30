@@ -10312,6 +10312,11 @@ static bool isNonZeroElementsInOrder(const APInt &Zeroable,
   return true;
 }
 
+static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
+                                      ArrayRef<SDValue> Ops, SelectionDAG &DAG,
+                                      const X86Subtarget &Subtarget,
+                                      unsigned Depth = 0);
+
 /// Try to lower a shuffle with a single PSHUFB of V1 or V2.
 static SDValue lowerShuffleWithPSHUFB(const SDLoc &DL, MVT VT,
                                       ArrayRef<int> Mask, SDValue V1,
@@ -10692,7 +10697,8 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
                                     SelectionDAG &DAG) {
   assert((VT.is128BitVector() || VT.is256BitVector()) &&
          "Unexpected VTRUNC type");
-  if (!Subtarget.hasAVX512())
+  if (!Subtarget.hasAVX512() ||
+      (VT.is256BitVector() && !Subtarget.useAVX512Regs()))
     return SDValue();
 
   unsigned NumElts = VT.getVectorNumElements();
@@ -10721,29 +10727,18 @@ static SDValue lowerShuffleAsVTRUNC(const SDLoc &DL, MVT VT, SDValue V1,
       bool UndefUppers =
           UpperElts > 0 && isUndefInRange(Mask, NumSrcElts, UpperElts);
 
-      // For offset truncations, ensure that the concat is cheap.
-      if (Offset) {
-        auto IsCheapConcat = [&](SDValue Lo, SDValue Hi) {
-          if (Lo.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-              Hi.getOpcode() == ISD::EXTRACT_SUBVECTOR)
-            return Lo.getOperand(0) == Hi.getOperand(0);
-          if (ISD::isNormalLoad(Lo.getNode()) &&
-              ISD::isNormalLoad(Hi.getNode())) {
-            auto *LDLo = cast<LoadSDNode>(Lo);
-            auto *LDHi = cast<LoadSDNode>(Hi);
-            return DAG.areNonVolatileConsecutiveLoads(
-                LDHi, LDLo, Lo.getValueType().getStoreSize(), 1);
-          }
-          return false;
-        };
-        if (!IsCheapConcat(peekThroughBitcasts(V1), peekThroughBitcasts(V2)))
-          continue;
-      }
-
       // As we're using both sources then we need to concat them together
       // and truncate from the double-sized src.
-      MVT ConcatVT = MVT::getVectorVT(VT.getScalarType(), NumElts * 2);
-      SDValue Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+      MVT ConcatVT = VT.getDoubleNumVectorElementsVT();
+
+      // For offset truncations, ensure that the concat is cheap.
+      SDValue Src =
+          combineConcatVectorOps(DL, ConcatVT, {V1, V2}, DAG, Subtarget);
+      if (!Src) {
+        if (Offset)
+          continue;
+        Src = DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, V1, V2);
+      }
 
       MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
       MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
@@ -42183,11 +42178,6 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
   return SDValue();
 }
 
-static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
-                                      ArrayRef<SDValue> Ops, SelectionDAG &DAG,
-                                      const X86Subtarget &Subtarget,
-                                      unsigned Depth = 0);
-
 /// Try to combine x86 target specific shuffles.
 static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                                     SelectionDAG &DAG,
@@ -45103,9 +45093,11 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::UNPCKH:
   case X86ISD::UNPCKL:
     return false;
-    // SSE comparisons handle all fcmp cases.
-    // TODO: Add PCMPEQ/GT and CMPM/MM with test coverage.
+    // SSE comparisons handle all icmp/fcmp cases.
+    // TODO: Add CMPM/MM with test coverage.
   case X86ISD::CMPP:
+  case X86ISD::PCMPEQ:
+  case X86ISD::PCMPGT:
     return false;
   case ISD::INTRINSIC_WO_CHAIN:
     switch (Op->getConstantOperandVal(0)) {
