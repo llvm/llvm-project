@@ -27,12 +27,10 @@ subroutine linear_clause_02(arg_01, arg_02)
     integer, value, intent(in) :: arg_02
 
     !WARNING: The 'modifier(<list>)' syntax is deprecated in OpenMP v5.2, use '<list> : modifier' instead
-    !ERROR: The list item 'var' specified without the REF 'linear-modifier' must be of INTEGER type
     !ERROR: If the `linear-modifier` is REF or UVAL, the list item 'var' must be a dummy argument without the VALUE attribute
     !ERROR: The list item `var` must be a dummy argument
     !ERROR: The list item `var` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute
     !$omp declare simd linear(uval(var))
-    !ERROR: The type of 'var' has already been implicitly declared
     integer, pointer :: var
 end subroutine linear_clause_02
 

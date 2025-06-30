@@ -665,7 +665,7 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
                  CanonCallee->getParamDecl(I)->getAttr<LifetimeCaptureByAttr>();
              CaptureAttr && isa<CXXConstructorDecl>(CanonCallee) &&
              llvm::any_of(CaptureAttr->params(), [](int ArgIdx) {
-               return ArgIdx == LifetimeCaptureByAttr::THIS;
+               return ArgIdx == LifetimeCaptureByAttr::This;
              }))
       // `lifetime_capture_by(this)` in a class constructor has the same
       // semantics as `lifetimebound`:

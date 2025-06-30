@@ -30,6 +30,14 @@ llvm_canonicalize_cmake_booleans(
   LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
+# Run tests requiring Z3 headers only if LLVM was built with Z3
+# and the headers are available while building Clang -- the latter may
+# not be the case when building standalone against installed LLVM.
+set(TEST_WITH_Z3_DEVEL 0)
+if(LLVM_WITH_Z3 AND Z3_FOUND)
+  set(TEST_WITH_Z3_DEVEL 1)
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
@@ -124,10 +132,6 @@ if(LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
     )
 endif()    
 
-set(CLANG_TEST_PARAMS
-  USE_Z3_SOLVER=0
-  )
-
 if( NOT CLANG_BUILT_STANDALONE )
   list(APPEND CLANG_TEST_DEPS
     llvm-config
@@ -195,13 +199,11 @@ set_target_properties(clang-test-depends PROPERTIES FOLDER "Clang/Tests")
 add_lit_testsuite(check-clang "Running the Clang regression tests"
   ${CMAKE_CURRENT_BINARY_DIR}
   #LIT ${LLVM_LIT}
-  PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
   ARGS ${CLANG_TEST_EXTRA_ARGS}
   )
 
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
-  PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
   FOLDER "Clang tests/Suites"
 )

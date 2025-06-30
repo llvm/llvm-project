@@ -576,12 +576,12 @@ define void @splat2_i64(ptr %s, ptr %d) {
 ;
 ; AVX1-LABEL: splat2_i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vperm2f128 $51, (%rdi), %ymm0, %ymm0 # ymm0 = mem[2,3,2,3]
+; AVX1-NEXT:    vbroadcastf128 (%rdi), %ymm0 # ymm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,0,3,3]
-; AVX1-NEXT:    vbroadcastf128 (%rdi), %ymm1 # ymm1 = mem[0,1,0,1]
+; AVX1-NEXT:    vbroadcastf128 16(%rdi), %ymm1 # ymm1 = mem[0,1,0,1]
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[0,0,3,3]
-; AVX1-NEXT:    vmovupd %ymm0, 32(%rsi)
-; AVX1-NEXT:    vmovupd %ymm1, (%rsi)
+; AVX1-NEXT:    vmovupd %ymm1, 32(%rsi)
+; AVX1-NEXT:    vmovupd %ymm0, (%rsi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;

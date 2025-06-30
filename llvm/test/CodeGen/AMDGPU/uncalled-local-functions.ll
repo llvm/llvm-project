@@ -22,7 +22,7 @@ define internal i32 @aliased_internal_func() {
 ; CHECK-LABEL: take_alias_addr
 ; CHECK:      Function info:
 ; CHECK-NEXT: codeLenInByte = 60
-; CHECK-NEXT: NumSgprs: 37
+; CHECK-NEXT: TotalNumSgprs: 37
 ; CHECK-NEXT: NumVgprs: 1
 ; CHECK-NEXT: NumAgprs: 0
 ; CHECK-NEXT: TotalNumVgprs: 1
@@ -37,7 +37,7 @@ define void @take_alias_addr() {
 ; CHECK: aliased_taken_func
 ; CHECK:      Function info:
 ; CHECK-NEXT: codeLenInByte = 12
-; CHECK-NEXT: NumSgprs: 36
+; CHECK-NEXT: TotalNumSgprs: 36
 ; CHECK-NEXT: NumVgprs: 1
 ; CHECK-NEXT: NumAgprs: 0
 ; CHECK-NEXT: TotalNumVgprs: 1
@@ -50,7 +50,7 @@ define internal i32 @aliased_taken_func() {
 ; CHECK-LABEL: addr_taken
 ; CHECK:      Function info:
 ; CHECK-NEXT: codeLenInByte = 12
-; CHECK-NEXT: NumSgprs: 36
+; CHECK-NEXT: TotalNumSgprs: 36
 ; CHECK-NEXT: NumVgprs: 1
 ; CHECK-NEXT: NumAgprs: 0
 ; CHECK-NEXT: TotalNumVgprs: 1
@@ -63,7 +63,7 @@ define internal i32 @addr_taken() {
 ; CHECK-LABEL: non_local
 ; CHECK:      Function info:
 ; CHECK-NEXT: codeLenInByte = 12
-; CHECK-NEXT: NumSgprs: 36
+; CHECK-NEXT: TotalNumSgprs: 36
 ; CHECK-NEXT: NumVgprs: 1
 ; CHECK-NEXT: NumAgprs: 0
 ; CHECK-NEXT: TotalNumVgprs: 1
@@ -76,7 +76,7 @@ define i32 @non_local() {
 ; CHECK-LABEL: take_addr
 ; CHECK:      Function info:
 ; CHECK-NEXT: codeLenInByte = 60
-; CHECK-NEXT: NumSgprs: 37
+; CHECK-NEXT: TotalNumSgprs: 37
 ; CHECK-NEXT: NumVgprs: 1
 ; CHECK-NEXT: NumAgprs: 0
 ; CHECK-NEXT: TotalNumVgprs: 1

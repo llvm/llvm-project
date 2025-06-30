@@ -204,7 +204,7 @@ struct DataAction {
   amd_comgr_language_t Language;
   bool Logging;
   bool ShouldLinkDeviceLibs = false;
-  bool ShouldUseVFS = false;
+  bool ShouldUseVFS = true;
 
   std::vector<std::string> BundleEntryIDs;
 

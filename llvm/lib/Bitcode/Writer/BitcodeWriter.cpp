@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -66,6 +67,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -119,8 +121,6 @@ static cl::opt<bool>
 namespace llvm {
 extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
 }
-
-extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -388,8 +388,6 @@ private:
                              unsigned Abbrev);
   void writeDILocalVariable(const DILocalVariable *N,
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
-  void writeDIFragment(const DIFragment *N, SmallVectorImpl<uint64_t> &Record,
-                       unsigned Abbrev);
   void writeDILabel(const DILabel *N,
                     SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
 
@@ -399,8 +397,6 @@ private:
                             SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
   void writeDIExpression(const DIExpression *N,
                          SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
-  void writeDIExpr(const DIExpr *N, SmallVectorImpl<uint64_t> &Record,
-                   unsigned Abbrev);
   void writeDIGlobalVariableExpression(const DIGlobalVariableExpression *N,
                                        SmallVectorImpl<uint64_t> &Record,
                                        unsigned Abbrev);
@@ -409,8 +405,6 @@ private:
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
-  void writeDILifetime(const DILifetime *N, SmallVectorImpl<uint64_t> &Record,
-                       unsigned Abbrev);
   unsigned createNamedMetadataAbbrev();
   void writeNamedMetadata(SmallVectorImpl<uint64_t> &Record);
   unsigned createMetadataStringsAbbrev();
@@ -2350,12 +2344,6 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   Record.clear();
 }
 
-void ModuleBitcodeWriter::writeDIFragment(const DIFragment *N,
-                                          SmallVectorImpl<uint64_t> &Record,
-                                          unsigned Abbrev) {
-  report_fatal_error("unsupported DIExpr-based metadata");
-}
-
 void ModuleBitcodeWriter::writeDILabel(
     const DILabel *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -2462,12 +2450,6 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
   Record.clear();
 }
 
-void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
-                                      SmallVectorImpl<uint64_t> &Record,
-                                      unsigned Abbrev) {
-  report_fatal_error("unsupported DIExpr-based metadata");
-}
-
 void ModuleBitcodeWriter::writeDIGlobalVariableExpression(
     const DIGlobalVariableExpression *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
@@ -2509,12 +2491,6 @@ void ModuleBitcodeWriter::writeDIImportedEntity(
 
   Stream.EmitRecord(bitc::METADATA_IMPORTED_ENTITY, Record, Abbrev);
   Record.clear();
-}
-
-void ModuleBitcodeWriter::writeDILifetime(const DILifetime *N,
-                                          SmallVectorImpl<uint64_t> &Record,
-                                          unsigned Abbrev) {
-  report_fatal_error("unsupported DIExpr-based metadata");
 }
 
 unsigned ModuleBitcodeWriter::createNamedMetadataAbbrev() {
@@ -3848,7 +3824,8 @@ void ModuleBitcodeWriter::writeFunction(
         /// without the ValueAsMetadata wrapper.
         auto PushValueOrMetadata = [&Vals, InstID,
                                     this](Metadata *RawLocation) {
-          assert(RawLocation && "RawLocation unexpectedly null in DPValue");
+          assert(RawLocation &&
+                 "RawLocation unexpectedly null in DbgVariableRecord");
           if (ValueAsMetadata *VAM = dyn_cast<ValueAsMetadata>(RawLocation)) {
             SmallVector<unsigned, 2> ValAndType;
             // If the value is a fwd-ref the type is also pushed. We don't
@@ -4698,14 +4675,23 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     Stream.EmitRecord(bitc::FS_STACK_IDS, Vals, StackIdAbbvId);
   }
 
-  // n x context id
-  auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
-  ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
-  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
-  // The context ids are hashes that are close to 64 bits in size, so emitting
-  // as a pair of 32-bit fixed-width values is more efficient than a VBR.
-  ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  unsigned ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
+  unsigned ContextIdAbbvId = 0;
+  if (metadataMayIncludeContextSizeInfo()) {
+    // n x context id
+    auto ContextIdAbbv = std::make_shared<BitCodeAbbrev>();
+    ContextIdAbbv->Add(BitCodeAbbrevOp(bitc::FS_ALLOC_CONTEXT_IDS));
+    ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
+    // The context ids are hashes that are close to 64 bits in size, so emitting
+    // as a pair of 32-bit fixed-width values is more efficient than a VBR if we
+    // are emitting them for all MIBs. Otherwise we use VBR to better compress 0
+    // values that are expected to more frequently occur in an alloc's memprof
+    // summary.
+    if (metadataIncludesAllContextSizeInfo())
+      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
+    else
+      ContextIdAbbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    ContextIdAbbvId = Stream.EmitAbbrev(std::move(ContextIdAbbv));
+  }
 
   // Abbrev for FS_PERMODULE_PROFILE.
   Abbv = std::make_shared<BitCodeAbbrev>();

@@ -358,6 +358,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error unloadBinaryImpl(DeviceImageTy *Image) override {
+    assert(Context && "Invalid CUDA context");
+
+    // Each image has its own module.
+    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
+
+    // Unload the module of the image.
+    if (auto Err = CUDAImage.unloadModule())
+      return Err;
+
+    return Plugin::success();
+  }
+
   /// Deinitialize the device and release its resources.
   Error deinitImpl() override {
     if (Context) {
@@ -371,20 +384,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = CUDAEventManager.deinit())
       return Err;
-
-    // Close modules if necessary.
-    if (!LoadedImages.empty()) {
-      assert(Context && "Invalid CUDA context");
-
-      // Each image has its own module.
-      for (DeviceImageTy *Image : LoadedImages) {
-        CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
-
-        // Unload the module of the image.
-        if (auto Err = CUDAImage.unloadModule())
-          return Err;
-      }
-    }
 
     if (Context) {
       CUresult Res = cuDevicePrimaryCtxRelease(Device);
@@ -922,15 +921,18 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Print information about the device.
-  Error obtainInfoImpl(InfoQueueTy &Info) override {
+  Expected<InfoTreeNode> obtainInfoImpl() override {
     char TmpChar[1000];
     const char *TmpCharPtr;
     size_t TmpSt;
     int TmpInt;
+    InfoTreeNode Info;
 
     CUresult Res = cuDriverGetVersion(&TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("CUDA Driver Version", TmpInt);
+      // For consistency with other drivers, store the version as a string
+      // rather than an integer
+      Info.add("CUDA Driver Version", std::to_string(TmpInt));
 
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
@@ -971,27 +973,27 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       Info.add("Maximum Threads per Block", TmpInt);
 
-    Info.add("Maximum Block Dimensions", "");
+    auto &MaxBlock = *Info.add("Maximum Block Dimensions", "");
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("x", TmpInt);
+      MaxBlock.add("x", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Y, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("y", TmpInt);
+      MaxBlock.add("y", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_Z, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("z", TmpInt);
+      MaxBlock.add("z", TmpInt);
 
-    Info.add("Maximum Grid Dimensions", "");
+    auto &MaxGrid = *Info.add("Maximum Grid Dimensions", "");
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("x", TmpInt);
+      MaxGrid.add("x", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Y, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("y", TmpInt);
+      MaxGrid.add("y", TmpInt);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_GRID_DIM_Z, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add<InfoLevel2>("z", TmpInt);
+      MaxGrid.add("z", TmpInt);
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_PITCH, TmpInt);
     if (Res == CUDA_SUCCESS)
@@ -1087,7 +1089,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Info.add("Compute Capabilities", ComputeCapability.str());
 
-    return Plugin::success();
+    return Info;
   }
 
   virtual bool shouldSetupDeviceMemoryPool() const override {

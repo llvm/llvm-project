@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "Clang.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
+#include "llvm/ADT/StringMap.h"    
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 

@@ -78,11 +78,8 @@ createScaledCFAInPrivateWave(const GCNSubtarget &ST,
           << uint8_t(dwarf::DW_OP_shl)
           << uint8_t(dwarf::DW_OP_lit0 +
                      dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave);
-  if (EmitHeterogeneousDwarfAsUserOps)
     OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-            << uint8_t(dwarf::DW_OP_LLVM_USER_form_aspace_address);
-  else
-    OSBlock << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
+            << uint8_t(dwarf::DW_OP_LLVM_form_aspace_address);
 
   SmallString<20> CFIInst;
   raw_svector_ostream OSCFIInst(CFIInst);
@@ -778,15 +775,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   if (NeedsFrameMoves) {
     // On entry the SP/FP are not set up, so we need to define the CFA in terms
     // of a literal location expression.
-    static const char CFAEncodedInstArr[] = {
-        dwarf::DW_CFA_def_cfa_expression,
-        3, // length
-        static_cast<char>(dwarf::DW_OP_lit0),
-        static_cast<char>(dwarf::DW_OP_lit0 +
-                          dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
-        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
-    static StringRef CFAEncodedInst =
-        StringRef(CFAEncodedInstArr, sizeof(CFAEncodedInstArr));
     static const char CFAEncodedInstUserOpsArr[] = {
         dwarf::DW_CFA_def_cfa_expression,
         4, // length
@@ -794,14 +782,11 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
         static_cast<char>(dwarf::DW_OP_lit0 +
                           dwarf::DW_ASPACE_LLVM_AMDGPU_private_wave),
         static_cast<char>(dwarf::DW_OP_LLVM_user),
-        static_cast<char>(dwarf::DW_OP_LLVM_USER_form_aspace_address)};
+        static_cast<char>(dwarf::DW_OP_LLVM_form_aspace_address)};
     static StringRef CFAEncodedInstUserOps =
         StringRef(CFAEncodedInstUserOpsArr, sizeof(CFAEncodedInstUserOpsArr));
-    buildCFI(
-        MBB, I, DL,
-        MCCFIInstruction::createEscape(nullptr, EmitHeterogeneousDwarfAsUserOps
-                                                    ? CFAEncodedInstUserOps
-                                                    : CFAEncodedInst));
+    buildCFI(MBB, I, DL,
+             MCCFIInstruction::createEscape(nullptr, CFAEncodedInstUserOps));
     // Unwinding halts when the return address (PC) is undefined.
     buildCFI(MBB, I, DL,
              MCCFIInstruction::createUndefined(
@@ -900,11 +885,12 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
     assert(hasFP(MF));
     Register FPReg = MFI->getFrameOffsetReg();
     assert(FPReg != AMDGPU::FP_REG);
-    unsigned VGPRSize =
-        llvm::alignTo((ST.getAddressableNumVGPRs() -
-                       AMDGPU::IsaInfo::getVGPRAllocGranule(&ST)) *
-                          4,
-                      FrameInfo.getMaxAlign());
+    unsigned VGPRSize = llvm::alignTo(
+        (ST.getAddressableNumVGPRs(MFI->getDynamicVGPRBlockSize()) -
+         AMDGPU::IsaInfo::getVGPRAllocGranule(&ST,
+                                              MFI->getDynamicVGPRBlockSize())) *
+            4,
+        FrameInfo.getMaxAlign());
     MFI->setScratchReservedForDynamicVGPRs(VGPRSize);
 
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), FPReg)
@@ -2225,7 +2211,6 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
   }
 
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
-  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   const TargetRegisterClass *BlockRegClass =
@@ -2252,7 +2237,7 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
             TII->get(AMDGPU::SI_BLOCK_SPILL_V1024_CFI_SAVE))
         .addReg(Reg, getKillRegState(false))
         .addFrameIndex(FrameIndex)
-        .addReg(MFI->getStackPtrOffsetReg())
+        .addReg(FuncInfo->getStackPtrOffsetReg())
         .addImm(0)
         .addImm(Mask)
         .addMemOperand(MMO);
@@ -2394,7 +2379,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
 bool SIFrameLowering::mayReserveScratchForCWSR(
     const MachineFunction &MF) const {
-  return MF.getSubtarget<GCNSubtarget>().isDynamicVGPREnabled() &&
+  return MF.getInfo<SIMachineFunctionInfo>()->isDynamicVGPREnabled() &&
          AMDGPU::isEntryFunctionCC(MF.getFunction().getCallingConv()) &&
          AMDGPU::isCompute(MF.getFunction().getCallingConv());
 }

@@ -632,7 +632,9 @@ void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
-    : TM(tm), Libcalls(TM.getTargetTriple()) {
+    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.ExceptionModel,
+                       TM.Options.FloatABIType, TM.Options.EABIVersion,
+                       TM.Options.MCOptions.getABIName()) {
   initActions();
 
   // Perform these initializations only once.
@@ -1030,7 +1032,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     // If type is to be expanded, split the vector.
     //  <4 x i140> -> <2 x i140>
     if (LK.first == TypeExpandInteger) {
-      if (VT.getVectorElementCount().isScalable())
+      if (NumElts.isScalable() && NumElts.getKnownMinValue() == 1)
         return LegalizeKind(TypeScalarizeScalableVector, EltVT);
       return LegalizeKind(TypeSplitVector,
                           VT.getHalfNumVectorElementsVT(Context));

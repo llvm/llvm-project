@@ -74,10 +74,6 @@
 #include <memory>
 #include <system_error>
 
-namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-} // namespace llvm
-
 using namespace Fortran::frontend;
 
 constexpr llvm::StringLiteral timingIdParse = "Parse";
@@ -310,6 +306,8 @@ bool CodeGenAction::beginSourceFileAction() {
       ci.getInvocation().getCodeGenOpts().getDoConcurrentMapping();
   opts.enableOffloadGlobalFiltering =
       ci.getInvocation().getCodeGenOpts().OffloadGlobalFiltering;
+  opts.deferDescMap =
+      ci.getInvocation().getCodeGenOpts().DeferDescriptorMapping;
 
   if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None &&
       !isOpenMPEnabled) {
@@ -746,6 +744,7 @@ void CodeGenAction::generateLLVMIR() {
     config.VScaleMax = vsr->second;
   }
 
+  config.Reciprocals = opts.Reciprocals;
   config.PreferVectorWidth = opts.PreferVectorWidth;
 
   if (ci.getInvocation().getFrontendOpts().features.IsEnabled(

@@ -1,6 +1,6 @@
 // Test TBAA tags for common and equivalence.
 // RUN: fir-opt --fir-add-alias-tags --split-input-file %s | FileCheck --check-prefixes=ALL,DEFAULT %s
-// RUN: fir-opt --fir-add-alias-tags --tbaa-local-alloc --split-input-file %s | FileCheck --check-prefixes=ALL,LOCAL %s
+// RUN: fir-opt --fir-add-alias-tags --local-alloc-tbaa --split-input-file %s | FileCheck --check-prefixes=ALL,LOCAL %s
 
 // ALL: #[[ROOT:.+]] = #llvm.tbaa_root<id = "Flang function root _QPtest_common">
 // ALL: #[[ANY:.+]] = #llvm.tbaa_type_desc<id = "any access", members = {<#[[ROOT]], 0>}>

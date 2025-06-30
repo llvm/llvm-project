@@ -43,6 +43,7 @@
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -69,7 +70,8 @@
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/KCFI.h"
 #include "llvm/Transforms/Instrumentation/LowerAllowCheckPass.h"
-#include "llvm/Transforms/Instrumentation/MemProfiler.h"
+#include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
+#include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
@@ -95,8 +97,6 @@ using namespace llvm;
 #include "llvm/Support/Extension.def"
 
 namespace llvm {
-extern cl::opt<bool> PrintPipelinePasses;
-
 // Experiment to move sanitizers earlier.
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
@@ -117,7 +117,8 @@ static cl::opt<PGOOptions::ColdFuncOpt> ClPGOColdFuncAttr(
                clEnumValN(PGOOptions::ColdFuncOpt::OptNone, "optnone",
                           "Mark cold functions with optnone.")));
 
-extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
+LLVM_ABI extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind>
+    ProfileCorrelate;
 } // namespace llvm
 namespace clang {
 extern llvm::cl::opt<bool> ClSanitizeGuardChecks;
@@ -804,17 +805,21 @@ static void addSanitizers(const Triple &TargetTriple,
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
-
+  uint64_t AllowRuntimeCheckSkipHotCutoff =
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.value_or(0.0) * 1000000;
   // TODO: remove IsRequested()
-  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value()) {
+  if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value()) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback(
-        [ScaledCutoffs](ModulePassManager &MPM, OptimizationLevel Level,
-                        ThinOrFullLTOPhase Phase) {
+        [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff](
+            ModulePassManager &MPM, OptimizationLevel Level,
+            ThinOrFullLTOPhase Phase) {
           LowerAllowCheckPass::Options Opts;
           // TODO: after removing IsRequested(), make this unconditional
           if (ScaledCutoffs.has_value())
             Opts.cutoffs = ScaledCutoffs.value();
+          Opts.runtime_check = AllowRuntimeCheckSkipHotCutoff;
           MPM.addPass(
               createModuleToFunctionPassAdaptor(LowerAllowCheckPass(Opts)));
         });
@@ -828,12 +833,12 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
   if (CodeGenOpts.hasProfileIRInstr())
     // -fprofile-generate.
-    PGOOpt = PGOOptions(
-        getProfileGenName(CodeGenOpts), "", "",
-        CodeGenOpts.MemoryProfileUsePath, nullptr, PGOOptions::IRInstr,
-        PGOOptions::NoCSAction, llvm::ClPGOColdFuncAttr,
-        CodeGenOpts.DebugInfoForProfiling,
-        /*PseudoProbeForProfiling=*/false, CodeGenOpts.AtomicProfileUpdate);
+    PGOOpt = PGOOptions(getProfileGenName(CodeGenOpts), "", "",
+                        CodeGenOpts.MemoryProfileUsePath, nullptr,
+                        PGOOptions::IRInstr, PGOOptions::NoCSAction,
+                        ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling,
+                        /*PseudoProbeForProfiling=*/false,
+                        CodeGenOpts.AtomicProfileUpdate);
   else if (CodeGenOpts.hasProfileIRUse()) {
     // -fprofile-use.
     auto CSAction = CodeGenOpts.hasProfileCSIRUse() ? PGOOptions::CSIRUse
@@ -841,32 +846,31 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     PGOOpt = PGOOptions(CodeGenOpts.ProfileInstrumentUsePath, "",
                         CodeGenOpts.ProfileRemappingFile,
                         CodeGenOpts.MemoryProfileUsePath, VFS,
-                        PGOOptions::IRUse, CSAction, llvm::ClPGOColdFuncAttr,
+                        PGOOptions::IRUse, CSAction, ClPGOColdFuncAttr,
                         CodeGenOpts.DebugInfoForProfiling);
   } else if (!CodeGenOpts.SampleProfileFile.empty())
     // -fprofile-sample-use
     PGOOpt = PGOOptions(
         CodeGenOpts.SampleProfileFile, "", CodeGenOpts.ProfileRemappingFile,
         CodeGenOpts.MemoryProfileUsePath, VFS, PGOOptions::SampleUse,
-        PGOOptions::NoCSAction, llvm::ClPGOColdFuncAttr,
+        PGOOptions::NoCSAction, ClPGOColdFuncAttr,
         CodeGenOpts.DebugInfoForProfiling, CodeGenOpts.PseudoProbeForProfiling);
   else if (!CodeGenOpts.MemoryProfileUsePath.empty())
     // -fmemory-profile-use (without any of the above options)
-    PGOOpt =
-        PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, VFS,
-                   PGOOptions::NoAction, PGOOptions::NoCSAction,
-                   llvm::ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
+    PGOOpt = PGOOptions("", "", "", CodeGenOpts.MemoryProfileUsePath, VFS,
+                        PGOOptions::NoAction, PGOOptions::NoCSAction,
+                        ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling);
   else if (CodeGenOpts.PseudoProbeForProfiling)
     // -fpseudo-probe-for-profiling
-    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
-                        PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        llvm::ClPGOColdFuncAttr,
-                        CodeGenOpts.DebugInfoForProfiling, true);
+    PGOOpt =
+        PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+                   PGOOptions::NoAction, PGOOptions::NoCSAction,
+                   ClPGOColdFuncAttr, CodeGenOpts.DebugInfoForProfiling, true);
   else if (CodeGenOpts.DebugInfoForProfiling)
     // -fdebug-info-for-profiling
     PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
                         PGOOptions::NoAction, PGOOptions::NoCSAction,
-                        llvm::ClPGOColdFuncAttr, true);
+                        ClPGOColdFuncAttr, true);
 
   // Check to see if we want to generate a CS profile.
   if (CodeGenOpts.hasProfileCSIRInstr()) {
@@ -1345,7 +1349,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
     Conf.RunCSIRInstr = true;
-    Conf.CSIRProfile = std::move(CGOpts.InstrProfileOutput);
+    Conf.CSIRProfile = getProfileGenName(CGOpts);
   } else if (CGOpts.hasProfileCSIRUse()) {
     Conf.RunCSIRInstr = false;
     Conf.CSIRProfile = std::move(CGOpts.ProfileInstrumentUsePath);

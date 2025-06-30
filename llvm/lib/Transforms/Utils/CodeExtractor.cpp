@@ -471,10 +471,6 @@ CodeExtractor::getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
         Info.LifeEnd = IntrInst;
         continue;
       }
-      // At this point, permit debug uses outside of the region.
-      // This is fixed in a later call to fixupDebugInfoPostExtraction().
-      if (isa<DbgInfoIntrinsic>(IntrInst))
-        continue;
     }
     // Find untracked uses of the address, bail.
     if (!definedInRegion(Blocks, U))
@@ -792,7 +788,6 @@ void CodeExtractor::severSplitPHINodesOfExits() {
         NewBB = BasicBlock::Create(ExitBB->getContext(),
                                    ExitBB->getName() + ".split",
                                    ExitBB->getParent(), ExitBB);
-        NewBB->IsNewDbgInfoFormat = ExitBB->IsNewDbgInfoFormat;
         SmallVector<BasicBlock *, 4> Preds(predecessors(ExitBB));
         for (BasicBlock *PredBB : Preds)
           if (Blocks.count(PredBB))
@@ -1019,7 +1014,6 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::DeadOnUnwind:
       case Attribute::Range:
       case Attribute::Initializes:
-      case Attribute::SanitizedPaddedGlobal:
       case Attribute::NoExt:
       //  These are not really attributes.
       case Attribute::None:
@@ -1078,10 +1072,6 @@ static void applyFirstDebugLoc(Function *oldFunction,
     any_of(Blocks, [&BranchI](const BasicBlock *BB) {
       return any_of(*BB, [&BranchI](const Instruction &I) {
         if (!I.getDebugLoc())
-          return false;
-        // Don't use source locations attached to debug-intrinsics: they could
-        // be from completely unrelated scopes.
-        if (isa<DbgInfoIntrinsic>(I))
           return false;
         BranchI->setDebugLoc(I.getDebugLoc());
         return true;
@@ -1331,7 +1321,6 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
   //  2) They need to point to fresh metadata, e.g. because they currently
   //     point to a variable in the wrong scope.
   SmallDenseMap<DINode *, DINode *> RemappedMetadata;
-  SmallVector<Instruction *, 4> DebugIntrinsicsToDelete;
   SmallVector<DbgVariableRecord *, 4> DVRsToDelete;
   DenseMap<const MDNode *, MDNode *> Cache;
 
@@ -1373,66 +1362,29 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
       }
 
       DbgVariableRecord &DVR = cast<DbgVariableRecord>(DR);
-      // Apply the two updates that dbg.values get: invalid operands, and
-      // variable metadata fixup.
+      // If any of the used locations are invalid, delete the record.
       if (any_of(DVR.location_ops(), IsInvalidLocation)) {
         DVRsToDelete.push_back(&DVR);
         continue;
       }
+
+      // DbgAssign intrinsics have an extra Value argument:
       if (DVR.isDbgAssign() && IsInvalidLocation(DVR.getAddress())) {
         DVRsToDelete.push_back(&DVR);
         continue;
       }
+
+      // If the variable was in the scope of the old function, i.e. it was not
+      // inlined, point the intrinsic to a fresh variable within the new
+      // function.
       if (!DVR.getDebugLoc().getInlinedAt())
         DVR.setVariable(GetUpdatedDIVariable(DVR.getVariable()));
     }
   };
 
-  for (Instruction &I : instructions(NewFunc)) {
+  for (Instruction &I : instructions(NewFunc))
     UpdateDbgRecordsOnInst(I);
 
-    auto *DII = dyn_cast<DbgInfoIntrinsic>(&I);
-    if (!DII)
-      continue;
-
-    // Point the intrinsic to a fresh label within the new function if the
-    // intrinsic was not inlined from some other function.
-    if (auto *DLI = dyn_cast<DbgLabelInst>(&I)) {
-      UpdateDbgLabel(DLI);
-      continue;
-    }
-
-    auto *DVI = cast<DbgVariableIntrinsic>(DII);
-    // If any of the used locations are invalid, delete the intrinsic.
-    if (any_of(DVI->location_ops(), IsInvalidLocation)) {
-      DebugIntrinsicsToDelete.push_back(DVI);
-      continue;
-    }
-    // DbgAssign intrinsics have an extra Value argument:
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI);
-        DAI && IsInvalidLocation(DAI->getAddress())) {
-      DebugIntrinsicsToDelete.push_back(DVI);
-      continue;
-    }
-    // If the variable was in the scope of the old function, i.e. it was not
-    // inlined, point the intrinsic to a fresh variable within the new function.
-    if (!DVI->getDebugLoc().getInlinedAt()) {
-      DILocalVariable *OldVar = DVI->getVariable();
-      DINode *&NewVar = RemappedMetadata[OldVar];
-      if (!NewVar) {
-        DILocalScope *NewScope = DILocalScope::cloneScopeForSubprogram(
-            *OldVar->getScope(), *NewSP, Ctx, Cache);
-        NewVar = DIB.createAutoVariable(
-            NewScope, OldVar->getName(), OldVar->getFile(), OldVar->getLine(),
-            OldVar->getType(), /*AlwaysPreserve=*/false, DINode::FlagZero,
-            OldVar->getDWARFMemorySpace(), OldVar->getAlignInBits());
-      }
-      DVI->setVariable(GetUpdatedDIVariable(DVI->getVariable()));
-    }
-  }
-
-  for (auto *DII : DebugIntrinsicsToDelete)
-    DII->eraseFromParent();
   for (auto *DVR : DVRsToDelete)
     DVR->getMarker()->MarkedInstr->dropOneDbgRecord(DVR);
   DIB.finalizeSubprogram(NewSP);
@@ -1561,7 +1513,6 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   Function *newFunction = constructFunctionDeclaration(
       inputs, outputs, EntryFreq, oldFunction->getName() + "." + SuffixToUse,
       StructValues, StructTy);
-  newFunction->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
   SmallVector<Value *> NewValues;
 
   emitFunctionBody(inputs, outputs, StructValues, newFunction, StructTy, header,
@@ -1578,12 +1529,10 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
   fixupDebugInfoPostExtraction(*oldFunction, *newFunction, *TheCall, inputs,
                                NewValues);
 
-  LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
-    newFunction->dump();
-    report_fatal_error("verification of newFunction failed!");
-  });
-  LLVM_DEBUG(if (verifyFunction(*oldFunction))
-                 report_fatal_error("verification of oldFunction failed!"));
+  LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - newFunction:\n");
+  LLVM_DEBUG(newFunction->dump());
+  LLVM_DEBUG(llvm::dbgs() << "After extractCodeRegion - oldFunction:\n");
+  LLVM_DEBUG(oldFunction->dump());
   LLVM_DEBUG(if (AC && verifyAssumptionCache(*oldFunction, *newFunction, AC))
                  report_fatal_error("Stale Asumption cache for old Function!"));
   return newFunction;
@@ -1650,7 +1599,6 @@ void CodeExtractor::emitFunctionBody(
   // head of the region, but the entry node of a function cannot have preds.
   BasicBlock *newFuncRoot =
       BasicBlock::Create(Context, "newFuncRoot", newFunction);
-  newFuncRoot->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
 
   // Now sink all instructions which only have non-phi uses inside the region.
   // Group the allocas at the start of the block, so that any bitcast uses of
@@ -1884,10 +1832,11 @@ CallInst *CodeExtractor::emitReplacerCall(
   // This takes place of the original loop
   BasicBlock *codeReplacer =
       BasicBlock::Create(Context, "codeRepl", oldFunction, ReplIP);
-  codeReplacer->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
+  if (AllocationBlock)
+    assert(AllocationBlock->getParent() == oldFunction &&
+           "AllocationBlock is not in the same function");
   BasicBlock *AllocaBlock =
       AllocationBlock ? AllocationBlock : &oldFunction->getEntryBlock();
-  AllocaBlock->IsNewDbgInfoFormat = oldFunction->IsNewDbgInfoFormat;
 
   // Update the entry count of the function.
   if (BFI)
@@ -1916,7 +1865,7 @@ CallInst *CodeExtractor::emitReplacerCall(
     ReloadOutputs.push_back(alloca);
   }
 
-  Instruction *Struct = nullptr;
+  AllocaInst *Struct = nullptr;
   if (!StructValues.empty()) {
     Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
                             "structArg", AllocaBlock->getFirstInsertionPt());
@@ -1924,10 +1873,10 @@ CallInst *CodeExtractor::emitReplacerCall(
       auto *StructSpaceCast = new AddrSpaceCastInst(
           Struct, PointerType ::get(Context, 0), "structArg.ascast");
       StructSpaceCast->insertAfter(Struct->getIterator());
-      Struct = StructSpaceCast;
+      params.push_back(StructSpaceCast);
+    } else {
+      params.push_back(Struct);
     }
-
-    params.push_back(Struct);
 
     unsigned AggIdx = 0;
     for (Value *input : inputs) {

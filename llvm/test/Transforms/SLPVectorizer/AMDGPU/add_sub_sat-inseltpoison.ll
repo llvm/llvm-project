@@ -264,11 +264,8 @@ define <3 x i16> @uadd_sat_v3i16(<3 x i16> %arg0, <3 x i16> %arg1) {
 ; GFX8-NEXT:  bb:
 ; GFX8-NEXT:    [[ARG0_2:%.*]] = extractelement <3 x i16> [[ARG0:%.*]], i64 2
 ; GFX8-NEXT:    [[ARG1_2:%.*]] = extractelement <3 x i16> [[ARG1:%.*]], i64 2
-; GFX8-NEXT:    [[TMP0:%.*]] = shufflevector <3 x i16> [[ARG0]], <3 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX8-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[ARG1]], <3 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX8-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+; GFX8-NEXT:    [[TMP3:%.*]] = call <3 x i16> @llvm.uadd.sat.v3i16(<3 x i16> [[ARG0]], <3 x i16> [[ARG1]])
 ; GFX8-NEXT:    [[ADD_2:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_2]], i16 [[ARG1_2]])
-; GFX8-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; GFX8-NEXT:    [[INS_2:%.*]] = insertelement <3 x i16> [[TMP3]], i16 [[ADD_2]], i64 2
 ; GFX8-NEXT:    ret <3 x i16> [[INS_2]]
 ;
@@ -276,11 +273,8 @@ define <3 x i16> @uadd_sat_v3i16(<3 x i16> %arg0, <3 x i16> %arg1) {
 ; GFX9-NEXT:  bb:
 ; GFX9-NEXT:    [[ARG0_2:%.*]] = extractelement <3 x i16> [[ARG0:%.*]], i64 2
 ; GFX9-NEXT:    [[ARG1_2:%.*]] = extractelement <3 x i16> [[ARG1:%.*]], i64 2
-; GFX9-NEXT:    [[TMP0:%.*]] = shufflevector <3 x i16> [[ARG0]], <3 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX9-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[ARG1]], <3 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX9-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
+; GFX9-NEXT:    [[TMP3:%.*]] = call <3 x i16> @llvm.uadd.sat.v3i16(<3 x i16> [[ARG0]], <3 x i16> [[ARG1]])
 ; GFX9-NEXT:    [[ADD_2:%.*]] = call i16 @llvm.uadd.sat.i16(i16 [[ARG0_2]], i16 [[ARG1_2]])
-; GFX9-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> poison, <3 x i32> <i32 0, i32 1, i32 poison>
 ; GFX9-NEXT:    [[INS_2:%.*]] = insertelement <3 x i16> [[TMP3]], i16 [[ADD_2]], i64 2
 ; GFX9-NEXT:    ret <3 x i16> [[INS_2]]
 ;
@@ -323,24 +317,20 @@ define <4 x i16> @uadd_sat_v4i16(<4 x i16> %arg0, <4 x i16> %arg1) {
 ;
 ; GFX8-LABEL: @uadd_sat_v4i16(
 ; GFX8-NEXT:  bb:
-; GFX8-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> [[ARG0:%.*]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX8-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[ARG1:%.*]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX8-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
-; GFX8-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[ARG0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+; GFX8-NEXT:    [[TMP0:%.*]] = call <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16> [[ARG0:%.*]], <4 x i16> [[ARG2:%.*]])
+; GFX8-NEXT:    [[ARG1:%.*]] = call <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16> [[ARG0]], <4 x i16> [[ARG2]])
 ; GFX8-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[ARG1]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
-; GFX8-NEXT:    [[TMP5:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP3]], <2 x i16> [[TMP4]])
-; GFX8-NEXT:    [[INS_31:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; GFX8-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP4]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; GFX8-NEXT:    [[INS_31:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; GFX8-NEXT:    ret <4 x i16> [[INS_31]]
 ;
 ; GFX9-LABEL: @uadd_sat_v4i16(
 ; GFX9-NEXT:  bb:
-; GFX9-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> [[ARG0:%.*]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX9-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[ARG1:%.*]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
-; GFX9-NEXT:    [[TMP2:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP0]], <2 x i16> [[TMP1]])
-; GFX9-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[ARG0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
+; GFX9-NEXT:    [[TMP0:%.*]] = call <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16> [[ARG0:%.*]], <4 x i16> [[ARG2:%.*]])
+; GFX9-NEXT:    [[ARG1:%.*]] = call <4 x i16> @llvm.uadd.sat.v4i16(<4 x i16> [[ARG0]], <4 x i16> [[ARG2]])
 ; GFX9-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[ARG1]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
-; GFX9-NEXT:    [[TMP5:%.*]] = call <2 x i16> @llvm.uadd.sat.v2i16(<2 x i16> [[TMP3]], <2 x i16> [[TMP4]])
-; GFX9-NEXT:    [[INS_31:%.*]] = shufflevector <2 x i16> [[TMP2]], <2 x i16> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; GFX9-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i16> [[TMP4]], <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; GFX9-NEXT:    [[INS_31:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; GFX9-NEXT:    ret <4 x i16> [[INS_31]]
 ;
 bb:
@@ -364,25 +354,35 @@ bb:
 }
 
 define <4 x i8> @uadd_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1) {
-; GCN-LABEL: @uadd_sat_v4i8(
-; GCN-NEXT:  bb:
-; GCN-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
-; GCN-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
-; GCN-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
-; GCN-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
-; GCN-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
-; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
-; GCN-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
-; GCN-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
-; GCN-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
-; GCN-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
-; GCN-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
-; GCN-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
-; GCN-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
-; GCN-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
-; GCN-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
-; GCN-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
-; GCN-NEXT:    ret <4 x i8> [[INS_3]]
+; GFX7-LABEL: @uadd_sat_v4i8(
+; GFX7-NEXT:  bb:
+; GFX7-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
+; GFX7-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
+; GFX7-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
+; GFX7-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
+; GFX7-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
+; GFX7-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
+; GFX7-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
+; GFX7-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
+; GFX7-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
+; GFX7-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
+; GFX7-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
+; GFX7-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
+; GFX7-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
+; GFX7-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
+; GFX7-NEXT:    ret <4 x i8> [[INS_3]]
+;
+; GFX8-LABEL: @uadd_sat_v4i8(
+; GFX8-NEXT:  bb:
+; GFX8-NEXT:    [[TMP0:%.*]] = call <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8> [[ARG0:%.*]], <4 x i8> [[ARG1:%.*]])
+; GFX8-NEXT:    ret <4 x i8> [[TMP0]]
+;
+; GFX9-LABEL: @uadd_sat_v4i8(
+; GFX9-NEXT:  bb:
+; GFX9-NEXT:    [[TMP0:%.*]] = call <4 x i8> @llvm.uadd.sat.v4i8(<4 x i8> [[ARG0:%.*]], <4 x i8> [[ARG1:%.*]])
+; GFX9-NEXT:    ret <4 x i8> [[TMP0]]
 ;
 bb:
   %arg0.0 = extractelement <4 x i8> %arg0, i64 0
@@ -405,25 +405,35 @@ bb:
 }
 
 define <4 x i8> @usub_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1) {
-; GCN-LABEL: @usub_sat_v4i8(
-; GCN-NEXT:  bb:
-; GCN-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
-; GCN-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
-; GCN-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
-; GCN-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
-; GCN-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
-; GCN-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
-; GCN-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
-; GCN-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
-; GCN-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
-; GCN-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
-; GCN-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
-; GCN-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
-; GCN-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
-; GCN-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
-; GCN-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
-; GCN-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
-; GCN-NEXT:    ret <4 x i8> [[INS_3]]
+; GFX7-LABEL: @usub_sat_v4i8(
+; GFX7-NEXT:  bb:
+; GFX7-NEXT:    [[ARG0_0:%.*]] = extractelement <4 x i8> [[ARG0:%.*]], i64 0
+; GFX7-NEXT:    [[ARG0_1:%.*]] = extractelement <4 x i8> [[ARG0]], i64 1
+; GFX7-NEXT:    [[ARG0_2:%.*]] = extractelement <4 x i8> [[ARG0]], i64 2
+; GFX7-NEXT:    [[ARG0_3:%.*]] = extractelement <4 x i8> [[ARG0]], i64 3
+; GFX7-NEXT:    [[ARG1_0:%.*]] = extractelement <4 x i8> [[ARG1:%.*]], i64 0
+; GFX7-NEXT:    [[ARG1_1:%.*]] = extractelement <4 x i8> [[ARG1]], i64 1
+; GFX7-NEXT:    [[ARG1_2:%.*]] = extractelement <4 x i8> [[ARG1]], i64 2
+; GFX7-NEXT:    [[ARG1_3:%.*]] = extractelement <4 x i8> [[ARG1]], i64 3
+; GFX7-NEXT:    [[ADD_0:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_0]], i8 [[ARG1_0]])
+; GFX7-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
+; GFX7-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
+; GFX7-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
+; GFX7-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
+; GFX7-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
+; GFX7-NEXT:    ret <4 x i8> [[INS_3]]
+;
+; GFX8-LABEL: @usub_sat_v4i8(
+; GFX8-NEXT:  bb:
+; GFX8-NEXT:    [[TMP0:%.*]] = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> [[ARG0:%.*]], <4 x i8> [[ARG1:%.*]])
+; GFX8-NEXT:    ret <4 x i8> [[TMP0]]
+;
+; GFX9-LABEL: @usub_sat_v4i8(
+; GFX9-NEXT:  bb:
+; GFX9-NEXT:    [[TMP0:%.*]] = call <4 x i8> @llvm.usub.sat.v4i8(<4 x i8> [[ARG0:%.*]], <4 x i8> [[ARG1:%.*]])
+; GFX9-NEXT:    ret <4 x i8> [[TMP0]]
 ;
 bb:
   %arg0.0 = extractelement <4 x i8> %arg0, i64 0

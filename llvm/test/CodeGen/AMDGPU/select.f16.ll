@@ -3214,11 +3214,11 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; VI-NEXT:    v_lshrrev_b32_e32 v55, 16, v2
 ; VI-NEXT:    v_lshrrev_b32_e32 v43, 16, v18
 ; VI-NEXT:    buffer_load_dword v44, off, s[0:3], s32 offset:108
-; VI-NEXT:    s_waitcnt vmcnt(5)
+; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:92
+; VI-NEXT:    s_waitcnt vmcnt(6)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v49
 ; VI-NEXT:    v_cndmask_b32_e32 v49, v43, v55, vcc
 ; VI-NEXT:    buffer_load_dword v55, off, s[0:3], s32 offset:100
-; VI-NEXT:    buffer_load_dword v45, off, s[0:3], s32 offset:92
 ; VI-NEXT:    v_lshrrev_b32_e32 v43, 16, v1
 ; VI-NEXT:    v_lshrrev_b32_e32 v46, 16, v17
 ; VI-NEXT:    buffer_load_dword v47, off, s[0:3], s32 offset:84
@@ -3249,10 +3249,9 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; VI-NEXT:    s_waitcnt vmcnt(13)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v44
 ; VI-NEXT:    v_cndmask_b32_e32 v13, v29, v13, vcc
-; VI-NEXT:    s_waitcnt vmcnt(12)
+; VI-NEXT:    s_waitcnt vmcnt(11)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v55
 ; VI-NEXT:    v_cndmask_b32_e32 v12, v28, v12, vcc
-; VI-NEXT:    s_waitcnt vmcnt(11)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v45
 ; VI-NEXT:    v_cndmask_b32_e32 v11, v27, v11, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(10)

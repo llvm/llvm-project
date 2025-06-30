@@ -23,7 +23,7 @@
 // COM: Verify success of compilation for all scenarios
 // STATUS: ReturnStatus: AMD_COMGR_STATUS_SUCCESS
 
-// OUT-NA-NA-NA: File System: Real
+// OUT-NA-NA-NA: File System: VFS
 // OUT-NA-VFS-NOVFS: File System: VFS
 // OUT-NA-VFS-NA: File System: VFS
 // OUT-NA-NOVFS-VFS: File System: Real

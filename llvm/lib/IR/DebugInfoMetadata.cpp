@@ -22,6 +22,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 #include <numeric>
 #include <optional>
@@ -36,7 +37,7 @@ cl::opt<bool> EnableFSDiscriminator(
 
 // When true, preserves line and column number by picking one of the merged
 // location info in a deterministic manner to assist sample based PGO.
-cl::opt<bool> PickMergedSourceLocations(
+LLVM_ABI cl::opt<bool> PickMergedSourceLocations(
     "pick-merged-source-locations", cl::init(false), cl::Hidden,
     cl::desc("Preserve line and column number when merging locations."));
 } // namespace llvm
@@ -824,25 +825,23 @@ DIGenericSubrange::BoundType DIGenericSubrange::getStride() const {
 }
 
 DISubrangeType::DISubrangeType(LLVMContext &C, StorageType Storage,
-                               unsigned Line, uint64_t SizeInBits,
-                               uint32_t AlignInBits, DIFlags Flags,
-                               ArrayRef<Metadata *> Ops)
+                               unsigned Line, uint32_t AlignInBits,
+                               DIFlags Flags, ArrayRef<Metadata *> Ops)
     : DIType(C, DISubrangeTypeKind, Storage, dwarf::DW_TAG_subrange_type, Line,
-             SizeInBits, AlignInBits, 0, 0, Flags, Ops) {}
+             AlignInBits, 0, Flags, Ops) {}
 
 DISubrangeType *DISubrangeType::getImpl(
     LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,
-    Metadata *Scope, uint64_t SizeInBits, uint32_t AlignInBits, DIFlags Flags,
+    Metadata *Scope, Metadata *SizeInBits, uint32_t AlignInBits, DIFlags Flags,
     Metadata *BaseType, Metadata *LowerBound, Metadata *UpperBound,
     Metadata *Stride, Metadata *Bias, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DISubrangeType, (Name, File, Line, Scope, SizeInBits,
                                          AlignInBits, Flags, BaseType,
                                          LowerBound, UpperBound, Stride, Bias));
-  Metadata *Ops[] = {File,       Scope,      Name,   BaseType,
-                     LowerBound, UpperBound, Stride, Bias};
-  DEFINE_GETIMPL_STORE(DISubrangeType, (Line, SizeInBits, AlignInBits, Flags),
-                       Ops);
+  Metadata *Ops[] = {File,     Scope,      Name,       SizeInBits, nullptr,
+                     BaseType, LowerBound, UpperBound, Stride,     Bias};
+  DEFINE_GETIMPL_STORE(DISubrangeType, (Line, AlignInBits, Flags), Ops);
 }
 
 DISubrangeType::BoundType
@@ -882,18 +881,17 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 }
 
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
-                                  MDString *Name, uint64_t SizeInBits,
+                                  MDString *Name, Metadata *SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
                                   uint32_t NumExtraInhabitants, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
                                       Encoding, NumExtraInhabitants, Flags));
-  Metadata *Ops[] = {nullptr, nullptr, Name};
-  DEFINE_GETIMPL_STORE(
-      DIBasicType,
-      (Tag, SizeInBits, AlignInBits, Encoding, NumExtraInhabitants, Flags),
-      Ops);
+  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(DIBasicType,
+                       (Tag, AlignInBits, Encoding, NumExtraInhabitants, Flags),
+                       Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -913,18 +911,18 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
 
 DIFixedPointType *
 DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-                          uint64_t SizeInBits, uint32_t AlignInBits,
+                          Metadata *SizeInBits, uint32_t AlignInBits,
                           unsigned Encoding, DIFlags Flags, unsigned Kind,
                           int Factor, APInt Numerator, APInt Denominator,
                           StorageType Storage, bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
                         (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
                          Kind, Factor, Numerator, Denominator));
-  Metadata *Ops[] = {nullptr, nullptr, Name};
-  DEFINE_GETIMPL_STORE(DIFixedPointType,
-                       (Tag, SizeInBits, AlignInBits, Encoding, Flags, Kind,
-                        Factor, Numerator, Denominator),
-                       Ops);
+  Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
+  DEFINE_GETIMPL_STORE(
+      DIFixedPointType,
+      (Tag, AlignInBits, Encoding, Flags, Kind, Factor, Numerator, Denominator),
+      Ops);
 }
 
 bool DIFixedPointType::isSigned() const {
@@ -956,17 +954,17 @@ DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
                                     MDString *Name, Metadata *StringLength,
                                     Metadata *StringLengthExp,
                                     Metadata *StringLocationExp,
-                                    uint64_t SizeInBits, uint32_t AlignInBits,
+                                    Metadata *SizeInBits, uint32_t AlignInBits,
                                     unsigned Encoding, StorageType Storage,
                                     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIStringType,
                         (Tag, Name, StringLength, StringLengthExp,
                          StringLocationExp, SizeInBits, AlignInBits, Encoding));
-  Metadata *Ops[] = {nullptr,      nullptr,         Name,
-                     StringLength, StringLengthExp, StringLocationExp};
-  DEFINE_GETIMPL_STORE(DIStringType, (Tag, SizeInBits, AlignInBits, Encoding),
-                       Ops);
+  Metadata *Ops[] = {nullptr,         nullptr,          Name,
+                     SizeInBits,      nullptr,          StringLength,
+                     StringLengthExp, StringLocationExp};
+  DEFINE_GETIMPL_STORE(DIStringType, (Tag, AlignInBits, Encoding), Ops);
 }
 DIType *DIDerivedType::getClassType() const {
   assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
@@ -1003,21 +1001,21 @@ Constant *DIDerivedType::getDiscriminantValue() const {
 
 DIDerivedType *DIDerivedType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
-    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint32_t AlignInBits, uint64_t OffsetInBits,
+    unsigned Line, Metadata *Scope, Metadata *BaseType, Metadata *SizeInBits,
+    uint32_t AlignInBits, Metadata *OffsetInBits,
     std::optional<unsigned> DWARFAddressSpace, dwarf::MemorySpace MS,
-    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData, Metadata *Annotations,
-    StorageType Storage, bool ShouldCreate) {
+    std::optional<PtrAuthData> PtrAuthData, DIFlags Flags, Metadata *ExtraData,
+    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                          AlignInBits, OffsetInBits, DWARFAddressSpace, MS, 
                          PtrAuthData, Flags, ExtraData, Annotations));
-  Metadata *Ops[] = {File, Scope, Name, BaseType, ExtraData, Annotations};
-  DEFINE_GETIMPL_STORE(DIDerivedType,
-                       (Tag, Line, SizeInBits, AlignInBits, OffsetInBits,
-                        DWARFAddressSpace, MS, PtrAuthData, Flags),
-                       Ops);
+  Metadata *Ops[] = {File,         Scope,    Name,      SizeInBits,
+                     OffsetInBits, BaseType, ExtraData, Annotations};
+  DEFINE_GETIMPL_STORE(
+      DIDerivedType,
+      (Tag, Line, AlignInBits, DWARFAddressSpace, MS, PtrAuthData, Flags), Ops);
 }
 
 std::optional<DIDerivedType::PtrAuthData>
@@ -1029,8 +1027,8 @@ DIDerivedType::getPtrAuthData() const {
 
 DICompositeType *DICompositeType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
-    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
+    unsigned Line, Metadata *Scope, Metadata *BaseType, Metadata *SizeInBits,
+    uint32_t AlignInBits, Metadata *OffsetInBits, DIFlags Flags,
     Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, MDString *Identifier,
     Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
@@ -1046,20 +1044,21 @@ DICompositeType *DICompositeType::getImpl(
        OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
        Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
        Annotations, Specification, NumExtraInhabitants, BitStride));
-  Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
-                     Elements,      VTableHolder, TemplateParams, Identifier,
-                     Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations,  Specification,  BitStride};
+  Metadata *Ops[] = {File,           Scope,      Name,          SizeInBits,
+                     OffsetInBits,   BaseType,   Elements,      VTableHolder,
+                     TemplateParams, Identifier, Discriminator, DataLocation,
+                     Associated,     Allocated,  Rank,          Annotations,
+                     Specification,  BitStride};
   DEFINE_GETIMPL_STORE(DICompositeType,
-                       (Tag, Line, RuntimeLang, SizeInBits, AlignInBits,
-                        OffsetInBits, NumExtraInhabitants, EnumKind, Flags),
+                       (Tag, Line, RuntimeLang, AlignInBits,
+                        NumExtraInhabitants, EnumKind, Flags),
                        Ops);
 }
 
 DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
-    uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
+    Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
     Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
     Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
@@ -1085,12 +1084,13 @@ DICompositeType *DICompositeType::buildODRType(
     return CT;
 
   // Mutate CT in place.  Keep this in sync with getImpl.
-  CT->mutate(Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits,
-             NumExtraInhabitants, EnumKind, Flags);
-  Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
-                     Elements,      VTableHolder, TemplateParams, &Identifier,
-                     Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations,  Specification,  BitStride};
+  CT->mutate(Tag, Line, RuntimeLang, AlignInBits, NumExtraInhabitants, EnumKind,
+             Flags);
+  Metadata *Ops[] = {File,           Scope,       Name,          SizeInBits,
+                     OffsetInBits,   BaseType,    Elements,      VTableHolder,
+                     TemplateParams, &Identifier, Discriminator, DataLocation,
+                     Associated,     Allocated,   Rank,          Annotations,
+                     Specification,  BitStride};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -1102,7 +1102,7 @@ DICompositeType *DICompositeType::buildODRType(
 DICompositeType *DICompositeType::getODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
-    uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
+    Metadata *SizeInBits, uint32_t AlignInBits, Metadata *OffsetInBits,
     Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
     Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
@@ -1137,7 +1137,7 @@ DISubroutineType::DISubroutineType(LLVMContext &C, StorageType Storage,
                                    DIFlags Flags, uint8_t CC,
                                    ArrayRef<Metadata *> Ops)
     : DIType(C, DISubroutineTypeKind, Storage, dwarf::DW_TAG_subroutine_type, 0,
-             0, 0, 0, 0, Flags, Ops),
+             0, 0, Flags, Ops),
       CC(CC) {}
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
@@ -1145,7 +1145,7 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
                                             StorageType Storage,
                                             bool ShouldCreate) {
   DEFINE_GETIMPL_LOOKUP(DISubroutineType, (Flags, CC, TypeArray));
-  Metadata *Ops[] = {nullptr, nullptr, nullptr, TypeArray};
+  Metadata *Ops[] = {nullptr, nullptr, nullptr, nullptr, nullptr, TypeArray};
   DEFINE_GETIMPL_STORE(DISubroutineType, (Flags, CC), Ops);
 }
 
@@ -1589,20 +1589,10 @@ DILocalVariable::getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
                        Ops);
 }
 
-DIFragment::DIFragment(LLVMContext &C, StorageType Storage)
-    : DIObject(C, DIFragmentKind, Storage, dwarf::DW_TAG_dwarf_procedure, {}) {
-  assert(Storage != Uniqued);
-}
-
-DIFragment *DIFragment::getImpl(LLVMContext &Context, StorageType Storage) {
-  assert(Storage != Uniqued && "Cannot unique DIFragment");
-  return storeImpl(new (0, Storage) DIFragment(Context, Storage), Storage);
-}
-
 DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        signed Line, ArrayRef<Metadata *> Ops,
                        dwarf::MemorySpace MS, uint32_t AlignInBits)
-    : DIObject(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
+    : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
       MemorySpace(MS) {
   SubclassData32 = AlignInBits;
 }
@@ -2883,6 +2873,84 @@ bool DIExpression::isPoisoned() const {
   });
 }
 
+namespace {
+/// Visitor specialization to find the divergent address spaces a DIOp-based
+/// DIExpression produces, if any. See the header comment on
+/// DIExpression::getNewDivergentAddrSpace() for more information.
+class DIOpDivergentAddrSpaceFinder
+    : public DIExprConstVisitor<DIOpDivergentAddrSpaceFinder> {
+
+  // Stack of dwarf stack entries with divergent address spaces. If a stack
+  // entry doesn't have a divergent address space, this contains std::nullopt
+  // for that stack element. Kept in sync with DIExprConstVisitor::Stack.
+  SmallVector<std::optional<unsigned>, 8> AddrSpaceStack;
+  Type *ResultTy = nullptr;
+
+  DIOpDivergentAddrSpaceFinder(LLVMContext &Ctx, ArrayRef<DIOp::Variant> Ops)
+      : DIExprConstVisitor(Ctx, Ops) {}
+
+public:
+  template <class DIOpTy>
+  bool visit(DIOpTy Op, Type *Ty, ArrayRef<StackEntry> Inputs) {
+    assert(Stack.size() == AddrSpaceStack.size() &&
+           "stacks should never get out of sync!");
+
+    if (isDIOpVariantOneOf<DIOp::Reinterpret>(Op)) {
+      // Nothing to do, Reinterpret operations don't change the divergent
+      // address space on the top of the stack.
+    } else if (isDIOpVariantOneOf<DIOp::Convert>(Op)) {
+      // If this Convert is an address space conversion, push a divergent
+      // address space unless we're already converting from a divergent address
+      // space or the conversion is a no-op.
+      Type *FromTy = Inputs[0].ResultType;
+      assert(Ty && FromTy && "failed to get operation types?");
+      if (FromTy->isPointerTy() && Ty->isPointerTy()) {
+        if (AddrSpaceStack.back() == std::nullopt && FromTy != Ty)
+          AddrSpaceStack.back() = FromTy->getPointerAddressSpace();
+      } else
+        AddrSpaceStack.back() = std::nullopt;
+    } else {
+      // No other operation can produce or maintain a divergent address space.
+      AddrSpaceStack.erase(AddrSpaceStack.end() - getNumInputs(Op),
+                           AddrSpaceStack.end());
+      if (Ty)
+        AddrSpaceStack.push_back(std::nullopt);
+    }
+
+    return DIExprConstVisitor::visit(Op, Ty, Inputs);
+  }
+
+  bool visitResult(StackEntry SE) {
+    ResultTy = SE.ResultType;
+    return true;
+  }
+
+  static std::optional<unsigned> find(LLVMContext &C,
+                                      ArrayRef<DIOp::Variant> Ops) {
+    DIOpDivergentAddrSpaceFinder Finder{C, Ops};
+    if (!Finder.visitInOrder())
+      return std::nullopt;
+    assert(Finder.AddrSpaceStack.size() == 1 &&
+           "expected one element on stack after expression!");
+    if (!Finder.ResultTy || !Finder.ResultTy->isPointerTy())
+      return std::nullopt;
+    // Only return a divergent address space when the expression produces a
+    // generic pointer.
+    unsigned DeclaredAddrSpace = Finder.ResultTy->getPointerAddressSpace();
+    if (Finder.AddrSpaceStack.back() && DeclaredAddrSpace == 0)
+      return Finder.AddrSpaceStack.back();
+    return std::nullopt;
+  }
+};
+} // namespace
+
+std::optional<unsigned> DIExpression::getNewDivergentAddrSpace() const {
+  auto Elems = getNewElementsRef();
+  if (!Elems || Elems->empty())
+    return std::nullopt;
+  return DIOpDivergentAddrSpaceFinder::find(getContext(), *Elems);
+}
+
 std::optional<DIExpression::SignedOrUnsignedConstant>
 DIExpression::isConstant() const {
 
@@ -2990,8 +3058,6 @@ DIExprBuilder::DIExprBuilder(LLVMContext &C,
     : C(C), Elements(IL) {}
 DIExprBuilder::DIExprBuilder(LLVMContext &C, ArrayRef<DIOp::Variant> V)
     : C(C), Elements(V) {}
-DIExprBuilder::DIExprBuilder(const DIExpr &E)
-    : C(E.getContext()), Elements(E.Elements) {}
 DIExprBuilder::DIExprBuilder(const DIExpression &E)
     : C(E.getContext()), Elements(*E.getNewElementsRef()) {}
 
@@ -3010,14 +3076,6 @@ DIExprBuilder::Iterator DIExprBuilder::erase(Iterator I) {
 
 DIExprBuilder::Iterator DIExprBuilder::erase(Iterator From, Iterator To) {
   return Elements.erase(From.Op, To.Op);
-}
-
-DIExpr *DIExprBuilder::intoExpr() {
-#ifndef NDEBUG
-  assert(!StateIsUnspecified);
-  StateIsUnspecified = true;
-#endif
-  return DIExpr::get(C, std::move(Elements));
 }
 
 DIExpression *DIExprBuilder::intoExpression() {
@@ -3043,14 +3101,6 @@ DIExprBuilder &DIExprBuilder::removeReferrerIndirection(Type *PointeeType) {
     }
   }
   return *this;
-}
-
-DIExpr *DIExpr::getImpl(LLVMContext &Context,
-                        SmallVector<DIOp::Variant> &&Elements,
-                        StorageType Storage, bool ShouldCreate) {
-  assert(Storage != Distinct && "DIExpr cannot be distinct");
-  DEFINE_GETIMPL_LOOKUP(DIExpr, (Elements));
-  DEFINE_GETIMPL_STORE_NO_OPS(DIExpr, (std::move(Elements)));
 }
 
 DIGlobalVariableExpression *
@@ -3168,13 +3218,4 @@ void DIArgList::dropAllReferences(bool Untrack) {
     untrack();
   Args.clear();
   ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
-}
-
-DILifetime *DILifetime::getImpl(LLVMContext &Context, Metadata *Obj,
-                                Metadata *Loc, ArrayRef<Metadata *> Args,
-                                StorageType Storage) {
-  Metadata *Ops[] = {Obj, Loc};
-  return storeImpl(new (std::size(Ops) + Args.size(), Storage)
-                       DILifetime(Context, Storage, Ops, Args),
-                   Storage);
 }

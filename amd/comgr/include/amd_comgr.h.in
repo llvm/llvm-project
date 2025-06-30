@@ -1563,9 +1563,6 @@ amd_comgr_action_info_get_working_directory_path(
  *
  * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
  * action_info is an invalid action info object.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
- * Unable to update action info object as out of resources.
  */
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_logging(
@@ -1584,9 +1581,6 @@ amd_comgr_action_info_set_logging(
  *
  * @retval ::AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT @p
  * action_info is an invalid action info object. @p logging is NULL.
- *
- * @retval ::AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES
- * Unable to update the data object as out of resources.
  */
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_logging(

@@ -75,7 +75,7 @@ convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
 /// ModuleTranslation stack frame for OpenMP operations. This keeps track of the
 /// insertion points for allocas.
 class OpenMPAllocaStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPAllocaStackFrame> {
+    : public StateStackFrameBase<OpenMPAllocaStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPAllocaStackFrame)
 
@@ -88,7 +88,7 @@ public:
 /// collapsed canonical loop information corresponding to an \c omp.loop_nest
 /// operation.
 class OpenMPLoopInfoStackFrame
-    : public LLVM::ModuleTranslation::StackFrameBase<OpenMPLoopInfoStackFrame> {
+    : public StateStackFrameBase<OpenMPLoopInfoStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPLoopInfoStackFrame)
   llvm::CanonicalLoopInfo *loopInfo = nullptr;
@@ -372,7 +372,13 @@ findAllocaInsertPoint(llvm::IRBuilderBase &builder,
         allocaInsertPoint = frame.allocaInsertPoint;
         return WalkResult::interrupt();
       });
-  if (walkResult.wasInterrupted())
+  // In cases with multiple levels of outlining, the tree walk might find an
+  // alloca insertion point that is inside the original function while the
+  // builder insertion point is inside the outlined function. We need to make
+  // sure that we do not use it in those cases.
+  if (walkResult.wasInterrupted() &&
+      allocaInsertPoint.getBlock()->getParent() ==
+          builder.GetInsertBlock()->getParent())
     return allocaInsertPoint;
 
   // Otherwise, insert to the entry block of the surrounding function.
@@ -2166,8 +2172,7 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
     if (!privateVarOrErr)
       return handleError(privateVarOrErr, *taskOp.getOperation());
 
-    llvm::IRBuilderBase::InsertPointGuard guard(builder);
-    builder.SetInsertPoint(builder.GetInsertBlock()->getTerminator());
+    setInsertPointForPossiblyEmptyBlock(builder);
 
     // TODO: this is a bit of a hack for Fortran character boxes.
     // Character boxes are passed by value into the init region and then the
@@ -3550,24 +3555,26 @@ static void collectMapDataFromMapOperands(
               mapOp, mapOp.getMapperIdAttr()));
     else
       mapData.Mappers.push_back(nullptr);
-    mapData.IsAMapping.push_back(true);
+    bool hasMapDescriptor =
+        (mapData.Types.back() &
+         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR) ==
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DESCRIPTOR;
+    mapData.IsAMapping.push_back(!hasMapDescriptor);
     mapData.IsAMember.push_back(checkIsAMember(mapVars, mapOp));
   }
 
   auto findMapInfo = [&mapData](llvm::Value *val,
-                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy,
-                                size_t memberCount) {
+                                llvm::OpenMPIRBuilder::DeviceInfoTy devInfoTy) {
+    unsigned index = 0;
     bool found = false;
-    for (size_t index = 0; index < mapData.OriginalValue.size(); ++index) {
-      auto mapInfoOp = dyn_cast<omp::MapInfoOp>(mapData.MapClause[index]);
-      if (mapData.IsAMapping[index] && mapData.Pointers[index] == val &&
-          mapData.BasePointers[index] == val &&
-          memberCount == mapInfoOp.getMembers().size()) {
+    for (llvm::Value *basePtr : mapData.OriginalValue) {
+      if (basePtr == val && mapData.IsAMapping[index]) {
         found = true;
         mapData.Types[index] |=
             llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_RETURN_PARAM;
         mapData.DevicePointers[index] = devInfoTy;
       }
+      index++;
     }
     return found;
   };
@@ -3582,7 +3589,7 @@ static void collectMapDataFromMapOperands(
       llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
 
       // Check if map info is already present for this entry.
-      if (!findMapInfo(origValue, devInfoTy, mapOp.getMembers().size())) {
+      if (!findMapInfo(origValue, devInfoTy)) {
         mapData.OriginalValue.push_back(origValue);
         mapData.Pointers.push_back(mapData.OriginalValue.back());
         mapData.IsDeclareTarget.push_back(false);
@@ -4460,6 +4467,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
                                              /*SeparateBeginEndCalls=*/true);
+  bool isTargetDevice = ompBuilder->Config.isTargetDevice();
+  bool isOffloadEntry =
+      isTargetDevice || !ompBuilder->Config.TargetTriples.empty();
 
   LogicalResult result =
       llvm::TypeSwitch<Operation *, LogicalResult>(op)
@@ -4549,6 +4559,9 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
 
   if (failed(result))
     return failure();
+  // Pretend we have IF(false) if we're not doing offload.
+  if (!isOffloadEntry)
+    ifCond = builder.getFalse();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   MapInfoData mapData;
@@ -4601,6 +4614,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
   auto bodyGenCB = [&](InsertPointTy codeGenIP, BodyGenTy bodyGenType)
       -> llvm::OpenMPIRBuilder::InsertPointOrErrorTy {
+    // We must always restoreIP regardless of doing anything the caller
+    // does not restore it, leading to incorrect (no) branch generation.
     builder.restoreIP(codeGenIP);
     assert(isa<omp::TargetDataOp>(op) &&
            "BodyGen requested for non TargetDataOp");
@@ -4637,9 +4652,18 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
       }
       break;
     case BodyGenTy::DupNoPriv:
-      // We must always restoreIP regardless of doing anything the caller
-      // does not restore it, leading to incorrect (no) branch generation.
-      builder.restoreIP(codeGenIP);
+      if (info.DevicePtrInfoMap.empty()) {
+        // For host device we still need to do the mapping for codegen,
+        // otherwise it may try to lookup a missing value.
+        if (!ompBuilder->Config.IsTargetDevice.value_or(false)) {
+          mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Address,
+                       blockArgIface.getUseDeviceAddrBlockArgs(),
+                       useDeviceAddrVars, mapData);
+          mapUseDevice(llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer,
+                       blockArgIface.getUseDevicePtrBlockArgs(),
+                       useDevicePtrVars, mapData);
+        }
+      }
       break;
     case BodyGenTy::NoPriv:
       // If device info is available then region has already been generated
@@ -4901,6 +4925,7 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
                           llvm::IRBuilderBase &builder, llvm::Function *func) {
   assert(moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
          "function only supported for target device codegen");
+  llvm::IRBuilderBase::InsertPointGuard guard(builder);
   for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
     // In the case of declare target mapped variables, the basePointer is
     // the reference pointer generated by the convertDeclareTargetAttr
@@ -4939,6 +4964,7 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
             llvm::Value *substitute = mapData.BasePointers[i];
             if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
                                                          : mapOp.getVarPtr())) {
+              builder.SetCurrentDebugLocation(insn->getDebugLoc());
               auto *load = builder.CreateLoad(
                   mapData.BasePointers[i]->getType(), mapData.BasePointers[i]);
               load->moveBefore(insn);
@@ -5977,7 +6003,13 @@ convertHostOrTargetOperation(Operation *op, llvm::IRBuilderBase &builder,
             llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
                 ompBuilder->createBarrier(builder.saveIP(),
                                           llvm::omp::OMPD_barrier);
-            return handleError(afterIP, *op);
+            LogicalResult res = handleError(afterIP, *op);
+            if (res.succeeded()) {
+              // If the barrier generated a cancellation check, the insertion
+              // point might now need to be changed to a new continuation block
+              builder.restoreIP(*afterIP);
+            }
+            return res;
           })
           .Case([&](omp::TaskyieldOp op) {
             if (failed(checkImplementationStatus(*op)))

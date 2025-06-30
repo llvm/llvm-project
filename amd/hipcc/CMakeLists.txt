@@ -1,15 +1,12 @@
 cmake_minimum_required(VERSION 3.13.4)
+if(POLICY CMP0177)
+  cmake_policy(SET CMP0177 NEW)
+endif()
 
 project(hipcc VERSION "1.1.1" LANGUAGES C CXX)
 
 include(CMakePackageConfigHelpers)
 include(GNUInstallDirs)
-
-find_package(ROCM QUIET)
-if(ROCM_FOUND)
-  include(ROCMSetupVersion)
-  rocm_setup_version(VERSION "${hipcc_VERSION}")
-endif()
 
 # Generate static package, when BUILD_SHARED_LIBS is set to OFF.
 # Default to ON
@@ -69,7 +66,7 @@ set(CPACK_DEBIAN_ENABLE_COMPONENT_DEPENDS ON)
 set(CPACK_DEB_COMPONENT_INSTALL ON)
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "rocm-core")
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm-Developer-Tools/HIPCC")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/ROCm/llvm-project/tree/amd-staging/amd/hipcc")
 if(DEFINED ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
   set(CPACK_DEBIAN_PACKAGE_RELEASE $ENV{CPACK_DEBIAN_PACKAGE_RELEASE})
 else()

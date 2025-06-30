@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=11
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 
 program main
   implicit none
@@ -33,7 +33,6 @@ program main
   enddo
   !$omp end target parallel
 
-  !ERROR: 'variable-category' modifier is required
   !$omp target parallel defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -80,7 +79,6 @@ program main
   enddo
   !$omp end target parallel do
 
-  !ERROR: 'variable-category' modifier is required
   !$omp target parallel do defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -140,7 +138,6 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: 'variable-category' modifier is required
   !$omp target teams defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -240,7 +237,6 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: 'variable-category' modifier is required
   !$omp target teams distribute defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -333,7 +329,6 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: 'variable-category' modifier is required
   !$omp target teams distribute parallel do defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14
@@ -433,7 +428,6 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: 'variable-category' modifier is required
   !$omp target teams distribute parallel do simd defaultmap(tofrom)
   do i = 1, N
      a(i) = 3.14

@@ -16,7 +16,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/SpecialCaseList.h"
 
-#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 using namespace clang;
@@ -80,7 +79,7 @@ static StringRef getSectionName(llvm::driver::ProfileInstrKind Kind) {
     return "llvm";
   case llvm::driver::ProfileInstrKind::ProfileCSIRInstr:
     return "csllvm";
-  case CodeGenOptions::ProfileIRSampleColdCov:
+  case llvm::driver::ProfileInstrKind::ProfileIRSampleColdCov:
     return "sample-coldcov";
   }
   llvm_unreachable("Unhandled llvm::driver::ProfileInstrKind enum");

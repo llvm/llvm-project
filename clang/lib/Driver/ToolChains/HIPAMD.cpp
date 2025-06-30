@@ -8,10 +8,10 @@
 
 #include "HIPAMD.h"
 #include "AMDGPU.h"
-#include "CommonArgs.h"
 #include "HIPUtility.h"
 #include "SPIRV.h"
 #include "clang/Basic/Cuda.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
@@ -104,6 +104,8 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO) {
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
+    LldArgs.push_back(Args.MakeArgString(
+        "-plugin-opt=-avail-extern-gv-in-addrspace-to-local=3"));
   }
 
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
@@ -430,4 +432,16 @@ void HIPAMDToolChain::checkTargetID(
       PTID.OptionalTargetID != "amdgcnspirv")
     getDriver().Diag(clang::diag::err_drv_bad_target_id)
         << *PTID.OptionalTargetID;
+}
+
+SPIRVAMDToolChain::SPIRVAMDToolChain(const Driver &D,
+                                     const llvm::Triple &Triple,
+                                     const ArgList &Args)
+    : ROCMToolChain(D, Triple, Args) {
+  getProgramPaths().push_back(getDriver().Dir);
+}
+
+Tool *SPIRVAMDToolChain::buildLinker() const {
+  assert(getTriple().getArch() == llvm::Triple::spirv64);
+  return new tools::AMDGCN::Linker(*this);
 }

@@ -43,7 +43,6 @@ add_public_tablegen_target(InstCombineTableGen)
 add_llvm_target(AMDGPUCodeGen
   AMDGPUAliasAnalysis.cpp
   AMDGPUAlwaysInlinePass.cpp
-  AMDGPUAnnotateKernelFeatures.cpp
   AMDGPUAnnotateUniformValues.cpp
   AMDGPUArgumentUsageInfo.cpp
   AMDGPUAsanInstrumentation.cpp
@@ -103,6 +102,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURemoveIncompatibleFunctions.cpp
   AMDGPUReserveWWMRegs.cpp
   AMDGPUResourceUsageAnalysis.cpp
+  AMDGPURewriteAGPRCopyMFMA.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp
   AMDGPUSelectionDAGInfo.cpp

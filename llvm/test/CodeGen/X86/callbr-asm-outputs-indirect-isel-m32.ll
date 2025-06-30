@@ -22,7 +22,7 @@ define i8 @emulator_cmpxchg_emulated() {
   ; CHECK-NEXT:   $al = COPY [[SETCCr]]
   ; CHECK-NEXT:   RET 0, $al
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.efaultu64.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.efaultu64.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   $al = COPY [[SETCCr1]]
   ; CHECK-NEXT:   RET 0, $al
@@ -62,7 +62,7 @@ define i32 @emulator_cmpxchg_emulated2() {
   ; CHECK-NEXT:   $eax = COPY [[COPY2]]
   ; CHECK-NEXT:   RET 0, $eax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.efaultu64.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.efaultu64.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   $eax = COPY %3
   ; CHECK-NEXT:   RET 0, $eax
 entry:
@@ -99,7 +99,7 @@ define i64 @multireg() {
   ; CHECK-NEXT:   $edx = COPY [[COPY2]]
   ; CHECK-NEXT:   RET 0, $eax, $edx
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.split (machine-block-address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.split (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   liveins: $eax, $edx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr32 = COPY $eax

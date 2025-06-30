@@ -197,4 +197,36 @@ define void @loadv4i16() {
   ret void
 }
 
+define void @loadf64() {
+  ; show dxil op lower can handle typedbuffer load where target is double but load type is <2 x i32>
+  ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 1, i32 1, i32 0, i8 1 }, i32 1, i1 false) #0
+  %buffer = call target("dx.TypedBuffer", double, 1, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
+          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+
+  ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]], %dx.types.ResourceProperties { i32 4106, i32 266 }) #0
+  %load = call { <2 x i32>, i1 } @llvm.dx.resource.load.typedbuffer(
+      target("dx.TypedBuffer", double, 1, 0, 0) %buffer, i32 0)
+
+; CHECK: call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle [[BA]], i32 0, i32 undef) #1
+  %val = extractvalue { <2 x i32>, i1 } %load, 0
+  ret void
+}
+
+define void @loadv2f64() {
+  ; show dxil op lower can handle typedbuffer load where target is double2 but load type is <4 x i32>
+  ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217, %dx.types.ResBind { i32 1, i32 1, i32 0, i8 1 }, i32 1, i1 false) #0
+  %buffer = call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
+          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+
+  ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]], %dx.types.ResourceProperties { i32 4106, i32 522 }) #0
+  %load = call { <4 x i32>, i1 } @llvm.dx.resource.load.typedbuffer(
+      target("dx.TypedBuffer", <2 x double>, 1, 0, 0) %buffer, i32 0)
+
+  ; CHECK: call %dx.types.ResRet.i32 @dx.op.bufferLoad.i32(i32 68, %dx.types.Handle [[BA]], i32 0, i32 undef) #1
+  %val = extractvalue { <4 x i32>, i1 } %load, 0
+  ret void
+}
+
 ; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(read) {{.*}}}

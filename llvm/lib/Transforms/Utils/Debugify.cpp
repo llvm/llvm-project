@@ -321,7 +321,7 @@ bool llvm::stripDebugifyMetadata(Module &M) {
 
 bool hasLoc(const Instruction &I) {
   const DILocation *Loc = I.getDebugLoc().get();
-#if LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
   DebugLocKind Kind = I.getDebugLoc().getKind();
   return Loc || Kind != DebugLocKind::Normal;
 #else
@@ -375,7 +375,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
 
         // Cllect dbg.values and dbg.declare.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -390,13 +390,7 @@ bool llvm::collectDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
         DebugInfoBeforePass.InstToDelete.insert({&I, &I});
@@ -619,7 +613,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
 
         // Collect dbg.values and dbg.declares.
         if (DebugifyLevel > Level::Locations) {
-          auto HandleDbgVariable = [&](auto *DbgVar) {
+          auto HandleDbgVariable = [&](DbgVariableRecord *DbgVar) {
             if (!SP)
               return;
             // Skip inlined variables.
@@ -634,13 +628,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
           };
           for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
             HandleDbgVariable(&DVR);
-          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-            HandleDbgVariable(DVI);
         }
-
-        // Skip debug instructions other than dbg.value and dbg.declare.
-        if (isa<DbgInfoIntrinsic>(&I))
-          continue;
 
         LLVM_DEBUG(dbgs() << "  Collecting info for inst: " << I << '\n');
 
@@ -727,7 +715,7 @@ bool diagnoseMisSizedDbgValue(Module &M, DbgValTy *DbgVal) {
   bool HasBadSize = false;
   if (Ty->isIntegerTy()) {
     auto Signedness = DbgVal->getVariable()->getSignedness();
-    if (Signedness && *Signedness == DIBasicType::Signedness::Signed)
+    if (Signedness == DIBasicType::Signedness::Signed)
       HasBadSize = ValueOperandSize < *DbgVarSize;
   } else {
     HasBadSize = ValueOperandSize != *DbgVarSize;

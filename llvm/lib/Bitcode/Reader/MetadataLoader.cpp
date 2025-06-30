@@ -966,9 +966,6 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
       case bitc::METADATA_IMPORTED_ENTITY:
       case bitc::METADATA_GLOBAL_VAR_EXPR:
       case bitc::METADATA_GENERIC_SUBRANGE:
-      case bitc::METADATA_EXPR:
-      case bitc::METADATA_FRAGMENT:
-      case bitc::METADATA_LIFETIME:
         // We don't expect to see any of these, if we see one, give up on
         // lazy-loading and fallback.
         MDStringRef.clear();
@@ -1483,6 +1480,14 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     return MetadataList.upgradeTypeRef(getMDOrNull(ID));
   };
 
+  auto getMetadataOrConstant = [&](bool IsMetadata,
+                                   uint64_t Entry) -> Metadata * {
+    if (IsMetadata)
+      return getMDOrNull(Entry);
+    return ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(Context), Entry));
+  };
+
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
 
@@ -1721,15 +1726,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() < 6 || Record.size() > 8)
       return error("Invalid record");
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
     DINode::DIFlags Flags = (Record.size() > 6)
                                 ? static_cast<DINode::DIFlags>(Record[6])
                                 : DINode::FlagZero;
     uint32_t NumExtraInhabitants = (Record.size() > 7) ? Record[7] : 0;
 
+    Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[3]);
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIBasicType,
-                        (Context, Record[1], getMDString(Record[2]), Record[3],
+                        (Context, Record[1], getMDString(Record[2]), SizeInBits,
                          Record[4], Record[5], NumExtraInhabitants, Flags)),
         NextMetadataNo);
     NextMetadataNo++;
@@ -1739,8 +1747,11 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() < 11)
       return error("Invalid record");
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[6]);
+
+    Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[3]);
 
     size_t Offset = 9;
 
@@ -1761,7 +1772,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIFixedPointType,
-                        (Context, Record[1], getMDString(Record[2]), Record[3],
+                        (Context, Record[1], getMDString(Record[2]), SizeInBits,
                          Record[4], Record[5], Flags, Record[7], Record[8],
                          Numerator, Denominator)),
         NextMetadataNo);
@@ -1772,17 +1783,21 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() > 9 || Record.size() < 8)
       return error("Invalid record");
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
     bool SizeIs8 = Record.size() == 8;
     // StringLocationExp (i.e. Record[5]) is added at a later time
     // than the other fields. The code here enables backward compatibility.
     Metadata *StringLocationExp = SizeIs8 ? nullptr : getMDOrNull(Record[5]);
     unsigned Offset = SizeIs8 ? 5 : 6;
+    Metadata *SizeInBits =
+        getMetadataOrConstant(SizeIsMetadata, Record[Offset]);
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIStringType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), getMDOrNull(Record[4]),
-                         StringLocationExp, Record[Offset], Record[Offset + 1],
+                         StringLocationExp, SizeInBits, Record[Offset + 1],
                          Record[Offset + 2])),
         NextMetadataNo);
     NextMetadataNo++;
@@ -1815,15 +1830,20 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (!MSpace)
       return MSpace.takeError();
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
+
+    Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[7]);
+    Metadata *OffsetInBits = getMetadataOrConstant(SizeIsMetadata, Record[9]);
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIDerivedType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), Record[4],
                          getDITypeRefOrNull(Record[5]),
-                         getDITypeRefOrNull(Record[6]), Record[7], Record[8],
-                         Record[9], DWARFAddressSpace, *MSpace, PtrAuthData, Flags,
+                         getDITypeRefOrNull(Record[6]), SizeInBits, Record[8],
+                         OffsetInBits, DWARFAddressSpace, *MSpace, PtrAuthData, Flags,
                          getDITypeRefOrNull(Record[11]), Annotations)),
         NextMetadataNo);
     NextMetadataNo++;
@@ -1833,13 +1853,17 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() != 13)
       return error("Invalid record");
 
-    IsDistinct = Record[0];
+    IsDistinct = Record[0] & 1;
+    bool SizeIsMetadata = Record[0] & 2;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[7]);
+
+    Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[5]);
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DISubrangeType,
                         (Context, getMDString(Record[1]),
                          getMDOrNull(Record[2]), Record[3],
-                         getMDOrNull(Record[4]), Record[5], Record[6], Flags,
+                         getMDOrNull(Record[4]), SizeInBits, Record[6], Flags,
                          getDITypeRefOrNull(Record[8]), getMDOrNull(Record[9]),
                          getMDOrNull(Record[10]), getMDOrNull(Record[11]),
                          getMDOrNull(Record[12]))),
@@ -1854,18 +1878,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     // If we have a UUID and this is not a forward declaration, lookup the
     // mapping.
     IsDistinct = Record[0] & 0x1;
-    bool IsNotUsedInTypeRef = Record[0] >= 2;
+    bool IsNotUsedInTypeRef = Record[0] & 2;
+    bool SizeIsMetadata = Record[0] & 4;
     unsigned Tag = Record[1];
     MDString *Name = getMDString(Record[2]);
     Metadata *File = getMDOrNull(Record[3]);
     unsigned Line = Record[4];
     Metadata *Scope = getDITypeRefOrNull(Record[5]);
     Metadata *BaseType = nullptr;
-    uint64_t SizeInBits = Record[7];
     if (Record[8] > (uint64_t)std::numeric_limits<uint32_t>::max())
       return error("Alignment value is too large");
     uint32_t AlignInBits = Record[8];
-    uint64_t OffsetInBits = 0;
+    Metadata *OffsetInBits = nullptr;
     uint32_t NumExtraInhabitants = (Record.size() > 22) ? Record[22] : 0;
     DINode::DIFlags Flags = static_cast<DINode::DIFlags>(Record[10]);
     Metadata *Elements = nullptr;
@@ -1912,7 +1936,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         TemplateParams = getMDOrNull(Record[14]);
     } else {
       BaseType = getDITypeRefOrNull(Record[6]);
-      OffsetInBits = Record[9];
+
+      OffsetInBits = getMetadataOrConstant(SizeIsMetadata, Record[9]);
+
       Elements = getMDOrNull(Record[11]);
       VTableHolder = getDITypeRefOrNull(Record[13]);
       TemplateParams = getMDOrNull(Record[14]);
@@ -1939,6 +1965,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
 
     if (Record.size() > 24 && Record[24] != dwarf::DW_APPLE_ENUM_KIND_invalid)
       EnumKind = Record[24];
+
+    Metadata *SizeInBits = getMetadataOrConstant(SizeIsMetadata, Record[7]);
 
     DICompositeType *CT = nullptr;
     if (Identifier)
@@ -2461,23 +2489,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
     break;
   }
-  case bitc::METADATA_EXPR: {
-    if (Record.size() < 1)
-      return error("Invalid record");
-
-    uint64_t Version = Record[0];
-    if (Version != 0)
-      return error("Invalid record: unknown DIExpr version " + Twine(Version));
-
-    DIExprBuilder Builder(Context);
-    if (Error Err =
-            appendDIOpsToBuilder(Builder, ArrayRef<uint64_t>(Record).slice(1)))
-      return Err;
-
-    MetadataList.assignValue(Builder.intoExpr(), NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
   case bitc::METADATA_GLOBAL_VAR_EXPR: {
     if (Record.size() != 3)
       return error("Invalid record");
@@ -2559,15 +2570,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         return Err;
     break;
   }
-  case bitc::METADATA_FRAGMENT: {
-    if (Record.size() != 0)
-      return error("Invalid record");
-    IsDistinct = true;
-    MetadataList.assignValue(DIFragment::getDistinct(Context),
-                             NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
   case bitc::METADATA_KIND: {
     // Support older bitcode files that had METADATA_KIND records in a
     // block with METADATA_BLOCK_ID.
@@ -2589,19 +2591,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     }
 
     MetadataList.assignValue(DIArgList::get(Context, Elts), NextMetadataNo);
-    NextMetadataNo++;
-    break;
-  }
-  case bitc::METADATA_LIFETIME: {
-    if (Record.size() < 2)
-      return error("Invalid record");
-    Metadata *Obj = getMD(Record[0]);
-    Metadata *Loc = getMD(Record[1]);
-    SmallVector<Metadata *> Args;
-    for (auto ArgID : ArrayRef<uint64_t>(Record).slice(2))
-      Args.push_back(getMD(ArgID));
-    MetadataList.assignValue(DILifetime::getDistinct(Context, Obj, Loc, Args),
-                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }

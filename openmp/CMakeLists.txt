@@ -68,6 +68,8 @@ else()
     set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
         "Path where built OpenMP libraries should be installed.")
   endif()
+  set(OPENMP_INSTALL_CFGDIR "lib/cmake" CACHE STRING
+        "Path where OpenMP config should be installed")
 
   if (NOT MSVC)
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
@@ -123,6 +125,8 @@ if (OPENMP_STANDALONE_BUILD)
     set(OPENMP_LIBDIR_SUFFIX "/asan")
     set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
   endif()
+  set(OPENMP_INSTALL_CFGDIR "${OPENMP_INSTALL_LIBDIR}/cmake" CACHE STRING
+        "Path where OpenMP config should be installed")
 endif()
 
 # Check and set up common compiler flags.

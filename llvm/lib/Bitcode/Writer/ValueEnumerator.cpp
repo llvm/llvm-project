@@ -1164,11 +1164,10 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
         assert(DVR.getRawLocation() &&
                "DbgVariableRecord location unexpectedly null");
         AddFnLocalMetadata(DVR.getRawLocation());
-         if (DVR.isDbgAssign()) {
+        if (DVR.isDbgAssign()) {
           assert(DVR.getRawAddress() &&
                  "DbgVariableRecord location unexpectedly null");
           AddFnLocalMetadata(DVR.getRawAddress());
-
         }
       }
       if (!I.getType()->isVoidTy())
