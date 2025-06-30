@@ -6661,6 +6661,10 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
       if (!NewV->getType()->isPointerTy())
         return V;
       V = NewV;
+    } else if (Operator::getOpcode(V) == Instruction::IntToPtr &&
+               Operator::getOpcode(cast<Operator>(V)->getOperand(0)) ==
+                   Instruction::PtrToInt) {
+      V = cast<Operator>(cast<Operator>(V)->getOperand(0))->getOperand(0);
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (GA->isInterposable())
         return V;

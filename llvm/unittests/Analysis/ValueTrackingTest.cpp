@@ -3350,6 +3350,18 @@ TEST_F(ValueTrackingTest, ComputeConstantRange) {
   }
 }
 
+TEST_F(ValueTrackingTest, GetUnderlyingObject) {
+  parseAssembly(R"(
+    @globalmem = external global i8
+    define void @test() {
+      %A = getelementptr i8, ptr @globalmem, i64 0
+      %A2 = getelementptr i8, ptr inttoptr (i32 ptrtoint (ptr @globalmem to i32) to ptr), i64 0
+      ret void
+    }
+  )");
+  EXPECT_EQ(getUnderlyingObject(A), getUnderlyingObject(A2));
+}
+
 struct FindAllocaForValueTestParams {
   const char *IR;
   bool AnyOffsetResult;
