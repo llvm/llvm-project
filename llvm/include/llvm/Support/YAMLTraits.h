@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -1539,6 +1540,7 @@ private:
     std::vector<HNode *> Entries;
   };
 
+  void saveAliasHNode(Node *node, HNode *hnode);
   Input::HNode *createHNodes(Node *node);
   void setError(HNode *hnode, const Twine &message);
   void setError(Node *node, const Twine &message);
@@ -1577,6 +1579,7 @@ private:
   HNode *CurrentNode = nullptr;
   bool                                ScalarMatchFound = false;
   bool AllowUnknownKeys = false;
+  DenseMap<StringRef, HNode *> AliasMap;
 };
 
 ///
