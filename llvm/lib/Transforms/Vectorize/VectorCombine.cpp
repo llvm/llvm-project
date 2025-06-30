@@ -1776,12 +1776,13 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
 }
 
 bool VectorCombine::scalarizeExtExtract(Instruction &I) {
-  if (!match(&I, m_ZExt(m_Value())))
+  auto *Ext = dyn_cast<ZExtInst>(&I);
+  if (!Ext)
     return false;
 
-  // Try to convert a vector zext feeding only extracts to a set of scalar (Src
-  // << ExtIdx *Size) & (Size -1), if profitable.
-  auto *Ext = cast<ZExtInst>(&I);
+  // Try to convert a vector zext feeding only extracts to a set of scalar
+  //   (Src << ExtIdx *Size) & (Size -1)
+  // if profitable   .
   auto *SrcTy = dyn_cast<FixedVectorType>(Ext->getOperand(0)->getType());
   if (!SrcTy)
     return false;
@@ -1822,21 +1823,20 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     return false;
 
   Value *ScalarV = Ext->getOperand(0);
-  if (!isGuaranteedNotToBePoison(ScalarV, &AC))
+  if (!isGuaranteedNotToBePoison(ScalarV, &AC, dyn_cast<Instruction>(ScalarV),
+                                 &DT))
     ScalarV = Builder.CreateFreeze(ScalarV);
   ScalarV = Builder.CreateBitCast(
       ScalarV,
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
   unsigned SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
-  Value *EltBitMask =
-      ConstantInt::get(ScalarV->getType(), (1ull << SrcEltSizeInBits) - 1);
-  for (auto *U : to_vector(Ext->users())) {
+  unsigned EltBitMask = (1ull << SrcEltSizeInBits) - 1;
+  for (User *U : Ext->users()) {
     auto *Extract = cast<ExtractElementInst>(U);
-    unsigned Idx =
+    uint64_t Idx =
         cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
-    auto *S = Builder.CreateLShr(
-        ScalarV, ConstantInt::get(ScalarV->getType(), Idx * SrcEltSizeInBits));
-    auto *A = Builder.CreateAnd(S, EltBitMask);
+    Value *S = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
+    Value *A = Builder.CreateAnd(S, EltBitMask);
     U->replaceAllUsesWith(A);
   }
   return true;
