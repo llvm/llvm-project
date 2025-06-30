@@ -20,9 +20,13 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <type_traits>
 #include <utility>
 
 using namespace llvm;
+
+static_assert(std::is_trivially_destructible_v<MCDataFragment>,
+              "fragment classes must be trivially destructible");
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
     : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
