@@ -297,7 +297,7 @@ static void replaceAccessesWithHandle(CBufferResource &CBR) {
       continue;
     }
 
-    reportFatalInternalError("Unexpected user of Global");
+    llvm_unreachable("Unexpected user of Global");
   }
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
 }
