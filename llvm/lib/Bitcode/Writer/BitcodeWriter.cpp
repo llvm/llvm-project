@@ -152,6 +152,7 @@ enum {
   FUNCTION_INST_UNREACHABLE_ABBREV,
   FUNCTION_INST_GEP_ABBREV,
   FUNCTION_DEBUG_RECORD_VALUE_ABBREV,
+  FUNCTION_DEBUG_LOC_ABBREV,
 };
 
 /// Abstract class to manage the bitcode writing, subclassed for each bitcode
@@ -3675,7 +3676,7 @@ void ModuleBitcodeWriter::writeFunction(
   // in the VST.
   FunctionToBitcodeIndex[&F] = Stream.GetCurrentBitNo();
 
-  Stream.EnterSubblock(bitc::FUNCTION_BLOCK_ID, 4);
+  Stream.EnterSubblock(bitc::FUNCTION_BLOCK_ID, 5);
   VE.incorporateFunction(F);
 
   SmallVector<unsigned, 64> Vals;
@@ -3724,7 +3725,8 @@ void ModuleBitcodeWriter::writeFunction(
           Vals.push_back(VE.getMetadataOrNullID(DL->getScope()));
           Vals.push_back(VE.getMetadataOrNullID(DL->getInlinedAt()));
           Vals.push_back(DL->isImplicitCode());
-          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals);
+          Stream.EmitRecord(bitc::FUNC_CODE_DEBUG_LOC, Vals,
+                            FUNCTION_DEBUG_LOC_ABBREV);
           Vals.clear();
           LastDL = DL;
         }
@@ -4054,6 +4056,19 @@ void ModuleBitcodeWriter::writeBlockInfo() {
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_DEBUG_RECORD_VALUE_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering! 1");
+  }
+  {
+    auto Abbv = std::make_shared<BitCodeAbbrev>();
+    Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_DEBUG_LOC));
+    // NOTE: No IsDistinct field for FUNCTION_DEBUG_LOCs.
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
+    if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
+        FUNCTION_DEBUG_LOC_ABBREV)
+      llvm_unreachable("Unexpected abbrev ordering!");
   }
   Stream.ExitBlock();
 }
