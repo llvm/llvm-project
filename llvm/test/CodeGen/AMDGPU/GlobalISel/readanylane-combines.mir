@@ -46,8 +46,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (s32), addrspace 1)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[LOAD]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_READANYLANE]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -74,11 +73,9 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s16>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s16>), addrspace 1)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[LOAD]]
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[AMDGPU_READANYLANE]](<2 x s16>)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[BITCAST]](s32)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
-    ; CHECK-NEXT: G_STORE [[COPY4]](s32), [[COPY5]](p1) :: (store (s32), addrspace 1)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s32) = G_BITCAST [[LOAD]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
+    ; CHECK-NEXT: G_STORE [[BITCAST]](s32), [[COPY4]](p1) :: (store (s32), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -106,8 +103,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s16>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s16>), addrspace 1)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[LOAD]]
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[AMDGPU_READANYLANE]](<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s32) = G_BITCAST [[LOAD]](<2 x s16>)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](s32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:sgpr(s32) = COPY $sgpr0
@@ -136,13 +132,8 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s64) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (s64), addrspace 1)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[MV2:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s64) = COPY [[MV2]](s64)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
-    ; CHECK-NEXT: G_STORE [[COPY4]](s64), [[COPY5]](p1) :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
+    ; CHECK-NEXT: G_STORE [[LOAD]](s64), [[COPY4]](p1) :: (store (s64), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -169,11 +160,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s64) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (s64), addrspace 1)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(s64) = G_MERGE_VALUES [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[LOAD]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -200,14 +187,9 @@ body: |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s64) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s64) = COPY [[BITCAST]](s64)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
-    ; CHECK-NEXT: G_STORE [[COPY4]](s64), [[COPY5]](p1) :: (store (s64), addrspace 1)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s64) = G_BITCAST [[LOAD]](<2 x s32>)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
+    ; CHECK-NEXT: G_STORE [[BITCAST]](s64), [[COPY4]](p1) :: (store (s64), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -235,11 +217,7 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s64) = G_BITCAST [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s64) = G_BITCAST [[LOAD]](<2 x s32>)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
     %0:sgpr(s32) = COPY $sgpr0
@@ -269,13 +247,8 @@ body: |
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[UV3]](s32)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
-    ; CHECK-NEXT: G_STORE [[COPY4]](s32), [[COPY5]](p1) :: (store (s32), addrspace 1)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
+    ; CHECK-NEXT: G_STORE [[UV1]](s32), [[COPY4]](p1) :: (store (s32), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -304,11 +277,7 @@ body: |
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<2 x s32>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<2 x s32>), addrspace 1)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[LOAD]](<2 x s32>)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(s32) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[AMDGPU_READANYLANE]](s32), [[AMDGPU_READANYLANE1]](s32)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0 = COPY [[UV3]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[UV1]](s32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -337,14 +306,9 @@ body: |
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s16>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<4 x s16>), addrspace 1)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:sgpr(<4 x s16>) = G_CONCAT_VECTORS [[AMDGPU_READANYLANE]](<2 x s16>), [[AMDGPU_READANYLANE1]](<2 x s16>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(<2 x s16>), [[UV3:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[UV2]](<2 x s16>)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[BITCAST]](s32)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
-    ; CHECK-NEXT: G_STORE [[COPY4]](s32), [[COPY5]](p1) :: (store (s32), addrspace 1)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(p1) = COPY [[MV1]](p1)
+    ; CHECK-NEXT: G_STORE [[BITCAST]](s32), [[COPY4]](p1) :: (store (s32), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -374,11 +338,7 @@ body: |
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sgpr(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(<4 x s16>) = G_LOAD [[MV]](p1) :: (volatile "amdgpu-noclobber" load (<4 x s16>), addrspace 1)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[LOAD]](<4 x s16>)
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV]]
-    ; CHECK-NEXT: [[AMDGPU_READANYLANE1:%[0-9]+]]:sgpr(<2 x s16>) = G_AMDGPU_READANYLANE [[UV1]]
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:sgpr(<4 x s16>) = G_CONCAT_VECTORS [[AMDGPU_READANYLANE]](<2 x s16>), [[AMDGPU_READANYLANE1]](<2 x s16>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:sgpr(<2 x s16>), [[UV3:%[0-9]+]]:sgpr(<2 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s16>)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(s32) = G_BITCAST [[UV2]](<2 x s16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(s32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](s32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
     %0:sgpr(s32) = COPY $sgpr0
