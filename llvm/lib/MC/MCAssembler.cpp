@@ -607,12 +607,14 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
   case MCFragment::FT_Data:
     ++stats::EmittedDataFragments;
-    OS << cast<MCDataFragment>(F).getContents();
+    OS << StringRef(cast<MCDataFragment>(F).getContents().data(),
+                    cast<MCDataFragment>(F).getContents().size());
     break;
 
   case MCFragment::FT_Relaxable:
     ++stats::EmittedRelaxableFragments;
-    OS << cast<MCRelaxableFragment>(F).getContents();
+    OS << StringRef(cast<MCRelaxableFragment>(F).getContents().data(),
+                    cast<MCRelaxableFragment>(F).getContents().size());
     break;
 
   case MCFragment::FT_Fill: {
@@ -692,7 +694,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
   case MCFragment::FT_LEB: {
     const MCLEBFragment &LF = cast<MCLEBFragment>(F);
-    OS << LF.getContents();
+    OS << StringRef(LF.getContents().data(), LF.getContents().size());
     break;
   }
 
@@ -722,27 +724,27 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
   case MCFragment::FT_Dwarf: {
     const MCDwarfLineAddrFragment &OF = cast<MCDwarfLineAddrFragment>(F);
-    OS << OF.getContents();
+    OS << StringRef(OF.getContents().data(), OF.getContents().size());
     break;
   }
   case MCFragment::FT_DwarfFrame: {
     const MCDwarfCallFrameFragment &CF = cast<MCDwarfCallFrameFragment>(F);
-    OS << CF.getContents();
+    OS << StringRef(CF.getContents().data(), CF.getContents().size());
     break;
   }
   case MCFragment::FT_CVInlineLines: {
     const auto &OF = cast<MCCVInlineLineTableFragment>(F);
-    OS << OF.getContents();
+    OS << StringRef(OF.getContents().data(), OF.getContents().size());
     break;
   }
   case MCFragment::FT_CVDefRange: {
     const auto &DRF = cast<MCCVDefRangeFragment>(F);
-    OS << DRF.getContents();
+    OS << StringRef(DRF.getContents().data(), DRF.getContents().size());
     break;
   }
   case MCFragment::FT_PseudoProbe: {
     const MCPseudoProbeAddrFragment &PF = cast<MCPseudoProbeAddrFragment>(F);
-    OS << PF.getContents();
+    OS << StringRef(PF.getContents().data(), PF.getContents().size());
     break;
   }
   }
@@ -994,10 +996,11 @@ bool MCAssembler::relaxInstruction(MCRelaxableFragment &F) {
 
   // Encode the new instruction.
   F.setInst(Relaxed);
-  F.getFixups().clear();
-  F.getContents().clear();
-  getEmitter().encodeInstruction(Relaxed, F.getContents(), F.getFixups(),
-                                 *F.getSubtargetInfo());
+  SmallVector<char, 16> Data;
+  SmallVector<MCFixup, 1> Fixups;
+  getEmitter().encodeInstruction(Relaxed, Data, Fixups, *F.getSubtargetInfo());
+  F.setContents(Data);
+  F.setFixups(Fixups);
   return true;
 }
 
@@ -1005,8 +1008,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
   const unsigned OldSize = static_cast<unsigned>(LF.getContents().size());
   unsigned PadTo = OldSize;
   int64_t Value;
-  SmallVectorImpl<char> &Data = LF.getContents();
-  LF.getFixups().clear();
+  LF.clearFixups();
   // Use evaluateKnownAbsolute for Mach-O as a hack: .subsections_via_symbols
   // requires that .uleb128 A-B is foldable where A and B reside in different
   // fragments. This is used by __gcc_except_table.
@@ -1027,7 +1029,7 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
     if (UseZeroPad)
       Value = 0;
   }
-  Data.clear();
+  SmallVector<char, 16> Data;
   raw_svector_ostream OSE(Data);
   // The compiler can generate EH table assembly that is impossible to assemble
   // without either adding padding to an LEB fragment or adding extra padding
@@ -1037,7 +1039,8 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
     encodeSLEB128(Value, OSE, PadTo);
   else
     encodeULEB128(Value, OSE, PadTo);
-  return OldSize != LF.getContents().size();
+  LF.setContents(Data);
+  return OldSize != Data.size();
 }
 
 /// Check if the branch crosses the boundary.
@@ -1107,19 +1110,19 @@ bool MCAssembler::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF) {
     return WasRelaxed;
 
   MCContext &Context = getContext();
-  uint64_t OldSize = DF.getContents().size();
+  auto OldSize = DF.getContents().size();
   int64_t AddrDelta;
   bool Abs = DF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
   assert(Abs && "We created a line delta with an invalid expression");
   (void)Abs;
   int64_t LineDelta;
   LineDelta = DF.getLineDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  Data.clear();
-  DF.getFixups().clear();
+  SmallVector<char, 8> Data;
 
   MCDwarfLineAddr::encode(Context, getDWARFLinetableParams(), LineDelta,
                           AddrDelta, Data);
+  DF.setContents(Data);
+  DF.clearFixups();
   return OldSize != Data.size();
 }
 
@@ -1138,12 +1141,11 @@ bool MCAssembler::relaxDwarfCallFrameFragment(MCDwarfCallFrameFragment &DF) {
     return false;
   }
 
-  SmallVectorImpl<char> &Data = DF.getContents();
-  uint64_t OldSize = Data.size();
-  Data.clear();
-  DF.getFixups().clear();
-
+  auto OldSize = DF.getContents().size();
+  SmallVector<char, 8> Data;
   MCDwarfFrameEmitter::encodeAdvanceLoc(Context, Value, Data);
+  DF.setContents(Data);
+  DF.clearFixups();
   return OldSize != Data.size();
 }
 
@@ -1173,13 +1175,13 @@ bool MCAssembler::relaxPseudoProbeAddr(MCPseudoProbeAddrFragment &PF) {
   bool Abs = PF.getAddrDelta().evaluateKnownAbsolute(AddrDelta, *this);
   assert(Abs && "We created a pseudo probe with an invalid expression");
   (void)Abs;
-  SmallVectorImpl<char> &Data = PF.getContents();
-  Data.clear();
+  SmallVector<char, 8> Data;
   raw_svector_ostream OSE(Data);
-  PF.getFixups().clear();
 
   // AddrDelta is a signed integer
   encodeSLEB128(AddrDelta, OSE, OldSize);
+  PF.setContents(Data);
+  PF.clearFixups();
   return OldSize != Data.size();
 }
 
