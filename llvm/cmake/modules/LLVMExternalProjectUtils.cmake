@@ -404,6 +404,8 @@ function(llvm_ExternalProject_Add name source_dir)
                -DPACKAGE_VERSION=${PACKAGE_VERSION}
                -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
                -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
+               -DLLVM_ENABLE_SPHINX=${LLVM_ENABLE_SPHINX}
+               -DLLVM_BUILD_DOCS=${LLVM_BUILD_DOCS}
                -DCMAKE_EXPORT_COMPILE_COMMANDS=1
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}
