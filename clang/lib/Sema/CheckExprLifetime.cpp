@@ -1341,6 +1341,14 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       }
 
       if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
+
+        if (SemaRef.getLangOpts().CPlusPlus23) {
+          if (const VarDecl *VD =
+                  dyn_cast_if_present<VarDecl>(InitEntity->getDecl());
+              VD && VD->isCXXForRangeImplicitVar())
+            return false;
+        }
+
         SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
             << DiagRange;
         return false;
