@@ -156,6 +156,13 @@ LLVM_ABI extern char &InferAddressSpacesID;
 
 //===----------------------------------------------------------------------===//
 //
+// PackedIntegerCombinePass - Tracks individual bytes through instructions to
+// systematically identify redundant byte packing or unpacking operations.
+//
+LLVM_ABI FunctionPass *createPackedIntegerCombinePass();
+
+//===----------------------------------------------------------------------===//
+//
 // PartiallyInlineLibCalls - Tries to inline the fast path of library
 // calls such as sqrt.
 //

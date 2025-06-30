@@ -121,6 +121,7 @@
 #include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Transforms/Scalar/NewGVN.h"
+#include "llvm/Transforms/Scalar/PackedIntegerCombinePass.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SROA.h"
@@ -542,6 +543,9 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   // opportunities that creates).
   FPM.addPass(BDCEPass());
 
+  // Simplify bit-packed operations before cleaning up with instcombine.
+  FPM.addPass(PackedIntegerCombinePass());
+
   // Run instcombine after redundancy and dead bit elimination to exploit
   // opportunities opened up by them.
   FPM.addPass(InstCombinePass());
@@ -742,6 +746,9 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // computations, and then ADCE will run later to exploit any new DCE
   // opportunities that creates).
   FPM.addPass(BDCEPass());
+
+  // Simplify bit-packed operations before cleaning up with instcombine.
+  FPM.addPass(PackedIntegerCombinePass());
 
   // Run instcombine after redundancy and dead bit elimination to exploit
   // opportunities opened up by them.
