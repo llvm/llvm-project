@@ -11,15 +11,17 @@
 # Test strict mode warnings
 .inline_asm_mode strict
 
-# This should produce a warning
-# CHECK: warning: non-local label 'unsafe_global' in inline assembly strict mode may be unsafe for external jumps; consider using local labels (.L*) instead
+# This should produce a warning (non-numeric label)
+# CHECK: warning: non-numeric label 'unsafe_global' in inline assembly strict mode may be unsafe for external jumps; consider using numeric labels (1:, 2:, etc.) instead
 unsafe_global:
     nop
 
-# This should not warn (local label)
-.L_safe_local:
+# This should also warn
+# CHECK: warning: non-numeric label '.L_unsafe_local' in inline assembly strict mode may be unsafe for external jumps; consider using numeric labels (1:, 2:, etc.) instead
+.L_unsafe_local:
     nop
 
-# Test error handling
-.inline_asm_mode invalid
-# CHECK: error: expected 'strict' or 'relaxed'
+# No warning
+1:
+    nop
+

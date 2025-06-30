@@ -36,6 +36,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <cctype>
 #include <cstdint>
 #include <cstdlib>
 #include <optional>
@@ -402,13 +403,13 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 
   if (InlineAsmStrictMode) {
     StringRef Name = Symbol->getName();
-    if (!Name.empty() && !Name.starts_with(".L") && !Name.starts_with("L..") &&
-        !Name.starts_with("$") && !Name.starts_with("__") &&
-        Name.front() != '.' && !std::isdigit(Name.front())) {
+    // Only numeric labels are considered safe in inline assembly
+    // Skip compiler-generated temporary labels (like .Ltmp0, .Ltmp1, etc.)
+    if (!Name.empty() && !std::isdigit(Name.front()) && !Name.starts_with(".Ltmp")) {
       getContext().reportWarning(
-          Loc, "non-local label '" + Name +
+          Loc, "non-numeric label '" + Name +
                    "' in inline assembly strict mode may be unsafe for "
-                   "external jumps; consider using local labels (.L*) instead");
+                   "external jumps; consider using numeric labels (1:, 2:, etc.) instead");
     }
   }
 
