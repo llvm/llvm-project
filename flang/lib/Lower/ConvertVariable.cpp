@@ -647,13 +647,19 @@ fir::GlobalOp Fortran::lower::defineGlobal(
 
 /// Return linkage attribute for \p var.
 static mlir::StringAttr
-getLinkageAttribute(fir::FirOpBuilder &builder,
+getLinkageAttribute(Fortran::lower::AbstractConverter &converter,
                     const Fortran::lower::pft::Variable &var) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   // Runtime type info for a same derived type is identical in each compilation
   // unit. It desired to avoid having to link against module that only define a
   // type. Therefore the runtime type info is generated everywhere it is needed
-  // with `linkonce_odr` LLVM linkage.
-  if (var.isRuntimeTypeInfoData())
+  // with `linkonce_odr` LLVM linkage (unless the skipExternalRttiDefinition
+  // option is set, in which case one will need to link against objects of
+  // modules defining types). Builtin objects rtti is always generated because
+  // the builtin module is currently not compiled or part of the runtime.
+  if (var.isRuntimeTypeInfoData() &&
+      (!converter.getLoweringOptions().getSkipExternalRttiDefinition() ||
+       Fortran::semantics::IsFromBuiltinModule(var.getSymbol())))
     return builder.createLinkOnceODRLinkage();
   if (var.isModuleOrSubmoduleVariable())
     return {}; // external linkage
@@ -673,7 +679,7 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(sym);
   mlir::Location loc = genLocation(converter, sym);
-  mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   fir::GlobalOp global;
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
@@ -1265,7 +1271,7 @@ instantiateAggregateStore(Fortran::lower::AbstractConverter &converter,
   if (var.isGlobal()) {
     fir::GlobalOp global;
     auto &aggregate = var.getAggregateStore();
-    mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+    mlir::StringAttr linkage = getLinkageAttribute(converter, var);
     if (var.isModuleOrSubmoduleVariable()) {
       // A module global was or will be defined when lowering the module. Emit
       // only a declaration if the global does not exist at that point.
@@ -2470,8 +2476,7 @@ void Fortran::lower::defineModuleVariable(
     AbstractConverter &converter, const Fortran::lower::pft::Variable &var) {
   // Use empty linkage for module variables, which makes them available
   // for use in another unit.
-  mlir::StringAttr linkage =
-      getLinkageAttribute(converter.getFirOpBuilder(), var);
+  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   if (!var.isGlobal())
     fir::emitFatalError(converter.getCurrentLocation(),
                         "attempting to lower module variable as local");
@@ -2606,10 +2611,9 @@ void Fortran::lower::createIntrinsicModuleGlobal(
 void Fortran::lower::createRuntimeTypeInfoGlobal(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::semantics::Symbol &typeInfoSym) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   std::string globalName = converter.mangleName(typeInfoSym);
   auto var = Fortran::lower::pft::Variable(typeInfoSym, /*global=*/true);
-  mlir::StringAttr linkage = getLinkageAttribute(builder, var);
+  mlir::StringAttr linkage = getLinkageAttribute(converter, var);
   defineGlobal(converter, var, globalName, linkage);
 }
 
