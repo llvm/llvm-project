@@ -2125,10 +2125,9 @@ protected:
       result.GetOutputStream().Format("Dumping sections for {0} modules.\n",
                                       num_modules);
       for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-        if (INTERRUPT_REQUESTED(
-                GetDebugger(),
-                "Interrupted in dump all sections with {0} of {1} dumped",
-                image_idx, num_modules))
+        if (INTERRUPT_REQUESTED(GetDebugger(),
+              "Interrupted in dump all sections with {0} of {1} dumped",
+              image_idx, num_modules))
           break;
 
         num_dumped++;
@@ -2147,10 +2146,9 @@ protected:
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (INTERRUPT_REQUESTED(
-                    GetDebugger(),
-                    "Interrupted in dump section list with {0} of {1} dumped.",
-                    i, num_matches))
+            if (INTERRUPT_REQUESTED(GetDebugger(),
+                  "Interrupted in dump section list with {0} of {1} dumped.",
+                  i, num_matches))
               break;
 
             Module *module = module_list.GetModulePointerAtIndex(i);
@@ -2301,10 +2299,9 @@ protected:
       }
 
       for (size_t i = 0; i < num_matches; ++i) {
-        if (INTERRUPT_REQUESTED(
-                GetDebugger(),
-                "Interrupted in dump clang ast list with {0} of {1} dumped.", i,
-                num_matches))
+        if (INTERRUPT_REQUESTED(GetDebugger(),
+              "Interrupted in dump clang ast list with {0} of {1} dumped.",
+              i, num_matches))
           break;
 
         Module *m = module_list.GetModulePointerAtIndex(i);
@@ -2353,10 +2350,9 @@ protected:
       result.GetOutputStream().Format(
           "Dumping debug symbols for {0} modules.\n", num_modules);
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (INTERRUPT_REQUESTED(GetDebugger(),
-                                "Interrupted in dumping all "
+        if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted in dumping all "
                                 "debug symbols with {0} of {1} modules dumped",
-                                num_dumped, num_modules))
+                                 num_dumped, num_modules))
           break;
 
         if (DumpModuleSymbolFile(result.GetOutputStream(), module_sp.get()))
@@ -2373,10 +2369,9 @@ protected:
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (INTERRUPT_REQUESTED(GetDebugger(),
-                                    "Interrupted dumping {0} "
-                                    "of {1} requested modules",
-                                    i, num_matches))
+            if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping {0} "
+                                                   "of {1} requested modules",
+                                                   i, num_matches))
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (module) {
@@ -2445,8 +2440,8 @@ protected:
           for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
             if (INTERRUPT_REQUESTED(GetDebugger(),
                                     "Interrupted in dump all line tables with "
-                                    "{0} of {1} dumped",
-                                    num_dumped, num_modules))
+                                    "{0} of {1} dumped", num_dumped,
+                                    num_modules))
               break;
 
             if (DumpCompileUnitLineTable(
@@ -2531,8 +2526,8 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
-      case 'd':
-        m_load_all_debug_info.SetCurrentValue(false);
+      case 'f':
+        m_load_all_debug_info.SetCurrentValue(true);
         m_load_all_debug_info.SetOptionWasSet();
         break;
       case 'j':
@@ -2561,7 +2556,7 @@ public:
 
     OptionValueBoolean m_json = false;
     OptionValueBoolean m_errors_only = false;
-    OptionValueBoolean m_load_all_debug_info = true;
+    OptionValueBoolean m_load_all_debug_info = false;
   };
 
 protected:
