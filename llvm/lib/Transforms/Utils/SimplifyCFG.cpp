@@ -6255,11 +6255,10 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       // actually unique we check, wheter the conjucted bits and the another
       // conjuction with the input value will only be true for exactly CaseCount
       // number times.
-      if ((One << ActiveBits) - (One << (ActiveBits - AndMask.popcount())) ==
-          CaseCount) {
+      if ((One << (ActiveBits - AndMask.popcount())) == CaseCount) {
         Value *And = Builder.CreateAnd(Condition, AndMask);
-        Value *Cmp =
-            Builder.CreateICmpNE(And, Constant::getNullValue(And->getType()));
+        Value *Cmp = Builder.CreateICmpEQ(
+            And, Constant::getIntegerValue(And->getType(), AndMask));
         return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
       }
 

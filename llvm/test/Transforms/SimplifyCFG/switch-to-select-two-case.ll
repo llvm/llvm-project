@@ -314,7 +314,7 @@ define i1 @range0to4odd(i8 range(i8 0, 4) %f) {
 ; CHECK-LABEL: @range0to4odd(
 ; CHECK-NEXT:  bb3:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
@@ -335,7 +335,7 @@ define i1 @range1to4odd(i8 range(i8 1, 4) %f) {
 ; CHECK-LABEL: @range1to4odd(
 ; CHECK-NEXT:  bb3:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
@@ -356,7 +356,7 @@ define i1 @range0to8odd(i8 range(i8 0, 8) %f) {
 ; CHECK-LABEL: @range0to8odd(
 ; CHECK-NEXT:  bb3:
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i8 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
@@ -364,6 +364,101 @@ define i1 @range0to8odd(i8 range(i8 0, 8) %f) {
   i8 1, label %bb2
   i8 3, label %bb2
   i8 5, label %bb2
+  i8 7, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @range0to8most_significant_bit(i8 range(i8 0, 8) %f) {
+; CHECK-LABEL: @range0to8most_significant_bit(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 4, label %bb2
+  i8 5, label %bb2
+  i8 6, label %bb2
+  i8 7, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @range0to15_middle_two_bits(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @range0to15_middle_two_bits(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
+  i8 7, label %bb2
+  i8 14, label %bb2
+  i8 15, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @negative_range0to15(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @negative_range0to15(
+; CHECK-NEXT:    switch i8 [[F:%.*]], label [[BB3:%.*]] [
+; CHECK-NEXT:      i8 6, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 7, label [[BB2]]
+; CHECK-NEXT:      i8 14, label [[BB2]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i1 [[_0_SROA_0_0]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
+  i8 7, label %bb2
+  i8 14, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @negative_range0to15_pow_2(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @negative_range0to15_pow_2(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i8 [[F:%.*]], 6
+; CHECK-NEXT:    [[SWITCH_AND:%.*]] = and i8 [[TMP0]], -2
+; CHECK-NEXT:    [[SWITCH_SELECTCMP:%.*]] = icmp eq i8 [[SWITCH_AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[SWITCH_SELECTCMP]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
   i8 7, label %bb2
   ]
 bb1:
