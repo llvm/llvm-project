@@ -2218,6 +2218,9 @@ let Predicates = [HasPAuth] in {
 
   def LOADgotAUTH : Pseudo<(outs GPR64common:$dst), (ins i64imm:$addr), []>,
                Sched<[WriteI, ReadI]> {
+    // Make it possible to eliminate dead instruction after folding it
+    // into LOADgotPAC.
+    let hasSideEffects = 0;
     let Defs = [X16,X17,NZCV];
     let Size = 44;
   }
