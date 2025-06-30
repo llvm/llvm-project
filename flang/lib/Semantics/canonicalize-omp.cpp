@@ -126,13 +126,13 @@ private:
     parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
     auto &dir{std::get<parser::OmpLoopDirective>(beginDir.t)};
-    auto missingDoConstruct = [](auto &dir, auto &messages_) {
-      messages_.Say(dir.source,
+    auto missingDoConstruct = [](auto &dir, auto &messages) {
+      messages.Say(dir.source,
           "A DO loop must follow the %s directive"_err_en_US,
           parser::ToUpperCaseLetters(dir.source.ToString()));
     };
-    auto tileUnrollError = [](auto &dir, auto &messages_) {
-      messages_.Say(dir.source,
+    auto tileUnrollError = [](auto &dir, auto &messages) {
+      messages.Say(dir.source,
           "If a loop construct has been fully unrolled, it cannot then be tiled"_err_en_US,
           parser::ToUpperCaseLetters(dir.source.ToString()));
     };

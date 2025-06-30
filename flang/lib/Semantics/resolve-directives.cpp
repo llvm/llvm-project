@@ -2008,8 +2008,8 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
           std::get<parser::OmpBeginLoopDirective>(loop->value().t);
       auto &beginLoopDirective =
           std::get<parser::OmpLoopDirective>(beginDirective.t);
-      if ((beginLoopDirective.v != llvm::omp::Directive::OMPD_unroll &&
-              beginLoopDirective.v != llvm::omp::Directive::OMPD_tile)) {
+      if (beginLoopDirective.v != llvm::omp::Directive::OMPD_unroll &&
+          beginLoopDirective.v != llvm::omp::Directive::OMPD_tile) {
         context_.Say(GetContext().directiveSource,
             "Only UNROLL or TILE constructs are allowed between an OpenMP Loop Construct and a DO construct"_err_en_US,
             parser::ToUpperCaseLetters(llvm::omp::getOpenMPDirectiveName(

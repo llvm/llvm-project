@@ -4233,12 +4233,13 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto &optLoopCons =
       std::get<std::optional<parser::NestedConstruct>>(loopConstruct.t);
-  if (optLoopCons.has_value())
+  if (optLoopCons.has_value()) {
     if (auto *ompNestedLoopCons{
             std::get_if<common::Indirection<parser::OpenMPLoopConstruct>>(
                 &*optLoopCons)}) {
       genOMP(converter, symTable, semaCtx, eval, ompNestedLoopCons->value());
     }
+  }
 
   llvm::omp::Directive directive =
       std::get<parser::OmpLoopDirective>(beginLoopDirective.t).v;
