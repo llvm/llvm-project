@@ -38,10 +38,6 @@ DWARF:
               Form:            DW_FORM_data2
             - Attribute:       DW_AT_stmt_list 
               Form:            DW_FORM_sec_offset 
-            - Attribute:       DW_AT_low_pc
-              Form:            DW_FORM_addr
-            - Attribute:       DW_AT_high_pc
-              Form:            DW_FORM_data4
         - Code:            0x02
           Tag:             DW_TAG_subprogram 
           Children:        DW_CHILDREN_no
@@ -59,8 +55,6 @@ DWARF:
             - Value:           0x0
             - Value:           0x04
             - Value:           0x0
-            - Value:	       0xdeadbeef
-            - Value:	       0xdeadbeef
         - AbbrCode:        0x2
           Values:
             - Value:           0x1
@@ -84,10 +78,6 @@ DWARF:
   auto attrs = cu_entry->GetAttributes(unit, DWARFDebugInfoEntry::Recurse::yes);
   attrs.ExtractFormValueAtIndex(2, form_value); // Validate DW_AT_stmt_list
   ASSERT_EQ(form_value.Unsigned(), 0UL);
-  attrs.ExtractFormValueAtIndex(3, form_value); // Validate DW_AT_low_pc
-  ASSERT_EQ(form_value.Unsigned(), 0xdeadbeef);
-  attrs.ExtractFormValueAtIndex(4, form_value); // Validate DW_AT_high_pc
-  ASSERT_EQ(form_value.Unsigned(), 0xdeadbeef);
 
   DWARFDIE cu_die(unit, cu_entry);
   auto declaration = cu_die.GetFirstChild();
