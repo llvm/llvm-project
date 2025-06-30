@@ -140,7 +140,7 @@ protected:
 
     /// The location of the semi-colon.Add commentMore actions
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long SemiLoc : SourceLocation::Bits;
+    uint64_t SemiLoc : SourceLocation::Bits;
   };
 
   class CompoundStmtBitfields {
@@ -165,7 +165,7 @@ protected:
     unsigned : NumStmtBits;
 
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long IdentLoc : SourceLocation::Bits;
+    uint64_t IdentLoc : SourceLocation::Bits;
   };
 
   class AttributedStmtBitfields {
@@ -204,7 +204,7 @@ protected:
 
     /// The location of the "if"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long IfLoc : SourceLocation::Bits;
+    uint64_t IfLoc : SourceLocation::Bits;
   };
 
   class SwitchStmtBitfields {
@@ -229,7 +229,7 @@ protected:
 
     /// The location of the "switch".
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long SwitchLoc : SourceLocation::Bits;
+    uint64_t SwitchLoc : SourceLocation::Bits;
   };
 
   class WhileStmtBitfields {
@@ -245,7 +245,7 @@ protected:
 
     /// The location of the "while"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long WhileLoc : SourceLocation::Bits;
+    uint64_t WhileLoc : SourceLocation::Bits;
   };
 
   class DoStmtBitfields {
@@ -256,7 +256,7 @@ protected:
 
     /// The location of the "do"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long DoLoc : SourceLocation::Bits;
+    uint64_t DoLoc : SourceLocation::Bits;
   };
 
   class ForStmtBitfields {
@@ -267,7 +267,7 @@ protected:
 
     /// The location of the "for"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long ForLoc : SourceLocation::Bits;
+    uint64_t ForLoc : SourceLocation::Bits;
   };
 
   class GotoStmtBitfields {
@@ -279,7 +279,7 @@ protected:
 
     /// The location of the "goto"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long GotoLoc : SourceLocation::Bits;
+    uint64_t GotoLoc : SourceLocation::Bits;
   };
 
   class ContinueStmtBitfields {
@@ -290,7 +290,7 @@ protected:
 
     /// The location of the "continue"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long ContinueLoc : SourceLocation::Bits;
+    uint64_t ContinueLoc : SourceLocation::Bits;
   };
 
   class BreakStmtBitfields {
@@ -301,7 +301,7 @@ protected:
 
     /// The location of the "break"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long BreakLoc : SourceLocation::Bits;
+    uint64_t BreakLoc : SourceLocation::Bits;
   };
 
   class ReturnStmtBitfields {
@@ -316,7 +316,7 @@ protected:
 
     /// The location of the "return"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long RetLoc : SourceLocation::Bits;
+    uint64_t RetLoc : SourceLocation::Bits;
   };
 
   class SwitchCaseBitfields {
@@ -333,7 +333,7 @@ protected:
 
     /// The location of the "case" or "default" keyword.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long KeywordLoc : SourceLocation::Bits;
+    uint64_t KeywordLoc : SourceLocation::Bits;
   };
 
   //===--- Expression bitfields classes ---===//
@@ -550,7 +550,7 @@ protected:
     unsigned : NumExprBits;
 
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long RBracketLoc : SourceLocation::Bits;
+    uint64_t RBracketLoc : SourceLocation::Bits;
   };
 
   class CallExprBitfields {
@@ -705,7 +705,7 @@ protected:
 
     /// The location of the "_Generic"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long GenericLoc : SourceLocation::Bits;
+    uint64_t GenericLoc : SourceLocation::Bits;
   };
 
   class PseudoObjectExprBitfields {
@@ -815,7 +815,7 @@ protected:
 
     /// The location of the boolean ligeral
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class CXXNullPtrLiteralExprBitfields {
@@ -826,7 +826,7 @@ protected:
 
     /// The location of the null pointer literal.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class CXXThisExprBitfields {
@@ -846,7 +846,7 @@ protected:
 
     /// The location of the "this"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class CXXThrowExprBitfields {
@@ -862,7 +862,7 @@ protected:
 
     /// The location of the "throw"
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long ThrowLoc : SourceLocation::Bits;
+    uint64_t ThrowLoc : SourceLocation::Bits;
   };
 
   class CXXDefaultArgExprBitfields {
@@ -878,7 +878,7 @@ protected:
 
     /// The location where the default argument expression was used.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class CXXDefaultInitExprBitfields {
@@ -895,7 +895,7 @@ protected:
 
     /// The location where the default initializer expression was used.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class CXXScalarValueInitExprBitfields {
@@ -907,7 +907,7 @@ protected:
 
     /// The location where the default initializer expression was used.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long RParenLoc : SourceLocation::Bits;
+    uint64_t RParenLoc : SourceLocation::Bits;
   };
 
   class CXXNewExprBitfields {
@@ -984,7 +984,7 @@ protected:
 
     /// Location of the expression
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class TypeTraitExprBitfields {
@@ -1100,7 +1100,7 @@ protected:
     
     /// The location of the '->' or '.' operator.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long OperatorLoc : SourceLocation::Bits;
+    uint64_t OperatorLoc : SourceLocation::Bits;
   };
 
   class OverloadExprBitfields {
@@ -1181,7 +1181,7 @@ protected:
 
     /// The location of the non-type template parameter reference.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long NameLoc : SourceLocation::Bits;
+    uint64_t NameLoc : SourceLocation::Bits;
   };
 
   class LambdaExprBitfields {
@@ -1222,7 +1222,7 @@ protected:
     unsigned IsSatisfied : 1;
 
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long RequiresKWLoc : SourceLocation::Bits;
+    uint64_t RequiresKWLoc : SourceLocation::Bits;
   };
 
   class ArrayTypeTraitExprBitfields {
@@ -1316,7 +1316,7 @@ protected:
     
      /// The location of the non-type template parameter reference.
     LLVM_PREFERRED_TYPE(SourceLocation)
-    unsigned long Loc : SourceLocation::Bits;
+    uint64_t Loc : SourceLocation::Bits;
   };
 
   class ConvertVectorExprBitfields {
