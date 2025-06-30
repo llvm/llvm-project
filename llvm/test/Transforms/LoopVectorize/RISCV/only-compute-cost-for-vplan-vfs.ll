@@ -5,10 +5,10 @@
 ; REQUIRES: asserts
 
 ; Make sure we do not vectorize a loop with a widened pointer induction.
-define void @test_wide_integer_induction(ptr noalias %a, i64 %N) {
+define void @test_wide_pointer_induction(ptr noalias %a, i64 %N) {
 ; CHECK-NOT: LV: Vector loop of width {{.+}} costs:
 ;
-; CHECK: define void @test_wide_integer_induction(
+; CHECK: define void @test_wide_pointer_induction(
 ; CHECK-NOT: vector.body
 ;
 entry:
