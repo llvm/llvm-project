@@ -169,16 +169,16 @@ struct CBufferResource {
             {Handle, ConstantInt::get(Builder.getInt32Ty(), ++CurrentRow)},
             nullptr, Name + ".load");
 
-      Extracts.push_back(Builder.CreateExtractValue(
-          CBufLoad, {CurrentIndex++}, Name + ".extract"));
+      Extracts.push_back(Builder.CreateExtractValue(CBufLoad, {CurrentIndex++},
+                                                    Name + ".extract"));
     }
 
     // Finally, we build up the original loaded value.
     Result = PoisonValue::get(Ty);
     for (int I = 0, E = Extracts.size(); I < E; ++I)
-      Result = Builder.CreateInsertElement(Result, Extracts[I],
-                                           Builder.getInt32(I),
-                                           Name + formatv(".upto{}", I));
+      Result =
+          Builder.CreateInsertElement(Result, Extracts[I], Builder.getInt32(I),
+                                      Name + formatv(".upto{}", I));
     return Result;
   }
 };
