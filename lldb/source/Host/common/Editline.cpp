@@ -122,21 +122,20 @@ static int GetOperation(HistoryOperation op) {
   //  - The H_FIRST returns the most recent entry in the history.
   //
   // The naming of the enum entries match the semantic meaning.
-  switch(op) {
-    case HistoryOperation::Oldest:
-      return H_LAST;
-    case HistoryOperation::Older:
-      return H_NEXT;
-    case HistoryOperation::Current:
-      return H_CURR;
-    case HistoryOperation::Newer:
-      return H_PREV;
-    case HistoryOperation::Newest:
-      return H_FIRST;
+  switch (op) {
+  case HistoryOperation::Oldest:
+    return H_LAST;
+  case HistoryOperation::Older:
+    return H_NEXT;
+  case HistoryOperation::Current:
+    return H_CURR;
+  case HistoryOperation::Newer:
+    return H_PREV;
+  case HistoryOperation::Newest:
+    return H_FIRST;
   }
   llvm_unreachable("Fully covered switch!");
 }
-
 
 EditLineStringType CombineLines(const std::vector<EditLineStringType> &lines) {
   EditLineStringStreamType combined_stream;
@@ -313,8 +312,8 @@ protected:
   /// Path to the history file.
   std::string m_path;
 };
-}
-}
+} // namespace line_editor
+} // namespace lldb_private
 
 // Editline private methods
 
@@ -1151,7 +1150,8 @@ unsigned char Editline::TabCommand(int ch) {
       to_add.push_back(' ');
       el_deletestr(m_editline, request.GetCursorArgumentPrefix().size());
       el_insertstr(m_editline, to_add.c_str());
-      // Clear all the autosuggestion parts if the only single space can be completed.
+      // Clear all the autosuggestion parts if the only single space can be
+      // completed.
       if (to_add == " ")
         return CC_REDISPLAY;
       return CC_REFRESH;

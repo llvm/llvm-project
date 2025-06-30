@@ -696,7 +696,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     mlir::Type ty = cgm.convertType(destType);
-    assert(mlir::isa<cir::CIRFPTypeInterface>(ty) &&
+    assert(mlir::isa<cir::FPTypeInterface>(ty) &&
            "expected floating-point type");
     return cgm.getBuilder().getAttr<cir::FPAttr>(ty, init);
   }
@@ -793,7 +793,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
           builder.getAttr<cir::IntAttr>(complexElemTy, imag));
     }
 
-    assert(isa<cir::CIRFPTypeInterface>(complexElemTy) &&
+    assert(isa<cir::FPTypeInterface>(complexElemTy) &&
            "expected floating-point type");
     llvm::APFloat real = value.getComplexFloatReal();
     llvm::APFloat imag = value.getComplexFloatImag();

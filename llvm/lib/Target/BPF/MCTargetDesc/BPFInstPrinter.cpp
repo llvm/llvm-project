@@ -42,11 +42,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
   if (!SRE)
     report_fatal_error("Unexpected MCExpr type.");
 
-#ifndef NDEBUG
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
-
-  assert(Kind == MCSymbolRefExpr::VK_None);
-#endif
+  assert(SRE->getSpecifier() == 0);
   O << *Expr;
 }
 
