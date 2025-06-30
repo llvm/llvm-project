@@ -444,6 +444,11 @@ MCFragment *CodeViewContext::emitDefRange(
     StringRef FixedSizePortion) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
+  FixedSizePortion = MCCtx->allocateString(FixedSizePortion);
+  auto Pos = DefRangeStorage.size();
+  llvm::append_range(DefRangeStorage, Ranges);
+  if (!Ranges.empty())
+    Ranges = {&DefRangeStorage[Pos], Ranges.size()};
   auto *F =
       MCCtx->allocFragment<MCCVDefRangeFragment>(Ranges, FixedSizePortion);
   OS.insert(F);
