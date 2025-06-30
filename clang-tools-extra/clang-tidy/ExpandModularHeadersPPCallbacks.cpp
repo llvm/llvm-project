@@ -90,14 +90,14 @@ ExpandModularHeadersPPCallbacks::ExpandModularHeadersPPCallbacks(
                                               &Compiler.getTarget());
 
   PP = std::make_unique<clang::Preprocessor>(Compiler.getPreprocessorOpts(),
-                                             Diags, LangOpts, Sources,
+                                             Diags, LangOpts, CGOpts, Sources,
                                              *HeaderInfo, ModuleLoader,
                                              /*IILookup=*/nullptr,
                                              /*OwnsHeaderSearch=*/false);
   PP->Initialize(Compiler.getTarget(), Compiler.getAuxTarget());
   InitializePreprocessor(*PP, Compiler.getPreprocessorOpts(),
                          Compiler.getPCHContainerReader(),
-                         Compiler.getFrontendOpts(), Compiler.getCodeGenOpts());
+                         Compiler.getFrontendOpts());
   ApplyHeaderSearchOptions(*HeaderInfo, HSOpts, LangOpts,
                            Compiler.getTarget().getTriple());
 }

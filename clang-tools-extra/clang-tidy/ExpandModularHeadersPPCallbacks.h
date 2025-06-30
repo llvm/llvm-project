@@ -131,6 +131,7 @@ private:
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   LangOptions LangOpts;
+  CodeGenOptions CGOpts;
   HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModuleLoader;
 
