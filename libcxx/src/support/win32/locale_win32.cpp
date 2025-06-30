@@ -57,6 +57,68 @@ size_t __strftime(char* ret, size_t n, const char* format, const struct tm* tm, 
   __locale_guard __current(loc);
   return std::strftime(ret, n, format, tm);
 }
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+int __iswctype(wint_t c, wctype_t type, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswctype(c, type);
+}
+int __iswspace(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswspace(c);
+}
+int __iswprint(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswprint(c);
+}
+int __iswcntrl(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswcntrl(c);
+}
+int __iswupper(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswupper(c);
+}
+int __iswlower(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswlower(c);
+}
+int __iswalpha(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswalpha(c);
+}
+int __iswblank(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswblank(c);
+}
+int __iswdigit(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswdigit(c);
+}
+int __iswpunct(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswpunct(c);
+}
+int __iswxdigit(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::iswxdigit(c);
+}
+wint_t __towupper(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::towupper(c);
+}
+wint_t __towlower(wint_t c, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::towlower(c);
+}
+int __wcscoll(const wchar_t* ws1, const wchar_t* ws2, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::wcscoll(ws1, ws2);
+}
+size_t __wcsxfrm(wchar_t* dest, const wchar_t* src, size_t n, __locale_t loc) {
+  __locale_guard __current(loc);
+  return ::wcsxfrm(dest, src, n);
+}
+#  endif
 #endif
 
 //
