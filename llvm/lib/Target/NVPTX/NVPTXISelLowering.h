@@ -86,10 +86,7 @@ enum NodeType : unsigned {
   StoreParam,
   StoreParamV2,
   StoreParamV4,
-  StoreRetval,
-  StoreRetvalV2,
-  StoreRetvalV4,
-  LAST_MEMORY_OPCODE = StoreRetvalV4,
+  LAST_MEMORY_OPCODE = StoreParamV4,
 };
 }
 

@@ -223,6 +223,7 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
+    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
@@ -647,6 +648,13 @@ Improvements to Clang's diagnostics
   #GH142457, #GH139913, #GH138850, #GH137867, #GH137860, #GH107840, #GH93308,
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
+
+- Clang now avoids issuing `-Wreturn-type` warnings in some cases where
+  the final statement of a non-void function is a `throw` expression, or
+  a call to a function that is trivially known to always throw (i.e., its
+  body consists solely of a `throw` statement). This avoids certain
+  false positives in exception-heavy code, though only simple patterns
+  are currently recognized.
 
   
 Improvements to Clang's time-trace

@@ -233,6 +233,7 @@ protected:
   bool HasPseudoScalarTrans = false;
   bool HasRestrictedSOffset = false;
   bool HasBitOp3Insts = false;
+  bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
   bool HasPermlane16Swap = false;
@@ -1384,6 +1385,8 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.

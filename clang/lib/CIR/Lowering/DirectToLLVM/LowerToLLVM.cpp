@@ -529,12 +529,12 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type srcTy = elementTypeIfVector(castOp.getSrc().getType());
     mlir::Type dstTy = elementTypeIfVector(castOp.getType());
 
-    if (!mlir::isa<cir::CIRFPTypeInterface>(dstTy) ||
-        !mlir::isa<cir::CIRFPTypeInterface>(srcTy))
+    if (!mlir::isa<cir::FPTypeInterface>(dstTy) ||
+        !mlir::isa<cir::FPTypeInterface>(srcTy))
       return castOp.emitError() << "NYI cast from " << srcTy << " to " << dstTy;
 
     auto getFloatWidth = [](mlir::Type ty) -> unsigned {
-      return mlir::cast<cir::CIRFPTypeInterface>(ty).getWidth();
+      return mlir::cast<cir::FPTypeInterface>(ty).getWidth();
     };
 
     if (getFloatWidth(srcTy) > getFloatWidth(dstTy))
@@ -928,7 +928,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     attr = rewriter.getIntegerAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::IntAttr>(op.getValue()).getValue());
-  } else if (mlir::isa<cir::CIRFPTypeInterface>(op.getType())) {
+  } else if (mlir::isa<cir::FPTypeInterface>(op.getType())) {
     attr = rewriter.getFloatAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::FPAttr>(op.getValue()).getValue());
@@ -1349,7 +1349,7 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   }
 
   // Floating point unary operations: + - ++ --
-  if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
+  if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     switch (op.getKind()) {
     case cir::UnaryOpKind::Inc: {
       assert(!isVector && "++ not allowed on vector types");
@@ -1438,7 +1438,7 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     return op.emitError() << "inconsistent operands' types not supported yet";
 
   mlir::Type type = op.getRhs().getType();
-  if (!mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
+  if (!mlir::isa<cir::IntType, cir::BoolType, cir::FPTypeInterface,
                  mlir::IntegerType, cir::VectorType>(type))
     return op.emitError() << "operand type not supported yet";
 
@@ -1601,7 +1601,7 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
                                       /* isSigned=*/false);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::CIRFPTypeInterface>(type)) {
+  } else if (mlir::isa<cir::FPTypeInterface>(type)) {
     mlir::LLVM::FCmpPredicate kind =
         convertCmpKindToFCmpPredicate(cmpOp.getKind());
     rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
@@ -2059,7 +2059,7 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), intType.isSigned()),
         adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
+  } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     bitResult = rewriter.create<mlir::LLVM::FCmpOp>(
         op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
         adaptor.getLhs(), adaptor.getRhs());

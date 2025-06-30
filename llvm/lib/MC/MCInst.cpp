@@ -35,7 +35,8 @@ void MCOperand::print(raw_ostream &OS, const MCRegisterInfo *RegInfo) const {
   else if (isDFPImm())
     OS << "DFPImm:" << bit_cast<double>(getDFPImm());
   else if (isExpr()) {
-    OS << "Expr:" << *getExpr();
+    OS << "Expr:";
+    getExpr()->print(OS, nullptr);
   } else if (isInst()) {
     OS << "Inst:(";
     if (const auto *Inst = getInst())
@@ -62,7 +63,7 @@ bool MCOperand::isBareSymbolRef() const {
   const MCExpr *Expr = getExpr();
   MCExpr::ExprKind Kind = getExpr()->getKind();
   return Kind == MCExpr::SymbolRef &&
-    cast<MCSymbolRefExpr>(Expr)->getKind() == MCSymbolRefExpr::VK_None;
+         cast<MCSymbolRefExpr>(Expr)->getSpecifier() == 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
