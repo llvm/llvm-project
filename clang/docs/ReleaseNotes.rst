@@ -1100,6 +1100,9 @@ Crash and bug fixes
 - Fixed a crash in ``UnixAPIMisuseChecker`` and ``MallocChecker`` when analyzing
   code with non-standard ``getline`` or ``getdelim`` function signatures. (#GH144884)
 
+- Fixed a crash when analyzing default bindings as compound literals in
+  designated initializers for bitfields in unions. (#GH146050)
+
 Improvements
 ^^^^^^^^^^^^
 
