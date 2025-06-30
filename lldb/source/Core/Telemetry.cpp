@@ -162,12 +162,11 @@ void TelemetryManager::DispatchClientTelemetry(
              "Cannot determine client_data from client-telemetry entry");
 
   if (auto maybe_start_time = GetAsNanosec(dict, "start_time"))
-      client_info.start_time += *maybe_start_time;
+    client_info.start_time += *maybe_start_time;
 
-  auto end_time = GetAsNanosec(dict, "end_time");
-  if (end_time.has_value()) {
+  if (auto maybe_end_time = GetAsNanosec(dict, "end_time")) {
     SteadyTimePoint epoch;
-    client_info.end_time = epoch + end_time.value();
+    client_info.end_time = epoch + maybe_end_time.value();
   }
 
   llvm::StringRef error_msg;
