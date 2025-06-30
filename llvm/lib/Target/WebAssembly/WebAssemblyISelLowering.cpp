@@ -18,7 +18,6 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -3223,11 +3222,8 @@ static SDValue performBitcastCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   EVT SrcVT = Src.getValueType();
 
-  bool Vectorizable = DCI.isBeforeLegalize() && VT.isScalarInteger() &&
-                      SrcVT.isFixedLengthVector() &&
-                      SrcVT.getScalarType() == MVT::i1;
-
-  if (!Vectorizable)
+  if (!(DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+        SrcVT.isFixedLengthVector() && SrcVT.getScalarType() == MVT::i1))
     return SDValue();
 
   unsigned NumElts = SrcVT.getVectorNumElements();
@@ -3252,23 +3248,24 @@ static SDValue performBitcastCombine(SDNode *N,
     SDValue Concat, SetCCVector;
     ISD::CondCode SetCond;
 
-    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat),
-                                         m_VectorVT(m_Value(SetCCVector)),
+    if (!sd_match(N, m_BitCast(m_c_SetCC(m_Value(Concat), m_Value(SetCCVector),
                                          m_CondCode(SetCond)))))
       return SDValue();
     if (Concat.getOpcode() != ISD::CONCAT_VECTORS)
       return SDValue();
-    // CHECK IF VECTOR is a constant, i.e all values are the same
-    if (!ISD::isBuildVectorOfConstantSDNodes(SetCCVector.getNode()))
-      return SDValue();
 
-    SDValue SplitSetCCVec =
-        DAG.getSplat(MVT::v16i8, DL, SetCCVector->ops().front());
+    uint64_t ElementWidth =
+        SetCCVector.getValueType().getVectorElementType().getFixedSizeInBits();
 
     SmallVector<SDValue> VectorsToShuffle;
-    for (SDValue V : Concat->ops())
+    for (size_t I = 0; I < Concat->ops().size(); I++) {
       VectorsToShuffle.push_back(DAG.getBitcast(
-          MVT::i16, DAG.getSetCC(DL, MVT::v16i1, V, SplitSetCCVec, SetCond)));
+          MVT::i16,
+          DAG.getSetCC(DL, MVT::v16i1, Concat->ops()[I],
+                       extractSubVector(SetCCVector, I * (128 / ElementWidth),
+                                        DAG, DL, 128),
+                       SetCond)));
+    }
 
     MVT ReturnType = VectorsToShuffle.size() == 2 ? MVT::i32 : MVT::i64;
     SDValue ReturningInteger = DAG.getConstant(0, DL, ReturnType);
