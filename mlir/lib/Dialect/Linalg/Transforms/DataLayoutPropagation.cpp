@@ -359,16 +359,9 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 }
 
 static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
-  Block *block = genericOp.getBody();
-  int numBlockArgs = block->getNumArguments();
-  int numDpsOuts = genericOp.getNumDpsInits();
-  int initArgStartIndex = numBlockArgs - numDpsOuts;
-  for (int i = 0; i < numDpsOuts; ++i) {
-    int matchingInitArgIndex = initArgStartIndex + i;
-    if (!block->getArgument(matchingInitArgIndex).use_empty())
-      return false;
-  }
-  return true;
+  return llvm::all_of(genericOp.getDpsInitsMutable(), [&](OpOperand &operand) {
+    return genericOp.getMatchingBlockArgument(&operand).use_empty();
+  });
 }
 
 /// Bubbles up linalg.pack op through a producer generic op. This
