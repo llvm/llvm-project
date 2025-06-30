@@ -5160,6 +5160,11 @@ cc_binary(
     ],
 )
 
+filegroup(
+    name = "gdb-scripts",
+    srcs = glob(["utils/gdb-scripts/*"]),
+)
+
 ################################################################################
 # Begin testonly libraries
 
