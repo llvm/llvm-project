@@ -63,7 +63,7 @@ void MCObjectStreamer::resolvePendingFixups() {
     PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset() +
                                  PendingFixup.Fixup.getOffset());
 
-    // If the location symbol to relocate is in MCEncodedFragmentWithFixups,
+    // If the location symbol to relocate is in MCEncodedFragment,
     // put the Fixup into location symbol's fragment. Otherwise
     // put into PendingFixup.DF
     MCFragment *SymFragment = PendingFixup.Sym->getFragment();
@@ -71,15 +71,9 @@ void MCObjectStreamer::resolvePendingFixups() {
     case MCFragment::FT_Relaxable:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_PseudoProbe:
-      cast<MCEncodedFragmentWithFixups<8, 1>>(SymFragment)
-          ->getFixups()
-          .push_back(PendingFixup.Fixup);
-      break;
     case MCFragment::FT_Data:
     case MCFragment::FT_CVDefRange:
-      cast<MCEncodedFragmentWithFixups<32, 4>>(SymFragment)
-          ->getFixups()
-          .push_back(PendingFixup.Fixup);
+      cast<MCEncodedFragment>(SymFragment)->addFixup(PendingFixup.Fixup);
       break;
     default:
       PendingFixup.DF->addFixup(PendingFixup.Fixup);
@@ -398,10 +392,9 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
 
   auto CodeOffset = DF->getContents().size();
-  for (MCFixup &Fixup : Fixups) {
+  for (MCFixup &Fixup : Fixups)
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    DF->addFixup(Fixup);
-  }
+  DF->appendFixups(Fixups);
   DF->setHasInstructions(STI);
   DF->appendContents(Code);
 }
@@ -414,8 +407,11 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
       getContext().allocFragment<MCRelaxableFragment>(Inst, STI);
   insert(IF);
 
-  getAssembler().getEmitter().encodeInstruction(Inst, IF->getContents(),
-                                                IF->getFixups(), STI);
+  SmallVector<MCFixup, 1> Fixups;
+  getAssembler().getEmitter().encodeInstruction(
+      Inst, IF->getContentsForAppending(), Fixups, STI);
+  IF->doneAppending();
+  IF->appendFixups(Fixups);
 }
 
 #ifndef NDEBUG

@@ -512,7 +512,7 @@ void CodeViewContext::encodeInlineLineTable(const MCAssembler &Asm,
 
   MCCVFunctionInfo *SiteInfo = getCVFunctionInfo(Frag.SiteFuncId);
 
-  SmallVectorImpl<char> &Buffer = Frag.getContents();
+  SmallVector<char, 0> Buffer;
   Buffer.clear(); // Clear old contents if we went through relaxation.
   for (const MCCVLoc &Loc : Locs) {
     // Exit early if our line table would produce an oversized InlineSiteSym
@@ -606,15 +606,14 @@ void CodeViewContext::encodeInlineLineTable(const MCAssembler &Asm,
 
   compressAnnotation(BinaryAnnotationsOpCode::ChangeCodeLength, Buffer);
   compressAnnotation(std::min(EndSymLength, LocAfterLength), Buffer);
+  Frag.setContents(Buffer);
 }
 
 void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
                                      MCCVDefRangeFragment &Frag) {
   MCContext &Ctx = Asm.getContext();
-  SmallVectorImpl<char> &Contents = Frag.getContents();
-  Contents.clear();
-  SmallVectorImpl<MCFixup> &Fixups = Frag.getFixups();
-  Fixups.clear();
+  SmallVector<char, 0> Contents;
+  SmallVector<MCFixup, 0> Fixups;
   raw_svector_ostream OS(Contents);
 
   // Compute all the sizes up front.
@@ -694,4 +693,7 @@ void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
       GapStartOffset += GapSize + RangeSize;
     }
   }
+
+  Frag.setContents(Contents);
+  Frag.setFixups(Fixups);
 }

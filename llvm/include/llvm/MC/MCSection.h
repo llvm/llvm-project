@@ -39,6 +39,7 @@ class LLVM_ABI MCSection {
 public:
   friend MCAssembler;
   friend MCObjectStreamer;
+  friend class MCEncodedFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -115,6 +116,10 @@ private:
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
+
+  // Content and fixup storage for fragments
+  SmallVector<char, 0> ContentStorage;
+  SmallVector<MCFixup, 0> FixupStorage;
 
 protected:
   // TODO Make Name private when possible.
