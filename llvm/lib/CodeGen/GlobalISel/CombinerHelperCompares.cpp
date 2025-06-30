@@ -140,3 +140,92 @@ bool CombinerHelper::matchCanonicalizeFCmp(const MachineInstr &MI,
 
   return false;
 }
+
+bool CombinerHelper::combineMergedBFXCompare(MachineInstr &MI) const {
+  const GICmp *Cmp = cast<GICmp>(&MI);
+
+  ICmpInst::Predicate CC = Cmp->getCond();
+  if (CC != CmpInst::ICMP_EQ && CC != CmpInst::ICMP_NE)
+    return false;
+
+  Register CmpLHS = Cmp->getLHSReg();
+  Register CmpRHS = Cmp->getRHSReg();
+
+  LLT OpTy = MRI.getType(CmpLHS);
+  if (!OpTy.isScalar() || OpTy.isPointer())
+    return false;
+
+  assert(isZeroOrZeroSplat(CmpRHS, /*AllowUndefs=*/false));
+
+  Register Src;
+  const auto IsSrc = [&](Register R) {
+    if (!Src) {
+      Src = R;
+      return true;
+    }
+
+    return Src == R;
+  };
+
+  MachineInstr *CmpLHSDef = MRI.getVRegDef(CmpLHS);
+  if (CmpLHSDef->getOpcode() != TargetOpcode::G_OR)
+    return false;
+
+  APInt PartsMask(OpTy.getSizeInBits(), 0);
+  SmallVector<MachineInstr *> Worklist = {CmpLHSDef};
+  while (!Worklist.empty()) {
+    MachineInstr *Cur = Worklist.pop_back_val();
+
+    Register Dst = Cur->getOperand(0).getReg();
+    if (!MRI.hasOneUse(Dst) && Dst != Src)
+      return false;
+
+    if (Cur->getOpcode() == TargetOpcode::G_OR) {
+      Worklist.push_back(MRI.getVRegDef(Cur->getOperand(1).getReg()));
+      Worklist.push_back(MRI.getVRegDef(Cur->getOperand(2).getReg()));
+      continue;
+    }
+
+    if (Cur->getOpcode() == TargetOpcode::G_UBFX) {
+      Register Op = Cur->getOperand(1).getReg();
+      Register Width = Cur->getOperand(2).getReg();
+      Register Off = Cur->getOperand(3).getReg();
+
+      auto WidthCst = getIConstantVRegVal(Width, MRI);
+      auto OffCst = getIConstantVRegVal(Off, MRI);
+      if (!WidthCst || !OffCst || !IsSrc(Op))
+        return false;
+
+      unsigned Start = OffCst->getZExtValue();
+      unsigned End = Start + WidthCst->getZExtValue();
+      if (End > OpTy.getScalarSizeInBits())
+        return false;
+      PartsMask.setBits(Start, End);
+      continue;
+    }
+
+    if (Cur->getOpcode() == TargetOpcode::G_AND) {
+      Register LHS = Cur->getOperand(1).getReg();
+      Register RHS = Cur->getOperand(2).getReg();
+
+      auto MaskCst = getIConstantVRegVal(RHS, MRI);
+      if (!MaskCst || !MaskCst->isMask() || !IsSrc(LHS))
+        return false;
+
+      PartsMask |= *MaskCst;
+      continue;
+    }
+
+    return false;
+  }
+
+  if (!PartsMask.isMask() || !Src)
+    return false;
+
+  assert(OpTy == MRI.getType(Src) && "Ignored a type casting operation?");
+  auto MaskedSrc =
+      Builder.buildAnd(OpTy, Src, Builder.buildConstant(OpTy, PartsMask));
+  Builder.buildICmp(CC, Cmp->getReg(0), MaskedSrc, CmpRHS, Cmp->getFlags());
+  MI.eraseFromParent();
+  return true;
+}
