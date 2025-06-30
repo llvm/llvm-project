@@ -175,9 +175,8 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
       WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
                                ToTimeout(GetNextWakeupTime()), FALSE);
 
-  for (auto &[_, fd_info] : m_read_fds) {
+  for (auto &[_, fd_info] : m_read_fds)
     fd_info.event->DidPoll();
-  }
 
   if (result >= WSA_WAIT_EVENT_0 && result < WSA_WAIT_EVENT_0 + events.size())
     return result - WSA_WAIT_EVENT_0;

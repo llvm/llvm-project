@@ -88,7 +88,7 @@ TEST_F(MainLoopTest, ReadPipeObject) {
 
   char X = 'X';
   size_t len = sizeof(X);
-  ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
 
   Status error;
   auto handle = loop.RegisterReadObject(
@@ -124,8 +124,7 @@ TEST_F(MainLoopTest, NoSpuriousPipeReads) {
           // pipe is empty, and we should not be called anymore.
           char X;
           size_t len = sizeof(X);
-          EXPECT_THAT_ERROR(r->Read(&X, len).ToError(), llvm::Succeeded());
-          EXPECT_EQ(len, sizeof(X));
+          EXPECT_THAT_EXPECTED(r->Read(&X, len).ToError(), llvm::HasValue(1));
         }
         ++callback_count;
       },
