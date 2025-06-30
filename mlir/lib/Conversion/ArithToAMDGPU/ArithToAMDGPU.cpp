@@ -482,6 +482,7 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   if (!outVecType) {
     Value inCast =
         rewriter.create<vector::SplatOp>(loc, VectorType::get(1, inType), in);
+    // TODO: replace this with non-packed ScaledExtOp
     Value scaleExt = rewriter.create<amdgpu::ScaledExtPackedOp>(
         loc, extScaleResultType, inCast, scale, 0);
     scaleExt = rewriter.replaceOpWithNewOp<vector::ExtractOp>(op, scaleExt, 0);
@@ -530,6 +531,7 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
          i += sliceWidth, sliceWidth = opWidth - blockSize % opWidth) {
       Value slice = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, block1D, i, sliceWidth, 1);
+      // TODO: replace this with non-packed ScaledExtOp for sliceWidth == 1
       Value scaleExt = rewriter.create<amdgpu::ScaledExtPackedOp>(
           loc, extScaleResultType, slice, uniformScale, 0);
       if (sliceWidth != opWidth)
@@ -586,10 +588,8 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
 
   if (!outVecType) {
     Type inVecType = VectorType::get(1, inType);
-    // Type exisingVecType = VectorType::get(opWidth, outType);
     Value inCast = rewriter.create<vector::SplatOp>(loc, inVecType, in);
-    // Value existing =
-    //     rewriter.createOrFold<vector::SplatOp>(loc, exisingVecType, zero);
+    // TODO: replace this with non-packed ScaledTruncOp
     Value scaleTrunc = rewriter.create<amdgpu::PackedScaledTruncOp>(
         loc, truncScaleResultType, inCast, scale, 0, /*existing=*/nullptr);
     scaleTrunc =
@@ -637,9 +637,7 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
          i += sliceWidth, sliceWidth = opWidth - blockSize % opWidth) {
       Value slice = rewriter.create<vector::ExtractStridedSliceOp>(
           loc, block1D, i, sliceWidth, 1);
-      // VectorType exisingVecType = VectorType::get(opWidth, outType);
-      // Value existing =
-      //     rewriter.createOrFold<vector::SplatOp>(loc, exisingVecType, zero);
+      // TODO: replace this with non-packed ScaledTruncOp for sliceWidth == 1
       Value scaleTrunc = rewriter.create<amdgpu::PackedScaledTruncOp>(
           loc, truncScaleResultType, slice, uniformScale, 0,
           /*existing=*/nullptr);
