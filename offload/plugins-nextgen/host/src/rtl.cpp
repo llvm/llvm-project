@@ -115,8 +115,8 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
   /// Return maximum block size for maximum occupancy
-  Expected<size_t> maxGroupSize(GenericDeviceTy &Device,
-                                size_t DynamicMemSize) const override {
+  Expected<uint64_t> maxGroupSize(GenericDeviceTy &Device,
+                                  uint64_t DynamicMemSize) const override {
     // TODO
     return 1;
   }
