@@ -170,6 +170,9 @@ public:
   }
 };
 
+template <class _V>
+constexpr bool enable_borrowed_range<to_input_view<_V>> = enable_borrowed_range<_V>;
+
 inline namespace __cpo {
 struct __to_input_range_adaptor {
   template <ranges::input_range _V>
