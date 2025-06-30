@@ -17,3 +17,4 @@ HLSL Design and Implementation
    EntryFunctions
    FunctionCalls
    AvailabilityDiagnostics
+   RootSignature
