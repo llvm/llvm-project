@@ -613,12 +613,39 @@ public:
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      assert(!clause.isEmptySelfClause() && !clause.isConditionExprClause() &&
+             "var-list version of self required for update");
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
+            var, mlir::acc::DataClause::acc_update_self, {},
+            /*structured=*/false, /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. update construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitSelfClause");
+    }
+  }
+
+  void VisitHostClause(const OpenACCHostClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
+            var, mlir::acc::DataClause::acc_update_host, {},
+            /*structured=*/false, /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitHostClause");
+    }
+  }
+
+  void VisitDeviceClause(const OpenACCDeviceClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::UpdateDeviceOp>(
+            var, mlir::acc::DataClause::acc_update_device, {},
+            /*structured=*/false, /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitDeviceClause");
     }
   }
 
@@ -1095,6 +1122,7 @@ EXPL_SPEC(mlir::acc::WaitOp)
 EXPL_SPEC(mlir::acc::HostDataOp)
 EXPL_SPEC(mlir::acc::EnterDataOp)
 EXPL_SPEC(mlir::acc::ExitDataOp)
+EXPL_SPEC(mlir::acc::UpdateOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>
