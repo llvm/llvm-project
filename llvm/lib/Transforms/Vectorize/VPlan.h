@@ -1709,6 +1709,7 @@ class VPVectorEndPointerRecipe : public VPRecipeWithIRFlags,
                                  public VPUnrollPartAccessor<2> {
   Type *IndexedTy;
 
+  /// The constant stride of the pointer computed by this recipe.
   int64_t Stride;
 
 public:
