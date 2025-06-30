@@ -22,7 +22,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
-#include <chrono>
+
 
 std::mutex mux;
 
@@ -33,7 +33,6 @@ int main(int, char**) {
     std::unique_lock thread_lock(mux);
     cond.notify_all();
     thread_lock.unlock();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     value = 4;
     (void)value;
