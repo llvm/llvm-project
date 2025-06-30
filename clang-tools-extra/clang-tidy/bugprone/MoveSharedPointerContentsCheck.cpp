@@ -12,8 +12,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
-using namespace clang::ast_matchers; // NOLINT
-
 namespace clang::tidy::bugprone {
 namespace {
 
@@ -48,7 +46,36 @@ MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
       SharedPointerClasses(utils::options::parseStringList(Options.get(
           "SharedPointerClasses", "::std::shared_ptr;::boost::shared_ptr"))) {}
 
-void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
+void MoveSharedPointerContentsCheck::registerMatchers(
+    ast_matchers::MatchFinder *Finder) {
+  using ast_matchers::anyOf;
+  using ast_matchers::callee;
+  using ast_matchers::callExpr;
+  using ast_matchers::cxxDependentScopeMemberExpr;
+  using ast_matchers::cxxMemberCallExpr;
+  using ast_matchers::cxxMethodDecl;
+  using ast_matchers::cxxOperatorCallExpr;
+  using ast_matchers::declRefExpr;
+  using ast_matchers::functionDecl;
+  using ast_matchers::hasAnyDeclaration;
+  using ast_matchers::hasAnyName;
+  using ast_matchers::hasArgument;
+  using ast_matchers::hasDescendant;
+  using ast_matchers::hasMemberName;
+  using ast_matchers::hasName;
+  using ast_matchers::hasOperatorName;
+  using ast_matchers::hasOverloadedOperatorName;
+  using ast_matchers::hasType;
+  using ast_matchers::hasUnaryOperand;
+  using ast_matchers::hasUnderlyingDecl;
+  using ast_matchers::namedDecl;
+  using ast_matchers::on;
+  using ast_matchers::qualType;
+  using ast_matchers::to;
+  using ast_matchers::unaryOperator;
+  using ast_matchers::unresolvedLookupExpr;
+  using ast_matchers::varDecl;
+
   auto IsStdMove =
       callee(functionDecl(hasAnyName("::std::move", "::std::forward")));
 
@@ -68,7 +95,6 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
       callExpr(IsStdMove,
                hasArgument(
                    0, unaryOperator(hasOperatorName("*"),
-
                                     hasUnaryOperand(cxxMemberCallExpr(
                                         callee(cxxMethodDecl(hasName("get"))),
                                         on(hasType(qualType(isSharedPointer(
@@ -112,7 +138,7 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 void MoveSharedPointerContentsCheck::check(
-    const MatchFinder::MatchResult &Result) {
+    const ast_matchers::MatchFinder::MatchResult &Result) {
   const CallExpr *Call = nullptr;
   for (const llvm::StringRef Binding :
        {"unresolved_call", "unresolved_get_call", "get_call", "call"}) {
