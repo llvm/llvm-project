@@ -34,7 +34,7 @@ CWrapperFunctionResult testWritePointers(const char *ArgData, size_t ArgSize) {
       handle(ArgData, ArgSize,
              [](std::vector<tpctypes::PointerWrite> Ws) {
                for (auto &W : Ws)
-                 *W.Addr.template toPtr<uint64_t *>() = W.Value.getValue();
+                 *W.Addr.template toPtr<void **>() = W.Value.toPtr<void *>();
              })
           .release();
 }

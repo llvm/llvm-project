@@ -399,10 +399,8 @@ public:
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
-    Streamer.emitValue(
-        MCSymbolRefExpr::create(&S, MCSymbolRefExpr::VariantKind(Kind),
-                                Streamer.getContext()),
-        PointerSize);
+    Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
+                       PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {

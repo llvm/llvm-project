@@ -29,6 +29,14 @@ llvm_canonicalize_cmake_booleans(
   LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
+# Run tests requiring Z3 headers only if LLVM was built with Z3
+# and the headers are available while building Clang -- the latter may
+# not be the case when building standalone against installed LLVM.
+set(TEST_WITH_Z3_DEVEL 0)
+if(LLVM_WITH_Z3 AND Z3_FOUND)
+  set(TEST_WITH_Z3_DEVEL 1)
+endif()
+
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py

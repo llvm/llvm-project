@@ -2344,6 +2344,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":basic",
+        ":config",
         ":frontend",
         ":interpreter",
         ":lex",
@@ -2352,8 +2353,10 @@ cc_binary(
         "//llvm:Core",
         "//llvm:LineEditor",
         "//llvm:Option",
+        "//llvm:OrcDebugging",
         "//llvm:OrcJIT",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
