@@ -568,8 +568,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
-  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
-
   CmdArgs.push_back("-Bstatic");
 
   if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
@@ -619,6 +617,12 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
 
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
+                  D.getLTOMode() == LTOK_Thin);
+
+  AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
   if (TC.ShouldLinkCXXStdlib(Args)) {
     bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                !Args.hasArg(options::OPT_static);
@@ -638,10 +642,6 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lgloss");
     CmdArgs.push_back("--end-group");
   }
-
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
 
   if ((TC.hasValidGCCInstallation() || detectGCCToolchainAdjacent(D)) &&
       NeedCRTs)
