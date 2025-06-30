@@ -294,6 +294,34 @@ inline auto m_SpecificVT(EVT RefVT) {
 inline auto m_Glue() { return m_SpecificVT(MVT::Glue); }
 inline auto m_OtherVT() { return m_SpecificVT(MVT::Other); }
 
+/// Match a scalar ValueType.
+template <typename Pattern>
+inline auto m_SpecificScalarVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) { return VT.getScalarType() == RefVT; },
+                         P};
+}
+inline auto m_SpecificScalarVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) { return VT.getScalarType() == RefVT; },
+                         m_Value()};
+}
+
+/// Match a vector ValueType.
+template <typename Pattern>
+inline auto m_SpecificVectorElementVT(EVT RefVT, const Pattern &P) {
+  return ValueType_match{[=](EVT VT) {
+                           return VT.isVector() &&
+                                  VT.getVectorElementType() == RefVT;
+                         },
+                         P};
+}
+inline auto m_SpecificVectorElementVT(EVT RefVT) {
+  return ValueType_match{[=](EVT VT) {
+                           return VT.isVector() &&
+                                  VT.getVectorElementType() == RefVT;
+                         },
+                         m_Value()};
+}
+
 /// Match any integer ValueTypes.
 template <typename Pattern> inline auto m_IntegerVT(const Pattern &P) {
   return ValueType_match{[](EVT VT) { return VT.isInteger(); }, P};

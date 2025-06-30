@@ -188,8 +188,8 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
 
 template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::SelectOp op) {
-  addValue(op.getInput2());
-  addValue(op.getInput3());
+  addValue(op.getOnTrue());
+  addValue(op.getOnFalse());
   addValue(op.getOutput());
   return success();
 }

@@ -376,7 +376,7 @@ bool DebugInfoFinder::addType(DIType *DT) {
   if (!NodesSeen.insert(DT).second)
     return false;
 
-  TYs.push_back(const_cast<DIType *>(DT));
+  TYs.push_back(DT);
   return true;
 }
 

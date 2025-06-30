@@ -1292,11 +1292,12 @@ const char *DICompileUnit::nameTableKindString(DebugNameTableKind NTK) {
 DISubprogram::DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                            unsigned ScopeLine, unsigned VirtualIndex,
                            int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags,
-                           ArrayRef<Metadata *> Ops)
+                           bool UsesKeyInstructions, ArrayRef<Metadata *> Ops)
     : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram, Ops),
       Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
       ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags) {
   static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
+  SubclassData1 = UsesKeyInstructions;
 }
 DISubprogram::DISPFlags
 DISubprogram::toSPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized,
@@ -1395,7 +1396,7 @@ DISubprogram *DISubprogram::getImpl(
     int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
     Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
     Metadata *ThrownTypes, Metadata *Annotations, MDString *TargetFuncName,
-    StorageType Storage, bool ShouldCreate) {
+    bool UsesKeyInstructions, StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
   assert(isCanonical(TargetFuncName) && "Expected canonical MDString");
@@ -1404,7 +1405,7 @@ DISubprogram *DISubprogram::getImpl(
                          ContainingType, VirtualIndex, ThisAdjustment, Flags,
                          SPFlags, Unit, TemplateParams, Declaration,
                          RetainedNodes, ThrownTypes, Annotations,
-                         TargetFuncName));
+                         TargetFuncName, UsesKeyInstructions));
   SmallVector<Metadata *, 13> Ops = {
       File,           Scope,          Name,        LinkageName,
       Type,           Unit,           Declaration, RetainedNodes,
@@ -1424,10 +1425,10 @@ DISubprogram *DISubprogram::getImpl(
       }
     }
   }
-  DEFINE_GETIMPL_STORE_N(
-      DISubprogram,
-      (Line, ScopeLine, VirtualIndex, ThisAdjustment, Flags, SPFlags), Ops,
-      Ops.size());
+  DEFINE_GETIMPL_STORE_N(DISubprogram,
+                         (Line, ScopeLine, VirtualIndex, ThisAdjustment, Flags,
+                          SPFlags, UsesKeyInstructions),
+                         Ops, Ops.size());
 }
 
 bool DISubprogram::describes(const Function *F) const {
