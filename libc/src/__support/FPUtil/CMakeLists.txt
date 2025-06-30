@@ -214,10 +214,10 @@ add_header_library(
   HDRS
     ComparisonOperations.h
   DEPENDS
-    .fp_bits
     .fenv_impl
-    libc.src.__support.CPP.type_traits
+    .fp_bits
     libc.src.__support.config
+    libc.src.__support.CPP.type_traits
 )
 
 add_header_library(
