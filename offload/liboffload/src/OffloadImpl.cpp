@@ -194,17 +194,16 @@ Error initPlugins() {
 Error olInit_impl() {
   std::lock_guard<std::mutex> Lock{OffloadContextValMutex};
 
-  std::optional<Error> InitResult;
-  if (!isOffloadInitialized()) {
-    OffloadContextVal = new OffloadContext{};
-    InitResult = initPlugins();
+  if (isOffloadInitialized()) {
+    OffloadContext::get().RefCount++;
+    return Plugin::success();
   }
 
+  OffloadContextVal = new OffloadContext{};
+  Error InitResult = initPlugins();
   OffloadContext::get().RefCount++;
 
-  if (InitResult)
-    return std::move(*InitResult);
-  return Error::success();
+  return InitResult;
 }
 
 Error olShutDown_impl() {
