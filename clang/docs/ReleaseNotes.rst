@@ -658,6 +658,8 @@ Improvements to Clang's diagnostics
   are currently recognized.
 
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
