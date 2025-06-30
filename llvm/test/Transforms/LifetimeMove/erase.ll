@@ -27,7 +27,7 @@ entry:
 }
 
 ; Do not erase lifetime markers inside a loop
-define void @fn2() presplitcoroutine {
+define void @fn2(i1 %cond) presplitcoroutine {
 ; CHECK-LABEL: define void @fn2(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -39,7 +39,7 @@ define void @fn2() presplitcoroutine {
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 24, ptr nonnull [[VALUE]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[VALUE]], align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[VALUE]])
-; CHECK-NEXT:    br i1 undef, label %[[LOOP]], label %[[END:.*]]
+; CHECK-NEXT:    br i1 %cond, label %[[LOOP]], label %[[END:.*]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[VALUE]])
 ; CHECK-NEXT:    %unused2 = call i8 @llvm.coro.suspend(token none, i1 false)
@@ -54,7 +54,7 @@ loop:
   call void @llvm.lifetime.start.p0(i64 24, ptr nonnull %value)
   %0 = load i8, ptr %value, align 8
   call void @llvm.lifetime.end.p0(i64 24, ptr nonnull %value)
-  br i1 undef, label %loop, label %end
+  br i1 %cond, label %loop, label %end
 
 end:
   %unused2 = call i8 @llvm.coro.suspend(token none, i1 false)

@@ -55,7 +55,7 @@ exit:
 }
 
 ; Test do not move lifetime markers into a loop
-define void @fn2() presplitcoroutine {
+define void @fn2(i1 %cond) presplitcoroutine {
 ; CHECK-LABEL: define void @fn2(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -64,7 +64,7 @@ define void @fn2() presplitcoroutine {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[UNUSED:%.*]] = call i8 @llvm.coro.suspend(token none, i1 false)
-; CHECK-NEXT:    br i1 undef, label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 %cond, label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 500, ptr nonnull [[TESTVAL]])
 ; CHECK-NEXT:    ret void
@@ -76,7 +76,7 @@ entry:
 
 loop:
   %unused = call i8 @llvm.coro.suspend(token none, i1 false)
-  br i1 undef, label %exit, label %loop
+  br i1 %cond, label %exit, label %loop
 
 exit:
   call void @llvm.lifetime.end.p0(i64 500, ptr nonnull %testval)
