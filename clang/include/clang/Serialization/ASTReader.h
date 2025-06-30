@@ -72,6 +72,7 @@ class ASTContext;
 class ASTDeserializationListener;
 class ASTReader;
 class ASTRecordReader;
+class CodeGenOptions;
 class CXXTemporary;
 class Decl;
 class DeclarationName;
@@ -134,6 +135,15 @@ public:
   virtual bool ReadLanguageOptions(const LangOptions &LangOpts,
                                    StringRef ModuleFilename, bool Complain,
                                    bool AllowCompatibleDifferences) {
+    return false;
+  }
+
+  /// Receives the codegen options.
+  ///
+  /// \returns true to indicate the options are invalid or false otherwise.
+  virtual bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                                  StringRef ModuleFilename, bool Complain,
+                                  bool AllowCompatibleDifferences) {
     return false;
   }
 
@@ -281,6 +291,9 @@ public:
   bool ReadLanguageOptions(const LangOptions &LangOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
+  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                          StringRef ModuleFilename, bool Complain,
+                          bool AllowCompatibleDifferences) override;
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
@@ -322,6 +335,9 @@ public:
   bool ReadLanguageOptions(const LangOptions &LangOpts,
                            StringRef ModuleFilename, bool Complain,
                            bool AllowCompatibleDifferences) override;
+  bool ReadCodeGenOptions(const CodeGenOptions &CGOpts,
+                          StringRef ModuleFilename, bool Complain,
+                          bool AllowCompatibleDifferences) override;
   bool ReadTargetOptions(const TargetOptions &TargetOpts,
                          StringRef ModuleFilename, bool Complain,
                          bool AllowCompatibleDifferences) override;
@@ -1586,6 +1602,10 @@ private:
                                    StringRef ModuleFilename, bool Complain,
                                    ASTReaderListener &Listener,
                                    bool AllowCompatibleDifferences);
+  static bool ParseCodeGenOptions(const RecordData &Record,
+                                  StringRef ModuleFilename, bool Complain,
+                                  ASTReaderListener &Listener,
+                                  bool AllowCompatibleDifferences);
   static bool ParseTargetOptions(const RecordData &Record,
                                  StringRef ModuleFilename, bool Complain,
                                  ASTReaderListener &Listener,
@@ -1996,14 +2016,12 @@ public:
 
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
-  static bool isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
-                                  const ModuleCache &ModCache,
-                                  const PCHContainerReader &PCHContainerRdr,
-                                  const LangOptions &LangOpts,
-                                  const TargetOptions &TargetOpts,
-                                  const PreprocessorOptions &PPOpts,
-                                  StringRef ExistingModuleCachePath,
-                                  bool RequireStrictOptionMatches = false);
+  static bool isAcceptableASTFile(
+      StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
+      const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
+      const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
+      const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
+      bool RequireStrictOptionMatches = false);
 
   /// Returns the suggested contents of the predefines buffer,
   /// which contains a (typically-empty) subset of the predefines

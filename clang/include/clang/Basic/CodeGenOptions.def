@@ -12,8 +12,10 @@
 // that have enumeration type and VALUE_CODEGENOPT is a code
 // generation option that describes a value rather than a flag.
 //
-// AFFECTING_VALUE_CODEGENOPT is used for code generation options that can
-// affect the AST.
+// COMPATIBLE_VALUE_CODEGENOPT is used for code generation options that affect
+//     the construction of the AST in a way that doesn't prevent
+//     interoperability (that is, the value can be different between an explicit
+//     module and the user of that module).
 //
 //===----------------------------------------------------------------------===//
 #ifndef CODEGENOPT
@@ -30,9 +32,14 @@ CODEGENOPT(Name, Bits, Default)
 CODEGENOPT(Name, Bits, Default)
 #endif
 
-#ifndef AFFECTING_VALUE_CODEGENOPT
-#  define AFFECTING_VALUE_CODEGENOPT(Name, Bits, Default) \
+#ifndef COMPATIBLE_VALUE_CODEGENOPT
+#  define COMPATIBLE_VALUE_CODEGENOPT(Name, Bits, Default, Description) \
 VALUE_CODEGENOPT(Name, Bits, Default)
+#endif
+
+#ifndef COMPATIBLE_ENUM_CODEGENOPT
+#  define COMPATIBLE_ENUM_CODEGENOPT(Name, Type, Bits, Default, Description) \
+ENUM_CODEGENOPT(Name, Type, Bits, Default)
 #endif
 
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
@@ -216,9 +223,9 @@ CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1)
 CODEGENOPT(ObjCAvoidHeapifyLocalBlocks, 1, 0)
 
 
-// The optimization options affect frontend options, whicn in turn do affect the AST.
-AFFECTING_VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
-AFFECTING_VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
+// The optimization options affect frontend options, which in turn do affect the AST.
+COMPATIBLE_VALUE_CODEGENOPT(OptimizationLevel, 2, 0, "optimization level") ///< The -O[0-3] option specified.
+COMPATIBLE_VALUE_CODEGENOPT(OptimizeSize, 2, 0, "optimizing for size") ///< If -Os (==1) or -Oz (==2) is specified.
 
 CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
 CODEGENOPT(ContinuousProfileSync, 1, 0) ///< Enable continuous instrumentation profiling
@@ -383,7 +390,7 @@ VALUE_CODEGENOPT(SmallDataLimit, 32, 0)
 VALUE_CODEGENOPT(SSPBufferSize, 32, 0)
 
 /// The kind of inlining to perform.
-ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
+COMPATIBLE_ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining, "inlining kind")
 
 /// The maximum stack size a function can have to be considered for inlining.
 VALUE_CODEGENOPT(InlineMaxStackSize, 32, UINT_MAX)
@@ -494,4 +501,5 @@ ENUM_CODEGENOPT(WinX64EHUnwindV2, llvm::WinX64EHUnwindV2Mode,
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
-#undef AFFECTING_VALUE_CODEGENOPT
+#undef COMPATIBLE_VALUE_CODEGENOPT
+#undef COMPATIBLE_ENUM_CODEGENOPT

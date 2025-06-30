@@ -449,11 +449,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   HeaderSearch *HeaderInfo =
       new HeaderSearch(getHeaderSearchOpts(), getSourceManager(),
                        getDiagnostics(), getLangOpts(), &getTarget());
-  PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOpts(),
-                                      getDiagnostics(), getLangOpts(),
-                                      getSourceManager(), *HeaderInfo, *this,
-                                      /*IdentifierInfoLookup=*/nullptr,
-                                      /*OwnsHeaderSearch=*/true, TUKind);
+  PP = std::make_shared<Preprocessor>(
+      Invocation->getPreprocessorOpts(), getDiagnostics(), getLangOpts(),
+      getCodeGenOpts(), getSourceManager(), *HeaderInfo, *this,
+      /*IdentifierInfoLookup=*/nullptr,
+      /*OwnsHeaderSearch=*/true, TUKind);
   getTarget().adjust(getDiagnostics(), getLangOpts());
   PP->Initialize(getTarget(), getAuxTarget());
 
@@ -466,7 +466,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Predefine macros and configure the preprocessor.
   InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
-                         getFrontendOpts(), getCodeGenOpts());
+                         getFrontendOpts());
 
   // Initialize the header search object.  In CUDA compilations, we use the aux
   // triple (the host triple) to initialize our header search, since we need to

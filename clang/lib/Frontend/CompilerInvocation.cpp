@@ -4397,22 +4397,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenACCMacroOverride = A->getValue();
   }
 
-  // FIXME: Eliminate this dependency.
-  unsigned Opt = getOptimizationLevel(Args, IK, Diags),
-       OptSize = getOptimizationLevelSize(Args);
-  Opts.Optimize = Opt != 0;
-  Opts.OptimizeSize = OptSize != 0;
-
-  // This is the __NO_INLINE__ define, which just depends on things like the
-  // optimization level and -fno-inline, not actually whether the backend has
-  // inlining enabled.
-  Opts.NoInlineDefine = !Opts.Optimize;
-  if (Arg *InlineArg = Args.getLastArg(
-          options::OPT_finline_functions, options::OPT_finline_hint_functions,
-          options::OPT_fno_inline_functions, options::OPT_fno_inline))
-    if (InlineArg->getOption().matches(options::OPT_fno_inline))
-      Opts.NoInlineDefine = true;
-
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
     if (Val == "fast")
@@ -5253,6 +5237,15 @@ std::string CompilerInvocation::getModuleHash() const {
     if (auto Build = APINotesOpts.SwiftVersion.getBuild())
       HBuilder.add(*Build);
   }
+
+  // The default CODEGENOPT is benign, so only include the ones marked as
+  // compatible into the hash.
+#define CODEGENOPT(Name, Bits, Default)
+#define COMPATIBLE_VALUE_CODEGENOPT(Name, Bits, Default, Description)          \
+  HBuilder.add(CodeGenOpts->Name);
+#define COMPATIBLE_ENUM_CODEGENOPT(Name, Type, Bits, Default, Description)     \
+  HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
+#include "clang/Basic/CodeGenOptions.def"
 
   // When compiling with -gmodules, also hash -fdebug-prefix-map as it
   // affects the debug info in the PCM.

@@ -107,6 +107,7 @@ public:
 
 private:
   std::unique_ptr<LangOptions> LangOpts;
+  std::unique_ptr<CodeGenOptions> CGOpts = std::make_unique<CodeGenOptions>();
   // FIXME: The documentation on \c LoadFrom* member functions states that the
   // DiagnosticsEngine (and therefore DiagnosticOptions) must outlive the
   // returned ASTUnit. This is not the case. Enfore it by storing non-owning

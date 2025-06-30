@@ -77,8 +77,8 @@ protected:
 
     HeaderInfo.emplace(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
-    return std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, SourceMgr,
-                                          *HeaderInfo, ModLoader,
+    return std::make_unique<Preprocessor>(PPOpts, Diags, LangOpts, CGOpts,
+                                          SourceMgr, *HeaderInfo, ModLoader,
                                           /*IILookup=*/nullptr,
                                           /*OwnsHeaderSearch=*/false);
   }
@@ -100,6 +100,7 @@ protected:
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
   LangOptions LangOpts;
+  CodeGenOptions CGOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearchOptions HSOpts;
   std::optional<HeaderSearch> HeaderInfo;
