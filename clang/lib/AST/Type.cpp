@@ -4131,7 +4131,7 @@ DynamicRangePointerType::DynamicRangePointerType(
   assert(StartPtrDecls.size() < (1 << 16));
   DynamicRangePointerTypeBits.NumEndPtrDecls = EndPtrDecls.size();
   DynamicRangePointerTypeBits.NumStartPtrDecls = StartPtrDecls.size();
-  auto *DeclSlot = getTrailingObjects<TypeCoupledDeclRefInfo>();
+  auto *DeclSlot = getTrailingObjects();
   Decls = llvm::ArrayRef(DeclSlot,
                          EndPtrDecls.size() + StartPtrDecls.size());
   for (unsigned i = 0; i != StartPtrDecls.size(); ++i)

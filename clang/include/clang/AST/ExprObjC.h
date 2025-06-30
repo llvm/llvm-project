@@ -1714,7 +1714,7 @@ private:
         VersionToCheck(), AtLoc(AtLoc), RParen(RParen) {
     setDependence(ExprDependence::None);
     setHasDomainName(true);
-    strcpy(getTrailingObjects<char>(), DomainName.data());
+    strcpy(getTrailingObjects(), DomainName.data());
   }
 
 public:
@@ -1756,7 +1756,7 @@ public:
   }
   StringRef getDomainName() const {
     assert(hasDomainName());
-    return getTrailingObjects<char>();
+    return getTrailingObjects();
   }
 
   child_range children() {

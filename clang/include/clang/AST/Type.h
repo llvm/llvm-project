@@ -3752,7 +3752,7 @@ public:
   }
 
   decl_iterator startptr_decl_begin() const {
-    return getTrailingObjects<TypeCoupledDeclRefInfo>();
+    return getTrailingObjects();
   }
 
   decl_iterator startptr_decl_end() const {

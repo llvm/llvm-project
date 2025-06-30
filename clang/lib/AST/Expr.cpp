@@ -2209,7 +2209,7 @@ AssumptionExpr *AssumptionExpr::CreateEmpty(const ASTContext &Ctx,
 }
 
 Stmt **BoundsSafetyPointerPromotionExpr::getPointerPtr() {
-  return getTrailingObjects<Stmt *>();
+  return getTrailingObjects();
 }
 
 Stmt **BoundsSafetyPointerPromotionExpr::getLowerBoundPtr() {

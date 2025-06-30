@@ -3980,11 +3980,11 @@ class AssumptionExpr final
   friend class ASTStmtWriter;
 
   Expr **getTrailingExprs() {
-    return const_cast<Expr **>(getTrailingObjects<Expr *>());
+    return const_cast<Expr **>(getTrailingObjects());
   }
 
   Expr *const *getTrailingExprs() const {
-    return getTrailingObjects<Expr *>();
+    return getTrailingObjects();
   }
 
   AssumptionExpr(EmptyShell Empty, unsigned NumExprs)
@@ -4325,10 +4325,10 @@ class PredefinedBoundsCheckExpr final
   }
 
   Stmt **getTrailingStmts() {
-    return const_cast<Stmt **>(getTrailingObjects<Stmt *>());
+    return const_cast<Stmt **>(getTrailingObjects());
   }
 
-  Stmt *const *getTrailingStmts() const { return getTrailingObjects<Stmt *>(); }
+  Stmt *const *getTrailingStmts() const { return getTrailingObjects(); }
 
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(getTrailingStmts()); }
 
@@ -4474,11 +4474,11 @@ class BoundsCheckExpr final :
   }
 
   Stmt **getTrailingStmts() {
-    return const_cast<Stmt **>(getTrailingObjects<Stmt *>());
+    return const_cast<Stmt **>(getTrailingObjects());
   }
 
   Stmt *const *getTrailingStmts() const {
-    return getTrailingObjects<Stmt *>();
+    return getTrailingObjects();
   }
 
   Expr **getSubExprs() {
@@ -4589,11 +4589,11 @@ class MaterializeSequenceExpr final :
   }
 
   Expr **getSubExprs() {
-    return getTrailingObjects<Expr *>();
+    return getTrailingObjects();
   }
 
   Expr *const *getSubExprs() const {
-    return getTrailingObjects<Expr *>();
+    return getTrailingObjects();
   }
 
   friend class ASTStmtReader;

@@ -1688,7 +1688,7 @@ void ASTStmtReader::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E)
   if (E->hasDomainName()) {
     std::string DomainName = Record.readString();
     assert(DomainNameLength == DomainName.size());
-    strcpy(E->getTrailingObjects<char>(), DomainName.data());
+    strcpy(E->getTrailingObjects(), DomainName.data());
   }
 }
 

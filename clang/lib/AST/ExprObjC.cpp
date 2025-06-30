@@ -353,7 +353,7 @@ ObjCAvailabilityCheckExpr *ObjCAvailabilityCheckExpr::CreateEmpty(
       totalSizeToAlloc<char>(FeaturesLen + 1),
       alignof(ObjCAvailabilityCheckExpr));
   new (E) ObjCAvailabilityCheckExpr(Empty);
-  memset(E->getTrailingObjects<char>(), 0, FeaturesLen + 1);
+  memset(E->getTrailingObjects(), 0, FeaturesLen + 1);
   return E;
 }
 
