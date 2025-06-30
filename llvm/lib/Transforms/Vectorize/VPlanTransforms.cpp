@@ -3251,7 +3251,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
