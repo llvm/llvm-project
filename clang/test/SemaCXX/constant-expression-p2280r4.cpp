@@ -285,6 +285,14 @@ namespace dynamic {
   }
 }
 
+namespace unsized_array {
+  void f(int (&a)[], int (&b)[]) {
+    constexpr int t1 = a - a;
+    constexpr int t2 = a - b; // expected-error {{constexpr variable 't2' must be initialized by a constant expression}}
+                              // expected-note {{arithmetic involving unrelated objects '&a[0]' and '&b[0]' has unspecified value}}
+  }
+}
+
 namespace pointer_comparisons {
   extern int &extern_n; // interpreter-note 2 {{declared here}}
   extern int &extern_n2;
