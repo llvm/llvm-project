@@ -212,6 +212,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
+  flag to specify the function used for forwarding instead of ``std::forward``.
+   
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
   by adding a flag to specify the function used for moving instead of
