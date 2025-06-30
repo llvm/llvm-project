@@ -43,6 +43,7 @@ public:
   mlir::Value VisitCallExpr(const CallExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
@@ -149,6 +150,11 @@ mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
   if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e))
     return emitConstant(constant, e);
   return emitLoadOfLValue(e);
+}
+
+mlir::Value
+ComplexExprEmitter::VisitGenericSelectionExpr(GenericSelectionExpr *e) {
+  return Visit(e->getResultExpr());
 }
 
 mlir::Value ComplexExprEmitter::VisitImplicitCastExpr(ImplicitCastExpr *e) {
