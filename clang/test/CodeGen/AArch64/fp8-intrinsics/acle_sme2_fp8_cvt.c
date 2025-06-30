@@ -32,6 +32,8 @@ svmfloat8_t test_cvt_f16_x2(svfloat16x2_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvt_mf8,_f16_x2,_fpm)(zn, fpmr);
 }
 
+// CHECK: declare void @llvm.aarch64.set.fpmr(i64)  [[ATTR1:#.*]]
+
 // CHECK-LABEL: @test_cvt_f32_x4(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
@@ -207,3 +209,5 @@ svbfloat16x2_t test_cvtl1_bf16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
 svbfloat16x2_t test_cvtl2_bf16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvtl2_bf16,_mf8,_x2_fpm)(zn, fpmr);
 }
+
+// CHECK: attributes [[ATTR1]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

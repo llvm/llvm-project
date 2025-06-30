@@ -154,6 +154,8 @@ float16x8_t test_vmlalb_lane(float16x8_t vd, mfloat8x16_t vn, mfloat8x8_t vm, fp
   return vmlalbq_lane_f16_mf8_fpm(vd, vn, vm, 0, fpm);
 }
 
+// CHECK: declare void @llvm.aarch64.set.fpmr(i64)  [[ATTR1:#.*]]
+
 // CHECK-LABEL: define dso_local <8 x half> @test_vmlalb_laneq(
 // CHECK-SAME: <8 x half> noundef [[VD:%.*]], <16 x i8> [[VN:%.*]], <16 x i8> [[VM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -379,3 +381,5 @@ float32x4_t test_vmlalltt_lane(float32x4_t vd, mfloat8x16_t vn, mfloat8x8_t vm, 
 float32x4_t test_vmlalltt_laneq(float32x4_t vd, mfloat8x16_t vn, mfloat8x16_t vm, fpm_t fpm) {
   return vmlallttq_laneq_f32_mf8_fpm(vd, vn, vm, 15, fpm);
 }
+
+// CHECK: attributes [[ATTR1]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

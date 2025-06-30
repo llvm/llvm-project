@@ -35,6 +35,8 @@ void test_svmla_lane_za16_vg2x1(uint32_t slice, svmfloat8_t zn, svmfloat8_t zm, 
     SME_ACLE_FUNC(svmla_lane_za16,_mf8,_vg2x1_fpm,,)(slice, zn, zm, 0, fpm);
 }
 
+// CHECK: declare void @llvm.aarch64.set.fpmr(i64)  [[ATTR1:#.*]]
+
 // CHECK-LABEL: define dso_local void @test_svmla_lane_za16_vg2x2(
 // CHECK-SAME: i32 noundef [[SLICE:%.*]], <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -314,3 +316,6 @@ void test_svmla_multi_za32_vg4x2(uint32_t slice, svmfloat8x2_t zn, svmfloat8x2_t
 void test_svmla_multi_za32_vg4x4(uint32_t slice, svmfloat8x4_t zn, svmfloat8x4_t zm, fpm_t fpm) __arm_streaming __arm_inout("za") {
     SME_ACLE_FUNC(svmla_za32,_mf8,_vg4x4_fpm,,)(slice, zn, zm, fpm);
 }
+
+
+// CHECK: attributes [[ATTR1]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
