@@ -282,6 +282,12 @@ static cl::opt<bool> ClPoisonUndefVectors(
              "unaffected by this flag (see -msan-poison-undef)."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClPreciseDisjointOr(
+    "msan-precise-disjoint-or",
+    cl::desc("Precisely poison disjoint OR. If false (legacy behavior), "
+             "disjointedness is ignored (i.e., 1|1 is initialized)."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
                  cl::desc("propagate shadow through ICmpEQ and ICmpNE"),
@@ -2497,11 +2503,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitOr(BinaryOperator &I) {
     IRBuilder<> IRB(&I);
-    //  "Or" of 1 and a poisoned value results in unpoisoned value.
-    //  1|1 => 1;     0|1 => 1;     p|1 => 1;
-    //  1|0 => 1;     0|0 => 0;     p|0 => p;
-    //  1|p => 1;     0|p => p;     p|p => p;
-    //  S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
+    //  "Or" of 1 and a poisoned value results in unpoisoned value:
+    //    1|1 => 1;     0|1 => 1;     p|1 => 1;
+    //    1|0 => 1;     0|0 => 0;     p|0 => p;
+    //    1|p => 1;     0|p => p;     p|p => p;
+    //
+    //    S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
+    //
+    //  Addendum if the "Or" is "disjoint":
+    //    1|1 => p;
+    //    S = S | (V1 & V2)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
     Value *V1 = IRB.CreateNot(I.getOperand(0));
@@ -2513,7 +2524,14 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
+
+    Value *S = IRB.CreateOr({S1S2, V1S2, S1V2});
+    if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
+      Value *V1V2 = IRB.CreateAnd(V1, V2);
+      S = IRB.CreateOr({S, V1V2});
+    }
+
+    setShadow(&I, S);
     setOriginForNaryOp(I);
   }
 
@@ -3294,22 +3312,51 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Op));
   }
 
-  void handleCountZeroes(IntrinsicInst &I) {
+  // Uninitialized bits are ok if they appear after the leading/trailing 0's
+  // and a 1. If the input is all zero, it is fully initialized iff
+  // !is_zero_poison.
+  //
+  // e.g., for ctlz, with little-endian, if 0/1 are initialized bits with
+  // concrete value 0/1, and ? is an uninitialized bit:
+  //       - 0001 0??? is fully initialized
+  //       - 000? ???? is fully uninitialized (*)
+  //       - ???? ???? is fully uninitialized
+  //       - 0000 0000 is fully uninitialized if is_zero_poison,
+  //                      fully initialized   otherwise
+  //
+  // (*) TODO: arguably, since the number of zeros is in the range [3, 8], we
+  //     only need to poison 4 bits.
+  //
+  // OutputShadow =
+  //      ((ConcreteZerosCount >= ShadowZerosCount) && !AllZeroShadow)
+  //   || (is_zero_poison && AllZeroSrc)
+  void handleCountLeadingTrailingZeros(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Src = I.getArgOperand(0);
+    Value *SrcShadow = getShadow(Src);
 
-    // Set the Output shadow based on input Shadow
-    Value *BoolShadow = IRB.CreateIsNotNull(getShadow(Src), "_mscz_bs");
+    Value *False = IRB.getInt1(false);
+    Value *ConcreteZerosCount = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {Src, /*is_zero_poison=*/False});
+    Value *ShadowZerosCount = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {SrcShadow, /*is_zero_poison=*/False});
+
+    Value *CompareConcreteZeros = IRB.CreateICmpUGE(
+        ConcreteZerosCount, ShadowZerosCount, "_mscz_cmp_zeros");
+
+    Value *NotAllZeroShadow =
+        IRB.CreateIsNotNull(SrcShadow, "_mscz_shadow_not_null");
+    Value *OutputShadow =
+        IRB.CreateAnd(CompareConcreteZeros, NotAllZeroShadow, "_mscz_main");
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
     if (!IsZeroPoison->isZeroValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
-      BoolShadow = IRB.CreateOr(BoolShadow, BoolZeroPoison, "_mscz_bs");
+      OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }
 
-    Value *OutputShadow =
-        IRB.CreateSExt(BoolShadow, getShadowTy(Src), "_mscz_os");
+    OutputShadow = IRB.CreateSExt(OutputShadow, getShadowTy(Src), "_mscz_os");
 
     setShadow(&I, OutputShadow);
     setOriginForNaryOp(I);
@@ -4726,7 +4773,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::ctlz:
     case Intrinsic::cttz:
-      handleCountZeroes(I);
+      handleCountLeadingTrailingZeros(I);
       break;
     case Intrinsic::masked_compressstore:
       handleMaskedCompressStore(I);

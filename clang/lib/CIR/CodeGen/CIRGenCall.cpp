@@ -404,7 +404,7 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
           funcTy.getAs<FunctionNoProtoType>()) {
     assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
     assert(!cir::MissingFeatures::opCallFnInfoOpts());
-    return arrangeCIRFunctionInfo(noProto->getReturnType(), std::nullopt,
+    return arrangeCIRFunctionInfo(noProto->getReturnType(), {},
                                   RequiredArgs::All);
   }
 

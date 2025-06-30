@@ -4574,22 +4574,23 @@ VarCreationState Compiler<Emitter>::visitDecl(const VarDecl *VD,
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclAndReturn(const VarDecl *VD,
                                            bool ConstantContext) {
-  std::optional<PrimType> VarT = classify(VD->getType());
 
   // We only create variables if we're evaluating in a constant context.
   // Otherwise, just evaluate the initializer and return it.
   if (!ConstantContext) {
     DeclScope<Emitter> LS(this, VD);
-    if (!this->visit(VD->getAnyInitializer()))
+    const Expr *Init = VD->getInit();
+    if (!this->visit(Init))
       return false;
-    return this->emitRet(VarT.value_or(PT_Ptr), VD) && LS.destroyLocals() &&
-           this->emitCheckAllocations(VD);
+    return this->emitRet(classify(Init).value_or(PT_Ptr), VD) &&
+           LS.destroyLocals() && this->emitCheckAllocations(VD);
   }
 
   LocalScope<Emitter> VDScope(this, VD);
   if (!this->visitVarDecl(VD, /*Toplevel=*/true))
     return false;
 
+  std::optional<PrimType> VarT = classify(VD->getType());
   if (Context::shouldBeGloballyIndexed(VD)) {
     auto GlobalIndex = P.getGlobal(VD);
     assert(GlobalIndex); // visitVarDecl() didn't return false.
