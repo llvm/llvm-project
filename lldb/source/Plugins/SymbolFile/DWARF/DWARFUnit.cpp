@@ -1073,20 +1073,7 @@ const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {
              : m_dwarf.GetDWARFContext().getOrLoadDebugInfoData();
 }
 
-uint32_t DWARFUnit::GetHeaderByteSize() const {
-  switch (m_header.getUnitType()) {
-  case llvm::dwarf::DW_UT_compile:
-  case llvm::dwarf::DW_UT_partial:
-    return GetVersion() < 5 ? 11 : 12;
-  case llvm::dwarf::DW_UT_skeleton:
-  case llvm::dwarf::DW_UT_split_compile:
-    return 20;
-  case llvm::dwarf::DW_UT_type:
-  case llvm::dwarf::DW_UT_split_type:
-    return GetVersion() < 5 ? 23 : 24;
-  }
-  llvm_unreachable("invalid UnitType.");
-}
+uint32_t DWARFUnit::GetHeaderByteSize() const { return m_header.getSize(); }
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
