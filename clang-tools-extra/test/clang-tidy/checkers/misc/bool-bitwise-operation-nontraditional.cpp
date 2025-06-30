@@ -397,5 +397,3 @@ int bad_in_template_lamnda_captured(T a, T b) {
 }
 
 int dummy = bad_in_template(true, false) + bad_in_template_lamnda_captured(false, true);
-
-
