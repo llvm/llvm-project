@@ -3985,6 +3985,24 @@ SDValue AMDGPUTargetLowering::performAssertSZExtCombine(SDNode *N,
     }
   }
 
+  // AssertZext in front of these intrinsics is not necessary, the lowering of
+  // the intrinsics into a register read will insert one if it is needed.
+  if (N->getOpcode() == ISD::AssertZext &&
+      N0.getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
+    unsigned IID = N0.getConstantOperandVal(0);
+    switch (IID) {
+    case Intrinsic::amdgcn_workitem_id_x:
+    case Intrinsic::amdgcn_workitem_id_y:
+    case Intrinsic::amdgcn_workitem_id_z:
+    case Intrinsic::amdgcn_workgroup_id_x:
+    case Intrinsic::amdgcn_workgroup_id_y:
+    case Intrinsic::amdgcn_workgroup_id_z:
+      return N0;
+    default:
+      break;
+    }
+  }
+
   return SDValue();
 }
 
