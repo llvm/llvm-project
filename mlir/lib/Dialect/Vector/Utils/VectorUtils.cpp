@@ -321,8 +321,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                                      ArrayRef<int64_t> inputVectorSizes,
                                      Value padValue,
                                      bool useInBoundsInsteadOfMasking) {
-  assert(llvm::none_of(inputVectorSizes,
-                       [](int64_t s) { return s == ShapedType::kDynamic; }) &&
+  assert(!llvm::is_contained(inputVectorSizes, ShapedType::kDynamic) &&
          "invalid input vector sizes");
   auto sourceShapedType = cast<ShapedType>(source.getType());
   auto sourceShape = sourceShapedType.getShape();

@@ -1820,6 +1820,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
 
+  if (Opts.AllowRuntimeCheckSkipHotCutoff) {
+    GenerateArg(Consumer, OPT_fallow_runtime_check_skip_hot_cutoff_EQ,
+                std::to_string(*Opts.AllowRuntimeCheckSkipHotCutoff));
+  }
+
   for (StringRef Sanitizer :
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
     GenerateArg(Consumer, OPT_fsanitize_annotate_debug_info_EQ, Sanitizer);
@@ -2321,6 +2326,18 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       "-fsanitize-annotate-debug-info=",
       Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
       Opts.SanitizeAnnotateDebugInfo);
+
+  if (StringRef V =
+          Args.getLastArgValue(OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
+      !V.empty()) {
+    double A;
+    if (V.getAsDouble(A) || A < 0.0 || A > 1.0) {
+      Diags.Report(diag::err_drv_invalid_value)
+          << "-fallow-runtime-check-skip-hot-cutoff=" << V;
+    } else {
+      Opts.AllowRuntimeCheckSkipHotCutoff = A;
+    }
+  }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 

@@ -184,6 +184,18 @@ class OneUse2<SDPatternOperator operator>
 class fpimm_pos_inf<ValueType vt>
     : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
 
+
+
+// Operands which can hold a Register or an Immediate.
+//
+// Unfortunately, since most register classes can hold multiple types, we must
+// use the 'Any' type for these.
+
+def RI1  : Operand<i1>;
+def RI16 : Operand<Any>;
+def RI32 : Operand<Any>;
+def RI64 : Operand<Any>;
+
 // Utility class to wrap up information about a register and DAG type for more
 // convenient iteration and parameterization
 class RegTyInfo<ValueType ty, NVPTXRegClass rc, Operand imm, SDNode imm_node,
@@ -1989,9 +2001,6 @@ def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
-def SDTStoreRetvalProfile : SDTypeProfile<0, 2, [SDTCisInt<0>]>;
-def SDTStoreRetvalV2Profile : SDTypeProfile<0, 3, [SDTCisInt<0>]>;
-def SDTStoreRetvalV4Profile : SDTypeProfile<0, 5, [SDTCisInt<0>]>;
 def SDTProxyRegProfile : SDTypeProfile<1, 1, []>;
 
 def DeclareParam :
@@ -2028,15 +2037,6 @@ def StoreParamV4 :
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
-def StoreRetval :
-  SDNode<"NVPTXISD::StoreRetval", SDTStoreRetvalProfile,
-         [SDNPHasChain, SDNPSideEffect]>;
-def StoreRetvalV2 :
-  SDNode<"NVPTXISD::StoreRetvalV2", SDTStoreRetvalV2Profile,
-         [SDNPHasChain, SDNPSideEffect]>;
-def StoreRetvalV4 :
-  SDNode<"NVPTXISD::StoreRetvalV4", SDTStoreRetvalV4Profile,
-         [SDNPHasChain, SDNPSideEffect]>;
 def ProxyReg :
   SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
@@ -2111,25 +2111,6 @@ let mayStore = true in {
                           " \t[param$a$b], {{$val1, $val2, $val3, $val4}};",
                           []>;
   }
-
-  class StoreRetvalInst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, Offseti32imm:$a),
-                  !strconcat("st.param", opstr, " \t[func_retval0$a], $val;"),
-                  []>;
-
-  class StoreRetvalV2Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs), (ins regclass:$val, regclass:$val2, Offseti32imm:$a),
-                  !strconcat("st.param.v2", opstr,
-                             " \t[func_retval0$a], {{$val, $val2}};"),
-                  []>;
-
-  class StoreRetvalV4Inst<NVPTXRegClass regclass, string opstr> :
-        NVPTXInst<(outs),
-                  (ins regclass:$val, regclass:$val2, regclass:$val3,
-                       regclass:$val4, Offseti32imm:$a),
-                  !strconcat("st.param.v4", opstr,
-                             " \t[func_retval0$a], {{$val, $val2, $val3, $val4}};"),
-                  []>;
 }
 
 /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
@@ -2207,20 +2188,6 @@ defm StoreParamV2F64  : StoreParamV2Inst<B64, f64imm, ".b64">;
 
 defm StoreParamV4F32  : StoreParamV4Inst<B32, f32imm, ".b32">;
 
-def StoreRetvalI64    : StoreRetvalInst<B64, ".b64">;
-def StoreRetvalI32    : StoreRetvalInst<B32, ".b32">;
-def StoreRetvalI16    : StoreRetvalInst<B16, ".b16">;
-def StoreRetvalI8     : StoreRetvalInst<B16, ".b8">;
-def StoreRetvalI8TruncI32 : StoreRetvalInst<B32, ".b8">;
-def StoreRetvalI8TruncI64 : StoreRetvalInst<B64, ".b8">;
-def StoreRetvalV2I64  : StoreRetvalV2Inst<B64, ".b64">;
-def StoreRetvalV2I32  : StoreRetvalV2Inst<B32, ".b32">;
-def StoreRetvalV2I16  : StoreRetvalV2Inst<B16, ".b16">;
-def StoreRetvalV2I8   : StoreRetvalV2Inst<B16, ".b8">;
-def StoreRetvalV4I32  : StoreRetvalV4Inst<B32, ".b32">;
-def StoreRetvalV4I16  : StoreRetvalV4Inst<B16, ".b16">;
-def StoreRetvalV4I8   : StoreRetvalV4Inst<B16, ".b8">;
-
 def DeclareRetMemInst :
   NVPTXInst<(outs), (ins i32imm:$align, i32imm:$size),
             ".param .align $align .b8 retval0[$size];",
@@ -2276,19 +2243,20 @@ let mayLoad=1, hasSideEffects=0 in {
   def LD_i64 : LD<B64>;
 }
 
-class ST<NVPTXRegClass regclass>
+class ST<DAGOperand O>
   : NVPTXInst<
     (outs),
-    (ins regclass:$src, LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Sign, i32imm:$toWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.${Sign:sign}$toWidth"
+    (ins O:$src,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$toWidth,
+         ADDR:$addr),
+    "st${sem:sem}${scope:scope}${addsp:addsp}.b$toWidth"
     " \t[$addr], $src;", []>;
 
 let mayStore=1, hasSideEffects=0 in {
-  def ST_i8  : ST<B16>;
-  def ST_i16 : ST<B16>;
-  def ST_i32 : ST<B32>;
-  def ST_i64 : ST<B64>;
+  def ST_i8  : ST<RI16>;
+  def ST_i16 : ST<RI16>;
+  def ST_i32 : ST<RI32>;
+  def ST_i64 : ST<RI64>;
 }
 
 // The following is used only in and after vector elementizations.  Vector
@@ -2324,38 +2292,38 @@ let mayLoad=1, hasSideEffects=0 in {
   defm LDV_i64 : LD_VEC<B64>;
 }
 
-multiclass ST_VEC<NVPTXRegClass regclass, bit support_v8 = false> {
+multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
   def _v2 : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, LdStCode:$sem, LdStCode:$scope,
-         LdStCode:$addsp, LdStCode:$Sign, i32imm:$fromWidth,
+    (ins O:$src1, O:$src2,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth,
          ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.${Sign:sign}$fromWidth "
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v2.b$fromWidth "
     "\t[$addr], {{$src1, $src2}};", []>;
   def _v4 : NVPTXInst<
     (outs),
-    (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp,
-         LdStCode:$Sign, i32imm:$fromWidth, ADDR:$addr),
-    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.${Sign:sign}$fromWidth "
+    (ins O:$src1, O:$src2, O:$src3, O:$src4,
+         LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth,
+         ADDR:$addr),
+    "st${sem:sem}${scope:scope}${addsp:addsp}.v4.b$fromWidth "
     "\t[$addr], {{$src1, $src2, $src3, $src4}};", []>;
   if support_v8 then
     def _v8 : NVPTXInst<
       (outs),
-      (ins regclass:$src1, regclass:$src2, regclass:$src3, regclass:$src4,
-           regclass:$src5, regclass:$src6, regclass:$src7, regclass:$src8,
-           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, LdStCode:$Sign,
-           i32imm:$fromWidth, ADDR:$addr),
-      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.${Sign:sign}$fromWidth "
+      (ins O:$src1, O:$src2, O:$src3, O:$src4,
+           O:$src5, O:$src6, O:$src7, O:$src8,
+           LdStCode:$sem, LdStCode:$scope, LdStCode:$addsp, i32imm:$fromWidth, 
+           ADDR:$addr),
+      "st${sem:sem}${scope:scope}${addsp:addsp}.v8.b$fromWidth "
       "\t[$addr], "
       "{{$src1, $src2, $src3, $src4, $src5, $src6, $src7, $src8}};", []>;
 }
 
 let mayStore=1, hasSideEffects=0 in {
-  defm STV_i8  : ST_VEC<B16>;
-  defm STV_i16 : ST_VEC<B16>;
-  defm STV_i32 : ST_VEC<B32, support_v8 = true>;
-  defm STV_i64 : ST_VEC<B64>;
+  defm STV_i8  : ST_VEC<RI16>;
+  defm STV_i16 : ST_VEC<RI16>;
+  defm STV_i32 : ST_VEC<RI32, support_v8 = true>;
+  defm STV_i64 : ST_VEC<RI64>;
 }
 
 //---- Conversion ----
