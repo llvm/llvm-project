@@ -14,11 +14,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <4 x i8> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, -66911489;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], -66911489;
 ; CHECK-NEXT:    ret;
   ret <4 x i8> <i8 -1, i8 2, i8 3, i8 -4>
 }
@@ -268,19 +267,19 @@ define <4 x i8> @test_smax(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    bfe.s32 %r9, %r2, 24, 8;
 ; CHECK-NEXT:    bfe.s32 %r10, %r1, 24, 8;
 ; CHECK-NEXT:    setp.gt.s32 %p4, %r10, %r9;
-; CHECK-NEXT:    bfe.u32 %r11, %r1, 0, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r1, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r13, %r1, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
-; CHECK-NEXT:    bfe.u32 %r15, %r2, 24, 8;
-; CHECK-NEXT:    selp.b32 %r16, %r14, %r15, %p4;
-; CHECK-NEXT:    bfe.u32 %r17, %r2, 16, 8;
-; CHECK-NEXT:    selp.b32 %r18, %r13, %r17, %p3;
+; CHECK-NEXT:    bfe.u32 %r11, %r2, 0, 8;
+; CHECK-NEXT:    bfe.u32 %r12, %r2, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r13, %r2, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r14, %r2, 24, 8;
+; CHECK-NEXT:    bfe.u32 %r15, %r1, 24, 8;
+; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
+; CHECK-NEXT:    bfe.u32 %r17, %r1, 16, 8;
+; CHECK-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
 ; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
-; CHECK-NEXT:    bfe.u32 %r20, %r2, 8, 8;
-; CHECK-NEXT:    selp.b32 %r21, %r12, %r20, %p2;
-; CHECK-NEXT:    bfe.u32 %r22, %r2, 0, 8;
-; CHECK-NEXT:    selp.b32 %r23, %r11, %r22, %p1;
+; CHECK-NEXT:    bfe.u32 %r20, %r1, 8, 8;
+; CHECK-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
+; CHECK-NEXT:    bfe.u32 %r22, %r1, 0, 8;
+; CHECK-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
 ; CHECK-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r25;
@@ -346,19 +345,19 @@ define <4 x i8> @test_smin(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    bfe.s32 %r9, %r2, 24, 8;
 ; CHECK-NEXT:    bfe.s32 %r10, %r1, 24, 8;
 ; CHECK-NEXT:    setp.le.s32 %p4, %r10, %r9;
-; CHECK-NEXT:    bfe.u32 %r11, %r1, 0, 8;
-; CHECK-NEXT:    bfe.u32 %r12, %r1, 8, 8;
-; CHECK-NEXT:    bfe.u32 %r13, %r1, 16, 8;
-; CHECK-NEXT:    bfe.u32 %r14, %r1, 24, 8;
-; CHECK-NEXT:    bfe.u32 %r15, %r2, 24, 8;
-; CHECK-NEXT:    selp.b32 %r16, %r14, %r15, %p4;
-; CHECK-NEXT:    bfe.u32 %r17, %r2, 16, 8;
-; CHECK-NEXT:    selp.b32 %r18, %r13, %r17, %p3;
+; CHECK-NEXT:    bfe.u32 %r11, %r2, 0, 8;
+; CHECK-NEXT:    bfe.u32 %r12, %r2, 8, 8;
+; CHECK-NEXT:    bfe.u32 %r13, %r2, 16, 8;
+; CHECK-NEXT:    bfe.u32 %r14, %r2, 24, 8;
+; CHECK-NEXT:    bfe.u32 %r15, %r1, 24, 8;
+; CHECK-NEXT:    selp.b32 %r16, %r15, %r14, %p4;
+; CHECK-NEXT:    bfe.u32 %r17, %r1, 16, 8;
+; CHECK-NEXT:    selp.b32 %r18, %r17, %r13, %p3;
 ; CHECK-NEXT:    prmt.b32 %r19, %r18, %r16, 0x3340U;
-; CHECK-NEXT:    bfe.u32 %r20, %r2, 8, 8;
-; CHECK-NEXT:    selp.b32 %r21, %r12, %r20, %p2;
-; CHECK-NEXT:    bfe.u32 %r22, %r2, 0, 8;
-; CHECK-NEXT:    selp.b32 %r23, %r11, %r22, %p1;
+; CHECK-NEXT:    bfe.u32 %r20, %r1, 8, 8;
+; CHECK-NEXT:    selp.b32 %r21, %r20, %r12, %p2;
+; CHECK-NEXT:    bfe.u32 %r22, %r1, 0, 8;
+; CHECK-NEXT:    selp.b32 %r23, %r22, %r11, %p1;
 ; CHECK-NEXT:    prmt.b32 %r24, %r23, %r21, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r25, %r24, %r19, 0x5410U;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r25;
@@ -833,12 +832,7 @@ define <4 x i8> @test_call(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
 ; CHECK-NEXT:    st.param.b32 [param1], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_callee,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -861,12 +855,7 @@ define <4 x i8> @test_call_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
 ; CHECK-NEXT:    st.param.b32 [param1], %r1;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_callee,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -889,12 +878,7 @@ define <4 x i8> @test_tailcall_flipped(<4 x i8> %a, <4 x i8> %b) #0 {
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
 ; CHECK-NEXT:    st.param.b32 [param1], %r1;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    test_callee,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 2
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
@@ -1140,12 +1124,11 @@ define <4 x i8> @test_bitcast_i32_to_4xi8(i32 %a) #0 {
 define <4 x i8> @test_bitcast_float_to_4xi8(float %a) #0 {
 ; CHECK-LABEL: test_bitcast_float_to_4xi8(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_float_to_4xi8_param_0];
-; CHECK-NEXT:    mov.b32 %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast float %a to <4 x i8>
   ret <4 x i8> %r
@@ -1167,12 +1150,11 @@ define i32 @test_bitcast_4xi8_to_i32(<4 x i8> %a) #0 {
 define float @test_bitcast_4xi8_to_float(<4 x i8> %a) #0 {
 ; CHECK-LABEL: test_bitcast_4xi8_to_float(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_bitcast_4xi8_to_float_param_0];
-; CHECK-NEXT:    mov.b32 %r2, %r1;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   %r = bitcast <4 x i8> %a to float
   ret float %r

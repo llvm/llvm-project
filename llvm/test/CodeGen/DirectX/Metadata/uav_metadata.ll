@@ -85,7 +85,7 @@ define void @test() #0 {
   %Array_42_h = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
             @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, i1 false, ptr @Array.str)
 
-  ; Same buffer type as Nine
+  ; Same buffer type as Nine - should have the same type in metadata
   ; RWBuffer<double> Ten : register(u2);
   %Ten_h = call target("dx.TypedBuffer", i64, 1, 0, 0)
             @llvm.dx.resource.handlefrombinding(i32 5, i32 22, i32 1, i32 0, i1 false, ptr @Ten.str)
@@ -95,31 +95,30 @@ define void @test() #0 {
 
 attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 
-; CHECK: %RWTypedBuffer = type { <4 x half> }
-; CHECK: %RWTypedBuffer.0 = type { <2 x float> }
-; CHECK: %RWTypedBuffer.1 = type { double }
-; CHECK: %RWTypedBuffer.2 = type { <4 x i32> }
+; CHECK: %"RWBuffer<half4>" = type { <4 x half> }
+; CHECK: %"RWBuffer<float2>" = type { <2 x float> }
+; CHECK: %"RWBuffer<double>" = type { double }
+; CHECK: %"RWBuffer<int32_t4>" = type { <4 x i32> }
 ; CHECK: %RWByteAddressBuffer = type { i32 }
-; CHECK: %RWStructuredBuffer = type { i16 }
-; CHECK: %RasterizerOrderedTypedBuffer = type { <4 x i32> }
-; CHECK: %RasterizerOrderedStructuredBuffer = type { <4 x i32> }
+; CHECK: %"RWStructuredBuffer<int16_t>" = type { i16 }
+; CHECK: %"RasterizerOrderedBuffer<int32_t4>" = type { <4 x i32> }
+; CHECK: %"RasterizerOrderedStructuredBuffer<int32_t4>" = type { <4 x i32> }
 ; CHECK: %RasterizerOrderedByteAddressBuffer = type { i32 }
-; CHECK: %RWTypedBuffer.3 = type { i64 }
-; CHECK: %RWTypedBuffer.4 = type { <4 x float> }
-; CHECK: %RWTypedBuffer.5 = type { i64 }
+; CHECK: %"RWBuffer<uint32_t>" = type { i64 }
+; CHECK: %"RWBuffer<float4>" = type { <4 x float> }
 
-; CHECK: @Zero = external constant %RWTypedBuffer
-; CHECK: @One = external constant %RWTypedBuffer.0
-; CHECK: @Two = external constant %RWTypedBuffer.1
-; CHECK: @Three = external constant %RWTypedBuffer.2
+; CHECK: @Zero = external constant %"RWBuffer<half4>"
+; CHECK: @One = external constant %"RWBuffer<float2>"
+; CHECK: @Two = external constant %"RWBuffer<double>"
+; CHECK: @Three = external constant %"RWBuffer<int32_t4>"
 ; CHECK: @Four = external constant %RWByteAddressBuffer
-; CHECK: @Five = external constant %RWStructuredBuffer
-; CHECK: @Six = external constant %RasterizerOrderedTypedBuffer
-; CHECK: @Seven = external constant %RasterizerOrderedStructuredBuffer
+; CHECK: @Five = external constant %"RWStructuredBuffer<int16_t>"
+; CHECK: @Six = external constant %"RasterizerOrderedBuffer<int32_t4>"
+; CHECK: @Seven = external constant %"RasterizerOrderedStructuredBuffer<int32_t4>"
 ; CHECK: @Eight = external constant %RasterizerOrderedByteAddressBuffer
-; CHECK: @Nine = external constant %RWTypedBuffer.3
-; CHECK: @Array = external constant %RWTypedBuffer.4
-; CHECK: @Ten = external constant %RWTypedBuffer.5
+; CHECK: @Nine = external constant %"RWBuffer<uint32_t>"
+; CHECK: @Array = external constant %"RWBuffer<float4>"
+; CHECK: @Ten = external constant %"RWBuffer<uint32_t>"
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 

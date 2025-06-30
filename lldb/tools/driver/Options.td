@@ -19,9 +19,11 @@ def: Separate<["-"], "n">,
   HelpText<"Alias for --attach-name">,
   Group<grp_attach>;
 
-def wait_for: F<"wait-for">,
-  HelpText<"Tells the debugger to wait for a process with the given pid or name to launch before attaching.">,
-  Group<grp_attach>;
+def wait_for
+    : F<"wait-for">,
+      HelpText<"Tells the debugger to wait for the process with the name "
+               "specified by --attach-name to launch before attaching.">,
+      Group<grp_attach>;
 def: Flag<["-"], "w">,
   Alias<wait_for>,
   HelpText<"Alias for --wait-for">,

@@ -53,7 +53,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Lower Bound: 3
   ; CHECK:     Size: 24
   ; CHECK:   Class: SRV
-  ; CHECK:   Kind: TypedBuffer
+  ; CHECK:   Kind: Buffer
   ; CHECK:   Element Type: u32
   ; CHECK:   Element Count: 4
 
@@ -70,7 +70,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Globally Coherent: 0
   ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
-  ; CHECK:   Kind: TypedBuffer
+  ; CHECK:   Kind: Buffer
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: i32
   ; CHECK:   Element Count: 1
@@ -89,7 +89,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Globally Coherent: 0
   ; CHECK:   Counter Direction: Decrement
   ; CHECK:   Class: UAV
-  ; CHECK:   Kind: TypedBuffer
+  ; CHECK:   Kind: Buffer
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
@@ -112,7 +112,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Globally Coherent: 0
   ; CHECK:   Counter Direction: Increment
   ; CHECK:   Class: UAV
-  ; CHECK:   Kind: TypedBuffer
+  ; CHECK:   Kind: Buffer
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4
@@ -132,7 +132,7 @@ define void @test_typedbuffer() {
   ; CHECK:   Globally Coherent: 0
   ; CHECK:   Counter Direction: Invalid
   ; CHECK:   Class: UAV
-  ; CHECK:   Kind: TypedBuffer
+  ; CHECK:   Kind: Buffer
   ; CHECK:   IsROV: 0
   ; CHECK:   Element Type: f32
   ; CHECK:   Element Count: 4

@@ -536,8 +536,8 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrspace(1) nocapture %out, float %x, [8 x i32], float %y) #0 {
 ; SI-LABEL: test_not_isfinite_pattern_4_wrong_ord_test:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s0, s[4:5], 0x14
 ; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x9
+; SI-NEXT:    s_load_dword s0, s[4:5], 0x14
 ; SI-NEXT:    s_load_dword s1, s[4:5], 0xb
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
 ; SI-NEXT:    s_mov_b32 s10, -1

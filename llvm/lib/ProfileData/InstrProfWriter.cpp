@@ -21,7 +21,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -618,12 +617,9 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
 
-    // Get the finalized MemProf summary that was built when adding records.
-    auto MemProfSum = MemProfSumBuilder.getSummary();
-
     if (auto E = writeMemProf(
             OS, MemProfData, MemProfVersionRequested, MemProfFullSchema,
-            std::move(DataAccessProfileData), MemProfSum.get()))
+            std::move(DataAccessProfileData), MemProfSumBuilder.getSummary()))
       return E;
   }
 
