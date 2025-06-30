@@ -350,6 +350,7 @@ static DecodeStatus decodeAddSubWordImm(MCInst &Inst, unsigned Insn,
 
     Inst.setOpcode((Insn & 0xff00) == 0x9600 ? AVR::ADIWRdK : AVR::SUBIWRdK);
     Inst.addOperand(MCOperand::createReg(RegVal));
+    Inst.addOperand(MCOperand::createReg(RegVal));
     unsigned imm = ((Insn & 0x00C0) >> 2) | (Insn & 0xF);
     Inst.addOperand(MCOperand::createImm(imm));
     return MCDisassembler::Success;
