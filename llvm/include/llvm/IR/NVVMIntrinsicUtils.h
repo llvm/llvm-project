@@ -426,7 +426,7 @@ inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
   case Intrinsic::nvvm_rcp_rp_f:
   case Intrinsic::nvvm_rcp_rp_d:
   case Intrinsic::nvvm_rcp_rp_ftz_f:
-    return APFloat::rmNearestTiesToEven;
+    return APFloat::rmTowardPositive;
 
   case Intrinsic::nvvm_rcp_rz_f:
   case Intrinsic::nvvm_rcp_rz_d:
