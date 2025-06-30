@@ -118,5 +118,3 @@ class TestStatusline(PExpectTest):
         self.child.expect(re.escape("\n\x1b[1A"))
         # Check for the escape code to move the cursor back to column 8.
         self.child.expect(re.escape("\x1b[8G"))
-
-
