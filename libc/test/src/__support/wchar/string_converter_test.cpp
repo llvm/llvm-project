@@ -35,7 +35,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32) {
 
   res = sc.popUTF32();
   ASSERT_FALSE(res.has_value());
-  ASSERT_EQ(res.error(), 0);
+  ASSERT_EQ(res.error(), -1);
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8) {
@@ -78,7 +78,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8) {
 
   res = sc.popUTF8();
   ASSERT_FALSE(res.has_value());
-  ASSERT_EQ(res.error(), 0);
+  ASSERT_EQ(res.error(), -1);
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
@@ -105,7 +105,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8PartialRead) {
 
   res = sc.popUTF8();
   ASSERT_FALSE(res.has_value());
-  ASSERT_EQ(res.error(), 0);
+  ASSERT_EQ(res.error(), -1);
 }
 
 TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
@@ -121,7 +121,7 @@ TEST(LlvmLibcStringConverterTest, UTF8To32PartialRead) {
 
   res = sc.popUTF32();
   ASSERT_FALSE(res.has_value());
-  ASSERT_EQ(static_cast<int>(res.error()), 0);
+  ASSERT_EQ(static_cast<int>(res.error()), -1);
 }
 
 TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
@@ -152,7 +152,7 @@ TEST(LlvmLibcStringConverterTest, UTF32To8ErrorHandling) {
 }
 
 TEST(LlvmLibcStringConverterTest, UTF8To32ErrorHandling) {
-  const char *src = "\xF0\x9F\xA4\xA1\xE2\x88\x91";
+  const char *src = "\xF0\x9F\xA4\xA1\xE2\x88";
   LIBC_NAMESPACE::internal::mbstate state;
   LIBC_NAMESPACE::internal::StringConverter<char8_t> sc(
       reinterpret_cast<const char8_t *>(src), &state);

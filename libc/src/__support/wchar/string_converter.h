@@ -57,8 +57,9 @@ public:
       : cr(ps), src(s), src_len(len), src_idx(0) {}
 
   ErrorOr<char32_t> popUTF32() {
-    if (pushFullCharacter() != 0)
-      return Error(0);
+    int err = pushFullCharacter();
+    if (err != 0)
+      return Error(err);
 
     auto out = cr.pop_utf32();
     if (out.has_value() && out.value() == L'\0')
@@ -68,8 +69,9 @@ public:
   }
 
   ErrorOr<char8_t> popUTF8() {
-    if (pushFullCharacter() != 0)
-      return Error(0);
+    int err = pushFullCharacter();
+    if (err != 0)
+      return Error(err);
 
     auto out = cr.pop_utf8();
     if (out.has_value() && out.value() == '\0')
