@@ -1412,11 +1412,13 @@ static bool DumpModuleSymbolFile(Stream &strm, Module *module) {
 }
 
 static bool GetSeparateDebugInfoList(StructuredData::Array &list,
-                                     Module *module, bool errors_only) {
+                                     Module *module, bool errors_only,
+                                     bool load_all_debug_info) {
   if (module) {
     if (SymbolFile *symbol_file = module->GetSymbolFile(/*can_create=*/true)) {
       StructuredData::Dictionary d;
-      if (symbol_file->GetSeparateDebugInfo(d, errors_only)) {
+      if (symbol_file->GetSeparateDebugInfo(d, errors_only,
+                                            load_all_debug_info)) {
         list.AddItem(
             std::make_shared<StructuredData::Dictionary>(std::move(d)));
         return true;
@@ -2030,7 +2032,8 @@ protected:
           }
           if (INTERRUPT_REQUESTED(GetDebugger(),
                                   "Interrupted in dump all symtabs with {0} "
-                                  "of {1} dumped.", num_dumped, num_modules))
+                                  "of {1} dumped.",
+                                  num_dumped, num_modules))
             break;
 
           num_dumped++;
@@ -2058,9 +2061,10 @@ protected:
                 result.GetOutputStream().EOL();
                 result.GetOutputStream().EOL();
               }
-              if (INTERRUPT_REQUESTED(GetDebugger(),
-                    "Interrupted in dump symtab list with {0} of {1} dumped.",
-                    num_dumped, num_matches))
+              if (INTERRUPT_REQUESTED(
+                      GetDebugger(),
+                      "Interrupted in dump symtab list with {0} of {1} dumped.",
+                      num_dumped, num_matches))
                 break;
 
               num_dumped++;
@@ -2121,9 +2125,10 @@ protected:
       result.GetOutputStream().Format("Dumping sections for {0} modules.\n",
                                       num_modules);
       for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
-        if (INTERRUPT_REQUESTED(GetDebugger(),
-              "Interrupted in dump all sections with {0} of {1} dumped",
-              image_idx, num_modules))
+        if (INTERRUPT_REQUESTED(
+                GetDebugger(),
+                "Interrupted in dump all sections with {0} of {1} dumped",
+                image_idx, num_modules))
           break;
 
         num_dumped++;
@@ -2142,9 +2147,10 @@ protected:
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (INTERRUPT_REQUESTED(GetDebugger(),
-                  "Interrupted in dump section list with {0} of {1} dumped.",
-                  i, num_matches))
+            if (INTERRUPT_REQUESTED(
+                    GetDebugger(),
+                    "Interrupted in dump section list with {0} of {1} dumped.",
+                    i, num_matches))
               break;
 
             Module *module = module_list.GetModulePointerAtIndex(i);
@@ -2295,9 +2301,10 @@ protected:
       }
 
       for (size_t i = 0; i < num_matches; ++i) {
-        if (INTERRUPT_REQUESTED(GetDebugger(),
-              "Interrupted in dump clang ast list with {0} of {1} dumped.",
-              i, num_matches))
+        if (INTERRUPT_REQUESTED(
+                GetDebugger(),
+                "Interrupted in dump clang ast list with {0} of {1} dumped.", i,
+                num_matches))
           break;
 
         Module *m = module_list.GetModulePointerAtIndex(i);
@@ -2346,9 +2353,10 @@ protected:
       result.GetOutputStream().Format(
           "Dumping debug symbols for {0} modules.\n", num_modules);
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted in dumping all "
+        if (INTERRUPT_REQUESTED(GetDebugger(),
+                                "Interrupted in dumping all "
                                 "debug symbols with {0} of {1} modules dumped",
-                                 num_dumped, num_modules))
+                                num_dumped, num_modules))
           break;
 
         if (DumpModuleSymbolFile(result.GetOutputStream(), module_sp.get()))
@@ -2365,9 +2373,10 @@ protected:
             FindModulesByName(&target, arg_cstr, module_list, true);
         if (num_matches > 0) {
           for (size_t i = 0; i < num_matches; ++i) {
-            if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted dumping {0} "
-                                                   "of {1} requested modules",
-                                                   i, num_matches))
+            if (INTERRUPT_REQUESTED(GetDebugger(),
+                                    "Interrupted dumping {0} "
+                                    "of {1} requested modules",
+                                    i, num_matches))
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (module) {
@@ -2436,8 +2445,8 @@ protected:
           for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
             if (INTERRUPT_REQUESTED(GetDebugger(),
                                     "Interrupted in dump all line tables with "
-                                    "{0} of {1} dumped", num_dumped,
-                                    num_modules))
+                                    "{0} of {1} dumped",
+                                    num_dumped, num_modules))
               break;
 
             if (DumpCompileUnitLineTable(
@@ -2522,6 +2531,10 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'd':
+        m_load_all_debug_info.SetCurrentValue(false);
+        m_load_all_debug_info.SetOptionWasSet();
+        break;
       case 'j':
         m_json.SetCurrentValue(true);
         m_json.SetOptionWasSet();
@@ -2539,6 +2552,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json.Clear();
       m_errors_only.Clear();
+      m_load_all_debug_info.Clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2547,6 +2561,7 @@ public:
 
     OptionValueBoolean m_json = false;
     OptionValueBoolean m_errors_only = false;
+    OptionValueBoolean m_load_all_debug_info = true;
   };
 
 protected:
@@ -2578,7 +2593,8 @@ protected:
 
         if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
                                      module_sp.get(),
-                                     bool(m_options.m_errors_only)))
+                                     bool(m_options.m_errors_only),
+                                     bool(m_options.m_load_all_debug_info)))
           num_dumped++;
       }
     } else {
@@ -2599,7 +2615,8 @@ protected:
               break;
             Module *module = module_list.GetModulePointerAtIndex(i);
             if (GetSeparateDebugInfoList(separate_debug_info_lists_by_module,
-                                         module, bool(m_options.m_errors_only)))
+                                         module, bool(m_options.m_errors_only),
+                                         bool(m_options.m_load_all_debug_info)))
               num_dumped++;
           }
         } else
