@@ -5557,6 +5557,22 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SPLAT_VECTOR:
     return false;
 
+  case ISD::ADDC:
+  case ISD::SUBC:
+  case ISD::ADDE:
+  case ISD::SUBE:
+  case ISD::SADDO:
+  case ISD::SSUBO:
+  case ISD::SADDO_CARRY:
+  case ISD::SSUBO_CARRY:
+  case ISD::UADDO:
+  case ISD::USUBO:
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
+    // No poison on result or overflow flags.
+    // TODO: Add SMULO/UMULO with test coverage.
+    return false;
+
   case ISD::SELECT_CC:
   case ISD::SETCC: {
     // Integer setcc cannot create undef or poison.
