@@ -12493,8 +12493,7 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
     // In C++ [basic.start.main]p3, it is said a program attaching main to a
     // named module is ill-formed.
     if (FD->isInNamedModule()) {
-      Diag(FD->getTypeSpecStartLoc(), diag::err_main_in_named_module);
-      FD->setInvalidDecl(true);
+      Diag(FD->getTypeSpecStartLoc(), diag::warn_main_in_named_module);
     }
   }
 
