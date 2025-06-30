@@ -42,11 +42,11 @@
 ; considerably more copies of the loop (especially top-level ones).
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
-; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=8 \
+; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=8 -unswitch-parent-blocks-div=32 \
 ; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX2
 ;
-; We get hundreds of copies of the loop when cost multiplier is disabled:
+; We get several copies of the loop when cost multiplier is disabled:
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
 ; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
@@ -61,19 +61,19 @@
 ; Somewhat relaxed restrictions on candidates:
 ; LOOP-RELAX-COUNT-5:     Loop at depth 1 containing:
 ; LOOP-RELAX-NOT: Loop at depth 1 containing:
-; LOOP-RELAX-COUNT-32:     Loop at depth 2 containing:
+; LOOP-RELAX-COUNT-5:     Loop at depth 2 containing:
 ; LOOP-RELAX-NOT: Loop at depth 2 containing:
 ;
 ; Even more relaxed restrictions on candidates and siblings.
-; LOOP-RELAX2-COUNT-11:     Loop at depth 1 containing:
+; LOOP-RELAX2-COUNT-6:     Loop at depth 1 containing:
 ; LOOP-RELAX2-NOT: Loop at depth 1 containing:
-; LOOP-RELAX2-COUNT-40:     Loop at depth 2 containing:
+; LOOP-RELAX2-COUNT-6:     Loop at depth 2 containing:
 ; LOOP-RELAX-NOT: Loop at depth 2 containing:
 ;
 ; Unswitched as much as it could (with multiplier disabled).
-; LOOP-MAX-COUNT-56:     Loop at depth 1 containing:
+; LOOP-MAX-COUNT-11:     Loop at depth 1 containing:
 ; LOOP-MAX-NOT: Loop at depth 1 containing:
-; LOOP-MAX-COUNT-111:     Loop at depth 2 containing:
+; LOOP-MAX-COUNT-11:     Loop at depth 2 containing:
 ; LOOP-MAX-NOT: Loop at depth 2 containing:
 
 define i32 @loop_switch(ptr %addr, i32 %c1, i32 %c2) {
