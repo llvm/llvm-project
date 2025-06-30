@@ -9,9 +9,9 @@ func.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
   // CHECK-DAG: v_blocks = 1 : i32
   // CHECK-DAG: transpose = false
   // CHECK-DAG: pack_register = false
-  // CHECK-DAG: cache_control = #xevm.load_cache_control<Default>
+  // CHECK-DAG: cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>
   // CHECK: (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
-  %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false, pack_register=false, cache_control=#xevm.load_cache_control<Default>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
+  %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false, pack_register=false, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
   return %loaded_a : vector<8xi16>
 }
 
@@ -22,9 +22,8 @@ func.func @blockstore2d(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i3
   // CHECK-DAG: elem_size_in_bits = 32 : i32
   // CHECK-DAG: tile_width = 16 : i32
   // CHECK-DAG: tile_height = 8 : i32
-  // CHECK-DAG: cache_control = #xevm.store_cache_control<Default>
   // CHECK: (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
-  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32, cache_control=#xevm.store_cache_control<Default>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
   return
 }
 

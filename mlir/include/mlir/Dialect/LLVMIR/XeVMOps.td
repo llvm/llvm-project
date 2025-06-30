@@ -77,10 +77,8 @@ def XeVM_ElemType : AnyTypeOf<[AnyI8, AnyI16, AnyI32, F32, TF32, F16, BF16]>;
 //   c - cached
 //   s - streaming
 //   ir - invalidated after read
-//   Default - default cache behavior for L1, L2 and L3 cache
 //===----------------------------------------------------------------------===//
 
-def LoadCacheControlDefault : I32EnumAttrCase<"DEFAULT", 0, "Default">;
 def LoadCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def LoadCacheControl_L1uc_L2uc_L3c
@@ -111,13 +109,13 @@ def LoadCacheControlInvalidateRead
 def XeVM_LoadCacheControl
     : I32EnumAttr<
           "LoadCacheControl", "XeVM load ops cache control",
-          [LoadCacheControlDefault, LoadCacheControl_L1uc_L2uc_L3uc,
-           LoadCacheControl_L1uc_L2uc_L3c, LoadCacheControl_L1uc_L2c_L3uc,
-           LoadCacheControl_L1uc_L2c_L3c, LoadCacheControl_L1c_L2uc_L3uc,
-           LoadCacheControl_L1c_L2uc_L3c, LoadCacheControl_L1c_L2c_L3uc,
-           LoadCacheControl_L1c_L2c_L3c, LoadCacheControl_L1s_L2uc_L3uc,
-           LoadCacheControl_L1s_L2uc_L3c, LoadCacheControl_L1s_L2c_L3uc,
-           LoadCacheControl_L1s_L2c_L3c, LoadCacheControlInvalidateRead]> {
+          [LoadCacheControl_L1uc_L2uc_L3uc, LoadCacheControl_L1uc_L2uc_L3c,
+           LoadCacheControl_L1uc_L2c_L3uc, LoadCacheControl_L1uc_L2c_L3c,
+           LoadCacheControl_L1c_L2uc_L3uc, LoadCacheControl_L1c_L2uc_L3c,
+           LoadCacheControl_L1c_L2c_L3uc, LoadCacheControl_L1c_L2c_L3c,
+           LoadCacheControl_L1s_L2uc_L3uc, LoadCacheControl_L1s_L2uc_L3c,
+           LoadCacheControl_L1s_L2c_L3uc, LoadCacheControl_L1s_L2c_L3c,
+           LoadCacheControlInvalidateRead]> {
   let cppNamespace = "::mlir::xevm";
   let genSpecializedAttr = 0;
 }
@@ -135,10 +133,8 @@ def XeVM_LoadCacheControlAttr
 //   wb - write-back
 //   wt - write-through
 //   s - streaming
-//   Default - default cache behavior for L1, L2 and L3 cache
 //===----------------------------------------------------------------------===//
 
-def StoreCacheControlDefault : I32EnumAttrCase<"DEFAULT", 0, "Default">;
 def StoreCacheControl_L1uc_L2uc_L3uc
     : I32EnumAttrCase<"L1UC_L2UC_L3UC", 1, "L1uc_L2uc_L3uc">;
 def StoreCacheControl_L1uc_L2uc_L3wb
@@ -173,14 +169,13 @@ def StoreCacheControl_L1wb_L2uc_L3wb
 def XeVM_StoreCacheControl
     : I32EnumAttr<
           "StoreCacheControl", "XeVM store ops cache control",
-          [StoreCacheControlDefault, StoreCacheControl_L1uc_L2uc_L3uc,
-           StoreCacheControl_L1uc_L2uc_L3wb, StoreCacheControl_L1uc_L2wb_L3uc,
-           StoreCacheControl_L1uc_L2wb_L3wb, StoreCacheControl_L1wt_L2uc_L3uc,
-           StoreCacheControl_L1wt_L2uc_L3wb, StoreCacheControl_L1wt_L2wb_L3uc,
-           StoreCacheControl_L1wt_L2wb_L3wb, StoreCacheControl_L1s_L2uc_L3uc,
-           StoreCacheControl_L1s_L2uc_L3wb, StoreCacheControl_L1s_L2wb_L3uc,
-           StoreCacheControl_L1s_L2wb_L3wb, StoreCacheControl_L1wb_L2uc_L3uc,
-           StoreCacheControl_L1wb_L2wb_L3uc,
+          [StoreCacheControl_L1uc_L2uc_L3uc, StoreCacheControl_L1uc_L2uc_L3wb,
+           StoreCacheControl_L1uc_L2wb_L3uc, StoreCacheControl_L1uc_L2wb_L3wb,
+           StoreCacheControl_L1wt_L2uc_L3uc, StoreCacheControl_L1wt_L2uc_L3wb,
+           StoreCacheControl_L1wt_L2wb_L3uc, StoreCacheControl_L1wt_L2wb_L3wb,
+           StoreCacheControl_L1s_L2uc_L3uc, StoreCacheControl_L1s_L2uc_L3wb,
+           StoreCacheControl_L1s_L2wb_L3uc, StoreCacheControl_L1s_L2wb_L3wb,
+           StoreCacheControl_L1wb_L2uc_L3uc, StoreCacheControl_L1wb_L2wb_L3uc,
            StoreCacheControl_L1wb_L2uc_L3wb]> {
   let cppNamespace = "::mlir::xevm";
   let genSpecializedAttr = 0;
@@ -205,7 +200,7 @@ def XeVM_BlockLoad2dOp
 
   let description = [{
     The `xevm.blockload2d` operation loads a two dimensional matrix tile
-    from a base matrix residing in memory. The parameters are:
+    from a base matrix residing in global memory. The parameters are:
       $ptr - the base address of the base matrix containing the tile to load
       $base_width, $base_height, $base_pitch - the shape of the base matrix.
       pitch is the physical stride between the first columns of the current row
@@ -248,12 +243,6 @@ def XeVM_BlockLoad2dOp
   }];
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
-    /// Get cache control or return default if not set.
-    ::mlir::xevm::LoadCacheControl getCacheControlOrDefault() {
-      if(getCacheControl())
-        return *getCacheControl();
-      return ::mlir::xevm::LoadCacheControl::DEFAULT;
-    }
   }];
 
   let hasVerifier = 1;
@@ -271,7 +260,7 @@ def XeVM_BlockStore2dOp
 
   let description = [{
     The `xevm.blockstore2d` operation stores a two dimensional tile into a
-    larger matrix residing in memory. The parameters are:
+    larger matrix residing in global memory. The parameters are:
       $ptr - the base address of the target matrix where to store the tile
       $base_width, $base_height, $base_pitch - the shape of the target matrix. pitch is the
       physical stride between the first columns of the current row and the subsequent row.
@@ -304,13 +293,6 @@ def XeVM_BlockStore2dOp
   }];
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
-    /// Get cache control or return default if not set.
-    ::mlir::xevm::StoreCacheControl getCacheControlOrDefault() {
-      if(getCacheControl())
-        return *getCacheControl();
-      return ::mlir::xevm::StoreCacheControl::DEFAULT;
-    }
-
     /// Default value for v_blocks is 1.
     constexpr uint32_t getVBlocks() {
       return 1;
@@ -321,16 +303,16 @@ def XeVM_BlockStore2dOp
 }
 
 def MemScopeLane : I32EnumAttrCase<"LANE", 0, "lane">;
-def MemScopeSg : I32EnumAttrCase<"SUBGROUP", 1, "subgroup">;
-def MemScopeWg : I32EnumAttrCase<"WORKGROUP", 2, "workgroup">;
+def MemScopeSubgroup : I32EnumAttrCase<"SUBGROUP", 1, "subgroup">;
+def MemScopeWorkgroup : I32EnumAttrCase<"WORKGROUP", 2, "workgroup">;
 def MemScopeCluster : I32EnumAttrCase<"CLUSTER", 3, "cluster">;
 def MemScopeDevice : I32EnumAttrCase<"DEVICE", 4, "device">;
 def MemScopeSystem : I32EnumAttrCase<"SYSTEM", 5, "system">;
 
 def XeVM_MemScope
     : I32EnumAttr<"MemScope", "XeVM memory scope",
-                  [MemScopeLane, MemScopeSg, MemScopeWg, MemScopeCluster,
-                   MemScopeDevice, MemScopeSystem]> {
+                  [MemScopeLane, MemScopeSubgroup, MemScopeWorkgroup,
+                   MemScopeCluster, MemScopeDevice, MemScopeSystem]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::xevm";
 }
@@ -394,12 +376,6 @@ def XeVM_PrefetchOp
   }];
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
-    /// Get cache control or return default if not set.
-    ::mlir::xevm::LoadCacheControl getCacheControlOrDefault() {
-      if(getCacheControl())
-        return *getCacheControl();
-      return ::mlir::xevm::LoadCacheControl::DEFAULT;
-    }
   }];
 
   let hasVerifier = 1;
@@ -417,7 +393,7 @@ def XeVM_BlockPrefetch2dOp
 
   let description = [{
     The `xevm.blockprefetch2d` operation prefetches a two dimensional tile
-    from a larger base matrix residing in memory. The parameters are:
+    from a larger base matrix residing in global memory. The parameters are:
       $ptr - the base address of the base matrix containing the tile to prefetch
       $base_width, $base_height, $base_pitch - the shape of the base matrix.
       pitch is the physical stride between the first columns of the current row
@@ -445,12 +421,6 @@ def XeVM_BlockPrefetch2dOp
   }];
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
-    /// Get cache control or return default if not set.
-    ::mlir::xevm::LoadCacheControl getCacheControlOrDefault() {
-      if(getCacheControl())
-        return *getCacheControl();
-      return ::mlir::xevm::LoadCacheControl::DEFAULT;
-    }
   }];
 
   let hasVerifier = 1;
