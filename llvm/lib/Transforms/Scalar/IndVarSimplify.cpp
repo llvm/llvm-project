@@ -122,6 +122,10 @@ static cl::opt<bool>
 AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
                 cl::desc("Allow widening of indvars to eliminate s/zext"));
 
+static cl::opt<bool> EnableAlmostDeadCounterCheck(
+    "enable-almost-dead-counter-check", cl::Hidden, cl::init(false),
+    cl::desc("Enable almost dead LoopCounter check."));
+
 namespace {
 
 class IndVarSimplify {
@@ -159,6 +163,13 @@ class IndVarSimplify {
                                  PHINode *IndVar, SCEVExpander &Rewriter);
 
   bool sinkUnusedInvariants(Loop *L);
+
+  PHINode *findCandidateLoopCounter(Loop *L, PHINode *LoopCounter,
+                                    const SCEV *ExitCount, ICmpInst *Cond,
+                                    ScalarEvolution *SE);
+
+  bool tryToReplacePureLoopCounter(Loop *L, ScalarEvolution *SE,
+                                  SCEVExpander &Rewriter, LoopInfo *LI);
 
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
@@ -808,7 +819,13 @@ static bool isLoopCounter(PHINode* Phi, Loop *L,
     return false;
 
   const SCEV *S = SE->getSCEV(Phi);
-  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_scev_One(), m_SpecificLoop(L))))
+  const SCEVConstant *Step;
+  if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_SCEVConstant(Step),
+                                    m_SpecificLoop(L))))
+    return false;
+  int64_t StepVal = Step->getValue()->getSExtValue();
+  // Require that the loop counter stride can only be 1 or -1
+  if (StepVal != 1 && StepVal != -1)
     return false;
 
   int LatchIdx = Phi->getBasicBlockIndex(L->getLoopLatch());
@@ -910,7 +927,8 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
   assert(isLoopCounter(IndVar, L, SE));
   assert(ExitCount->getType()->isIntegerTy() && "exit count must be integer");
   const SCEVAddRecExpr *AR = cast<SCEVAddRecExpr>(SE->getSCEV(IndVar));
-  assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
+  const SCEV *StepAbs = SE->getAbsExpr(AR->getStepRecurrence(*SE), true);
+  assert(StepAbs->isOne() && "only handles unit stride");
 
   // For integer IVs, truncate the IV before computing the limit unless we
   // know apriori that the limit must be a constant when evaluated in the
@@ -1870,6 +1888,133 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   return Changed;
 }
 
+
+/// Look for a PHI node from the loop header that
+/// 1. is a candidate inductive variable and passes the isLoopCounter() check;
+/// 2. has an integer type; has a width that is not less than ExitCount;
+/// 3. is a live node.
+PHINode *IndVarSimplify::findCandidateLoopCounter(Loop *L, PHINode *LoopCounter,
+                                                  const SCEV *ExitCount,
+                                                  ICmpInst *Cond,
+                                                  ScalarEvolution *SE) {
+
+  PHINode *CandidateCounter = nullptr;
+  unsigned ExitCountWidth = SE->getTypeSizeInBits(ExitCount->getType());
+
+  // Look for another IV that can serve as a LoopCounter.
+  for (PHINode &AuxPHI : L->getHeader()->phis()) {
+
+    unsigned PhiWidth;
+
+    // Require that the candidate IV is of integer type
+    if (AuxPHI.getType()->isIntegerTy())
+      PhiWidth = SE->getTypeSizeInBits(AuxPHI.getType());
+    else
+      continue;
+
+    if (L->isAuxiliaryInductionVariable(AuxPHI, *SE) &&
+        &AuxPHI != LoopCounter && isLoopCounter(&AuxPHI, L, SE) &&
+        // Do not worry; if the width of the LoopCounter is
+        // greater than ExitCount, LTFR will sign/zero extend ExitCount.
+        PhiWidth >= ExitCountWidth && DL.isLegalInteger(PhiWidth) &&
+        !isAlmostDeadIV(&AuxPHI, L->getLoopLatch(), Cond)) {
+
+      CandidateCounter = &AuxPHI;
+      break;
+    }
+  }
+
+  return CandidateCounter;
+}
+
+
+/// We define a PHI node as the Pure LoopCounter if it meets these two conditions: 
+/// 1. it is used for loop termination testing; 
+/// 2. it has at most two uses, PostAdd and CMP, with the latter being optional.
+///
+/// When the Pure loop counter is selected as the loop termination condition, 
+/// we will try to find a candidate loop counter to take over its counting function
+/// such as:
+//  loop:                                           
+///   %3 = phi i64 [ %10, %loop ], [ %2, %entry ]
+///   %4 = phi i64 [ %9, %loop ], [ 1, %entry ]
+///   ...                      ; Here, %4 is used to calculate array indices.
+///   %9 = add i64 %4, 1
+///   %10 = add nsw i64 %3, -1
+///   %11 = icmp ugt i64 %3, 1
+///   br i1 %11, label %loop, label %end
+/// After replacing the Pure LoopCounter:
+/// loop:                                           
+///   %4 = phi i64 [ %9, %loop ], [ 1, %entry ]
+///   ...
+///   %9 = add i64 %4, 1
+///   %11 = icmp ne i64 %9, 11
+///   br i1 %11, label %loop, label %end
+/// 
+bool IndVarSimplify::tryToReplacePureLoopCounter(Loop *L, ScalarEvolution *SE,
+                                                SCEVExpander &Rewriter,
+                                                LoopInfo *LI) {
+  bool Changed = false;
+
+  SmallVector<BasicBlock *, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+  if (ExitingBlocks.empty())
+    return false;
+
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    // Can't handle non-branch yet.
+    if (!isa<BranchInst>(ExitingBB->getTerminator()))
+      continue;
+    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI || BI->isUnconditional())
+      continue;
+
+    // Check the Compare 检查整数比较  输出信息 LLVM_Ddg()
+    ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
+    if (!Cond)
+      continue;
+
+    // If our exitting block exits multiple loops, we can only rewrite the
+    // innermost one.  Otherwise, we're changing how many times the innermost
+    // loop runs before it exits.
+    if (LI->getLoopFor(ExitingBB) != L)
+      continue;
+
+    // Get the number of times the backedge executes before the given 
+    // exit would be taken;
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    if (isa<SCEVCouldNotCompute>(ExitCount) || ExitCount->isZero() ||
+        !Rewriter.isSafeToExpand(ExitCount))
+      continue;
+
+    // Let FindLoopCounter() select the loop counter first. 
+    PHINode *FoundCounter = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
+    if (!FoundCounter)
+      continue;
+
+    Value *PostAdd = FoundCounter->getIncomingValueForBlock(L->getLoopLatch());
+    // If it selects the Pure LoopCounter
+    if ((isLoopExitTestBasedOn(FoundCounter, ExitingBB) ||
+         isLoopExitTestBasedOn(PostAdd, ExitingBB)) &&
+         !hasConcreteDef(FoundCounter) &&
+         // isAlmostDeadIV()
+         isAlmostDeadIV(FoundCounter, L->getLoopLatch(), Cond)) {
+
+      // Try to find other suitable IV as the new LoopCounter
+      PHINode *CandidateCounter =
+          findCandidateLoopCounter(L, FoundCounter, ExitCount, Cond, SE);
+      if (!CandidateCounter)
+        continue;
+
+      // Let this newly found candidate LoopCounter perform LFTR
+      Changed |= linearFunctionTestReplace(L, ExitingBB, ExitCount,
+                                           CandidateCounter, Rewriter);
+    }
+  }
+
+  return Changed;
+}
+
 //===----------------------------------------------------------------------===//
 //  IndVarSimplify driver. Manage several subpasses of IV simplification.
 //===----------------------------------------------------------------------===//
@@ -1983,18 +2128,23 @@ bool IndVarSimplify::run(Loop *L) {
       if (!IndVar)
         continue;
 
-      // Avoid high cost expansions.  Note: This heuristic is questionable in
-      // that our definition of "high cost" is not exactly principled.
-      if (Rewriter.isHighCostExpansion(ExitCount, L, SCEVCheapExpansionBudget,
-                                       TTI, PreHeader->getTerminator()))
-        continue;
+      if (EnableAlmostDeadCounterCheck)
+        Changed |= tryToReplacePureLoopCounter(L, SE, Rewriter, LI);
+      else{
+        // Avoid high cost expansions.  Note: This heuristic is questionable in
+        // that our definition of "high cost" is not exactly principled.
+        if (Rewriter.isHighCostExpansion(ExitCount, L, SCEVCheapExpansionBudget,
+                                        TTI, PreHeader->getTerminator()))
+          continue;
 
-      if (!Rewriter.isSafeToExpand(ExitCount))
-        continue;
+        if (!Rewriter.isSafeToExpand(ExitCount))
+          continue;
 
-      Changed |= linearFunctionTestReplace(L, ExitingBB,
-                                           ExitCount, IndVar,
-                                           Rewriter);
+        else
+          Changed |= linearFunctionTestReplace(L, ExitingBB,
+                                            ExitCount, IndVar,
+                                            Rewriter);
+      }
     }
   }
   // Clear the rewriter cache, because values that are in the rewriter's cache
