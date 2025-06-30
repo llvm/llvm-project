@@ -7036,11 +7036,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
-        if (none_of(FOR->users(), [](VPUser *U) {
-              auto *VPI = dyn_cast<VPInstruction>(U);
-              return VPI && VPI->getOpcode() ==
-                                VPInstruction::FirstOrderRecurrenceSplice;
-            }))
+        using namespace VPlanPatternMatch;
+        if (none_of(
+                FOR->users(),
+                match(
+                    m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                        m_VPValue(), m_VPValue()))))
           return true;
       }
       // The VPlan-based cost model is more accurate for partial reduction and
@@ -7449,13 +7450,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       Hints.setAlreadyVectorized();
 
       // Check if it's EVL-vectorized and mark the corresponding metadata.
+      using namespace VPlanPatternMatch;
       bool IsEVLVectorized =
-          llvm::any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
-            // Looking for the ExplictVectorLength VPInstruction.
-            if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
-              return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
-            return false;
-          });
+          any_of(make_pointer_range(*HeaderVPBB),
+                 match(m_VPInstruction<VPInstruction::ExplicitVectorLength>(
+                     m_VPValue())));
       if (IsEVLVectorized) {
         LLVMContext &Context = L->getHeader()->getContext();
         MDNode *LoopID = L->getLoopID();
@@ -9737,10 +9736,9 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   // If there is a suitable resume value for the canonical induction in the
   // scalar (which will become vector) epilogue loop we are done. Otherwise
   // create it below.
-  if (any_of(*MainScalarPH, [VectorTC](VPRecipeBase &R) {
-        return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
-                                                           m_SpecificInt(0)));
-      }))
+  if (any_of(make_pointer_range(*MainScalarPH),
+             match(m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
+                                                     m_SpecificInt(0)))))
     return;
   VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
   ScalarPHBuilder.createScalarPhi(
@@ -9778,10 +9776,9 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
                     m_SpecificInt(0)) &&
-                all_of(P.incoming_values(), [&EPI](Value *Inc) {
-                  return Inc == EPI.VectorTripCount ||
-                         match(Inc, m_SpecificInt(0));
-                }))
+                all_of(P.incoming_values(),
+                       match(m_CombineOr(m_Specific(EPI.VectorTripCount),
+                                         m_SpecificInt(0)))))
               return &P;
             return nullptr;
           });

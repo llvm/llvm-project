@@ -50,6 +50,11 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
+template <typename Val = const Value, typename Pattern>
+std::function<bool(Val *)> match(const Pattern &P) {
+  return [&P](Val *V) { return P.match(V); };
+}
+
 template <typename Pattern> bool match(ArrayRef<int> Mask, const Pattern &P) {
   return P.match(Mask);
 }

@@ -1341,7 +1341,7 @@ Instruction *InstCombinerImpl::foldICmpWithConstant(ICmpInst &Cmp) {
     return nullptr;
 
   if (auto *Phi = dyn_cast<PHINode>(Op0))
-    if (all_of(Phi->operands(), [](Value *V) { return isa<Constant>(V); })) {
+    if (all_of(Phi->operands(), match(m_Constant()))) {
       SmallVector<Constant *> Ops;
       for (Value *V : Phi->incoming_values()) {
         Constant *Res =
