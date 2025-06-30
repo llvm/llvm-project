@@ -1593,11 +1593,14 @@ def : Pat<(vector_insert v8i32:$xd, GRLenVT:$rj, uimm3:$imm),
           (XVINSGR2VR_W v8i32:$xd, GRLenVT:$rj, uimm3:$imm)>;
 def : Pat<(vector_insert v4i64:$xd, GRLenVT:$rj, uimm2:$imm),
           (XVINSGR2VR_D v4i64:$xd, GRLenVT:$rj, uimm2:$imm)>;
-
-def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
-          (XVINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm3:$imm)>;
-def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
-          (XVINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm2:$imm)>;
+def : Pat<(vector_insert v8f32:$xd, (f32 (vector_extract v8f32:$xj, uimm3:$imm1)), uimm3:$imm2),
+          (XVINSGR2VR_W $xd, (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm1), uimm3:$imm2)>;
+def : Pat<(vector_insert v4f64:$xd, (f64 (vector_extract v4f64:$xj, uimm2:$imm1)), uimm2:$imm2),
+          (XVINSGR2VR_D $xd, (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm1), uimm2:$imm2)>;
+def : Pat<(vector_insert v8f32:$xd, FPR32:$fj, uimm3:$imm),
+          (XVINSGR2VR_W $xd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm3:$imm)>;
+def : Pat<(vector_insert v4f64:$xd, FPR64:$fj, uimm2:$imm),
+          (XVINSGR2VR_D $xd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm2:$imm)>;
 
 // scalar_to_vector
 def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),

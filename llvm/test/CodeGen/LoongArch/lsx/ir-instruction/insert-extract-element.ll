@@ -4,8 +4,7 @@
 define <4 x float> @insert_extract_v4f32(<4 x float> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 3
-; CHECK-NEXT:    movfr2gr.s $a0, $fa1
+; CHECK-NEXT:    vpickve2gr.w $a0, $vr0, 3
 ; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -17,8 +16,7 @@ entry:
 define <2 x double> @insert_extract_v2f64(<2 x double> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
+; CHECK-NEXT:    vpickve2gr.d $a0, $vr0, 1
 ; CHECK-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

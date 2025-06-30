@@ -1791,7 +1791,10 @@ def : Pat<(vector_insert v4i32:$vd, GRLenVT:$rj, uimm2:$imm),
           (VINSGR2VR_W v4i32:$vd, GRLenVT:$rj, uimm2:$imm)>;
 def : Pat<(vector_insert v2i64:$vd, GRLenVT:$rj, uimm1:$imm),
           (VINSGR2VR_D v2i64:$vd, GRLenVT:$rj, uimm1:$imm)>;
-
+def : Pat<(vector_insert v4f32:$vd, (f32 (vector_extract v4f32:$vj, uimm2:$imm1)), uimm2:$imm2),
+          (VINSGR2VR_W $vd, (VPICKVE2GR_W v4f32:$vj, uimm2:$imm1), uimm2:$imm2)>;
+def : Pat<(vector_insert v2f64:$vd, (f64 (vector_extract v2f64:$vj, uimm1:$imm1)), uimm1:$imm2),
+          (VINSGR2VR_D $vd, (VPICKVE2GR_D v2f64:$vj, uimm1:$imm1), uimm1:$imm2)>;
 def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, uimm2:$imm),
           (VINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm2:$imm)>;
 def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, uimm1:$imm),
