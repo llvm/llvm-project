@@ -15,8 +15,8 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include "time_constants.h"
 
 #include <stdint.h>

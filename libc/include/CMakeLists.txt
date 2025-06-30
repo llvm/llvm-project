@@ -255,6 +255,7 @@ add_header_macro(
   time.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.null_macro
     .llvm-libc-macros.time_macros
     .llvm-libc-types.clock_t
     .llvm-libc-types.time_t
@@ -329,6 +330,7 @@ add_header_macro(
   stdio.h
   DEPENDS
     .llvm-libc-macros.file_seek_macros
+    .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdio_macros
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
@@ -343,6 +345,7 @@ add_header_macro(
   ../libc/include/stdlib.yaml
   stdlib.h
   DEPENDS
+    .llvm-libc-macros.null_macro
     .llvm-libc-macros.stdlib_macros
     .llvm-libc-types.__atexithandler_t
     .llvm-libc-types.__qsortcompare_t
@@ -709,6 +712,7 @@ add_header_macro(
   wchar.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.null_macro
     .llvm-libc-macros.wchar_macros
     .llvm-libc-types.mbstate_t
     .llvm-libc-types.size_t
@@ -723,6 +727,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.locale_macros
+    .llvm-libc-macros.null_macro
     .llvm-libc-types.locale_t
     .llvm-libc-types.struct_lconv
 )

@@ -757,10 +757,9 @@ void CodeGenFunction::LexicalScope::rescopeLabels() {
     = CGF.EHStack.getInnermostNormalCleanup();
 
   // Change the scope depth of all the labels.
-  for (SmallVectorImpl<const LabelDecl*>::const_iterator
-         i = Labels.begin(), e = Labels.end(); i != e; ++i) {
-    assert(CGF.LabelMap.count(*i));
-    JumpDest &dest = CGF.LabelMap.find(*i)->second;
+  for (const LabelDecl *Label : Labels) {
+    assert(CGF.LabelMap.count(Label));
+    JumpDest &dest = CGF.LabelMap.find(Label)->second;
     assert(dest.getScopeDepth().isValid());
     assert(innermostScope.encloses(dest.getScopeDepth()));
     dest.setScopeDepth(innermostScope);
@@ -1483,7 +1482,14 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
     BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
         BoolCondVal, Stmt::getLikelihood(S.getBody()));
-  Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+  auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+  // Key Instructions: Emit the condition and branch as separate atoms to
+  // match existing loop stepping behaviour. FIXME: We could have the branch as
+  // the backup location for the condition, which would probably be a better
+  // experience.
+  if (auto *CondI = dyn_cast<llvm::Instruction>(BoolCondVal))
+    addInstToNewSourceAtom(CondI, nullptr);
+  addInstToNewSourceAtom(I, nullptr);
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
@@ -1508,6 +1514,9 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
     EmitStmt(S.getLoopVarStmt());
     EmitStmt(S.getBody());
   }
+  // The last block in the loop's body (which unconditionally branches to the
+  // `inc` block if there is one).
+  auto *FinalBodyBB = Builder.GetInsertBlock();
 
   EmitStopPoint(&S);
   // If there is an increment, emit it next.
@@ -1532,6 +1541,12 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  if (FinalBodyBB) {
+    // We want the for closing brace to be step-able on to match existing
+    // behaviour.
+    addInstToNewSourceAtom(FinalBodyBB->getTerminator(), nullptr);
+  }
 }
 
 void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
@@ -1589,6 +1604,7 @@ static bool isSwiftAsyncCallee(const CallExpr *CE) {
 /// if the function returns void, or may be missing one if the function returns
 /// non-void.  Fun stuff :).
 void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
+  ApplyAtomGroup Grp(getDebugInfo());
   if (requiresReturnValueCheck()) {
     llvm::Constant *SLoc = EmitCheckSourceLocation(S.getBeginLoc());
     auto *SLocPtr =
@@ -1664,16 +1680,19 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
     // If this function returns a reference, take the address of the expression
     // rather than the value.
     RValue Result = EmitReferenceBindingToExpr(RV);
-    Builder.CreateStore(Result.getScalarVal(), ReturnValue);
+    auto *I = Builder.CreateStore(Result.getScalarVal(), ReturnValue);
+    addInstToCurrentSourceAtom(I, I->getValueOperand());
   } else {
     switch (getEvaluationKind(RV->getType())) {
     case TEK_Scalar: {
       llvm::Value *Ret = EmitScalarExpr(RV);
-      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect)
+      if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
         EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
                           /*isInit*/ true);
-      else
-        Builder.CreateStore(Ret, ReturnValue);
+      } else {
+        auto *I = Builder.CreateStore(Ret, ReturnValue);
+        addInstToCurrentSourceAtom(I, I->getValueOperand());
+      }
       break;
     }
     case TEK_Complex:
@@ -2282,8 +2301,8 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
       // Okay, we can dead code eliminate everything except this case.  Emit the
       // specified series of statements and we're good.
-      for (unsigned i = 0, e = CaseStmts.size(); i != e; ++i)
-        EmitStmt(CaseStmts[i]);
+      for (const Stmt *CaseStmt : CaseStmts)
+        EmitStmt(CaseStmt);
       incrementProfileCounter(&S);
       PGO->markStmtMaybeUsed(S.getBody());
 

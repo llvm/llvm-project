@@ -63,9 +63,8 @@ TEST(PassManagerTest, OpSpecificAnalysis) {
   // Create a module with 2 functions.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
   for (StringRef name : {"secret", "not_secret"}) {
-    auto func = func::FuncOp::create(
-        builder.getUnknownLoc(), name,
-        builder.getFunctionType(std::nullopt, std::nullopt));
+    auto func = func::FuncOp::create(builder.getUnknownLoc(), name,
+                                     builder.getFunctionType({}, {}));
     func.setPrivate();
     module->push_back(func);
   }
@@ -125,9 +124,8 @@ TEST(PassManagerTest, ExecutionAction) {
 
   // Create a module with 2 functions.
   OwningOpRef<ModuleOp> module(ModuleOp::create(UnknownLoc::get(&context)));
-  auto f =
-      func::FuncOp::create(builder.getUnknownLoc(), "process_me_once",
-                           builder.getFunctionType(std::nullopt, std::nullopt));
+  auto f = func::FuncOp::create(builder.getUnknownLoc(), "process_me_once",
+                                builder.getFunctionType({}, {}));
   f.setPrivate();
   module->push_back(f);
 

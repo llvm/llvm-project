@@ -27,6 +27,10 @@ add_subdirectory(TraceExporter)
 add_subdirectory(TypeSystem)
 add_subdirectory(UnwindAssembly)
 
+if(LLDB_ENABLE_PROTOCOL_SERVERS)
+  add_subdirectory(Protocol)
+endif()
+
 set(LLDB_STRIPPED_PLUGINS)
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 

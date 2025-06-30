@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Investigate
+// ABI tags have no effect in MSVC mode.
 // XFAIL: msvc
+
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 // Test that we encode the hardening mode in an ABI tag to avoid ODR violations
 // when linking TUs that have different values for it.
@@ -21,31 +23,33 @@
 // RUN: %{cxx} %t.tu1.o %t.tu2.o %t.tu3.o %t.tu4.o %t.main.o %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
+#include "test_macros.h"
+
 // fast hardening mode
 #ifdef TU1
 #  include <__config>
-_LIBCPP_HIDE_FROM_ABI inline int f() { return 1; }
+_LIBCPP_HIDE_FROM_ABI TEST_NOINLINE inline int f() { return 1; }
 int tu1() { return f(); }
 #endif // TU1
 
 // extensive hardening mode
 #ifdef TU2
 #  include <__config>
-_LIBCPP_HIDE_FROM_ABI inline int f() { return 2; }
+_LIBCPP_HIDE_FROM_ABI TEST_NOINLINE inline int f() { return 2; }
 int tu2() { return f(); }
 #endif // TU2
 
 // debug hardening mode
 #ifdef TU3
 #  include <__config>
-_LIBCPP_HIDE_FROM_ABI inline int f() { return 3; }
+_LIBCPP_HIDE_FROM_ABI TEST_NOINLINE inline int f() { return 3; }
 int tu3() { return f(); }
 #endif // TU3
 
 // No hardening
 #ifdef TU4
 #  include <__config>
-_LIBCPP_HIDE_FROM_ABI inline int f() { return 4; }
+_LIBCPP_HIDE_FROM_ABI TEST_NOINLINE inline int f() { return 4; }
 int tu4() { return f(); }
 #endif // TU4
 

@@ -889,7 +889,7 @@ def FlushOp : OpenMP_Op<"flush", clauses = [
     specified or implied.
   }] # clausesDescription;
 
-  let arguments = !con((ins Variadic<OpenMP_PointerLikeType>:$varList),
+  let arguments = !con((ins Variadic<AnyType>:$varList),
                        clausesArgs);
 
   // Override inherited assembly format to include `varList`.

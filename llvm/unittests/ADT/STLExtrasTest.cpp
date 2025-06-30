@@ -1567,6 +1567,30 @@ TEST(STLExtrasTest, Mismatch) {
   }
 }
 
+TEST(STLExtrasTest, Includes) {
+  {
+    std::vector<int> V1 = {1, 2};
+    std::vector<int> V2;
+    EXPECT_TRUE(includes(V1, V2));
+    EXPECT_FALSE(includes(V2, V1));
+    V2.push_back(1);
+    EXPECT_TRUE(includes(V1, V2));
+    V2.push_back(3);
+    EXPECT_FALSE(includes(V1, V2));
+  }
+
+  {
+    std::vector<int> V1 = {3, 2, 1};
+    std::vector<int> V2;
+    EXPECT_TRUE(includes(V1, V2, std::greater<>()));
+    EXPECT_FALSE(includes(V2, V1, std::greater<>()));
+    V2.push_back(3);
+    EXPECT_TRUE(includes(V1, V2, std::greater<>()));
+    V2.push_back(0);
+    EXPECT_FALSE(includes(V1, V2, std::greater<>()));
+  }
+}
+
 struct Foo;
 struct Bar {};
 

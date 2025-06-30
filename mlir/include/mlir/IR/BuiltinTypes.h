@@ -99,7 +99,9 @@ public:
 /// Note: This class attaches the ShapedType trait to act as a mixin to
 ///       provide many useful utility functions. This inheritance has no effect
 ///       on derived memref types.
-class BaseMemRefType : public Type, public ShapedType::Trait<BaseMemRefType> {
+class BaseMemRefType : public Type,
+                       public PtrLikeTypeInterface::Trait<BaseMemRefType>,
+                       public ShapedType::Trait<BaseMemRefType> {
 public:
   using Type::Type;
 
@@ -116,6 +118,12 @@ public:
   /// provided shape is `std::nullopt`, the current shape of the type is used.
   BaseMemRefType cloneWith(std::optional<ArrayRef<int64_t>> shape,
                            Type elementType) const;
+
+  /// Clone this type with the given memory space and element type. If the
+  /// provided element type is `std::nullopt`, the current element type of the
+  /// type is used.
+  FailureOr<PtrLikeTypeInterface>
+  clonePtrWith(Attribute memorySpace, std::optional<Type> elementType) const;
 
   // Make sure that base class overloads are visible.
   using ShapedType::Trait<BaseMemRefType>::clone;
@@ -141,8 +149,16 @@ public:
   /// New `Attribute getMemorySpace()` method should be used instead.
   unsigned getMemorySpaceAsInt() const;
 
+  /// Returns that this ptr-like object has non-empty ptr metadata.
+  bool hasPtrMetadata() const { return true; }
+
   /// Allow implicit conversion to ShapedType.
   operator ShapedType() const { return llvm::cast<ShapedType>(*this); }
+
+  /// Allow implicit conversion to PtrLikeTypeInterface.
+  operator PtrLikeTypeInterface() const {
+    return llvm::cast<PtrLikeTypeInterface>(*this);
+  }
 };
 
 } // namespace mlir

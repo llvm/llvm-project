@@ -41,8 +41,7 @@ std::optional<bool> isExpensiveToCopy(QualType Type,
     return std::nullopt;
   return !Type.isTriviallyCopyableType(Context) &&
          !classHasTrivialCopyAndDestroy(Type) &&
-         !hasDeletedCopyConstructor(Type) &&
-         !Type->isObjCLifetimeType();
+         !hasDeletedCopyConstructor(Type) && !Type->isObjCLifetimeType();
 }
 
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,

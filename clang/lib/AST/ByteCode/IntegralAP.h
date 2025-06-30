@@ -28,12 +28,19 @@ namespace interp {
 
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
-template <unsigned Bits, bool Signed> class Integral;
 
+/// If an IntegralAP is constructed from Memory, it DOES NOT OWN THAT MEMORY.
+/// It will NOT copy the memory (unless, of course, copy() is called) and it
+/// won't alllocate anything. The allocation should happen via InterpState or
+/// Program.
 template <bool Signed> class IntegralAP final {
-private:
+public:
+  union {
+    uint64_t *Memory = nullptr;
+    uint64_t Val;
+  };
+  uint32_t BitWidth = 0;
   friend IntegralAP<!Signed>;
-  APInt V;
 
   template <typename T, bool InputSigned>
   static T truncateCast(const APInt &V) {
@@ -52,106 +59,126 @@ private:
                                : V.trunc(BitSize).getZExtValue();
   }
 
+  APInt getValue() const {
+    if (singleWord())
+      return APInt(BitWidth, Val, Signed);
+    unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
+    return llvm::APInt(BitWidth, NumWords, Memory);
+  }
+
 public:
   using AsUnsigned = IntegralAP<false>;
 
-  template <typename T>
-  IntegralAP(T Value, unsigned BitWidth)
-      : V(APInt(BitWidth, static_cast<uint64_t>(Value), Signed)) {}
-
-  IntegralAP(APInt V) : V(V) {}
-  /// Arbitrary value for uninitialized variables.
-  IntegralAP() : IntegralAP(Signed ? -1 : 7, 3) {}
-
-  IntegralAP operator-() const { return IntegralAP(-V); }
-  IntegralAP operator-(const IntegralAP &Other) const {
-    return IntegralAP(V - Other.V);
+  void take(uint64_t *NewMemory) {
+    assert(!singleWord());
+    std::memcpy(NewMemory, Memory, numWords() * sizeof(uint64_t));
+    Memory = NewMemory;
   }
+
+  void copy(const APInt &V) {
+    assert(BitWidth == V.getBitWidth());
+    assert(numWords() == V.getNumWords());
+
+    if (V.isSingleWord()) {
+      if constexpr (Signed)
+        Val = V.getSExtValue();
+      else
+        Val = V.getZExtValue();
+      return;
+    }
+    assert(Memory);
+    std::memcpy(Memory, V.getRawData(), V.getNumWords() * sizeof(uint64_t));
+  }
+
+  IntegralAP() = default;
+  /// Zeroed, single-word IntegralAP of the given bitwidth.
+  IntegralAP(unsigned BitWidth) : Val(0), BitWidth(BitWidth) {
+    assert(singleWord());
+  }
+  IntegralAP(uint64_t *Memory, unsigned BitWidth)
+      : Memory(Memory), BitWidth(BitWidth) {}
+  IntegralAP(const APInt &V) : BitWidth(V.getBitWidth()) {
+    if (V.isSingleWord()) {
+      Val = Signed ? V.getSExtValue() : V.getZExtValue();
+    } else {
+      Memory = const_cast<uint64_t *>(V.getRawData());
+    }
+  }
+
+  IntegralAP operator-() const { return IntegralAP(-getValue()); }
   bool operator>(const IntegralAP &RHS) const {
     if constexpr (Signed)
-      return V.ugt(RHS.V);
-    return V.sgt(RHS.V);
+      return getValue().sgt(RHS.getValue());
+    return getValue().ugt(RHS.getValue());
   }
-  bool operator>=(IntegralAP RHS) const {
+  bool operator>=(unsigned RHS) const {
     if constexpr (Signed)
-      return V.uge(RHS.V);
-    return V.sge(RHS.V);
+      return getValue().sge(RHS);
+    return getValue().uge(RHS);
   }
   bool operator<(IntegralAP RHS) const {
     if constexpr (Signed)
-      return V.slt(RHS.V);
-    return V.slt(RHS.V);
-  }
-  bool operator<=(IntegralAP RHS) const {
-    if constexpr (Signed)
-      return V.ult(RHS.V);
-    return V.ult(RHS.V);
+      return getValue().slt(RHS.getValue());
+    return getValue().ult(RHS.getValue());
   }
 
   template <typename Ty, typename = std::enable_if_t<std::is_integral_v<Ty>>>
   explicit operator Ty() const {
-    return truncateCast<Ty, Signed>(V);
+    return truncateCast<Ty, Signed>(getValue());
   }
 
   template <typename T> static IntegralAP from(T Value, unsigned NumBits = 0) {
+    if (NumBits == 0)
+      NumBits = sizeof(T) * 8;
     assert(NumBits > 0);
+    assert(APInt::getNumWords(NumBits) == 1);
     APInt Copy = APInt(NumBits, static_cast<uint64_t>(Value), Signed);
-
     return IntegralAP<Signed>(Copy);
   }
 
-  template <bool InputSigned>
-  static IntegralAP from(IntegralAP<InputSigned> V, unsigned NumBits = 0) {
-    if (NumBits == 0)
-      NumBits = V.bitWidth();
-
-    if constexpr (InputSigned)
-      return IntegralAP<Signed>(V.V.sextOrTrunc(NumBits));
-    return IntegralAP<Signed>(V.V.zextOrTrunc(NumBits));
-  }
-
-  template <unsigned Bits, bool InputSigned>
-  static IntegralAP from(Integral<Bits, InputSigned> I, unsigned BitWidth) {
-    return IntegralAP<Signed>(I.toAPInt(BitWidth));
-  }
-
-  static IntegralAP zero(int32_t BitWidth) {
-    APInt V = APInt(BitWidth, 0LL, Signed);
-    return IntegralAP(V);
-  }
-
-  constexpr unsigned bitWidth() const { return V.getBitWidth(); }
+  constexpr uint32_t bitWidth() const { return BitWidth; }
+  constexpr unsigned numWords() const { return APInt::getNumWords(BitWidth); }
+  constexpr bool singleWord() const { return numWords() == 1; }
 
   APSInt toAPSInt(unsigned Bits = 0) const {
     if (Bits == 0)
       Bits = bitWidth();
 
+    APInt V = getValue();
     if constexpr (Signed)
-      return APSInt(V.sext(Bits), !Signed);
+      return APSInt(getValue().sext(Bits), !Signed);
     else
-      return APSInt(V.zext(Bits), !Signed);
+      return APSInt(getValue().zext(Bits), !Signed);
   }
   APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
-  bool isZero() const { return V.isZero(); }
+  bool isZero() const { return getValue().isZero(); }
   bool isPositive() const {
     if constexpr (Signed)
-      return V.isNonNegative();
+      return getValue().isNonNegative();
     return true;
   }
   bool isNegative() const {
     if constexpr (Signed)
-      return !V.isNonNegative();
+      return !getValue().isNonNegative();
     return false;
   }
-  bool isMin() const { return V.isMinValue(); }
-  bool isMax() const { return V.isMaxValue(); }
+  bool isMin() const {
+    if constexpr (Signed)
+      return getValue().isMinSignedValue();
+    return getValue().isMinValue();
+  }
+  bool isMax() const {
+    if constexpr (Signed)
+      return getValue().isMaxSignedValue();
+    return getValue().isMaxValue();
+  }
   static constexpr bool isSigned() { return Signed; }
-  bool isMinusOne() const { return Signed && V == -1; }
+  bool isMinusOne() const { return Signed && getValue().isAllOnes(); }
 
-  unsigned countLeadingZeros() const { return V.countl_zero(); }
+  unsigned countLeadingZeros() const { return getValue().countl_zero(); }
 
-  void print(llvm::raw_ostream &OS) const { V.print(OS, Signed);}
+  void print(llvm::raw_ostream &OS) const { getValue().print(OS, Signed); }
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     std::string NameStr;
     llvm::raw_string_ostream OS(NameStr);
@@ -161,53 +188,57 @@ public:
 
   IntegralAP truncate(unsigned BitWidth) const {
     if constexpr (Signed)
-      return IntegralAP(V.trunc(BitWidth).sextOrTrunc(this->bitWidth()));
+      return IntegralAP(
+          getValue().trunc(BitWidth).sextOrTrunc(this->bitWidth()));
     else
-      return IntegralAP(V.trunc(BitWidth).zextOrTrunc(this->bitWidth()));
+      return IntegralAP(
+          getValue().trunc(BitWidth).zextOrTrunc(this->bitWidth()));
   }
 
   IntegralAP<false> toUnsigned() const {
-    APInt Copy = V;
-    return IntegralAP<false>(Copy);
+    return IntegralAP<false>(Memory, BitWidth);
   }
 
   void bitcastToMemory(std::byte *Dest) const {
-    llvm::StoreIntToMemory(V, (uint8_t *)Dest, bitWidth() / 8);
+    llvm::StoreIntToMemory(getValue(), (uint8_t *)Dest, bitWidth() / 8);
   }
 
-  static IntegralAP bitcastFromMemory(const std::byte *Src, unsigned BitWidth) {
+  static void bitcastFromMemory(const std::byte *Src, unsigned BitWidth,
+                                IntegralAP *Result) {
     APInt V(BitWidth, static_cast<uint64_t>(0), Signed);
     llvm::LoadIntFromMemory(V, (const uint8_t *)Src, BitWidth / 8);
-    return IntegralAP(V);
+    Result->copy(V);
   }
 
   ComparisonCategoryResult compare(const IntegralAP &RHS) const {
     assert(Signed == RHS.isSigned());
     assert(bitWidth() == RHS.bitWidth());
+    APInt V1 = getValue();
+    APInt V2 = RHS.getValue();
     if constexpr (Signed) {
-      if (V.slt(RHS.V))
+      if (V1.slt(V2))
         return ComparisonCategoryResult::Less;
-      if (V.sgt(RHS.V))
+      if (V1.sgt(V2))
         return ComparisonCategoryResult::Greater;
       return ComparisonCategoryResult::Equal;
     }
 
     assert(!Signed);
-    if (V.ult(RHS.V))
+    if (V1.ult(V2))
       return ComparisonCategoryResult::Less;
-    if (V.ugt(RHS.V))
+    if (V1.ugt(V2))
       return ComparisonCategoryResult::Greater;
     return ComparisonCategoryResult::Equal;
   }
 
   static bool increment(IntegralAP A, IntegralAP *R) {
-    IntegralAP<Signed> One(1, A.bitWidth());
-    return add(A, One, A.bitWidth() + 1, R);
+    APSInt One(APInt(A.bitWidth(), 1ull, Signed), !Signed);
+    return add(A, IntegralAP<Signed>(One), A.bitWidth() + 1, R);
   }
 
   static bool decrement(IntegralAP A, IntegralAP *R) {
-    IntegralAP<Signed> One(1, A.bitWidth());
-    return sub(A, One, A.bitWidth() + 1, R);
+    APSInt One(APInt(A.bitWidth(), 1ull, Signed), !Signed);
+    return sub(A, IntegralAP<Signed>(One), A.bitWidth() + 1, R);
   }
 
   static bool add(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
@@ -224,87 +255,96 @@ public:
 
   static bool rem(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
     if constexpr (Signed)
-      *R = IntegralAP(A.V.srem(B.V));
+      R->copy(A.getValue().srem(B.getValue()));
     else
-      *R = IntegralAP(A.V.urem(B.V));
+      R->copy(A.getValue().urem(B.getValue()));
     return false;
   }
 
   static bool div(IntegralAP A, IntegralAP B, unsigned OpBits, IntegralAP *R) {
     if constexpr (Signed)
-      *R = IntegralAP(A.V.sdiv(B.V));
+      R->copy(A.getValue().sdiv(B.getValue()));
     else
-      *R = IntegralAP(A.V.udiv(B.V));
+      R->copy(A.getValue().udiv(B.getValue()));
     return false;
   }
 
   static bool bitAnd(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
-    *R = IntegralAP(A.V & B.V);
+    R->copy(A.getValue() & B.getValue());
     return false;
   }
 
   static bool bitOr(IntegralAP A, IntegralAP B, unsigned OpBits,
                     IntegralAP *R) {
-    *R = IntegralAP(A.V | B.V);
+    R->copy(A.getValue() | B.getValue());
     return false;
   }
 
   static bool bitXor(IntegralAP A, IntegralAP B, unsigned OpBits,
                      IntegralAP *R) {
-    *R = IntegralAP(A.V ^ B.V);
+    R->copy(A.getValue() ^ B.getValue());
     return false;
   }
 
   static bool neg(const IntegralAP &A, IntegralAP *R) {
-    APInt AI = A.V;
+    APInt AI = A.getValue();
     AI.negate();
-    *R = IntegralAP(AI);
+    R->copy(AI);
     return false;
   }
 
   static bool comp(IntegralAP A, IntegralAP *R) {
-    *R = IntegralAP(~A.V);
+    R->copy(~A.getValue());
     return false;
   }
 
   static void shiftLeft(const IntegralAP A, const IntegralAP B, unsigned OpBits,
                         IntegralAP *R) {
-    *R = IntegralAP(A.V.shl(B.V.getZExtValue()));
+    *R = IntegralAP(A.getValue().shl(B.getValue().getZExtValue()));
   }
 
   static void shiftRight(const IntegralAP A, const IntegralAP B,
                          unsigned OpBits, IntegralAP *R) {
-    unsigned ShiftAmount = B.V.getZExtValue();
+    unsigned ShiftAmount = B.getValue().getZExtValue();
     if constexpr (Signed)
-      *R = IntegralAP(A.V.ashr(ShiftAmount));
+      R->copy(A.getValue().ashr(ShiftAmount));
     else
-      *R = IntegralAP(A.V.lshr(ShiftAmount));
+      R->copy(A.getValue().lshr(ShiftAmount));
   }
 
   // === Serialization support ===
   size_t bytesToSerialize() const {
-    // 4 bytes for the BitWidth followed by N bytes for the actual APInt.
-    return sizeof(uint32_t) + (V.getBitWidth() / CHAR_BIT);
+    assert(BitWidth != 0);
+    return sizeof(uint32_t) + (numWords() * sizeof(uint64_t));
   }
 
   void serialize(std::byte *Buff) const {
-    assert(V.getBitWidth() < std::numeric_limits<uint8_t>::max());
-    uint32_t BitWidth = V.getBitWidth();
-
     std::memcpy(Buff, &BitWidth, sizeof(uint32_t));
-    llvm::StoreIntToMemory(V, (uint8_t *)(Buff + sizeof(uint32_t)),
-                           BitWidth / CHAR_BIT);
+    if (singleWord())
+      std::memcpy(Buff + sizeof(uint32_t), &Val, sizeof(uint64_t));
+    else {
+      std::memcpy(Buff + sizeof(uint32_t), Memory,
+                  numWords() * sizeof(uint64_t));
+    }
   }
 
-  static IntegralAP<Signed> deserialize(const std::byte *Buff) {
-    uint32_t BitWidth;
-    std::memcpy(&BitWidth, Buff, sizeof(uint32_t));
-    IntegralAP<Signed> Val(APInt(BitWidth, 0ull, !Signed));
+  static uint32_t deserializeSize(const std::byte *Buff) {
+    return *reinterpret_cast<const uint32_t *>(Buff);
+  }
 
-    llvm::LoadIntFromMemory(Val.V, (const uint8_t *)Buff + sizeof(uint32_t),
-                            BitWidth / CHAR_BIT);
-    return Val;
+  static void deserialize(const std::byte *Buff, IntegralAP<Signed> *Result) {
+    uint32_t BitWidth = Result->BitWidth;
+    assert(BitWidth != 0);
+    unsigned NumWords = llvm::APInt::getNumWords(BitWidth);
+
+    if (NumWords == 1)
+      std::memcpy(&Result->Val, Buff + sizeof(uint32_t), sizeof(uint64_t));
+    else {
+      assert(Result->Memory);
+      std::memcpy(Result->Memory, Buff + sizeof(uint32_t),
+                  NumWords * sizeof(uint64_t));
+    }
   }
 
 private:
@@ -312,7 +352,7 @@ private:
   static bool CheckAddSubMulUB(const IntegralAP &A, const IntegralAP &B,
                                unsigned BitWidth, IntegralAP *R) {
     if constexpr (!Signed) {
-      R->V = Op<APInt>{}(A.V, B.V);
+      R->copy(Op<APInt>{}(A.getValue(), B.getValue()));
       return false;
     }
 
@@ -320,7 +360,7 @@ private:
     const APSInt &RHS = B.toAPSInt();
     APSInt Value = Op<APSInt>{}(LHS.extend(BitWidth), RHS.extend(BitWidth));
     APSInt Result = Value.trunc(LHS.getBitWidth());
-    R->V = Result;
+    R->copy(Result);
 
     return Result.extend(BitWidth) != Value;
   }

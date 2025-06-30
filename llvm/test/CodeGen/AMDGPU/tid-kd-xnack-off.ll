@@ -6,7 +6,7 @@
 
 define amdgpu_kernel void @kern() #0 {
 ; ASM-LABEL: kern:
-; ASM: .amdhsa_next_free_sgpr 8
+; ASM: .amdhsa_next_free_sgpr 5
 ; ASM: .amdhsa_reserve_xnack_mask 0
 
 ; Verify that an extra SGPR block is not reserved with XNACK "off" tid setting.
@@ -17,7 +17,7 @@ define amdgpu_kernel void @kern() #0 {
 ; OBJ-NEXT: 0030 0000af00 8c000000 21000000 00000000 ........!.......
 
 ; ELF: AMDGPU Metadata
-; ELF: .sgpr_count:     8
+; ELF: .sgpr_count:     5
 entry:
   tail call void asm sideeffect "", "~{s[0:4]}"()
   ret void

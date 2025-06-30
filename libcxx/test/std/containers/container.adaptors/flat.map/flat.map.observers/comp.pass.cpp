@@ -16,12 +16,13 @@
 #include <cassert>
 #include <flat_map>
 #include <functional>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "test_macros.h"
 
-int main(int, char**) {
+constexpr bool test() {
   {
     using M    = std::flat_map<int, char>;
     using Comp = std::less<int>; // the default
@@ -38,7 +39,7 @@ int main(int, char**) {
     assert(vc({1, '2'}, {2, '1'}));
     assert(!vc({2, '1'}, {1, '2'}));
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using Comp = std::function<bool(int, int)>;
     using M    = std::flat_map<int, int, Comp>;
     Comp comp  = std::greater<int>();
@@ -72,7 +73,7 @@ int main(int, char**) {
     assert(vc({1, 2}, {2, 1}));
     assert(!vc({2, 1}, {1, 2}));
   }
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using Comp = std::function<bool(const std::vector<int>&, const std::vector<int>&)>;
     using M    = std::flat_map<std::vector<int>, int, Comp>;
     Comp comp  = [i = 1](const auto& x, const auto& y) { return x[i] < y[i]; };
@@ -92,5 +93,15 @@ int main(int, char**) {
     assert(!vc(b, a));
     assert(!vc(c, b));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

@@ -565,12 +565,16 @@ let Predicates = [MMA, IsISAFuture], isCodeGenOnly = 1 in {
   let mayStore = 1 in {
     def SPILL_WACC: PPCEmitTimePseudo<(outs), (ins wacc:$AT, memrix16:$dst),
                                       "#SPILL_WACC", []>;
+    def SPILL_DMRP: PPCEmitTimePseudo<(outs), (ins dmrp:$AT, memrix16:$dst),
+                                      "#SPILL_DMRP", []>;
     def SPILL_DMR: PPCEmitTimePseudo<(outs), (ins dmr:$AT, memrix16:$dst),
                                       "#SPILL_DMR", []>;
   }
   let mayLoad = 1, hasSideEffects = 0 in {
     def RESTORE_WACC: PPCEmitTimePseudo<(outs wacc:$AT), (ins memrix16:$src),
                                         "#RESTORE_WACC", []>;
+    def RESTORE_DMRP: PPCEmitTimePseudo<(outs dmrp:$AT), (ins memrix16:$src),
+                                        "#RESTORE_DMRP", []>;
     def RESTORE_DMR: PPCEmitTimePseudo<(outs dmr:$AT), (ins memrix16:$src),
                                         "#RESTORE_DMR", []>;
   }

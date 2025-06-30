@@ -18,7 +18,6 @@ _CLC_DEF _CLC_OVERLOAD float __clc_fmin(float x, float y) {
   y = __builtin_canonicalizef(y);
   return __builtin_fminf(x, y);
 }
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_fmin, float, float)
 
 #ifdef cl_khr_fp64
 
@@ -29,8 +28,6 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmin(double x, double y) {
   y = __builtin_canonicalize(y);
   return __builtin_fmin(x, y);
 }
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_fmin, double,
-                      double)
 
 #endif
 
@@ -45,6 +42,9 @@ _CLC_DEF _CLC_OVERLOAD half __clc_fmin(half x, half y) {
     return x;
   return (y < x) ? y : x;
 }
-_CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_fmin, half, half)
 
 #endif
+
+#define FUNCTION __clc_fmin
+#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#include <clc/math/gentype.inc>

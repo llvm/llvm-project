@@ -248,3 +248,26 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
                     "TCF: 0 = TCF_NONE, 1 = TCF_SYNC, 2 = TCF_ASYNC, 3 = TCF_ASYMM"
                 ],
             )
+
+    @skipIfLLVMTargetMissing("AArch64")
+    def test_mte_no_tags(self):
+        """Test that we handle there being a tag segment but that segment does
+        not contain any tag data. This can happen when the core is dumped
+        with a restrictive limit or filter."""
+        self.runCmd("target create --core core.mte.notags")
+
+        mte_buf_addr = 0xFFFFA4AF3000
+
+        # We can see which memory was tagged.
+        self.expect(
+            f"memory region {mte_buf_addr}", substrs=["memory tagging: enabled"]
+        )
+
+        # We cannot read those tags.
+        self.expect(
+            f"memory tag read {mte_buf_addr}",
+            substrs=[
+                "Could not read tags from core file segment. Segment is missing some or all tag data."
+            ],
+            error=True,
+        )

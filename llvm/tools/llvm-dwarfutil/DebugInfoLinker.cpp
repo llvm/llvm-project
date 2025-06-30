@@ -13,7 +13,7 @@
 #include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Object/ObjectFile.h"
 #include <memory>
 #include <vector>

@@ -45,6 +45,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_constant
     0,  // hlsl_private
     0,  // hlsl_device
+    0,  // hlsl_input
     20, // wasm_funcref
 };
 

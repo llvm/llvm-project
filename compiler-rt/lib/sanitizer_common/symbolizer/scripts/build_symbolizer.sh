@@ -174,6 +174,7 @@ $LINK $LIBCXX_ARCHIVE_DIR/libc++.a \
       $LLVM_BUILD/lib/libLLVMObject.a \
       $LLVM_BUILD/lib/libLLVMBinaryFormat.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoDWARF.a \
+      $LLVM_BUILD/lib/libLLVMDebugInfoDWARFLowLevel.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoGSYM.a \
       $LLVM_BUILD/lib/libLLVMSupport.a \
       $LLVM_BUILD/lib/libLLVMDebugInfoPDB.a \

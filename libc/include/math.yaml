@@ -734,7 +734,7 @@ functions:
       - type: float128
       - type: float128
       - type: float128
-    guards: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: ffmal
     standards:
       - stdc

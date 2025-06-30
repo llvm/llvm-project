@@ -36,7 +36,7 @@ module {
     cir.return
   }
 
-  // CHECK: cir.func @c0(%arg0: !s32i, %arg1: !s32i) {
+  // CHECK: cir.func{{.*}} @c0(%arg0: !s32i, %arg1: !s32i) {
   // CHECK-NEXT:   %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
   // CHECK-NEXT:   %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init] {alignment = 4 : i64}
   // CHECK-NEXT:   %2 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init] {alignment = 1 : i64}
@@ -102,7 +102,7 @@ module {
     cir.return
   }
 
-  // CHECK: cir.func @c0_unsigned(%arg0: !u32i, %arg1: !u32i) {
+  // CHECK: cir.func{{.*}} @c0_unsigned(%arg0: !u32i, %arg1: !u32i) {
   // CHECK-NEXT:   %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
   // CHECK-NEXT:   %1 = cir.alloca !u32i, !cir.ptr<!u32i>, ["b", init] {alignment = 4 : i64}
   // CHECK-NEXT:   %2 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init] {alignment = 1 : i64}
@@ -168,7 +168,7 @@ module {
     cir.return
   }
 
-  // CHECK: cir.func @c0_float(%arg0: !cir.float, %arg1: !cir.float) {
+  // CHECK: cir.func{{.*}} @c0_float(%arg0: !cir.float, %arg1: !cir.float) {
   // CHECK-NEXT:   %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init] {alignment = 4 : i64}
   // CHECK-NEXT:   %1 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init] {alignment = 4 : i64}
   // CHECK-NEXT:   %2 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init] {alignment = 1 : i64}
@@ -234,7 +234,7 @@ module {
     cir.return
   }
 
-  // CHECK: cir.func @pointer_cmp(%arg0: !cir.ptr<!s32i>, %arg1: !cir.ptr<!s32i>) {
+  // CHECK: cir.func{{.*}} @pointer_cmp(%arg0: !cir.ptr<!s32i>, %arg1: !cir.ptr<!s32i>) {
   // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["a", init] {alignment = 8 : i64}
   // CHECK-NEXT:   %1 = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["b", init] {alignment = 8 : i64}
   // CHECK-NEXT:   %2 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init] {alignment = 1 : i64}
@@ -312,7 +312,7 @@ module {
     cir.return
   }
 
-  // CHECK: cir.func @bool_cmp(%arg0: !cir.bool, %arg1: !cir.bool) {
+  // CHECK: cir.func{{.*}} @bool_cmp(%arg0: !cir.bool, %arg1: !cir.bool) {
   // CHECK-NEXT:   %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init] {alignment = 1 : i64}
   // CHECK-NEXT:   %1 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init] {alignment = 1 : i64}
   // CHECK-NEXT:   %2 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init] {alignment = 1 : i64}

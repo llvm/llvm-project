@@ -84,20 +84,20 @@ define <4 x i64> @z_i32_v4i64(i32 %x) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s0, w0
 ; CHECK-GI-NEXT:    mov b1, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    mov b2, v0.b[1]
 ; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    ubfx x8, x8, #0, #8
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    ubfx x9, x9, #0, #8
 ; CHECK-GI-NEXT:    ubfx x8, x8, #0, #8
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    fmov w10, s2
+; CHECK-GI-NEXT:    fmov w11, s3
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    ubfx x9, x9, #0, #8
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    ubfx x10, x10, #0, #8
+; CHECK-GI-NEXT:    ubfx x11, x11, #0, #8
+; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    mov v0.d[1], x10
+; CHECK-GI-NEXT:    mov v1.d[1], x11
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
   %e = zext <4 x i8> %b to <4 x i64>
@@ -188,20 +188,20 @@ define <4 x i64> @s_i32_v4i64(i32 %x) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    fmov s0, w0
 ; CHECK-GI-NEXT:    mov b1, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    mov b2, v0.b[1]
 ; CHECK-GI-NEXT:    mov b3, v0.b[3]
-; CHECK-GI-NEXT:    sxtb x8, w8
+; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    fmov w9, s1
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov w8, s2
-; CHECK-GI-NEXT:    sxtb x9, w9
 ; CHECK-GI-NEXT:    sxtb x8, w8
-; CHECK-GI-NEXT:    mov v1.d[0], x9
-; CHECK-GI-NEXT:    fmov w9, s3
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    fmov w10, s2
+; CHECK-GI-NEXT:    fmov w11, s3
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    sxtb x9, w9
-; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    sxtb x10, w10
+; CHECK-GI-NEXT:    sxtb x11, w11
+; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    mov v0.d[1], x10
+; CHECK-GI-NEXT:    mov v1.d[1], x11
 ; CHECK-GI-NEXT:    ret
   %b = bitcast i32 %x to <4 x i8>
   %e = sext <4 x i8> %b to <4 x i64>

@@ -50,7 +50,7 @@ static_assert(!CanIndex<TransparentMap, TransparentMap::iterator>);
 static_assert(!CanIndex<TransparentMap, TransparentMap::const_iterator>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using P = std::pair<int, double>;
   P ar[]  = {
       P(1, 1.5),
@@ -81,11 +81,17 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<int>, std::vector<double>>();
+  }
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
+
   {
     bool transparent_used = false;
     TransparentComparator c(transparent_used);
@@ -95,6 +101,14 @@ int main(int, char**) {
     assert(transparent_used);
   }
   {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    int& x = m["alpha"];
+    assert(x == 1);
+  }
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     auto index_func = [](auto& m, auto key_arg, auto value_arg) {
       using FlatMap                             = std::decay_t<decltype(m)>;
       using Key                                 = typename FlatMap::key_type;
@@ -103,5 +117,15 @@ int main(int, char**) {
     };
     test_emplace_exception_guarantee(index_func);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

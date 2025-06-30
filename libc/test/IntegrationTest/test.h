@@ -68,12 +68,9 @@
 ////////////////////////////////////////////////////////////////////////////////
 // Errno checks.
 
-#define ASSERT_ERRNO_EQ(VAL)                                                   \
-  ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_SUCCESS()                                                 \
-  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
-#define ASSERT_ERRNO_FAILURE()                                                 \
-  ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_EQ(VAL) ASSERT_EQ(VAL, static_cast<int>(libc_errno))
+#define ASSERT_ERRNO_SUCCESS() ASSERT_EQ(0, static_cast<int>(libc_errno))
+#define ASSERT_ERRNO_FAILURE() ASSERT_NE(0, static_cast<int>(libc_errno))
 
 // Integration tests are compiled with -ffreestanding which stops treating
 // the main function as a non-overloadable special function. Hence, we use a

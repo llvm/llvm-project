@@ -20,6 +20,33 @@
 
 namespace lldb_private {
 
+class RISCVSingleStepBreakpointLocationsPredictor
+    : public SingleStepBreakpointLocationsPredictor {
+public:
+  RISCVSingleStepBreakpointLocationsPredictor(
+      std::unique_ptr<EmulateInstruction> emulator)
+      : SingleStepBreakpointLocationsPredictor{std::move(emulator)} {}
+
+  BreakpointLocations GetBreakpointLocations(Status &status) override;
+
+  llvm::Expected<unsigned> GetBreakpointSize(lldb::addr_t bp_addr) override;
+
+private:
+  static bool FoundLoadReserve(const RISCVInst &inst) {
+    return std::holds_alternative<LR_W>(inst) ||
+           std::holds_alternative<LR_D>(inst);
+  }
+
+  static bool FoundStoreConditional(const RISCVInst &inst) {
+    return std::holds_alternative<SC_W>(inst) ||
+           std::holds_alternative<SC_D>(inst);
+  }
+
+  BreakpointLocations HandleAtomicSequence(lldb::addr_t pc, Status &error);
+
+  static constexpr size_t s_max_atomic_sequence_length = 64;
+};
+
 class EmulateInstructionRISCV : public EmulateInstruction {
 public:
   static llvm::StringRef GetPluginNameStatic() { return "riscv"; }
@@ -67,9 +94,6 @@ public:
   std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
                                               uint32_t reg_num) override;
 
-  std::optional<lldb::addr_t> ReadPC();
-  bool WritePC(lldb::addr_t pc);
-
   std::optional<DecodeResult> ReadInstructionAt(lldb::addr_t addr);
   std::optional<DecodeResult> Decode(uint32_t inst);
   bool Execute(DecodeResult inst, bool ignore_cond);
@@ -98,6 +122,13 @@ public:
   bool SetAccruedExceptions(llvm::APFloatBase::opStatus);
 
 private:
+  BreakpointLocationsPredictorCreator
+  GetSingleStepBreakpointLocationsPredictorCreator() override {
+    return [](std::unique_ptr<EmulateInstruction> emulator_up) {
+      return std::make_unique<RISCVSingleStepBreakpointLocationsPredictor>(
+          std::move(emulator_up));
+    };
+  }
   /// Last decoded instruction from m_opcode
   DecodeResult m_decoded;
   /// Last decoded instruction size estimate.

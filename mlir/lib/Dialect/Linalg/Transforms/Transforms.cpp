@@ -227,8 +227,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
   // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
-  if (llvm::any_of(packOp.getStaticInnerTiles(),
-                   [](int64_t size) { return ShapedType::isDynamic(size); })) {
+  if (llvm::any_of(packOp.getStaticInnerTiles(), ShapedType::isDynamic)) {
     return rewriter.notifyMatchFailure(
         packOp,
         "non-static shape NYI, needs a more powerful tensor.expand_shape op");
@@ -1179,13 +1178,6 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   int64_t destRank = packOp.getDestRank();
   int64_t numTiles = destRank - srcRank;
 
-  if (!llvm::all_of(packOp.getInnerDimsPos(),
-                    [&srcRank, &numTiles](int64_t dimPos) {
-                      return dimPos >= (srcRank - numTiles - 1);
-                    }))
-    return rewriter.notifyMatchFailure(
-        packOp, "Attempting to tile non-trailing source dims!");
-
   // 1. Extract the inner tile sizes.
   // Where possible, values are replaced with constant attributes (to match the
   // behaviour of `getPackOpSourceOrPaddedSource`).
@@ -1205,16 +1197,24 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
   //    %init = tensor.empty()
   //    %transposed_tile = linalg.transpose ins(%source_or_padded_source),
   //                                        outs(%init)
-  // Two assumptions are made:
-  //  1. All outer dims are 1 - the corresponding transposition doesn't matter.
-  //  2. Inner dims position correspond to the trailing `numTiles` dims.
-  SmallVector<int64_t> tilesPermNormalized =
-      getPackUnpackNormalizedPerm(srcRank, packOp.getInnerDimsPos());
+  // Assumptions made:
+  //  1. All outer dims are 1 - the corresponding transposition order doesn't
+  //     matter, but requires all dim indices to be present.
   SmallVector<int64_t> srcPermForTranspose;
-  for (int64_t i = 0; i < (srcRank - numTiles); i++)
+  ArrayRef<int64_t> innerDimPos(packOp.getInnerDimsPos());
+  for (int64_t i = 0; i < srcRank; i++) {
+    // We assume the `k` dimensions of the inner dim position, where `k` is the
+    // rank of the inner tiling, correspond to the last `k` indices of the
+    // transpose permutation. This is done by adding the indices not contained
+    // in the inner dimension position in order from 0 to `n`. Where n is the
+    // rank of the source tensor. For example if we have a source tensor with
+    // indices [0, 1, 2, 3] and inner dim position of [3, 0], the remaining
+    // indices are [1, 2]. and the transpose will be [1, 2, 3, 0].
+    if (llvm::is_contained(innerDimPos, i))
+      continue;
     srcPermForTranspose.push_back(i);
-
-  srcPermForTranspose.append(SmallVector<int64_t>(packOp.getInnerDimsPos()));
+  }
+  srcPermForTranspose.append(innerDimPos.begin(), innerDimPos.end());
 
   LLVM_DEBUG(DBGS() << "Pack permutation: " << packOp << "\n"
                     << "perm: " << llvm::interleaved(srcPermForTranspose)

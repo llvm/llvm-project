@@ -7,14 +7,14 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MINREG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -amdgpu-sched-strategy=iterative-maxocc -verify-machineinstrs < %s | FileCheck --check-prefix=VI-MAXOCC %s
 
-; SI-MINREG: NumSgprs: {{[1]?[1-9]$}}
-; SI-MINREG: NumVgprs: {{[1]?[1-9]$}}
+; SI-MINREG: NumSgprs: {{[1-9]$}}
+; SI-MINREG: NumVgprs: {{[1-9]$}}
 
 ; SI-MAXOCC: NumSgprs: {{[1-4]?[0-9]$}}
 ; SI-MAXOCC: NumVgprs: {{[1-4]?[0-9]$}}
 
 ; stores may alias loads
-; VI-MINREG: NumSgprs: {{[1]?[0-9]$}}
+; VI-MINREG: NumSgprs: {{[0-9]$}}
 ; VI-MINREG: NumVgprs: {{[1-3][0-9]$}}
 
 ; stores may alias loads

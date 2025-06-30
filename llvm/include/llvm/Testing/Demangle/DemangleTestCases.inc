@@ -6,6 +6,7 @@
 {"_Z1fDU10_", "f(unsigned _BitInt(10))"},
 {"_Z1fIfEvDUstPT__", "void f<float>(unsigned _BitInt(sizeof (float*)))"},
 {"_Z1fIiEvDBstPT__", "void f<int>(_BitInt(sizeof (int*)))"},
+{"_Z6myfuncRDB8_S0_", "myfunc(_BitInt(8)&, _BitInt(8)&)"},
 {"_Z4testI1A1BE1Cv", "C test<A, B>()"},
 {"_Z4testI1A1BET0_T_S3_", "B test<A, B>(A, A)"},
 {"_ZN1SgtEi", "S::operator>(int)"},

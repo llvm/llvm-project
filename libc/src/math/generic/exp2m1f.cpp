@@ -14,10 +14,10 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/cpu_features.h"
-#include "src/errno/libc_errno.h"
 
 #include "explogxf.h"
 

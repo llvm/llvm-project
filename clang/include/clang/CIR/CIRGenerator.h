@@ -76,7 +76,9 @@ public:
   ~CIRGenerator() override;
   void Initialize(clang::ASTContext &astContext) override;
   bool HandleTopLevelDecl(clang::DeclGroupRef group) override;
+  void HandleTranslationUnit(clang::ASTContext &astContext) override;
   void HandleInlineFunctionDefinition(clang::FunctionDecl *d) override;
+  void HandleTagDeclDefinition(clang::TagDecl *d) override;
   void CompleteTentativeDefinition(clang::VarDecl *d) override;
 
   mlir::ModuleOp getModule() const;

@@ -139,6 +139,7 @@ public:
   bool processMap(mlir::Location currentLocation,
                   lower::StatementContext &stmtCtx,
                   mlir::omp::MapClauseOps &result,
+                  llvm::omp::Directive directive = llvm::omp::OMPD_unknown,
                   llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms =
                       nullptr) const;
   bool processMotionClauses(lower::StatementContext &stmtCtx,

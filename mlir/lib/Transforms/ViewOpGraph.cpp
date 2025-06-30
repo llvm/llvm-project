@@ -8,7 +8,6 @@
 
 #include "mlir/Transforms/ViewOpGraph.h"
 
-#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"

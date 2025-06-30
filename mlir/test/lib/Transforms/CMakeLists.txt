@@ -26,11 +26,11 @@ endif()
 add_mlir_library(MLIRTestTransforms
   TestCommutativityUtils.cpp
   TestCompositePass.cpp
-  TestConstantFold.cpp
   TestControlFlowSink.cpp
   TestInlining.cpp
   TestInliningCallback.cpp
   TestMakeIsolatedFromAbove.cpp
+  TestSingleFold.cpp
   TestTransformsOps.cpp
   ${MLIRTestTransformsPDLSrc}
 

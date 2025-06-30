@@ -19,7 +19,7 @@ def CortexA53Model : SchedMachineModel {
   let MicroOpBufferSize = 0; // Explicitly set to zero since A53 is in-order.
   let IssueWidth = 2;        // 2 micro-ops are dispatched per cycle.
   let LoadLatency = 3;       // Optimistic load latency assuming bypass.
-                             // This is overriden by OperandCycles if the
+                             // This is overridden by OperandCycles if the
                              // Itineraries are queried instead.
   let MispredictPenalty = 9; // Based on "Cortex-A53 Software Optimisation
                              // Specification - Instruction Timings"

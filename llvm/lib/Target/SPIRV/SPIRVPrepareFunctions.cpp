@@ -438,10 +438,9 @@ SPIRVPrepareFunctions::removeAggregateTypesFromSignature(Function *F) {
 
   IRBuilder<> B(F->getContext());
 
-  bool HasAggrArg =
-      std::any_of(F->arg_begin(), F->arg_end(), [](Argument &Arg) {
-        return Arg.getType()->isAggregateType();
-      });
+  bool HasAggrArg = llvm::any_of(F->args(), [](Argument &Arg) {
+    return Arg.getType()->isAggregateType();
+  });
   bool DoClone = IsRetAggr || HasAggrArg;
   if (!DoClone)
     return F;

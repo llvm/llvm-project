@@ -220,7 +220,8 @@ void mlir::populateArmSVELegalizeForLLVMExportPatterns(
 void mlir::configureArmSVELegalizeForExportTarget(
     LLVMConversionTarget &target) {
   // clang-format off
-  target.addLegalOp<ConvertFromSvboolIntrOp,
+  target.addLegalOp<BfmmlaOp,
+                    ConvertFromSvboolIntrOp,
                     ConvertToSvboolIntrOp,
                     DupQLaneIntrOp,
                     PselIntrOp,

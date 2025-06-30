@@ -421,7 +421,7 @@ struct WhileOpConversion final : SCFToSPIRVPattern<scf::WhileOp> {
 
     rewriter.setInsertionPointToEnd(&beforeBlock);
     rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
-        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, std::nullopt);
+        cond, conditionVal, &afterBlock, condArgs, &mergeBlock, ValueRange());
 
     // Convert the scf.yield op to a branch back to the header block.
     rewriter.setInsertionPointToEnd(&afterBlock);

@@ -105,6 +105,11 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
   } else {
     terminator.Crash("host to host copy not supported");
   }
+  // Allocate dst descriptor if not allocated.
+  if (!dstDesc->IsAllocated()) {
+    dstDesc->ApplyMold(*srcDesc, dstDesc->rank());
+    dstDesc->Allocate(/*asyncObject=*/nullptr);
+  }
   if ((srcDesc->rank() > 0) && (dstDesc->Elements() < srcDesc->Elements())) {
     // Special case when rhs is bigger than lhs and both are contiguous arrays.
     // In this case we do a simple ptr to ptr transfer with the size of lhs.

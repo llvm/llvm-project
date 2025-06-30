@@ -45,3 +45,20 @@ class quux : quux { // expected-error {{base class has incomplete type}} \
   virtual int c();
 };
 }
+
+// Ensure we don't get infinite recursion from the check, however. See GH141789
+namespace GH141789 {
+template <typename Ty>
+struct S {
+  Ty t; // expected-error {{field has incomplete type 'GH141789::X'}}
+};
+
+struct T {
+  ~T();
+};
+
+struct X { // expected-note {{definition of 'GH141789::X' is not complete until the closing '}'}}
+  S<X> next; // expected-note {{in instantiation of template class 'GH141789::S<GH141789::X>' requested here}}
+  T m;
+};
+}

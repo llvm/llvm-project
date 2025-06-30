@@ -73,11 +73,11 @@ private:
   bool isProfitableToTransform(const MachineInstr &MI) const;
 
   // transformInstruction - Perform the transformation of an instruction
-  // to its equivalant AdvSIMD scalar instruction. Update inputs and outputs
+  // to its equivalent AdvSIMD scalar instruction. Update inputs and outputs
   // to be the correct register class, minimizing cross-class copies.
   void transformInstruction(MachineInstr &MI);
 
-  // processMachineBasicBlock - Main optimzation loop.
+  // processMachineBasicBlock - Main optimization loop.
   bool processMachineBasicBlock(MachineBasicBlock *MBB);
 
 public:
@@ -231,7 +231,7 @@ bool AArch64AdvSIMDScalar::isProfitableToTransform(
 
   // If any of the uses of the original instructions is a cross class copy,
   // that's a copy that will be removable if we transform. Likewise, if
-  // any of the uses is a transformable instruction, it's likely the tranforms
+  // any of the uses is a transformable instruction, it's likely the transforms
   // will chain, enabling us to save a copy there, too. This is an aggressive
   // heuristic that approximates the graph based cost analysis described above.
   Register Dst = MI.getOperand(0).getReg();
@@ -280,7 +280,7 @@ static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr &MI,
 }
 
 // transformInstruction - Perform the transformation of an instruction
-// to its equivalant AdvSIMD scalar instruction. Update inputs and outputs
+// to its equivalent AdvSIMD scalar instruction. Update inputs and outputs
 // to be the correct register class, minimizing cross-class copies.
 void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Scalar transform: " << MI);
@@ -372,7 +372,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
   ++NumScalarInsnsUsed;
 }
 
-// processMachineBasicBlock - Main optimzation loop.
+// processMachineBasicBlock - Main optimization loop.
 bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {

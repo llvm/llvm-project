@@ -283,7 +283,7 @@ public:
   /// mapper' construct.
   QualType ActOnOpenMPDeclareMapperType(SourceLocation TyLoc,
                                         TypeResult ParsedType);
-  /// Called on start of '#pragma omp declare mapper'.
+  /// Called for '#pragma omp declare mapper'.
   DeclGroupPtrTy ActOnOpenMPDeclareMapperDirective(
       Scope *S, DeclContext *DC, DeclarationName Name, QualType MapperType,
       SourceLocation StartLoc, DeclarationName VN, AccessSpecifier AS,
@@ -849,6 +849,7 @@ public:
       FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
       ArrayRef<Expr *> AdjustArgsNothing,
       ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
+      ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
@@ -876,10 +877,10 @@ public:
                                     SourceLocation LParenLoc,
                                     SourceLocation EndLoc);
   /// Called on well-formed 'num_threads' clause.
-  OMPClause *ActOnOpenMPNumThreadsClause(Expr *NumThreads,
-                                         SourceLocation StartLoc,
-                                         SourceLocation LParenLoc,
-                                         SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPNumThreadsClause(
+      OpenMPNumThreadsClauseModifier Modifier, Expr *NumThreads,
+      SourceLocation StartLoc, SourceLocation LParenLoc,
+      SourceLocation ModifierLoc, SourceLocation EndLoc);
   /// Called on well-formed 'align' clause.
   OMPClause *ActOnOpenMPAlignClause(Expr *Alignment, SourceLocation StartLoc,
                                     SourceLocation LParenLoc,

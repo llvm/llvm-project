@@ -211,7 +211,11 @@ _CLC_OVERLOAD _CLC_DEF float __clc_erf(float x) {
   return ret;
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, __clc_erf, float);
+#define __FLOAT_ONLY
+#define FUNCTION __clc_erf
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef FUNCTION
 
 #ifdef cl_khr_fp64
 
@@ -496,7 +500,11 @@ _CLC_OVERLOAD _CLC_DEF double __clc_erf(double y) {
   return y < 0.0 ? -ret : ret;
 }
 
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, __clc_erf, double);
+#define __DOUBLE_ONLY
+#define FUNCTION __clc_erf
+#define __CLC_BODY <clc/shared/unary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef FUNCTION
 
 #endif
 

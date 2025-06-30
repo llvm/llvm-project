@@ -265,8 +265,8 @@ target_link_libraries(lldbDebugserverCommon
                       ${ENERGY_LIBRARY})
 add_lldb_tool(debugserver ADD_TO_FRAMEWORK
   debugserver.cpp
-  LINK_LIBS lldbDebugserverCommon
   ENTITLEMENTS ${entitlements}
+  LINK_LIBS lldbDebugserverCommon
 )
 
 # Workaround for Xcode-specific code-signing behavior:
@@ -329,10 +329,9 @@ if(APPLE_EMBEDDED)
   add_lldb_tool(debugserver-nonui
     debugserver.cpp
 
-    LINK_LIBS
-      lldbDebugserverCommon_NonUI
-
     ENTITLEMENTS
       ${entitlements}
+    LINK_LIBS
+      lldbDebugserverCommon_NonUI
     )
 endif()

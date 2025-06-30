@@ -10,5 +10,5 @@
 #include <clc/opencl/clc.h>
 
 #define FUNCTION pown
-#define __CLC_BODY <clc/math/binary_def_with_int_second_arg.inc>
+#define __CLC_BODY <clc/shared/binary_def_with_int_second_arg.inc>
 #include <clc/math/gentype.inc>

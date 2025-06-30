@@ -62,6 +62,10 @@ func.func @const() -> () {
   // CHECK: spirv.Constant dense<1.000000e+00> : tensor<2x3xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
   // CHECK: spirv.Constant dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spirv.array<2 x !spirv.array<3 x i32>>
   // CHECK: spirv.Constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
+  // CHECK: spirv.Constant dense<0.000000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  // CHECK: spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
 
   %0 = spirv.Constant true
   %1 = spirv.Constant 42 : i32
@@ -73,6 +77,10 @@ func.func @const() -> () {
   %7 = spirv.Constant dense<[[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi32> : !spirv.array<2 x !spirv.array<3 x i32>>
   %8 = spirv.Constant dense<[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]> : tensor<2x3xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
   %9 = spirv.Constant [[dense<3.0> : vector<2xf32>]] : !spirv.array<1 x !spirv.array<1xvector<2xf32>>>
+  %10 = spirv.Constant dense<0.000000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  %11 = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  %12 = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  %13 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   return
 }
 
@@ -128,6 +136,31 @@ func.func @value_result_num_elements_mismatch() -> () {
   // expected-error @+1 {{result number of elements (6) does not match value number of elements (4)}}
   %0 = spirv.Constant dense<1.0> : tensor<2x2xf32> : !spirv.array<2 x !spirv.array<3 x f32>>
   return
+}
+
+// -----
+
+func.func @coop_matrix_const_non_splat() -> () {
+    // expected-error @+1 {{expected a splat dense attribute for cooperative matrix constant, but found}}
+    %0 = spirv.Constant dense<[[1.0, 2.0], [3.0, 4.0]]> : !spirv.coopmatrix<2x2xf32, Subgroup, MatrixAcc>
+    return
+}
+
+// -----
+
+func.func @coop_matrix_const_non_dense() -> () {
+    // expected-error @+2 {{floating point value not valid for specified type}}
+    %0 = spirv.Constant 0.000000e+00 : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    return
+}
+
+// -----
+
+func.func @coop_matrix_const_wrong_type() -> () {
+    // expected-error @below {{unexpected decimal integer literal for a floating point value}}
+    // expected-note @+1 {{add a trailing dot to make the literal a float}}
+    %0 = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    return
 }
 
 // -----

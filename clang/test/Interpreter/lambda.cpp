@@ -1,7 +1,9 @@
 // REQUIRES: host-supports-jit
 // UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
-// RUN: cat %s | clang-repl -Xcc -Xclang -Xcc -verify -Xcc -O2 | FileCheck %s
+// At -O2, somehow "x = 42" appears first when piped into FileCheck,
+// see https://github.com/llvm/llvm-project/issues/143547.
+// RUN: %if !system-windows %{ cat %s | clang-repl -Xcc -Xclang -Xcc -verify -Xcc -O2 | FileCheck %s %}
 
 extern "C" int printf(const char *, ...);
 

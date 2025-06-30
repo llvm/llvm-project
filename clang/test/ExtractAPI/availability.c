@@ -17,7 +17,7 @@ void a(void) __attribute__((availability(macos, introduced=12.0)));
 // A-NEXT: ]
 
 // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix B
-void b(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0)));
+void b(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=30.0)));
 // B-LABEL: "!testLabel": "c:@F@b"
 // B:      "availability": [
 // B-NEXT:   {
@@ -33,7 +33,7 @@ void b(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0
 // B-NEXT:       "patch": 0
 // B-NEXT:     },
 // B-NEXT:     "obsoleted": {
-// B-NEXT:       "major": 20,
+// B-NEXT:       "major": 30,
 // B-NEXT:       "minor": 0,
 // B-NEXT:       "patch": 0
 // B-NEXT:     }
@@ -41,7 +41,7 @@ void b(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0
 // B-NEXT: ]
 
 // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix E
-void c(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=20.0))) __attribute__((availability(ios, introduced=13.0)));
+void c(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0, obsoleted=30.0))) __attribute__((availability(ios, introduced=13.0)));
 // C-LABEL: "!testLabel": "c:@F@c"
 // C:       "availability": [
 // C-NEXT:    {
@@ -57,7 +57,7 @@ void c(void) __attribute__((availability(macos, introduced=11.0, deprecated=12.0
 // C-NEXT:        "patch": 0
 // C-NEXT:      },
 // C-NEXT:      "obsoleted": {
-// C-NEXT:        "major": 20,
+// C-NEXT:        "major": 30,
 // C-NEXT:        "minor": 0,
 // C-NEXT:        "patch": 0
 // C-NEXT:      }

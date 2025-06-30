@@ -1,6 +1,8 @@
 ; RUN: llc -verify-machineinstrs -O3 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s --match-full-lines
 ; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
+@.str = private unnamed_addr constant [3 x i8] c"B0\00", align 1
+
 %S2 = type { { [10 x { i32, i32 } ] }, i32 }
 
 ; CHECK-DAG:                     %[[#uint:]] = OpTypeInt 32 0
@@ -21,11 +23,9 @@
 ; CHECK-DAG:              %[[#rarr_struct:]] = OpTypeStruct %[[#rarr]]
 ; CHECK-DAG:       %[[#spirv_VulkanBuffer:]] = OpTypePointer StorageBuffer %[[#rarr_struct]]
 
-declare target("spirv.VulkanBuffer", [0 x %S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_Ss_12_1t(i32, i32, i32, i32, i1)
-
 define void @main() "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" {
 entry:
-  %handle = tail call target("spirv.VulkanBuffer", [0 x %S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_Ss_12_1t(i32 0, i32 0, i32 1, i32 0, i1 false)
+  %handle = tail call target("spirv.VulkanBuffer", [0 x %S2], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_Ss_12_1t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str)
 ; CHECK:      %[[#resource:]] = OpVariable %[[#spirv_VulkanBuffer]] StorageBuffer
 
   %ptr = tail call noundef align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_Ss_12_1t(target("spirv.VulkanBuffer", [0 x %S2], 12, 1) %handle, i32 0)

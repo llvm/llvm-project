@@ -11,17 +11,15 @@ define void @add_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = add <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -35,17 +33,15 @@ define void @fadd_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x float>, ptr %lhs
   %rhsv = load <4 x float>, ptr %rhs
   %op = fadd <4 x float> %lhsv, %rhsv
-  %opt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %op, i32 2, i32 2)
-  %optt = call <4 x float> @llvm.matrix.transpose(<4 x float> %opt, i32 2, i32 2)
-  store <4 x float> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x float> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -59,17 +55,15 @@ define void @sub_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = sub <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -83,17 +77,15 @@ define void @fsub_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub nnan <2 x float> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub nnan <2 x float> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x float>, ptr %lhs
   %rhsv = load <4 x float>, ptr %rhs
   %op = fsub nnan <4 x float> %lhsv, %rhsv
-  %opt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %op, i32 2, i32 2)
-  %optt = call <4 x float> @llvm.matrix.transpose(<4 x float> %opt, i32 2, i32 2)
-  store <4 x float> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x float> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -107,17 +99,15 @@ define void @mul_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = mul <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -131,17 +121,15 @@ define void @fmul_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul contract <2 x float> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x float> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x float>, ptr %lhs
   %rhsv = load <4 x float>, ptr %rhs
   %op = fmul contract <4 x float> %lhsv, %rhsv
-  %opt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %op, i32 2, i32 2)
-  %optt = call <4 x float> @llvm.matrix.transpose(<4 x float> %opt, i32 2, i32 2)
-  store <4 x float> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x float> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -155,17 +143,15 @@ define void @udiv_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = udiv <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -179,17 +165,15 @@ define void @sdiv_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = sdiv <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = sdiv <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -203,17 +187,15 @@ define void @fdiv_2x2(ptr %num, ptr %denom, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = fdiv nnan <2 x double> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fdiv nnan <2 x double> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[OUT:%.*]], align 32
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[VEC_GEP5]], align 16
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[VEC_GEP5]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %numv = load <4 x double>, ptr %num
   %denomv = load <4 x double>, ptr %denom
-  %div = fdiv nnan <4 x double> %numv, %denomv
-  %divt  = call <4 x double> @llvm.matrix.transpose(<4 x double> %div, i32 2, i32 2)
-  %divtt = call <4 x double> @llvm.matrix.transpose(<4 x double> %divt, i32 2, i32 2)
-  store <4 x double> %divtt, ptr %out
+  %op = fdiv nnan <4 x double> %numv, %denomv
+  call void @llvm.matrix.column.major.store(<4 x double> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -227,17 +209,15 @@ define void @urem_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = urem <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -251,17 +231,15 @@ define void @srem_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = srem <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = srem <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -275,17 +253,15 @@ define void @frem_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x float>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = frem fast <2 x float> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = frem fast <2 x float> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x float> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr float, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x float>, ptr %lhs
   %rhsv = load <4 x float>, ptr %rhs
   %op = frem fast <4 x float> %lhsv, %rhsv
-  %opt  = call <4 x float> @llvm.matrix.transpose(<4 x float> %op, i32 2, i32 2)
-  %optt = call <4 x float> @llvm.matrix.transpose(<4 x float> %opt, i32 2, i32 2)
-  store <4 x float> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x float> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -299,17 +275,15 @@ define void @shl_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = shl <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -323,17 +297,15 @@ define void @lshr_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = lshr <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -347,17 +319,15 @@ define void @ashr_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ashr <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = ashr <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -371,17 +341,15 @@ define void @and_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = and <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -395,17 +363,15 @@ define void @or_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = or <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }
 
@@ -419,16 +385,50 @@ define void @xor_2x2(ptr %lhs, ptr %rhs, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i32>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[COL_LOAD]], [[COL_LOAD2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[COL_LOAD1]], [[COL_LOAD4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 16
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP5]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %lhsv = load <4 x i32>, ptr %lhs
   %rhsv = load <4 x i32>, ptr %rhs
   %op = xor <4 x i32> %lhsv, %rhsv
-  %opt  = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %op, i32 2, i32 2)
-  %optt = call <4 x i32> @llvm.matrix.transpose(<4 x i32> %opt, i32 2, i32 2)
-  store <4 x i32> %optt, ptr %out
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
+  ret void
+}
+
+define void @fabs_2x2f64(ptr %in, ptr %out) {
+; CHECK-LABEL: @fabs_2x2f64(
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[IN:%.*]], align 32
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[COL_LOAD]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[COL_LOAD1]])
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[VEC_GEP2]], align 8
+; CHECK-NEXT:    ret void
+;
+  %load = load <4 x double>, ptr %in
+  %op = call <4 x double> @llvm.fabs.v4f64(<4 x double> %load)
+  call void @llvm.matrix.column.major.store(<4 x double> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
+  ret void
+}
+
+define void @abs_2x2i32(ptr %in, ptr %out) {
+; CHECK-LABEL: @abs_2x2i32(
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i32>, ptr [[IN:%.*]], align 16
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i32, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i32>, ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[COL_LOAD]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[COL_LOAD1]], i1 false)
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr [[OUT:%.*]], align 4
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr i32, ptr [[OUT]], i64 2
+; CHECK-NEXT:    store <2 x i32> [[TMP2]], ptr [[VEC_GEP2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %load = load <4 x i32>, ptr %in
+  %op = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %load, i1 false)
+  call void @llvm.matrix.column.major.store(<4 x i32> %op, ptr %out, i64 2, i1 false, i32 2, i32 2)
   ret void
 }

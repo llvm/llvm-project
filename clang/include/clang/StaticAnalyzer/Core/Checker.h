@@ -608,20 +608,6 @@ public:
   }
 };
 
-/// Tag that can use a checker name as a message provider
-/// (see SimpleProgramPointTag).
-/// FIXME: This is a cargo cult class which is copied into several checkers but
-/// does not provide anything useful.
-/// The only added functionality provided by this class (compared to
-/// SimpleProgramPointTag) is that it composes the tag description string from
-/// two arguments -- but tag descriptions only appear in debug output so there
-/// is no reason to bother with this.
-class CheckerProgramPointTag : public SimpleProgramPointTag {
-public:
-  CheckerProgramPointTag(StringRef CheckerName, StringRef Msg);
-  CheckerProgramPointTag(const CheckerBase *Checker, StringRef Msg);
-};
-
 /// We dereferenced a location that may be null.
 struct ImplicitNullDerefEvent {
   SVal Location;

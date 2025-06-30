@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -emit-pch %/S/Inputs/ctu-lookup-name-with-space.cpp -o %t/importee.ast
 
 // RUN: cd %t
-// RUN: %clang_cc1 -analyze \
+// RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-config experimental-enable-naive-ctu-analysis=true \
 // RUN:   -analyzer-config ctu-dir=. \

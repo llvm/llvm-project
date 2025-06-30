@@ -58,6 +58,11 @@ class PPCRegisterInfo : public PPCGenRegisterInfo {
   DenseMap<unsigned, unsigned> ImmToIdxMap;
   const PPCTargetMachine &TM;
 
+  void spillRegPair(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
+                    DebugLoc DL, const TargetInstrInfo &TII,
+                    unsigned FrameIndex, bool IsLittleEndian, bool IsKilled,
+                    Register Reg, int Offset) const;
+
 public:
   PPCRegisterInfo(const PPCTargetMachine &TM);
 

@@ -19,7 +19,12 @@ add_lldb_library(lldbValueObject
   ValueObjectVariable.cpp
   ValueObjectVTable.cpp
 
-
+  ADDITIONAL_HEADER_DIRS
+    ${LLDB_INCLUDE_DIR}/lldb/ValueObject
+  LINK_COMPONENTS
+    Support
+    Demangle
+    TargetParser
   LINK_LIBS
     lldbBreakpoint
     lldbDataFormatters
@@ -31,9 +36,4 @@ add_lldb_library(lldbValueObject
     lldbUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
-
-  LINK_COMPONENTS
-    Support
-    Demangle
-    TargetParser
   )

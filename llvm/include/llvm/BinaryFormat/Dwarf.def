@@ -475,7 +475,7 @@ HANDLE_DW_AT(0x2029, HP_is_result_param, 0, HP)
 // HANDLE_DW_AT(0x2004, CPQ_split_lifetimes_rtn, 0, COMPAQ)
 // HANDLE_DW_AT(0x2005, CPQ_prologue_length, 0, COMPAQ)
 
-HANDLE_DW_AT(0x2026, DW_AT_INTEL_other_endian, 0, INTEL)
+HANDLE_DW_AT(0x2026, INTEL_other_endian, 0, INTEL)
 
 // Green Hills.
 HANDLE_DW_AT(0x2083, GHS_rsm, 0, GHS)
@@ -887,6 +887,7 @@ HANDLE_DW_OP(0xed, WASM_location, -1, -1, 0, WASM)
 HANDLE_DW_OP(0xee, WASM_location_int, -1, -1, 0, WASM)
 // Historic and not implemented in LLVM.
 HANDLE_DW_OP(0xf0, APPLE_uninit, -1, -1, 0, APPLE)
+HANDLE_DW_OP(0xf2, GNU_implicit_pointer, 2, 0, 4, GNU)
 // The GNU entry value extension.
 HANDLE_DW_OP(0xf3, GNU_entry_value, 2, 0, 0, GNU)
 HANDLE_DW_OP(0xf8, PGI_omp_thread_num, -1, -1, 0, PGI)
@@ -1117,7 +1118,7 @@ HANDLE_DW_CC(0xc3, LLVM_AAPCS)
 HANDLE_DW_CC(0xc4, LLVM_AAPCS_VFP)
 HANDLE_DW_CC(0xc5, LLVM_IntelOclBicc)
 HANDLE_DW_CC(0xc6, LLVM_SpirFunction)
-HANDLE_DW_CC(0xc7, LLVM_OpenCLKernel)
+HANDLE_DW_CC(0xc7, LLVM_DeviceKernel)
 HANDLE_DW_CC(0xc8, LLVM_Swift)
 HANDLE_DW_CC(0xc9, LLVM_PreserveMost)
 HANDLE_DW_CC(0xca, LLVM_PreserveAll)

@@ -334,6 +334,9 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// @{
+  /// These properties are per-module, please use the TargetMachine
+  /// TargetTriple.
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
@@ -348,39 +351,18 @@ public:
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
   bool isTargetMachO() const { return TargetTriple.isOSBinFormatMachO(); }
 
-  // ARM EABI is the bare-metal EABI described in ARM ABI documents and
-  // can be accessed via -target arm-none-eabi. This is NOT GNUEABI.
-  // FIXME: Add a flag for bare-metal for that target and set Triple::EABI
-  // even for GNUEABI, so we can make a distinction here and still conform to
-  // the EABI on GNU (and Android) mode. This requires change in Clang, too.
-  // FIXME: The Darwin exception is temporary, while we move users to
-  // "*-*-*-macho" triples as quickly as possible.
-  bool isTargetAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::EABI ||
-            TargetTriple.getEnvironment() == Triple::EABIHF) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
-  bool isTargetGNUAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::GNUEABI ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIT64 ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
-  bool isTargetMuslAEABI() const {
-    return (TargetTriple.getEnvironment() == Triple::MuslEABI ||
-            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-            TargetTriple.getEnvironment() == Triple::OpenHOS) &&
-           !isTargetDarwin() && !isTargetWindows();
-  }
+  bool isTargetAEABI() const { return TargetTriple.isTargetAEABI(); }
+
+  bool isTargetGNUAEABI() const { return TargetTriple.isTargetGNUAEABI(); }
+
+  bool isTargetMuslAEABI() const { return TargetTriple.isTargetMuslAEABI(); }
 
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
     return TargetTriple.isTargetEHABICompatible();
   }
-
-  bool isTargetHardFloat() const;
+  /// @}
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());
@@ -389,10 +371,6 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
 
   bool isXRaySupported() const override;
-
-  bool isAPCS_ABI() const;
-  bool isAAPCS_ABI() const;
-  bool isAAPCS16_ABI() const;
 
   bool isROPI() const;
   bool isRWPI() const;

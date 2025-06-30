@@ -205,6 +205,23 @@ LogicalResult spirv::ImageDrefGatherOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.ImageReadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::ImageReadOp::verify() {
+  // TODO: Do we need check for: "If the Arrayed operand is 1, then additional
+  // capabilities may be required; e.g., ImageCubeArray, or ImageMSArray."?
+
+  // TODO: Ideally it should be somewhere verified that "If the Image Dim
+  // operand is not SubpassData, the Image Format must not be Unknown, unless
+  // the StorageImageReadWithoutFormat Capability was declared." This function
+  // however may not be the suitable place for such verification.
+
+  return verifyImageOperands(getOperation(), getImageOperandsAttr(),
+                             getOperandArguments());
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.ImageWriteOp
 //===----------------------------------------------------------------------===//
 

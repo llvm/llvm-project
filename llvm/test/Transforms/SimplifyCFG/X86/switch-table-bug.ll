@@ -10,8 +10,8 @@ define i64 @_TFO6reduce1E5toRawfS0_FT_Si(i2) {
 ; CHECK-LABEL: @_TFO6reduce1E5toRawfS0_FT_Si(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TMP0:%.*]], -2
-; CHECK-NEXT:    [[SWITCH_TABLEIDX_ZEXT:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i3
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i64], ptr @switch.table._TFO6reduce1E5toRawfS0_FT_Si, i32 0, i3 [[SWITCH_TABLEIDX_ZEXT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [4 x i64], ptr @switch.table._TFO6reduce1E5toRawfS0_FT_Si, i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i64, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    ret i64 [[SWITCH_LOAD]]
 ;

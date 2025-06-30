@@ -334,40 +334,25 @@ entry:
 }
 
 define <2 x i32> @f(i32 %a, i32 %b) nounwind readnone  {
-; CHECK-SD-LABEL: f:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov.s v0[1], w1
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: f:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.s v0[0], w0
-; CHECK-GI-NEXT:    mov.s v0[1], w1
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: f:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov.s v0[1], w1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
   %vecinit = insertelement <2 x i32> undef, i32 %a, i32 0
   %vecinit1 = insertelement <2 x i32> %vecinit, i32 %b, i32 1
   ret <2 x i32> %vecinit1
 }
 
 define <4 x i32> @g(i32 %a, i32 %b) nounwind readnone  {
-; CHECK-SD-LABEL: g:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    mov.s v0[1], w1
-; CHECK-SD-NEXT:    mov.s v0[2], w1
-; CHECK-SD-NEXT:    mov.s v0[3], w0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: g:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.s v0[0], w0
-; CHECK-GI-NEXT:    mov.s v0[1], w1
-; CHECK-GI-NEXT:    mov.s v0[2], w1
-; CHECK-GI-NEXT:    mov.s v0[3], w0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: g:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    mov.s v0[1], w1
+; CHECK-NEXT:    mov.s v0[2], w1
+; CHECK-NEXT:    mov.s v0[3], w0
+; CHECK-NEXT:    ret
   %vecinit = insertelement <4 x i32> undef, i32 %a, i32 0
   %vecinit1 = insertelement <4 x i32> %vecinit, i32 %b, i32 1
   %vecinit2 = insertelement <4 x i32> %vecinit1, i32 %b, i32 2
@@ -376,17 +361,11 @@ define <4 x i32> @g(i32 %a, i32 %b) nounwind readnone  {
 }
 
 define <2 x i64> @h(i64 %a, i64 %b) nounwind readnone  {
-; CHECK-SD-LABEL: h:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    mov.d v0[1], x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: h:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov.d v0[0], x0
-; CHECK-GI-NEXT:    mov.d v0[1], x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    mov.d v0[1], x1
+; CHECK-NEXT:    ret
   %vecinit = insertelement <2 x i64> undef, i64 %a, i32 0
   %vecinit1 = insertelement <2 x i64> %vecinit, i64 %b, i32 1
   ret <2 x i64> %vecinit1
@@ -422,16 +401,10 @@ define <4 x i16> @test_build_illegal(<4 x i32> %in) {
 ; SelectionDAGBuilder here. We then added a DUPLANE on top of that, preventing
 ; the formation of an indexed-by-7 MLS.
 define <4 x i16> @test_high_splat(<4 x i16> %a, <4 x i16> %b, <8 x i16> %v) #0 {
-; CHECK-SD-LABEL: test_high_splat:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mls.4h v0, v1, v2[7]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_high_splat:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    dup.8h v2, v2[7]
-; CHECK-GI-NEXT:    mls.4h v0, v2, v1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_high_splat:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mls.4h v0, v1, v2[7]
+; CHECK-NEXT:    ret
 entry:
   %shuffle = shufflevector <8 x i16> %v, <8 x i16> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
   %mul = mul <4 x i16> %shuffle, %b

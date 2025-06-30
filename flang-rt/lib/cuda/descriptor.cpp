@@ -54,6 +54,14 @@ void RTDEF(CUFSyncGlobalDescriptor)(
   ((Descriptor *)devAddr, (Descriptor *)hostPtr, sourceFile, sourceLine);
 }
 
+void RTDEF(CUFDescriptorCheckSection)(
+    const Descriptor *desc, const char *sourceFile, int sourceLine) {
+  if (desc && !desc->IsContiguous()) {
+    Terminator terminator{sourceFile, sourceLine};
+    terminator.Crash("device array section argument is not contiguous");
+  }
+}
+
 RT_EXT_API_GROUP_END
 }
 } // namespace Fortran::runtime::cuda

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
 ; EHCont Guard is currently only available on Windows
 
-; CHECK: .set @feat.00, 16384
+; CHECK: @feat.00 = 16384
 
 ; CHECK: .section .gehcont$y
 

@@ -25,7 +25,6 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                         Align ByteAlignment) override;
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
                                   MCSymbol *CsectSym, Align Alignment) override;
   void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,

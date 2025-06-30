@@ -30,6 +30,10 @@ class LoongArchAsmBackend : public MCAsmBackend {
   bool Is64Bit;
   const MCTargetOptions &TargetOptions;
   DenseMap<MCSection *, const MCSymbolRefExpr *> SecToAlignSym;
+  // Temporary symbol used to check whether a PC-relative fixup is resolved.
+  MCSymbol *PCRelTemp = nullptr;
+
+  bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
 public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,

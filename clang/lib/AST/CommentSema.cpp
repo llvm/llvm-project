@@ -268,7 +268,7 @@ void Sema::actOnParamCommandParamNameArg(ParamCommandComment *Command,
   }
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::ArrayRef(A, 1));
+  Command->setArgs(ArrayRef(A, 1));
 }
 
 void Sema::actOnParamCommandFinish(ParamCommandComment *Command,
@@ -304,7 +304,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
 
   auto *A = new (Allocator)
       Comment::Argument{SourceRange(ArgLocBegin, ArgLocEnd), Arg};
-  Command->setArgs(llvm::ArrayRef(A, 1));
+  Command->setArgs(ArrayRef(A, 1));
 
   if (!isTemplateOrSpecialization()) {
     // We already warned that this \\tparam is not attached to a template decl.
@@ -315,7 +315,7 @@ void Sema::actOnTParamCommandParamNameArg(TParamCommandComment *Command,
       ThisDeclInfo->TemplateParameters;
   SmallVector<unsigned, 2> Position;
   if (resolveTParamReference(Arg, TemplateParameters, &Position)) {
-    Command->setPosition(copyArray(llvm::ArrayRef(Position)));
+    Command->setPosition(copyArray(ArrayRef(Position)));
     TParamCommandComment *&PrevCommand = TemplateParameterDocs[Arg];
     if (PrevCommand) {
       SourceRange ArgRange(ArgLocBegin, ArgLocEnd);

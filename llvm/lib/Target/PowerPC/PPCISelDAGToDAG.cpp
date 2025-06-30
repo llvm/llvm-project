@@ -4961,6 +4961,21 @@ bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   // If this is just a masked value where the input is not handled, and
   // is not a rotate-left (handled by a pattern in the .td file), emit rlwinm
   if (isRunOfOnes(Imm, MB, ME) && Val.getOpcode() != ISD::ROTL) {
+    // The result of LBARX/LHARX do not need to be cleared as the instructions
+    // implicitly clear the upper bits.
+    unsigned AlreadyCleared = 0;
+    if (Val.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+      auto IntrinsicID = Val.getConstantOperandVal(1);
+      if (IntrinsicID == Intrinsic::ppc_lbarx)
+        AlreadyCleared = 24;
+      else if (IntrinsicID == Intrinsic::ppc_lharx)
+        AlreadyCleared = 16;
+      if (AlreadyCleared != 0 && AlreadyCleared == MB && ME == 31) {
+        ReplaceUses(SDValue(N, 0), N->getOperand(0));
+        return true;
+      }
+    }
+
     SDValue Ops[] = {Val, getI32Imm(0, dl), getI32Imm(MB, dl),
                      getI32Imm(ME, dl)};
     CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);

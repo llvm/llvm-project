@@ -11,12 +11,9 @@
 // RUN: llvm-pdbutil dump -symbols %t.obj | FileCheck %s --check-prefix=HOTPATCH
 // HOTPATCH: S_COMPILE3 [size = [[#]]]
 // HOTPATCH: flags = hot patchable
-///
-/// Unfortunately we need /Z7, Clang does not systematically generate S_COMPILE3.
-///
+//
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc /c -o %t.obj -- %s
-// RUN: llvm-pdbutil dump -symbols %t.obj | FileCheck %s --check-prefix=NO-HOTPATCH
-// NO-HOTPATCH-NOT: flags = hot patchable
+// RUN: llvm-pdbutil dump -symbols %t.obj | FileCheck %s --check-prefix=HOTPATCH
 
 int main() {
   return 0;

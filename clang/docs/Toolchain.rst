@@ -347,3 +347,8 @@ workarounds for issues discovered in libstdc++, and these are removed
 as fixed libstdc++ becomes sufficiently old.
 
 You can instruct Clang to use libstdc++ with the ``-stdlib=libstdc++`` flag.
+
+GCC Installation
+=================
+Users can point to their GCC installation by using the ``-gcc-toolchain`` or by
+using ``-gcc-install-dir`` flag.

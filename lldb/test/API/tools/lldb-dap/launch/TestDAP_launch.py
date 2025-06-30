@@ -566,7 +566,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         )
         version_eval_output = version_eval_response["body"]["result"]
 
-        version_string = self.dap_server.get_initialize_value("$__lldb_version")
+        version_string = self.dap_server.get_capability("$__lldb_version")
         self.assertEqual(
             version_eval_output.splitlines(),
             version_string.splitlines(),

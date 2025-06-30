@@ -27,6 +27,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Casting.h"
@@ -1358,7 +1359,7 @@ void annotateValueSite(Module &M, Instruction &Inst,
   MDBuilder MDHelper(Ctx);
   SmallVector<Metadata *, 3> Vals;
   // Tag
-  Vals.push_back(MDHelper.createString("VP"));
+  Vals.push_back(MDHelper.createString(MDProfLabels::ValueProfile));
   // Value Kind
   Vals.push_back(MDHelper.createConstant(
       ConstantInt::get(Type::getInt32Ty(Ctx), ValueKind)));
@@ -1389,7 +1390,7 @@ MDNode *mayHaveValueProfileOfKind(const Instruction &Inst,
     return nullptr;
 
   MDString *Tag = cast<MDString>(MD->getOperand(0));
-  if (!Tag || Tag->getString() != "VP")
+  if (!Tag || Tag->getString() != MDProfLabels::ValueProfile)
     return nullptr;
 
   // Now check kind:

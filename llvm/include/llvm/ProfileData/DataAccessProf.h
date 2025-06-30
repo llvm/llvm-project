@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/StringSaver.h"
 
@@ -138,33 +139,35 @@ public:
   /// - Serialized strings.
   /// - The encoded hashes.
   /// - Records.
-  Error serialize(ProfOStream &OS) const;
+  LLVM_ABI Error serialize(ProfOStream &OS) const;
 
   /// Deserialize this class from the given buffer.
-  Error deserialize(const unsigned char *&Ptr);
+  LLVM_ABI Error deserialize(const unsigned char *&Ptr);
 
   /// Returns a profile record for \p SymbolID, or std::nullopt if there
   /// isn't a record. Internally, this function will canonicalize the symbol
   /// name before the lookup.
-  std::optional<DataAccessProfRecord>
+  LLVM_ABI std::optional<DataAccessProfRecord>
   getProfileRecord(const SymbolHandleRef SymID) const;
 
   /// Returns true if \p SymID is seen in profiled binaries and cold.
-  bool isKnownColdSymbol(const SymbolHandleRef SymID) const;
+  LLVM_ABI bool isKnownColdSymbol(const SymbolHandleRef SymID) const;
 
   /// Methods to set symbolized data access profile. Returns error if
   /// duplicated symbol names or content hashes are seen. The user of this
   /// class should aggregate counters that correspond to the same symbol name
   /// or with the same string literal hash before calling 'set*' methods.
-  Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount);
+  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID,
+                                      uint64_t AccessCount);
   /// Similar to the method above, for records with \p Locations representing
   /// the `filename:line` where this symbol shows up. Note because of linker's
   /// merge of identical symbols (e.g., unnamed_addr string literals), one
   /// symbol is likely to have multiple locations.
-  Error setDataAccessProfile(SymbolHandleRef SymbolID, uint64_t AccessCount,
-                             ArrayRef<SourceLocation> Locations);
+  LLVM_ABI Error setDataAccessProfile(SymbolHandleRef SymbolID,
+                                      uint64_t AccessCount,
+                                      ArrayRef<SourceLocation> Locations);
   /// Add a symbol that's seen in the profiled binary without samples.
-  Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
+  LLVM_ABI Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
 
   /// The following methods return array reference for various internal data
   /// structures.

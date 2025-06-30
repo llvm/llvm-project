@@ -25,6 +25,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -70,15 +71,17 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
-  case Intrinsic::dx_resource_load_typedbuffer:
-    // We need to handle doubles and vector of doubles.
-    return F.getReturnType()
-        ->getStructElementType(0)
-        ->getScalarType()
-        ->isDoubleTy();
-  case Intrinsic::dx_resource_store_typedbuffer:
-    // We need to handle doubles and vector of doubles.
-    return F.getFunctionType()->getParamType(2)->getScalarType()->isDoubleTy();
+  case Intrinsic::dx_resource_load_typedbuffer: {
+    // We need to handle i64, doubles, and vectors of them.
+    Type *ScalarTy =
+        F.getReturnType()->getStructElementType(0)->getScalarType();
+    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
+  }
+  case Intrinsic::dx_resource_store_typedbuffer: {
+    // We need to handle i64 and doubles and vectors of i64 and doubles.
+    Type *ScalarTy = F.getFunctionType()->getParamType(2)->getScalarType();
+    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
+  }
   }
   return false;
 }
@@ -545,13 +548,15 @@ static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig);
 
   Type *BufferTy = Orig->getType()->getStructElementType(0);
-  assert(BufferTy->getScalarType()->isDoubleTy() &&
-         "Only expand double or double2");
+  Type *ScalarTy = BufferTy->getScalarType();
+  bool IsDouble = ScalarTy->isDoubleTy();
+  assert(IsDouble || ScalarTy->isIntegerTy(64) &&
+                         "Only expand double or int64 scalars or vectors");
 
   unsigned ExtractNum = 2;
   if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
     assert(VT->getNumElements() == 2 &&
-           "TypedBufferLoad double vector has wrong size");
+           "TypedBufferLoad vector must be size 2");
     ExtractNum = 4;
   }
 
@@ -570,22 +575,42 @@ static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
     ExtractElements.push_back(
         Builder.CreateExtractElement(Extract, Builder.getInt32(I)));
 
-  // combine into double(s)
+  // combine into double(s) or int64(s)
   Value *Result = PoisonValue::get(BufferTy);
   for (unsigned I = 0; I < ExtractNum; I += 2) {
-    Value *Dbl =
-        Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
-                                {ExtractElements[I], ExtractElements[I + 1]});
+    Value *Combined = nullptr;
+    if (IsDouble)
+      // For doubles, use dx_asdouble intrinsic
+      Combined =
+          Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
+                                  {ExtractElements[I], ExtractElements[I + 1]});
+    else {
+      // For int64, manually combine two int32s
+      // First, zero-extend both values to i64
+      Value *Lo = Builder.CreateZExt(ExtractElements[I], Builder.getInt64Ty());
+      Value *Hi =
+          Builder.CreateZExt(ExtractElements[I + 1], Builder.getInt64Ty());
+      // Shift the high bits left by 32 bits
+      Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
+      // OR the high and low bits together
+      Combined = Builder.CreateOr(Lo, ShiftedHi);
+    }
+
     if (ExtractNum == 4)
-      Result =
-          Builder.CreateInsertElement(Result, Dbl, Builder.getInt32(I / 2));
+      Result = Builder.CreateInsertElement(Result, Combined,
+                                           Builder.getInt32(I / 2));
     else
-      Result = Dbl;
+      Result = Combined;
   }
 
   Value *CheckBit = nullptr;
   for (User *U : make_early_inc_range(Orig->users())) {
-    auto *EVI = cast<ExtractValueInst>(U);
+    // If it's not a ExtractValueInst, we don't know how to
+    // handle it
+    auto *EVI = dyn_cast<ExtractValueInst>(U);
+    if (!EVI)
+      llvm_unreachable("Unexpected user of typedbufferload");
+
     ArrayRef<unsigned> Indices = EVI->getIndices();
     assert(Indices.size() == 1);
 
@@ -609,38 +634,61 @@ static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
   IRBuilder<> Builder(Orig);
 
   Type *BufferTy = Orig->getFunctionType()->getParamType(2);
-  assert(BufferTy->getScalarType()->isDoubleTy() &&
-         "Only expand double or double2");
+  Type *ScalarTy = BufferTy->getScalarType();
+  bool IsDouble = ScalarTy->isDoubleTy();
+  assert((IsDouble || ScalarTy->isIntegerTy(64)) &&
+         "Only expand double or int64 scalars or vectors");
 
-  unsigned ExtractNum = 2;
-  if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
-    assert(VT->getNumElements() == 2 &&
-           "TypedBufferStore double vector has wrong size");
-    ExtractNum = 4;
+  // Determine if we're dealing with a vector or scalar
+  bool IsVector = isa<FixedVectorType>(BufferTy);
+  if (IsVector) {
+    assert(cast<FixedVectorType>(BufferTy)->getNumElements() == 2 &&
+           "TypedBufferStore vector must be size 2");
   }
 
-  Type *SplitElementTy = Builder.getInt32Ty();
-  if (ExtractNum == 4)
+  // Create the appropriate vector type for the result
+  Type *Int32Ty = Builder.getInt32Ty();
+  Type *ResultTy = VectorType::get(Int32Ty, IsVector ? 4 : 2, false);
+  Value *Val = PoisonValue::get(ResultTy);
+
+  Type *SplitElementTy = Int32Ty;
+  if (IsVector)
     SplitElementTy = VectorType::get(SplitElementTy, 2, false);
 
-  // split our double(s)
-  auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
-  Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
-                                         Orig->getOperand(2));
-  // create our vector
-  Value *LowBits = Builder.CreateExtractValue(Split, 0);
-  Value *HighBits = Builder.CreateExtractValue(Split, 1);
-  Value *Val;
-  if (ExtractNum == 2) {
-    Val = PoisonValue::get(VectorType::get(SplitElementTy, 2, false));
+  Value *LowBits = nullptr;
+  Value *HighBits = nullptr;
+  // Split the 64-bit values into 32-bit components
+  if (IsDouble) {
+    auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
+    Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
+                                           {Orig->getOperand(2)});
+    LowBits = Builder.CreateExtractValue(Split, 0);
+    HighBits = Builder.CreateExtractValue(Split, 1);
+  } else {
+    // Handle int64 type(s)
+    Value *InputVal = Orig->getOperand(2);
+    Constant *ShiftAmt = Builder.getInt64(32);
+    if (IsVector)
+      ShiftAmt = ConstantVector::getSplat(ElementCount::getFixed(2), ShiftAmt);
+
+    // Split into low and high 32-bit parts
+    LowBits = Builder.CreateTrunc(InputVal, SplitElementTy);
+    Value *ShiftedVal = Builder.CreateLShr(InputVal, ShiftAmt);
+    HighBits = Builder.CreateTrunc(ShiftedVal, SplitElementTy);
+  }
+
+  if (IsVector) {
+    Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+  } else {
     Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
     Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
-  } else
-    Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+  }
 
+  // Create the final intrinsic call
   Builder.CreateIntrinsic(Builder.getVoidTy(),
                           Intrinsic::dx_resource_store_typedbuffer,
                           {Orig->getOperand(0), Orig->getOperand(1), Val});
+
   Orig->eraseFromParent();
   return true;
 }

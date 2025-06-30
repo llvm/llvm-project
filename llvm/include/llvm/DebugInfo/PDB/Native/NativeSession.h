@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolCache.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -29,7 +30,7 @@ class PDBSymbolCompiland;
 class PDBSymbolExe;
 template <typename ChildType> class IPDBEnumChildren;
 
-class NativeSession : public IPDBSession {
+class LLVM_ABI NativeSession : public IPDBSession {
   struct PdbSearchOptions {
     StringRef ExePath;
     // FIXME: Add other PDB search options (_NT_SYMBOL_PATH, symsrv)

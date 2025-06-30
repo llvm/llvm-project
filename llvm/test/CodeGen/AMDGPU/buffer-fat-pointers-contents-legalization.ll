@@ -2166,14 +2166,14 @@ define <6 x i8> @load_v6i8(ptr addrspace(8) inreg %buf) {
 ; GISEL-LABEL: load_v6i8:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    buffer_load_ushort v4, off, s[16:19], 0 offset:4
 ; GISEL-NEXT:    buffer_load_dword v0, off, s[16:19], 0
+; GISEL-NEXT:    buffer_load_ushort v4, off, s[16:19], 0 offset:4
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %ret = load <6 x i8>, ptr addrspace(7) %p
@@ -3630,10 +3630,10 @@ define <6 x i8> @volatile_load_v6i8(ptr addrspace(8) inreg %buf) {
 ; GISEL-NEXT:    buffer_load_ushort v4, off, s[16:19], 0 offset:4 glc
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v1, 8, v0
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
+; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    v_lshrrev_b32_e32 v5, 8, v4
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %p = addrspacecast ptr addrspace(8) %buf to ptr addrspace(7)
   %ret = load volatile <6 x i8>, ptr addrspace(7) %p

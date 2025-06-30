@@ -1,5 +1,7 @@
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml | FileCheck %s
+RUN: llvm-remarkutil instruction-mix %p/Inputs/instruction-mix.yaml | FileCheck %s
 RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-mix.yaml | llvm-remarkutil instruction-mix --parser=bitstream | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-mix.yaml | llvm-remarkutil instruction-mix | FileCheck %s
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=human | FileCheck %s
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --report_style=csv | FileCheck %s --check-prefix=CSV
 RUN: llvm-remarkutil instruction-mix --parser=yaml %p/Inputs/instruction-mix.yaml --rfilter=meow | FileCheck %s --check-prefix=MEOW-RE

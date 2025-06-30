@@ -28,11 +28,7 @@ define void @st_param_i8_i16() {
 ; CHECK-NEXT:    .param .align 2 .b8 param0[4];
 ; CHECK-NEXT:    st.param.b8 [param0], 1;
 ; CHECK-NEXT:    st.param.b16 [param0+2], 2;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_i8_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_i8_i16, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    ret;
   call void @call_i8_i16(%struct.A { i8 1, i16 2 })
@@ -48,11 +44,7 @@ define void @st_param_i32() {
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .b32 param0;
 ; CHECK-NEXT:    st.param.b32 [param0], 3;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_i32, (param0);
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    ret;
   call void @call_i32(i32 3)
@@ -68,11 +60,7 @@ define void @st_param_i64() {
 ; CHECK-NEXT:    { // callseq 2, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], 4;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_i64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_i64, (param0);
 ; CHECK-NEXT:    } // callseq 2
 ; CHECK-NEXT:    ret;
   call void @call_i64(i64 4)
@@ -88,11 +76,7 @@ define void @st_param_f32() {
 ; CHECK-NEXT:    { // callseq 3, 0
 ; CHECK-NEXT:    .param .b32 param0;
 ; CHECK-NEXT:    st.param.b32 [param0], 0f40A00000;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_f32, (param0);
 ; CHECK-NEXT:    } // callseq 3
 ; CHECK-NEXT:    ret;
   call void @call_f32(float 5.0)
@@ -108,11 +92,7 @@ define void @st_param_f64() {
 ; CHECK-NEXT:    { // callseq 4, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    st.param.b64 [param0], 0d4018000000000000;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_f64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_f64, (param0);
 ; CHECK-NEXT:    } // callseq 4
 ; CHECK-NEXT:    ret;
   call void @call_f64(double 6.0)
@@ -134,11 +114,7 @@ define void @st_param_v2_i8_ii() {
 ; CHECK-NEXT:    { // callseq 5, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[2];
 ; CHECK-NEXT:    st.param.v2.b8 [param0], {1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i8, (param0);
 ; CHECK-NEXT:    } // callseq 5
 ; CHECK-NEXT:    ret;
   call void @call_v2_i8(%struct.char2 { i8 1, i8 2 })
@@ -154,11 +130,7 @@ define void @st_param_v2_i8_ir(i8 %val) {
 ; CHECK-NEXT:    { // callseq 6, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[2];
 ; CHECK-NEXT:    st.param.v2.b8 [param0], {1, %rs1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i8, (param0);
 ; CHECK-NEXT:    } // callseq 6
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.char2 poison, i8 1, 0
@@ -176,11 +148,7 @@ define void @st_param_v2_i8_ri(i8 %val) {
 ; CHECK-NEXT:    { // callseq 7, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[2];
 ; CHECK-NEXT:    st.param.v2.b8 [param0], {%rs1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i8, (param0);
 ; CHECK-NEXT:    } // callseq 7
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.char2 poison, i8 %val, 0
@@ -198,11 +166,7 @@ define void @st_param_v2_i16_ii() {
 ; CHECK-NEXT:    { // callseq 8, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v2.b16 [param0], {1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i16, (param0);
 ; CHECK-NEXT:    } // callseq 8
 ; CHECK-NEXT:    ret;
   call void @call_v2_i16(%struct.short2 { i16 1, i16 2 })
@@ -218,11 +182,7 @@ define void @st_param_v2_i16_ir(i16 %val) {
 ; CHECK-NEXT:    { // callseq 9, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v2.b16 [param0], {1, %rs1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i16, (param0);
 ; CHECK-NEXT:    } // callseq 9
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.short2 poison, i16 1, 0
@@ -240,11 +200,7 @@ define void @st_param_v2_i16_ri(i16 %val) {
 ; CHECK-NEXT:    { // callseq 10, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v2.b16 [param0], {%rs1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i16, (param0);
 ; CHECK-NEXT:    } // callseq 10
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.short2 poison, i16 %val, 0
@@ -262,11 +218,7 @@ define void @st_param_v2_i32_ii() {
 ; CHECK-NEXT:    { // callseq 11, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i32, (param0);
 ; CHECK-NEXT:    } // callseq 11
 ; CHECK-NEXT:    ret;
   call void @call_v2_i32(%struct.int2 { i32 1, i32 2 })
@@ -282,11 +234,7 @@ define void @st_param_v2_i32_ir(i32 %val) {
 ; CHECK-NEXT:    { // callseq 12, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {1, %r1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i32, (param0);
 ; CHECK-NEXT:    } // callseq 12
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.int2 poison, i32 1, 0
@@ -304,11 +252,7 @@ define void @st_param_v2_i32_ri(i32 %val) {
 ; CHECK-NEXT:    { // callseq 13, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i32, (param0);
 ; CHECK-NEXT:    } // callseq 13
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.int2 poison, i32 %val, 0
@@ -326,11 +270,7 @@ define void @st_param_v2_i64_ii() {
 ; CHECK-NEXT:    { // callseq 14, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i64, (param0);
 ; CHECK-NEXT:    } // callseq 14
 ; CHECK-NEXT:    ret;
   call void @call_v2_i64(%struct.longlong2 { i64 1, i64 2 })
@@ -346,11 +286,7 @@ define void @st_param_v2_i64_ir(i64 %val) {
 ; CHECK-NEXT:    { // callseq 15, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {1, %rd1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i64, (param0);
 ; CHECK-NEXT:    } // callseq 15
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.longlong2 poison, i64 1, 0
@@ -368,11 +304,7 @@ define void @st_param_v2_i64_ri(i64 %val) {
 ; CHECK-NEXT:    { // callseq 16, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd1, 2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_i64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_i64, (param0);
 ; CHECK-NEXT:    } // callseq 16
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.longlong2 poison, i64 %val, 0
@@ -390,11 +322,7 @@ define void @st_param_v2_f32_ii(float %val) {
 ; CHECK-NEXT:    { // callseq 17, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {0f3F800000, 0f40000000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_f32, (param0);
 ; CHECK-NEXT:    } // callseq 17
 ; CHECK-NEXT:    ret;
   call void @call_v2_f32(%struct.float2 { float 1.0, float 2.0 })
@@ -410,11 +338,7 @@ define void @st_param_v2_f32_ir(float %val) {
 ; CHECK-NEXT:    { // callseq 18, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {0f3F800000, %r1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_f32, (param0);
 ; CHECK-NEXT:    } // callseq 18
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.float2 poison, float 1.0, 0
@@ -432,11 +356,7 @@ define void @st_param_v2_f32_ri(float %val) {
 ; CHECK-NEXT:    { // callseq 19, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, 0f40000000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_f32, (param0);
 ; CHECK-NEXT:    } // callseq 19
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.float2 poison, float %val, 0
@@ -454,11 +374,7 @@ define void @st_param_v2_f64_ii(double %val) {
 ; CHECK-NEXT:    { // callseq 20, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {0d3FF0000000000000, 0d4000000000000000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_f64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_f64, (param0);
 ; CHECK-NEXT:    } // callseq 20
 ; CHECK-NEXT:    ret;
   call void @call_v2_f64(%struct.double2 { double 1.0, double 2.0 })
@@ -474,11 +390,7 @@ define void @st_param_v2_f64_ir(double %val) {
 ; CHECK-NEXT:    { // callseq 21, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {0d3FF0000000000000, %rd1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_f64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_f64, (param0);
 ; CHECK-NEXT:    } // callseq 21
 ; CHECK-NEXT:    ret;
   %struct.ir0 = insertvalue %struct.double2 poison, double 1.0, 0
@@ -496,11 +408,7 @@ define void @st_param_v2_f64_ri(double %val) {
 ; CHECK-NEXT:    { // callseq 22, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v2.b64 [param0], {%rd1, 0d4000000000000000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v2_f64,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v2_f64, (param0);
 ; CHECK-NEXT:    } // callseq 22
 ; CHECK-NEXT:    ret;
   %struct.ri0 = insertvalue %struct.double2 poison, double %val, 0
@@ -525,11 +433,7 @@ define void @st_param_v4_i8_iiii() {
 ; CHECK-NEXT:    { // callseq 23, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 23
 ; CHECK-NEXT:    ret;
   call void @call_v4_i8(%struct.char4 { i8 1, i8 2, i8 3, i8 4 })
@@ -547,11 +451,7 @@ define void @st_param_v4_i8_irrr(i8 %b, i8 %c, i8 %d) {
 ; CHECK-NEXT:    { // callseq 24, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, %rs2, %rs3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 24
 ; CHECK-NEXT:    ret;
   %struct.irrr0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -573,11 +473,7 @@ define void @st_param_v4_i8_rirr(i8 %a, i8 %c, i8 %d) {
 ; CHECK-NEXT:    { // callseq 25, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, %rs2, %rs3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 25
 ; CHECK-NEXT:    ret;
   %struct.rirr0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -599,11 +495,7 @@ define void @st_param_v4_i8_rrir(i8 %a, i8 %b, i8 %d) {
 ; CHECK-NEXT:    { // callseq 26, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, %rs2, 3, %rs3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 26
 ; CHECK-NEXT:    ret;
   %struct.rrir0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -625,11 +517,7 @@ define void @st_param_v4_i8_rrri(i8 %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    { // callseq 27, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, %rs2, %rs3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 27
 ; CHECK-NEXT:    ret;
   %struct.rrri0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -650,11 +538,7 @@ define void @st_param_v4_i8_iirr(i8 %c, i8 %d) {
 ; CHECK-NEXT:    { // callseq 28, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, %rs1, %rs2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 28
 ; CHECK-NEXT:    ret;
   %struct.iirr0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -675,11 +559,7 @@ define void @st_param_v4_i8_irir(i8 %b, i8 %d) {
 ; CHECK-NEXT:    { // callseq 29, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, 3, %rs2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 29
 ; CHECK-NEXT:    ret;
   %struct.irir0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -700,11 +580,7 @@ define void @st_param_v4_i8_irri(i8 %b, i8 %c) {
 ; CHECK-NEXT:    { // callseq 30, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, %rs2, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 30
 ; CHECK-NEXT:    ret;
   %struct.irri0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -725,11 +601,7 @@ define void @st_param_v4_i8_riir(i8 %a, i8 %d) {
 ; CHECK-NEXT:    { // callseq 31, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, 3, %rs2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 31
 ; CHECK-NEXT:    ret;
   %struct.riir0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -750,11 +622,7 @@ define void @st_param_v4_i8_riri(i8 %a, i8 %c) {
 ; CHECK-NEXT:    { // callseq 32, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, %rs2, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 32
 ; CHECK-NEXT:    ret;
   %struct.riri0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -775,11 +643,7 @@ define void @st_param_v4_i8_rrii(i8 %a, i8 %b) {
 ; CHECK-NEXT:    { // callseq 33, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, %rs2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 33
 ; CHECK-NEXT:    ret;
   %struct.rrii0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -799,11 +663,7 @@ define void @st_param_v4_i8_iiir(i8 %d) {
 ; CHECK-NEXT:    { // callseq 34, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, 3, %rs1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 34
 ; CHECK-NEXT:    ret;
   %struct.iiir0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -823,11 +683,7 @@ define void @st_param_v4_i8_iiri(i8 %c) {
 ; CHECK-NEXT:    { // callseq 35, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, 2, %rs1, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 35
 ; CHECK-NEXT:    ret;
   %struct.iiri0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -847,11 +703,7 @@ define void @st_param_v4_i8_irii(i8 %b) {
 ; CHECK-NEXT:    { // callseq 36, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {1, %rs1, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 36
 ; CHECK-NEXT:    ret;
   %struct.irii0 = insertvalue %struct.char4 poison, i8 1, 0
@@ -871,11 +723,7 @@ define void @st_param_v4_i8_riii(i8 %a) {
 ; CHECK-NEXT:    { // callseq 37, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
 ; CHECK-NEXT:    st.param.v4.b8 [param0], {%rs1, 2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i8,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i8, (param0);
 ; CHECK-NEXT:    } // callseq 37
 ; CHECK-NEXT:    ret;
   %struct.riii0 = insertvalue %struct.char4 poison, i8 %a, 0
@@ -895,11 +743,7 @@ define void @st_param_v4_i16_iiii() {
 ; CHECK-NEXT:    { // callseq 38, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 38
 ; CHECK-NEXT:    ret;
   call void @call_v4_i16(%struct.short4 { i16 1, i16 2, i16 3, i16 4 })
@@ -917,11 +761,7 @@ define void @st_param_v4_i16_irrr(i16 %b, i16 %c, i16 %d) {
 ; CHECK-NEXT:    { // callseq 39, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, %rs2, %rs3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 39
 ; CHECK-NEXT:    ret;
   %struct.irrr0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -943,11 +783,7 @@ define void @st_param_v4_i16_rirr(i16 %a, i16 %c, i16 %d) {
 ; CHECK-NEXT:    { // callseq 40, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, %rs2, %rs3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 40
 ; CHECK-NEXT:    ret;
   %struct.rirr0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -969,11 +805,7 @@ define void @st_param_v4_i16_rrir(i16 %a, i16 %b, i16 %d) {
 ; CHECK-NEXT:    { // callseq 41, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, %rs2, 3, %rs3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 41
 ; CHECK-NEXT:    ret;
   %struct.rrir0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -995,11 +827,7 @@ define void @st_param_v4_i16_rrri(i16 %a, i16 %b, i16 %c) {
 ; CHECK-NEXT:    { // callseq 42, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, %rs2, %rs3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 42
 ; CHECK-NEXT:    ret;
   %struct.rrri0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -1020,11 +848,7 @@ define void @st_param_v4_i16_iirr(i16 %c, i16 %d) {
 ; CHECK-NEXT:    { // callseq 43, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, %rs1, %rs2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 43
 ; CHECK-NEXT:    ret;
   %struct.iirr0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -1045,11 +869,7 @@ define void @st_param_v4_i16_irir(i16 %b, i16 %d) {
 ; CHECK-NEXT:    { // callseq 44, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, 3, %rs2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 44
 ; CHECK-NEXT:    ret;
   %struct.irir0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -1070,11 +890,7 @@ define void @st_param_v4_i16_irri(i16 %b, i16 %c) {
 ; CHECK-NEXT:    { // callseq 45, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, %rs2, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 45
 ; CHECK-NEXT:    ret;
   %struct.irri0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -1095,11 +911,7 @@ define void @st_param_v4_i16_riir(i16 %a, i16 %d) {
 ; CHECK-NEXT:    { // callseq 46, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, 3, %rs2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 46
 ; CHECK-NEXT:    ret;
   %struct.riir0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -1120,11 +932,7 @@ define void @st_param_v4_i16_riri(i16 %a, i16 %c) {
 ; CHECK-NEXT:    { // callseq 47, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, %rs2, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 47
 ; CHECK-NEXT:    ret;
   %struct.riri0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -1145,11 +953,7 @@ define void @st_param_v4_i16_rrii(i16 %a, i16 %b) {
 ; CHECK-NEXT:    { // callseq 48, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, %rs2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 48
 ; CHECK-NEXT:    ret;
   %struct.rrii0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -1169,11 +973,7 @@ define void @st_param_v4_i16_iiir(i16 %d) {
 ; CHECK-NEXT:    { // callseq 49, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, 3, %rs1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 49
 ; CHECK-NEXT:    ret;
   %struct.iiir0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -1193,11 +993,7 @@ define void @st_param_v4_i16_iiri(i16 %c) {
 ; CHECK-NEXT:    { // callseq 50, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, 2, %rs1, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 50
 ; CHECK-NEXT:    ret;
   %struct.iiri0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -1217,11 +1013,7 @@ define void @st_param_v4_i16_irii(i16 %b) {
 ; CHECK-NEXT:    { // callseq 51, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {1, %rs1, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 51
 ; CHECK-NEXT:    ret;
   %struct.irii0 = insertvalue %struct.short4 poison, i16 1, 0
@@ -1241,11 +1033,7 @@ define void @st_param_v4_i16_riii(i16 %a) {
 ; CHECK-NEXT:    { // callseq 52, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
 ; CHECK-NEXT:    st.param.v4.b16 [param0], {%rs1, 2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i16,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i16, (param0);
 ; CHECK-NEXT:    } // callseq 52
 ; CHECK-NEXT:    ret;
   %struct.riii0 = insertvalue %struct.short4 poison, i16 %a, 0
@@ -1265,11 +1053,7 @@ define void @st_param_v4_i32_iiii() {
 ; CHECK-NEXT:    { // callseq 53, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 53
 ; CHECK-NEXT:    ret;
   call void @call_v4_i32(%struct.int4 { i32 1, i32 2, i32 3, i32 4 })
@@ -1287,11 +1071,7 @@ define void @st_param_v4_i32_irrr(i32 %b, i32 %c, i32 %d) {
 ; CHECK-NEXT:    { // callseq 54, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, %r2, %r3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 54
 ; CHECK-NEXT:    ret;
   %struct.irrr0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1313,11 +1093,7 @@ define void @st_param_v4_i32_rirr(i32 %a, i32 %c, i32 %d) {
 ; CHECK-NEXT:    { // callseq 55, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, %r2, %r3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 55
 ; CHECK-NEXT:    ret;
   %struct.rirr0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1339,11 +1115,7 @@ define void @st_param_v4_i32_rrir(i32 %a, i32 %b, i32 %d) {
 ; CHECK-NEXT:    { // callseq 56, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, 3, %r3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 56
 ; CHECK-NEXT:    ret;
   %struct.rrir0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1365,11 +1137,7 @@ define void @st_param_v4_i32_rrri(i32 %a, i32 %b, i32 %c) {
 ; CHECK-NEXT:    { // callseq 57, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, %r3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 57
 ; CHECK-NEXT:    ret;
   %struct.rrri0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1390,11 +1158,7 @@ define void @st_param_v4_i32_iirr(i32 %c, i32 %d) {
 ; CHECK-NEXT:    { // callseq 58, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, %r1, %r2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 58
 ; CHECK-NEXT:    ret;
   %struct.iirr0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1415,11 +1179,7 @@ define void @st_param_v4_i32_irir(i32 %b, i32 %d) {
 ; CHECK-NEXT:    { // callseq 59, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, 3, %r2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 59
 ; CHECK-NEXT:    ret;
   %struct.irir0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1440,11 +1200,7 @@ define void @st_param_v4_i32_irri(i32 %b, i32 %c) {
 ; CHECK-NEXT:    { // callseq 60, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, %r2, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 60
 ; CHECK-NEXT:    ret;
   %struct.irri0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1465,11 +1221,7 @@ define void @st_param_v4_i32_riir(i32 %a, i32 %d) {
 ; CHECK-NEXT:    { // callseq 61, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, 3, %r2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 61
 ; CHECK-NEXT:    ret;
   %struct.riir0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1490,11 +1242,7 @@ define void @st_param_v4_i32_riri(i32 %a, i32 %c) {
 ; CHECK-NEXT:    { // callseq 62, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, %r2, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 62
 ; CHECK-NEXT:    ret;
   %struct.riri0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1515,11 +1263,7 @@ define void @st_param_v4_i32_rrii(i32 %a, i32 %b) {
 ; CHECK-NEXT:    { // callseq 63, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 63
 ; CHECK-NEXT:    ret;
   %struct.rrii0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1539,11 +1283,7 @@ define void @st_param_v4_i32_iiir(i32 %d) {
 ; CHECK-NEXT:    { // callseq 64, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, 3, %r1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 64
 ; CHECK-NEXT:    ret;
   %struct.iiir0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1563,11 +1303,7 @@ define void @st_param_v4_i32_iiri(i32 %c) {
 ; CHECK-NEXT:    { // callseq 65, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, 2, %r1, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 65
 ; CHECK-NEXT:    ret;
   %struct.iiri0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1587,11 +1323,7 @@ define void @st_param_v4_i32_irii(i32 %b) {
 ; CHECK-NEXT:    { // callseq 66, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {1, %r1, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 66
 ; CHECK-NEXT:    ret;
   %struct.irii0 = insertvalue %struct.int4 poison, i32 1, 0
@@ -1611,11 +1343,7 @@ define void @st_param_v4_i32_riii(i32 %a) {
 ; CHECK-NEXT:    { // callseq 67, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 2, 3, 4};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_i32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_i32, (param0);
 ; CHECK-NEXT:    } // callseq 67
 ; CHECK-NEXT:    ret;
   %struct.riii0 = insertvalue %struct.int4 poison, i32 %a, 0
@@ -1635,11 +1363,7 @@ define void @st_param_v4_f32_iiii() {
 ; CHECK-NEXT:    { // callseq 68, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, 0f40400000, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 68
 ; CHECK-NEXT:    ret;
   call void @call_v4_f32(%struct.float4 { float 1.0, float 2.0, float 3.0, float 4.0 })
@@ -1657,11 +1381,7 @@ define void @st_param_v4_f32_irrr(float %b, float %c, float %d) {
 ; CHECK-NEXT:    { // callseq 69, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %r1, %r2, %r3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 69
 ; CHECK-NEXT:    ret;
   %struct.irrr0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1683,11 +1403,7 @@ define void @st_param_v4_f32_rirr(float %a, float %c, float %d) {
 ; CHECK-NEXT:    { // callseq 70, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 0f40000000, %r2, %r3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 70
 ; CHECK-NEXT:    ret;
   %struct.rirr0 = insertvalue %struct.float4 poison, float %a, 0
@@ -1709,11 +1425,7 @@ define void @st_param_v4_f32_rrir(float %a, float %b, float %d) {
 ; CHECK-NEXT:    { // callseq 71, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, 0f40400000, %r3};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 71
 ; CHECK-NEXT:    ret;
   %struct.rrir0 = insertvalue %struct.float4 poison, float %a, 0
@@ -1735,11 +1447,7 @@ define void @st_param_v4_f32_rrri(float %a, float %b, float %c) {
 ; CHECK-NEXT:    { // callseq 72, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, %r3, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 72
 ; CHECK-NEXT:    ret;
   %struct.rrri0 = insertvalue %struct.float4 poison, float %a, 0
@@ -1760,11 +1468,7 @@ define void @st_param_v4_f32_iirr(float %c, float %d) {
 ; CHECK-NEXT:    { // callseq 73, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, %r1, %r2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 73
 ; CHECK-NEXT:    ret;
   %struct.iirr0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1785,11 +1489,7 @@ define void @st_param_v4_f32_irir(float %b, float %d) {
 ; CHECK-NEXT:    { // callseq 74, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %r1, 0f40400000, %r2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 74
 ; CHECK-NEXT:    ret;
   %struct.irir0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1810,11 +1510,7 @@ define void @st_param_v4_f32_irri(float %b, float %c) {
 ; CHECK-NEXT:    { // callseq 75, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %r1, %r2, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 75
 ; CHECK-NEXT:    ret;
   %struct.irri0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1835,11 +1531,7 @@ define void @st_param_v4_f32_riir(float %a, float %d) {
 ; CHECK-NEXT:    { // callseq 76, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 0f40000000, 0f40400000, %r2};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 76
 ; CHECK-NEXT:    ret;
   %struct.riir0 = insertvalue %struct.float4 poison, float %a, 0
@@ -1860,11 +1552,7 @@ define void @st_param_v4_f32_riri(float %a, float %c) {
 ; CHECK-NEXT:    { // callseq 77, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 0f40000000, %r2, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 77
 ; CHECK-NEXT:    ret;
   %struct.riri0 = insertvalue %struct.float4 poison, float %a, 0
@@ -1885,11 +1573,7 @@ define void @st_param_v4_f32_rrii(float %a, float %b) {
 ; CHECK-NEXT:    { // callseq 78, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, %r2, 0f40400000, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 78
 ; CHECK-NEXT:    ret;
   %struct.rrii0 = insertvalue %struct.float4 poison, float %a, 0
@@ -1909,11 +1593,7 @@ define void @st_param_v4_f32_iiir(float %d) {
 ; CHECK-NEXT:    { // callseq 79, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, 0f40400000, %r1};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 79
 ; CHECK-NEXT:    ret;
   %struct.iiir0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1933,11 +1613,7 @@ define void @st_param_v4_f32_iiri(float %c) {
 ; CHECK-NEXT:    { // callseq 80, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, 0f40000000, %r1, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 80
 ; CHECK-NEXT:    ret;
   %struct.iiri0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1957,11 +1633,7 @@ define void @st_param_v4_f32_irii(float %b) {
 ; CHECK-NEXT:    { // callseq 81, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {0f3F800000, %r1, 0f40400000, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 81
 ; CHECK-NEXT:    ret;
   %struct.irii0 = insertvalue %struct.float4 poison, float 1.0, 0
@@ -1981,11 +1653,7 @@ define void @st_param_v4_f32_riii(float %a) {
 ; CHECK-NEXT:    { // callseq 82, 0
 ; CHECK-NEXT:    .param .align 16 .b8 param0[16];
 ; CHECK-NEXT:    st.param.v4.b32 [param0], {%r1, 0f40000000, 0f40400000, 0f40800000};
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_v4_f32,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_v4_f32, (param0);
 ; CHECK-NEXT:    } // callseq 82
 ; CHECK-NEXT:    ret;
   %struct.riii0 = insertvalue %struct.float4 poison, float %a, 0
@@ -2011,11 +1679,7 @@ define void @st_param_bfloat() {
 ; CHECK-NEXT:    { // callseq 83, 0
 ; CHECK-NEXT:    .param .align 2 .b8 param0[2];
 ; CHECK-NEXT:    st.param.b16 [param0], %rs1;
-; CHECK-NEXT:    call.uni
-; CHECK-NEXT:    call_bfloat,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni call_bfloat, (param0);
 ; CHECK-NEXT:    } // callseq 83
 ; CHECK-NEXT:    ret;
   %five = bitcast i16 16640 to bfloat

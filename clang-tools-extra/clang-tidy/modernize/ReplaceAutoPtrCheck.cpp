@@ -141,8 +141,7 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
       "auto_ptr")
     return;
 
-  SourceLocation EndLoc =
-      AutoPtrLoc.getLocWithOffset(strlen("auto_ptr") - 1);
+  SourceLocation EndLoc = AutoPtrLoc.getLocWithOffset(strlen("auto_ptr") - 1);
   diag(AutoPtrLoc, "auto_ptr is deprecated, use unique_ptr instead")
       << FixItHint::CreateReplacement(SourceRange(AutoPtrLoc, EndLoc),
                                       "unique_ptr");

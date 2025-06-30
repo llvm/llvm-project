@@ -119,7 +119,7 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK:         jmp     .LBB1_[[epilogue]]
 
 ; CHECK:         .seh_handlerdata
-; CHECK-NEXT:         .set .Lmain$parent_frame_offset, 32
+; CHECK-NEXT:         .Lmain$parent_frame_offset = 32
 ; CHECK-NEXT:         .long   (.Llsda_end0-.Llsda_begin0)/16
 ; CHECK-NEXT: .Llsda_begin0:
 ; CHECK-NEXT:         .long   .Ltmp0@IMGREL

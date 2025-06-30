@@ -163,7 +163,8 @@ using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
     arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, true,
     arith::AttrConverterConstrainedFPToLLVM>;
 using TruncIOpLowering =
-    VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp>;
+    VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp,
+                               arith::AttrConvertOverflowToLLVM>;
 using UIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::UIToFPOp, LLVM::UIToFPOp>;
 using XOrIOpLowering = VectorConvertToLLVMPattern<arith::XOrIOp, LLVM::XOrOp>;

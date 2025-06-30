@@ -279,11 +279,8 @@ define double @convert_u64_to_double(i64 %a) nounwind {
 define double @bitcast_i64_to_double(i64 %a, i64 %b) nounwind {
 ; LA32-LABEL: bitcast_i64_to_double:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $a1, $sp, 12
-; LA32-NEXT:    st.w $a0, $sp, 8
-; LA32-NEXT:    fld.d $fa0, $sp, 8
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    movgr2fr.w $fa0, $a0
+; LA32-NEXT:    movgr2frh.w $fa0, $a1
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bitcast_i64_to_double:
@@ -297,11 +294,8 @@ define double @bitcast_i64_to_double(i64 %a, i64 %b) nounwind {
 define i64 @bitcast_double_to_i64(double %a) nounwind {
 ; LA32-LABEL: bitcast_double_to_i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    fst.d $fa0, $sp, 8
-; LA32-NEXT:    ld.w $a0, $sp, 8
-; LA32-NEXT:    ld.w $a1, $sp, 12
-; LA32-NEXT:    addi.w $sp, $sp, 16
+; LA32-NEXT:    movfr2gr.s $a0, $fa0
+; LA32-NEXT:    movfrh2gr.s $a1, $fa0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: bitcast_double_to_i64:

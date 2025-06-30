@@ -17,10 +17,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::zircon {
 
+namespace {
+
 AST_MATCHER_P(CXXRecordDecl, matchesAnyName, ArrayRef<StringRef>, Names) {
   std::string QualifiedName = Node.getQualifiedNameAsString();
   return llvm::is_contained(Names, QualifiedName);
 }
+
+} // namespace
 
 void TemporaryObjectsCheck::registerMatchers(MatchFinder *Finder) {
   // Matcher for default constructors.

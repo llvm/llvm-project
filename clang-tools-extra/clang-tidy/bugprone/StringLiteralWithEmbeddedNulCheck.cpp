@@ -47,8 +47,9 @@ void StringLiteralWithEmbeddedNulCheck::registerMatchers(MatchFinder *Finder) {
 
   // Detect passing a suspicious string literal to a string constructor.
   // example: std::string str = "abc\0def";
-  Finder->addMatcher(traverse(TK_AsIs,
-      cxxConstructExpr(StringConstructorExpr, hasArgument(0, StrLitWithNul))),
+  Finder->addMatcher(
+      traverse(TK_AsIs, cxxConstructExpr(StringConstructorExpr,
+                                         hasArgument(0, StrLitWithNul))),
       this);
 
   // Detect passing a suspicious string literal through an overloaded operator.

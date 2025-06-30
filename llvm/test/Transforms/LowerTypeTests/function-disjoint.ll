@@ -5,8 +5,8 @@
 
 target datalayout = "e-p:64:64"
 
-; X64: @g = alias void (), ptr @[[JT1:.*]]
-; X64: @f = alias void (), ptr @[[JT0:.*]]
+; X64: @g = alias [8 x i8], ptr @[[JT1:.*]]
+; X64: @f = alias [8 x i8], ptr @[[JT0:.*]]
 
 ; WASM32: private constant [0 x i8] zeroinitializer
 @0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16

@@ -1174,11 +1174,15 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // the indices in `coefficients` map, and affine expression corresponding to
   // in indices in `indexToExprMap` map.
   for (const auto &it : llvm::enumerate(localExprs)) {
-    AffineExpr expr = it.value();
     if (flatExprs[numDims + numSymbols + it.index()] == 0)
       continue;
-    AffineExpr lhs = cast<AffineBinaryOpExpr>(expr).getLHS();
-    AffineExpr rhs = cast<AffineBinaryOpExpr>(expr).getRHS();
+    AffineExpr expr = it.value();
+    auto binaryExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+    if (!binaryExpr)
+      continue;
+
+    AffineExpr lhs = binaryExpr.getLHS();
+    AffineExpr rhs = binaryExpr.getRHS();
     if (!((isa<AffineDimExpr>(lhs) || isa<AffineSymbolExpr>(lhs)) &&
           (isa<AffineDimExpr>(rhs) || isa<AffineSymbolExpr>(rhs) ||
            isa<AffineConstantExpr>(rhs)))) {

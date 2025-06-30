@@ -1191,7 +1191,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   FrontendOpts.OriginalModuleMap = std::string(OriginalModuleMapFile);
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
-  FrontendOpts.Inputs = {Input};
+  FrontendOpts.Inputs = {std::move(Input)};
 
   // Don't free the remapped file buffers; they are owned by our caller.
   PPOpts.RetainRemappedFileBuffers = true;

@@ -16,6 +16,14 @@
 // CHECK-XANDESPERF: __riscv_xandesperf  5000000{{$}}
 
 // RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32i_xandesvbfhcvt -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVBFHCVT %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64i_xandesvbfhcvt -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVBFHCVT %s
+// CHECK-XANDESVBFHCVT: __riscv_xandesvbfhcvt  5000000{{$}}
+
+// RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_xandesvpackfph -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-XANDESVPACKFPH %s
 // RUN: %clang --target=riscv64 \

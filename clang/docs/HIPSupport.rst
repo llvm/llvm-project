@@ -17,7 +17,7 @@
 HIP Support
 =============
 
-HIP (Heterogeneous-Compute Interface for Portability) `<https://github.com/ROCm-Developer-Tools/HIP>`_ is
+HIP (Heterogeneous-Compute Interface for Portability) `<https://github.com/ROCm/HIP>`_ is
 a C++ Runtime API and Kernel Language. It enables developers to create portable applications for
 offloading computation to different hardware platforms from a single source code.
 
@@ -41,9 +41,9 @@ backend or the out-of-tree LLVM-SPIRV translator. The SPIR-V is then bundled and
 .. note::
    While Clang does not directly provide HIP support for NVIDIA GPUs and CPUs, these platforms are supported via other means:
 
-   - NVIDIA GPUs: HIP support is offered through the HIP project `<https://github.com/ROCm-Developer-Tools/HIP>`_, which provides a header-only library for translating HIP runtime APIs into CUDA runtime APIs. The code is subsequently compiled using NVIDIA's `nvcc`.
+   - NVIDIA GPUs: HIP support is offered through the HIP project `<https://github.com/ROCm/HIP>`_, which provides a header-only library for translating HIP runtime APIs into CUDA runtime APIs. The code is subsequently compiled using NVIDIA's `nvcc`.
 
-   - CPUs: HIP support is available through the HIP-CPU runtime library `<https://github.com/ROCm-Developer-Tools/HIP-CPU>`_. This header-only library enables CPUs to execute unmodified HIP code.
+   - CPUs: HIP support is available through the HIP-CPU runtime library `<https://github.com/ROCm/HIP-CPU>`_. This header-only library enables CPUs to execute unmodified HIP code.
 
 
 Example Usage
@@ -328,7 +328,7 @@ The `parallel_unsequenced_policy <https://en.cppreference.com/w/cpp/algorithm/ex
 maps relatively well to the execution model of AMD GPUs. This, coupled with the
 the availability and maturity of GPU accelerated algorithm libraries that
 implement most / all corresponding algorithms in the standard library
-(e.g. `rocThrust <https://github.com/ROCmSoftwarePlatform/rocThrust>`__), makes
+(e.g. `rocThrust <https://github.com/ROCm/rocm-libraries/tree/develop/projects/rocthrust>`__), makes
 it feasible to provide seamless accelerator offload for supported algorithms,
 when an accelerated version exists. Thus, it becomes possible to easily access
 the computational resources of an AMD accelerator, via a well specified,
@@ -483,7 +483,7 @@ such as GPUs, work.
      allocation / deallocation functions with accelerator-aware equivalents,
      based on a pre-established table; the list of functions that can be
      interposed is available
-     `here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#allocation--deallocation-interposition-status>`__;
+     `here <https://github.com/ROCm/roc-stdpar#allocation--deallocation-interposition-status>`__;
    - This is only run when compiling for the host.
 
 The second pass is optional.
@@ -627,7 +627,7 @@ Linux operating system. Support is synthesised in the following table:
 The minimum Linux kernel version for running in HMM mode is 6.4.
 
 The forwarding header can be obtained from
-`its GitHub repository <https://github.com/ROCmSoftwarePlatform/roc-stdpar>`_.
+`its GitHub repository <https://github.com/ROCm/roc-stdpar>`_.
 It will be packaged with a future `ROCm <https://rocm.docs.amd.com/en/latest/>`_
 release. Because accelerated algorithms are provided via
 `rocThrust <https://rocm.docs.amd.com/projects/rocThrust/en/latest/>`_, a
@@ -636,7 +636,7 @@ transitive dependency on
 can be obtained either by installing their associated components of the
 `ROCm <https://rocm.docs.amd.com/en/latest/>`_ stack, or from their respective
 repositories. The list algorithms that can be offloaded is available
-`here <https://github.com/ROCmSoftwarePlatform/roc-stdpar#algorithm-support-status>`_.
+`here <https://github.com/ROCm/roc-stdpar#algorithm-support-status>`_.
 
 HIP Specific Elements
 ---------------------

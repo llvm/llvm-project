@@ -204,7 +204,7 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w9, [x2], #16
 ; CHECK-GI-NEXT:    subs x8, x8, #8
-; CHECK-GI-NEXT:    mov v2.s[0], w9
+; CHECK-GI-NEXT:    fmov s2, w9
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
@@ -583,8 +583,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    mov w10, w2
 ; CHECK-SD-NEXT:    b.hi .LBB5_4
 ; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov x11, xzr
 ; CHECK-SD-NEXT:    mov w8, wzr
+; CHECK-SD-NEXT:    mov x11, xzr
 ; CHECK-SD-NEXT:    b .LBB5_7
 ; CHECK-SD-NEXT:  .LBB5_3:
 ; CHECK-SD-NEXT:    mov w8, wzr

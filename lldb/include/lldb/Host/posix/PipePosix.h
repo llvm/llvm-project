@@ -32,14 +32,12 @@ public:
 
   ~PipePosix() override;
 
-  Status CreateNew(bool child_process_inherit) override;
-  Status CreateNew(llvm::StringRef name, bool child_process_inherit) override;
+  Status CreateNew() override;
+  Status CreateNew(llvm::StringRef name) override;
   Status CreateWithUniqueName(llvm::StringRef prefix,
-                              bool child_process_inherit,
                               llvm::SmallVectorImpl<char> &name) override;
-  Status OpenAsReader(llvm::StringRef name,
-                      bool child_process_inherit) override;
-  llvm::Error OpenAsWriter(llvm::StringRef name, bool child_process_inherit,
+  Status OpenAsReader(llvm::StringRef name) override;
+  llvm::Error OpenAsWriter(llvm::StringRef name,
                            const Timeout<std::micro> &timeout) override;
 
   bool CanRead() const override;

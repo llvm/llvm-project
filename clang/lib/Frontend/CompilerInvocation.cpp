@@ -636,6 +636,10 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-hlsl-entry" << GetInputKindName(IK);
 
+  if (Args.hasArg(OPT_fdx_rootsignature_version) && !LangOpts.HLSL)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << "-fdx-rootsignature-version" << GetInputKindName(IK);
+
   if (Args.hasArg(OPT_fgpu_allow_device_init) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
@@ -1492,11 +1496,11 @@ static void setPGOUseInstrumentor(CodeGenOptions &Opts,
   // which is available (might be one or both).
   if (PGOReader->isIRLevelProfile() || PGOReader->hasMemoryProfile()) {
     if (PGOReader->hasCSIRLevelProfile())
-      Opts.setProfileUse(CodeGenOptions::ProfileCSIRInstr);
+      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileCSIRInstr);
     else
-      Opts.setProfileUse(CodeGenOptions::ProfileIRInstr);
+      Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileIRInstr);
   } else
-    Opts.setProfileUse(CodeGenOptions::ProfileClangInstr);
+    Opts.setProfileUse(llvm::driver::ProfileInstrKind::ProfileClangInstr);
 }
 
 void CompilerInvocation::setDefaultPointerAuthOptions(
@@ -1815,6 +1819,11 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
   serializeSanitizerMaskCutoffs(Opts.SanitizeSkipHotCutoffs, Values);
   for (std::string Sanitizer : Values)
     GenerateArg(Consumer, OPT_fsanitize_skip_hot_cutoff_EQ, Sanitizer);
+
+  if (Opts.AllowRuntimeCheckSkipHotCutoff) {
+    GenerateArg(Consumer, OPT_fallow_runtime_check_skip_hot_cutoff_EQ,
+                std::to_string(*Opts.AllowRuntimeCheckSkipHotCutoff));
+  }
 
   for (StringRef Sanitizer :
        serializeSanitizerKinds(Opts.SanitizeAnnotateDebugInfo))
@@ -2317,6 +2326,18 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       "-fsanitize-annotate-debug-info=",
       Args.getAllArgValues(OPT_fsanitize_annotate_debug_info_EQ), Diags,
       Opts.SanitizeAnnotateDebugInfo);
+
+  if (StringRef V =
+          Args.getLastArgValue(OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
+      !V.empty()) {
+    double A;
+    if (V.getAsDouble(A) || A < 0.0 || A > 1.0) {
+      Diags.Report(diag::err_drv_invalid_value)
+          << "-fallow-runtime-check-skip-hot-cutoff=" << V;
+    } else {
+      Opts.AllowRuntimeCheckSkipHotCutoff = A;
+    }
+  }
 
   Opts.EmitVersionIdentMetadata = Args.hasFlag(OPT_Qy, OPT_Qn, true);
 
@@ -4475,6 +4496,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver18);
       else if (Major <= 19)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver19);
+      else if (Major <= 20)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver20);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();

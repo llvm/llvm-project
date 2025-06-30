@@ -300,8 +300,8 @@ declare <2 x i64> @llvm.x86.sse2.psrl.dq(<2 x i64>, i32) nounwind readnone
 define <2 x double> @test_x86_sse41_blendpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: test_x86_sse41_blendpd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vblendps $3, %xmm0, %xmm1, %xmm0 # encoding: [0xc4,0xe3,0x71,0x0c,0xc0,0x03]
-; CHECK-NEXT:    # xmm0 = xmm0[0,1],xmm1[2,3]
+; CHECK-NEXT:    vmovsd %xmm0, %xmm1, %xmm0 # encoding: [0xc5,0xf3,0x10,0xc0]
+; CHECK-NEXT:    # xmm0 = xmm0[0],xmm1[1]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %res = call <2 x double> @llvm.x86.sse41.blendpd(<2 x double> %a0, <2 x double> %a1, i8 2) ; <<2 x double>> [#uses=1]
   ret <2 x double> %res

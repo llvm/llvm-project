@@ -145,8 +145,7 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
     exit(1);
   }
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).takeError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().takeError(), llvm::Succeeded());
   SCOPED_TRACE(llvm::formatv("Pipe handles are: {0}/{1}",
                              (uint64_t)pipe.GetReadPipe(),
                              (uint64_t)pipe.GetWritePipe())

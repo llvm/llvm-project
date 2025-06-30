@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/BPFMCAsmInfo.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -20,6 +21,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -163,10 +165,10 @@ public:
     return Tok;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Immediate:
-      OS << *getImm();
+      MAI.printExpr(OS, *getImm());
       break;
     case Register:
       OS << "<register x";
@@ -261,7 +263,6 @@ public:
         .Case("bswap32", true)
         .Case("bswap64", true)
         .Case("goto", true)
-        .Case("gotol", true)
         .Case("ll", true)
         .Case("skb", true)
         .Case("s", true)
@@ -533,7 +534,7 @@ bool BPFAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmParser() {
   RegisterMCAsmParser<BPFAsmParser> X(getTheBPFTarget());
   RegisterMCAsmParser<BPFAsmParser> Y(getTheBPFleTarget());
   RegisterMCAsmParser<BPFAsmParser> Z(getTheBPFbeTarget());

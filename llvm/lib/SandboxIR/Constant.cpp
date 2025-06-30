@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/SandboxIR/Constant.h"
-#include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
@@ -283,20 +282,11 @@ PoisonValue *PoisonValue::getElementValue(unsigned Idx) const {
       cast<llvm::PoisonValue>(Val)->getElementValue(Idx)));
 }
 
-void GlobalObject::setAlignment(MaybeAlign Align) {
+void GlobalVariable::setAlignment(MaybeAlign Align) {
   Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&GlobalObject::getAlign, &GlobalObject::setAlignment>>(
-          this);
-  cast<llvm::GlobalObject>(Val)->setAlignment(Align);
-}
-
-void GlobalObject::setGlobalObjectSubClassData(unsigned V) {
-  Ctx.getTracker()
-      .emplaceIfTracking<
-          GenericSetter<&GlobalObject::getGlobalObjectSubClassData,
-                        &GlobalObject::setGlobalObjectSubClassData>>(this);
-  cast<llvm::GlobalObject>(Val)->setGlobalObjectSubClassData(V);
+      .emplaceIfTracking<GenericSetter<&GlobalVariable::getAlign,
+                                       &GlobalVariable::setAlignment>>(this);
+  cast<llvm::GlobalVariable>(Val)->setAlignment(Align);
 }
 
 void GlobalObject::setSection(StringRef S) {
@@ -315,35 +305,14 @@ GlobalT &GlobalWithNodeAPI<GlobalT, LLVMGlobalT, ParentT, LLVMParentT>::
 }
 
 // Explicit instantiations.
-template class GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                                 llvm::GlobalObject>;
-template class GlobalWithNodeAPI<Function, llvm::Function, GlobalObject,
-                                 llvm::GlobalObject>;
-template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
-                                 GlobalObject, llvm::GlobalObject>;
-template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                                 llvm::GlobalValue>;
-
-#if defined(_MSC_VER) && !defined(__clang__)
-// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
-template LLVM_EXPORT_TEMPLATE GlobalIFunc &
-GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
-                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
-                                                                  &LLVMGV)
-    const;
-template LLVM_EXPORT_TEMPLATE Function &
-GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
-    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
-
-template LLVM_EXPORT_TEMPLATE GlobalVariable &GlobalWithNodeAPI<
-    GlobalVariable, llvm::GlobalVariable, GlobalObject,
-    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
-    const;
-template LLVM_EXPORT_TEMPLATE GlobalAlias &
-GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
-                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
-                                                                 &LLVMGV) const;
-#endif
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalIFunc, llvm::GlobalIFunc, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    Function, llvm::Function, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject, llvm::GlobalObject>;
+template class LLVM_EXPORT_TEMPLATE GlobalWithNodeAPI<
+    GlobalAlias, llvm::GlobalAlias, GlobalValue, llvm::GlobalValue>;
 
 void GlobalIFunc::setResolver(Constant *Resolver) {
   Ctx.getTracker()

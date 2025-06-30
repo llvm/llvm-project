@@ -626,6 +626,9 @@ Error RewriteInstance::discoverStorage() {
     NextAvailableAddress += BC->PageAlign;
   }
 
+  NewTextSegmentAddress = NextAvailableAddress;
+  NewTextSegmentOffset = NextAvailableOffset;
+
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
@@ -652,6 +655,8 @@ Error RewriteInstance::discoverStorage() {
 
     PHDRTableAddress = NextAvailableAddress;
     PHDRTableOffset = NextAvailableOffset;
+    NewTextSegmentAddress = NextAvailableAddress;
+    NewTextSegmentOffset = NextAvailableOffset;
 
     // Reserve space for 3 extra pheaders.
     unsigned Phnum = Obj.getHeader().e_phnum;
@@ -664,14 +669,12 @@ Error RewriteInstance::discoverStorage() {
 
     NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
     NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
+
+    // Align at cache line.
+    NextAvailableAddress = alignTo(NextAvailableAddress, 64);
+    NextAvailableOffset = alignTo(NextAvailableOffset, 64);
   }
 
-  // Align at cache line.
-  NextAvailableAddress = alignTo(NextAvailableAddress, 64);
-  NextAvailableOffset = alignTo(NextAvailableOffset, 64);
-
-  NewTextSegmentAddress = NextAvailableAddress;
-  NewTextSegmentOffset = NextAvailableOffset;
   BC->LayoutStartAddress = NextAvailableAddress;
 
   // Tools such as objcopy can strip section contents but leave header
@@ -780,14 +783,6 @@ void RewriteInstance::discoverFileObjects() {
 
   // For local symbols we want to keep track of associated FILE symbol name for
   // disambiguation by combined name.
-  StringRef FileSymbolName;
-  bool SeenFileName = false;
-  struct SymbolRefHash {
-    size_t operator()(SymbolRef const &S) const {
-      return std::hash<decltype(DataRefImpl::p)>{}(S.getRawDataRefImpl().p);
-    }
-  };
-  std::unordered_map<SymbolRef, StringRef, SymbolRefHash> SymbolToFileName;
   for (const ELFSymbolRef &Symbol : InputFile->symbols()) {
     Expected<StringRef> NameOrError = Symbol.getName();
     if (NameOrError && NameOrError->starts_with("__asan_init")) {
@@ -806,21 +801,8 @@ void RewriteInstance::discoverFileObjects() {
     if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Undefined)
       continue;
 
-    if (cantFail(Symbol.getType()) == SymbolRef::ST_File) {
+    if (cantFail(Symbol.getType()) == SymbolRef::ST_File)
       FileSymbols.emplace_back(Symbol);
-      StringRef Name =
-          cantFail(std::move(NameOrError), "cannot get symbol name for file");
-      // Ignore Clang LTO artificial FILE symbol as it is not always generated,
-      // and this uncertainty is causing havoc in function name matching.
-      if (Name == "ld-temp.o")
-        continue;
-      FileSymbolName = Name;
-      SeenFileName = true;
-      continue;
-    }
-    if (!FileSymbolName.empty() &&
-        !(cantFail(Symbol.getFlags()) & SymbolRef::SF_Global))
-      SymbolToFileName[Symbol] = FileSymbolName;
   }
 
   // Sort symbols in the file by value. Ignore symbols from non-allocatable
@@ -1028,14 +1010,14 @@ void RewriteInstance::discoverFileObjects() {
       // The <id> field is used for disambiguation of local symbols since there
       // could be identical function names coming from identical file names
       // (e.g. from different directories).
-      std::string AltPrefix;
-      auto SFI = SymbolToFileName.find(Symbol);
-      if (SymbolType == SymbolRef::ST_Function && SFI != SymbolToFileName.end())
-        AltPrefix = Name + "/" + std::string(SFI->second);
+      auto SFI = llvm::upper_bound(FileSymbols, ELFSymbolRef(Symbol));
+      if (SymbolType == SymbolRef::ST_Function && SFI != FileSymbols.begin()) {
+        StringRef FileSymbolName = cantFail(SFI[-1].getName());
+        if (!FileSymbolName.empty())
+          AlternativeName = NR.uniquify(Name + "/" + FileSymbolName.str());
+      }
 
       UniqueName = NR.uniquify(Name);
-      if (!AltPrefix.empty())
-        AlternativeName = NR.uniquify(AltPrefix);
     }
 
     uint64_t SymbolSize = ELFSymbolRef(Symbol).getSize();
@@ -1294,7 +1276,7 @@ void RewriteInstance::discoverFileObjects() {
                              FDE->getAddressRange());
   }
 
-  BC->setHasSymbolsWithFileName(SeenFileName);
+  BC->setHasSymbolsWithFileName(FileSymbols.size());
 
   // Now that all the functions were created - adjust their boundaries.
   adjustFunctionBoundaries();
@@ -1566,6 +1548,11 @@ void RewriteInstance::registerFragments() {
       StopSymbol = *FSI;
 
     uint64_t ParentAddress{0};
+
+    // Check if containing FILE symbol is BOLT emitted synthetic symbol marking
+    // local fragments of global parents.
+    if (cantFail(FSI[-1].getName()) == getBOLTFileSymbolName())
+      goto registerParent;
 
     // BOLT split fragment symbols are emitted just before the main function
     // symbol.
@@ -3931,15 +3918,40 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
       return Address;
     };
 
+    // Try to allocate sections before the \p Address and return an address for
+    // the allocation of the first section, or 0 if [0, Address) range is not
+    // big enough to fit all sections.
+    auto allocateBefore = [&](uint64_t Address) -> uint64_t {
+      for (BinarySection *Section : llvm::reverse(CodeSections)) {
+        if (Section->getOutputSize() > Address)
+          return 0;
+        Address -= Section->getOutputSize();
+        Address = alignDown(Address, Section->getAlignment());
+        Section->setOutputAddress(Address);
+      }
+      return Address;
+    };
+
     // Check if we can fit code in the original .text
     bool AllocationDone = false;
     if (opts::UseOldText) {
-      const uint64_t CodeSize =
-          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
+      uint64_t StartAddress;
+      uint64_t EndAddress;
+      if (opts::HotFunctionsAtEnd) {
+        EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
+        StartAddress = allocateBefore(EndAddress);
+      } else {
+        StartAddress = BC->OldTextSectionAddress;
+        EndAddress = allocateAt(BC->OldTextSectionAddress);
+      }
 
+      const uint64_t CodeSize = EndAddress - StartAddress;
       if (CodeSize <= BC->OldTextSectionSize) {
         BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
+                   << Twine::utohexstr(opts::AlignText) << " alignment";
+        if (StartAddress != BC->OldTextSectionAddress)
+          BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
+        BC->outs() << '\n';
         AllocationDone = true;
       } else {
         BC->errs()
@@ -4149,13 +4161,8 @@ void RewriteInstance::mapAllocatableSections(
     }
 
     if (SType == ST_READONLY) {
-      if (PHDRTableAddress) {
-        // Segment size includes the size of the PHDR area.
-        NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-      } else if (NewTextSegmentAddress) {
-        // Existing PHDR table would be updated.
+      if (NewTextSegmentAddress)
         NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
-      }
     } else if (SType == ST_READWRITE) {
       NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
       // Restore NextAvailableAddress if no new writable sections
@@ -4202,12 +4209,15 @@ void RewriteInstance::patchELFPHDRTable() {
   // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
   // last segments size based on the NextAvailableAddress variable.
   if (!NewWritableSegmentSize) {
-    if (PHDRTableAddress)
-      NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-    else if (NewTextSegmentAddress)
+    if (NewTextSegmentAddress)
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+  }
+
+  if (!NewTextSegmentSize && !NewWritableSegmentSize) {
+    BC->outs() << "BOLT-INFO: not adding new segments\n";
+    return;
   }
 
   const uint64_t SavedPos = OS.tell();
@@ -4217,15 +4227,9 @@ void RewriteInstance::patchELFPHDRTable() {
     SmallVector<ELF64LEPhdrTy, 3> NewPhdrs;
     ELF64LEPhdrTy NewPhdr;
     NewPhdr.p_type = ELF::PT_LOAD;
-    if (PHDRTableAddress) {
-      NewPhdr.p_offset = PHDRTableOffset;
-      NewPhdr.p_vaddr = PHDRTableAddress;
-      NewPhdr.p_paddr = PHDRTableAddress;
-    } else {
-      NewPhdr.p_offset = NewTextSegmentOffset;
-      NewPhdr.p_vaddr = NewTextSegmentAddress;
-      NewPhdr.p_paddr = NewTextSegmentAddress;
-    }
+    NewPhdr.p_offset = NewTextSegmentOffset;
+    NewPhdr.p_vaddr = NewTextSegmentAddress;
+    NewPhdr.p_paddr = NewTextSegmentAddress;
     NewPhdr.p_filesz = NewTextSegmentSize;
     NewPhdr.p_memsz = NewTextSegmentSize;
     NewPhdr.p_flags = ELF::PF_X | ELF::PF_R;
@@ -4286,7 +4290,7 @@ void RewriteInstance::patchELFPHDRTable() {
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    if (PHDRTableAddress || NewTextSegmentSize) {
+    if (NewTextSegmentSize) {
       SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
       OS.write(reinterpret_cast<const char *>(NewPhdrs.data()),
                sizeof(ELF64LE::Phdr) * NewPhdrs.size());

@@ -280,20 +280,16 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # math.h entrypoints
-    libc.src.math.acos
     libc.src.math.acosf
-    libc.src.math.acosh
     libc.src.math.acoshf
     libc.src.math.asin
     libc.src.math.asinf
-    libc.src.math.asinh
     libc.src.math.asinhf
     libc.src.math.atan
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan2l
     libc.src.math.atanf
-    libc.src.math.atanh
     libc.src.math.atanhf
     libc.src.math.canonicalize
     libc.src.math.canonicalizef
@@ -308,14 +304,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
-    libc.src.math.cosh
     libc.src.math.coshf
     libc.src.math.cospif
     libc.src.math.ddivl
     libc.src.math.dfmal
     libc.src.math.dmull
     libc.src.math.dsqrtl
-    libc.src.math.erf
     libc.src.math.erff
     libc.src.math.exp
     libc.src.math.exp10
@@ -457,8 +451,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextupl
     libc.src.math.pow
     libc.src.math.powf
-    libc.src.math.powi
-    libc.src.math.powif
     libc.src.math.remainder
     libc.src.math.remainderf
     libc.src.math.remainderl
@@ -490,7 +482,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sincos
     libc.src.math.sincosf
     libc.src.math.sinf
-    libc.src.math.sinh
     libc.src.math.sinhf
     libc.src.math.sinpif
     libc.src.math.sqrt
@@ -498,7 +489,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.sqrtl
     libc.src.math.tan
     libc.src.math.tanf
-    libc.src.math.tanh
     libc.src.math.tanhf
     libc.src.math.tgamma
     libc.src.math.tgammaf
@@ -523,14 +513,25 @@ set(TARGET_LIBM_ENTRYPOINTS
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
+    libc.src.math.acosf16
+    libc.src.math.acoshf16
+    libc.src.math.acospif16
+    libc.src.math.asinf16
+    libc.src.math.asinhf16
+    libc.src.math.atanf16
+    libc.src.math.atanhf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
+    libc.src.math.cosf16
     libc.src.math.coshf16
+    libc.src.math.cospif16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16
+    libc.src.math.exp2m1f16
     libc.src.math.expf16
+    libc.src.math.expm1f16
     libc.src.math.f16add
     libc.src.math.f16addf
     libc.src.math.f16addl
@@ -568,7 +569,10 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
+    libc.src.math.hypotf16
     libc.src.math.ilogbf16
+    libc.src.math.iscanonicalf16
+    libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
     libc.src.math.llrintf16
@@ -595,9 +599,13 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
+    libc.src.math.sinf16
     libc.src.math.sinhf16
+    libc.src.math.sinpif16
     libc.src.math.sqrtf16
+    libc.src.math.tanf16
     libc.src.math.tanhf16
+    libc.src.math.tanpif16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16
     libc.src.math.truncf16

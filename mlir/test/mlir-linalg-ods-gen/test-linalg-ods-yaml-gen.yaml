@@ -87,7 +87,8 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:    }
 
 # IMPL-LABEL:  void Test1Op::regionBuilder(ImplicitLocOpBuilder &b,
-#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
+#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs,
+#  IMPL-NEXT:    function_ref<InFlightDiagnostic()> emitError)
 #       IMPL:  TypeFn castVal = TypeFn::cast_signed;
 #  IMPL-NEXT:  auto castIter = llvm::find_if(attrs, [&](const NamedAttribute &attr) {
 #  IMPL-NEXT:                                return attr.getName() == "cast"; });
@@ -97,10 +98,10 @@ structured_op: !LinalgStructuredOpConfig
 #  IMPL-NEXT:  }
 
 #       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.constant("42 : i64");
-#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL0]]);
+#   IMPL-DAG:  Value [[VAL1:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL0]], emitError);
 #   IMPL-DAG:  Value [[VAL2:[a-z0-9]+]] = helper.index(1);
-#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL2]]);
-#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.buildBinaryFn(BinaryFn::add, [[VAL1]], [[VAL3]]);
+#   IMPL-DAG:  Value [[VAL3:[a-z0-9]+]] = helper.buildTypeFn(castVal, block.getArgument(0).getType(), [[VAL2]], emitError);
+#   IMPL-DAG:  Value [[VAL4:[a-z0-9]+]] = helper.buildBinaryFn(BinaryFn::add, [[VAL1]], [[VAL3]], emitError);
 
 
 # @linalg_structured_op
@@ -186,7 +187,8 @@ structured_op: !LinalgStructuredOpConfig
 #       IMPL:  "incorrect element type for index attribute 'strides'"
 #       IMPL:  "incorrect shape for index attribute 'strides'"
 #       IMPL:  void Test2Op::regionBuilder(ImplicitLocOpBuilder &b,
-#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
+#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs,
+#  IMPL-NEXT:    function_ref<InFlightDiagnostic()> emitError)
 #  IMPL-NEXT:    assert(2 > 0 && block.getNumArguments() == 2 &&
 
 #       IMPL:   yields.push_back(block.getArgument(0));
@@ -315,13 +317,18 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:    $_state.addAttribute("binary_fun", binary_fun)
 
 # IMPL-LABEL:  void Test4Op::regionBuilder(ImplicitLocOpBuilder &b,
-#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs)
+#  IMPL-NEXT:    Block &block, ArrayRef<NamedAttribute> attrs,
+#  IMPL-NEXT:    function_ref<InFlightDiagnostic()> emitError)
 #       IMPL:  UnaryFn unary_funVal = UnaryFn::exp
 #       IMPL:  BinaryFn binary_funVal = BinaryFn::add
 
-#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.buildUnaryFn(unary_funVal, block.getArgument(0))
-#  IMPL-NEXT:  Value [[VAL1:[a-z0-9]+]] = helper.buildBinaryFn(binary_funVal, [[VAL0]], block.getArgument(0))
-#  IMPL-NEXT:  yields.push_back([[VAL1]])
+#       IMPL:  Value [[VAL0:[a-z0-9]+]] = helper.buildUnaryFn(unary_funVal, block.getArgument(0), emitError);
+#  IMPL-NEXT:  if (![[VAL0]])
+#  IMPL-NEXT:    return;
+#  IMPL:  Value [[VAL1:[a-z0-9]+]] = helper.buildBinaryFn(binary_funVal, [[VAL0]], block.getArgument(0), emitError);
+#  IMPL-NEXT:  if (![[VAL1]])
+#  IMPL-NEXT:    return;
+#  IMPL:  yields.push_back([[VAL1]])
 
 # @linalg_structured_op
 # def test5(value=ScalarDef(T1), O=TensorDef(U, output=True)):

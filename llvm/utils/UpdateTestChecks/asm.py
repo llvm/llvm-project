@@ -561,6 +561,7 @@ def get_run_handler(triple):
         "aarch64": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
         "aarch64-apple-darwin": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "aarch64-apple-ios": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
+        "aarch64-apple-macosx": (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
         "bpf": (scrub_asm_bpf, ASM_FUNCTION_BPF_RE),
         "bpfel": (scrub_asm_bpf, ASM_FUNCTION_BPF_RE),
         "bpfeb": (scrub_asm_bpf, ASM_FUNCTION_BPF_RE),

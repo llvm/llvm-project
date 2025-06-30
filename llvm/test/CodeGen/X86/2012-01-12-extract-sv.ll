@@ -11,7 +11,7 @@ define void @endless_loop() {
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm2[0,1,2,3,4,5,6],ymm1[7]
 ; AVX1-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; AVX1-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX1-NEXT:    vmovaps %ymm0, (%eax)
 ; AVX1-NEXT:    vmovaps %ymm1, (%eax)
 ; AVX1-NEXT:    vzeroupper
@@ -21,7 +21,7 @@ define void @endless_loop() {
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vbroadcastss (%eax), %xmm0
 ; AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
+; AVX2-NEXT:    vmovss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; AVX2-NEXT:    vbroadcastss %xmm0, %ymm0
 ; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5,6],ymm0[7]

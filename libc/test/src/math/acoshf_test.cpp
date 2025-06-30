@@ -8,7 +8,7 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/acoshf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -21,7 +21,7 @@ using LlvmLibcAcoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcAcoshfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acoshf(aNaN));
   EXPECT_MATH_ERRNO(0);

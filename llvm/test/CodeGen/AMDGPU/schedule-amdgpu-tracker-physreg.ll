@@ -4,8 +4,8 @@
 ; CHECK-LABEL: {{^}}spill:
 ; GCN:    NumSgprs: 104
 ; GCN-GCNTRACKERS:    NumSgprs: 104
-; GCN:    NumVgprs: 3
-; GCN-GCNTRACKERS:    NumVgprs: 3
+; GCN:    NumVgprs: 1
+; GCN-GCNTRACKERS:    NumVgprs: 2
 ; GCN:    ScratchSize: 0
 ; GCN-GCNTRACKERS:    ScratchSize: 0
 ; GCN:    Occupancy: 5

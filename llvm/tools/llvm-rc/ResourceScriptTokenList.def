@@ -29,6 +29,8 @@ SHORT_TOKEN(BlockEnd, '}')     // End of the block; can also be END.
 SHORT_TOKEN(Comma, ',')        // Comma - resource arguments separator.
 SHORT_TOKEN(Plus, '+')         // Addition operator.
 SHORT_TOKEN(Minus, '-')        // Subtraction operator.
+SHORT_TOKEN(Asterisk, '*')     // Multiplication operator.
+SHORT_TOKEN(Slash, '/')        // Division operator.
 SHORT_TOKEN(Pipe, '|')         // Bitwise-OR operator.
 SHORT_TOKEN(Amp, '&')          // Bitwise-AND operator.
 SHORT_TOKEN(Tilde, '~')        // Bitwise-NOT operator.

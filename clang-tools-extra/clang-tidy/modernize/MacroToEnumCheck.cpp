@@ -161,7 +161,7 @@ public:
     checkName(MacroNameTok);
   }
   void Elifdef(SourceLocation Loc, SourceRange ConditionRange,
-      SourceLocation IfLoc) override {
+               SourceLocation IfLoc) override {
     PPCallbacks::Elifdef(Loc, ConditionRange, IfLoc);
   }
   void Elifndef(SourceLocation Loc, const Token &MacroNameTok,
@@ -169,7 +169,7 @@ public:
     checkName(MacroNameTok);
   }
   void Elifndef(SourceLocation Loc, SourceRange ConditionRange,
-      SourceLocation IfLoc) override {
+                SourceLocation IfLoc) override {
     PPCallbacks::Elifndef(Loc, ConditionRange, IfLoc);
   }
   void Endif(SourceLocation Loc, SourceLocation IfLoc) override;
@@ -316,8 +316,7 @@ void MacroToEnumCallbacks::FileChanged(SourceLocation Loc,
   CurrentFile = &Files.back();
 }
 
-bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens)
-{
+bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens) {
   IntegralLiteralExpressionMatcher Matcher(MacroTokens, LangOpts.C99 == 0);
   bool Matched = Matcher.match();
   bool IsC = !LangOpts.CPlusPlus;
@@ -327,7 +326,6 @@ bool MacroToEnumCallbacks::isInitializer(ArrayRef<Token> MacroTokens)
 
   return Matched;
 }
-
 
 // Any defined but rejected macro is scanned for identifiers that
 // are to be excluded as enums.
@@ -444,8 +442,8 @@ void MacroToEnumCallbacks::invalidateExpressionNames() {
 }
 
 void MacroToEnumCallbacks::EndOfMainFile() {
-    invalidateExpressionNames();
-    issueDiagnostics();
+  invalidateExpressionNames();
+  issueDiagnostics();
 }
 
 void MacroToEnumCallbacks::invalidateRange(SourceRange Range) {
@@ -517,7 +515,8 @@ void MacroToEnumCallbacks::fixEnumMacro(const MacroList &MacroList) const {
 void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
-  auto Callback = std::make_unique<MacroToEnumCallbacks>(this, getLangOpts(), SM);
+  auto Callback =
+      std::make_unique<MacroToEnumCallbacks>(this, getLangOpts(), SM);
   PPCallback = Callback.get();
   PP->addPPCallbacks(std::move(Callback));
 }
@@ -540,7 +539,7 @@ void MacroToEnumCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
   auto *TLDecl = Result.Nodes.getNodeAs<Decl>("top");
   if (TLDecl == nullptr)
-      return;
+    return;
 
   SourceRange Range = TLDecl->getSourceRange();
   if (auto *TemplateFn = Result.Nodes.getNodeAs<FunctionTemplateDecl>("top")) {

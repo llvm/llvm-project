@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
 
 // <functional>
 
@@ -23,18 +23,15 @@
 #include "test_comparisons.h"
 #include "test_macros.h"
 
-#include "helper_concepts.h"
-#include "helper_types.h"
-
 // Test SFINAE.
 
-static_assert(std::three_way_comparable_with<std::reference_wrapper<StrongOrder>, const StrongOrder>);
-static_assert(std::three_way_comparable_with<std::reference_wrapper<WeakOrder>, const WeakOrder>);
-static_assert(std::three_way_comparable_with<std::reference_wrapper<PartialOrder>, const PartialOrder>);
+static_assert(HasOperatorSpaceship<std::reference_wrapper<StrongOrder>, std::reference_wrapper<const StrongOrder>>);
+static_assert(HasOperatorSpaceship<std::reference_wrapper<WeakOrder>, std::reference_wrapper<const WeakOrder>>);
+static_assert(HasOperatorSpaceship<std::reference_wrapper<PartialOrder>, std::reference_wrapper<const PartialOrder>>);
 
-static_assert(!std::three_way_comparable_with<std::reference_wrapper<StrongOrder>, const NonComparable>);
-static_assert(!std::three_way_comparable_with<std::reference_wrapper<WeakOrder>, const NonComparable>);
-static_assert(!std::three_way_comparable_with<std::reference_wrapper<PartialOrder>, const NonComparable>);
+static_assert(!HasOperatorSpaceship<std::reference_wrapper<StrongOrder>, std::reference_wrapper<const NonComparable>>);
+static_assert(!HasOperatorSpaceship<std::reference_wrapper<WeakOrder>, std::reference_wrapper<const NonComparable>>);
+static_assert(!HasOperatorSpaceship<std::reference_wrapper<PartialOrder>, std::reference_wrapper<const NonComparable>>);
 
 // Test comparisons.
 

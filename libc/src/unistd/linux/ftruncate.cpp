@@ -12,8 +12,8 @@
 #include "src/__support/common.h"
 
 #include "hdr/unistd_macros.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/errno/libc_errno.h"
 #include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
 

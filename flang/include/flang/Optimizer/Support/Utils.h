@@ -35,32 +35,6 @@ inline std::int64_t toInt(mlir::arith::ConstantOp cop) {
       .getSExtValue();
 }
 
-// Reconstruct binding tables for dynamic dispatch.
-using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
-using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
-
-inline void buildBindingTables(BindingTables &bindingTables,
-                               mlir::ModuleOp mod) {
-
-  // The binding tables are defined in FIR after lowering inside fir.type_info
-  // operations. Go through each binding tables and store the procedure name and
-  // binding index for later use by the fir.dispatch conversion pattern.
-  for (auto typeInfo : mod.getOps<fir::TypeInfoOp>()) {
-    unsigned bindingIdx = 0;
-    BindingTable bindings;
-    if (typeInfo.getDispatchTable().empty()) {
-      bindingTables[typeInfo.getSymName()] = bindings;
-      continue;
-    }
-    for (auto dtEntry :
-         typeInfo.getDispatchTable().front().getOps<fir::DTEntryOp>()) {
-      bindings[dtEntry.getMethod()] = bindingIdx;
-      ++bindingIdx;
-    }
-    bindingTables[typeInfo.getSymName()] = bindings;
-  }
-}
-
 // Translate front-end KINDs for use in the IR and code gen.
 inline std::vector<fir::KindTy>
 fromDefaultKinds(const Fortran::common::IntrinsicTypeDefaultKinds &defKinds) {

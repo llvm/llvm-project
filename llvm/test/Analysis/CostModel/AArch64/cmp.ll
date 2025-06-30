@@ -53,6 +53,14 @@ define void @andcmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c32 = icmp eq i32 %a32, 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %a64 = and i64 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64 = icmp ne i64 %a64, 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c32ge = icmp sge i32 %a32, 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c32le = icmp slt i32 %a32, 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c32leneg = icmp sle i32 %a32, -1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c32gtneg = icmp sgt i32 %a32, -1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64ge = icmp sge i64 %a64, 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64le = icmp slt i64 %a64, 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64leneg = icmp sle i64 %a64, -1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64gtneg = icmp sgt i64 %a64, -1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %a128 = and i128 undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %c128 = icmp eq i128 %a128, 0
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %av16i8 = and <16 x i8> undef, undef
@@ -62,7 +70,7 @@ define void @andcmp() {
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %av4i32 = and <4 x i32> undef, undef
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %cv4i32 = icmp ne <4 x i32> %av4i32, zeroinitializer
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c32not0 = icmp eq i32 %a32, 1
-; CHECK-NEXT:  Cost Model: Found costs of 1 for: %c64sle = icmp sle i64 %a64, 0
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: %c64sle = icmp sle i64 %a64, 0
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %a8 = and i8 undef, undef
@@ -73,6 +81,17 @@ define void @andcmp() {
   %c32 = icmp eq i32 %a32, 0
   %a64 = and i64 undef, undef
   %c64 = icmp ne i64 %a64, 0
+
+  %c32ge = icmp sge i32 %a32, 1
+  %c32le = icmp slt i32 %a32, 1
+  %c32leneg = icmp sle i32 %a32, -1
+  %c32gtneg  = icmp sgt i32 %a32, -1
+
+  %c64ge = icmp sge i64 %a64, 1
+  %c64le = icmp slt i64 %a64, 1
+  %c64leneg = icmp sle i64 %a64, -1
+  %c64gtneg  = icmp sgt i64 %a64, -1
+
   %a128 = and i128 undef, undef
   %c128 = icmp eq i128 %a128, zeroinitializer
   %av16i8 = and <16 x i8> undef, undef

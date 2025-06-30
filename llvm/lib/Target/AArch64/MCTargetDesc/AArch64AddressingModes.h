@@ -97,7 +97,7 @@ static inline unsigned getShiftValue(unsigned Imm) {
 ///   {5-0}  = imm
 static inline unsigned getShifterImm(AArch64_AM::ShiftExtendType ST,
                                      unsigned Imm) {
-  assert((Imm & 0x3f) == Imm && "Illegal shifted immedate value!");
+  assert((Imm & 0x3f) == Imm && "Illegal shifted immediate value!");
   unsigned STEnc = 0;
   switch (ST) {
   default:  llvm_unreachable("Invalid shift requested");
@@ -169,7 +169,7 @@ inline unsigned getExtendEncoding(AArch64_AM::ShiftExtendType ET) {
 ///   {2-0}  = imm3
 static inline unsigned getArithExtendImm(AArch64_AM::ShiftExtendType ET,
                                          unsigned Imm) {
-  assert((Imm & 0x7) == Imm && "Illegal shifted immedate value!");
+  assert((Imm & 0x7) == Imm && "Illegal shifted immediate value!");
   return (getExtendEncoding(ET) << 3) | (Imm & 0x7);
 }
 
@@ -594,7 +594,7 @@ static inline bool isAdvSIMDModImmType10(uint64_t Imm) {
 #if defined(_MSC_VER) && _MSC_VER == 1937 && !defined(__clang__) &&            \
     defined(_M_ARM64)
   // The MSVC compiler 19.37 for ARM64 has an optimization bug that
-  // causes an incorrect behavior with the orignal version. Work around
+  // causes an incorrect behavior with the original version. Work around
   // by using a slightly different variation.
   // https://developercommunity.visualstudio.com/t/C-ARM64-compiler-optimization-bug/10481261
   constexpr uint64_t Mask = 0xFFULL;

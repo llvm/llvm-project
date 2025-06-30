@@ -1,0 +1,40 @@
+# This testing configuration handles running the test suite against LLVM's
+# libc++abi using adb on Android.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+import re
+import site
+
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+
+import libcxx.test.android
+import libcxx.test.config
+import libcxx.test.params
+
+config.substitutions.append(('%{flags}',
+    '--sysroot @CMAKE_SYSROOT@' if '@CMAKE_SYSROOT@' else ''
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
+))
+
+# The platform library is called "libc++.so" and the NDK library is called "libc++_shared.so". 
+# Use LD_LIBRARY_PATH to find the libcxx shared object because older Bionic dynamic loaders 
+# don't support rpath lookup. The Android libc++ shared library exports libc++abi, so we 
+# don't need to link with -lc++abi.
+config.substitutions.append(('%{link_flags}',
+    '-nostdlib++ -L %{lib} -l@LIBCXX_SHARED_OUTPUT_NAME@'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor}' +
+    ' --job-limit-socket ' + libcxx.test.android.adb_job_limit_socket() +
+    ' --prepend-path-env LD_LIBRARY_PATH /data/local/tmp/libc++ --execdir %T -- '
+))
+
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

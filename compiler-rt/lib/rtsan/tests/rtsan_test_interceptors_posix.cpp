@@ -449,12 +449,6 @@ TEST_F(RtsanFileTest, FcntlSetFdDiesWhenRealtime) {
   close(fd);
 }
 
-TEST(TestRtsanInterceptors, CloseDiesWhenRealtime) {
-  auto Func = []() { close(0); };
-  ExpectRealtimeDeath(Func, "close");
-  ExpectNonRealtimeSurvival(Func);
-}
-
 TEST(TestRtsanInterceptors, ChdirDiesWhenRealtime) {
   auto Func = []() { chdir("."); };
   ExpectRealtimeDeath(Func, "chdir");
@@ -606,8 +600,10 @@ protected:
   }
 
   void TearDown() override {
-    if (file != nullptr)
+    const bool is_open = fcntl(fd, F_GETFD) != -1;
+    if (is_open && file != nullptr)
       fclose(file);
+
     RtsanFileTest::TearDown();
   }
 
@@ -619,6 +615,16 @@ private:
   FILE *file = nullptr;
   int fd = -1;
 };
+
+TEST_F(RtsanOpenedFileTest, CloseDiesWhenRealtime) {
+  auto Func = [this]() { close(GetOpenFd()); };
+  ExpectRealtimeDeath(Func, "close");
+}
+
+TEST_F(RtsanOpenedFileTest, CloseSurvivesWhenNotRealtime) {
+  auto Func = [this]() { close(GetOpenFd()); };
+  ExpectNonRealtimeSurvival(Func);
+}
 
 #if SANITIZER_INTERCEPT_FSEEK
 TEST_F(RtsanOpenedFileTest, FgetposDieWhenRealtime) {

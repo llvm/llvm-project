@@ -11,9 +11,9 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; CHECK-SAME: (ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i64 [[UNIFORM:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP3]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -36,12 +36,12 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; INTERLEAVE-SAME: (ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i64 [[UNIFORM:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP3]])
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 1
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 [[N]])
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -65,7 +65,7 @@ define void @test_uniform(ptr noalias %dst, ptr readonly %src, i64 %uniform , i6
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP11]], ptr [[TMP14]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 1
+; INTERLEAVE-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 1
 ; INTERLEAVE-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], [[TMP16]]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP4]])
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT4]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP17]], i64 [[TMP4]])
@@ -97,9 +97,9 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; CHECK-SAME: (ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[UNIFORM:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP3]])
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -122,12 +122,12 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; INTERLEAVE-SAME: (ptr noalias [[DST:%.*]], ptr readonly [[SRC:%.*]], i32 [[UNIFORM:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; INTERLEAVE-NEXT:  entry:
 ; INTERLEAVE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
+; INTERLEAVE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 2
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP3]])
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP5]], 1
+; INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 [[N]])
 ; INTERLEAVE-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -151,7 +151,7 @@ define void @test_uniform_smaller_scalar(ptr noalias %dst, ptr readonly %src, i3
 ; INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[TMP11]], ptr [[TMP14]], i32 8, <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; INTERLEAVE-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; INTERLEAVE-NEXT:    [[TMP16:%.*]] = shl i64 [[TMP15]], 1
+; INTERLEAVE-NEXT:    [[TMP16:%.*]] = shl nuw i64 [[TMP15]], 1
 ; INTERLEAVE-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], [[TMP16]]
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TMP4]])
 ; INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT4]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP17]], i64 [[TMP4]])

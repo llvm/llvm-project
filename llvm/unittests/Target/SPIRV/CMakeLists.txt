@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   BinaryFormat
   Core
+  Passes
   SPIRVCodeGen
   SPIRVAnalysis
   Support

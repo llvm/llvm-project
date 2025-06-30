@@ -584,9 +584,7 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
 
-  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat);
-  if (M.IsNewDbgInfoFormat)
-    M.removeDebugIntrinsicDeclarations();
+  M.removeDebugIntrinsicDeclarations();
 
   bool Changed = writeThinLTOBitcode(
       OS, ThinLinkOS,

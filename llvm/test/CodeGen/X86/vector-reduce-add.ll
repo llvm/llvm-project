@@ -1025,19 +1025,28 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: test_v4i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
-; AVX-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    # kill: def $al killed $al killed $eax
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_v4i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
+; AVX1-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    # kill: def $al killed $al killed $eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_v4i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX2-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    # kill: def $al killed $al killed $eax
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_v4i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5,6,7]
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax

@@ -7316,7 +7316,7 @@ defm VRINTNN : VRINT_FPI<"n", 0b000, int_arm_neon_vrintn>;
 defm VRINTXN : VRINT_FPI<"x", 0b001, int_arm_neon_vrintx>;
 defm VRINTAN : VRINT_FPI<"a", 0b010, int_arm_neon_vrinta>;
 defm VRINTZN : VRINT_FPI<"z", 0b011, int_arm_neon_vrintz>;
-defm VRINTMN : VRINT_FPI<"m", 0b101, int_arm_neon_vrintm>;
+defm VRINTMN : VRINT_FPI<"m", 0b101, ffloor>;
 defm VRINTPN : VRINT_FPI<"p", 0b111, int_arm_neon_vrintp>;
 
 // Cryptography instructions

@@ -15,16 +15,16 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[N:%.*]], i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[SMAX]], [[IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i32 [[TMP6]], 2
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[IDX]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[IDX]], i64 0
@@ -52,7 +52,7 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP22:%.*]] = mul i32 [[TMP21]], 2
+; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw i32 [[TMP21]], 2
 ; CHECK-NEXT:    [[TMP23:%.*]] = sub i32 [[TMP22]], 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x ptr> [[TMP15]], i32 [[TMP23]]
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]

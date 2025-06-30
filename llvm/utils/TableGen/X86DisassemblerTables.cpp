@@ -882,9 +882,9 @@ void DisassemblerTables::emitInstructionInfo(raw_ostream &o,
     N = ++OperandSetNum;
 
     o << "  { /* " << (OperandSetNum - 1) << " */\n";
-    for (unsigned i = 0, e = OperandList.size(); i != e; ++i) {
-      const char *Encoding = stringForOperandEncoding(OperandList[i].first);
-      const char *Type = stringForOperandType(OperandList[i].second);
+    for (const auto &[Enc, Ty] : OperandList) {
+      const char *Encoding = stringForOperandEncoding(Enc);
+      const char *Type = stringForOperandType(Ty);
       o << "    { " << Encoding << ", " << Type << " },\n";
     }
     o << "  },\n";

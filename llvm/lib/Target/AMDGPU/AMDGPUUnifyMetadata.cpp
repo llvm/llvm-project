@@ -32,17 +32,6 @@ namespace {
 
   } // end namespace kOCLMD
 
-  /// Unify multiple OpenCL metadata due to linking.
-  class AMDGPUUnifyMetadata : public ModulePass {
-  public:
-    static char ID;
-
-    explicit AMDGPUUnifyMetadata() : ModulePass(ID) {}
-
-  private:
-    bool runOnModule(Module &M) override;
-  };
-
     /// Unify version metadata.
     /// \return true if changes are made.
     /// Assume the named metadata has operands each of which is a pair of
@@ -104,6 +93,7 @@ namespace {
     return true;
   }
 
+  /// Unify multiple OpenCL metadata due to linking.
   bool unifyMetadataImpl(Module &M) {
     const char *Vers[] = {kOCLMD::SpirVer, kOCLMD::OCLVer};
     const char *Exts[] = {kOCLMD::UsedExt, kOCLMD::UsedOptCoreFeat,
@@ -121,21 +111,6 @@ namespace {
   }
 
   } // end anonymous namespace
-
-  char AMDGPUUnifyMetadata::ID = 0;
-
-  char &llvm::AMDGPUUnifyMetadataID = AMDGPUUnifyMetadata::ID;
-
-  INITIALIZE_PASS(AMDGPUUnifyMetadata, "amdgpu-unify-metadata",
-                  "Unify multiple OpenCL metadata due to linking", false, false)
-
-  ModulePass *llvm::createAMDGPUUnifyMetadataPass() {
-    return new AMDGPUUnifyMetadata();
-  }
-
-  bool AMDGPUUnifyMetadata::runOnModule(Module &M) {
-    return unifyMetadataImpl(M);
-  }
 
   PreservedAnalyses AMDGPUUnifyMetadataPass::run(Module &M,
                                                  ModuleAnalysisManager &AM) {

@@ -48,6 +48,19 @@
   # CHECK-OBJ-NEXT: R_RISCV_VENDOR    QUALCOMM
   # CHECK-OBJ-NEXT: R_RISCV_CUSTOM192 my_bar+0x2
 
+  .reloc ., R_RISCV_VENDOR,     ANDES
+  .reloc ., R_RISCV_NDS_BRANCH_10, my_bar + 2
+  addi a1, a1, 0
+  # CHECK-ASM:      [[L3:.L[^:]+]]:
+  # CHECK-ASM-NEXT: .reloc [[L3]], R_RISCV_VENDOR, ANDES
+  # CHECK-ASM-NEXT: [[L4:.L[^:]+]]:
+  # CHECK-ASM-NEXT: .reloc [[L4]], R_RISCV_NDS_BRANCH_10, my_bar+2
+  # CHECK-ASM-NEXT: mv a1, a1
+
+  # CHECK-OBJ:      addi a1, a1, 0
+  # CHECK-OBJ-NEXT: R_RISCV_VENDOR    ANDES
+  # CHECK-OBJ-NEXT: R_RISCV_CUSTOM241 my_bar+0x2
+
   nop
   # CHECK-ASM: nop
   # CHECK-OBJ: addi zero, zero, 0x0

@@ -21,7 +21,6 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"

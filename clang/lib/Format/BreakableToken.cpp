@@ -158,8 +158,7 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
       return BreakableToken::Split(StringRef::npos, 0);
     StringRef BeforeCut = Text.substr(0, SpaceOffset).rtrim(Blanks);
     StringRef AfterCut = Text.substr(SpaceOffset);
-    // Don't trim the leading blanks if it would create a */ after the break.
-    if (!DecorationEndsWithStar || AfterCut.size() <= 1 || AfterCut[1] != '/')
+    if (!DecorationEndsWithStar)
       AfterCut = AfterCut.ltrim(Blanks);
     return BreakableToken::Split(BeforeCut.size(),
                                  AfterCut.begin() - BeforeCut.end());

@@ -21,8 +21,8 @@ program mm
  !REF: /md
  use :: md
  !DEF: /mm/c CommonBlockDetails
- !DEF: /mm/x ObjectEntity REAL(4)
- !DEF: /mm/y ObjectEntity REAL(4)
+ !DEF: /mm/x (InCommonBlock) ObjectEntity REAL(4)
+ !DEF: /mm/y (InCommonBlock) ObjectEntity REAL(4)
  common /c/x, y
  !REF: /mm/x
  !REF: /mm/y

@@ -255,13 +255,9 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
                                     const MCSubtargetInfo &STI) const {
   int64_t Imm;
   if (MO.isExpr()) {
-    const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
-    if (!C)
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
       return 255;
-
-    Imm = C->getValue();
   } else {
-
     assert(!MO.isDFPImm());
 
     if (!MO.isImm())
@@ -547,6 +543,7 @@ static bool needsPCRel(const MCExpr *Expr) {
   }
   case MCExpr::Unary:
     return needsPCRel(cast<MCUnaryExpr>(Expr)->getSubExpr());
+  case MCExpr::Specifier:
   case MCExpr::Target:
   case MCExpr::Constant:
     return false;

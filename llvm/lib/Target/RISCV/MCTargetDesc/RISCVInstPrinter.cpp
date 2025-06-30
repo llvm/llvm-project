@@ -12,7 +12,6 @@
 
 #include "RISCVInstPrinter.h"
 #include "RISCVBaseInfo.h"
-#include "RISCVMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -102,7 +101,7 @@ void RISCVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
-  MO.getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MO.getExpr());
 }
 
 void RISCVInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,

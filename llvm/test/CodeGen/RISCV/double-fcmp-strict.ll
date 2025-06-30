@@ -471,15 +471,15 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind strictfp {
 ; RV32I-NEXT:    mv s1, a2
 ; RV32I-NEXT:    mv s2, a1
 ; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    call __eqdf2
-; RV32I-NEXT:    seqz s4, a0
+; RV32I-NEXT:    call __unorddf2
+; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    mv a3, s0
-; RV32I-NEXT:    call __unorddf2
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    or a0, a0, s4
+; RV32I-NEXT:    call __eqdf2
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    or a0, s4, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -498,13 +498,13 @@ define i32 @fcmp_ueq(double %a, double %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    seqz s2, a0
+; RV64I-NEXT:    call __unorddf2
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    or a0, a0, s2
+; RV64I-NEXT:    call __eqdf2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    or a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -1199,15 +1199,15 @@ define i32 @fcmps_ueq(double %a, double %b) nounwind strictfp {
 ; RV32I-NEXT:    mv s1, a2
 ; RV32I-NEXT:    mv s2, a1
 ; RV32I-NEXT:    mv s3, a0
-; RV32I-NEXT:    call __eqdf2
-; RV32I-NEXT:    seqz s4, a0
+; RV32I-NEXT:    call __unorddf2
+; RV32I-NEXT:    mv s4, a0
 ; RV32I-NEXT:    mv a0, s3
 ; RV32I-NEXT:    mv a1, s2
 ; RV32I-NEXT:    mv a2, s1
 ; RV32I-NEXT:    mv a3, s0
-; RV32I-NEXT:    call __unorddf2
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    or a0, a0, s4
+; RV32I-NEXT:    call __eqdf2
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    or a0, s4, a0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1226,13 +1226,13 @@ define i32 @fcmps_ueq(double %a, double %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqdf2
-; RV64I-NEXT:    seqz s2, a0
+; RV64I-NEXT:    call __unorddf2
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unorddf2
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    or a0, a0, s2
+; RV64I-NEXT:    call __eqdf2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    or a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

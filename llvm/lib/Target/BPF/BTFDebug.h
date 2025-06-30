@@ -300,7 +300,8 @@ class BTFDebug : public DebugHandlerBase {
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
   StringMap<std::vector<std::string>> FileContent;
-  std::map<std::string, std::unique_ptr<BTFKindDataSec>> DataSecEntries;
+  std::map<std::string, std::unique_ptr<BTFKindDataSec>, std::less<>>
+      DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
   std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
   std::map<const DICompositeType *,

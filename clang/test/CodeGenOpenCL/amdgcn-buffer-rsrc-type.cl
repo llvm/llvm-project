@@ -44,7 +44,7 @@ void consumeBufferPtr(__amdgpu_buffer_rsrc_t *p) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[A]], align 16, !tbaa [[TBAA8:![0-9]+]]
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 // CHECK-NEXT:    [[TOBOOL_NOT_I:%.*]] = icmp eq ptr addrspace(5) [[A]], addrspacecast (ptr null to ptr addrspace(5))
-// CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL_NOT_I]], [[TOBOOL_NOT]]
+// CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TOBOOL_NOT]], i1 true, i1 [[TOBOOL_NOT_I]]
 // CHECK-NEXT:    br i1 [[OR_COND]], label [[IF_END:%.*]], label [[IF_THEN_I:%.*]]
 // CHECK:       if.then.i:
 // CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) [[A]], i32 16

@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "clang/Basic/TypeTraits.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -102,7 +104,8 @@ static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
   OverloadCandidateSet::iterator Best;
   switch (OCS.BestViableFunction(SemaRef, LookupLoc, Best)) {
   case OR_Success:
-    return cast<CXXMethodDecl>(Best->Function);
+  case OR_Deleted:
+    return cast<CXXMethodDecl>(Best->Function)->getCanonicalDecl();
   default:
     return nullptr;
   }
@@ -118,7 +121,8 @@ static bool hasSuitableConstructorForRelocation(Sema &SemaRef,
 
   CXXMethodDecl *Decl =
       LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false);
-  return Decl && Decl->isUserProvided() == AllowUserDefined;
+  return Decl && (AllowUserDefined || !Decl->isUserProvided()) &&
+         !Decl->isDeleted();
 }
 
 static bool hasSuitableMoveAssignmentOperatorForRelocation(
@@ -133,7 +137,8 @@ static bool hasSuitableMoveAssignmentOperatorForRelocation(
   if (!Decl)
     return false;
 
-  return Decl && Decl->isUserProvided() == AllowUserDefined;
+  return Decl && (AllowUserDefined || !Decl->isUserProvided()) &&
+         !Decl->isDeleted();
 }
 
 // [C++26][class.prop]
@@ -159,6 +164,8 @@ static bool IsDefaultMovable(Sema &SemaRef, const CXXRecordDecl *D) {
   if (!Dtr)
     return true;
 
+  Dtr = Dtr->getCanonicalDecl();
+
   if (Dtr->isUserProvided() && (!Dtr->isDefaulted() || Dtr->isDeleted()))
     return false;
 
@@ -181,6 +188,7 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
       return false;
   }
 
+  bool IsUnion = D->isUnion();
   for (const FieldDecl *Field : D->fields()) {
     if (Field->getType()->isDependentType())
       continue;
@@ -189,6 +197,12 @@ static bool IsEligibleForTrivialRelocation(Sema &SemaRef,
     // ... has a non-static data member of an object type that is not
     // of a trivially relocatable type
     if (!SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
+      return false;
+
+    // A union contains values with address discriminated pointer auth
+    // cannot be relocated.
+    if (IsUnion && SemaRef.Context.containsAddressDiscriminatedPointerAuth(
+                       Field->getType()))
       return false;
   }
   return !D->hasDeletedDestructor();
@@ -295,18 +309,17 @@ Sema::CheckCXX2CRelocatableAndReplaceable(const CXXRecordDecl *D) {
   return Info;
 }
 
-static bool IsCXXTriviallyRelocatableType(Sema &S, const CXXRecordDecl *RD) {
+bool Sema::IsCXXTriviallyRelocatableType(const CXXRecordDecl &RD) {
   if (std::optional<ASTContext::CXXRecordDeclRelocationInfo> Info =
-          S.getASTContext().getRelocationInfoForCXXRecord(RD))
+          getASTContext().getRelocationInfoForCXXRecord(&RD))
     return Info->IsRelocatable;
   ASTContext::CXXRecordDeclRelocationInfo Info =
-      S.CheckCXX2CRelocatableAndReplaceable(RD);
-  S.getASTContext().setRelocationInfoForCXXRecord(RD, Info);
+      CheckCXX2CRelocatableAndReplaceable(&RD);
+  getASTContext().setRelocationInfoForCXXRecord(&RD, Info);
   return Info.IsRelocatable;
 }
 
 bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
-
   QualType BaseElementType = getASTContext().getBaseElementType(Type);
 
   if (Type->isVariableArrayType())
@@ -315,17 +328,17 @@ bool Sema::IsCXXTriviallyRelocatableType(QualType Type) {
   if (BaseElementType.hasNonTrivialObjCLifetime())
     return false;
 
-  if (BaseElementType.hasAddressDiscriminatedPointerAuth())
+  if (BaseElementType->isIncompleteType())
     return false;
 
-  if (BaseElementType->isIncompleteType())
+  if (Context.containsNonRelocatablePointerAuth(Type))
     return false;
 
   if (BaseElementType->isScalarType() || BaseElementType->isVectorType())
     return true;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl())
-    return ::IsCXXTriviallyRelocatableType(*this, RD);
+    return IsCXXTriviallyRelocatableType(*RD);
 
   return false;
 }
@@ -663,11 +676,14 @@ static bool IsTriviallyRelocatableType(Sema &SemaRef, QualType T) {
   if (!BaseElementType->isObjectType())
     return false;
 
-  if (T.hasAddressDiscriminatedPointerAuth())
+  // The deprecated __builtin_is_trivially_relocatable does not have
+  // an equivalent to __builtin_trivially_relocate, so there is no
+  // safe way to use it if there are any address discriminated values.
+  if (SemaRef.getASTContext().containsAddressDiscriminatedPointerAuth(T))
     return false;
 
   if (const auto *RD = BaseElementType->getAsCXXRecordDecl();
-      RD && !RD->isPolymorphic() && IsCXXTriviallyRelocatableType(SemaRef, RD))
+      RD && !RD->isPolymorphic() && SemaRef.IsCXXTriviallyRelocatableType(*RD))
     return true;
 
   if (const auto *RD = BaseElementType->getAsRecordDecl())
@@ -1563,6 +1579,58 @@ ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   return BuildTypeTrait(Kind, KWLoc, ConvertedArgs, RParenLoc);
 }
 
+bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
+                           QualType RhsT) {
+  // C++0x [meta.rel]p2
+  // Base is a base class of Derived without regard to cv-qualifiers or
+  // Base and Derived are not unions and name the same class type without
+  // regard to cv-qualifiers.
+
+  const RecordType *lhsRecord = LhsT->getAs<RecordType>();
+  const RecordType *rhsRecord = RhsT->getAs<RecordType>();
+  if (!rhsRecord || !lhsRecord) {
+    const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
+    const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
+    if (!LHSObjTy || !RHSObjTy)
+      return false;
+
+    ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
+    ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
+    if (!BaseInterface || !DerivedInterface)
+      return false;
+
+    if (RequireCompleteType(RhsTLoc, RhsT,
+                            diag::err_incomplete_type_used_in_type_trait_expr))
+      return false;
+
+    return BaseInterface->isSuperClassOf(DerivedInterface);
+  }
+
+  assert(Context.hasSameUnqualifiedType(LhsT, RhsT) ==
+         (lhsRecord == rhsRecord));
+
+  // Unions are never base classes, and never have base classes.
+  // It doesn't matter if they are complete or not. See PR#41843
+  if (lhsRecord && lhsRecord->getDecl()->isUnion())
+    return false;
+  if (rhsRecord && rhsRecord->getDecl()->isUnion())
+    return false;
+
+  if (lhsRecord == rhsRecord)
+    return true;
+
+  // C++0x [meta.rel]p2:
+  //   If Base and Derived are class types and are different types
+  //   (ignoring possible cv-qualifiers) then Derived shall be a
+  //   complete type.
+  if (RequireCompleteType(RhsTLoc, RhsT,
+                          diag::err_incomplete_type_used_in_type_trait_expr))
+    return false;
+
+  return cast<CXXRecordDecl>(rhsRecord->getDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+}
+
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                     const TypeSourceInfo *Lhs,
                                     const TypeSourceInfo *Rhs,
@@ -1574,58 +1642,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
          "Cannot evaluate traits of dependent types");
 
   switch (BTT) {
-  case BTT_IsBaseOf: {
-    // C++0x [meta.rel]p2
-    // Base is a base class of Derived without regard to cv-qualifiers or
-    // Base and Derived are not unions and name the same class type without
-    // regard to cv-qualifiers.
+  case BTT_IsBaseOf:
+    return Self.BuiltinIsBaseOf(Rhs->getTypeLoc().getBeginLoc(), LhsT, RhsT);
 
-    const RecordType *lhsRecord = LhsT->getAs<RecordType>();
-    const RecordType *rhsRecord = RhsT->getAs<RecordType>();
-    if (!rhsRecord || !lhsRecord) {
-      const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
-      const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
-      if (!LHSObjTy || !RHSObjTy)
-        return false;
-
-      ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
-      ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
-      if (!BaseInterface || !DerivedInterface)
-        return false;
-
-      if (Self.RequireCompleteType(
-              Rhs->getTypeLoc().getBeginLoc(), RhsT,
-              diag::err_incomplete_type_used_in_type_trait_expr))
-        return false;
-
-      return BaseInterface->isSuperClassOf(DerivedInterface);
-    }
-
-    assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT) ==
-           (lhsRecord == rhsRecord));
-
-    // Unions are never base classes, and never have base classes.
-    // It doesn't matter if they are complete or not. See PR#41843
-    if (lhsRecord && lhsRecord->getDecl()->isUnion())
-      return false;
-    if (rhsRecord && rhsRecord->getDecl()->isUnion())
-      return false;
-
-    if (lhsRecord == rhsRecord)
-      return true;
-
-    // C++0x [meta.rel]p2:
-    //   If Base and Derived are class types and are different types
-    //   (ignoring possible cv-qualifiers) then Derived shall be a
-    //   complete type.
-    if (Self.RequireCompleteType(
-            Rhs->getTypeLoc().getBeginLoc(), RhsT,
-            diag::err_incomplete_type_used_in_type_trait_expr))
-      return false;
-
-    return cast<CXXRecordDecl>(rhsRecord->getDecl())
-        ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
-  }
   case BTT_IsVirtualBaseOf: {
     const RecordType *BaseRecord = LhsT->getAs<RecordType>();
     const RecordType *DerivedRecord = RhsT->getAs<RecordType>();
@@ -1709,14 +1728,15 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
 
     // Build expressions that emulate the effect of declval<T>() and
     // declval<U>().
-    if (LhsT->isObjectType() || LhsT->isFunctionType())
-      LhsT = Self.Context.getRValueReferenceType(LhsT);
-    if (RhsT->isObjectType() || RhsT->isFunctionType())
-      RhsT = Self.Context.getRValueReferenceType(RhsT);
-    OpaqueValueExpr Lhs(KeyLoc, LhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(LhsT));
-    OpaqueValueExpr Rhs(KeyLoc, RhsT.getNonLValueExprType(Self.Context),
-                        Expr::getValueKindForType(RhsT));
+    auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
+      if (Ty->isObjectType() || Ty->isFunctionType())
+        Ty = Self.Context.getRValueReferenceType(Ty);
+      return {KeyLoc, Ty.getNonLValueExprType(Self.Context),
+              Expr::getValueKindForType(Ty)};
+    };
+
+    auto Lhs = createDeclValExpr(LhsT);
+    auto Rhs = createDeclValExpr(RhsT);
 
     // Attempt the assignment in an unevaluated context within a SFINAE
     // trap at translation unit scope.
@@ -1938,6 +1958,11 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
   return llvm::StringSwitch<std::optional<TypeTrait>>(Name)
       .Case("is_trivially_relocatable",
             TypeTrait::UTT_IsCppTriviallyRelocatable)
+      .Case("is_replaceable", TypeTrait::UTT_IsReplaceable)
+      .Case("is_trivially_copyable", TypeTrait::UTT_IsTriviallyCopyable)
+      .Case("is_assignable", TypeTrait::BTT_IsAssignable)
+      .Case("is_empty", TypeTrait::UTT_IsEmpty)
+      .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
       .Default(std::nullopt);
 }
 
@@ -2002,35 +2027,8 @@ static ExtractedTypeTraitInfo ExtractTypeTraitFromExpression(const Expr *E) {
   return std::nullopt;
 }
 
-static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
-                                                  SourceLocation Loc,
-                                                  const CXXRecordDecl *D) {
-  for (const CXXBaseSpecifier &B : D->bases()) {
-    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
-    if (B.isVirtual())
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::VBase << B.getType()
-          << B.getSourceRange();
-    if (!SemaRef.IsCXXTriviallyRelocatableType(B.getType()))
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NRBase << B.getType()
-          << B.getSourceRange();
-  }
-  for (const FieldDecl *Field : D->fields()) {
-    if (!Field->getType()->isReferenceType() &&
-        !SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
-      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-          << diag::TraitNotSatisfiedReason::NRField << Field << Field->getType()
-          << Field->getSourceRange();
-  }
-  if (D->hasDeletedDestructor())
-    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::DeletedDtr << /*Deleted*/ 0
-        << D->getDestructor()->getSourceRange();
-
-  if (D->hasAttr<TriviallyRelocatableAttr>())
-    return;
-
+static void DiagnoseNonDefaultMovable(Sema &SemaRef, SourceLocation Loc,
+                                      const CXXRecordDecl *D) {
   if (D->isUnion()) {
     auto DiagSPM = [&](CXXSpecialMemberKind K, bool Has) {
       if (Has)
@@ -2049,7 +2047,7 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
   }
 
   if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
-    const auto *Decl = cast<CXXConstructorDecl>(
+    const auto *Decl = cast_or_null<CXXConstructorDecl>(
         LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
     if (Decl && Decl->isUserProvided())
       SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
@@ -2064,11 +2062,44 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
           << diag::TraitNotSatisfiedReason::UserProvidedAssign
           << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
   }
-  CXXDestructorDecl *Dtr = D->getDestructor();
-  if (Dtr && Dtr->isUserProvided() && !Dtr->isDefaulted())
+  if (CXXDestructorDecl *Dtr = D->getDestructor()) {
+    Dtr = Dtr->getCanonicalDecl();
+    if (Dtr->isUserProvided() && !Dtr->isDefaulted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedDtr << /*User Provided*/ 1
+          << Dtr->getSourceRange();
+  }
+}
+
+static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
+                                                  SourceLocation Loc,
+                                                  const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (B.isVirtual())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    if (!SemaRef.IsCXXTriviallyRelocatableType(B.getType()))
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTRBase << B.getType()
+          << B.getSourceRange();
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType()->isReferenceType() &&
+        !SemaRef.IsCXXTriviallyRelocatableType(Field->getType()))
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTRField << Field
+          << Field->getType() << Field->getSourceRange();
+  }
+  if (D->hasDeletedDestructor())
     SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
-        << diag::TraitNotSatisfiedReason::DeletedDtr << /*User Provided*/ 1
-        << Dtr->getSourceRange();
+        << diag::TraitNotSatisfiedReason::DeletedDtr << /*Deleted*/ 0
+        << D->getDestructor()->getSourceRange();
+
+  if (D->hasAttr<TriviallyRelocatableAttr>())
+    return;
+  DiagnoseNonDefaultMovable(SemaRef, Loc, D);
 }
 
 static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
@@ -2099,6 +2130,406 @@ static void DiagnoseNonTriviallyRelocatableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonReplaceableReason(Sema &SemaRef, SourceLocation Loc,
+                                         const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (!SemaRef.IsCXXReplaceableType(B.getType()))
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonReplaceableBase << B.getType()
+          << B.getSourceRange();
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!SemaRef.IsCXXReplaceableType(Field->getType()))
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonReplaceableField << Field
+          << Field->getType() << Field->getSourceRange();
+  }
+  if (D->hasDeletedDestructor())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::DeletedDtr << /*Deleted*/ 0
+        << D->getDestructor()->getSourceRange();
+
+  if (!D->hasSimpleMoveConstructor() && !D->hasSimpleCopyConstructor()) {
+    const auto *Decl = cast<CXXConstructorDecl>(
+        LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/false));
+    if (Decl && Decl->isDeleted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedCtr
+          << Decl->isMoveConstructor() << Decl->getSourceRange();
+  }
+  if (!D->hasSimpleMoveAssignment() && !D->hasSimpleCopyAssignment()) {
+    CXXMethodDecl *Decl =
+        LookupSpecialMemberFromXValue(SemaRef, D, /*Assign=*/true);
+    if (Decl && Decl->isDeleted())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::DeletedAssign
+          << Decl->isMoveAssignmentOperator() << Decl->getSourceRange();
+  }
+
+  if (D->hasAttr<ReplaceableAttr>())
+    return;
+  DiagnoseNonDefaultMovable(SemaRef, Loc, D);
+}
+
+static void DiagnoseNonReplaceableReason(Sema &SemaRef, SourceLocation Loc,
+                                         QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::Replaceable;
+
+  if (T->isVariablyModifiedType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VLA;
+
+  if (T->isReferenceType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+  T = T.getNonReferenceType();
+
+  if (T.isConstQualified())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Const;
+
+  if (T.isVolatileQualified())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Volatile;
+
+  bool IsArray = T->isArrayType();
+  T = SemaRef.getASTContext().getBaseElementType(T.getUnqualifiedType());
+
+  if (T->isScalarType())
+    return;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NotScalarOrClass << IsArray;
+    return;
+  }
+
+  if (D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonReplaceableReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
+                                               SourceLocation Loc,
+                                               const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (B.isVirtual())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    if (!B.getType().isTriviallyCopyableType(D->getASTContext())) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType().isTriviallyCopyableType(Field->getASTContext()))
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTCField << Field
+          << Field->getType() << Field->getSourceRange();
+  }
+  CXXDestructorDecl *Dtr = D->getDestructor();
+  if (D->hasDeletedDestructor() || (Dtr && !Dtr->isTrivial()))
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::DeletedDtr
+        << !D->hasDeletedDestructor() << D->getDestructor()->getSourceRange();
+
+  for (const CXXMethodDecl *Method : D->methods()) {
+    if (Method->isTrivial() || !Method->isUserProvided()) {
+      continue;
+    }
+    auto SpecialMemberKind =
+        SemaRef.getDefaultedFunctionKind(Method).asSpecialMember();
+    switch (SpecialMemberKind) {
+    case CXXSpecialMemberKind::CopyConstructor:
+    case CXXSpecialMemberKind::MoveConstructor:
+    case CXXSpecialMemberKind::CopyAssignment:
+    case CXXSpecialMemberKind::MoveAssignment: {
+      bool IsAssignment =
+          SpecialMemberKind == CXXSpecialMemberKind::CopyAssignment ||
+          SpecialMemberKind == CXXSpecialMemberKind::MoveAssignment;
+      bool IsMove =
+          SpecialMemberKind == CXXSpecialMemberKind::MoveConstructor ||
+          SpecialMemberKind == CXXSpecialMemberKind::MoveAssignment;
+
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << (IsAssignment ? diag::TraitNotSatisfiedReason::UserProvidedAssign
+                           : diag::TraitNotSatisfiedReason::UserProvidedCtr)
+          << IsMove << Method->getSourceRange();
+      break;
+    }
+    default:
+      break;
+    }
+  }
+}
+
+static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
+                                               SourceLocation Loc, QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyCopyable;
+
+  if (T->isReferenceType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonTriviallyCopyableReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
+                                        QualType T, QualType U) {
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+
+  auto createDeclValExpr = [&](QualType Ty) -> OpaqueValueExpr {
+    if (Ty->isObjectType() || Ty->isFunctionType())
+      Ty = SemaRef.Context.getRValueReferenceType(Ty);
+    return {Loc, Ty.getNonLValueExprType(SemaRef.Context),
+            Expr::getValueKindForType(Ty)};
+  };
+
+  auto LHS = createDeclValExpr(T);
+  auto RHS = createDeclValExpr(U);
+
+  EnterExpressionEvaluationContext Unevaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::ContextRAII TUContext(SemaRef,
+                              SemaRef.Context.getTranslationUnitDecl());
+  SemaRef.BuildBinOp(/*S=*/nullptr, Loc, BO_Assign, &LHS, &RHS);
+
+  if (!D || D->isInvalidDecl())
+    return;
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
+static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc,
+                                  const CXXRecordDecl *D) {
+  // Non-static data members (ignore zero-width bit‐fields).
+  for (const auto *Field : D->fields()) {
+    if (Field->isZeroLengthBitField())
+      continue;
+    if (Field->isBitField()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonZeroLengthField << Field
+          << Field->getSourceRange();
+      continue;
+    }
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::NonEmptyMember << Field
+        << Field->getType() << Field->getSourceRange();
+  }
+
+  // Virtual functions.
+  for (const auto *M : D->methods()) {
+    if (M->isVirtual()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << M
+          << M->getSourceRange();
+      break;
+    }
+  }
+
+  // Virtual bases and non-empty bases.
+  for (const auto &B : D->bases()) {
+    const auto *BR = B.getType()->getAsCXXRecordDecl();
+    if (!BR || BR->isInvalidDecl())
+      continue;
+    if (B.isVirtual()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    }
+    if (!BR->isEmpty()) {
+      S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonEmptyBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseIsEmptyReason(Sema &S, SourceLocation Loc, QualType T) {
+  // Emit primary "not empty" diagnostic.
+  S.Diag(Loc, diag::note_unsatisfied_trait) << T << diag::TraitName::Empty;
+
+  // While diagnosing is_empty<T>, we want to look at the actual type, not a
+  // reference or an array of it. So we need to massage the QualType param to
+  // strip refs and arrays.
+  if (T->isReferenceType())
+    S.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+  T = T.getNonReferenceType();
+
+  if (auto *AT = S.Context.getAsArrayType(T))
+    T = AT->getElementType();
+
+  if (auto *D = T->getAsCXXRecordDecl()) {
+    if (D->hasDefinition()) {
+      DiagnoseIsEmptyReason(S, Loc, D);
+      S.Diag(D->getLocation(), diag::note_defined_here) << D;
+    }
+  }
+}
+
+static bool hasMultipleDataBaseClassesWithFields(const CXXRecordDecl *D) {
+  int NumBasesWithFields = 0;
+  for (const CXXBaseSpecifier &Base : D->bases()) {
+    const CXXRecordDecl *BaseRD = Base.getType()->getAsCXXRecordDecl();
+    if (!BaseRD || BaseRD->isInvalidDecl())
+      continue;
+
+    for (const FieldDecl *Field : BaseRD->fields()) {
+      if (!Field->isUnnamedBitField()) {
+        if (++NumBasesWithFields > 1)
+          return true; // found more than one base class with fields
+        break;         // no need to check further fields in this base class
+      }
+    }
+  }
+  return false;
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    assert(B.getType()->getAsCXXRecordDecl() && "invalid base?");
+    if (B.isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+    }
+    if (!B.getType()->isStandardLayoutType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonStandardLayoutBase << B.getType()
+          << B.getSourceRange();
+    }
+  }
+  // Check for mixed access specifiers in fields.
+  const FieldDecl *FirstField = nullptr;
+  AccessSpecifier FirstAccess = AS_none;
+
+  for (const FieldDecl *Field : D->fields()) {
+    if (Field->isUnnamedBitField())
+      continue;
+
+    // Record the first field we see
+    if (!FirstField) {
+      FirstField = Field;
+      FirstAccess = Field->getAccess();
+      continue;
+    }
+
+    // Check if the field has a different access specifier than the first one.
+    if (Field->getAccess() != FirstAccess) {
+      // Emit a diagnostic about mixed access specifiers.
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::MixedAccess;
+
+      SemaRef.Diag(FirstField->getLocation(), diag::note_defined_here)
+          << FirstField;
+
+      SemaRef.Diag(Field->getLocation(), diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::MixedAccessField << Field
+          << FirstField;
+
+      // No need to check further fields, as we already found mixed access.
+      break;
+    }
+  }
+  if (hasMultipleDataBaseClassesWithFields(D)) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::MultipleDataBase;
+  }
+  if (D->isPolymorphic()) {
+    // Find the best location to point “defined here” at.
+    const CXXMethodDecl *VirtualMD = nullptr;
+    // First, look for a virtual method.
+    for (const auto *M : D->methods()) {
+      if (M->isVirtual()) {
+        VirtualMD = M;
+        break;
+      }
+    }
+    if (VirtualMD) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << VirtualMD;
+      SemaRef.Diag(VirtualMD->getLocation(), diag::note_defined_here)
+          << VirtualMD;
+    } else {
+      // If no virtual method, point to the record declaration itself.
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << D;
+      SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+    }
+  }
+  for (const FieldDecl *Field : D->fields()) {
+    if (!Field->getType()->isStandardLayoutType()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NonStandardLayoutMember << Field
+          << Field->getType() << Field->getSourceRange();
+    }
+  }
+  // Find any indirect base classes that have fields.
+  if (D->hasDirectFields()) {
+    const CXXRecordDecl *Indirect = nullptr;
+    D->forallBases([&](const CXXRecordDecl *BaseDef) {
+      if (BaseDef->hasDirectFields()) {
+        Indirect = BaseDef;
+        return false; // stop traversal
+      }
+      return true; // continue to the next base
+    });
+    if (Indirect) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::IndirectBaseWithFields << Indirect
+          << Indirect->getSourceRange();
+    }
+  }
+}
+
+static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
+                                            QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::StandardLayout;
+
+  // Check type-level exclusion first.
+  if (T->isVariablyModifiedType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::VLA;
+    return;
+  }
+
+  if (T->isReferenceType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::Ref;
+    return;
+  }
+  T = T.getNonReferenceType();
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonStandardLayoutReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2112,6 +2543,21 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   switch (Trait) {
   case UTT_IsCppTriviallyRelocatable:
     DiagnoseNonTriviallyRelocatableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsReplaceable:
+    DiagnoseNonReplaceableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsTriviallyCopyable:
+    DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case BTT_IsAssignable:
+    DiagnoseNonAssignableReason(*this, E->getBeginLoc(), Args[0], Args[1]);
+    break;
+  case UTT_IsEmpty:
+    DiagnoseIsEmptyReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsStandardLayout:
+    DiagnoseNonStandardLayoutReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;

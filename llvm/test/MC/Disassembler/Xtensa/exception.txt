@@ -1,0 +1,42 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+exception -disassemble %s | FileCheck -check-prefixes=CHECK-EXCEPTION %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## Xtensa exception option enabled. Also verify that dissasembling without
+## Xtensa exception option generates warnings.
+
+[0x80,0x20,0x00]
+# CHECK-EXCEPTION: excw
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x00,0x50,0x00]
+# CHECK-EXCEPTION: syscall
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x00,0x30,0x00]
+# CHECK-EXCEPTION: rfe
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x00,0x32,0x00]
+# CHECK-EXCEPTION: rfde
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xb1, 0x61]
+#CHECK-INST: xsr a2, epc1
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xd1, 0x61]
+#CHECK-INST: xsr a2, excsave1
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xe8, 0x61]
+#CHECK-INST: xsr a2, exccause
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xee, 0x61]
+#CHECK-INST: xsr a2, excvaddr
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x20, 0xc0, 0x61]
+#CHECK-INST: xsr a2, depc
+#CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

@@ -8,6 +8,11 @@ RUN: llvm-remarkutil instruction-count --parser=bitstream %p/Inputs/empty-file -
 RUN: llvm-remarkutil instruction-mix --parser=bitstream %p/Inputs/empty-file --report_style=csv -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=MIXBITSTREAM
 RUN: llvm-remarkutil annotation-count --parser=bitstream --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=ANNOTATIONBITSTREAM
 RUN: llvm-remarkutil count --parser=bitstream %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=COUNTBITSTREAM
+; Parser format auto-detection should treat empty files as bitstream files
+RUN: llvm-remarkutil instruction-count %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=SIZEBITSTREAM
+RUN: llvm-remarkutil instruction-mix %p/Inputs/empty-file --report_style=csv -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=MIXBITSTREAM
+RUN: llvm-remarkutil annotation-count --annotation-type=remark %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=ANNOTATIONBITSTREAM
+RUN: llvm-remarkutil count %p/Inputs/empty-file -o - 2>&1 | FileCheck %s --allow-empty --check-prefix=COUNTBITSTREAM
 
 ; YAMLPARSER: error: document root is not of mapping type.
 

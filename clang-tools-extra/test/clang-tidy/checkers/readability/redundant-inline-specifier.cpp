@@ -149,3 +149,13 @@ public:
   // CHECK-FIXES-STRICT: static float test4;
 };
 }
+
+namespace ns {
+class B
+{
+public:
+  ~B();
+};
+
+inline B::~B() = default;
+}

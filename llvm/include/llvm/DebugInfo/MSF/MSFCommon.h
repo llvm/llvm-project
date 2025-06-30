@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -83,9 +84,9 @@ public:
 /// Determine the layout of the FPM stream, given the MSF layout.  An FPM
 /// stream spans 1 or more blocks, each at equally spaced intervals throughout
 /// the file.
-MSFStreamLayout getFpmStreamLayout(const MSFLayout &Msf,
-                                   bool IncludeUnusedFpmData = false,
-                                   bool AltFpm = false);
+LLVM_ABI MSFStreamLayout getFpmStreamLayout(const MSFLayout &Msf,
+                                            bool IncludeUnusedFpmData = false,
+                                            bool AltFpm = false);
 
 inline bool isValidBlockSize(uint32_t Size) {
   switch (Size) {
@@ -176,7 +177,7 @@ inline uint32_t getNumFpmIntervals(const MSFLayout &L,
                             AltFpm ? L.alternateFpmBlock() : L.mainFpmBlock());
 }
 
-Error validateSuperBlock(const SuperBlock &SB);
+LLVM_ABI Error validateSuperBlock(const SuperBlock &SB);
 
 } // end namespace msf
 } // end namespace llvm

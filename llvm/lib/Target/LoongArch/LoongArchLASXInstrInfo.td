@@ -12,6 +12,10 @@
 
 // Target nodes.
 def loongarch_xvpermi: SDNode<"LoongArchISD::XVPERMI", SDT_LoongArchV1RUimm>;
+def loongarch_xvmskltz: SDNode<"LoongArchISD::XVMSKLTZ", SDT_LoongArchVMSKCOND>;
+def loongarch_xvmskgez: SDNode<"LoongArchISD::XVMSKGEZ", SDT_LoongArchVMSKCOND>;
+def loongarch_xvmskeqz: SDNode<"LoongArchISD::XVMSKEQZ", SDT_LoongArchVMSKCOND>;
+def loongarch_xvmsknez: SDNode<"LoongArchISD::XVMSKNEZ", SDT_LoongArchVMSKCOND>;
 
 def lasxsplati8
   : PatFrag<(ops node:$e0),
@@ -1086,6 +1090,16 @@ def PseudoXVINSGR2VR_H
   : Pseudo<(outs LASX256:$dst), (ins LASX256:$xd, GPR:$rj, uimm4:$imm)>;
 } //  usesCustomInserter = 1, Constraints = "$xd = $dst"
 
+let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+def PseudoXVMSKLTZ_B : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+def PseudoXVMSKLTZ_H : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+def PseudoXVMSKLTZ_W : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+def PseudoXVMSKLTZ_D : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+def PseudoXVMSKGEZ_B : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+def PseudoXVMSKEQZ_B : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+def PseudoXVMSKNEZ_B : Pseudo<(outs GPR:$rd), (ins LASX256:$vj)>;
+} // usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
 } // Predicates = [HasExtLASX]
 
 multiclass PatXr<SDPatternOperator OpNode, string Inst> {
@@ -1855,6 +1869,15 @@ def : Pat<(vt (concat_vectors LSX128:$vd, LSX128:$vj)),
 // XVABSD_{B/H/W/D}[U]
 defm : PatXrXr<abds, "XVABSD">;
 defm : PatXrXrU<abdu, "XVABSD">;
+
+// Vector mask set by condition
+def : Pat<(loongarch_xvmskltz (v32i8 LASX256:$vj)), (PseudoXVMSKLTZ_B LASX256:$vj)>;
+def : Pat<(loongarch_xvmskltz (v16i16 LASX256:$vj)), (PseudoXVMSKLTZ_H LASX256:$vj)>;
+def : Pat<(loongarch_xvmskltz (v8i32 LASX256:$vj)), (PseudoXVMSKLTZ_W LASX256:$vj)>;
+def : Pat<(loongarch_xvmskltz (v4i64 LASX256:$vj)), (PseudoXVMSKLTZ_D LASX256:$vj)>;
+def : Pat<(loongarch_xvmskgez (v32i8 LASX256:$vj)), (PseudoXVMSKGEZ_B LASX256:$vj)>;
+def : Pat<(loongarch_xvmskeqz (v32i8 LASX256:$vj)), (PseudoXVMSKEQZ_B LASX256:$vj)>;
+def : Pat<(loongarch_xvmsknez (v32i8 LASX256:$vj)), (PseudoXVMSKNEZ_B LASX256:$vj)>;
 
 } // Predicates = [HasExtLASX]
 

@@ -895,7 +895,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
 
   SourceManager &SM = R.getSourceMgr();
   assert(&Pos.getManager() == &SM && "SourceManagers are different!");
-  std::pair<FileID, unsigned> LPosInfo = SM.getDecomposedExpansionLoc(Pos);
+  FileIDAndOffset LPosInfo = SM.getDecomposedExpansionLoc(Pos);
 
   if (LPosInfo.first != BugFileID)
     return;
@@ -1034,7 +1034,7 @@ void HTMLDiagnostics::HandlePiece(Rewriter &R, FileID BugFileID,
       FullSourceLoc L = MP->getLocation().asLocation().getExpansionLoc();
       assert(L.isFileID());
       StringRef BufferInfo = L.getBufferData();
-      std::pair<FileID, unsigned> LocInfo = L.getDecomposedLoc();
+      FileIDAndOffset LocInfo = L.getDecomposedLoc();
       const char* MacroName = LocInfo.second + BufferInfo.data();
       Lexer rawLexer(SM.getLocForStartOfFile(LocInfo.first), PP.getLangOpts(),
                      BufferInfo.begin(), MacroName, BufferInfo.end());

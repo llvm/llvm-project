@@ -15,7 +15,9 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVELEMENT_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVSourceLanguage.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <map>
 #include <set>
@@ -70,7 +72,7 @@ using LVElementRequest = std::vector<LVElementGetFunction>;
 // lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParserClang.cpp.
 constexpr unsigned int DWARF_CHAR_BIT = 8u;
 
-class LVElement : public LVObject {
+class LLVM_ABI LVElement : public LVObject {
   enum class Property {
     IsLine,   // A logical line.
     IsScope,  // A logical scope.
@@ -105,17 +107,17 @@ class LVElement : public LVObject {
     IsAnonymous,
     LastEntry
   };
-  // Typed bitvector with properties for this element.
-  LVProperties<Property> Properties;
   static LVElementDispatch Dispatch;
-
-  /// RTTI.
-  const LVSubclassID SubclassID;
 
   // Indexes in the String Pool.
   size_t NameIndex = 0;
   size_t QualifiedNameIndex = 0;
   size_t FilenameIndex = 0;
+
+  // Typed bitvector with properties for this element.
+  LVProperties<Property> Properties;
+  /// RTTI.
+  const LVSubclassID SubclassID;
 
   uint16_t AccessibilityCode : 2; // DW_AT_accessibility.
   uint16_t InlineCode : 2;        // DW_AT_inline.
@@ -219,6 +221,9 @@ public:
 
   virtual StringRef getProducer() const { return StringRef(); }
   virtual void setProducer(StringRef ProducerName) {}
+
+  virtual LVSourceLanguage getSourceLanguage() const { return {}; }
+  virtual void setSourceLanguage(LVSourceLanguage SL) {}
 
   virtual bool isCompileUnit() const { return false; }
   virtual bool isRoot() const { return false; }

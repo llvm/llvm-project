@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++26
+// REQUIRES: std-at-least-c++23
 
 #include <flat_map>
 #include <utility>

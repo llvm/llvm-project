@@ -16,6 +16,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -187,6 +188,15 @@ TEST_F(MatchSelectPatternTest, FastFMin) {
       "  %A = select i1 %1, float %a, float 5.0\n"
       "  ret float %A\n"
       "}\n");
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_ANY, true});
+}
+
+TEST_F(MatchSelectPatternTest, FastFMinUnordered) {
+  parseAssembly("define float @test(float %a) {\n"
+                "  %1 = fcmp nnan ult float %a, 5.0\n"
+                "  %A = select i1 %1, float %a, float 5.0\n"
+                "  ret float %A\n"
+                "}\n");
   expectPattern({SPF_FMINNUM, SPNB_RETURNS_ANY, false});
 }
 
@@ -1246,6 +1256,58 @@ TEST_F(ValueTrackingTest, computePtrAlignment) {
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI, &AC, &DT), Align(1));
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI2, &AC, &DT), Align(1));
   EXPECT_EQ(getKnownAlignment(A, DL, CxtI3, &AC, &DT), Align(16));
+}
+
+TEST_F(ValueTrackingTest, MatchBinaryIntrinsicRecurrenceUMax) {
+  auto M = parseModule(R"(
+    define i8 @test(i8 %a, i8 %b) {
+    entry:
+      br label %loop
+    loop:
+      %iv = phi i8 [ %iv.next, %loop ], [ 0, %entry ]
+      %umax.acc = phi i8 [ %umax, %loop ], [ %a, %entry ]
+      %umax = call i8 @llvm.umax.i8(i8 %umax.acc, i8 %b)
+      %iv.next = add nuw i8 %iv, 1
+      %cmp = icmp ult i8 %iv.next, 10
+      br i1 %cmp, label %loop, label %exit
+    exit:
+      ret i8 %umax
+    }
+  )");
+
+  auto *F = M->getFunction("test");
+  auto *II = &cast<IntrinsicInst>(findInstructionByName(F, "umax"));
+  auto *UMaxAcc = &cast<PHINode>(findInstructionByName(F, "umax.acc"));
+  PHINode *PN;
+  Value *Init, *OtherOp;
+  EXPECT_TRUE(matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp));
+  EXPECT_EQ(UMaxAcc, PN);
+  EXPECT_EQ(F->getArg(0), Init);
+  EXPECT_EQ(F->getArg(1), OtherOp);
+}
+
+TEST_F(ValueTrackingTest, MatchBinaryIntrinsicRecurrenceNegativeFSHR) {
+  auto M = parseModule(R"(
+    define i8 @test(i8 %a, i8 %b, i8 %c) {
+    entry:
+      br label %loop
+    loop:
+      %iv = phi i8 [ %iv.next, %loop ], [ 0, %entry ]
+      %fshr.acc = phi i8 [ %fshr, %loop ], [ %a, %entry ]
+      %fshr = call i8 @llvm.fshr.i8(i8 %fshr.acc, i8 %b, i8 %c)
+      %iv.next = add nuw i8 %iv, 1
+      %cmp = icmp ult i8 %iv.next, 10
+      br i1 %cmp, label %loop, label %exit
+    exit:
+      ret i8 %fshr
+    }
+  )");
+
+  auto *F = M->getFunction("test");
+  auto *II = &cast<IntrinsicInst>(findInstructionByName(F, "fshr"));
+  PHINode *PN;
+  Value *Init, *OtherOp;
+  EXPECT_FALSE(matchSimpleBinaryIntrinsicRecurrence(II, PN, Init, OtherOp));
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBits) {

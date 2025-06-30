@@ -1702,9 +1702,9 @@ the configuration (without a prefix: ``Auto``).
 .. _AllowAllArgumentsOnNextLine:
 
 **AllowAllArgumentsOnNextLine** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <AllowAllArgumentsOnNextLine>`
-  If a function call or braced initializer list doesn't fit on a
-  line, allow putting all arguments onto the next line, even if
-  ``BinPackArguments`` is ``false``.
+  If a function call or braced initializer list doesn't fit on a line, allow
+  putting all arguments onto the next line, even if ``BinPackArguments`` is
+  ``false``.
 
   .. code-block:: c++
 
@@ -5528,8 +5528,7 @@ the configuration (without a prefix: ``Auto``).
 .. _ReferenceAlignment:
 
 **ReferenceAlignment** (``ReferenceAlignmentStyle``) :versionbadge:`clang-format 13` :ref:`¶ <ReferenceAlignment>`
-  Reference alignment style (overrides ``PointerAlignment`` for
-  references).
+  Reference alignment style (overrides ``PointerAlignment`` for references).
 
   Possible values:
 
@@ -6885,8 +6884,8 @@ the configuration (without a prefix: ``Auto``).
 .. _TypenameMacros:
 
 **TypenameMacros** (``List of Strings``) :versionbadge:`clang-format 9` :ref:`¶ <TypenameMacros>`
-  A vector of macros that should be interpreted as type declarations
-  instead of as function calls.
+  A vector of macros that should be interpreted as type declarations instead
+  of as function calls.
 
   These are expected to be macros of the form:
 
@@ -6992,7 +6991,7 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       namespace N1 {
-      namespace N2
+      namespace N2 {
       function();
       }
       }

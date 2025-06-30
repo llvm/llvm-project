@@ -9,6 +9,7 @@
 #include "OrcTestCommon.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/Testing/Support/Error.h"

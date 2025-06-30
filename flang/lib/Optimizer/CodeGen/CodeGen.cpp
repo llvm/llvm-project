@@ -1294,6 +1294,51 @@ genCUFAllocDescriptor(mlir::Location loc,
       .getResult();
 }
 
+/// Get the address of the type descriptor global variable that was created by
+/// lowering for derived type \p recType.
+template <typename ModOpTy>
+static mlir::Value
+getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
+                  mlir::Location loc, fir::RecordType recType,
+                  const fir::FIRToLLVMPassOptions &options) {
+  std::string name =
+      options.typeDescriptorsRenamedForAssembly
+          ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
+          : fir::NameUniquer::getTypeDescriptorName(recType.getName());
+  mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
+  if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name))
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                    global.getSymName());
+  // The global may have already been translated to LLVM.
+  if (auto global = mod.template lookupSymbol<mlir::LLVM::GlobalOp>(name))
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                    global.getSymName());
+  // Type info derived types do not have type descriptors since they are the
+  // types defining type descriptors.
+  if (options.ignoreMissingTypeDescriptors ||
+      fir::NameUniquer::belongsToModule(
+          name, Fortran::semantics::typeInfoBuiltinModule))
+    return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
+
+  if (!options.skipExternalRttiDefinition)
+    fir::emitFatalError(loc,
+                        "runtime derived type info descriptor was not "
+                        "generated and skipExternalRttiDefinition and "
+                        "ignoreMissingTypeDescriptors options are not set");
+
+  // Rtti for a derived type defined in another compilation unit and for which
+  // rtti was not defined in lowering because of the skipExternalRttiDefinition
+  // option. Generate the object declaration now.
+  auto insertPt = rewriter.saveInsertionPoint();
+  rewriter.setInsertionPoint(mod.getBody(), mod.getBody()->end());
+  mlir::LLVM::GlobalOp global = rewriter.create<mlir::LLVM::GlobalOp>(
+      loc, llvmPtrTy, /*constant=*/true, mlir::LLVM::Linkage::External, name,
+      mlir::Attribute());
+  rewriter.restoreInsertionPoint(insertPt);
+  return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                  global.getSymName());
+}
+
 /// Common base class for embox to descriptor conversion.
 template <typename OP>
 struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
@@ -1406,36 +1451,6 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                        stride);
   }
 
-  /// Get the address of the type descriptor global variable that was created by
-  /// lowering for derived type \p recType.
-  template <typename ModOpTy>
-  mlir::Value
-  getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
-                    mlir::Location loc, fir::RecordType recType) const {
-    std::string name =
-        this->options.typeDescriptorsRenamedForAssembly
-            ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
-            : fir::NameUniquer::getTypeDescriptorName(recType.getName());
-    mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
-    if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name)) {
-      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
-                                                      global.getSymName());
-    }
-    if (auto global = mod.template lookupSymbol<mlir::LLVM::GlobalOp>(name)) {
-      // The global may have already been translated to LLVM.
-      return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
-                                                      global.getSymName());
-    }
-    // Type info derived types do not have type descriptors since they are the
-    // types defining type descriptors.
-    if (!this->options.ignoreMissingTypeDescriptors &&
-        !fir::NameUniquer::belongsToModule(
-            name, Fortran::semantics::typeInfoBuiltinModule))
-      fir::emitFatalError(
-          loc, "runtime derived type info descriptor was not generated");
-    return rewriter.create<mlir::LLVM::ZeroOp>(loc, llvmPtrTy);
-  }
-
   template <typename ModOpTy>
   mlir::Value populateDescriptor(mlir::Location loc, ModOpTy mod,
                                  fir::BaseBoxType boxTy, mlir::Type inputType,
@@ -1500,7 +1515,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
           mlir::Type innerType = fir::unwrapInnerType(inputType);
           if (innerType && mlir::isa<fir::RecordType>(innerType)) {
             auto recTy = mlir::dyn_cast<fir::RecordType>(innerType);
-            typeDesc = getTypeDescriptor(mod, rewriter, loc, recTy);
+            typeDesc =
+                getTypeDescriptor(mod, rewriter, loc, recTy, this->options);
           } else {
             // Unlimited polymorphic type descriptor with no record type. Set
             // type descriptor address to a clean state.
@@ -1508,8 +1524,8 @@ struct EmboxCommonConversion : public fir::FIROpConversion<OP> {
                 loc, ::getLlvmPtrType(mod.getContext()));
           }
         } else {
-          typeDesc = getTypeDescriptor(mod, rewriter, loc,
-                                       fir::unwrapIfDerived(boxTy));
+          typeDesc = getTypeDescriptor(
+              mod, rewriter, loc, fir::unwrapIfDerived(boxTy), this->options);
         }
       }
       if (typeDesc)
@@ -3021,22 +3037,10 @@ struct TypeDescOpConversion : public fir::FIROpConversion<fir::TypeDescOp> {
     assert(mlir::isa<fir::RecordType>(inTy) && "expecting fir.type");
     auto recordType = mlir::dyn_cast<fir::RecordType>(inTy);
     auto module = typeDescOp.getOperation()->getParentOfType<mlir::ModuleOp>();
-    std::string typeDescName =
-        this->options.typeDescriptorsRenamedForAssembly
-            ? fir::NameUniquer::getTypeDescriptorAssemblyName(
-                  recordType.getName())
-            : fir::NameUniquer::getTypeDescriptorName(recordType.getName());
-    auto llvmPtrTy = ::getLlvmPtrType(typeDescOp.getContext());
-    if (auto global = module.lookupSymbol<mlir::LLVM::GlobalOp>(typeDescName)) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
-          typeDescOp, llvmPtrTy, global.getSymName());
-      return mlir::success();
-    } else if (auto global = module.lookupSymbol<fir::GlobalOp>(typeDescName)) {
-      rewriter.replaceOpWithNewOp<mlir::LLVM::AddressOfOp>(
-          typeDescOp, llvmPtrTy, global.getSymName());
-      return mlir::success();
-    }
-    return mlir::failure();
+    mlir::Value typeDesc = getTypeDescriptor(
+        module, rewriter, typeDescOp.getLoc(), recordType, this->options);
+    rewriter.replaceOp(typeDescOp, typeDesc);
+    return mlir::success();
   }
 };
 
@@ -3290,6 +3294,30 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
         attachTBAATag(loadOp, load.getType(), load.getType(), nullptr);
       rewriter.replaceOp(load, loadOp.getResult());
     }
+    return mlir::success();
+  }
+};
+
+struct LocalitySpecifierOpConversion
+    : public fir::FIROpConversion<fir::LocalitySpecifierOp> {
+  using FIROpConversion::FIROpConversion;
+  llvm::LogicalResult
+  matchAndRewrite(fir::LocalitySpecifierOp localizer, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+#ifdef EXPENSIVE_CHECKS
+    auto uses = mlir::SymbolTable::getSymbolUses(
+        localizer, localizer->getParentOfType<mlir::ModuleOp>());
+
+    // `fir.local` ops are not supposed to have any uses at this point (i.e.
+    // during lowering to LLVM). In case of serialization, the
+    // `fir.do_concurrent` users are expected to have been lowered to
+    // `fir.do_loop` nests. In case of parallelization, the `fir.do_concurrent`
+    // users are expected to have been lowered to the target parallel model
+    // (e.g. OpenMP).
+    assert(uses && uses->empty());
+#endif
+
+    rewriter.eraseOp(localizer);
     return mlir::success();
   }
 };
@@ -3930,12 +3958,25 @@ struct BoxOffsetOpConversion : public fir::FIROpConversion<fir::BoxOffsetOp> {
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     mlir::Type pty = ::getLlvmPtrType(boxOffset.getContext());
-    mlir::Type boxType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
-    mlir::Type llvmBoxTy =
-        lowerTy().convertBoxTypeAsStruct(mlir::cast<fir::BaseBoxType>(boxType));
-    int fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
-                      ? getTypeDescFieldId(boxType)
-                      : kAddrPosInBox;
+    mlir::Type boxRefType = fir::unwrapRefType(boxOffset.getBoxRef().getType());
+
+    assert((mlir::isa<fir::BaseBoxType>(boxRefType) ||
+            mlir::isa<fir::BoxCharType>(boxRefType)) &&
+           "boxRef should be a reference to either fir.box or fir.boxchar");
+
+    mlir::Type llvmBoxTy;
+    int fieldId;
+    if (auto boxType = mlir::dyn_cast_or_null<fir::BaseBoxType>(boxRefType)) {
+      llvmBoxTy = lowerTy().convertBoxTypeAsStruct(
+          mlir::cast<fir::BaseBoxType>(boxType));
+      fieldId = boxOffset.getField() == fir::BoxFieldAttr::derived_type
+                    ? getTypeDescFieldId(boxType)
+                    : kAddrPosInBox;
+    } else {
+      auto boxCharType = mlir::cast<fir::BoxCharType>(boxRefType);
+      llvmBoxTy = lowerTy().convertType(boxCharType);
+      fieldId = kAddrPosInBox;
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
         boxOffset, pty, llvmBoxTy, adaptor.getBoxRef(),
         llvm::ArrayRef<mlir::LLVM::GEPArg>{0, fieldId});
@@ -4236,15 +4277,15 @@ void fir::populateFIRToLLVMConversionPatterns(
       FieldIndexOpConversion, FirEndOpConversion, FreeMemOpConversion,
       GlobalLenOpConversion, GlobalOpConversion, InsertOnRangeOpConversion,
       IsPresentOpConversion, LenParamIndexOpConversion, LoadOpConversion,
-      MulcOpConversion, NegcOpConversion, NoReassocOpConversion,
-      SelectCaseOpConversion, SelectOpConversion, SelectRankOpConversion,
-      SelectTypeOpConversion, ShapeOpConversion, ShapeShiftOpConversion,
-      ShiftOpConversion, SliceOpConversion, StoreOpConversion,
-      StringLitOpConversion, SubcOpConversion, TypeDescOpConversion,
-      TypeInfoOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
-      UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-      XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(converter,
-                                                                options);
+      LocalitySpecifierOpConversion, MulcOpConversion, NegcOpConversion,
+      NoReassocOpConversion, SelectCaseOpConversion, SelectOpConversion,
+      SelectRankOpConversion, SelectTypeOpConversion, ShapeOpConversion,
+      ShapeShiftOpConversion, ShiftOpConversion, SliceOpConversion,
+      StoreOpConversion, StringLitOpConversion, SubcOpConversion,
+      TypeDescOpConversion, TypeInfoOpConversion, UnboxCharOpConversion,
+      UnboxProcOpConversion, UndefOpConversion, UnreachableOpConversion,
+      XArrayCoorOpConversion, XEmboxOpConversion, XReboxOpConversion,
+      ZeroOpConversion>(converter, options);
 
   // Patterns that are populated without a type converter do not trigger
   // target materializations for the operands of the root op.

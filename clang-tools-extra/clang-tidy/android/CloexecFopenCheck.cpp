@@ -15,11 +15,10 @@ namespace clang::tidy::android {
 
 void CloexecFopenCheck::registerMatchers(MatchFinder *Finder) {
   auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
-  registerMatchersImpl(Finder,
-                       functionDecl(isExternC(), returns(asString("FILE *")),
-                                    hasName("fopen"),
-                                    hasParameter(0, CharPointerType),
-                                    hasParameter(1, CharPointerType)));
+  registerMatchersImpl(
+      Finder, functionDecl(isExternC(), returns(asString("FILE *")),
+                           hasName("fopen"), hasParameter(0, CharPointerType),
+                           hasParameter(1, CharPointerType)));
 }
 
 void CloexecFopenCheck::check(const MatchFinder::MatchResult &Result) {

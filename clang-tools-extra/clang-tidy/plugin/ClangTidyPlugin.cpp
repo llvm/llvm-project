@@ -78,6 +78,7 @@ private:
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the clang-tidy plugin.
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int ClangTidyPluginAnchorSource = 0;
 
 static clang::FrontendPluginRegistry::Add<clang::tidy::ClangTidyPluginAction>

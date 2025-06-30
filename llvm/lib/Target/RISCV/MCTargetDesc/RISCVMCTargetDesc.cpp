@@ -28,6 +28,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
 
@@ -331,7 +332,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
   return new RISCVMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVTargetMC() {
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);

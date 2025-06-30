@@ -23,7 +23,8 @@ public:
 protected:
   // List of thread ids stepping with a breakpoint with the address of
   // the relevan breakpoint
-  std::map<lldb::tid_t, lldb::addr_t> m_threads_stepping_with_breakpoint;
+  std::map<lldb::tid_t, std::vector<lldb::addr_t>>
+      m_threads_stepping_with_breakpoint;
 };
 
 } // namespace lldb_private

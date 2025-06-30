@@ -1,0 +1,9 @@
+{
+  "DefaultVariant": "xrOS", "DisplayName": "xrOS",
+  "Version": "26.0",
+  "CanonicalName": "xros26.0",
+  "MaximumDeploymentTarget": "26.0.99",
+  "VersionMap": {
+    "iOS_xrOS":{"15.0":"1.0", "16.0":"2.0", "19.0":"26.0", "26.0":"26.0"}
+  }
+}

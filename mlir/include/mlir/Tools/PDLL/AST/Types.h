@@ -226,8 +226,7 @@ public:
   /// Return an instance of the Tuple type.
   static TupleType get(Context &context, ArrayRef<Type> elementTypes,
                        ArrayRef<StringRef> elementNames);
-  static TupleType get(Context &context,
-                       ArrayRef<Type> elementTypes = std::nullopt);
+  static TupleType get(Context &context, ArrayRef<Type> elementTypes = {});
 
   /// Return the element types of this tuple.
   ArrayRef<Type> getElementTypes() const;

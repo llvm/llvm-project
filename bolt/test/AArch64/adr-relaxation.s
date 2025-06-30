@@ -34,7 +34,6 @@ foo:
   .cfi_startproc
   cmp  x1, x11
   b.hi  .L2
-  mov  x0, #0x0
 .L2:
 # CHECK-FOO: <foo.cold.0>:
 # CHECK-FOO-NEXT: adrp

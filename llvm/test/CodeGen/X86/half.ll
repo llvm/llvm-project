@@ -262,7 +262,7 @@ define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ;
 ; BWON-F16C-LABEL: test_sitofp_i64:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    vpextrw $0, %xmm0, (%rsi)
 ; BWON-F16C-NEXT:    retq
@@ -385,14 +385,14 @@ define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; BWON-F16C-NEXT:    testq %rdi, %rdi
 ; BWON-F16C-NEXT:    js .LBB10_1
 ; BWON-F16C-NEXT:  # %bb.2:
-; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; BWON-F16C-NEXT:    jmp .LBB10_3
 ; BWON-F16C-NEXT:  .LBB10_1:
 ; BWON-F16C-NEXT:    movq %rdi, %rax
 ; BWON-F16C-NEXT:    shrq %rax
 ; BWON-F16C-NEXT:    andl $1, %edi
 ; BWON-F16C-NEXT:    orq %rax, %rdi
-; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; BWON-F16C-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; BWON-F16C-NEXT:    vaddss %xmm0, %xmm0, %xmm0
 ; BWON-F16C-NEXT:  .LBB10_3:
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
@@ -843,7 +843,7 @@ define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; BWON-F16C-LABEL: test_sitofp_fadd_i32:
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vpinsrw $0, (%rsi), %xmm0, %xmm0
-; BWON-F16C-NEXT:    vcvtsi2ss %edi, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
 ; BWON-F16C-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0

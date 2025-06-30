@@ -734,12 +734,14 @@ void DWARFTypePrinter<DieType>::appendSubroutineNameAfter(
       OS << " __attribute__((intel_ocl_bicc))";
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_SpirFunction:
-    case dwarf::CallingConvention::DW_CC_LLVM_OpenCLKernel:
-      // These aren't available as attributes, but maybe we should still
-      // render them somehow? (Clang doesn't render them, but that's an issue
+      // This isn't available as an attribute, but maybe we should still
+      // render it somehow? (Clang doesn't render it, but that's an issue
       // for template names too - since then the DWARF names of templates
       // instantiated with function types with these calling conventions won't
       // have distinct names - so we'd need to fix that too)
+      break;
+    case dwarf::CallingConvention::DW_CC_LLVM_DeviceKernel:
+      OS << " __attribute__((device_kernel))";
       break;
     case dwarf::CallingConvention::DW_CC_LLVM_Swift:
       // SwiftAsync missing

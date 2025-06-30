@@ -25,6 +25,11 @@
 ; CHECK-NEXT:  BlockEnd: }
 ; CHECK-NEXT:  BlockBegin: Begin
 ; CHECK-NEXT:  BlockEnd: End
+; CHECK-NEXT:  Int: 1; int value = 1
+; CHECK-NEXT:  Asterisk: *
+; CHECK-NEXT:  Int: 3; int value = 3
+; CHECK-NEXT:  Slash: /
+; CHECK-NEXT:  Int: 4; int value = 4
 ; CHECK-NEXT:  Identifier: He11o
 ; CHECK-NEXT:  Identifier: LLVM
 ; CHECK-NEXT:  Identifier: identifier-with-dashes

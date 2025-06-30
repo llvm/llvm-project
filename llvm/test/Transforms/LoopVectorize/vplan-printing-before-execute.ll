@@ -49,8 +49,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%and>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%A>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME1:%.+]]> = phi [ vp<[[END1]]>, middle.block ], [ ir<%and>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = phi [ vp<[[END2]]>, middle.block ], [ ir<%A>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
@@ -98,8 +98,8 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<scalar.ph>:
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME1:%.+]]> = resume-phi vp<[[END1]]>, ir<%and>
-; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END2]]>, ir<%A>
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME1:%.+]]> = phi [ vp<[[END1]]>, middle.block ], [ ir<%and>, ir-bb<entry> ]
+; CHECK-NEXT:   EMIT-SCALAR vp<[[RESUME2:%.+]]>.1 = phi [ vp<[[END2]]>, middle.block ], [ ir<%A>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:

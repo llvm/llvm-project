@@ -282,12 +282,12 @@ define arm_aapcs_vfpcc <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64>
 ; CHECK-NEXT:    vmov r1, s1
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    cmp.w r1, #-1
-; CHECK-NEXT:    csetm r1, gt
+; CHECK-NEXT:    mvns r1, r1
+; CHECK-NEXT:    asrs r1, r1, #31
 ; CHECK-NEXT:    bfi r0, r1, #0, #8
 ; CHECK-NEXT:    vmov r1, s3
-; CHECK-NEXT:    cmp.w r1, #-1
-; CHECK-NEXT:    csetm r1, gt
+; CHECK-NEXT:    mvns r1, r1
+; CHECK-NEXT:    asrs r1, r1, #31
 ; CHECK-NEXT:    bfi r0, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q1, q2

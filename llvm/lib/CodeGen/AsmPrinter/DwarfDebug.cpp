@@ -32,7 +32,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
@@ -169,8 +169,10 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
 
-static cl::opt<bool> KeyInstructionsAreStmts("dwarf-use-key-instructions",
-                                             cl::Hidden, cl::init(false));
+/// Set to false to ignore Key Instructions metadata.
+static cl::opt<bool> KeyInstructionsAreStmts(
+    "dwarf-use-key-instructions", cl::Hidden, cl::init(true),
+    cl::desc("Set to false to ignore Key Instructions metadata"));
 
 static constexpr unsigned ULEB128PadSize = 4;
 
@@ -2077,8 +2079,17 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  // There may be a mixture of scopes using and not using Key Instructions.
+  // Not-Key-Instructions functions inlined into Key Instructions functions
+  // should use not-key is_stmt handling. Key Instructions functions inlined
+  // into Not-Key-Instructions functions should use Key Instructions is_stmt
+  // handling.
+  bool ScopeUsesKeyInstructions =
+      KeyInstructionsAreStmts && DL &&
+      DL->getScope()->getSubprogram()->getKeyInstructionsEnabled();
+
   bool IsKey = false;
-  if (KeyInstructionsAreStmts && DL && DL.getLine())
+  if (ScopeUsesKeyInstructions && DL && DL.getLine())
     IsKey = KeyInstructions.contains(MI);
 
   if (!DL && MI == PrologEndLoc) {
@@ -2158,7 +2169,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrologEndLoc = nullptr;
   }
 
-  if (KeyInstructionsAreStmts) {
+  if (ScopeUsesKeyInstructions) {
     if (IsKey)
       Flags |= DWARF2_FLAG_IS_STMT;
   } else {
@@ -2368,8 +2379,8 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
   // Map {(InlinedAt, Group): (Rank, Instructions)}.
   // NOTE: Anecdotally, for a large C++ blob, 99% of the instruction
   // SmallVectors contain 2 or fewer elements; use 2 inline elements.
-  DenseMap<std::pair<DILocation *, uint32_t>,
-           std::pair<uint16_t, SmallVector<const MachineInstr *, 2>>>
+  DenseMap<std::pair<DILocation *, uint64_t>,
+           std::pair<uint8_t, SmallVector<const MachineInstr *, 2>>>
       GroupCandidates;
 
   // For each instruction:
@@ -2651,10 +2662,12 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
+  // Run both `findForceIsStmtInstrs` and `computeKeyInstructions` because
+  // Not-Key-Instructions functions may be inlined into Key Instructions
+  // functions and vice versa.
   if (KeyInstructionsAreStmts)
     computeKeyInstructions(MF);
-  else
-    findForceIsStmtInstrs(MF);
+  findForceIsStmtInstrs(MF);
 }
 
 unsigned
@@ -3881,7 +3894,7 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   if (!TypeUnitsUnderConstruction.empty() && AddrPool.hasBeenUsed())
     return;
 
-  auto Ins = TypeSignatures.insert(std::make_pair(CTy, 0));
+  auto Ins = TypeSignatures.try_emplace(CTy);
   if (!Ins.second) {
     CU.addDIETypeSignature(RefDie, Ins.first->second);
     return;

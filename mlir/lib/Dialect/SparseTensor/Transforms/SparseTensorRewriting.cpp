@@ -1537,7 +1537,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
-        loc, src, std::nullopt,
+        loc, src, ValueRange(),
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           for (Dimension d = 0; d < dimRank; d++) {

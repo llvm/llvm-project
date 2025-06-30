@@ -9,7 +9,7 @@
 //   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[c50:.*]] = arith.constant 50 : index
 //   CHECK-DAG:   %[[dim0:.*]] = tensor.dim %[[t]], %[[c0]]
-//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[h1]], %[[dim0]]]
+//   CHECK-DAG:   %[[size0:.*]] = affine.apply #[[$map]]()[%[[dim0]], %[[h1]]]
 //   CHECK-DAG:   %[[size1:.*]] = affine.apply #[[$map1]]()[%[[l2]], %[[h2]]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) : memref<?x?xindex>
 //       CHECK:   linalg.fill ins(%[[c50]] : index) outs(%[[alloc]] : memref<?x?xindex>)

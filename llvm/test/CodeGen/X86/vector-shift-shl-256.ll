@@ -1369,7 +1369,7 @@ define <32 x i8> @constant_shift_v32i8(<32 x i8> %a) nounwind {
 ; AVX512DQVL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0,1,0,4,0,16,0,64,0,128,0,32,0,8,0,2,0]
 ; AVX512DQVL-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1,0,2,0,8,0,32,0,128,0,64,0,16,0,4,0,1]
 ; AVX512DQVL-NEXT:    vpsllw $8, %ymm0, %ymm0
-; AVX512DQVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 | (ymm1 & mem)
+; AVX512DQVL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 | (ymm1 & m32bcst)
 ; AVX512DQVL-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: constant_shift_v32i8:
@@ -1820,6 +1820,67 @@ define <4 x i64> @shift32_v4i64(<4 x i64> %a) nounwind {
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpsllq $32, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
+  %shift = shl <4 x i64> %a, <i64 32, i64 32, i64 32, i64 32>
+  ret <4 x i64> %shift
+}
+
+define <4 x i64> @shift32_v4i64_concat(<2 x i64> %lo, <2 x i64> %hi) nounwind {
+; AVX1-LABEL: shift32_v4i64_concat:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: shift32_v4i64_concat:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; XOPAVX1-LABEL: shift32_v4i64_concat:
+; XOPAVX1:       # %bb.0:
+; XOPAVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; XOPAVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
+; XOPAVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; XOPAVX1-NEXT:    retq
+;
+; XOPAVX2-LABEL: shift32_v4i64_concat:
+; XOPAVX2:       # %bb.0:
+; XOPAVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; XOPAVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsllq $32, %ymm0, %ymm0
+; XOPAVX2-NEXT:    retq
+;
+; AVX512-LABEL: shift32_v4i64_concat:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX512-NEXT:    retq
+;
+; AVX512VL-LABEL: shift32_v4i64_concat:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX512VL-NEXT:    retq
+;
+; X86-AVX1-LABEL: shift32_v4i64_concat:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    vpsllq $32, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpsllq $32, %xmm1, %xmm1
+; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX2-LABEL: shift32_v4i64_concat:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; X86-AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpsllq $32, %ymm0, %ymm0
+; X86-AVX2-NEXT:    retl
+  %a = shufflevector <2 x i64> %lo, <2 x i64> %hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %shift = shl <4 x i64> %a, <i64 32, i64 32, i64 32, i64 32>
   ret <4 x i64> %shift
 }

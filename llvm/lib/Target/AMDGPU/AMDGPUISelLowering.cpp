@@ -848,7 +848,7 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
        AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
        (isa<LoadSDNode>(N) && AS == AMDGPUAS::GLOBAL_ADDRESS &&
         MN->isInvariant())) &&
-      AMDGPUInstrInfo::isUniformMMO(MN->getMemOperand()))
+      AMDGPU::isUniformMMO(MN->getMemOperand()))
     return false;
 
   // Don't produce extloads from sub 32-bit types. SI doesn't have scalar
@@ -1142,7 +1142,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::SPIR_KERNEL:
   default:
-    report_fatal_error("Unsupported calling convention for call");
+    reportFatalUsageError("unsupported calling convention for call");
   }
 }
 
@@ -1169,7 +1169,7 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForReturn(CallingConv::ID CC,
   case CallingConv::Cold:
     return RetCC_AMDGPU_Func;
   default:
-    report_fatal_error("Unsupported calling convention.");
+    reportFatalUsageError("unsupported calling convention");
   }
 }
 
@@ -4097,7 +4097,7 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
   if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  // i64 (shl x, C) -> (build_pair 0, (shl x, C -32))
+  // i64 (shl x, C) -> (build_pair 0, (shl x, C - 32))
 
   // On some subtargets, 64-bit shift is a quarter rate instruction. In the
   // common case, splitting this into a move and a 32-bit shift is faster and
@@ -4117,12 +4117,12 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
     ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
                                TargetType);
   } else {
-    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
     const SDValue ShiftMask =
         DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
     // This AND instruction will clamp out of bounds shift values.
     // It will also be removed during later instruction selection.
-    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
   }
 
   SDValue Lo = DAG.getNode(ISD::TRUNCATE, SL, TargetType, LHS);
@@ -4151,80 +4151,199 @@ SDValue AMDGPUTargetLowering::performShlCombine(SDNode *N,
 
 SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
-  if (N->getValueType(0) != MVT::i64)
-    return SDValue();
-
-  const ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!RHS)
-    return SDValue();
-
+  SDValue RHS = N->getOperand(1);
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
+  EVT VT = N->getValueType(0);
+  SDValue LHS = N->getOperand(0);
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
-  unsigned RHSVal = RHS->getZExtValue();
+
+  if (VT.getScalarType() != MVT::i64)
+    return SDValue();
 
   // For C >= 32
-  // (sra i64:x, C) -> build_pair (sra hi_32(x), C - 32), (sra hi_32(x), 31)
-  if (RHSVal >= 32) {
-    SDValue Hi = getHiHalf64(N->getOperand(0), DAG);
-    Hi = DAG.getFreeze(Hi);
-    SDValue HiShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-                                  DAG.getConstant(31, SL, MVT::i32));
-    SDValue LoShift = DAG.getNode(ISD::SRA, SL, MVT::i32, Hi,
-                                  DAG.getConstant(RHSVal - 32, SL, MVT::i32));
+  // i64 (sra x, C) -> (build_pair (sra hi_32(x), C - 32), sra hi_32(x), 31))
 
-    SDValue BuildVec = DAG.getBuildVector(MVT::v2i32, SL, {LoShift, HiShift});
-    return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildVec);
+  // On some subtargets, 64-bit shift is a quarter rate instruction. In the
+  // common case, splitting this into a move and a 32-bit shift is faster and
+  // the same code size.
+  KnownBits Known = DAG.computeKnownBits(RHS);
+
+  EVT ElementType = VT.getScalarType();
+  EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
+  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
+                                 : TargetScalarType;
+
+  if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
+    return SDValue();
+
+  SDValue ShiftFullAmt =
+      DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
+  SDValue ShiftAmt;
+  if (CRHS) {
+    unsigned RHSVal = CRHS->getZExtValue();
+    ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
+                               TargetType);
+  } else if (Known.getMinValue().getZExtValue() ==
+             (ElementType.getSizeInBits() - 1)) {
+    ShiftAmt = ShiftFullAmt;
+  } else {
+    SDValue truncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    const SDValue ShiftMask =
+        DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
+    // This AND instruction will clamp out of bounds shift values.
+    // It will also be removed during later instruction selection.
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, truncShiftAmt, ShiftMask);
   }
 
-  return SDValue();
+  EVT ConcatType;
+  SDValue Hi;
+  SDLoc LHSSL(LHS);
+  // Bitcast LHS into ConcatType so hi-half of source can be extracted into Hi
+  if (VT.isVector()) {
+    unsigned NElts = TargetType.getVectorNumElements();
+    ConcatType = TargetType.getDoubleNumVectorElementsVT(*DAG.getContext());
+    SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
+    SmallVector<SDValue, 8> HiOps(NElts);
+    SmallVector<SDValue, 16> HiAndLoOps;
+
+    DAG.ExtractVectorElements(SplitLHS, HiAndLoOps, 0, NElts * 2);
+    for (unsigned I = 0; I != NElts; ++I) {
+      HiOps[I] = HiAndLoOps[2 * I + 1];
+    }
+    Hi = DAG.getNode(ISD::BUILD_VECTOR, LHSSL, TargetType, HiOps);
+  } else {
+    const SDValue One = DAG.getConstant(1, LHSSL, TargetScalarType);
+    ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
+    SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
+    Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
+  }
+  Hi = DAG.getFreeze(Hi);
+
+  SDValue HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
+  SDValue NewShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftAmt);
+
+  SDValue Vec;
+  if (VT.isVector()) {
+    unsigned NElts = TargetType.getVectorNumElements();
+    SmallVector<SDValue, 8> HiOps;
+    SmallVector<SDValue, 8> LoOps;
+    SmallVector<SDValue, 16> HiAndLoOps(NElts * 2);
+
+    DAG.ExtractVectorElements(HiShift, HiOps, 0, NElts);
+    DAG.ExtractVectorElements(NewShift, LoOps, 0, NElts);
+    for (unsigned I = 0; I != NElts; ++I) {
+      HiAndLoOps[2 * I + 1] = HiOps[I];
+      HiAndLoOps[2 * I] = LoOps[I];
+    }
+    Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, HiAndLoOps);
+  } else {
+    Vec = DAG.getBuildVector(ConcatType, SL, {NewShift, HiShift});
+  }
+  return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
 }
 
 SDValue AMDGPUTargetLowering::performSrlCombine(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
-  auto *RHS = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (!RHS)
-    return SDValue();
-
+  SDValue RHS = N->getOperand(1);
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
   EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
-  unsigned ShiftAmt = RHS->getZExtValue();
   SelectionDAG &DAG = DCI.DAG;
   SDLoc SL(N);
+  unsigned RHSVal;
 
-  // fold (srl (and x, c1 << c2), c2) -> (and (srl(x, c2), c1)
-  // this improves the ability to match BFE patterns in isel.
-  if (LHS.getOpcode() == ISD::AND) {
-    if (auto *Mask = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
-      unsigned MaskIdx, MaskLen;
-      if (Mask->getAPIntValue().isShiftedMask(MaskIdx, MaskLen) &&
-          MaskIdx == ShiftAmt) {
-        return DAG.getNode(
-            ISD::AND, SL, VT,
-            DAG.getNode(ISD::SRL, SL, VT, LHS.getOperand(0), N->getOperand(1)),
-            DAG.getNode(ISD::SRL, SL, VT, LHS.getOperand(1), N->getOperand(1)));
+  if (CRHS) {
+    RHSVal = CRHS->getZExtValue();
+
+    // fold (srl (and x, c1 << c2), c2) -> (and (srl(x, c2), c1)
+    // this improves the ability to match BFE patterns in isel.
+    if (LHS.getOpcode() == ISD::AND) {
+      if (auto *Mask = dyn_cast<ConstantSDNode>(LHS.getOperand(1))) {
+        unsigned MaskIdx, MaskLen;
+        if (Mask->getAPIntValue().isShiftedMask(MaskIdx, MaskLen) &&
+            MaskIdx == RHSVal) {
+          return DAG.getNode(ISD::AND, SL, VT,
+                             DAG.getNode(ISD::SRL, SL, VT, LHS.getOperand(0),
+                                         N->getOperand(1)),
+                             DAG.getNode(ISD::SRL, SL, VT, LHS.getOperand(1),
+                                         N->getOperand(1)));
+        }
       }
     }
   }
 
-  if (VT != MVT::i64)
+  if (VT.getScalarType() != MVT::i64)
     return SDValue();
 
-  if (ShiftAmt < 32)
+  // for C >= 32
+  // i64 (srl x, C) -> (build_pair (srl hi_32(x), C - 32), 0)
+
+  // On some subtargets, 64-bit shift is a quarter rate instruction. In the
+  // common case, splitting this into a move and a 32-bit shift is faster and
+  // the same code size.
+  KnownBits Known = DAG.computeKnownBits(RHS);
+
+  EVT ElementType = VT.getScalarType();
+  EVT TargetScalarType = ElementType.getHalfSizedIntegerVT(*DAG.getContext());
+  EVT TargetType = VT.isVector() ? VT.changeVectorElementType(TargetScalarType)
+                                 : TargetScalarType;
+
+  if (Known.getMinValue().getZExtValue() < TargetScalarType.getSizeInBits())
     return SDValue();
 
-  // srl i64:x, C for C >= 32
-  // =>
-  //   build_pair (srl hi_32(x), C - 32), 0
-  SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
+  SDValue ShiftAmt;
+  if (CRHS) {
+    ShiftAmt = DAG.getConstant(RHSVal - TargetScalarType.getSizeInBits(), SL,
+                               TargetType);
+  } else {
+    SDValue TruncShiftAmt = DAG.getNode(ISD::TRUNCATE, SL, TargetType, RHS);
+    const SDValue ShiftMask =
+        DAG.getConstant(TargetScalarType.getSizeInBits() - 1, SL, TargetType);
+    // This AND instruction will clamp out of bounds shift values.
+    // It will also be removed during later instruction selection.
+    ShiftAmt = DAG.getNode(ISD::AND, SL, TargetType, TruncShiftAmt, ShiftMask);
+  }
 
-  SDValue Hi = getHiHalf64(LHS, DAG);
+  const SDValue Zero = DAG.getConstant(0, SL, TargetScalarType);
+  EVT ConcatType;
+  SDValue Hi;
+  SDLoc LHSSL(LHS);
+  // Bitcast LHS into ConcatType so hi-half of source can be extracted into Hi
+  if (VT.isVector()) {
+    unsigned NElts = TargetType.getVectorNumElements();
+    ConcatType = TargetType.getDoubleNumVectorElementsVT(*DAG.getContext());
+    SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
+    SmallVector<SDValue, 8> HiOps(NElts);
+    SmallVector<SDValue, 16> HiAndLoOps;
 
-  SDValue NewConst = DAG.getConstant(ShiftAmt - 32, SL, MVT::i32);
-  SDValue NewShift = DAG.getNode(ISD::SRL, SL, MVT::i32, Hi, NewConst);
+    DAG.ExtractVectorElements(SplitLHS, HiAndLoOps, /*Start=*/0, NElts * 2);
+    for (unsigned I = 0; I != NElts; ++I)
+      HiOps[I] = HiAndLoOps[2 * I + 1];
+    Hi = DAG.getNode(ISD::BUILD_VECTOR, LHSSL, TargetType, HiOps);
+  } else {
+    const SDValue One = DAG.getConstant(1, LHSSL, TargetScalarType);
+    ConcatType = EVT::getVectorVT(*DAG.getContext(), TargetType, 2);
+    SDValue SplitLHS = DAG.getNode(ISD::BITCAST, LHSSL, ConcatType, LHS);
+    Hi = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, LHSSL, TargetType, SplitLHS, One);
+  }
 
-  SDValue BuildPair = DAG.getBuildVector(MVT::v2i32, SL, {NewShift, Zero});
+  SDValue NewShift = DAG.getNode(ISD::SRL, SL, TargetType, Hi, ShiftAmt);
 
-  return DAG.getNode(ISD::BITCAST, SL, MVT::i64, BuildPair);
+  SDValue Vec;
+  if (VT.isVector()) {
+    unsigned NElts = TargetType.getVectorNumElements();
+    SmallVector<SDValue, 8> LoOps;
+    SmallVector<SDValue, 16> HiAndLoOps(NElts * 2, Zero);
+
+    DAG.ExtractVectorElements(NewShift, LoOps, 0, NElts);
+    for (unsigned I = 0; I != NElts; ++I)
+      HiAndLoOps[2 * I] = LoOps[I];
+    Vec = DAG.getNode(ISD::BUILD_VECTOR, SL, ConcatType, HiAndLoOps);
+  } else {
+    Vec = DAG.getBuildVector(ConcatType, SL, {NewShift, Zero});
+  }
+  return DAG.getNode(ISD::BITCAST, SL, VT, Vec);
 }
 
 SDValue AMDGPUTargetLowering::performTruncateCombine(
@@ -5209,28 +5328,22 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
-  case ISD::SHL: {
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL: {
     // Range metadata can be invalidated when loads are converted to legal types
     // (e.g. v2i64 -> v4i32).
-    // Try to convert vector shl before type legalization so that range metadata
-    // can be utilized.
+    // Try to convert vector shl/sra/srl before type legalization so that range
+    // metadata can be utilized.
     if (!(N->getValueType(0).isVector() &&
           DCI.getDAGCombineLevel() == BeforeLegalizeTypes) &&
         DCI.getDAGCombineLevel() < AfterLegalizeDAG)
       break;
-    return performShlCombine(N, DCI);
-  }
-  case ISD::SRL: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-      break;
-
+    if (N->getOpcode() == ISD::SHL)
+      return performShlCombine(N, DCI);
+    if (N->getOpcode() == ISD::SRA)
+      return performSraCombine(N, DCI);
     return performSrlCombine(N, DCI);
-  }
-  case ISD::SRA: {
-    if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
-      break;
-
-    return performSraCombine(N, DCI);
   }
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DCI);

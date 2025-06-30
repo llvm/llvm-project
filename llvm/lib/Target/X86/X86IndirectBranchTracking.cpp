@@ -147,7 +147,7 @@ bool X86IndirectBranchTrackingPass::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MBB : MF) {
     // Find all basic blocks that their address was taken (for example
     // in the case of indirect jump) and add ENDBR instruction.
-    if (MBB.hasAddressTaken())
+    if (MBB.isMachineBlockAddressTaken() || MBB.isIRBlockAddressTaken())
       Changed |= addENDBR(MBB, MBB.begin());
 
     for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {

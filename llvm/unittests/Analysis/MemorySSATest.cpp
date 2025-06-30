@@ -70,7 +70,8 @@ protected:
 
 public:
   MemorySSATest()
-      : M("MemorySSATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
+      : M("MemorySSATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+        TLI(TLII), F(nullptr) {}
 };
 
 TEST_F(MemorySSATest, CreateALoad) {

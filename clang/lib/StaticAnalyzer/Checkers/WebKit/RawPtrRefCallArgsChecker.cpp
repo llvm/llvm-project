@@ -443,6 +443,10 @@ public:
     return isRefOrCheckedPtrType(type);
   }
 
+  bool isSafeExpr(const Expr *E) const final {
+    return isExprToGetCheckedPtrCapableMember(E);
+  }
+
   const char *ptrKind() const final { return "unchecked"; }
 };
 

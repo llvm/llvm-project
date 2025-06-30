@@ -18,6 +18,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <bool expected, class Base, class Derived>
 void test() {
   // Test the type of the variables
@@ -98,8 +100,13 @@ int main(int, char**) {
 
   // Test with virtual inheritance
   {
+#ifdef TEST_COMPILER_GCC // FIXME: Is this a GCC or Clang bug? Or is the standards wording ambiguous?
+    test<true, Base, Derived3Virtual>();
+    test<true, Derived, Derived3Virtual>();
+#else
     test<false, Base, Derived3Virtual>();
     test<false, Derived, Derived3Virtual>();
+#endif
     test<true, Derived2b, Derived3Virtual>();
     test<true, Derived2a, Derived3Virtual>();
     test<true, Base, DerivedPrivate>();

@@ -8,7 +8,7 @@
 
 // <list>
 
-// void sort();
+// void sort(); // constexpr since C++26
 
 #include <algorithm>
 #include <list>
@@ -58,7 +58,7 @@ void test_stable(int N) {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {4, 8, 1, 0, 5, 7, 2, 3, 6, 11, 10, 9};
     int a2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
@@ -76,8 +76,19 @@ int main(int, char**) {
   }
 #endif
 
-  for (int i = 0; i < 40; ++i)
-    test_stable(i);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    for (int i = 0; i < 40; ++i)
+      test_stable(i);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

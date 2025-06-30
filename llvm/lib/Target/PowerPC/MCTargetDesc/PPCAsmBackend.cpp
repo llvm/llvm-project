@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/PPCFixupKinds.h"
-#include "MCTargetDesc/PPCMCExpr.h"
+#include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -140,7 +140,7 @@ public:
     // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
     // reference the null symbol.
     auto Target = TargetVal;
-    if (Target.getSpecifier() == PPCMCExpr::VK_TOCBASE)
+    if (Target.getSpecifier() == PPC::S_TOCBASE)
       Target.setAddSym(nullptr);
     return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
   }

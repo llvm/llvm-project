@@ -210,11 +210,9 @@ define half @test_vector_reduce_fminimum_v3half(<3 x half> %v) {
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v2, 0x7c00
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0x7c00
 ; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v2.l
 ; GFX12-SDAG-TRUE16-NEXT:    v_pk_minimum_f16 v0, v0, v1
-; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-TRUE16-NEXT:    v_minimum_f16 v0.l, v0.l, v0.h
 ; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

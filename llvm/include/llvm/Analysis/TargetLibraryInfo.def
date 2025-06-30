@@ -2046,6 +2046,11 @@ TLI_DEFINE_ENUM_INTERNAL(puts)
 TLI_DEFINE_STRING_INTERNAL("puts")
 TLI_DEFINE_SIG_INTERNAL(Int, Ptr)
 
+/// void *pvalloc(size_t size);
+TLI_DEFINE_ENUM_INTERNAL(pvalloc)
+TLI_DEFINE_STRING_INTERNAL("pvalloc")
+TLI_DEFINE_SIG_INTERNAL(Ptr, SizeT)
+
 /// ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
 TLI_DEFINE_ENUM_INTERNAL(pwrite)
 TLI_DEFINE_STRING_INTERNAL("pwrite")

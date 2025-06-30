@@ -775,7 +775,7 @@ public:
 
     // Getting the alloc size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
-      reportInvalidChunkState(AllocatorAction::Sizing, const_cast<void *>(Ptr));
+      reportInvalidChunkState(AllocatorAction::Sizing, Ptr);
 
     return getSize(Ptr, &Header);
   }

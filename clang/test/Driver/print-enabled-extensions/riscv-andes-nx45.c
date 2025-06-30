@@ -10,7 +10,6 @@
 // CHECK-NEXT:     f                    2.2       'F' (Single-Precision Floating-Point)
 // CHECK-NEXT:     d                    2.2       'D' (Double-Precision Floating-Point)
 // CHECK-NEXT:     c                    2.0       'C' (Compressed Instructions)
-// CHECK-NEXT:     b                    1.0       'B' (the collection of the Zba, Zbb, Zbs extensions)
 // CHECK-NEXT:     zicsr                2.0       'Zicsr' (CSRs)
 // CHECK-NEXT:     zifencei             2.0       'Zifencei' (fence.i)
 // CHECK-NEXT:     zmmul                1.0       'Zmmul' (Integer Multiplication)
@@ -18,11 +17,8 @@
 // CHECK-NEXT:     zalrsc               1.0       'Zalrsc' (Load-Reserved/Store-Conditional)
 // CHECK-NEXT:     zca                  1.0       'Zca' (part of the C extension, excluding compressed floating point loads/stores)
 // CHECK-NEXT:     zcd                  1.0       'Zcd' (Compressed Double-Precision Floating-Point Instructions)
-// CHECK-NEXT:     zba                  1.0       'Zba' (Address Generation Instructions)
-// CHECK-NEXT:     zbb                  1.0       'Zbb' (Basic Bit-Manipulation)
-// CHECK-NEXT:     zbs                  1.0       'Zbs' (Single-Bit Instructions)
 // CHECK-NEXT:     xandesperf           5.0       'XAndesPerf' (Andes Performance Extension)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-EMPTY:
-// CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_zba1p0_zbb1p0_zbs1p0_xandesperf5p0
+// CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_zicsr2p0_zifencei2p0_zmmul1p0_zaamo1p0_zalrsc1p0_zca1p0_zcd1p0_xandesperf5p0

@@ -329,10 +329,8 @@ bool CoverageChecker::collectFileSystemHeaders() {
   else {
     // Otherwise we only look at the sub-trees specified by the
     // include paths.
-    for (std::vector<std::string>::const_iterator I = IncludePaths.begin(),
-      E = IncludePaths.end();
-      I != E; ++I) {
-      if (!collectFileSystemHeaders(*I))
+    for (const std::string &IncludePath : IncludePaths) {
+      if (!collectFileSystemHeaders(IncludePath))
         return false;
     }
   }

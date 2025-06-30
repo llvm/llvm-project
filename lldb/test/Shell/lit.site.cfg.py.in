@@ -21,6 +21,7 @@ config.enable_remote = not @LLDB_TEST_SHELL_DISABLE_REMOTE@
 config.libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
+config.python_root_dir = "@Python3_ROOT_DIR@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.objc_gnustep_dir = "@LLDB_TEST_OBJC_GNUSTEP_DIR@"
 config.lldb_enable_lzma = @LLDB_ENABLE_LZMA@

@@ -1,0 +1,33 @@
+#ifndef _MUTEX_
+#define _MUTEX_
+
+namespace std {
+
+struct mutex {
+  void lock() {}
+  void unlock() {}
+};
+
+template<class Lockable1, class Lockable2, class... LockableN >
+void lock(Lockable1& lock1, Lockable2& lock2, LockableN&... lockn );
+
+struct adopt_lock_t { };
+std::adopt_lock_t adopt_lock {};
+
+template <typename Mutex>
+struct lock_guard {
+  lock_guard(Mutex &m) { }
+  lock_guard(Mutex &m, std::adopt_lock_t t) {}
+  lock_guard(const lock_guard&) = delete;
+};
+
+template <typename... MutexTypes>
+struct scoped_lock {
+  scoped_lock(MutexTypes&... m) {}
+  scoped_lock(std::adopt_lock_t t, MutexTypes&... m) {}
+  scoped_lock(const scoped_lock&) = delete;
+};
+
+} // namespace std
+
+#endif // _MUTEX_

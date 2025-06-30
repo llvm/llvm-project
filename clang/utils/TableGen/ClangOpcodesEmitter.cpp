@@ -224,8 +224,7 @@ void ClangOpcodesEmitter::EmitProto(raw_ostream &OS, StringRef N,
   auto Args = R->getValueAsListOfDefs("Args");
   Enumerate(R, N, [&OS, &Args](ArrayRef<const Record *> TS, const Twine &ID) {
     OS << "bool emit" << ID << "(";
-    for (size_t I = 0, N = Args.size(); I < N; ++I) {
-      const auto *Arg = Args[I];
+    for (const Record *Arg : Args) {
       bool AsRef = Arg->getValueAsBit("AsRef");
       auto Name = Arg->getValueAsString("Name");
 

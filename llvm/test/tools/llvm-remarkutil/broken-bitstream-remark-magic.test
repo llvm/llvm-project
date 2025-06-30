@@ -1,0 +1,6 @@
+RUN: not llvm-remarkutil instruction-count %p/Inputs/broken-remark-magic.bitstream -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil instruction-mix %p/Inputs/broken-remark-magic.bitstream -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil annotation-count --annotation-type=remark %p/Inputs/broken-remark-magic.bitstream -o - 2>&1 | FileCheck %s
+RUN: not llvm-remarkutil count %p/Inputs/broken-remark-magic.bitstream -o - 2>&1 | FileCheck %s
+
+CHECK: error: Automatic detection of remark format failed. Unknown magic number: '1234'

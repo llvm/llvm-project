@@ -168,10 +168,6 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
-      elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-        # Skip tests for externally implemented entrypoints.
-        list(APPEND dep_skip ${dep})
-        list(REMOVE_ITEM dep_obj ${dep})
       endif()
 
       set_target_properties(${dep} PROPERTIES

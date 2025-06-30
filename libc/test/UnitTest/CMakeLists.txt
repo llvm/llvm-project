@@ -35,7 +35,7 @@ function(add_unittest_framework_library name)
   else()
     _get_common_test_compile_options(compile_options "" "")
     target_compile_options(${name}.unit PRIVATE ${compile_options})
-endif()
+  endif()
 
   _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})

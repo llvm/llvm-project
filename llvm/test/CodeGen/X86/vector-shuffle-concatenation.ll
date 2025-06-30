@@ -173,7 +173,7 @@ define void @concat_a_to_shuf_of_ab(ptr %a.ptr, ptr %b.ptr, ptr %dst) {
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movaps (%rdi), %xmm0
 ; SSE42-NEXT:    movaps (%rsi), %xmm1
-; SSE42-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; SSE42-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE42-NEXT:    movaps %xmm0, 16(%rdx)
 ; SSE42-NEXT:    movaps %xmm1, (%rdx)
 ; SSE42-NEXT:    retq
@@ -288,7 +288,7 @@ define void @concat_shuf_of_ab_to_a(ptr %a.ptr, ptr %b.ptr, ptr %dst) {
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movaps (%rdi), %xmm0
 ; SSE42-NEXT:    movaps (%rsi), %xmm1
-; SSE42-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; SSE42-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE42-NEXT:    movaps %xmm1, 16(%rdx)
 ; SSE42-NEXT:    movaps %xmm0, (%rdx)
 ; SSE42-NEXT:    retq

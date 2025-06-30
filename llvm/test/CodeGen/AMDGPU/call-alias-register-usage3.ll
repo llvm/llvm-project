@@ -21,7 +21,7 @@ bb:
 
 ; CHECK:      .set .Laliasee_vgpr256_sgpr102.num_vgpr, 253
 ; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.num_agpr, 0
-; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.numbered_sgpr, 0
+; CHECK-NEXT: .set .Laliasee_vgpr256_sgpr102.numbered_sgpr, 33
 define internal void @aliasee_vgpr256_sgpr102() #1 {
 bb:
   call void asm sideeffect "; clobber v252 ", "~{v252}"()

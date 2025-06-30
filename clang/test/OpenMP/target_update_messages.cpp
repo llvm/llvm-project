@@ -113,9 +113,11 @@ int main(int argc, char **argv) {
   // Check parsing with two modifiers.
   // lt51-warning@+1 {{missing ':' after ) - ignoring}}
   #pragma omp target update to(mapper(id), present: s)
-  // lt51-error@+3 {{use of undeclared identifier 'present'}}
-  // lt51-error@+2 {{use of undeclared identifier 'id'}}
-  // lt51-error@+1 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  // lt51-error@+5 {{use of undeclared identifier 'present'}}
+  // lt51-error@+4 {{use of undeclared identifier 'id'}}
+  // lt51-error@+3 {{expected ',' or ')' in 'to' clause}}
+  // lt51-error@+2 {{expected ')'}}
+  // lt51-note@+1 {{to match this '('}}
   #pragma omp target update to(present, mapper(id): s)
   // lt51-warning@+1 {{missing ':' after ) - ignoring}}
   #pragma omp target update to(mapper(id) present: s)
@@ -141,10 +143,9 @@ int main(int argc, char **argv) {
   #pragma omp target update to(present,,: s)
   // lt51-warning@+1 {{missing ':' after ) - ignoring}}
   #pragma omp target update to(mapper(id), present,: s)
-  // lt51-error@+4 {{use of undeclared identifier 'present'}}
-  // lt51-error@+3 {{use of undeclared identifier 'id'}}
-  // lt51-error@+2 {{expected expression}}
-  // lt51-error@+1 {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+  // lt51-error@+3 {{use of undeclared identifier 'present'}}
+  // lt51-error@+2 {{use of undeclared identifier 'id'}}
+  // lt51-error@+1 {{expected expression}}
   #pragma omp target update to(present, mapper(id),: s)
 
   #pragma omp target update from(m) allocate(m) // expected-error {{unexpected OpenMP clause 'allocate' in directive '#pragma omp target update'}}

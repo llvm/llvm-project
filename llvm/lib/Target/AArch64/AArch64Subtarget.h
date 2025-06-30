@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/TargetParser/Triple.h"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -33,7 +34,6 @@
 namespace llvm {
 class GlobalValue;
 class StringRef;
-class Triple;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
@@ -406,7 +406,7 @@ public:
   }
 
   // Return the known bit length of SVE data registers. A value of 0 means the
-  // length is unkown beyond what's implied by the architecture.
+  // length is unknown beyond what's implied by the architecture.
   unsigned getSVEVectorSizeInBits() const {
     assert(isSVEorStreamingSVEAvailable() &&
            "Tried to get SVE vector length without SVE support!");

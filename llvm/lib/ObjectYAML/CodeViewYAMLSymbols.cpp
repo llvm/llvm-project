@@ -605,6 +605,11 @@ template <> void SymbolRecordImpl<JumpTableSym>::map(IO &IO) {
   IO.mapRequired("EntriesCount", Symbol.EntriesCount);
 }
 
+template <> void SymbolRecordImpl<HotPatchFuncSym>::map(IO &IO) {
+  IO.mapRequired("Function", Symbol.Function);
+  IO.mapRequired("Name", Symbol.Name);
+}
+
 } // end namespace detail
 } // end namespace CodeViewYAML
 } // end namespace llvm

@@ -303,10 +303,9 @@ static void ProcessAPINotes(Sema &S, Decl *D,
           AttributeFactory AF{};
           AttributePool AP{AF};
           auto &C = S.getASTContext();
-          ParsedAttr *SNA =
-              AP.create(&C.Idents.get("swift_name"), SourceRange(), nullptr,
-                        SourceLocation(), nullptr, nullptr, nullptr,
-                        ParsedAttr::Form::GNU());
+          ParsedAttr *SNA = AP.create(
+              &C.Idents.get("swift_name"), SourceRange(), AttributeScopeInfo(),
+              nullptr, nullptr, nullptr, ParsedAttr::Form::GNU());
 
           if (!S.Swift().DiagnoseName(D, Info.SwiftName, D->getLocation(), *SNA,
                                       /*IsAsync=*/false))

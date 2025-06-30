@@ -1823,7 +1823,16 @@ template <class _Rp, class _Fp>
 _LIBCPP_HIDE_FROM_ABI future<_Rp> __make_async_assoc_state(_Fp&& __f) {
   unique_ptr<__async_assoc_state<_Rp, _Fp>, __release_shared_count> __h(
       new __async_assoc_state<_Rp, _Fp>(std::forward<_Fp>(__f)));
-  std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
+#    if _LIBCPP_HAS_EXCEPTIONS
+  try {
+#    endif
+    std::thread(&__async_assoc_state<_Rp, _Fp>::__execute, __h.get()).detach();
+#    if _LIBCPP_HAS_EXCEPTIONS
+  } catch (...) {
+    __h->__make_ready();
+    throw;
+  }
+#    endif
   return future<_Rp>(__h.get());
 }
 

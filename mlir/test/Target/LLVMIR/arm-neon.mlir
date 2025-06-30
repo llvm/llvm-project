@@ -82,3 +82,16 @@ llvm.func @arm_neon_usmmla(%arg0: vector<16xi8>,
         -> vector<4xi32>
   llvm.return %0 : vector<4xi32>
 }
+
+// -----
+
+// CHECK-LABEL: arm_neon_bfmmla
+llvm.func @arm_neon_bfmmla(%arg0: vector<8xbf16>,
+                           %arg1: vector<8xbf16>,
+                           %arg2: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float
+  %0 = "arm_neon.intr.bfmmla"(%arg2, %arg0, %arg1) :
+    (vector<4xf32>, vector<8xbf16>, vector<8xbf16>)
+        -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}

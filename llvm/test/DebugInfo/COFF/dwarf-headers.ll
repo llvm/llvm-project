@@ -43,6 +43,33 @@
 ; DWO-4: 0x00000000: Compile Unit: {{.*}} version = 0x0004, abbr_offset
 ; DWO-4: 0x0000000b: DW_TAG_compile_unit
 
+; Check that basic CodeView compiler info is emitted even when the DWARF debug format is used.
+; RUN: llc -dwarf-version=4 \
+; RUN:     -filetype=obj -O0 -mtriple=x86_64-unknown-windows-msvc < %s \
+; RUN:     | llvm-readobj --codeview - | FileCheck %s --check-prefix=CODEVIEW
+; CODEVIEW:      CodeViewDebugInfo [
+; CODEVIEW-NEXT:   Section: .debug$S (4)
+; CODEVIEW-NEXT:   Magic: 0x4
+; CODEVIEW-NEXT:   Subsection [
+; CODEVIEW-NEXT:     SubSectionType: Symbols (0xF1)
+; CODEVIEW-NEXT:     SubSectionSize: 0x90
+; CODEVIEW-NEXT:     ObjNameSym {
+; CODEVIEW-NEXT:       Kind: S_OBJNAME (0x1101)
+; CODEVIEW-NEXT:       Signature: 0x0
+; CODEVIEW-NEXT:       ObjectName:
+; CODEVIEW-NEXT:     }
+; CODEVIEW-NEXT:     Compile3Sym {
+; CODEVIEW-NEXT:       Kind: S_COMPILE3 (0x113C)
+; CODEVIEW-NEXT:       Language: Cpp (0x1)
+; CODEVIEW-NEXT:       Flags [ (0x0)
+; CODEVIEW-NEXT:       ]
+; CODEVIEW-NEXT:       Machine: X64 (0xD0)
+; CODEVIEW-NEXT:       FrontendVersion: 17.0.0.0
+; CODEVIEW-NEXT:       BackendVersion:
+; CODEVIEW-NEXT:       VersionName: clang version 17.0.0
+; CODEVIEW-NEXT:     }
+; CODEVIEW-NEXT:   ]
+; CODEVIEW-NEXT: ]
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"

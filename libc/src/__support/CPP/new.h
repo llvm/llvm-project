@@ -29,6 +29,14 @@ enum class align_val_t : size_t {};
 
 namespace LIBC_NAMESPACE_DECL {
 
+namespace cpp {
+template <class T> [[nodiscard]] constexpr T *launder(T *p) {
+  static_assert(__has_builtin(__builtin_launder),
+                "cpp::launder requires __builtin_launder");
+  return __builtin_launder(p);
+}
+} // namespace cpp
+
 class AllocChecker {
   bool success = false;
 

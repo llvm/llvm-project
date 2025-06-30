@@ -3085,6 +3085,10 @@ void InitializeInterceptors() {
 #if !SANITIZER_ANDROID
   TSAN_INTERCEPT(dl_iterate_phdr);
 #endif
+
+  // Symbolization indirectly calls dl_iterate_phdr
+  ready_to_symbolize = true;
+
   TSAN_MAYBE_INTERCEPT_ON_EXIT;
   TSAN_INTERCEPT(__cxa_atexit);
   TSAN_INTERCEPT(_exit);

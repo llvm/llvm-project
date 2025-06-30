@@ -114,7 +114,7 @@ arrayConditionMatcher(internal::Matcher<Expr> LimitExpr) {
 /// Client code will need to make sure that:
 ///   - The index variable is only used as an array index.
 ///   - All arrays indexed by the loop are the same.
-StatementMatcher makeArrayLoopMatcher() {
+static StatementMatcher makeArrayLoopMatcher() {
   StatementMatcher ArrayBoundMatcher =
       expr(hasType(isInteger())).bind(ConditionBoundName);
 
@@ -155,7 +155,7 @@ StatementMatcher makeArrayLoopMatcher() {
 ///
 /// Client code will need to make sure that:
 ///   - The two containers on which 'begin' and 'end' are called are the same.
-StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
+static StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 
   auto BeginNameMatcher = IsReverse ? hasAnyName("rbegin", "crbegin")
                                     : hasAnyName("begin", "cbegin");
@@ -267,7 +267,7 @@ StatementMatcher makeIteratorLoopMatcher(bool IsReverse) {
 ///   - The index variable is only used in overloaded operator[] or
 ///     container.at().
 ///   - The container's iterators would not be invalidated during the loop.
-StatementMatcher makePseudoArrayLoopMatcher() {
+static StatementMatcher makePseudoArrayLoopMatcher() {
   // Test that the incoming type has a record declaration that has methods
   // called 'begin' and 'end'. If the incoming type is const, then make sure
   // these methods are also marked const.

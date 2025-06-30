@@ -154,12 +154,17 @@ public:
   RT_API_ATTRS bool IsArgDescriptor(int zeroBasedArg) const {
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
-  RT_API_ATTRS bool isTypeBound() const { return isTypeBound_; }
+  RT_API_ATTRS bool IsTypeBound() const { return isTypeBound_ != 0; }
   RT_API_ATTRS bool IsArgContiguous(int zeroBasedArg) const {
     return (isArgContiguousSet_ >> zeroBasedArg) & 1;
   }
-  template <typename PROC> RT_API_ATTRS PROC GetProc() const {
-    return reinterpret_cast<PROC>(proc_);
+  template <typename PROC>
+  RT_API_ATTRS PROC GetProc(const Binding *bindings = nullptr) const {
+    if (bindings && isTypeBound_ > 0) {
+      return reinterpret_cast<PROC>(bindings[isTypeBound_ - 1].proc);
+    } else {
+      return reinterpret_cast<PROC>(proc_);
+    }
   }
 
   FILE *Dump(FILE *) const;
@@ -193,6 +198,8 @@ private:
   //     When false, the defined I/O subroutine must have been
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
+  // When a special binding is type-bound, this is its binding's index (plus 1,
+  // so that 0 signifies that it's not type-bound).
   std::uint8_t isTypeBound_{0};
   // True when a FINAL subroutine has a dummy argument that is an array that
   // is CONTIGUOUS or neither assumed-rank nor assumed-shape.
@@ -240,6 +247,7 @@ public:
   RT_API_ATTRS bool noFinalizationNeeded() const {
     return noFinalizationNeeded_;
   }
+  RT_API_ATTRS bool noDefinedAssignment() const { return noDefinedAssignment_; }
 
   RT_API_ATTRS std::size_t LenParameters() const {
     return lenParameterKind().Elements();
@@ -322,6 +330,7 @@ private:
   bool noInitializationNeeded_{false};
   bool noDestructionNeeded_{false};
   bool noFinalizationNeeded_{false};
+  bool noDefinedAssignment_{false};
 };
 
 } // namespace Fortran::runtime::typeInfo

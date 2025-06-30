@@ -38,8 +38,11 @@ body:             |
     ; CHECK: liveins: $d0, $d1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: [[REV64_:%[0-9]+]]:_(<2 x s32>) = G_REV64 [[COPY]]
-    ; CHECK-NEXT: $d0 = COPY [[REV64_]](<2 x s32>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[COPY]](<2 x s32>), [[DEF]](<2 x s32>)
+    ; CHECK-NEXT: [[DUPLANE32_:%[0-9]+]]:_(<2 x s32>) = G_DUPLANE32 [[CONCAT_VECTORS]], [[C]](s64)
+    ; CHECK-NEXT: $d0 = COPY [[DUPLANE32_]](<2 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1

@@ -8,7 +8,7 @@
 
 // <forward_list>
 
-// void swap(forward_list& x);
+// void swap(forward_list& x); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef int T;
     typedef test_allocator<T> A;
@@ -255,6 +255,15 @@ int main(int, char**) {
     assert(std::distance(c2.begin(), c2.end()) == 0);
     assert(c2.get_allocator() == A());
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

@@ -617,7 +617,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(MCII, MI);
   unsigned FixupWidth = HexagonMCInstrInfo::getExtentBits(MCII, MI) -
                         HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
-  HexagonMCExpr::VariantKind VarKind = getVariantKind(MCSRE);
+  auto VarKind = HexagonMCExpr::VariantKind(MCSRE->getSpecifier());
   unsigned Opc = MCID.getOpcode();
   unsigned IType = HexagonMCInstrInfo::getType(MCII, MI);
 

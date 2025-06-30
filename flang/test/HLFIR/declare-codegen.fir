@@ -219,3 +219,21 @@ func.func @assumed_rank_declare(%arg0: !fir.box<!fir.array<*:f32>>) {
 // CHECK-SAME: %[[VAL_0:.*]]: !fir.box<!fir.array<*:f32>>) {
 // CHECK:    %[[VAL_1:.*]] = fir.declare %[[VAL_0]] {uniq_name = "x"} : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
 // CHECK:    %[[VAL_2:.*]] = fir.rebox_assumed_rank %[[VAL_1]] lbs ones : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
+
+func.func @no_useless_rebox(%arg0: !fir.class<!fir.type<sometype{i:i32}>>) {
+  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.class<!fir.type<sometype{i:i32}>>) -> (!fir.class<!fir.type<sometype{i:i32}>>, !fir.class<!fir.type<sometype{i:i32}>>)
+  fir.call @takes_class(%0#0) : (!fir.class<!fir.type<sometype{i:i32}>>) -> ()
+  return
+}
+// CHECK-LABEL: @no_useless_rebox
+// CHECK-NOT: fir.rebox
+// CHECK: return
+
+func.func @rebox_scalar_attrs(%arg0: !fir.class<!fir.ptr<!fir.type<sometype{i:i32}>>>) {
+  %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.class<!fir.ptr<!fir.type<sometype{i:i32}>>>) -> (!fir.class<!fir.type<sometype{i:i32}>>, !fir.class<!fir.type<sometype{i:i32}>>)
+  fir.call @takes_class(%0#0) : (!fir.class<!fir.type<sometype{i:i32}>>) -> ()
+  return
+}
+// CHECK-LABEL: @rebox_scalar_attrs
+// CHECK: fir.rebox %{{.*}} : (!fir.class<!fir.ptr<!fir.type<sometype{i:i32}>>>) -> !fir.class<!fir.type<sometype{i:i32}>>
+// CHECK: return

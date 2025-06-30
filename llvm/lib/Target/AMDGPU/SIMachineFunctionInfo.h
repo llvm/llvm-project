@@ -299,6 +299,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
 
+  unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
@@ -352,6 +353,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
   }
@@ -468,6 +470,8 @@ private:
 
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
+
+  unsigned DynamicVGPRBlockSize = 0;
 
   // The size in bytes of the scratch space reserved for the CWSR trap handler
   // to spill some of the dynamic VGPRs.
@@ -820,6 +824,9 @@ public:
     BytesInStackArgArea = Bytes;
   }
 
+  bool isDynamicVGPREnabled() const { return DynamicVGPRBlockSize != 0; }
+  unsigned getDynamicVGPRBlockSize() const { return DynamicVGPRBlockSize; }
+
   // This is only used if we need to save any dynamic VGPRs in scratch.
   unsigned getScratchReservedForDynamicVGPRs() const {
     return ScratchReservedForDynamicVGPRs;
@@ -970,23 +977,8 @@ public:
     return NumUserSGPRs;
   }
 
-  // Get the number of preloaded SGPRs for compute kernels.
   unsigned getNumPreloadedSGPRs() const {
     return NumUserSGPRs + NumSystemSGPRs;
-  }
-
-  // Get the number of preloaded VGPRs for compute kernels.
-  unsigned getNumPreloadedVGPRs() const {
-    if (hasWorkItemIDZ())
-      return ArgInfo.WorkItemIDZ.getRegister() - AMDGPU::VGPR0 + 1;
-
-    if (hasWorkItemIDY())
-      return ArgInfo.WorkItemIDY.getRegister() - AMDGPU::VGPR0 + 1;
-
-    if (hasWorkItemIDX())
-      return ArgInfo.WorkItemIDX.getRegister() - AMDGPU::VGPR0 + 1;
-
-    return 0;
   }
 
   unsigned getNumKernargPreloadedSGPRs() const {

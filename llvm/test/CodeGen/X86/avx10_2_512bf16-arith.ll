@@ -94,8 +94,8 @@ define <32 x bfloat> @test_int_x86_avx10_maskz_sub_bf16_512(<32 x bfloat> %src, 
 ;
 ; X86-LABEL: test_int_x86_avx10_maskz_sub_bf16_512:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    vsubbf16 %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf5,0x75,0xc9,0x5c,0xc2]
 ; X86-NEXT:    vsubbf16 (%eax), %zmm1, %zmm1 # encoding: [0x62,0xf5,0x75,0x48,0x5c,0x08]
 ; X86-NEXT:    vsubbf16 %zmm1, %zmm0, %zmm0 {%k1} # encoding: [0x62,0xf5,0x7d,0x49,0x5c,0xc1]

@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_GUID_H
 #define LLVM_DEBUGINFO_CODEVIEW_GUID_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <cstring>
 
@@ -46,7 +47,7 @@ inline bool operator!=(const GUID &LHS, const GUID &RHS) {
   return !(LHS == RHS);
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const GUID &Guid);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const GUID &Guid);
 
 } // namespace codeview
 } // namespace llvm

@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple s390x-ibm-zos -mcpu=z15 -asm-verbose=true < %s | FileCheck %s
 
-; CHECK:    .section    ".ppa2"
+; CHECK: C_CODE64 CATTR
 ; CHECK: L#PPA2:
 ; CHECK:    .byte   3
 ; CHECK:    .byte   231
@@ -19,7 +19,7 @@
 ; CHECK:    .quad   L#PPA2-CELQSTRT                 * A(PPA2-CELQSTRT)
 ; CHECK: L#PPA1_void_test_0:
 ; CHECK:    .long   L#PPA2-L#PPA1_void_test_0       * Offset to PPA2
-; CHECK:    .section    "B_IDRL"
+; CHECK: B_IDRL CATTR
 ; CHECK:    .byte   0
 ; CHECK:    .byte   3
 ; CHECK:    .short  30

@@ -249,11 +249,10 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
       capturesAnything, LI, MaxUsesToExplore));
 }
 
-Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
-                                       bool ReturnCaptures,
-                                       const DominatorTree &DT,
-                                       CaptureComponents Mask,
-                                       unsigned MaxUsesToExplore) {
+std::pair<Instruction *, CaptureComponents>
+llvm::FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
+                          const DominatorTree &DT, CaptureComponents Mask,
+                          unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
 
@@ -263,7 +262,7 @@ Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
     ++NumCapturedBefore;
   else
     ++NumNotCapturedBefore;
-  return CB.EarliestCapture;
+  return {CB.EarliestCapture, CB.CC};
 }
 
 UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
@@ -446,28 +445,4 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
   }
 
   // All uses examined.
-}
-
-bool llvm::isNonEscapingLocalObject(
-    const Value *V, SmallDenseMap<const Value *, bool, 8> *IsCapturedCache) {
-  SmallDenseMap<const Value *, bool, 8>::iterator CacheIt;
-  if (IsCapturedCache) {
-    bool Inserted;
-    std::tie(CacheIt, Inserted) = IsCapturedCache->insert({V, false});
-    if (!Inserted)
-      // Found cached result, return it!
-      return CacheIt->second;
-  }
-
-  // If this is an identified function-local object, check to see if it escapes.
-  // We only care about provenance here, not address capture.
-  if (isIdentifiedFunctionLocal(V)) {
-    bool Ret = !capturesAnything(PointerMayBeCaptured(
-        V, /*ReturnCaptures=*/false, CaptureComponents::Provenance));
-    if (IsCapturedCache)
-      CacheIt->second = Ret;
-    return Ret;
-  }
-
-  return false;
 }

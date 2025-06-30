@@ -139,7 +139,7 @@ define <4 x i32> @div32xi4(<4 x i32> %x) {
 ; CHECK-GI-NEXT:    mov w12, v0.s[3]
 ; CHECK-GI-NEXT:    sdiv w9, w9, w8
 ; CHECK-GI-NEXT:    sdiv w10, w10, w8
-; CHECK-GI-NEXT:    mov v0.s[0], w9
+; CHECK-GI-NEXT:    fmov s0, w9
 ; CHECK-GI-NEXT:    sdiv w11, w11, w8
 ; CHECK-GI-NEXT:    mov v0.s[1], w10
 ; CHECK-GI-NEXT:    sdiv w8, w12, w8
@@ -240,14 +240,14 @@ define <2 x i64> @udiv_v2i64(<2 x i64> %a) {
 ; CHECK-GI-LABEL: udiv_v2i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, #9363 // =0x2493
-; CHECK-GI-NEXT:    fmov x9, d0
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
+; CHECK-GI-NEXT:    fmov x10, d0
+; CHECK-GI-NEXT:    mov x9, v0.d[1]
 ; CHECK-GI-NEXT:    movk x8, #37449, lsl #16
 ; CHECK-GI-NEXT:    movk x8, #18724, lsl #32
 ; CHECK-GI-NEXT:    movk x8, #9362, lsl #48
-; CHECK-GI-NEXT:    umulh x9, x9, x8
-; CHECK-GI-NEXT:    umulh x8, x10, x8
-; CHECK-GI-NEXT:    mov v1.d[0], x9
+; CHECK-GI-NEXT:    umulh x10, x10, x8
+; CHECK-GI-NEXT:    umulh x8, x9, x8
+; CHECK-GI-NEXT:    fmov d1, x10
 ; CHECK-GI-NEXT:    mov v1.d[1], x8
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    usra v1.2d, v0.2d, #1

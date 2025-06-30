@@ -737,7 +737,7 @@ static spirv::GlobalVariableOp getBuiltinVariable(Block &body,
             spirv::SPIRVDialect::getAttributeName(
                 spirv::Decoration::BuiltIn))) {
       auto varBuiltIn = spirv::symbolizeBuiltIn(builtinAttr.getValue());
-      if (varBuiltIn && *varBuiltIn == builtin) {
+      if (varBuiltIn == builtin) {
         return varOp;
       }
     }
@@ -1020,22 +1020,22 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
     SmallVector<Location> locs(convertedTypes.size(), newFuncOp.getLoc());
     entryBlock.addArguments(convertedTypes, locs);
 
-    // Replace the placeholder values with the new arguments. We assume there is
-    // only one block for now.
+    // Replace all uses of placeholders for initially legal arguments with their
+    // original function arguments (that were added to `newFuncOp`).
+    for (auto &[placeholderOp, argIdx] : tmpOps) {
+      if (!placeholderOp)
+        continue;
+      Value replacement = newFuncOp.getArgument(argIdx);
+      rewriter.replaceAllUsesWith(placeholderOp->getResult(0), replacement);
+    }
+
+    // Replace dummy operands of new `vector.insert_strided_slice` ops with
+    // their corresponding new function arguments. The new
+    // `vector.insert_strided_slice` ops are inserted only into the entry block,
+    // so iterating over that block is sufficient.
     size_t unrolledInputIdx = 0;
     for (auto [count, op] : enumerate(entryBlock.getOperations())) {
-      // We first look for operands that are placeholders for initially legal
-      // arguments.
       Operation &curOp = op;
-      for (auto [operandIdx, operandVal] : llvm::enumerate(op.getOperands())) {
-        Operation *operandOp = operandVal.getDefiningOp();
-        if (auto it = tmpOps.find(operandOp); it != tmpOps.end()) {
-          size_t idx = operandIdx;
-          rewriter.modifyOpInPlace(&curOp, [&curOp, &newFuncOp, it, idx] {
-            curOp.setOperand(idx, newFuncOp.getArgument(it->second));
-          });
-        }
-      }
       // Since all newly created operations are in the beginning, reaching the
       // end of them means that any later `vector.insert_strided_slice` should
       // not be touched.

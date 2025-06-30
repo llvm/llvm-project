@@ -117,6 +117,34 @@ func.func @image_query_size_error_result2(%arg0 : !spirv.image<f32, Buffer, NoDe
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.ImageRead
+//===----------------------------------------------------------------------===//
+
+func.func @image_read(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, %arg1: vector<2xsi32>) -> () {
+  // CHECK: {{%.*}} = spirv.ImageRead {{%.*}}, {{%.*}} : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, vector<2xsi32> -> vector<4xf32>
+  %0 = spirv.ImageRead %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, vector<2xsi32> -> vector<4xf32>
+  spirv.Return
+}
+
+// -----
+
+func.func @image_read_type_mismatch(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, %arg1: vector<2xsi32>) -> () {
+  // expected-error @+1 {{op failed to verify that the result component type must match the image sampled type}}
+  %0 = spirv.ImageRead %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, vector<2xsi32> -> vector<4xf16>
+  spirv.Return
+}
+
+// -----
+
+func.func @image_read_need_sampler(%arg0: !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, %arg1: vector<2xsi32>) -> () {
+  // expected-error @+1 {{op failed to verify that the sampled operand of the underlying image must be SamplerUnknown or NoSampler}}
+  %0 = spirv.ImageRead %arg0, %arg1 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>, vector<2xsi32> -> vector<4xf16>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.ImageWrite
 //===----------------------------------------------------------------------===//
 

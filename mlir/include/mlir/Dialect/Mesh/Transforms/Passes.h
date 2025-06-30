@@ -19,6 +19,18 @@ class FuncOp;
 
 namespace mesh {
 
+/// This enum controls the traversal order for the sharding propagation.
+enum class TraversalOrder {
+  /// Forward traversal.
+  Forward,
+  /// Backward traversal.
+  Backward,
+  /// Forward then backward traversal.
+  ForwardBackward,
+  /// Backward then forward traversal.
+  BackwardForward
+};
+
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//

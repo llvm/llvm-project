@@ -31,6 +31,7 @@ add_extra_unittest(ClangDocTests
   MergeTest.cpp
   SerializeTest.cpp
   YAMLGeneratorTest.cpp
+  JSONGeneratorTest.cpp
   )
 
 clang_target_link_libraries(ClangDocTests

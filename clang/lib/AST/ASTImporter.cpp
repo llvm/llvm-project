@@ -904,8 +904,7 @@ ASTNodeImporter::import(const TemplateArgument &From) {
     if (Error Err = ImportTemplateArguments(From.pack_elements(), ToPack))
       return std::move(Err);
 
-    return TemplateArgument(
-        llvm::ArrayRef(ToPack).copy(Importer.getToContext()));
+    return TemplateArgument(ArrayRef(ToPack).copy(Importer.getToContext()));
   }
   }
 
@@ -1606,7 +1605,7 @@ ASTNodeImporter::VisitCountAttributedType(const CountAttributedType *T) {
 
   return Importer.getToContext().getCountAttributedType(
       *ToWrappedTypeOrErr, CountExpr, T->isCountInBytes(), T->isOrNull(),
-      ArrayRef(CoupledDecls.data(), CoupledDecls.size()));
+      ArrayRef(CoupledDecls));
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
@@ -1664,7 +1663,7 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
   if (!ToUnderlyingOrErr)
     return ToUnderlyingOrErr.takeError();
   return Importer.getToContext().getTemplateSpecializationType(
-      *ToTemplateOrErr, ToTemplateArgs, std::nullopt, *ToUnderlyingOrErr);
+      *ToTemplateOrErr, ToTemplateArgs, {}, *ToUnderlyingOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
@@ -4123,7 +4122,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
         return std::move(Err);
       auto **Memory =
           new (Importer.getToContext()) CXXCtorInitializer *[NumInitializers];
-      std::copy(CtorInitializers.begin(), CtorInitializers.end(), Memory);
+      llvm::copy(CtorInitializers, Memory);
       auto *ToCtor = cast<CXXConstructorDecl>(ToFunction);
       ToCtor->setCtorInitializers(Memory);
       ToCtor->setNumCtorInitializers(NumInitializers);
@@ -4348,7 +4347,7 @@ ExpectedDecl ASTNodeImporter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
     else
       return ToD.takeError();
 
-  llvm::MutableArrayRef<NamedDecl *> CH = {NamedChain, D->getChainingSize()};
+  MutableArrayRef<NamedDecl *> CH = {NamedChain, D->getChainingSize()};
   IndirectFieldDecl *ToIndirectField;
   if (GetImportedOrCreateDecl(ToIndirectField, D, Importer.getToContext(), DC,
                               Loc, Name.getAsIdentifierInfo(), *TypeOrErr, CH))
@@ -4452,7 +4451,7 @@ ExpectedDecl ASTNodeImporter::VisitFriendDecl(FriendDecl *D) {
   }
 
   SmallVector<TemplateParameterList *, 1> ToTPLists(D->NumTPLists);
-  auto **FromTPLists = D->getTrailingObjects<TemplateParameterList *>();
+  auto **FromTPLists = D->getTrailingObjects();
   for (unsigned I = 0; I < D->NumTPLists; I++) {
     if (auto ListOrErr = import(FromTPLists[I]))
       ToTPLists[I] = *ListOrErr;
@@ -6338,8 +6337,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
     if (GetImportedOrCreateDecl<ClassTemplatePartialSpecializationDecl>(
             D2, D, Importer.getToContext(), D->getTagKind(), DC, *BeginLocOrErr,
-            *IdLocOrErr, ToTPList, ClassTemplate,
-            llvm::ArrayRef(TemplateArgs.data(), TemplateArgs.size()),
+            *IdLocOrErr, ToTPList, ClassTemplate, ArrayRef(TemplateArgs),
             CanonInjType,
             cast_or_null<ClassTemplatePartialSpecializationDecl>(PrevDecl)))
       return D2;
@@ -7439,7 +7437,7 @@ ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
   const unsigned NumSubExprs = E->getNumSubExprs();
 
   llvm::SmallVector<Expr *, 8> ToSubExprs;
-  llvm::ArrayRef<Expr *> FromSubExprs(E->getSubExprs(), NumSubExprs);
+  ArrayRef<Expr *> FromSubExprs(E->getSubExprs(), NumSubExprs);
   ToSubExprs.resize(NumSubExprs);
 
   if ((Err = ImportContainerChecked(FromSubExprs, ToSubExprs)))
@@ -7492,25 +7490,25 @@ ASTNodeImporter::VisitGenericSelectionExpr(GenericSelectionExpr *E) {
   if (E->isResultDependent()) {
     if (ToControllingExpr) {
       return GenericSelectionExpr::Create(
-          ToCtx, ToGenericLoc, ToControllingExpr, llvm::ArrayRef(ToAssocTypes),
-          llvm::ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+          ToCtx, ToGenericLoc, ToControllingExpr, ArrayRef(ToAssocTypes),
+          ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
           E->containsUnexpandedParameterPack());
     }
     return GenericSelectionExpr::Create(
-        ToCtx, ToGenericLoc, ToControllingType, llvm::ArrayRef(ToAssocTypes),
-        llvm::ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+        ToCtx, ToGenericLoc, ToControllingType, ArrayRef(ToAssocTypes),
+        ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
         E->containsUnexpandedParameterPack());
   }
 
   if (ToControllingExpr) {
     return GenericSelectionExpr::Create(
-        ToCtx, ToGenericLoc, ToControllingExpr, llvm::ArrayRef(ToAssocTypes),
-        llvm::ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+        ToCtx, ToGenericLoc, ToControllingExpr, ArrayRef(ToAssocTypes),
+        ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
         E->containsUnexpandedParameterPack(), E->getResultIndex());
   }
   return GenericSelectionExpr::Create(
-      ToCtx, ToGenericLoc, ToControllingType, llvm::ArrayRef(ToAssocTypes),
-      llvm::ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
+      ToCtx, ToGenericLoc, ToControllingType, ArrayRef(ToAssocTypes),
+      ArrayRef(ToAssocExprs), ToDefaultLoc, ToRParenLoc,
       E->containsUnexpandedParameterPack(), E->getResultIndex());
 }
 
@@ -7695,9 +7693,9 @@ ExpectedStmt ASTNodeImporter::VisitStringLiteral(StringLiteral *E) {
       E->tokloc_begin(), E->tokloc_end(), ToLocations.begin()))
     return std::move(Err);
 
-  return StringLiteral::Create(
-      Importer.getToContext(), E->getBytes(), E->getKind(), E->isPascal(),
-      *ToTypeOrErr, ToLocations.data(), ToLocations.size());
+  return StringLiteral::Create(Importer.getToContext(), E->getBytes(),
+                               E->getKind(), E->isPascal(), *ToTypeOrErr,
+                               ToLocations);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCompoundLiteralExpr(CompoundLiteralExpr *E) {
@@ -8636,7 +8634,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXUnresolvedConstructExpr(
 
   return CXXUnresolvedConstructExpr::Create(
       Importer.getToContext(), ToType, ToTypeSourceInfo, ToLParenLoc,
-      llvm::ArrayRef(ToArgs), ToRParenLoc, E->isListInitialization());
+      ArrayRef(ToArgs), ToRParenLoc, E->isListInitialization());
 }
 
 ExpectedStmt
@@ -9333,8 +9331,9 @@ public:
     if (Err)
       return;
 
-    AttributeCommonInfo ToI(ToAttrName, ToScopeName, ToAttrRange, ToScopeLoc,
-                            FromAttr->getParsedKind(), FromAttr->getForm());
+    AttributeCommonInfo ToI(
+        ToAttrName, AttributeScopeInfo(ToScopeName, ToScopeLoc), ToAttrRange,
+        FromAttr->getParsedKind(), FromAttr->getForm());
     // The "SemanticSpelling" is not needed to be passed to the constructor.
     // That value is recalculated from the SpellingListIndex if needed.
     ToAttr = T::Create(Importer.getToContext(),
@@ -9990,7 +9989,7 @@ Expected<SourceLocation> ASTImporter::Import(SourceLocation FromLoc) {
   SourceManager &FromSM = FromContext.getSourceManager();
   bool IsBuiltin = FromSM.isWrittenInBuiltinFile(FromLoc);
 
-  std::pair<FileID, unsigned> Decomposed = FromSM.getDecomposedLoc(FromLoc);
+  FileIDAndOffset Decomposed = FromSM.getDecomposedLoc(FromLoc);
   Expected<FileID> ToFileIDOrErr = Import(Decomposed.first, IsBuiltin);
   if (!ToFileIDOrErr)
     return ToFileIDOrErr.takeError();
@@ -10395,8 +10394,7 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
             cast<const ValueDecl>(ImpMemPtrDecl),
             FromValue.isMemberPointerToDerivedMember(),
             FromValue.getMemberPointerPath().size());
-    llvm::ArrayRef<const CXXRecordDecl *> FromPath =
-        Result.getMemberPointerPath();
+    ArrayRef<const CXXRecordDecl *> FromPath = Result.getMemberPointerPath();
     for (unsigned Idx = 0; Idx < FromValue.getMemberPointerPath().size();
          Idx++) {
       const Decl *ImpDecl = importChecked(Err, FromPath[Idx]);
@@ -10453,8 +10451,7 @@ ASTNodeImporter::ImportAPValue(const APValue &FromValue) {
       MutableArrayRef<APValue::LValuePathEntry> ToPath = Result.setLValueUninit(
           Base, Offset, PathLength, FromValue.isLValueOnePastTheEnd(),
           FromValue.isNullPointer());
-      llvm::ArrayRef<APValue::LValuePathEntry> FromPath =
-          FromValue.getLValuePath();
+      ArrayRef<APValue::LValuePathEntry> FromPath = FromValue.getLValuePath();
       for (unsigned LoopIdx = 0; LoopIdx < PathLength; LoopIdx++) {
         if (FromElemTy->isRecordType()) {
           const Decl *FromDecl =

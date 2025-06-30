@@ -10,7 +10,6 @@
 #include "DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugInfoEntry.h"
-#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 using namespace dwarf_linker;

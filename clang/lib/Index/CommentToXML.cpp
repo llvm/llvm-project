@@ -898,7 +898,7 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
     {
       // Print line and column number.
       SourceLocation Loc = DI->CurrentDecl->getLocation();
-      std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+      FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
       FileID FID = LocInfo.first;
       unsigned FileOffset = LocInfo.second;
 

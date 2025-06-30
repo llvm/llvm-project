@@ -26,6 +26,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar.h"
 #include <optional>
 
@@ -174,7 +175,8 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTarget() {
   // Register the target.
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 

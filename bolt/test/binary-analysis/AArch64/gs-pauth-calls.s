@@ -1428,6 +1428,90 @@ printed_instrs_nocfg:
         br      x0
         .size   printed_instrs_nocfg, .-printed_instrs_nocfg
 
+// Test handling of unreachable basic blocks.
+//
+// Basic blocks without any predecessors were observed in real-world optimized
+// code. At least sometimes they were actually reachable via jump table, which
+// was not detected, but the function was processed as if its CFG was
+// reconstructed successfully.
+//
+// As a more predictable model example, let's use really unreachable code
+// for testing.
+
+        .globl  bad_unreachable_call
+        .type   bad_unreachable_call,@function
+bad_unreachable_call:
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function bad_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
+// CHECK-NOT:   instructions that write to the affected registers after any authentication are:
+// CHECK-LABEL: GS-PAUTH: non-protected call found in function bad_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
+// CHECK-NEXT:  The 0 instructions that write to the affected registers after any authentication are:
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        b       1f
+        // unreachable basic block:
+        blr     x0
+
+1:      // reachable basic block:
+        ldp     x29, x30, [sp], #16
+        autiasp
+        ret
+        .size bad_unreachable_call, .-bad_unreachable_call
+
+        .globl  good_unreachable_call
+        .type   good_unreachable_call,@function
+good_unreachable_call:
+// CHECK-NOT: non-protected call{{.*}}good_unreachable_call
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function good_unreachable_call, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      autia   x0, x1
+// CHECK-NOT: instructions that write to the affected registers after any authentication are:
+// CHECK-NOT: non-protected call{{.*}}good_unreachable_call
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+
+        b       1f
+        // unreachable basic block:
+        autia   x0, x1
+        blr     x0      // <-- this call is definitely protected provided at least
+                        //     basic block boundaries are detected correctly
+
+1:      // reachable basic block:
+        ldp     x29, x30, [sp], #16
+        autiasp
+        ret
+        .size good_unreachable_call, .-good_unreachable_call
+
+        .globl  unreachable_loop_of_bbs
+        .type   unreachable_loop_of_bbs,@function
+unreachable_loop_of_bbs:
+// CHECK-NOT: unreachable basic blocks{{.*}}unreachable_loop_of_bbs
+// CHECK-NOT: non-protected call{{.*}}unreachable_loop_of_bbs
+// CHECK-LABEL: GS-PAUTH: Warning: possibly imprecise CFG, the analysis quality may be degraded in this function. According to BOLT, unreachable code is found in function unreachable_loop_of_bbs, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:      blr     x0
+// CHECK-NOT: unreachable basic blocks{{.*}}unreachable_loop_of_bbs
+// CHECK-NOT: non-protected call{{.*}}unreachable_loop_of_bbs
+        paciasp
+        stp     x29, x30, [sp, #-16]!
+        mov     x29, sp
+        b       .Lreachable_epilogue_bb
+
+.Lfirst_unreachable_bb:
+        blr     x0      // <-- this call is not analyzed
+        b       .Lsecond_unreachable_bb
+.Lsecond_unreachable_bb:
+        blr     x1      // <-- this call is not analyzed
+        b       .Lfirst_unreachable_bb
+
+.Lreachable_epilogue_bb:
+        ldp     x29, x30, [sp], #16
+        autiasp
+        ret
+        .size unreachable_loop_of_bbs, .-unreachable_loop_of_bbs
+
         .globl  main
         .type   main,@function
 main:

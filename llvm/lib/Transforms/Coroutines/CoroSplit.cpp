@@ -703,6 +703,7 @@ void coro::BaseCloner::replaceEntryBlock() {
     auto *SwitchBB =
         cast<BasicBlock>(VMap[Shape.SwitchLowering.ResumeEntryBlock]);
     Builder.CreateBr(SwitchBB);
+    SwitchBB->moveAfter(Entry);
     break;
   }
   case coro::ABI::Async:
@@ -912,29 +913,14 @@ void coro::BaseCloner::create() {
     assert(SP != OrigF.getSubprogram() && SP->isDistinct());
     updateScopeLine(ActiveSuspend, *SP);
 
-    // Update the linkage name to reflect the modified symbol name. It
-    // is necessary to update the linkage name in Swift, since the
-    // mangling changes for resume functions. It might also be the
-    // right thing to do in C++, but due to a limitation in LLVM's
-    // AsmPrinter we can only do this if the function doesn't have an
-    // abstract specification, since the DWARF backend expects the
-    // abstract specification to contain the linkage name and asserts
-    // that they are identical.
-    if (SP->getUnit() &&
-        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift) {
-      SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
-      if (auto *Decl = SP->getDeclaration()) {
-        auto *NewDecl = DISubprogram::get(
-            Decl->getContext(), Decl->getScope(), Decl->getName(),
-            NewF->getName(), Decl->getFile(), Decl->getLine(), Decl->getType(),
-            Decl->getScopeLine(), Decl->getContainingType(),
-            Decl->getVirtualIndex(), Decl->getThisAdjustment(),
-            Decl->getFlags(), Decl->getSPFlags(), Decl->getUnit(),
-            Decl->getTemplateParams(), nullptr, Decl->getRetainedNodes(),
-            Decl->getThrownTypes(), Decl->getAnnotations(),
-            Decl->getTargetFuncName());
-        SP->replaceDeclaration(NewDecl);
-      }
+    // Update the linkage name and the function name to reflect the modified
+    // name.
+    MDString *NewLinkageName = MDString::get(Context, NewF->getName());
+    SP->replaceLinkageName(NewLinkageName);
+    if (DISubprogram *Decl = SP->getDeclaration()) {
+      TempDISubprogram NewDecl = Decl->clone();
+      NewDecl->replaceLinkageName(NewLinkageName);
+      SP->replaceDeclaration(MDNode::replaceWithUniqued(std::move(NewDecl)));
     }
   }
 

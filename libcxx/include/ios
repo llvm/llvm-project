@@ -216,6 +216,11 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #else
 #  include <__config>
 
+// standard-mandated includes
+
+// [ios.syn]
+#  include <iosfwd>
+
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__fwd/ios.h>
@@ -229,11 +234,6 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 #    include <__utility/swap.h>
 #    include <__verbose_abort>
 #    include <version>
-
-// standard-mandated includes
-
-// [ios.syn]
-#    include <iosfwd>
 
 #    if _LIBCPP_HAS_ATOMIC_HEADER
 #      include <__atomic/atomic.h> // for __xindex_

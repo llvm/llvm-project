@@ -17,6 +17,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <algorithm>
 #include <cassert>
@@ -135,46 +136,48 @@ public:
   // concrete and require clients to pass in a target like object. The other
   // option is to make this abstract, and have targets provide concrete
   // implementations as we do with AsmParser.
-  MCAssembler(MCContext &Context, std::unique_ptr<MCAsmBackend> Backend,
-              std::unique_ptr<MCCodeEmitter> Emitter,
-              std::unique_ptr<MCObjectWriter> Writer);
+  LLVM_ABI MCAssembler(MCContext &Context,
+                       std::unique_ptr<MCAsmBackend> Backend,
+                       std::unique_ptr<MCCodeEmitter> Emitter,
+                       std::unique_ptr<MCObjectWriter> Writer);
   MCAssembler(const MCAssembler &) = delete;
   MCAssembler &operator=(const MCAssembler &) = delete;
 
   /// Compute the effective fragment size.
-  uint64_t computeFragmentSize(const MCFragment &F) const;
+  LLVM_ABI uint64_t computeFragmentSize(const MCFragment &F) const;
 
-  void layoutBundle(MCFragment *Prev, MCFragment *F) const;
+  LLVM_ABI void layoutBundle(MCFragment *Prev, MCFragment *F) const;
 
   // Get the offset of the given fragment inside its containing section.
   uint64_t getFragmentOffset(const MCFragment &F) const { return F.Offset; }
 
-  uint64_t getSectionAddressSize(const MCSection &Sec) const;
-  uint64_t getSectionFileSize(const MCSection &Sec) const;
+  LLVM_ABI uint64_t getSectionAddressSize(const MCSection &Sec) const;
+  LLVM_ABI uint64_t getSectionFileSize(const MCSection &Sec) const;
 
   // Get the offset of the given symbol, as computed in the current
   // layout.
   // \return True on success.
-  bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
+  LLVM_ABI bool getSymbolOffset(const MCSymbol &S, uint64_t &Val) const;
 
   // Variant that reports a fatal error if the offset is not computable.
-  uint64_t getSymbolOffset(const MCSymbol &S) const;
+  LLVM_ABI uint64_t getSymbolOffset(const MCSymbol &S) const;
 
   // If this symbol is equivalent to A + Constant, return A.
-  const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
+  LLVM_ABI const MCSymbol *getBaseSymbol(const MCSymbol &Symbol) const;
 
   /// Emit the section contents to \p OS.
-  void writeSectionData(raw_ostream &OS, const MCSection *Section) const;
+  LLVM_ABI void writeSectionData(raw_ostream &OS,
+                                 const MCSection *Section) const;
 
   /// Check whether a given symbol has been flagged with .thumb_func.
-  bool isThumbFunc(const MCSymbol *Func) const;
+  LLVM_ABI bool isThumbFunc(const MCSymbol *Func) const;
 
   /// Flag a function symbol as the target of a .thumb_func directive.
   void setIsThumbFunc(const MCSymbol *Func) { ThumbFuncs.insert(Func); }
 
   /// Reuse an assembler instance
   ///
-  void reset();
+  LLVM_ABI void reset();
 
   MCContext &getContext() const { return Context; }
 
@@ -193,10 +196,10 @@ public:
   /// Finish - Do final processing and write the object to the output stream.
   /// \p Writer is used for custom object writer (as the MCJIT does),
   /// if not specified it is automatically created from backend.
-  void Finish();
+  LLVM_ABI void Finish();
 
   // Layout all section and prepare them for emission.
-  void layout();
+  LLVM_ABI void layout();
 
   bool hasLayout() const { return HasLayout; }
   bool hasFinalLayout() const { return HasFinalLayout; }
@@ -223,21 +226,22 @@ public:
     return make_pointee_range(Symbols);
   }
 
-  bool registerSection(MCSection &Section);
-  bool registerSymbol(const MCSymbol &Symbol);
+  LLVM_ABI bool registerSection(MCSection &Section);
+  LLVM_ABI bool registerSymbol(const MCSymbol &Symbol);
 
   /// Write the necessary bundle padding to \p OS.
   /// Expects a fragment \p F containing instructions and its size \p FSize.
-  void writeFragmentPadding(raw_ostream &OS, const MCEncodedFragment &F,
-                            uint64_t FSize) const;
+  LLVM_ABI void writeFragmentPadding(raw_ostream &OS,
+                                     const MCEncodedFragment &F,
+                                     uint64_t FSize) const;
 
-  void reportError(SMLoc L, const Twine &Msg) const;
+  LLVM_ABI void reportError(SMLoc L, const Twine &Msg) const;
   // Record pending errors during layout iteration, as they may go away once the
   // layout is finalized.
-  void recordError(SMLoc L, const Twine &Msg) const;
-  void flushPendingErrors() const;
+  LLVM_ABI void recordError(SMLoc L, const Twine &Msg) const;
+  LLVM_ABI void flushPendingErrors() const;
 
-  void dump() const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace llvm

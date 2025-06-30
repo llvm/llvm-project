@@ -39,15 +39,15 @@ void NVPTXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     report_fatal_error("Copy one register into another with a different width");
 
   unsigned Op;
-  if (DestRC == &NVPTX::Int1RegsRegClass) {
+  if (DestRC == &NVPTX::B1RegClass) {
     Op = NVPTX::IMOV1r;
-  } else if (DestRC == &NVPTX::Int16RegsRegClass) {
+  } else if (DestRC == &NVPTX::B16RegClass) {
     Op = NVPTX::MOV16r;
-  } else if (DestRC == &NVPTX::Int32RegsRegClass) {
+  } else if (DestRC == &NVPTX::B32RegClass) {
     Op = NVPTX::IMOV32r;
-  } else if (DestRC == &NVPTX::Int64RegsRegClass) {
+  } else if (DestRC == &NVPTX::B64RegClass) {
     Op = NVPTX::IMOV64r;
-  } else if (DestRC == &NVPTX::Int128RegsRegClass) {
+  } else if (DestRC == &NVPTX::B128RegClass) {
     Op = NVPTX::IMOV128r;
   } else {
     llvm_unreachable("Bad register copy");
@@ -190,22 +190,4 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
   BuildMI(&MBB, DL, get(NVPTX::CBranch)).add(Cond[0]).addMBB(TBB);
   BuildMI(&MBB, DL, get(NVPTX::GOTO)).addMBB(FBB);
   return 2;
-}
-
-bool NVPTXInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
-                                          const MachineBasicBlock *MBB,
-                                          const MachineFunction &MF) const {
-  // Prevent the scheduler from reordering & splitting up MachineInstrs
-  // which must stick together (in initially set order) to
-  // comprise a valid PTX function call sequence.
-  switch (MI.getOpcode()) {
-  case NVPTX::CallUniPrintCallRetInst1:
-  case NVPTX::CallArgBeginInst:
-  case NVPTX::CallArgParam:
-  case NVPTX::LastCallArgParam:
-  case NVPTX::CallArgEndInst1:
-    return true;
-  }
-
-  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF);
 }

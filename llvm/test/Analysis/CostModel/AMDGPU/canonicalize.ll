@@ -22,12 +22,12 @@ define void @canonicalize_f16() {
 ;
 ; GFX8-LABEL: 'canonicalize_f16'
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.canonicalize.f16(half undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
-; GFX8-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
+; GFX8-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
 ; GFX8-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; GFX9-LABEL: 'canonicalize_f16'
@@ -62,12 +62,12 @@ define void @canonicalize_f16() {
 ;
 ; GFX8-SIZE-LABEL: 'canonicalize_f16'
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f16 = call half @llvm.canonicalize.f16(half undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
-; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f16 = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v3f16 = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f16 = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v5f16 = call <5 x half> @llvm.canonicalize.v5f16(<5 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f16 = call <16 x half> @llvm.canonicalize.v16f16(<16 x half> undef)
+; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %v17f16 = call <17 x half> @llvm.canonicalize.v17f16(<17 x half> undef)
 ; GFX8-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; GFX9-SIZE-LABEL: 'canonicalize_f16'

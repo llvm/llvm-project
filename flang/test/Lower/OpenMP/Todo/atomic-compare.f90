@@ -1,6 +1,6 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 -o - %s 2>&1 | FileCheck %s
 
-! CHECK: not yet implemented: OpenMP atomic compare
+! CHECK: not yet implemented: OpenMP ATOMIC COMPARE
 program p
   integer :: x
   logical :: r

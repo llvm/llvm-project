@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -3427,6 +3428,25 @@ AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
   Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
 }
 
+static void
+AddFunctionExceptSpecToCompletionString(std::string &NameAndSignature,
+                                        const FunctionDecl *Function) {
+  const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
+  if (!Proto)
+    return;
+
+  auto ExceptInfo = Proto->getExceptionSpecInfo();
+  switch (ExceptInfo.Type) {
+  case EST_BasicNoexcept:
+  case EST_NoexceptTrue:
+    NameAndSignature += " noexcept";
+    break;
+
+  default:
+    break;
+  }
+}
+
 /// Add the name of the given declaration
 static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
                               const NamedDecl *ND,
@@ -3642,6 +3662,13 @@ CodeCompletionResult::createCodeCompletionStringForOverride(
   std::string NameAndSignature;
   // For overrides all chunks go into the result, none are informative.
   printOverrideString(*CCS, BeforeName, NameAndSignature);
+
+  // If the virtual function is declared with "noexcept", add it in the result
+  // code completion string.
+  const auto *VirtualFunc = dyn_cast<FunctionDecl>(Declaration);
+  assert(VirtualFunc && "overridden decl must be a function");
+  AddFunctionExceptSpecToCompletionString(NameAndSignature, VirtualFunc);
+
   NameAndSignature += " override";
 
   Result.AddTextChunk(Result.getAllocator().CopyString(BeforeName));

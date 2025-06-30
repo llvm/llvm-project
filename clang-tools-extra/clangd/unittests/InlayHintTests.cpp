@@ -1011,11 +1011,16 @@ TEST(ParameterHints, FunctionPointer) {
     f3_t f3;
     using f4_t = void(__stdcall *)(int param);
     f4_t f4;
+    __attribute__((noreturn)) f4_t f5;
     void bar() {
       f1($f1[[42]]);
       f2($f2[[42]]);
       f3($f3[[42]]);
       f4($f4[[42]]);
+      // This one runs into an edge case in clang's type model
+      // and we can't extract the parameter name. But at least
+      // we shouldn't crash.
+      f5(42);
     }
   )cpp",
       ExpectedHint{"param: ", "f1"}, ExpectedHint{"param: ", "f2"},

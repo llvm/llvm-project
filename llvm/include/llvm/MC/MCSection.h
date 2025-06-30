@@ -13,10 +13,12 @@
 #ifndef LLVM_MC_MCSECTION_H
 #define LLVM_MC_MCSECTION_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <utility>
 
@@ -33,7 +35,7 @@ class Triple;
 
 /// Instances of this class represent a uniqued identifier for a section in the
 /// current translation unit.  The MCContext class uniques and creates these.
-class MCSection {
+class LLVM_ABI MCSection {
 public:
   friend MCAssembler;
   friend MCObjectStreamer;
@@ -181,7 +183,8 @@ public:
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }
 
-  void dump() const;
+  void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
+                *FragToSyms = nullptr) const;
 
   virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                     raw_ostream &OS,

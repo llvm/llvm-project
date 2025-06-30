@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S < %s -p loop-vectorize -enable-early-exit-vectorization -disable-output \
+; RUN: opt -S < %s -p loop-vectorize -disable-output \
 ; RUN:   -debug-only=loop-vectorize 2>&1 | FileCheck %s --check-prefixes=CHECK
 
 target triple = "aarch64-unknown-linux-gnu"

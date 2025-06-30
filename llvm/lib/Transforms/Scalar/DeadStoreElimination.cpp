@@ -2029,10 +2029,18 @@ struct DSEState {
     auto *InnerCallee = Malloc->getCalledFunction();
     if (!InnerCallee)
       return false;
-    LibFunc Func;
+    LibFunc Func = NotLibFunc;
+    StringRef ZeroedVariantName;
     if (!TLI.getLibFunc(*InnerCallee, Func) || !TLI.has(Func) ||
-        Func != LibFunc_malloc)
-      return false;
+        Func != LibFunc_malloc) {
+      Attribute Attr = Malloc->getFnAttr("alloc-variant-zeroed");
+      if (!Attr.isValid())
+        return false;
+      ZeroedVariantName = Attr.getValueAsString();
+      if (ZeroedVariantName.empty())
+        return false;
+    }
+
     // Gracefully handle malloc with unexpected memory attributes.
     auto *MallocDef = dyn_cast_or_null<MemoryDef>(MSSA.getMemoryAccess(Malloc));
     if (!MallocDef)
@@ -2059,15 +2067,32 @@ struct DSEState {
 
     if (Malloc->getOperand(0) != MemSet->getLength())
       return false;
-    if (!shouldCreateCalloc(Malloc, MemSet) ||
-        !DT.dominates(Malloc, MemSet) ||
+    if (!shouldCreateCalloc(Malloc, MemSet) || !DT.dominates(Malloc, MemSet) ||
         !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
       return false;
     IRBuilder<> IRB(Malloc);
-    Type *SizeTTy = Malloc->getArgOperand(0)->getType();
-    auto *Calloc =
-        emitCalloc(ConstantInt::get(SizeTTy, 1), Malloc->getArgOperand(0), IRB,
-                   TLI, Malloc->getType()->getPointerAddressSpace());
+    assert(Func == LibFunc_malloc || !ZeroedVariantName.empty());
+    Value *Calloc = nullptr;
+    if (!ZeroedVariantName.empty()) {
+      LLVMContext &Ctx = Malloc->getContext();
+      AttributeList Attrs = InnerCallee->getAttributes();
+      AllocFnKind AllocKind =
+          Attrs.getFnAttr(Attribute::AllocKind).getAllocKind() |
+          AllocFnKind::Zeroed;
+      Attrs =
+          Attrs.addFnAttribute(Ctx, Attribute::getWithAllocKind(Ctx, AllocKind))
+              .removeFnAttribute(Ctx, "alloc-variant-zeroed");
+      FunctionCallee ZeroedVariant = Malloc->getModule()->getOrInsertFunction(
+          ZeroedVariantName, InnerCallee->getFunctionType(), Attrs);
+      SmallVector<Value *, 3> Args;
+      Args.append(Malloc->arg_begin(), Malloc->arg_end());
+      Calloc = IRB.CreateCall(ZeroedVariant, Args, ZeroedVariantName);
+    } else {
+      Type *SizeTTy = Malloc->getArgOperand(0)->getType();
+      Calloc =
+          emitCalloc(ConstantInt::get(SizeTTy, 1), Malloc->getArgOperand(0),
+                     IRB, TLI, Malloc->getType()->getPointerAddressSpace());
+    }
     if (!Calloc)
       return false;
 
@@ -2320,7 +2345,8 @@ bool isFuncLocalAndNotCaptured(Value *Arg, const CallBase *CB,
                                EarliestEscapeAnalysis &EA) {
   const Value *UnderlyingObj = getUnderlyingObject(Arg);
   return isIdentifiedFunctionLocal(UnderlyingObj) &&
-         EA.isNotCapturedBefore(UnderlyingObj, CB, /*OrAt*/ true);
+         capturesNothing(
+             EA.getCapturesBefore(UnderlyingObj, CB, /*OrAt*/ true));
 }
 
 SmallVector<MemoryLocation, 1>

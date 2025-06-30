@@ -148,6 +148,15 @@ class Constraint<Pred pred, string desc = ""> {
   string summary = desc;
 }
 
+// Base class for constraints on types and attributes.
+class AttrTypeConstraint<Pred pred, string summary = "",
+                         string cppFunctionNameParam = ""> :
+    Constraint<pred, summary> {
+  // The name of the C++ function that is generated for this constraint.
+  // If empty, no C++ function is generated.
+  string cppFunctionName = cppFunctionNameParam;
+}
+
 // Subclasses used to differentiate different constraint kinds. These are used
 // as markers for the TableGen backend to handle different constraint kinds
 // differently if needed. Constraints not deriving from the following subclasses
@@ -157,17 +166,15 @@ class Constraint<Pred pred, string desc = ""> {
 class TypeConstraint<Pred predicate, string summary = "",
                      string cppTypeParam = "::mlir::Type",
                      string cppFunctionNameParam = ""> :
-    Constraint<predicate, summary> {
+    AttrTypeConstraint<predicate, summary, cppFunctionNameParam> {
   // The name of the C++ Type class if known, or Type if not.
   string cppType = cppTypeParam;
-  // The name of the C++ function that is generated for this type constraint.
-  // If empty, no C++ function is generated.
-  string cppFunctionName = cppFunctionNameParam;
 }
 
 // Subclass for constraints on an attribute.
-class AttrConstraint<Pred predicate, string summary = ""> :
-    Constraint<predicate, summary>;
+class AttrConstraint<Pred predicate, string summary = "",
+                     string cppFunctionNameParam = ""> :
+    AttrTypeConstraint<predicate, summary, cppFunctionNameParam>;
 
 // Subclass for constraints on a property.
 class PropConstraint<Pred predicate, string summary = "", string interfaceTypeParam = ""> :

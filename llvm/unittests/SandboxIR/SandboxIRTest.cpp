@@ -1051,29 +1051,6 @@ define void @foo() {
   auto *Call = cast<sandboxir::CallInst>(&*It++);
   // Check classof(), creation.
   auto *GO = cast<sandboxir::GlobalObject>(Call->getCalledOperand());
-  // Check getAlignment().
-  EXPECT_EQ(GO->getAlignment(), LLVMGO->getAlignment());
-  // Check getAlign().
-  EXPECT_EQ(GO->getAlign(), LLVMGO->getAlign());
-  // Check setAlignment().
-  auto OrigMaybeAlign = GO->getAlign();
-  auto NewMaybeAlign = MaybeAlign(128);
-  EXPECT_NE(NewMaybeAlign, OrigMaybeAlign);
-  GO->setAlignment(NewMaybeAlign);
-  EXPECT_EQ(GO->getAlign(), NewMaybeAlign);
-  GO->setAlignment(OrigMaybeAlign);
-  EXPECT_EQ(GO->getAlign(), OrigMaybeAlign);
-  // Check getGlobalObjectSubClassData().
-  EXPECT_EQ(GO->getGlobalObjectSubClassData(),
-            LLVMGO->getGlobalObjectSubClassData());
-  // Check setGlobalObjectSubClassData().
-  auto OrigGOSCD = GO->getGlobalObjectSubClassData();
-  auto NewGOSCD = 1u;
-  EXPECT_NE(NewGOSCD, OrigGOSCD);
-  GO->setGlobalObjectSubClassData(NewGOSCD);
-  EXPECT_EQ(GO->getGlobalObjectSubClassData(), NewGOSCD);
-  GO->setGlobalObjectSubClassData(OrigGOSCD);
-  EXPECT_EQ(GO->getGlobalObjectSubClassData(), OrigGOSCD);
   // Check hasSection().
   EXPECT_EQ(GO->hasSection(), LLVMGO->hasSection());
   // Check getSection().
@@ -1284,6 +1261,16 @@ define void @foo() {
   EXPECT_EQ(GV0->getCodeModelRaw(), LLVMGV0->getCodeModelRaw());
   // Check getCodeModel().
   EXPECT_EQ(GV0->getCodeModel(), LLVMGV0->getCodeModel());
+  // Check getAlign().
+  EXPECT_EQ(GV0->getAlign(), LLVMGV0->getAlign());
+  // Check setAlignment().
+  auto OrigMaybeAlign = GV0->getAlign();
+  auto NewMaybeAlign = MaybeAlign(128);
+  EXPECT_NE(NewMaybeAlign, OrigMaybeAlign);
+  GV0->setAlignment(NewMaybeAlign);
+  EXPECT_EQ(GV0->getAlign(), NewMaybeAlign);
+  GV0->setAlignment(OrigMaybeAlign);
+  EXPECT_EQ(GV0->getAlign(), OrigMaybeAlign);
 }
 
 TEST_F(SandboxIRTest, GlobalAlias) {
@@ -1855,6 +1842,17 @@ bb1:
 )IR");
   }
 #endif // NDEBUG
+
+  // Check getAlign().
+  EXPECT_EQ(F0->getAlign(), F0->getAlign());
+  // Check setAlignment().
+  auto OrigMaybeAlign = F0->getAlign();
+  auto NewMaybeAlign = MaybeAlign(128);
+  EXPECT_NE(NewMaybeAlign, OrigMaybeAlign);
+  F0->setAlignment(NewMaybeAlign);
+  EXPECT_EQ(F0->getAlign(), NewMaybeAlign);
+  F0->setAlignment(OrigMaybeAlign);
+  EXPECT_EQ(F0->getAlign(), OrigMaybeAlign);
 }
 
 TEST_F(SandboxIRTest, Module) {

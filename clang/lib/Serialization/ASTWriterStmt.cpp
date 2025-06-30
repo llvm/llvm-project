@@ -971,7 +971,7 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
 
   if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
-      E->getStmtClass() == Stmt::CallExprClass)
+      !E->usesMemberSyntax() && E->getStmtClass() == Stmt::CallExprClass)
     AbbrevToUse = Writer.getCallExprAbbrev();
 
   Code = serialization::EXPR_CALL;
@@ -2312,12 +2312,6 @@ void ASTStmtWriter::VisitOpaqueValueExpr(OpaqueValueExpr *E) {
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(E->isUnique());
   Code = serialization::EXPR_OPAQUE_VALUE;
-}
-
-void ASTStmtWriter::VisitTypoExpr(TypoExpr *E) {
-  VisitExpr(E);
-  // TODO: Figure out sane writer behavior for a TypoExpr, if necessary
-  llvm_unreachable("Cannot write TypoExpr nodes");
 }
 
 //===----------------------------------------------------------------------===//

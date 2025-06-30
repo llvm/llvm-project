@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {
@@ -50,22 +51,22 @@ struct StringTable {
   StringTable &operator=(StringTable &&) = default;
 
   /// Construct a string table from a ParsedStringTable.
-  StringTable(const ParsedStringTable &Other);
+  LLVM_ABI StringTable(const ParsedStringTable &Other);
 
   /// Add a string to the table. It returns an unique ID of the string.
-  std::pair<unsigned, StringRef> add(StringRef Str);
+  LLVM_ABI std::pair<unsigned, StringRef> add(StringRef Str);
   /// Modify \p R to use strings from this string table. If the string table
   /// does not contain the strings, it adds them.
-  void internalize(Remark &R);
+  LLVM_ABI void internalize(Remark &R);
   /// Serialize the string table to a stream. It is serialized as a little
   /// endian uint64 (the size of the table in bytes) followed by a sequence of
   /// NULL-terminated strings, where the N-th string is the string with the ID N
   /// in the StrTab map.
-  void serialize(raw_ostream &OS) const;
+  LLVM_ABI void serialize(raw_ostream &OS) const;
   /// Serialize the string table to a vector. This allows users to do the actual
   /// writing to file/memory/other.
   /// The string with the ID == N should be the N-th element in the vector.
-  std::vector<StringRef> serialize() const;
+  LLVM_ABI std::vector<StringRef> serialize() const;
 };
 
 } // end namespace remarks

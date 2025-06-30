@@ -10,7 +10,7 @@
 // optimizations. This pass should be run after register allocation.
 //
 // The pass runs after the PrologEpilogInserter where we emit the CFI
-// instructions. In order to preserve the correctness of the unwind informaiton,
+// instructions. In order to preserve the correctness of the unwind information,
 // the pass should not change the order of any two instructions, one of which
 // has the FrameSetup/FrameDestroy flag or, alternatively, apply an add-hoc fix
 // to unwind information.
@@ -189,7 +189,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   // pre or post indexed addressing with writeback. Scan backwards.
   // `MergeEither` is set to true if the combined instruction may be placed
   // either at the location of the load/store instruction or at the location of
-  // the update intruction.
+  // the update instruction.
   MachineBasicBlock::iterator
   findMatchingUpdateInsnBackward(MachineBasicBlock::iterator I, unsigned Limit,
                                  bool &MergeEither);
@@ -1281,7 +1281,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     // instruction contains the final value we care about we give it a new
     // debug-instr-number 3. Whereas, $w1 contains the final value that we care
     // about, therefore the LDP instruction is also given a new
-    // debug-instr-number 4. We have to add these subsitutions to the
+    // debug-instr-number 4. We have to add these substitutions to the
     // debugValueSubstitutions table. However, we also have to ensure that the
     // OpIndex that pointed to debug-instr-number 1 gets updated to 1, because
     // $w1 is the second operand of the LDP instruction.
@@ -2602,7 +2602,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
   ModifiedRegUnits.clear();
   UsedRegUnits.clear();
   unsigned Count = 0;
-  bool MemAcessBeforeSPPreInc = false;
+  bool MemAccessBeforeSPPreInc = false;
   MergeEither = true;
   do {
     MBBI = prev_nodbg(MBBI, B);
@@ -2617,7 +2617,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     if (isMatchingUpdateInsn(*I, MI, BaseReg, Offset)) {
       // Check that the update value is within our red zone limit (which may be
       // zero).
-      if (MemAcessBeforeSPPreInc && MBBI->getOperand(2).getImm() > RedZoneSize)
+      if (MemAccessBeforeSPPreInc && MBBI->getOperand(2).getImm() > RedZoneSize)
         return E;
       return MBBI;
     }
@@ -2648,7 +2648,7 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     // case we need to validate later that the update amount respects the red
     // zone.
     if (BaseRegSP && MBBI->mayLoadOrStore())
-      MemAcessBeforeSPPreInc = true;
+      MemAccessBeforeSPPreInc = true;
   } while (MBBI != B && Count < Limit);
   return E;
 }
@@ -2745,7 +2745,7 @@ bool AArch64LoadStoreOpt::tryToMergeZeroStInst(
   if (!TII->isCandidateToMergeOrPair(MI))
     return false;
 
-  // Look ahead up to LdStLimit instructions for a mergable instruction.
+  // Look ahead up to LdStLimit instructions for a mergeable instruction.
   LdStPairFlags Flags;
   MachineBasicBlock::iterator MergeMI =
       findMatchingInsn(MBBI, Flags, LdStLimit, /* FindNarrowMerge = */ true);
@@ -2941,7 +2941,7 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
 
   bool Modified = false;
-  // Four tranformations to do here:
+  // Four transformations to do here:
   // 1) Find loads that directly read from stores and promote them by
   //    replacing with mov instructions. If the store is wider than the load,
   //    the load will be replaced with a bitfield extract.

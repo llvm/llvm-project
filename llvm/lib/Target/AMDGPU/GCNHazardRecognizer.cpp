@@ -417,7 +417,8 @@ void GCNHazardRecognizer::AdvanceCycle() {
 }
 
 void GCNHazardRecognizer::RecedeCycle() {
-  llvm_unreachable("hazard recognizer does not support bottom-up scheduling.");
+  assert(!IsHazardRecognizerMode &&
+         "Bottom-up scheduling shouldn't run in hazard recognizer mode");
 }
 
 //===----------------------------------------------------------------------===//

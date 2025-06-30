@@ -44,46 +44,37 @@
   !$omp end atomic
 
   ! Check for error conditions:
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
+  !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
   !$omp atomic seq_cst seq_cst compare
   if (b .eq. c) b = a
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
+  !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
   !$omp atomic compare seq_cst seq_cst
   if (b .eq. c) b = a
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one SEQ_CST clause can appear on the COMPARE directive
+  !ERROR: At most one SEQ_CST clause can appear on the ATOMIC directive
   !$omp atomic seq_cst compare seq_cst
   if (b .eq. c) b = a
 
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one ACQUIRE clause can appear on the COMPARE directive
+  !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
   !$omp atomic acquire acquire compare
   if (b .eq. c) b = a
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one ACQUIRE clause can appear on the COMPARE directive
+  !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
   !$omp atomic compare acquire acquire
   if (b .eq. c) b = a
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one ACQUIRE clause can appear on the COMPARE directive
+  !ERROR: At most one ACQUIRE clause can appear on the ATOMIC directive
   !$omp atomic acquire compare acquire
   if (b .eq. c) b = a
 
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one RELAXED clause can appear on the COMPARE directive
+  !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
   !$omp atomic relaxed relaxed compare
   if (b .eq. c) b = a
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one RELAXED clause can appear on the COMPARE directive
+  !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
   !$omp atomic compare relaxed relaxed
   if (b .eq. c) b = a
-  !ERROR: More than one memory order clause not allowed on OpenMP ATOMIC construct
-  !ERROR: At most one RELAXED clause can appear on the COMPARE directive
+  !ERROR: At most one RELAXED clause can appear on the ATOMIC directive
   !$omp atomic relaxed compare relaxed
   if (b .eq. c) b = a
 
-  !ERROR: More than one FAIL clause not allowed on OpenMP ATOMIC construct
+  !ERROR: At most one FAIL clause can appear on the ATOMIC directive
   !$omp atomic fail(release) compare fail(release)
   if (c .eq. a) a = b
   !$omp end atomic

@@ -472,7 +472,10 @@ unsigned DIEExpr::sizeOf(const dwarf::FormParams &FormParams,
 }
 
 LLVM_DUMP_METHOD
-void DIEExpr::print(raw_ostream &O) const { O << "Expr: " << *Expr; }
+void DIEExpr::print(raw_ostream &O) const {
+  O << "Expr: ";
+  MCAsmInfo().printExpr(O, *Expr);
+}
 
 //===----------------------------------------------------------------------===//
 // DIELabel Implementation

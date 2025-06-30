@@ -688,6 +688,18 @@ const FunctionDecl *SimpleFunctionCall::getDecl() const {
   return getSVal(getOriginExpr()->getCallee()).getAsFunctionDecl();
 }
 
+RuntimeDefinition SimpleFunctionCall::getRuntimeDefinition() const {
+  // Clang converts lambdas to function pointers using an implicit conversion
+  // operator, which returns the lambda's '__invoke' method. However, Sema
+  // leaves the body of '__invoke' empty (it is generated later in CodeGen), so
+  // we need to skip '__invoke' and access the lambda's operator() directly.
+  if (const auto *CMD = dyn_cast_if_present<CXXMethodDecl>(getDecl());
+      CMD && CMD->isLambdaStaticInvoker())
+    return RuntimeDefinition{CMD->getParent()->getLambdaCallOperator()};
+
+  return AnyFunctionCall::getRuntimeDefinition();
+}
+
 const FunctionDecl *CXXInstanceCall::getDecl() const {
   const auto *CE = cast_or_null<CallExpr>(getOriginExpr());
   if (!CE)

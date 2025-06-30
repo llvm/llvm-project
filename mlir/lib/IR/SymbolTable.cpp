@@ -1100,7 +1100,7 @@ void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
   if (newSymbol != symbol) {
     // Transfer over the users to the new symbol.  The reference to the old one
     // is fetched again as the iterator is invalidated during the insertion.
-    auto newIt = symbolToUsers.try_emplace(newSymbol, SetVector<Operation *>{});
+    auto newIt = symbolToUsers.try_emplace(newSymbol);
     auto oldIt = symbolToUsers.find(symbol);
     assert(oldIt != symbolToUsers.end() && "missing old users list");
     if (newIt.second)

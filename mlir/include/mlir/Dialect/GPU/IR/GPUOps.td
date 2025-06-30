@@ -1332,7 +1332,8 @@ def GPU_ShuffleOp : GPU_Op<
     %3, %4 = gpu.shuffle down %0, %cst1, %width : f32
     ```
 
-    For lane `k`, returns the value from lane `(k + 1) % width`.
+    For lane `k`, returns the value from lane `(k + cst1)`. If `(k + cst1)` is
+    bigger than or equal to `width`, the value is poison and `valid` is `false`.
 
     `up` example:
 
@@ -1341,7 +1342,8 @@ def GPU_ShuffleOp : GPU_Op<
     %5, %6 = gpu.shuffle up %0, %cst1, %width : f32
     ```
 
-    For lane `k`, returns the value from lane `(k - 1) % width`.
+    For lane `k`, returns the value from lane `(k - cst1)`. If `(k - cst1)` is
+    smaller than `0`, the value is poison and `valid` is `false`.
 
     `idx` example:
 

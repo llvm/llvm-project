@@ -122,25 +122,35 @@ define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, doubl
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %bb1
-; CHECK-NEXT:    s_mov_b64 s[0:1], src_private_base
+; CHECK-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; CHECK-NEXT:    s_cmp_eq_u32 s5, s1
 ; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:    s_mov_b64 s[0:1], -1
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB3_5
-; CHECK-NEXT:  ; %bb.3: ; %Flow
+; CHECK-NEXT:  ; %bb.3: ; %Flow6
 ; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccz .LBB3_6
+; CHECK-NEXT:    s_cbranch_vccz .LBB3_10
 ; CHECK-NEXT:  .LBB3_4: ; %atomicrmw.phi
 ; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB3_5: ; %atomicrmw.global
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[4:5], s[4:5] op_sel:[0,1]
-; CHECK-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
-; CHECK-NEXT:    flat_atomic_add_f64 v[0:1], v[2:3]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:  .LBB3_5: ; %atomicrmw.check.private
+; CHECK-NEXT:    s_mov_b64 s[0:1], src_private_base
+; CHECK-NEXT:    s_cmp_eq_u32 s5, s1
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
+; CHECK-NEXT:    s_cbranch_vccz .LBB3_7
+; CHECK-NEXT:  ; %bb.6: ; %atomicrmw.global
+; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    global_atomic_add_f64 v2, v[0:1], s[4:5]
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_wbinvl1_vol
-; CHECK-NEXT:    s_cbranch_execnz .LBB3_4
-; CHECK-NEXT:  .LBB3_6: ; %atomicrmw.private
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:  .LBB3_7: ; %Flow
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
+; CHECK-NEXT:    s_cbranch_vccnz .LBB3_9
+; CHECK-NEXT:  ; %bb.8: ; %atomicrmw.private
 ; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cselect_b32 s0, s4, -1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s0
@@ -150,6 +160,15 @@ define protected amdgpu_kernel void @InferPHI(i32 %a, ptr addrspace(1) %b, doubl
 ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[2:3]
 ; CHECK-NEXT:    buffer_store_dword v0, v2, s[12:15], 0 offen
 ; CHECK-NEXT:    buffer_store_dword v1, v2, s[12:15], 0 offen offset:4
+; CHECK-NEXT:  .LBB3_9: ; %Flow5
+; CHECK-NEXT:    s_cbranch_execnz .LBB3_4
+; CHECK-NEXT:  .LBB3_10: ; %atomicrmw.shared
+; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; CHECK-NEXT:    s_cselect_b32 s0, s4, -1
+; CHECK-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
+; CHECK-NEXT:    ds_add_f64 v2, v[0:1]
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_endpgm
 entry:
   %i = add nsw i32 %a, -1

@@ -8,13 +8,13 @@
 class DeepClass
 {
 public:
-  void trigger() const;  // expected-note {{'trigger' declared here}}
+  void trigger() const;
 };
 
 class Y
 {
 public:
-  const DeepClass& getX() const { return m_deepInstance; }  // expected-note {{'getX' declared here}}
+  const DeepClass& getX() const { return m_deepInstance; }
 private:
   DeepClass m_deepInstance;
   int m_n;
@@ -23,7 +23,7 @@ private:
 class Z
 {
 public:
-  const Y& getY0() const { return m_y0; }  // expected-note {{'getY0' declared here}}
+  const Y& getY0() const { return m_y0; }
   const Y& getActiveY() const { return m_y0; }
 
 private:
@@ -35,9 +35,9 @@ Z z_obj;
 
 void testMultipleCorrections()
 {
-  z_obj.getY2().  // expected-error {{no member named 'getY2' in 'Z'; did you mean 'getY0'}}
-      getM().     // expected-error {{no member named 'getM' in 'Y'; did you mean 'getX'}}
-      triggee();  // expected-error {{no member named 'triggee' in 'DeepClass'; did you mean 'trigger'}}
+  z_obj.getY2().  // expected-error {{no member named 'getY2' in 'Z'}}
+      getM().
+      triggee();
 }
 
 void testNoCorrections()
@@ -53,19 +53,19 @@ struct A {
   C get_me_a_C();
 };
 struct B {
-  D get_me_a_D();  // expected-note {{'get_me_a_D' declared here}}
+  D get_me_a_D();
 };
 class Scope {
 public:
   A make_an_A();
-  B make_a_B();  // expected-note {{'make_a_B' declared here}}
+  B make_a_B();
 };
 
 Scope scope_obj;
 
 int testDiscardedCorrections() {
-  return scope_obj.make_an_E().  // expected-error {{no member named 'make_an_E' in 'Scope'; did you mean 'make_a_B'}}
-      get_me_a_Z().value;        // expected-error {{no member named 'get_me_a_Z' in 'B'; did you mean 'get_me_a_D'}}
+  return scope_obj.make_an_E().  // expected-error {{no member named 'make_an_E' in 'Scope'}}
+      get_me_a_Z().value;
 }
 
 class AmbiguousHelper {
@@ -120,13 +120,13 @@ int testDeepAmbiguity() {
 }
 
 struct Dog {
-  int age;  //expected-note{{'age' declared here}}
-  int size; //expected-note{{'size' declared here}}
+  int age;
+  int size;
 };
 
 int from_dog_years(int DogYears, int DogSize);
 int get_dog_years() {
   struct Dog doggo;
-  return from_dog_years(doggo.agee,   //expected-error{{no member named 'agee' in 'Dog'; did you mean 'age'}}
-                        doggo.sizee); //expected-error{{no member named 'sizee' in 'Dog'; did you mean 'size'}}
+  return from_dog_years(doggo.agee,   //expected-error{{no member named 'agee' in 'Dog'}}
+                        doggo.sizee); //expected-error{{no member named 'sizee' in 'Dog'}}
 }

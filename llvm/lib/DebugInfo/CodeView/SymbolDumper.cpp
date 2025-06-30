@@ -672,6 +672,13 @@ Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
   return Error::success();
 }
 
+Error CVSymbolDumperImpl::visitKnownRecord(CVSymbol &CVR,
+                                           HotPatchFuncSym &HotPatchFunc) {
+  printTypeIndex("Function", HotPatchFunc.Function);
+  W.printString("Name", HotPatchFunc.Name);
+  return Error::success();
+}
+
 Error CVSymbolDumperImpl::visitUnknownSymbol(CVSymbol &CVR) {
   W.printNumber("Length", CVR.length());
   return Error::success();

@@ -76,8 +76,8 @@ define void @alloc_func(i32 %n) {
 ; X64: .seh_stackalloc 16
 ; X64: leaq    16(%rsp), %rbp
 ; X64: .seh_setframe %rbp, 16
-; X64: .set .Lalloc_func$frame_escape_0, -4
-; X64: .set .Lalloc_func$frame_escape_1, -12
+; X64: .Lalloc_func$frame_escape_0 = -4
+; X64: .Lalloc_func$frame_escape_1 = -12
 ; X64: movl $42, -4(%rbp)
 ; X64: movl $13, -12(%rbp)
 ; X64: movq 	%rbp, %rcx
@@ -88,8 +88,8 @@ define void @alloc_func(i32 %n) {
 ; X86: pushl   %ebp
 ; X86: movl    %esp, %ebp
 ; X86: subl    $12, %esp
-; X86: .set Lalloc_func$frame_escape_0, -4
-; X86: .set Lalloc_func$frame_escape_1, -12
+; X86: Lalloc_func$frame_escape_0 = -4
+; X86: Lalloc_func$frame_escape_1 = -12
 ; X86: movl    $42, -4(%ebp)
 ; X86: movl    $13, -12(%ebp)
 ; X86: pushl   %ebp
@@ -118,8 +118,8 @@ define void @alloc_func_no_frameaddr() {
 ; X64: subq    $40, %rsp
 ; X64: .seh_stackalloc 40
 ; X64: .seh_endprologue
-; X64: .set .Lalloc_func_no_frameaddr$frame_escape_0, 36
-; X64: .set .Lalloc_func_no_frameaddr$frame_escape_1, 32
+; X64: .Lalloc_func_no_frameaddr$frame_escape_0 = 36
+; X64: .Lalloc_func_no_frameaddr$frame_escape_1 = 32
 ; X64: movl $42, 36(%rsp)
 ; X64: movl $13, 32(%rsp)
 ; X64: xorl %ecx, %ecx
@@ -131,8 +131,8 @@ define void @alloc_func_no_frameaddr() {
 
 ; X86-LABEL: alloc_func_no_frameaddr:
 ; X86: subl    $8, %esp
-; X86: .set Lalloc_func_no_frameaddr$frame_escape_0, 4
-; X86: .set Lalloc_func_no_frameaddr$frame_escape_1, 0
+; X86: Lalloc_func_no_frameaddr$frame_escape_0 = 4
+; X86: Lalloc_func_no_frameaddr$frame_escape_1 = 0
 ; X86: movl $42, 4(%esp)
 ; X86: movl $13, (%esp)
 ; X86: pushl $0

@@ -13,9 +13,11 @@
 #ifndef LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCASMINFO_H
 #define LLVM_LIB_TARGET_X86_MCTARGETDESC_X86MCASMINFO_H
 
+#include "MCTargetDesc/X86MCExpr.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
 #include "llvm/MC/MCAsmInfoELF.h"
+#include "llvm/MC/MCExpr.h"
 
 namespace llvm {
 class Triple;
@@ -61,6 +63,42 @@ class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
 public:
   explicit X86MCAsmInfoGNUCOFF(const Triple &Triple);
 };
+
+namespace X86 {
+using Specifier = uint16_t;
+
+enum {
+  S_None,
+  S_COFF_SECREL,
+
+  S_ABS8 = MCSymbolRefExpr::FirstTargetSpecifier,
+  S_DTPOFF,
+  S_DTPREL,
+  S_GOT,
+  S_GOTENT,
+  S_GOTNTPOFF,
+  S_GOTOFF,
+  S_GOTPCREL,
+  S_GOTPCREL_NORELAX,
+  S_GOTREL,
+  S_GOTTPOFF,
+  S_INDNTPOFF,
+  S_NTPOFF,
+  S_PCREL,
+  S_PLT,
+  S_PLTOFF,
+  S_SIZE,
+  S_TLSCALL,
+  S_TLSDESC,
+  S_TLSGD,
+  S_TLSLD,
+  S_TLSLDM,
+  S_TLVP,
+  S_TLVPPAGE,
+  S_TLVPPAGEOFF,
+  S_TPOFF,
+};
+} // namespace X86
 } // namespace llvm
 
 #endif

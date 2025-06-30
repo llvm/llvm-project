@@ -34,6 +34,8 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibStdcppUniquePointer.cpp
   MSVCUndecoratedNameParser.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbDataFormatters
@@ -45,9 +47,6 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
-
-  LINK_COMPONENTS
-    Support
 )
 
 add_dependencies(lldbPluginCPlusPlusLanguage

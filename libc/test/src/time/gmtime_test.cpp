@@ -8,7 +8,7 @@
 
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/time/gmtime.h"
 #include "src/time/time_constants.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -30,7 +30,7 @@ TEST(LlvmLibcGmTime, OutOfRange) {
   EXPECT_TRUE(tm_data == nullptr);
   ASSERT_ERRNO_EQ(EOVERFLOW);
 
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   seconds =
       INT_MIN *
           static_cast<int64_t>(

@@ -108,6 +108,7 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
                       const MLIRToLLVMPassPipelineConfig &config) {
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
+  options.skipExternalRttiDefinition = skipExternalRttiDefinition;
   options.applyTBAA = config.AliasAnalysis;
   options.forceUnifiedTBAATree = useOldAliasTags;
   options.typeDescriptorsRenamedForAssembly =
@@ -260,6 +261,11 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
         pm, hlfir::createOptimizedBufferization);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
+
+    if (optLevel == llvm::OptimizationLevel::O3) {
+      addNestedPassToAllTopLevelOperations<PassConstructor>(
+          pm, hlfir::createInlineHLFIRCopyIn);
+    }
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
@@ -364,7 +370,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       {framePointerKind, config.InstrumentFunctionEntry,
        config.InstrumentFunctionExit, config.NoInfsFPMath, config.NoNaNsFPMath,
        config.ApproxFuncFPMath, config.NoSignedZerosFPMath, config.UnsafeFPMath,
-       config.PreferVectorWidth, /*tuneCPU=*/"", setNoCapture, setNoAlias}));
+       config.Reciprocals, config.PreferVectorWidth, /*tuneCPU=*/"",
+       setNoCapture, setNoAlias}));
 
   if (config.EnableOpenMP) {
     pm.addNestedPass<mlir::func::FuncOp>(

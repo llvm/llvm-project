@@ -13,11 +13,9 @@
 
 
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_1
-; APXREL: movq    (%rip), %r16
-; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
-; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
-; NOAPXREL: movq    (%rip), %rdi
-; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar-0x4
+; CHECK-NOT: R_X86_64_CODE_4_GOTPCRELX gvar-0x4
+; CHECK: movq    (%rip), %rdi
+; CHECK-NEXT: R_X86_64_REX_GOTPCRELX gvar-0x4
 
 @gvar = external global [20000 x i8]
 

@@ -16,6 +16,7 @@
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/User.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -57,7 +58,7 @@ protected:
 
   /// A SandboxIR Instruction may map to multiple LLVM IR Instruction. This
   /// returns its topmost LLVM IR instruction.
-  llvm::Instruction *getTopmostLLVMInstruction() const;
+  LLVM_ABI llvm::Instruction *getTopmostLLVMInstruction() const;
   friend class VAArgInst;          // For getTopmostLLVMInstruction().
   friend class FreezeInst;         // For getTopmostLLVMInstruction().
   friend class FenceInst;          // For getTopmostLLVMInstruction().
@@ -113,17 +114,17 @@ protected:
   }
 
 public:
-  static const char *getOpcodeName(Opcode Opc);
+  LLVM_ABI static const char *getOpcodeName(Opcode Opc);
   /// This is used by BasicBlock::iterator.
   virtual unsigned getNumOfIRInstrs() const = 0;
   /// \Returns a BasicBlock::iterator for this Instruction.
-  BBIterator getIterator() const;
+  LLVM_ABI BBIterator getIterator() const;
   /// \Returns the next sandboxir::Instruction in the block, or nullptr if at
   /// the end of the block.
-  Instruction *getNextNode() const;
+  LLVM_ABI Instruction *getNextNode() const;
   /// \Returns the previous sandboxir::Instruction in the block, or nullptr if
   /// at the beginning of the block.
-  Instruction *getPrevNode() const;
+  LLVM_ABI Instruction *getPrevNode() const;
   /// \Returns this Instruction's opcode. Note that SandboxIR has its own opcode
   /// state to allow for new SandboxIR-specific instructions.
   Opcode getOpcode() const { return Opc; }
@@ -188,17 +189,17 @@ public:
   // TODO: More missing functions
 
   /// Detach this from its parent BasicBlock without deleting it.
-  void removeFromParent();
+  LLVM_ABI void removeFromParent();
   /// Detach this Value from its parent and delete it.
-  void eraseFromParent();
+  LLVM_ABI void eraseFromParent();
   /// Insert this detached instruction before \p BeforeI.
-  void insertBefore(Instruction *BeforeI);
+  LLVM_ABI void insertBefore(Instruction *BeforeI);
   /// Insert this detached instruction after \p AfterI.
-  void insertAfter(Instruction *AfterI);
+  LLVM_ABI void insertAfter(Instruction *AfterI);
   /// Insert this detached instruction into \p BB at \p WhereIt.
-  void insertInto(BasicBlock *BB, const BBIterator &WhereIt);
+  LLVM_ABI void insertInto(BasicBlock *BB, const BBIterator &WhereIt);
   /// Move this instruction to \p WhereIt.
-  void moveBefore(BasicBlock &BB, const BBIterator &WhereIt);
+  LLVM_ABI void moveBefore(BasicBlock &BB, const BBIterator &WhereIt);
   /// Move this instruction before \p Before.
   void moveBefore(Instruction *Before) {
     moveBefore(*Before->getParent(), Before->getIterator());
@@ -217,9 +218,9 @@ public:
   }
   /// \Returns the BasicBlock containing this Instruction, or null if it is
   /// detached.
-  BasicBlock *getParent() const;
+  LLVM_ABI BasicBlock *getParent() const;
   /// For isa/dyn_cast.
-  static bool classof(const sandboxir::Value *From);
+  LLVM_ABI static bool classof(const sandboxir::Value *From);
 
   /// Determine whether the no signed wrap flag is set.
   bool hasNoUnsignedWrap() const {
@@ -227,20 +228,20 @@ public:
   }
   /// Set or clear the nuw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setHasNoUnsignedWrap(bool B = true);
+  LLVM_ABI void setHasNoUnsignedWrap(bool B = true);
   /// Determine whether the no signed wrap flag is set.
   bool hasNoSignedWrap() const {
     return cast<llvm::Instruction>(Val)->hasNoSignedWrap();
   }
   /// Set or clear the nsw flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setHasNoSignedWrap(bool B = true);
+  LLVM_ABI void setHasNoSignedWrap(bool B = true);
   /// Determine whether all fast-math-flags are set.
   bool isFast() const { return cast<llvm::Instruction>(Val)->isFast(); }
   /// Set or clear all fast-math-flags on this instruction, which must be an
   /// operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setFast(bool B);
+  LLVM_ABI void setFast(bool B);
   /// Determine whether the allow-reassociation flag is set.
   bool hasAllowReassoc() const {
     return cast<llvm::Instruction>(Val)->hasAllowReassoc();
@@ -248,24 +249,24 @@ public:
   /// Set or clear the reassociation flag on this instruction, which must be
   /// an operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setHasAllowReassoc(bool B);
+  LLVM_ABI void setHasAllowReassoc(bool B);
   /// Determine whether the exact flag is set.
   bool isExact() const { return cast<llvm::Instruction>(Val)->isExact(); }
   /// Set or clear the exact flag on this instruction, which must be an operator
   /// which supports this flag. See LangRef.html for the meaning of this flag.
-  void setIsExact(bool B = true);
+  LLVM_ABI void setIsExact(bool B = true);
   /// Determine whether the no-NaNs flag is set.
   bool hasNoNaNs() const { return cast<llvm::Instruction>(Val)->hasNoNaNs(); }
   /// Set or clear the no-nans flag on this instruction, which must be an
   /// operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setHasNoNaNs(bool B);
+  LLVM_ABI void setHasNoNaNs(bool B);
   /// Determine whether the no-infs flag is set.
   bool hasNoInfs() const { return cast<llvm::Instruction>(Val)->hasNoInfs(); }
   /// Set or clear the no-infs flag on this instruction, which must be an
   /// operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setHasNoInfs(bool B);
+  LLVM_ABI void setHasNoInfs(bool B);
   /// Determine whether the no-signed-zeros flag is set.
   bool hasNoSignedZeros() const {
     return cast<llvm::Instruction>(Val)->hasNoSignedZeros();
@@ -273,7 +274,7 @@ public:
   /// Set or clear the no-signed-zeros flag on this instruction, which must be
   /// an operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setHasNoSignedZeros(bool B);
+  LLVM_ABI void setHasNoSignedZeros(bool B);
   /// Determine whether the allow-reciprocal flag is set.
   bool hasAllowReciprocal() const {
     return cast<llvm::Instruction>(Val)->hasAllowReciprocal();
@@ -281,7 +282,7 @@ public:
   /// Set or clear the allow-reciprocal flag on this instruction, which must be
   /// an operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setHasAllowReciprocal(bool B);
+  LLVM_ABI void setHasAllowReciprocal(bool B);
   /// Determine whether the allow-contract flag is set.
   bool hasAllowContract() const {
     return cast<llvm::Instruction>(Val)->hasAllowContract();
@@ -289,7 +290,7 @@ public:
   /// Set or clear the allow-contract flag on this instruction, which must be
   /// an operator which supports this flag. See LangRef.html for the meaning of
   /// this flag.
-  void setHasAllowContract(bool B);
+  LLVM_ABI void setHasAllowContract(bool B);
   /// Determine whether the approximate-math-functions flag is set.
   bool hasApproxFunc() const {
     return cast<llvm::Instruction>(Val)->hasApproxFunc();
@@ -297,7 +298,7 @@ public:
   /// Set or clear the approximate-math-functions flag on this instruction,
   /// which must be an operator which supports this flag. See LangRef.html for
   /// the meaning of this flag.
-  void setHasApproxFunc(bool B);
+  LLVM_ABI void setHasApproxFunc(bool B);
   /// Convenience function for getting all the fast-math flags, which must be an
   /// operator which supports these flags. See LangRef.html for the meaning of
   /// these flags.
@@ -307,11 +308,11 @@ public:
   /// Convenience function for setting multiple fast-math flags on this
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
-  void setFastMathFlags(FastMathFlags FMF);
+  LLVM_ABI void setFastMathFlags(FastMathFlags FMF);
   /// Convenience function for transferring all fast-math flag values to this
   /// instruction, which must be an operator which supports these flags. See
   /// LangRef.html for the meaning of these flags.
-  void copyFastMathFlags(FastMathFlags FMF);
+  LLVM_ABI void copyFastMathFlags(FastMathFlags FMF);
 
   bool isAssociative() const {
     return cast<llvm::Instruction>(Val)->isAssociative();
@@ -352,7 +353,7 @@ public:
 
   bool isVolatile() const { return cast<llvm::Instruction>(Val)->isVolatile(); }
 
-  Type *getAccessType() const;
+  LLVM_ABI Type *getAccessType() const;
 
   bool mayThrow(bool IncludePhaseOneUnwind = false) const {
     return cast<llvm::Instruction>(Val)->mayThrow(IncludePhaseOneUnwind);
@@ -414,22 +415,22 @@ class FenceInst : public SingleLLVMInstructionImpl<llvm::FenceInst> {
   friend Context; // For constructor;
 
 public:
-  static FenceInst *create(AtomicOrdering Ordering, InsertPosition Pos,
-                           Context &Ctx,
-                           SyncScope::ID SSID = SyncScope::System);
+  LLVM_ABI static FenceInst *create(AtomicOrdering Ordering, InsertPosition Pos,
+                                    Context &Ctx,
+                                    SyncScope::ID SSID = SyncScope::System);
   /// Returns the ordering constraint of this fence instruction.
   AtomicOrdering getOrdering() const {
     return cast<llvm::FenceInst>(Val)->getOrdering();
   }
   /// Sets the ordering constraint of this fence instruction.  May only be
   /// Acquire, Release, AcquireRelease, or SequentiallyConsistent.
-  void setOrdering(AtomicOrdering Ordering);
+  LLVM_ABI void setOrdering(AtomicOrdering Ordering);
   /// Returns the synchronization scope ID of this fence instruction.
   SyncScope::ID getSyncScopeID() const {
     return cast<llvm::FenceInst>(Val)->getSyncScopeID();
   }
   /// Sets the synchronization scope ID of this fence instruction.
-  void setSyncScopeID(SyncScope::ID SSID);
+  LLVM_ABI void setSyncScopeID(SyncScope::ID SSID);
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Fence;
   }
@@ -443,9 +444,9 @@ class SelectInst : public SingleLLVMInstructionImpl<llvm::SelectInst> {
   friend Context; // for SelectInst()
 
 public:
-  static Value *create(Value *Cond, Value *True, Value *False,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Cond, Value *True, Value *False,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
   const Value *getCondition() const { return getOperand(0); }
   const Value *getTrueValue() const { return getOperand(1); }
@@ -457,7 +458,7 @@ public:
   void setCondition(Value *New) { setOperand(0, New); }
   void setTrueValue(Value *New) { setOperand(1, New); }
   void setFalseValue(Value *New) { setOperand(2, New); }
-  void swapValues();
+  LLVM_ABI void swapValues();
 
   /// Return a string if the specified operands are invalid for a select
   /// operation, otherwise return null.
@@ -468,7 +469,7 @@ public:
   }
 
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
+  LLVM_ABI static bool classof(const Value *From);
 };
 
 class InsertElementInst final
@@ -480,9 +481,9 @@ class InsertElementInst final
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static Value *create(Value *Vec, Value *NewElt, Value *Idx,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Vec, Value *NewElt, Value *Idx,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::InsertElement;
   }
@@ -503,8 +504,8 @@ class ExtractElementInst final
                         // create*()
 
 public:
-  static Value *create(Value *Vec, Value *Idx, InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Vec, Value *Idx, InsertPosition Pos,
+                                Context &Ctx, const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ExtractElement;
   }
@@ -516,7 +517,7 @@ public:
   Value *getIndexOperand() { return getOperand(1); }
   const Value *getVectorOperand() const { return getOperand(0); }
   const Value *getIndexOperand() const { return getOperand(1); }
-  VectorType *getVectorOperandType() const;
+  LLVM_ABI VectorType *getVectorOperandType() const;
 };
 
 class ShuffleVectorInst final
@@ -528,18 +529,19 @@ class ShuffleVectorInst final
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static Value *create(Value *V1, Value *V2, Value *Mask, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *V1, Value *V2, Value *Mask,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *V1, Value *V2, ArrayRef<int> Mask,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ShuffleVector;
   }
 
   /// Swap the operands and adjust the mask to preserve the semantics of the
   /// instruction.
-  void commute();
+  LLVM_ABI void commute();
 
   /// Return true if a shufflevector instruction can be formed with the
   /// specified operands.
@@ -554,7 +556,7 @@ public:
   }
 
   /// Overload to return most specific vector type.
-  VectorType *getType() const;
+  LLVM_ABI VectorType *getType() const;
 
   /// Return the shuffle mask value of this instruction for the given element
   /// index. Return PoisonMaskElem if the element is undef.
@@ -577,12 +579,12 @@ public:
   }
 
   /// Return the mask for this instruction, for use in bitcode.
-  Constant *getShuffleMaskForBitcode() const;
+  LLVM_ABI Constant *getShuffleMaskForBitcode() const;
 
-  static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
-                                                Type *ResultTy);
+  LLVM_ABI static Constant *convertShuffleMaskForBitcode(ArrayRef<int> Mask,
+                                                         Type *ResultTy);
 
-  void setShuffleMask(ArrayRef<int> Mask);
+  LLVM_ABI void setShuffleMask(ArrayRef<int> Mask);
 
   ArrayRef<int> getShuffleMask() const {
     return cast<llvm::ShuffleVectorInst>(Val)->getShuffleMask();
@@ -965,9 +967,9 @@ class InsertValueInst
   friend Context; // for InsertValueInst()
 
 public:
-  static Value *create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Agg, Value *Val, ArrayRef<unsigned> Idxs,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::InsertValue;
@@ -1024,36 +1026,37 @@ class BranchInst : public SingleLLVMInstructionImpl<llvm::BranchInst> {
   friend Context; // for BranchInst()
 
 public:
-  static BranchInst *create(BasicBlock *IfTrue, InsertPosition Pos,
-                            Context &Ctx);
-  static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
-                            Value *Cond, InsertPosition Pos, Context &Ctx);
+  LLVM_ABI static BranchInst *create(BasicBlock *IfTrue, InsertPosition Pos,
+                                     Context &Ctx);
+  LLVM_ABI static BranchInst *create(BasicBlock *IfTrue, BasicBlock *IfFalse,
+                                     Value *Cond, InsertPosition Pos,
+                                     Context &Ctx);
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
+  LLVM_ABI static bool classof(const Value *From);
   bool isUnconditional() const {
     return cast<llvm::BranchInst>(Val)->isUnconditional();
   }
   bool isConditional() const {
     return cast<llvm::BranchInst>(Val)->isConditional();
   }
-  Value *getCondition() const;
+  LLVM_ABI Value *getCondition() const;
   void setCondition(Value *V) { setOperand(0, V); }
   unsigned getNumSuccessors() const { return 1 + isConditional(); }
-  BasicBlock *getSuccessor(unsigned SuccIdx) const;
-  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
   void swapSuccessors() { swapOperandsInternal(1, 2); }
 
 private:
   struct LLVMBBToSBBB {
     Context &Ctx;
     LLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
-    BasicBlock *operator()(llvm::BasicBlock *BB) const;
+    LLVM_ABI BasicBlock *operator()(llvm::BasicBlock *BB) const;
   };
 
   struct ConstLLVMBBToSBBB {
     Context &Ctx;
     ConstLLVMBBToSBBB(Context &Ctx) : Ctx(Ctx) {}
-    const BasicBlock *operator()(const llvm::BasicBlock *BB) const;
+    LLVM_ABI const BasicBlock *operator()(const llvm::BasicBlock *BB) const;
   };
 
 public:
@@ -1109,8 +1112,9 @@ class ExtractValueInst : public UnaryInstruction {
   friend Context; // for ExtractValueInst()
 
 public:
-  static Value *create(Value *Agg, ArrayRef<unsigned> Idxs, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static Value *create(Value *Agg, ArrayRef<unsigned> Idxs,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::ExtractValue;
@@ -1120,7 +1124,7 @@ public:
   /// with an extractvalue instruction with the specified parameters.
   ///
   /// Null is returned if the indices are invalid for the specified type.
-  static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs);
+  LLVM_ABI static Type *getIndexedType(Type *Agg, ArrayRef<unsigned> Idxs);
 
   using idx_iterator = llvm::ExtractValueInst::idx_iterator;
 
@@ -1163,9 +1167,9 @@ class VAArgInst : public UnaryInstruction {
   friend Context; // For constructor;
 
 public:
-  static VAArgInst *create(Value *List, Type *Ty, InsertPosition Pos,
-                           Context &Ctx, const Twine &Name = "");
-  Value *getPointerOperand();
+  LLVM_ABI static VAArgInst *create(Value *List, Type *Ty, InsertPosition Pos,
+                                    Context &Ctx, const Twine &Name = "");
+  LLVM_ABI Value *getPointerOperand();
   const Value *getPointerOperand() const {
     return const_cast<VAArgInst *>(this)->getPointerOperand();
   }
@@ -1183,8 +1187,8 @@ class FreezeInst : public UnaryInstruction {
   friend Context; // For constructor;
 
 public:
-  static FreezeInst *create(Value *V, InsertPosition Pos, Context &Ctx,
-                            const Twine &Name = "");
+  LLVM_ABI static FreezeInst *create(Value *V, InsertPosition Pos, Context &Ctx,
+                                     const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Freeze;
   }
@@ -1200,11 +1204,11 @@ public:
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return cast<llvm::LoadInst>(Val)->isVolatile(); }
   /// Specify whether this is a volatile load or not.
-  void setVolatile(bool V);
+  LLVM_ABI void setVolatile(bool V);
 
-  static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
-                          InsertPosition Pos, bool IsVolatile, Context &Ctx,
-                          const Twine &Name = "");
+  LLVM_ABI static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
+                                   InsertPosition Pos, bool IsVolatile,
+                                   Context &Ctx, const Twine &Name = "");
   static LoadInst *create(Type *Ty, Value *Ptr, MaybeAlign Align,
                           InsertPosition Pos, Context &Ctx,
                           const Twine &Name = "") {
@@ -1212,8 +1216,8 @@ public:
   }
 
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
-  Value *getPointerOperand() const;
+  LLVM_ABI static bool classof(const Value *From);
+  LLVM_ABI Value *getPointerOperand() const;
   Align getAlign() const { return cast<llvm::LoadInst>(Val)->getAlign(); }
   bool isUnordered() const { return cast<llvm::LoadInst>(Val)->isUnordered(); }
   bool isSimple() const { return cast<llvm::LoadInst>(Val)->isSimple(); }
@@ -1229,19 +1233,20 @@ public:
   /// Return true if this is a store from a volatile memory location.
   bool isVolatile() const { return cast<llvm::StoreInst>(Val)->isVolatile(); }
   /// Specify whether this is a volatile store or not.
-  void setVolatile(bool V);
+  LLVM_ABI void setVolatile(bool V);
 
-  static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
-                           InsertPosition Pos, bool IsVolatile, Context &Ctx);
+  LLVM_ABI static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
+                                    InsertPosition Pos, bool IsVolatile,
+                                    Context &Ctx);
   static StoreInst *create(Value *V, Value *Ptr, MaybeAlign Align,
                            InsertPosition Pos, Context &Ctx) {
     return create(V, Ptr, Align, Pos, /*IsVolatile=*/false, Ctx);
   }
 
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
-  Value *getValueOperand() const;
-  Value *getPointerOperand() const;
+  LLVM_ABI static bool classof(const Value *From);
+  LLVM_ABI Value *getValueOperand() const;
+  LLVM_ABI Value *getPointerOperand() const;
   Align getAlign() const { return cast<llvm::StoreInst>(Val)->getAlign(); }
   bool isSimple() const { return cast<llvm::StoreInst>(Val)->isSimple(); }
   bool isUnordered() const { return cast<llvm::StoreInst>(Val)->isUnordered(); }
@@ -1260,8 +1265,8 @@ class UnreachableInst final : public Instruction {
   }
 
 public:
-  static UnreachableInst *create(InsertPosition Pos, Context &Ctx);
-  static bool classof(const Value *From);
+  LLVM_ABI static UnreachableInst *create(InsertPosition Pos, Context &Ctx);
+  LLVM_ABI static bool classof(const Value *From);
   unsigned getNumSuccessors() const { return 0; }
   unsigned getUseOperandNo(const Use &Use) const final {
     llvm_unreachable("UnreachableInst has no operands!");
@@ -1280,12 +1285,13 @@ class ReturnInst final : public SingleLLVMInstructionImpl<llvm::ReturnInst> {
                                   Context &Ctx);
 
 public:
-  static ReturnInst *create(Value *RetVal, InsertPosition Pos, Context &Ctx);
+  LLVM_ABI static ReturnInst *create(Value *RetVal, InsertPosition Pos,
+                                     Context &Ctx);
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Ret;
   }
   /// \Returns null if there is no return value.
-  Value *getReturnValue() const;
+  LLVM_ABI Value *getReturnValue() const;
 };
 
 class CallBase : public SingleLLVMInstructionImpl<llvm::CallBase> {
@@ -1303,7 +1309,7 @@ public:
            Opc == Instruction::ClassID::CallBr;
   }
 
-  FunctionType *getFunctionType() const;
+  LLVM_ABI FunctionType *getFunctionType() const;
 
   op_iterator data_operands_begin() { return op_begin(); }
   const_op_iterator data_operands_begin() const {
@@ -1390,17 +1396,17 @@ public:
   }
   bool hasArgument(const Value *V) const { return is_contained(args(), V); }
 
-  Value *getCalledOperand() const;
-  Use getCalledOperandUse() const;
+  LLVM_ABI Value *getCalledOperand() const;
+  LLVM_ABI Use getCalledOperandUse() const;
 
-  Function *getCalledFunction() const;
+  LLVM_ABI Function *getCalledFunction() const;
   bool isIndirectCall() const {
     return cast<llvm::CallBase>(Val)->isIndirectCall();
   }
   bool isCallee(Use U) const {
     return cast<llvm::CallBase>(Val)->isCallee(U.LLVMUse);
   }
-  Function *getCaller();
+  LLVM_ABI Function *getCaller();
   const Function *getCaller() const {
     return const_cast<CallBase *>(this)->getCaller();
   }
@@ -1412,7 +1418,7 @@ public:
     return cast<llvm::CallBase>(Val)->getIntrinsicID();
   }
   void setCalledOperand(Value *V) { getCalledOperandUse().set(V); }
-  void setCalledFunction(Function *F);
+  LLVM_ABI void setCalledFunction(Function *F);
   CallingConv::ID getCallingConv() const {
     return cast<llvm::CallBase>(Val)->getCallingConv();
   }
@@ -1428,9 +1434,9 @@ class CallInst : public CallBase {
   friend class IntrinsicInst; // For constructor
 
 public:
-  static CallInst *create(FunctionType *FTy, Value *Func,
-                          ArrayRef<Value *> Args, InsertPosition Pos,
-                          Context &Ctx, const Twine &NameStr = "");
+  LLVM_ABI static CallInst *create(FunctionType *FTy, Value *Func,
+                                   ArrayRef<Value *> Args, InsertPosition Pos,
+                                   Context &Ctx, const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Call;
@@ -1446,20 +1452,21 @@ class InvokeInst final : public CallBase {
                         // create*()
 
 public:
-  static InvokeInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *IfNormal, BasicBlock *IfException,
-                            ArrayRef<Value *> Args, InsertPosition Pos,
-                            Context &Ctx, const Twine &NameStr = "");
+  LLVM_ABI static InvokeInst *create(FunctionType *FTy, Value *Func,
+                                     BasicBlock *IfNormal,
+                                     BasicBlock *IfException,
+                                     ArrayRef<Value *> Args, InsertPosition Pos,
+                                     Context &Ctx, const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Invoke;
   }
-  BasicBlock *getNormalDest() const;
-  BasicBlock *getUnwindDest() const;
-  void setNormalDest(BasicBlock *BB);
-  void setUnwindDest(BasicBlock *BB);
-  LandingPadInst *getLandingPadInst() const;
-  BasicBlock *getSuccessor(unsigned SuccIdx) const;
+  LLVM_ABI BasicBlock *getNormalDest() const;
+  LLVM_ABI BasicBlock *getUnwindDest() const;
+  LLVM_ABI void setNormalDest(BasicBlock *BB);
+  LLVM_ABI void setUnwindDest(BasicBlock *BB);
+  LLVM_ABI LandingPadInst *getLandingPadInst() const;
+  LLVM_ABI BasicBlock *getSuccessor(unsigned SuccIdx) const;
   void setSuccessor(unsigned SuccIdx, BasicBlock *NewSucc) {
     assert(SuccIdx < 2 && "Successor # out of range for invoke!");
     if (SuccIdx == 0)
@@ -1481,25 +1488,25 @@ class CallBrInst final : public CallBase {
                         // create*()
 
 public:
-  static CallBrInst *create(FunctionType *FTy, Value *Func,
-                            BasicBlock *DefaultDest,
-                            ArrayRef<BasicBlock *> IndirectDests,
-                            ArrayRef<Value *> Args, InsertPosition Pos,
-                            Context &Ctx, const Twine &NameStr = "");
+  LLVM_ABI static CallBrInst *create(FunctionType *FTy, Value *Func,
+                                     BasicBlock *DefaultDest,
+                                     ArrayRef<BasicBlock *> IndirectDests,
+                                     ArrayRef<Value *> Args, InsertPosition Pos,
+                                     Context &Ctx, const Twine &NameStr = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CallBr;
   }
   unsigned getNumIndirectDests() const {
     return cast<llvm::CallBrInst>(Val)->getNumIndirectDests();
   }
-  Value *getIndirectDestLabel(unsigned Idx) const;
-  Value *getIndirectDestLabelUse(unsigned Idx) const;
-  BasicBlock *getDefaultDest() const;
-  BasicBlock *getIndirectDest(unsigned Idx) const;
-  SmallVector<BasicBlock *, 16> getIndirectDests() const;
-  void setDefaultDest(BasicBlock *BB);
-  void setIndirectDest(unsigned Idx, BasicBlock *BB);
-  BasicBlock *getSuccessor(unsigned Idx) const;
+  LLVM_ABI Value *getIndirectDestLabel(unsigned Idx) const;
+  LLVM_ABI Value *getIndirectDestLabelUse(unsigned Idx) const;
+  LLVM_ABI BasicBlock *getDefaultDest() const;
+  LLVM_ABI BasicBlock *getIndirectDest(unsigned Idx) const;
+  LLVM_ABI SmallVector<BasicBlock *, 16> getIndirectDests() const;
+  LLVM_ABI void setDefaultDest(BasicBlock *BB);
+  LLVM_ABI void setIndirectDest(unsigned Idx, BasicBlock *BB);
+  LLVM_ABI BasicBlock *getSuccessor(unsigned Idx) const;
   unsigned getNumSuccessors() const {
     return cast<llvm::CallBrInst>(Val)->getNumSuccessors();
   }
@@ -1512,9 +1519,10 @@ class LandingPadInst : public SingleLLVMInstructionImpl<llvm::LandingPadInst> {
   friend class Context; // For constructor.
 
 public:
-  static LandingPadInst *create(Type *RetTy, unsigned NumReservedClauses,
-                                InsertPosition Pos, Context &Ctx,
-                                const Twine &Name = "");
+  LLVM_ABI static LandingPadInst *create(Type *RetTy,
+                                         unsigned NumReservedClauses,
+                                         InsertPosition Pos, Context &Ctx,
+                                         const Twine &Name = "");
   /// Return 'true' if this landingpad instruction is a
   /// cleanup. I.e., it should be run when unwinding even if its landing pad
   /// doesn't catch the exception.
@@ -1522,14 +1530,14 @@ public:
     return cast<llvm::LandingPadInst>(Val)->isCleanup();
   }
   /// Indicate that this landingpad instruction is a cleanup.
-  void setCleanup(bool V);
+  LLVM_ABI void setCleanup(bool V);
 
   // TODO: We are not implementing addClause() because we have no way to revert
   // it for now.
 
   /// Get the value of the clause at index Idx. Use isCatch/isFilter to
   /// determine what type of clause this is.
-  Constant *getClause(unsigned Idx) const;
+  LLVM_ABI Constant *getClause(unsigned Idx) const;
 
   /// Return 'true' if the clause and index Idx is a catch clause.
   bool isCatch(unsigned Idx) const {
@@ -1565,12 +1573,12 @@ public:
   ///
   /// Note: This returns the associated CatchSwitchInst if this FuncletPadInst
   /// is a CatchPadInst.
-  Value *getParentPad() const;
-  void setParentPad(Value *ParentPad);
+  LLVM_ABI Value *getParentPad() const;
+  LLVM_ABI void setParentPad(Value *ParentPad);
   /// Return the Idx-th funcletpad argument.
-  Value *getArgOperand(unsigned Idx) const;
+  LLVM_ABI Value *getArgOperand(unsigned Idx) const;
   /// Set the Idx-th funcletpad argument.
-  void setArgOperand(unsigned Idx, Value *V);
+  LLVM_ABI void setArgOperand(unsigned Idx, Value *V);
 
   // TODO: Implement missing functions: arg_operands().
   static bool classof(const Value *From) {
@@ -1585,13 +1593,13 @@ class CatchPadInst : public FuncletPadInst {
   friend class Context; // For constructor.
 
 public:
-  CatchSwitchInst *getCatchSwitch() const;
+  LLVM_ABI CatchSwitchInst *getCatchSwitch() const;
   // TODO: We have not implemented setCatchSwitch() because we can't revert it
   // for now, as there is no CatchPadInst member function that can undo it.
 
-  static CatchPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
-                              InsertPosition Pos, Context &Ctx,
-                              const Twine &Name = "");
+  LLVM_ABI static CatchPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
+                                       InsertPosition Pos, Context &Ctx,
+                                       const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CatchPad;
   }
@@ -1603,9 +1611,10 @@ class CleanupPadInst : public FuncletPadInst {
   friend class Context; // For constructor.
 
 public:
-  static CleanupPadInst *create(Value *ParentPad, ArrayRef<Value *> Args,
-                                InsertPosition Pos, Context &Ctx,
-                                const Twine &Name = "");
+  LLVM_ABI static CleanupPadInst *create(Value *ParentPad,
+                                         ArrayRef<Value *> Args,
+                                         InsertPosition Pos, Context &Ctx,
+                                         const Twine &Name = "");
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CleanupPad;
   }
@@ -1619,16 +1628,17 @@ class CatchReturnInst
   friend class Context; // For constructor.
 
 public:
-  static CatchReturnInst *create(CatchPadInst *CatchPad, BasicBlock *BB,
-                                 InsertPosition Pos, Context &Ctx);
-  CatchPadInst *getCatchPad() const;
-  void setCatchPad(CatchPadInst *CatchPad);
-  BasicBlock *getSuccessor() const;
-  void setSuccessor(BasicBlock *NewSucc);
+  LLVM_ABI static CatchReturnInst *create(CatchPadInst *CatchPad,
+                                          BasicBlock *BB, InsertPosition Pos,
+                                          Context &Ctx);
+  LLVM_ABI CatchPadInst *getCatchPad() const;
+  LLVM_ABI void setCatchPad(CatchPadInst *CatchPad);
+  LLVM_ABI BasicBlock *getSuccessor() const;
+  LLVM_ABI void setSuccessor(BasicBlock *NewSucc);
   unsigned getNumSuccessors() {
     return cast<llvm::CatchReturnInst>(Val)->getNumSuccessors();
   }
-  Value *getCatchSwitchParentPad() const;
+  LLVM_ABI Value *getCatchSwitchParentPad() const;
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CatchRet;
   }
@@ -1642,22 +1652,22 @@ class CleanupReturnInst
   friend class Context; // For constructor.
 
 public:
-  static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
-                                   BasicBlock *UnwindBB, InsertPosition Pos,
-                                   Context &Ctx);
+  LLVM_ABI static CleanupReturnInst *create(CleanupPadInst *CleanupPad,
+                                            BasicBlock *UnwindBB,
+                                            InsertPosition Pos, Context &Ctx);
   bool hasUnwindDest() const {
     return cast<llvm::CleanupReturnInst>(Val)->hasUnwindDest();
   }
   bool unwindsToCaller() const {
     return cast<llvm::CleanupReturnInst>(Val)->unwindsToCaller();
   }
-  CleanupPadInst *getCleanupPad() const;
-  void setCleanupPad(CleanupPadInst *CleanupPad);
+  LLVM_ABI CleanupPadInst *getCleanupPad() const;
+  LLVM_ABI void setCleanupPad(CleanupPadInst *CleanupPad);
   unsigned getNumSuccessors() const {
     return cast<llvm::CleanupReturnInst>(Val)->getNumSuccessors();
   }
-  BasicBlock *getUnwindDest() const;
-  void setUnwindDest(BasicBlock *NewDest);
+  LLVM_ABI BasicBlock *getUnwindDest() const;
+  LLVM_ABI void setUnwindDest(BasicBlock *NewDest);
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::CleanupRet;
@@ -1677,16 +1687,16 @@ class GetElementPtrInst final
                         // create*()
 
 public:
-  static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &NameStr = "");
+  LLVM_ABI static Value *create(Type *Ty, Value *Ptr, ArrayRef<Value *> IdxList,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &NameStr = "");
 
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::GetElementPtr;
   }
 
-  Type *getSourceElementType() const;
-  Type *getResultElementType() const;
+  LLVM_ABI Type *getSourceElementType() const;
+  LLVM_ABI Type *getResultElementType() const;
   unsigned getAddressSpace() const {
     return cast<llvm::GetElementPtrInst>(Val)->getAddressSpace();
   }
@@ -1706,11 +1716,11 @@ public:
     return const_cast<GetElementPtrInst *>(this)->indices();
   }
 
-  Value *getPointerOperand() const;
+  LLVM_ABI Value *getPointerOperand() const;
   static unsigned getPointerOperandIndex() {
     return llvm::GetElementPtrInst::getPointerOperandIndex();
   }
-  Type *getPointerOperandType() const;
+  LLVM_ABI Type *getPointerOperandType() const;
   unsigned getPointerAddressSpace() const {
     return cast<llvm::GetElementPtrInst>(Val)->getPointerAddressSpace();
   }
@@ -1750,12 +1760,12 @@ class CatchSwitchInst
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static CatchSwitchInst *create(Value *ParentPad, BasicBlock *UnwindBB,
-                                 unsigned NumHandlers, InsertPosition Pos,
-                                 Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static CatchSwitchInst *
+  create(Value *ParentPad, BasicBlock *UnwindBB, unsigned NumHandlers,
+         InsertPosition Pos, Context &Ctx, const Twine &Name = "");
 
-  Value *getParentPad() const;
-  void setParentPad(Value *ParentPad);
+  LLVM_ABI Value *getParentPad() const;
+  LLVM_ABI void setParentPad(Value *ParentPad);
 
   bool hasUnwindDest() const {
     return cast<llvm::CatchSwitchInst>(Val)->hasUnwindDest();
@@ -1763,8 +1773,8 @@ public:
   bool unwindsToCaller() const {
     return cast<llvm::CatchSwitchInst>(Val)->unwindsToCaller();
   }
-  BasicBlock *getUnwindDest() const;
-  void setUnwindDest(BasicBlock *UnwindDest);
+  LLVM_ABI BasicBlock *getUnwindDest() const;
+  LLVM_ABI void setUnwindDest(BasicBlock *UnwindDest);
 
   unsigned getNumHandlers() const {
     return cast<llvm::CatchSwitchInst>(Val)->getNumHandlers();
@@ -1810,7 +1820,7 @@ public:
     return make_range(handler_begin(), handler_end());
   }
 
-  void addHandler(BasicBlock *Dest);
+  LLVM_ABI void addHandler(BasicBlock *Dest);
 
   // TODO: removeHandler() cannot be reverted because there is no equivalent
   // addHandler() with a handler_iterator to specify the position. So we can't
@@ -1839,8 +1849,9 @@ class ResumeInst : public SingleLLVMInstructionImpl<llvm::ResumeInst> {
   friend class Context; // For accessing the constructor in create*()
 
 public:
-  static ResumeInst *create(Value *Exn, InsertPosition Pos, Context &Ctx);
-  Value *getValue() const;
+  LLVM_ABI static ResumeInst *create(Value *Exn, InsertPosition Pos,
+                                     Context &Ctx);
+  LLVM_ABI Value *getValue() const;
   unsigned getNumSuccessors() const {
     return cast<llvm::ResumeInst>(Val)->getNumSuccessors();
   }
@@ -1858,17 +1869,17 @@ public:
   static constexpr const unsigned DefaultPseudoIndex =
       llvm::SwitchInst::DefaultPseudoIndex;
 
-  static SwitchInst *create(Value *V, BasicBlock *Dest, unsigned NumCases,
-                            InsertPosition Pos, Context &Ctx,
-                            const Twine &Name = "");
+  LLVM_ABI static SwitchInst *create(Value *V, BasicBlock *Dest,
+                                     unsigned NumCases, InsertPosition Pos,
+                                     Context &Ctx, const Twine &Name = "");
 
-  Value *getCondition() const;
-  void setCondition(Value *V);
-  BasicBlock *getDefaultDest() const;
+  LLVM_ABI Value *getCondition() const;
+  LLVM_ABI void setCondition(Value *V);
+  LLVM_ABI BasicBlock *getDefaultDest() const;
   bool defaultDestUnreachable() const {
     return cast<llvm::SwitchInst>(Val)->defaultDestUnreachable();
   }
-  void setDefaultDest(BasicBlock *DefaultCase);
+  LLVM_ABI void setDefaultDest(BasicBlock *DefaultCase);
   unsigned getNumCases() const {
     return cast<llvm::SwitchInst>(Val)->getNumCases();
   }
@@ -1913,9 +1924,9 @@ public:
       return I;
     return case_default();
   }
-  ConstantInt *findCaseDest(BasicBlock *BB);
+  LLVM_ABI ConstantInt *findCaseDest(BasicBlock *BB);
 
-  void addCase(ConstantInt *OnVal, BasicBlock *Dest);
+  LLVM_ABI void addCase(ConstantInt *OnVal, BasicBlock *Dest);
   /// This method removes the specified case and its successor from the switch
   /// instruction. Note that this operation may reorder the remaining cases at
   /// index idx and above.
@@ -1923,13 +1934,13 @@ public:
   /// This action invalidates iterators for all cases following the one removed,
   /// including the case_end() iterator. It returns an iterator for the next
   /// case.
-  CaseIt removeCase(CaseIt It);
+  LLVM_ABI CaseIt removeCase(CaseIt It);
 
   unsigned getNumSuccessors() const {
     return cast<llvm::SwitchInst>(Val)->getNumSuccessors();
   }
-  BasicBlock *getSuccessor(unsigned Idx) const;
-  void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
+  LLVM_ABI BasicBlock *getSuccessor(unsigned Idx) const;
+  LLVM_ABI void setSuccessor(unsigned Idx, BasicBlock *NewSucc);
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::Switch;
   }
@@ -1950,11 +1961,13 @@ class UnaryOperator : public UnaryInstruction {
                          Ctx) {}
   friend Context; // for constructor.
 public:
-  static Value *create(Instruction::Opcode Op, Value *OpV, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *OpV,
-                                      Value *CopyFrom, InsertPosition Pos,
-                                      Context &Ctx, const Twine &Name = "");
+  LLVM_ABI static Value *create(Instruction::Opcode Op, Value *OpV,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
+  LLVM_ABI static Value *createWithCopiedFlags(Instruction::Opcode Op,
+                                               Value *OpV, Value *CopyFrom,
+                                               InsertPosition Pos, Context &Ctx,
+                                               const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::UnOp;
@@ -2013,14 +2026,15 @@ protected:
   friend class Context; // For constructor.
 
 public:
-  static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Instruction::Opcode Op, Value *LHS, Value *RHS,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
 
-  static Value *createWithCopiedFlags(Instruction::Opcode Op, Value *LHS,
-                                      Value *RHS, Value *CopyFrom,
-                                      InsertPosition Pos, Context &Ctx,
-                                      const Twine &Name = "");
+  LLVM_ABI static Value *createWithCopiedFlags(Instruction::Opcode Op,
+                                               Value *LHS, Value *RHS,
+                                               Value *CopyFrom,
+                                               InsertPosition Pos, Context &Ctx,
+                                               const Twine &Name = "");
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     return From->getSubclassID() == ClassID::BinaryOperator;
@@ -2033,7 +2047,7 @@ public:
 /// can also be treated as an add.
 class PossiblyDisjointInst : public BinaryOperator {
 public:
-  void setIsDisjoint(bool B);
+  LLVM_ABI void setIsDisjoint(bool B);
   bool isDisjoint() const {
     return cast<llvm::PossiblyDisjointInst>(Val)->isDisjoint();
   }
@@ -2066,24 +2080,24 @@ public:
     cast<llvm::AtomicRMWInst>(Val)->setOperation(Op);
   }
   Align getAlign() const { return cast<llvm::AtomicRMWInst>(Val)->getAlign(); }
-  void setAlignment(Align Align);
+  LLVM_ABI void setAlignment(Align Align);
   bool isVolatile() const {
     return cast<llvm::AtomicRMWInst>(Val)->isVolatile();
   }
-  void setVolatile(bool V);
+  LLVM_ABI void setVolatile(bool V);
   AtomicOrdering getOrdering() const {
     return cast<llvm::AtomicRMWInst>(Val)->getOrdering();
   }
-  void setOrdering(AtomicOrdering Ordering);
+  LLVM_ABI void setOrdering(AtomicOrdering Ordering);
   SyncScope::ID getSyncScopeID() const {
     return cast<llvm::AtomicRMWInst>(Val)->getSyncScopeID();
   }
-  void setSyncScopeID(SyncScope::ID SSID);
-  Value *getPointerOperand();
+  LLVM_ABI void setSyncScopeID(SyncScope::ID SSID);
+  LLVM_ABI Value *getPointerOperand();
   const Value *getPointerOperand() const {
     return const_cast<AtomicRMWInst *>(this)->getPointerOperand();
   }
-  Value *getValOperand();
+  LLVM_ABI Value *getValOperand();
   const Value *getValOperand() const {
     return const_cast<AtomicRMWInst *>(this)->getValOperand();
   }
@@ -2097,11 +2111,10 @@ public:
     return From->getSubclassID() == ClassID::AtomicRMW;
   }
 
-  static AtomicRMWInst *create(BinOp Op, Value *Ptr, Value *Val,
-                               MaybeAlign Align, AtomicOrdering Ordering,
-                               InsertPosition Pos, Context &Ctx,
-                               SyncScope::ID SSID = SyncScope::System,
-                               const Twine &Name = "");
+  LLVM_ABI static AtomicRMWInst *
+  create(BinOp Op, Value *Ptr, Value *Val, MaybeAlign Align,
+         AtomicOrdering Ordering, InsertPosition Pos, Context &Ctx,
+         SyncScope::ID SSID = SyncScope::System, const Twine &Name = "");
 };
 
 class AtomicCmpXchgInst
@@ -2119,17 +2132,17 @@ public:
     return cast<llvm::AtomicCmpXchgInst>(Val)->getAlign();
   }
 
-  void setAlignment(Align Align);
+  LLVM_ABI void setAlignment(Align Align);
   /// Return true if this is a cmpxchg from a volatile memory
   /// location.
   bool isVolatile() const {
     return cast<llvm::AtomicCmpXchgInst>(Val)->isVolatile();
   }
   /// Specify whether this is a volatile cmpxchg.
-  void setVolatile(bool V);
+  LLVM_ABI void setVolatile(bool V);
   /// Return true if this cmpxchg may spuriously fail.
   bool isWeak() const { return cast<llvm::AtomicCmpXchgInst>(Val)->isWeak(); }
-  void setWeak(bool IsWeak);
+  LLVM_ABI void setWeak(bool IsWeak);
   static bool isValidSuccessOrdering(AtomicOrdering Ordering) {
     return llvm::AtomicCmpXchgInst::isValidSuccessOrdering(Ordering);
   }
@@ -2139,30 +2152,30 @@ public:
   AtomicOrdering getSuccessOrdering() const {
     return cast<llvm::AtomicCmpXchgInst>(Val)->getSuccessOrdering();
   }
-  void setSuccessOrdering(AtomicOrdering Ordering);
+  LLVM_ABI void setSuccessOrdering(AtomicOrdering Ordering);
 
   AtomicOrdering getFailureOrdering() const {
     return cast<llvm::AtomicCmpXchgInst>(Val)->getFailureOrdering();
   }
-  void setFailureOrdering(AtomicOrdering Ordering);
+  LLVM_ABI void setFailureOrdering(AtomicOrdering Ordering);
   AtomicOrdering getMergedOrdering() const {
     return cast<llvm::AtomicCmpXchgInst>(Val)->getMergedOrdering();
   }
   SyncScope::ID getSyncScopeID() const {
     return cast<llvm::AtomicCmpXchgInst>(Val)->getSyncScopeID();
   }
-  void setSyncScopeID(SyncScope::ID SSID);
-  Value *getPointerOperand();
+  LLVM_ABI void setSyncScopeID(SyncScope::ID SSID);
+  LLVM_ABI Value *getPointerOperand();
   const Value *getPointerOperand() const {
     return const_cast<AtomicCmpXchgInst *>(this)->getPointerOperand();
   }
 
-  Value *getCompareOperand();
+  LLVM_ABI Value *getCompareOperand();
   const Value *getCompareOperand() const {
     return const_cast<AtomicCmpXchgInst *>(this)->getCompareOperand();
   }
 
-  Value *getNewValOperand();
+  LLVM_ABI Value *getNewValOperand();
   const Value *getNewValOperand() const {
     return const_cast<AtomicCmpXchgInst *>(this)->getNewValOperand();
   }
@@ -2172,7 +2185,7 @@ public:
     return cast<llvm::AtomicCmpXchgInst>(Val)->getPointerAddressSpace();
   }
 
-  static AtomicCmpXchgInst *
+  LLVM_ABI static AtomicCmpXchgInst *
   create(Value *Ptr, Value *Cmp, Value *New, MaybeAlign Align,
          AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
          InsertPosition Pos, Context &Ctx,
@@ -2190,9 +2203,10 @@ class AllocaInst final : public UnaryInstruction {
   friend class Context; // For constructor.
 
 public:
-  static AllocaInst *create(Type *Ty, unsigned AddrSpace, InsertPosition Pos,
-                            Context &Ctx, Value *ArraySize = nullptr,
-                            const Twine &Name = "");
+  LLVM_ABI static AllocaInst *create(Type *Ty, unsigned AddrSpace,
+                                     InsertPosition Pos, Context &Ctx,
+                                     Value *ArraySize = nullptr,
+                                     const Twine &Name = "");
 
   /// Return true if there is an allocation size parameter to the allocation
   /// instruction that is not 1.
@@ -2201,12 +2215,12 @@ public:
   }
   /// Get the number of elements allocated. For a simple allocation of a single
   /// element, this will return a constant 1 value.
-  Value *getArraySize();
+  LLVM_ABI Value *getArraySize();
   const Value *getArraySize() const {
     return const_cast<AllocaInst *>(this)->getArraySize();
   }
   /// Overload to return most specific pointer type.
-  PointerType *getType() const;
+  LLVM_ABI PointerType *getType() const;
   /// Return the address space for the allocation.
   unsigned getAddressSpace() const {
     return cast<llvm::AllocaInst>(Val)->getAddressSpace();
@@ -2222,14 +2236,14 @@ public:
     return cast<llvm::AllocaInst>(Val)->getAllocationSizeInBits(DL);
   }
   /// Return the type that is being allocated by the instruction.
-  Type *getAllocatedType() const;
+  LLVM_ABI Type *getAllocatedType() const;
   /// for use only in special circumstances that need to generically
   /// transform a whole instruction (eg: IR linking and vectorization).
-  void setAllocatedType(Type *Ty);
+  LLVM_ABI void setAllocatedType(Type *Ty);
   /// Return the alignment of the memory that is being allocated by the
   /// instruction.
   Align getAlign() const { return cast<llvm::AllocaInst>(Val)->getAlign(); }
-  void setAlignment(Align Align);
+  LLVM_ABI void setAlignment(Align Align);
   /// Return true if this alloca is in the entry block of the function and is a
   /// constant size. If so, the code generator will fold it into the
   /// prolog/epilog code, so it is basically free.
@@ -2242,7 +2256,7 @@ public:
     return cast<llvm::AllocaInst>(Val)->isUsedWithInAlloca();
   }
   /// Specify whether this alloca is used to represent the arguments to a call.
-  void setUsedWithInAlloca(bool V);
+  LLVM_ABI void setUsedWithInAlloca(bool V);
 
   static bool classof(const Value *From) {
     if (auto *I = dyn_cast<Instruction>(From))
@@ -2293,13 +2307,13 @@ class CastInst : public UnaryInstruction {
   friend Context; // for SBCastInstruction()
 
 public:
-  static Value *create(Type *DestTy, Opcode Op, Value *Operand,
-                       InsertPosition Pos, Context &Ctx,
-                       const Twine &Name = "");
+  LLVM_ABI static Value *create(Type *DestTy, Opcode Op, Value *Operand,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
-  Type *getSrcTy() const;
-  Type *getDestTy() const;
+  LLVM_ABI static bool classof(const Value *From);
+  LLVM_ABI Type *getSrcTy() const;
+  LLVM_ABI Type *getDestTy() const;
 };
 
 /// Instruction that can have a nneg flag (zext/uitofp).
@@ -2308,7 +2322,7 @@ public:
   bool hasNonNeg() const {
     return cast<llvm::PossiblyNonNegInst>(Val)->hasNonNeg();
   }
-  void setNonNeg(bool B);
+  LLVM_ABI void setNonNeg(bool B);
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
     if (auto *I = dyn_cast<Instruction>(From)) {
@@ -2383,15 +2397,15 @@ class PHINode final : public SingleLLVMInstructionImpl<llvm::PHINode> {
   struct LLVMBBToBB {
     Context &Ctx;
     LLVMBBToBB(Context &Ctx) : Ctx(Ctx) {}
-    BasicBlock *operator()(llvm::BasicBlock *LLVMBB) const;
+    LLVM_ABI BasicBlock *operator()(llvm::BasicBlock *LLVMBB) const;
   };
 
 public:
-  static PHINode *create(Type *Ty, unsigned NumReservedValues,
-                         InsertPosition Pos, Context &Ctx,
-                         const Twine &Name = "");
+  LLVM_ABI static PHINode *create(Type *Ty, unsigned NumReservedValues,
+                                  InsertPosition Pos, Context &Ctx,
+                                  const Twine &Name = "");
   /// For isa/dyn_cast.
-  static bool classof(const Value *From);
+  LLVM_ABI static bool classof(const Value *From);
 
   using const_block_iterator =
       mapped_iterator<llvm::PHINode::const_block_iterator, LLVMBBToBB>;
@@ -2417,35 +2431,36 @@ public:
   unsigned getNumIncomingValues() const {
     return cast<llvm::PHINode>(Val)->getNumIncomingValues();
   }
-  Value *getIncomingValue(unsigned Idx) const;
-  void setIncomingValue(unsigned Idx, Value *V);
+  LLVM_ABI Value *getIncomingValue(unsigned Idx) const;
+  LLVM_ABI void setIncomingValue(unsigned Idx, Value *V);
   static unsigned getOperandNumForIncomingValue(unsigned Idx) {
     return llvm::PHINode::getOperandNumForIncomingValue(Idx);
   }
   static unsigned getIncomingValueNumForOperand(unsigned Idx) {
     return llvm::PHINode::getIncomingValueNumForOperand(Idx);
   }
-  BasicBlock *getIncomingBlock(unsigned Idx) const;
-  BasicBlock *getIncomingBlock(const Use &U) const;
+  LLVM_ABI BasicBlock *getIncomingBlock(unsigned Idx) const;
+  LLVM_ABI BasicBlock *getIncomingBlock(const Use &U) const;
 
-  void setIncomingBlock(unsigned Idx, BasicBlock *BB);
+  LLVM_ABI void setIncomingBlock(unsigned Idx, BasicBlock *BB);
 
-  void addIncoming(Value *V, BasicBlock *BB);
+  LLVM_ABI void addIncoming(Value *V, BasicBlock *BB);
 
-  Value *removeIncomingValue(unsigned Idx);
-  Value *removeIncomingValue(BasicBlock *BB);
+  LLVM_ABI Value *removeIncomingValue(unsigned Idx);
+  LLVM_ABI Value *removeIncomingValue(BasicBlock *BB);
 
-  int getBasicBlockIndex(const BasicBlock *BB) const;
-  Value *getIncomingValueForBlock(const BasicBlock *BB) const;
+  LLVM_ABI int getBasicBlockIndex(const BasicBlock *BB) const;
+  LLVM_ABI Value *getIncomingValueForBlock(const BasicBlock *BB) const;
 
-  Value *hasConstantValue() const;
+  LLVM_ABI Value *hasConstantValue() const;
 
   bool hasConstantOrUndefValue() const {
     return cast<llvm::PHINode>(Val)->hasConstantOrUndefValue();
   }
   bool isComplete() const { return cast<llvm::PHINode>(Val)->isComplete(); }
-  void replaceIncomingBlockWith(const BasicBlock *Old, BasicBlock *New);
-  void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate);
+  LLVM_ABI void replaceIncomingBlockWith(const BasicBlock *Old,
+                                         BasicBlock *New);
+  LLVM_ABI void removeIncomingValueIf(function_ref<bool(unsigned)> Predicate);
   // TODO: Implement
   // void copyIncomingBlocks(iterator_range<const_block_iterator> BBRange,
   //                         uint32_t ToIdx = 0)
@@ -2471,21 +2486,23 @@ protected:
   CmpInst(llvm::CmpInst *CI, Context &Ctx, ClassID Id, Opcode Opc)
       : SingleLLVMInstructionImpl(Id, Opc, CI, Ctx) {}
   friend Context; // for CmpInst()
-  static Value *createCommon(Value *Cond, Value *True, Value *False,
-                             const Twine &Name, IRBuilder<> &Builder,
-                             Context &Ctx);
+  LLVM_ABI static Value *createCommon(Value *Cond, Value *True, Value *False,
+                                      const Twine &Name, IRBuilder<> &Builder,
+                                      Context &Ctx);
 
 public:
   using Predicate = llvm::CmpInst::Predicate;
 
-  static Value *create(Predicate Pred, Value *S1, Value *S2, InsertPosition Pos,
-                       Context &Ctx, const Twine &Name = "");
-  static Value *createWithCopiedFlags(Predicate Pred, Value *S1, Value *S2,
-                                      const Instruction *FlagsSource,
-                                      InsertPosition Pos, Context &Ctx,
-                                      const Twine &Name = "");
-  void setPredicate(Predicate P);
-  void swapOperands();
+  LLVM_ABI static Value *create(Predicate Pred, Value *S1, Value *S2,
+                                InsertPosition Pos, Context &Ctx,
+                                const Twine &Name = "");
+  LLVM_ABI static Value *createWithCopiedFlags(Predicate Pred, Value *S1,
+                                               Value *S2,
+                                               const Instruction *FlagsSource,
+                                               InsertPosition Pos, Context &Ctx,
+                                               const Twine &Name = "");
+  LLVM_ABI void setPredicate(Predicate P);
+  LLVM_ABI void swapOperands();
 
   WRAP_MEMBER(getPredicate);
   WRAP_BOTH(isFPPredicate);
@@ -2517,7 +2534,7 @@ public:
   }
 
   /// Create a result type for fcmp/icmp
-  static Type *makeCmpResultType(Type *OpndType);
+  LLVM_ABI static Type *makeCmpResultType(Type *OpndType);
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
@@ -2533,7 +2550,7 @@ class ICmpInst : public CmpInst {
   using LLVMValType = llvm::ICmpInst;
 
 public:
-  void swapOperands();
+  LLVM_ABI void swapOperands();
 
   WRAP_BOTH(getSignedPredicate);
   WRAP_BOTH(getUnsignedPredicate);
@@ -2570,7 +2587,7 @@ class FCmpInst : public CmpInst {
   using LLVMValType = llvm::FCmpInst;
 
 public:
-  void swapOperands();
+  LLVM_ABI void swapOperands();
 
   WRAP_BOTH(isEquality);
   WRAP_MEMBER(isCommutative);

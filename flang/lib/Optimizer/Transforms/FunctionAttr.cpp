@@ -107,6 +107,10 @@ void FunctionAttrPass::runOnOperation() {
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getUnsafeFpMathAttrName(llvmFuncOpName),
         mlir::BoolAttr::get(context, true));
+  if (!reciprocals.empty())
+    func->setAttr(
+        mlir::LLVM::LLVMFuncOp::getReciprocalEstimatesAttrName(llvmFuncOpName),
+        mlir::StringAttr::get(context, reciprocals));
   if (!preferVectorWidth.empty())
     func->setAttr(
         mlir::LLVM::LLVMFuncOp::getPreferVectorWidthAttrName(llvmFuncOpName),

@@ -4,7 +4,7 @@
 
 ; Triply nested loop, should be able to do interchange three times
 ; to get the ideal access pattern.
-; void f(int e[10][10][10], int f[10][10][10]) {
+; void f(int e[restrict 10][10][10], int f[restrict 10][10][10]) {
 ;   for (int a = 0; a < 10; a++) {
 ;     for (int b = 0; b < 10; b++) {
 ;       for (int c = 0; c < 10; c++) {
@@ -35,7 +35,7 @@
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        pr43326-triply-nested
 
-define void @pr43326-triply-nested(ptr %e, ptr %f) {
+define void @pr43326-triply-nested(ptr noalias %e, ptr noalias %f) {
 entry:
   br label %for.outermost.header
 

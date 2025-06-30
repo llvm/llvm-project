@@ -2777,11 +2777,8 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   diagnoseDontCall(CI);
 
-  Intrinsic::ID ID = Intrinsic::not_intrinsic;
-  if (F && F->isIntrinsic())
-    ID = F->getIntrinsicID();
-
-  if (!F || !F->isIntrinsic() || ID == Intrinsic::not_intrinsic)
+  Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
+  if (!F || ID == Intrinsic::not_intrinsic)
     return translateCallBase(CI, MIRBuilder);
 
   assert(ID != Intrinsic::not_intrinsic && "unknown intrinsic");

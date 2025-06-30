@@ -32,7 +32,8 @@ jobs:
           COMMENT: >-
             ⚠️ We detected that you are using a GitHub private e-mail address to contribute to the repo.<br/>
             Please turn off [Keep my email addresses private](https://github.com/settings/emails) setting in your account.<br/>
-            See [LLVM Discourse](https://discourse.llvm.org/t/hidden-emails-on-github-should-we-do-something-about-it) for more information.
+            See [LLVM Developer Policy](https://llvm.org/docs/DeveloperPolicy.html#email-addresses) and
+            [LLVM Discourse](https://discourse.llvm.org/t/hidden-emails-on-github-should-we-do-something-about-it) for more information.
         run: |
           cat << EOF > comments
           [{"body" : "$COMMENT"}]

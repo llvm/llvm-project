@@ -116,7 +116,7 @@ public:
   /// enum value.
   virtual Value getMPIOp(const Location loc,
                          ConversionPatternRewriter &rewriter,
-                         mpi::MPI_OpClassEnum opAttr) = 0;
+                         mpi::MPI_ReductionOpEnum opAttr) = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -199,49 +199,49 @@ public:
   }
 
   Value getMPIOp(const Location loc, ConversionPatternRewriter &rewriter,
-                 mpi::MPI_OpClassEnum opAttr) override {
+                 mpi::MPI_ReductionOpEnum opAttr) override {
     int32_t op = MPI_NO_OP;
     switch (opAttr) {
-    case mpi::MPI_OpClassEnum::MPI_OP_NULL:
+    case mpi::MPI_ReductionOpEnum::MPI_OP_NULL:
       op = MPI_NO_OP;
       break;
-    case mpi::MPI_OpClassEnum::MPI_MAX:
+    case mpi::MPI_ReductionOpEnum::MPI_MAX:
       op = MPI_MAX;
       break;
-    case mpi::MPI_OpClassEnum::MPI_MIN:
+    case mpi::MPI_ReductionOpEnum::MPI_MIN:
       op = MPI_MIN;
       break;
-    case mpi::MPI_OpClassEnum::MPI_SUM:
+    case mpi::MPI_ReductionOpEnum::MPI_SUM:
       op = MPI_SUM;
       break;
-    case mpi::MPI_OpClassEnum::MPI_PROD:
+    case mpi::MPI_ReductionOpEnum::MPI_PROD:
       op = MPI_PROD;
       break;
-    case mpi::MPI_OpClassEnum::MPI_LAND:
+    case mpi::MPI_ReductionOpEnum::MPI_LAND:
       op = MPI_LAND;
       break;
-    case mpi::MPI_OpClassEnum::MPI_BAND:
+    case mpi::MPI_ReductionOpEnum::MPI_BAND:
       op = MPI_BAND;
       break;
-    case mpi::MPI_OpClassEnum::MPI_LOR:
+    case mpi::MPI_ReductionOpEnum::MPI_LOR:
       op = MPI_LOR;
       break;
-    case mpi::MPI_OpClassEnum::MPI_BOR:
+    case mpi::MPI_ReductionOpEnum::MPI_BOR:
       op = MPI_BOR;
       break;
-    case mpi::MPI_OpClassEnum::MPI_LXOR:
+    case mpi::MPI_ReductionOpEnum::MPI_LXOR:
       op = MPI_LXOR;
       break;
-    case mpi::MPI_OpClassEnum::MPI_BXOR:
+    case mpi::MPI_ReductionOpEnum::MPI_BXOR:
       op = MPI_BXOR;
       break;
-    case mpi::MPI_OpClassEnum::MPI_MINLOC:
+    case mpi::MPI_ReductionOpEnum::MPI_MINLOC:
       op = MPI_MINLOC;
       break;
-    case mpi::MPI_OpClassEnum::MPI_MAXLOC:
+    case mpi::MPI_ReductionOpEnum::MPI_MAXLOC:
       op = MPI_MAXLOC;
       break;
-    case mpi::MPI_OpClassEnum::MPI_REPLACE:
+    case mpi::MPI_ReductionOpEnum::MPI_REPLACE:
       op = MPI_REPLACE;
       break;
     }
@@ -336,49 +336,49 @@ public:
   }
 
   Value getMPIOp(const Location loc, ConversionPatternRewriter &rewriter,
-                 mpi::MPI_OpClassEnum opAttr) override {
+                 mpi::MPI_ReductionOpEnum opAttr) override {
     StringRef op;
     switch (opAttr) {
-    case mpi::MPI_OpClassEnum::MPI_OP_NULL:
+    case mpi::MPI_ReductionOpEnum::MPI_OP_NULL:
       op = "ompi_mpi_no_op";
       break;
-    case mpi::MPI_OpClassEnum::MPI_MAX:
+    case mpi::MPI_ReductionOpEnum::MPI_MAX:
       op = "ompi_mpi_max";
       break;
-    case mpi::MPI_OpClassEnum::MPI_MIN:
+    case mpi::MPI_ReductionOpEnum::MPI_MIN:
       op = "ompi_mpi_min";
       break;
-    case mpi::MPI_OpClassEnum::MPI_SUM:
+    case mpi::MPI_ReductionOpEnum::MPI_SUM:
       op = "ompi_mpi_sum";
       break;
-    case mpi::MPI_OpClassEnum::MPI_PROD:
+    case mpi::MPI_ReductionOpEnum::MPI_PROD:
       op = "ompi_mpi_prod";
       break;
-    case mpi::MPI_OpClassEnum::MPI_LAND:
+    case mpi::MPI_ReductionOpEnum::MPI_LAND:
       op = "ompi_mpi_land";
       break;
-    case mpi::MPI_OpClassEnum::MPI_BAND:
+    case mpi::MPI_ReductionOpEnum::MPI_BAND:
       op = "ompi_mpi_band";
       break;
-    case mpi::MPI_OpClassEnum::MPI_LOR:
+    case mpi::MPI_ReductionOpEnum::MPI_LOR:
       op = "ompi_mpi_lor";
       break;
-    case mpi::MPI_OpClassEnum::MPI_BOR:
+    case mpi::MPI_ReductionOpEnum::MPI_BOR:
       op = "ompi_mpi_bor";
       break;
-    case mpi::MPI_OpClassEnum::MPI_LXOR:
+    case mpi::MPI_ReductionOpEnum::MPI_LXOR:
       op = "ompi_mpi_lxor";
       break;
-    case mpi::MPI_OpClassEnum::MPI_BXOR:
+    case mpi::MPI_ReductionOpEnum::MPI_BXOR:
       op = "ompi_mpi_bxor";
       break;
-    case mpi::MPI_OpClassEnum::MPI_MINLOC:
+    case mpi::MPI_ReductionOpEnum::MPI_MINLOC:
       op = "ompi_mpi_minloc";
       break;
-    case mpi::MPI_OpClassEnum::MPI_MAXLOC:
+    case mpi::MPI_ReductionOpEnum::MPI_MAXLOC:
       op = "ompi_mpi_maxloc";
       break;
-    case mpi::MPI_OpClassEnum::MPI_REPLACE:
+    case mpi::MPI_ReductionOpEnum::MPI_REPLACE:
       op = "ompi_mpi_replace";
       break;
     }

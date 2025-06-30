@@ -14,13 +14,13 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
   RegisterContextPOSIXCore_loongarch64.cpp
   RegisterUtilities.cpp
 
+  LINK_COMPONENTS
+    BinaryFormat
+    Support
   LINK_LIBS
     lldbCore
     lldbTarget
     lldbPluginDynamicLoaderPosixDYLD
     lldbPluginObjectFileELF
     lldbPluginProcessUtility
-  LINK_COMPONENTS
-    BinaryFormat
-    Support
   )

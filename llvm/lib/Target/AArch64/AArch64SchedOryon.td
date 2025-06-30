@@ -187,7 +187,7 @@ def ORYONFP2 : ProcResGroup<[ORYONP14FP2]> {
   let BufferSize = 48;
 }
 
-// Reciprocal, Squre root on FP0.
+// Reciprocal, Square root on FP0.
 def ORYONFP0 : ProcResGroup<[ORYONP12FP0]> {
   let BufferSize = 48;
 }
@@ -701,7 +701,7 @@ def : InstRW<[ORYONWrite_1Cyc_I0123],
                        "^CSNEG(W|X)r", "^CSINC(W|X)r")>;
 
 //---
-//Compare Instruciton
+//Compare Instruction
 //---
 
 // We have CCMP, CCMN as LLVM DAG node
@@ -1512,7 +1512,7 @@ def : InstRW<[ORYONWrite_10Cyc_FP3_RC], (instregex "^FSQRTv.*32$")>;
 def : InstRW<[ORYONWrite_13Cyc_FP3_RC], (instregex "^FSQRTv.*64$")>;
 
 //==========
-// SIMD binary elememt arithmetic instructions
+// SIMD binary element arithmetic instructions
 //==========
 
 def : InstRW<[ORYONWrite_4Cyc_FP0123], (instregex "^FMLAv", "^FMLSv")>;
@@ -1568,7 +1568,7 @@ def : InstRW<[ORYONWrite_2Cyc_FP0123], (instregex "^ADDPv", "^FADDPv",
                                                    "^(FMAX|FMIN)(NMP|P)v",
                                                    "^(S|U)(MIN|MAX)Pv")>;
 //==========
-// SIMD dot prodcut instructions
+// SIMD dot product instructions
 //==========
 
 def : InstRW<[ORYONWrite_3Cyc_FP0123], (instregex "^(U|S)DOTv")>;
@@ -1581,7 +1581,7 @@ def : InstRW<[ORYONWrite_2Cyc_FP0123], (instrs TBLv8i8One, TBLv16i8One,
                                                 TBXv8i8One, TBXv16i8One,
                                                 TBLv8i8Two, TBLv16i8Two)>;
 
-// TBL 3-reg/4-reg, 3uops, throughtput=4/3=1.33 latency=4
+// TBL 3-reg/4-reg, 3uops, throughput=4/3=1.33 latency=4
 def : InstRW<[ORYONWrite_4Cyc_FP0123_FP0123_FP0123_RC],
             (instrs TBLv8i8Three, TBLv16i8Three,
                     TBLv8i8Four, TBLv16i8Four)>;

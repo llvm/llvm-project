@@ -86,10 +86,10 @@ namespace {
 struct OperandsSignature {
   class OpKind {
     enum { OK_Reg, OK_FP, OK_Imm, OK_Invalid = -1 };
-    char Repr;
+    char Repr = OK_Invalid;
 
   public:
-    OpKind() : Repr(OK_Invalid) {}
+    OpKind() {}
 
     bool operator<(OpKind RHS) const { return Repr < RHS.Repr; }
     bool operator==(OpKind RHS) const { return Repr == RHS.Repr; }

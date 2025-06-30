@@ -6,12 +6,12 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: noinline nounwind
-define ptr @f(i32 %x) #0 personality i32 0 !dbg !6 {
+define ptr @flink(i32 %x) #0 personality i32 0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %coro_hdl = alloca ptr, align 8
   store i32 %x, ptr %x.addr, align 4
-  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null), !dbg !16
+  %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @flink, ptr null), !dbg !16
   %1 = call i64 @llvm.coro.size.i64(), !dbg !16
   %call = call ptr @malloc(i64 %1), !dbg !16
   %2 = call ptr @llvm.coro.begin(token %0, ptr %call) #7, !dbg !16
@@ -170,8 +170,8 @@ attributes #7 = { noduplicate }
 !31 = !DILocalVariable(name: "allocated", scope: !6, file: !7, line: 55, type: !11)
 !32 = !DILocalVariable(name: "inline_asm", scope: !6, file: !7, line: 55, type: !11)
 
-; CHECK: define ptr @f(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
-; CHECK: define internal fastcc void @f.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
+; CHECK: define ptr @flink(i32 %x) #0 personality i32 0 !dbg ![[ORIG:[0-9]+]]
+; CHECK: define internal fastcc void @flink.resume(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[RESUME:[0-9]+]]
 ; CHECK: entry.resume:
 ; CHECK: %[[DBG_PTR:.*]] = alloca ptr
 ; CHECK: #dbg_declare(ptr %[[DBG_PTR]], ![[RESUME_COROHDL:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst,
@@ -194,18 +194,18 @@ attributes #7 = { noduplicate }
 ; CHECK: [[DEFAULT_DEST]]:
 ; CHECK-NOT: {{.*}}:
 ; CHECK: #dbg_value(i32 %[[CALLBR_RES]]
-; CHECK: define internal fastcc void @f.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
-; CHECK: define internal fastcc void @f.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
+; CHECK: define internal fastcc void @flink.destroy(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[DESTROY:[0-9]+]]
+; CHECK: define internal fastcc void @flink.cleanup(ptr noundef nonnull align 8 dereferenceable(40) %0) #0 personality i32 0 !dbg ![[CLEANUP:[0-9]+]]
 
 ; CHECK: ![[ORIG]] = distinct !DISubprogram(name: "f", linkageName: "flink"
 
-; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink"
+; CHECK: ![[RESUME]] = distinct !DISubprogram(name: "f", linkageName: "flink.resume"
 ; CHECK: ![[RESUME_COROHDL]] = !DILocalVariable(name: "coro_hdl", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_X]] = !DILocalVariable(name: "x", arg: 1, scope: ![[RESUME]]
 ; CHECK: ![[RESUME_CONST]] = !DILocalVariable(name: "direct_const", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT]] = !DILocalVariable(name: "direct_mem", scope: ![[RESUME]]
 ; CHECK: ![[RESUME_DIRECT_VALUE]] = !DILocalVariable(name: "direct_value", scope: ![[RESUME]]
 
-; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink"
+; CHECK: ![[DESTROY]] = distinct !DISubprogram(name: "f", linkageName: "flink.destroy"
 
-; CHECK: ![[CLEANUP]] = distinct !DISubprogram(name: "f", linkageName: "flink"
+; CHECK: ![[CLEANUP]] = distinct !DISubprogram(name: "f", linkageName: "flink.cleanup"

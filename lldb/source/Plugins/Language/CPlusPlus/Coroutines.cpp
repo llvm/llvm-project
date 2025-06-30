@@ -11,8 +11,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -61,19 +59,23 @@ static Function *ExtractDestroyFunction(lldb::TargetSP target_sp,
   return destroy_func_address.CalculateSymbolContextFunction();
 }
 
-static CompilerType InferPromiseType(Function &destroy_func) {
-  Block &block = destroy_func.GetBlock(true);
+// clang generates aritifical `__promise` and `__coro_frame` variables inside
+// the destroy function. Look for those variables and extract their type.
+static CompilerType InferArtificialCoroType(Function *destroy_func,
+                                            ConstString var_name) {
+  if (!destroy_func)
+    return {};
+
+  Block &block = destroy_func->GetBlock(true);
   auto variable_list = block.GetBlockVariableList(true);
 
-  // clang generates an artificial `__promise` variable inside the
-  // `destroy` function. Look for it.
-  auto promise_var = variable_list->FindVariable(ConstString("__promise"));
-  if (!promise_var)
+  auto var = variable_list->FindVariable(var_name);
+  if (!var)
     return {};
-  if (!promise_var->IsArtificial())
+  if (!var->IsArtificial())
     return {};
 
-  Type *promise_type = promise_var->GetType();
+  Type *promise_type = var->GetType();
   if (!promise_type)
     return {};
   return promise_type->GetForwardCompilerType();
@@ -107,30 +109,17 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
 
 llvm::Expected<uint32_t> lldb_private::formatters::
     StdlibCoroutineHandleSyntheticFrontEnd::CalculateNumChildren() {
-  if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
-    return 0;
-
-  return m_promise_ptr_sp ? 3 : 2;
+  return m_children.size();
 }
 
 lldb::ValueObjectSP lldb_private::formatters::
     StdlibCoroutineHandleSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
-  switch (idx) {
-  case 0:
-    return m_resume_ptr_sp;
-  case 1:
-    return m_destroy_ptr_sp;
-  case 2:
-    return m_promise_ptr_sp;
-  }
-  return lldb::ValueObjectSP();
+  return idx < m_children.size() ? m_children[idx] : lldb::ValueObjectSP();
 }
 
 lldb::ChildCacheState
 lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
-  m_resume_ptr_sp.reset();
-  m_destroy_ptr_sp.reset();
-  m_promise_ptr_sp.reset();
+  m_children.clear();
 
   ValueObjectSP valobj_sp = m_backend.GetNonSyntheticValue();
   if (!valobj_sp)
@@ -140,60 +129,66 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   if (frame_ptr_addr == 0 || frame_ptr_addr == LLDB_INVALID_ADDRESS)
     return lldb::ChildCacheState::eRefetch;
 
-  auto ast_ctx = valobj_sp->GetCompilerType().GetTypeSystem<TypeSystemClang>();
-  if (!ast_ctx)
-    return lldb::ChildCacheState::eRefetch;
-
-  // Create the `resume` and `destroy` children.
   lldb::TargetSP target_sp = m_backend.GetTargetSP();
   auto &exe_ctx = m_backend.GetExecutionContextRef();
   lldb::ProcessSP process_sp = target_sp->GetProcessSP();
   auto ptr_size = process_sp->GetAddressByteSize();
-  CompilerType void_type = ast_ctx->GetBasicType(lldb::eBasicTypeVoid);
-  std::array<CompilerType, 1> args{void_type};
-  CompilerType coro_func_type = ast_ctx->CreateFunctionType(
-      /*result_type=*/void_type, args,
-      /*is_variadic=*/false, /*qualifiers=*/0);
-  CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
-  m_resume_ptr_sp = CreateValueObjectFromAddress(
-      "resume", frame_ptr_addr + 0 * ptr_size, exe_ctx, coro_func_ptr_type);
-  lldbassert(m_resume_ptr_sp);
-  m_destroy_ptr_sp = CreateValueObjectFromAddress(
-      "destroy", frame_ptr_addr + 1 * ptr_size, exe_ctx, coro_func_ptr_type);
-  lldbassert(m_destroy_ptr_sp);
-
-  // Get the `promise_type` from the template argument
-  CompilerType promise_type(
-      valobj_sp->GetCompilerType().GetTypeTemplateArgument(0));
-  if (!promise_type)
+  auto ast_ctx = valobj_sp->GetCompilerType().GetTypeSystem<TypeSystemClang>();
+  if (!ast_ctx)
     return lldb::ChildCacheState::eRefetch;
 
-  // Try to infer the promise_type if it was type-erased
+  // Determine the coroutine frame type and the promise type. Fall back
+  // to `void`, since even the pointer itself might be useful, even if the
+  // type inference failed.
+  Function *destroy_func = ExtractDestroyFunction(target_sp, frame_ptr_addr);
+  CompilerType void_type = ast_ctx->GetBasicType(lldb::eBasicTypeVoid);
+  CompilerType promise_type;
+  if (CompilerType template_arg =
+          valobj_sp->GetCompilerType().GetTypeTemplateArgument(0))
+    promise_type = std::move(template_arg);
   if (promise_type.IsVoidType()) {
-    if (Function *destroy_func =
-            ExtractDestroyFunction(target_sp, frame_ptr_addr)) {
-      if (CompilerType inferred_type = InferPromiseType(*destroy_func)) {
+    // Try to infer the promise_type if it was type-erased
+    if (destroy_func) {
+      if (CompilerType inferred_type =
+              InferArtificialCoroType(destroy_func, ConstString("__promise"))) {
         promise_type = inferred_type;
       }
     }
   }
+  CompilerType coro_frame_type =
+      InferArtificialCoroType(destroy_func, ConstString("__coro_frame"));
+  if (!coro_frame_type)
+    coro_frame_type = void_type;
 
-  // If we don't know the promise type, we don't display the `promise` member.
-  // `CreateValueObjectFromAddress` below would fail for `void` types.
-  if (promise_type.IsVoidType()) {
-    return lldb::ChildCacheState::eRefetch;
-  }
+  // Create the `resume` and `destroy` children.
+  std::array<CompilerType, 1> args{coro_frame_type};
+  CompilerType coro_func_type = ast_ctx->CreateFunctionType(
+      /*result_type=*/void_type, args,
+      /*is_variadic=*/false, /*qualifiers=*/0);
+  CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
+  ValueObjectSP resume_ptr_sp = CreateValueObjectFromAddress(
+      "resume", frame_ptr_addr + 0 * ptr_size, exe_ctx, coro_func_ptr_type);
+  assert(resume_ptr_sp);
+  m_children.push_back(std::move(resume_ptr_sp));
+  ValueObjectSP destroy_ptr_sp = CreateValueObjectFromAddress(
+      "destroy", frame_ptr_addr + 1 * ptr_size, exe_ctx, coro_func_ptr_type);
+  assert(destroy_ptr_sp);
+  m_children.push_back(std::move(destroy_ptr_sp));
 
-  // Add the `promise` member. We intentionally add `promise` as a pointer type
-  // instead of a value type, and don't automatically dereference this pointer.
-  // We do so to avoid potential very deep recursion in case there is a cycle
-  // formed between `std::coroutine_handle`s and their promises.
-  lldb::ValueObjectSP promise = CreateValueObjectFromAddress(
-      "promise", frame_ptr_addr + 2 * ptr_size, exe_ctx, promise_type);
-  Status error;
-  lldb::ValueObjectSP promisePtr = promise->AddressOf(error);
-  if (error.Success())
-    m_promise_ptr_sp = promisePtr->Clone(ConstString("promise"));
+  // Add promise and coro_frame
+  // Add the `promise` and `coro_frame` member. We intentionally add them as
+  // pointer types instead of a value type, and don't automatically dereference
+  // those pointers. We do so to avoid potential very deep recursion in case
+  // there is a cycle formed between `std::coroutine_handle`s and their
+  // promises.
+  ValueObjectSP promise_ptr_sp = CreateValueObjectFromAddress(
+      "promise", frame_ptr_addr + 2 * ptr_size, exe_ctx,
+      promise_type.GetPointerType(), /*do_deref=*/false);
+  m_children.push_back(std::move(promise_ptr_sp));
+  ValueObjectSP coroframe_ptr_sp = CreateValueObjectFromAddress(
+      "coro_frame", frame_ptr_addr, exe_ctx, coro_frame_type.GetPointerType(),
+      /*do_deref=*/false);
+  m_children.push_back(std::move(coroframe_ptr_sp));
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -201,16 +196,10 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  if (!m_resume_ptr_sp || !m_destroy_ptr_sp)
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-
-  if (name == ConstString("resume"))
-    return 0;
-  if (name == ConstString("destroy"))
-    return 1;
-  if (name == ConstString("promise_ptr") && m_promise_ptr_sp)
-    return 2;
+  for (const auto &[idx, child_sp] : llvm::enumerate(m_children)) {
+    if (child_sp->GetName() == name)
+      return idx;
+  }
 
   return llvm::createStringError("Type has no child named '%s'",
                                  name.AsCString());

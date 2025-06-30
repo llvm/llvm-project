@@ -845,6 +845,8 @@ public:
     /// This type may be allocated on the stack, either as the allocated type
     /// of an alloca instruction or as a byval function parameter.
     CanBeLocal = 1U << 2,
+    // This type may be used as an element in a vector.
+    CanBeVectorElement = 1U << 3,
   };
 
   /// Returns true if the target extension type contains the given property.

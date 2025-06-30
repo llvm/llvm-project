@@ -8,7 +8,7 @@
 
 #include "hdr/math_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/expf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -18,7 +18,7 @@
 using LlvmLibcExpfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcExpfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::expf(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
@@ -40,7 +40,7 @@ TEST_F(LlvmLibcExpfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExpfTest, Overflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::expf(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);

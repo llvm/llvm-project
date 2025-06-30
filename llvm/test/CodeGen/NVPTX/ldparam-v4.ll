@@ -14,10 +14,7 @@ define void @foo(ptr %ptr) {
 ; CHECK-NEXT:    ld.param.b64 %rd1, [foo_param_0];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 16 .b8 retval0[16];
-; CHECK-NEXT:    call.uni (retval0),
-; CHECK-NEXT:    bar,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    );
+; CHECK-NEXT:    call.uni (retval0), bar, ();
 ; CHECK-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.v4.b32 [%rd1], {%r1, %r2, %r3, %r4};

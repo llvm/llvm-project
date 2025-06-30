@@ -59,10 +59,9 @@ public:
     }
 
     if (TM.isPositionIndependent()) {
-      DiagnosticInfoUnsupported Diag(CurDAG->getMachineFunction().getFunction(),
-                                     "PIC relocations are not supported ",
-                                     Addr.getDebugLoc());
-      CurDAG->getContext()->diagnose(Diag);
+      CurDAG->getContext()->diagnose(DiagnosticInfoUnsupported(
+          CurDAG->getMachineFunction().getFunction(),
+          "PIC relocations are not supported", Addr.getDebugLoc()));
     }
 
     if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||

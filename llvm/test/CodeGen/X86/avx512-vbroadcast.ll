@@ -210,7 +210,7 @@ define <16 x i32> @test_vbroadcast(<16 x float> %a0) {
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; ALL-NEXT:    vcmpunordps %zmm1, %zmm0, %k1
-; ALL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; ALL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; ALL-NEXT:    knotw %k1, %k1
 ; ALL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; ALL-NEXT:    retq

@@ -1745,14 +1745,10 @@ LazyValueInfoImpl &LazyValueInfo::getOrCreateImpl(const Module *M) {
         Intrinsic::getDeclarationIfExists(M, Intrinsic::experimental_guard);
     PImpl = new LazyValueInfoImpl(AC, DL, GuardDecl);
   }
-  return *static_cast<LazyValueInfoImpl *>(PImpl);
+  return *PImpl;
 }
 
-LazyValueInfoImpl *LazyValueInfo::getImpl() {
-  if (!PImpl)
-    return nullptr;
-  return static_cast<LazyValueInfoImpl *>(PImpl);
-}
+LazyValueInfoImpl *LazyValueInfo::getImpl() { return PImpl; }
 
 LazyValueInfo::~LazyValueInfo() { releaseMemory(); }
 

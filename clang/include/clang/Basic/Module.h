@@ -64,6 +64,11 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
 
   explicit operator bool() const { return *this != BaseT({{0}}); }
 
+  // Support implicit cast to ArrayRef.  Note that ASTFileSignature::size
+  // prevents implicit cast to ArrayRef because one of the implicit constructors
+  // of ArrayRef requires access to BaseT::size.
+  operator ArrayRef<uint8_t>() const { return ArrayRef<uint8_t>(data(), size); }
+
   /// Returns the value truncated to the size of an uint64_t.
   uint64_t truncatedValue() const {
     uint64_t Value = 0;

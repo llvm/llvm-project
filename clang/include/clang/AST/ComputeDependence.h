@@ -15,7 +15,7 @@
 
 #include "clang/AST/DependenceFlags.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "clang/Basic/LLVM.h"
 
 namespace clang {
 
@@ -180,7 +180,7 @@ ExprDependence computeDependence(ConceptSpecializationExpr *E,
 
 ExprDependence computeDependence(SYCLUniqueStableNameExpr *E);
 ExprDependence computeDependence(PredefinedExpr *E);
-ExprDependence computeDependence(CallExpr *E, llvm::ArrayRef<Expr *> PreArgs);
+ExprDependence computeDependence(CallExpr *E, ArrayRef<Expr *> PreArgs);
 ExprDependence computeDependence(OffsetOfExpr *E);
 ExprDependence computeDependence(MemberExpr *E);
 ExprDependence computeDependence(ShuffleVectorExpr *E);

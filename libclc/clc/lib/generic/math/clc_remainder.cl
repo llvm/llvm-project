@@ -73,8 +73,12 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remainder(float x, float y) {
 
   return xr;
 }
-_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_remainder, float,
-                      float);
+
+#define __FLOAT_ONLY
+#define FUNCTION __clc_remainder
+#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef FUNCTION
 
 #ifdef cl_khr_fp64
 
@@ -207,8 +211,13 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
 
   return ret;
 }
-_CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_remainder, double,
-                      double);
+
+#define __DOUBLE_ONLY
+#define FUNCTION __clc_remainder
+#define __CLC_BODY <clc/shared/binary_def_scalarize.inc>
+#include <clc/math/gentype.inc>
+#undef FUNCTION
+
 #endif
 
 #ifdef cl_khr_fp16

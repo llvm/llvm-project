@@ -2486,7 +2486,7 @@ TEST_F(FormatTestComments, BlockComments) {
   EXPECT_EQ("/*\n"
             "**\n"
             "* aaaaaa\n"
-            "*aaaaaa\n"
+            "* aaaaaa\n"
             "*/",
             format("/*\n"
                    "**\n"

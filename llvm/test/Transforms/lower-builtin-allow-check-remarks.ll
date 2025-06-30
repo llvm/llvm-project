@@ -1,11 +1,23 @@
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-random-rate=1 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-random-rate=0 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s --check-prefixes=REMOVE
 
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-percentile-cutoff-hot=0 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check)' -lower-allow-check-percentile-cutoff-hot=1000000 -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s --check-prefixes=REMOVE
+
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check<cutoffs[7]=0;runtime_check=1000000>)' -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s --check-prefixes=MIXED
+; RUN: opt < %s -passes='require<profile-summary>,function(lower-allow-check<cutoffs[7]=1000000;runtime_check=0>)' -pass-remarks=lower-allow-check -pass-remarks-missed=lower-allow-check -S 2>&1 | FileCheck %s --check-prefixes=MIXED2
+
 ; CHECK: remark: <unknown>:0:0: Allowed check: Kind=test_check F=test_runtime BB=entry1
 ; CHECK: remark: <unknown>:0:0: Allowed check: Kind=7 F=test_ubsan BB=entry2
 
 ; REMOVE: remark: <unknown>:0:0: Removed check: Kind=test_check F=test_runtime BB=entry1
 ; REMOVE: remark: <unknown>:0:0: Removed check: Kind=7 F=test_ubsan BB=entry2
+
+; MIXED: remark: <unknown>:0:0: Removed check: Kind=test_check F=test_runtime BB=entry1
+; MIXED: remark: <unknown>:0:0: Allowed check: Kind=7 F=test_ubsan BB=entry2
+
+; MIXED2: remark: <unknown>:0:0: Allowed check: Kind=test_check F=test_runtime BB=entry1
+; MIXED2: remark: <unknown>:0:0: Removed check: Kind=7 F=test_ubsan BB=entry2
 
 target triple = "x86_64-pc-linux-gnu"
 

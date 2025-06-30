@@ -146,7 +146,7 @@ define <4 x i32> @ashr_xor_and_custom(<4 x i32> %x) nounwind {
 ; AVX512-LABEL: ashr_xor_and_custom:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 ^ mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 ^ m32bcst)
 ; AVX512-NEXT:    retq
   %signsplat = ashr <4 x i32> %x, <i32 undef, i32 31, i32 31, i32 31>
   %flipsign = xor <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
@@ -187,7 +187,7 @@ define <4 x i32> @ashr_add_and_custom(<4 x i32> %x) nounwind {
 ; AVX512-LABEL: ashr_add_and_custom:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 ^ mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 ^ m32bcst)
 ; AVX512-NEXT:    retq
   %signsplat = ashr <4 x i32> %x, <i32 undef, i32 31, i32 31, i32 31>
   %flipsign = add <4 x i32> %x, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
@@ -230,7 +230,7 @@ define <4 x i32> @usubsat_custom(<4 x i32> %x) nounwind {
 ; AVX512-LABEL: usubsat_custom:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 ^ mem)
+; AVX512-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 & (xmm0 ^ m32bcst)
 ; AVX512-NEXT:    retq
   %res = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %x, <4 x i32> <i32 2147483648, i32 2147483648, i32 2147483648, i32 undef>)
   ret <4 x i32> %res

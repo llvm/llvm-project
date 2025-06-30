@@ -212,7 +212,7 @@ private:
   /// \c EscapedNewlineColumn for the first tokens or token parts in a line.
   void calculateLineBreakInformation();
 
-  /// \brief Align consecutive C/C++ preprocessor macros over all \c Changes.
+  /// Align consecutive C/C++ preprocessor macros over all \c Changes.
   void alignConsecutiveMacros();
 
   /// Align consecutive assignments over all \c Changes.

@@ -35,7 +35,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_z 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_info 0
 ; VI-NEXT:     .amdhsa_system_vgpr_workitem_id 2
-; VI-NEXT:     .amdhsa_next_free_vgpr 3
+; VI-NEXT:     .amdhsa_next_free_vgpr 1
 ; VI-NEXT:     .amdhsa_next_free_sgpr 18
 ; VI-NEXT:     .amdhsa_reserve_vcc 0
 ; VI-NEXT:     .amdhsa_reserve_flat_scratch 0
@@ -86,7 +86,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_z 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_info 0
 ; GFX9-NEXT:     .amdhsa_system_vgpr_workitem_id 2
-; GFX9-NEXT:     .amdhsa_next_free_vgpr 3
+; GFX9-NEXT:     .amdhsa_next_free_vgpr 1
 ; GFX9-NEXT:     .amdhsa_next_free_sgpr 18
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
 ; GFX9-NEXT:     .amdhsa_reserve_flat_scratch 0
@@ -146,7 +146,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_z 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_info 0
 ; VI-NEXT:     .amdhsa_system_vgpr_workitem_id 2
-; VI-NEXT:     .amdhsa_next_free_vgpr 3
+; VI-NEXT:     .amdhsa_next_free_vgpr 1
 ; VI-NEXT:     .amdhsa_next_free_sgpr 18
 ; VI-NEXT:     .amdhsa_reserve_vcc 0
 ; VI-NEXT:     .amdhsa_reserve_flat_scratch 0
@@ -197,7 +197,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_z 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_info 0
 ; GFX9-NEXT:     .amdhsa_system_vgpr_workitem_id 2
-; GFX9-NEXT:     .amdhsa_next_free_vgpr 3
+; GFX9-NEXT:     .amdhsa_next_free_vgpr 1
 ; GFX9-NEXT:     .amdhsa_next_free_sgpr 18
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
 ; GFX9-NEXT:     .amdhsa_reserve_flat_scratch 0
@@ -257,7 +257,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_id_z 1
 ; VI-NEXT:     .amdhsa_system_sgpr_workgroup_info 0
 ; VI-NEXT:     .amdhsa_system_vgpr_workitem_id 2
-; VI-NEXT:     .amdhsa_next_free_vgpr 3
+; VI-NEXT:     .amdhsa_next_free_vgpr 1
 ; VI-NEXT:     .amdhsa_next_free_sgpr 18
 ; VI-NEXT:     .amdhsa_reserve_vcc 0
 ; VI-NEXT:     .amdhsa_reserve_flat_scratch 0
@@ -308,7 +308,7 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_id_z 1
 ; GFX9-NEXT:     .amdhsa_system_sgpr_workgroup_info 0
 ; GFX9-NEXT:     .amdhsa_system_vgpr_workitem_id 2
-; GFX9-NEXT:     .amdhsa_next_free_vgpr 3
+; GFX9-NEXT:     .amdhsa_next_free_vgpr 1
 ; GFX9-NEXT:     .amdhsa_next_free_sgpr 18
 ; GFX9-NEXT:     .amdhsa_reserve_vcc 0
 ; GFX9-NEXT:     .amdhsa_reserve_flat_scratch 0

@@ -24,9 +24,10 @@ using namespace llvm;
 bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
 
-  if (!F.hasFnAttribute("frame-pointer"))
+  Attribute FPAttr = F.getFnAttribute("frame-pointer");
+  if (!FPAttr.isValid())
     return false;
-  StringRef FP = F.getFnAttribute("frame-pointer").getValueAsString();
+  StringRef FP = FPAttr.getValueAsString();
   if (FP == "all")
     return true;
   if (FP == "non-leaf")

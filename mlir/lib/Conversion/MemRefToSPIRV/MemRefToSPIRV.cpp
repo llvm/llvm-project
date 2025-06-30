@@ -928,7 +928,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
   }();
 
   rewriter.replaceOpWithNewOp<spirv::InBoundsPtrAccessChainOp>(
-      op, src, offsetValue, std::nullopt);
+      op, src, offsetValue, ValueRange());
   return success();
 }
 

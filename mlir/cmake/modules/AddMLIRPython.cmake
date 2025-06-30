@@ -676,33 +676,28 @@ function(add_mlir_python_extension libname extname)
       # Avoid some warnings from upstream nanobind.
       # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
       # the super project handle compile options as it wishes.
-      set(nanobind_target "nanobind-static")
-      if (NOT TARGET ${nanobind_target})
-        # Get correct nanobind target name: nanobind-static-ft or something else
-        # It is set by nanobind_add_module function according to the passed options
-        get_property(all_targets DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY BUILDSYSTEM_TARGETS)
+      get_property(NB_LIBRARY_TARGET_NAME TARGET ${libname} PROPERTY LINK_LIBRARIES)
+      target_compile_options(${NB_LIBRARY_TARGET_NAME}
+	PRIVATE
+	  -Wall -Wextra -Wpedantic
+	  -Wno-c++98-compat-extra-semi
+	  -Wno-cast-qual
+	  -Wno-covered-switch-default
+	  -Wno-nested-anon-types
+	  -Wno-unused-parameter
+	  -Wno-zero-length-array
+	  ${eh_rtti_enable})
 
-        # Iterate over the list of targets
-        foreach(target ${all_targets})
-          # Check if the target name matches the given string
-          if("${target}" MATCHES "nanobind-")
-            set(nanobind_target "${target}")
-          endif()
-        endforeach()
-
-        if (NOT TARGET ${nanobind_target})
-          message(FATAL_ERROR "Could not find nanobind target to set compile options to")
-        endif()
-      endif()
-      target_compile_options(${nanobind_target}
-        PRIVATE
-          -Wno-cast-qual
-          -Wno-zero-length-array
-          -Wno-nested-anon-types
-          -Wno-c++98-compat-extra-semi
-          -Wno-covered-switch-default
-          ${eh_rtti_enable}
-      )
+      target_compile_options(${libname}
+	PRIVATE
+	  -Wall -Wextra -Wpedantic
+	  -Wno-c++98-compat-extra-semi
+	  -Wno-cast-qual
+	  -Wno-covered-switch-default
+	  -Wno-nested-anon-types
+	  -Wno-unused-parameter
+	  -Wno-zero-length-array
+	  ${eh_rtti_enable})
     endif()
 
     if(APPLE)

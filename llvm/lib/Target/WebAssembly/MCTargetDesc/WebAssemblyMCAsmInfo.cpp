@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyMCAsmInfo.h"
-#include "WebAssemblyMCExpr.h"
 #include "WebAssemblyMCTargetDesc.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
@@ -65,5 +64,5 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
     ExceptionsType = ExceptionHandling::Wasm;
 
-  initializeVariantKinds(atSpecifiers);
+  initializeAtSpecifiers(atSpecifiers);
 }

@@ -65,8 +65,7 @@ void ImplicitConversionInLoopCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("faulty-var");
   const auto *Init = Result.Nodes.getNodeAs<Expr>("init");
-  const auto *OperatorCall =
-      Result.Nodes.getNodeAs<Expr>("operator-call");
+  const auto *OperatorCall = Result.Nodes.getNodeAs<Expr>("operator-call");
 
   if (const auto *Cleanup = dyn_cast<ExprWithCleanups>(Init))
     Init = Cleanup->getSubExpr();

@@ -10,15 +10,15 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -27,7 +27,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP6]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
@@ -36,7 +36,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 8
+; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i8>, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP17]], align 1
@@ -60,15 +60,15 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
 ; CHECK-NOI8MM-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NOI8MM-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NOI8MM-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NOI8MM-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-NOI8MM:       vector.body:
 ; CHECK-NOI8MM-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -77,7 +77,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NOI8MM-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
 ; CHECK-NOI8MM-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 8
+; CHECK-NOI8MM-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; CHECK-NOI8MM-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP6]], i64 [[TMP9]]
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
@@ -86,7 +86,7 @@ define i32 @sudot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NOI8MM-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NOI8MM-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 8
+; CHECK-NOI8MM-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 8
 ; CHECK-NOI8MM-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i8>, ptr [[TMP14]], align 1
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP17]], align 1
@@ -133,15 +133,15 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 16
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 16
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -150,7 +150,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 8
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP6]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
@@ -159,7 +159,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 8
+; CHECK-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 8
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i8>, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP17]], align 1
@@ -183,15 +183,15 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NOI8MM-NEXT:  entry:
 ; CHECK-NOI8MM-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 16
 ; CHECK-NOI8MM-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK-NOI8MM:       vector.ph:
 ; CHECK-NOI8MM-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 16
 ; CHECK-NOI8MM-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
 ; CHECK-NOI8MM-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NOI8MM-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 16
+; CHECK-NOI8MM-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 16
 ; CHECK-NOI8MM-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-NOI8MM:       vector.body:
 ; CHECK-NOI8MM-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -200,7 +200,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NOI8MM-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 0
 ; CHECK-NOI8MM-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 8
+; CHECK-NOI8MM-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; CHECK-NOI8MM-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP6]], i64 [[TMP9]]
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD2:%.*]] = load <vscale x 8 x i8>, ptr [[TMP10]], align 1
@@ -209,7 +209,7 @@ define i32 @usdot(ptr %a, ptr %b) #0 {
 ; CHECK-NOI8MM-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NOI8MM-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
 ; CHECK-NOI8MM-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NOI8MM-NEXT:    [[TMP16:%.*]] = mul i64 [[TMP15]], 8
+; CHECK-NOI8MM-NEXT:    [[TMP16:%.*]] = mul nuw i64 [[TMP15]], 8
 ; CHECK-NOI8MM-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP13]], i64 [[TMP16]]
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 8 x i8>, ptr [[TMP14]], align 1
 ; CHECK-NOI8MM-NEXT:    [[WIDE_LOAD4:%.*]] = load <vscale x 8 x i8>, ptr [[TMP17]], align 1

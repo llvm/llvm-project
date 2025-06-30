@@ -95,6 +95,8 @@ private:
                  MachineFunction &MF) const;
   bool selectFCmp(MachineInstr &I, MachineRegisterInfo &MRI,
                   MachineFunction &MF) const;
+  bool selectFAbs(MachineInstr &I, MachineRegisterInfo &MRI,
+                  MachineFunction &MF) const;
   bool selectUAddSub(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -391,6 +393,8 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   switch (I.getOpcode()) {
   default:
     return false;
+  case TargetOpcode::G_FABS:
+    return selectFAbs(I, MRI, MF);
   case TargetOpcode::G_STORE:
   case TargetOpcode::G_LOAD:
     return selectLoadStoreOp(I, MRI, MF);
@@ -1047,6 +1051,35 @@ bool X86InstructionSelector::selectCmp(MachineInstr &I,
   constrainSelectedInstRegOperands(CmpInst, TII, TRI, RBI);
   constrainSelectedInstRegOperands(SetInst, TII, TRI, RBI);
 
+  I.eraseFromParent();
+  return true;
+}
+bool X86InstructionSelector::selectFAbs(MachineInstr &I,
+                                        MachineRegisterInfo &MRI,
+                                        MachineFunction &MF) const {
+  assert((I.getOpcode() == TargetOpcode::G_FABS) && "unexpected instruction");
+  Register SrcReg = I.getOperand(1).getReg();
+  Register DstReg = I.getOperand(0).getReg();
+  LLT Ty = MRI.getType(SrcReg);
+  unsigned OpAbs;
+  const TargetRegisterClass *DstRC;
+  switch (Ty.getSizeInBits()) {
+  default:
+    return false;
+  case 32:
+    OpAbs = X86::ABS_Fp32;
+    DstRC = &X86::FR32RegClass;
+    break;
+  case 64:
+    OpAbs = X86::ABS_Fp64;
+    DstRC = &X86::FR64RegClass;
+    break;
+  }
+  MRI.setRegClass(DstReg, DstRC);
+  MachineInstr &FAbsInst =
+      *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpAbs), DstReg)
+           .addReg(SrcReg);
+  constrainSelectedInstRegOperands(FAbsInst, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
 }

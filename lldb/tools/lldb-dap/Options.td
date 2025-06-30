@@ -28,8 +28,8 @@ def connection
       MetaVarName<"<connection>">,
       HelpText<
           "Communicate with the lldb-dap tool over the specified connection. "
-          "Connections are specified like 'tcp://[host]:port' or "
-          "'unix:///path'.">;
+          "Connections are specified like 'listen://[host]:port' or "
+          "'accept:///path'.">;
 
 def launch_target: S<"launch-target">,
   MetaVarName<"<target>">,

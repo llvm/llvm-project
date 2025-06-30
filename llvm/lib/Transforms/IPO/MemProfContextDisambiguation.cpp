@@ -1642,7 +1642,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::
   // this entry.
   DenseSet<uint32_t> LastNodeContextIds = LastNode->getContextIds();
 
-  bool PrevIterCreatedNode = false;
+  [[maybe_unused]] bool PrevIterCreatedNode = false;
   bool CreatedNode = false;
   for (unsigned I = 0; I < Calls.size();
        I++, PrevIterCreatedNode = CreatedNode) {
@@ -2183,6 +2183,9 @@ ModuleCallsiteContextGraph::ModuleCallsiteContextGraph(
 
   updateStackNodes();
 
+  if (ExportToDot)
+    exportToDot("poststackupdate");
+
   handleCallsitesWithMultipleTargets();
 
   markBackedges();
@@ -2232,9 +2235,8 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
           CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
               EmptyContext;
           unsigned I = 0;
-          assert(
-              (!MemProfReportHintedSizes && MinClonedColdBytePercent >= 100) ||
-              AN.ContextSizeInfos.size() == AN.MIBs.size());
+          assert(!metadataMayIncludeContextSizeInfo() ||
+                 AN.ContextSizeInfos.size() == AN.MIBs.size());
           // Now add all of the MIBs and their stack nodes.
           for (auto &MIB : AN.MIBs) {
             CallStack<MIBInfo, SmallVector<unsigned>::const_iterator>
@@ -2285,6 +2287,9 @@ IndexCallsiteContextGraph::IndexCallsiteContextGraph(
     exportToDot("prestackupdate");
 
   updateStackNodes();
+
+  if (ExportToDot)
+    exportToDot("poststackupdate");
 
   handleCallsitesWithMultipleTargets();
 
@@ -3996,6 +4001,9 @@ ModuleCallsiteContextGraph::cloneFunctionForCallsite(
   std::string Name = getMemProfFuncName(Func.func()->getName(), CloneNo);
   assert(!Func.func()->getParent()->getFunction(Name));
   NewFunc->setName(Name);
+  if (auto *SP = NewFunc->getSubprogram())
+    SP->replaceLinkageName(
+        MDString::get(NewFunc->getParent()->getContext(), Name));
   for (auto &Inst : CallsWithMetadataInFunc) {
     // This map always has the initial version in it.
     assert(Inst.cloneNo() == 0);
@@ -4934,6 +4942,9 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
       PrevF->eraseFromParent();
     } else
       NewF->setName(Name);
+    if (auto *SP = NewF->getSubprogram())
+      SP->replaceLinkageName(
+          MDString::get(NewF->getParent()->getContext(), Name));
     ORE.emit(OptimizationRemark(DEBUG_TYPE, "MemprofClone", &F)
              << "created clone " << ore::NV("NewFunction", NewF));
 

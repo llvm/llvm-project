@@ -176,7 +176,8 @@ static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
   }
 
   // Access must be aligned!
-  size_t ValPos = align(Code.size());
+  assert(aligned(Code.size()));
+  size_t ValPos = Code.size();
   Size = align(Size);
   assert(aligned(ValPos + Size));
   Code.resize(ValPos + Size);

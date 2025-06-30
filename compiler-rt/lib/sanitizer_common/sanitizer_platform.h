@@ -14,7 +14,8 @@
 
 #if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__NetBSD__) && \
     !defined(__APPLE__) && !defined(_WIN32) && !defined(__Fuchsia__) &&     \
-    !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__)
+    !(defined(__sun__) && defined(__svr4__)) && !defined(__HAIKU__) &&      \
+    !defined(__wasi__)
 #  error "This operating system is not supported"
 #endif
 
@@ -59,6 +60,12 @@
 #  define SANITIZER_HAIKU 1
 #else
 #  define SANITIZER_HAIKU 0
+#endif
+
+#if defined(__wasi__)
+#  define SANITIZER_WASI 1
+#else
+#  define SANITIZER_WASI 0
 #endif
 
 // - SANITIZER_APPLE: all Apple code

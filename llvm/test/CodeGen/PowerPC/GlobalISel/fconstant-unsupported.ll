@@ -1,6 +1,6 @@
 ; RUN: not --crash llc -global-isel -mtriple=powerpc-unknown-linux-gnu \
 ; RUN:   -o - < %s 2>&1 | FileCheck %s --check-prefix=BE
-; RUN: not --crash llc -global-isel -mtriple=powerpcle-unknown-linux-gnu \
+; RUN: not llc -global-isel -mtriple=powerpcle-unknown-linux-gnu \
 ; RUN:   -o - < %s 2>&1 | FileCheck %s --check-prefix=BIT32
 
 ; BE: LLVM ERROR: unable to translate in big endian mode

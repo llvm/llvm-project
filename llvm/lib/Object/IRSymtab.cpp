@@ -48,7 +48,7 @@ static cl::opt<bool> DisableBitcodeVersionUpgrade(
 
 static const char *PreservedSymbols[] = {
     // There are global variables, so put it here instead of in
-    // RuntimeLibcalls.def.
+    // RuntimeLibcalls.td.
     // TODO: Are there similar such variables?
     "__ssp_canary_word",
     "__stack_chk_guard",
@@ -216,11 +216,11 @@ Expected<int> Builder::getComdatIndex(const Comdat *C, const Module *M) {
 static DenseSet<StringRef> buildPreservedSymbolsSet(const Triple &TT) {
   DenseSet<StringRef> PreservedSymbolSet(std::begin(PreservedSymbols),
                                          std::end(PreservedSymbols));
-
+  // FIXME: Do we need to pass in ABI fields from TargetOptions?
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
-  for (const char *Name : Libcalls.getLibcallNames()) {
-    if (Name)
-      PreservedSymbolSet.insert(Name);
+  for (RTLIB::LibcallImpl Impl : Libcalls.getLibcallImpls()) {
+    if (Impl != RTLIB::Unsupported)
+      PreservedSymbolSet.insert(Libcalls.getLibcallImplName(Impl));
   }
   return PreservedSymbolSet;
 }

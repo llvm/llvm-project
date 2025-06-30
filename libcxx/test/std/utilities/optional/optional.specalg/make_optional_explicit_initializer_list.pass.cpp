@@ -12,6 +12,9 @@
 // template <class T, class U, class... Args>
 //   constexpr optional<T> make_optional(initializer_list<U> il, Args&&... args);
 
+// GCC crashes on this file, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120577
+// XFAIL: gcc-15
+
 #include <cassert>
 #include <memory>
 #include <optional>

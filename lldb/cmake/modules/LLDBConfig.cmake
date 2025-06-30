@@ -67,6 +67,7 @@ add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in 
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
 option(LLDB_SKIP_STRIP "Whether to skip stripping of binaries when installing lldb." OFF)

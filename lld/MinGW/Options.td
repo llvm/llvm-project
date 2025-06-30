@@ -79,6 +79,8 @@ defm exclude_symbols: Eq<"exclude-symbols",
     "Exclude symbols from automatic export">, MetaVarName<"<symbol[,symbol,...]>">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
+defm dll_search_prefix:Eq<"dll-search-prefix", "Specify DLL prefix instead of 'lib'">,
+    MetaVarName<"<dll_search_prefix>">;
 defm fatal_warnings: B<"fatal-warnings",
     "Treat warnings as errors",
     "Do not treat warnings as errors (default)">;

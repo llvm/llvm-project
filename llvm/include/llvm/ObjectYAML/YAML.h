@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 
@@ -86,13 +87,13 @@ public:
   /// Write the contents (regardless of whether it is binary or a
   /// hex string) as binary to the given raw_ostream.
   /// N can be used to specify the maximum number of bytes.
-  void writeAsBinary(raw_ostream &OS, uint64_t N = UINT64_MAX) const;
+  LLVM_ABI void writeAsBinary(raw_ostream &OS, uint64_t N = UINT64_MAX) const;
 
   /// Write the contents (regardless of whether it is binary or a
   /// hex string) as hex to the given raw_ostream.
   ///
   /// For example, a possible output could be `DEADBEEFCAFEBABE`.
-  void writeAsHex(raw_ostream &OS) const;
+  LLVM_ABI void writeAsHex(raw_ostream &OS) const;
 };
 
 inline bool operator==(const BinaryRef &LHS, const BinaryRef &RHS) {
@@ -104,8 +105,8 @@ inline bool operator==(const BinaryRef &LHS, const BinaryRef &RHS) {
 }
 
 template <> struct ScalarTraits<BinaryRef> {
-  static void output(const BinaryRef &, void *, raw_ostream &);
-  static StringRef input(StringRef, void *, BinaryRef &);
+  LLVM_ABI static void output(const BinaryRef &, void *, raw_ostream &);
+  LLVM_ABI static StringRef input(StringRef, void *, BinaryRef &);
   static QuotingType mustQuote(StringRef S) { return needsQuotes(S); }
 };
 

@@ -8,26 +8,17 @@
 
 #include "DAP.h"
 #include "Protocol/ProtocolBase.h"
+#include "TestingSupport/Host/PipeTestUtilities.h"
 #include "Transport.h"
-#include "lldb/Host/Pipe.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace lldb_dap_tests {
 
-/// A base class for tests that need a pair of pipes for communication.
-class PipeBase : public testing::Test {
-protected:
-  lldb_private::Pipe input;
-  lldb_private::Pipe output;
-
-  void SetUp() override;
-};
-
 /// A base class for tests that need transport configured for communicating DAP
 /// messages.
-class TransportBase : public PipeBase {
+class TransportBase : public PipeTest {
 protected:
   std::unique_ptr<lldb_dap::Transport> to_dap;
   std::unique_ptr<lldb_dap::Transport> from_dap;

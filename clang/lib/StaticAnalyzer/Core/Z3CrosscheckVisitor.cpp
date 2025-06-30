@@ -92,7 +92,7 @@ void Z3CrosscheckVisitor::finalizeVisitor(BugReporterContext &BRC,
   };
 
   auto AttemptOnce = [&](const llvm::SMTSolverRef &Solver) -> Z3Result {
-    constexpr auto getCurrentTime = llvm::TimeRecord::getCurrentTime;
+    auto getCurrentTime = llvm::TimeRecord::getCurrentTime;
     unsigned InitialRLimit = GetUsedRLimit(Solver);
     double Start = getCurrentTime(/*Start=*/true).getWallTime();
     std::optional<bool> IsSAT = Solver->check();

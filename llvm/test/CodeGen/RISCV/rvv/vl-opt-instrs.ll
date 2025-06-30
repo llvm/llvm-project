@@ -3063,9 +3063,9 @@ define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
 define <vscale x 1 x i8> @vmv_v_v(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl) {
 ; NOVLOPT-LABEL: vmv_v_v:
 ; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli a1, zero, e8, mf8, tu, ma
+; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; NOVLOPT-NEXT:    vmv.v.v v8, v9
-; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; NOVLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; NOVLOPT-NEXT:    ret
 ;

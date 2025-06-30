@@ -1,6 +1,7 @@
-!RUN: %flang_fc1 -fsyntax-only -fhermetic-module-files -DSTEP=1 %s
-!RUN: %flang_fc1 -fsyntax-only -DSTEP=2 %s
-!RUN: not %flang_fc1 -fsyntax-only -pedantic %s 2>&1 | FileCheck %s
+!RUN: rm -rf %t && mkdir -p %t
+!RUN: %flang_fc1 -fsyntax-only -fhermetic-module-files -DSTEP=1 -J%t %s
+!RUN: %flang_fc1 -fsyntax-only -DSTEP=2 -J%t %s
+!RUN: not %flang_fc1 -fsyntax-only -pedantic -J%t %s 2>&1 | FileCheck %s
 
 ! Tests that a module captured in a hermetic module file is compatible when
 ! USE'd with a module of the same name USE'd directly.

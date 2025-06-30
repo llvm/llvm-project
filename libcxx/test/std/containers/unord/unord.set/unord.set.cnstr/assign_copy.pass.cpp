@@ -20,6 +20,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstddef>
+#include <utility>
 
 #include "test_macros.h"
 #include "../../../test_compare.h"
@@ -109,6 +110,19 @@ int main(int, char**) {
     assert(c.max_load_factor() == 1);
   }
 #endif
+  { // Test with std::pair, since we have some special handling for pairs inside __hash_table
+    struct pair_hash {
+      size_t operator()(std::pair<int, int> val) const TEST_NOEXCEPT { return val.first | val.second; }
+    };
+
+    std::pair<int, int> arr[] = {
+        std::make_pair(1, 2), std::make_pair(2, 3), std::make_pair(3, 4), std::make_pair(4, 5)};
+    std::unordered_set<std::pair<int, int>, pair_hash> a(arr, arr + 4);
+    std::unordered_set<std::pair<int, int>, pair_hash> b;
+
+    b = a;
+    assert(a == b);
+  }
 
   return 0;
 }

@@ -2119,7 +2119,7 @@ class MemRefType(ShapedType):
         """
     @property
     def typeid(self) -> TypeID: ...
-    def get_strides_and_offset(self) -> tuple[list[int], list[int]]:
+    def get_strides_and_offset(self) -> tuple[list[int], int]:
         """
         The strides and offset of the MemRef type.
         """

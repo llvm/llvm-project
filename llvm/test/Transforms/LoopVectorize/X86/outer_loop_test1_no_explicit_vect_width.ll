@@ -71,8 +71,8 @@
 ; AVX: br i1 %[[InnerCond]], label %[[ForInc]], label %[[InnerLoop]]
 
 ; AVX: [[ForInc]]:
-; AVX: %[[VecIndNext]] = add <8 x i64> %[[VecInd]], splat (i64 8)
 ; AVX: %[[IndNext]] = add nuw i64 %[[Ind]], 8
+; AVX: %[[VecIndNext]] = add <8 x i64> %[[VecInd]], splat (i64 8)
 ; AVX: br i1 true, label %middle.block, label %vector.body
 
 @arr2 = external global [8 x i32], align 16

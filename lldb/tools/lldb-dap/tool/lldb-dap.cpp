@@ -127,7 +127,7 @@ EXAMPLES:
   parent over stdio. Passing a --connection URI will cause lldb-dap to listen
   for a connection in the specified mode.
 
-    lldb-dap --connection connection://localhost:<port>
+    lldb-dap --connection listen://localhost:<port>
 
   Passing --wait-for-debugger will pause the process at startup and wait for a
   debugger to attach to the process.
@@ -226,23 +226,32 @@ static llvm::Expected<std::pair<Socket::SocketProtocol, std::string>>
 validateConnection(llvm::StringRef conn) {
   auto uri = lldb_private::URI::Parse(conn);
 
-  if (uri && (uri->scheme == "tcp" || uri->scheme == "connect" ||
-              !uri->hostname.empty() || uri->port)) {
+  auto make_error = [conn]() -> llvm::Error {
+    return llvm::createStringError(
+        "Unsupported connection specifier, expected 'accept:///path' or "
+        "'listen://[host]:port', got '%s'.",
+        conn.str().c_str());
+  };
+
+  if (!uri)
+    return make_error();
+
+  std::optional<Socket::ProtocolModePair> protocol_and_mode =
+      Socket::GetProtocolAndMode(uri->scheme);
+  if (!protocol_and_mode || protocol_and_mode->second != Socket::ModeAccept)
+    return make_error();
+
+  if (protocol_and_mode->first == Socket::ProtocolTcp) {
     return std::make_pair(
         Socket::ProtocolTcp,
         formatv("[{0}]:{1}", uri->hostname.empty() ? "0.0.0.0" : uri->hostname,
                 uri->port.value_or(0)));
   }
 
-  if (uri && (uri->scheme == "unix" || uri->scheme == "unix-connect" ||
-              uri->path != "/")) {
+  if (protocol_and_mode->first == Socket::ProtocolUnixDomain)
     return std::make_pair(Socket::ProtocolUnixDomain, uri->path.str());
-  }
 
-  return llvm::createStringError(
-      "Unsupported connection specifier, expected 'unix-connect:///path' or "
-      "'connect://[host]:port', got '%s'.",
-      conn.str().c_str());
+  return make_error();
 }
 
 static llvm::Error

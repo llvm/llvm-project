@@ -1343,7 +1343,8 @@ public:
   Use &getCalledOperandUse() { return Op<CalledOperandOpEndIdx>(); }
 
   /// Returns the function called, or null if this is an indirect function
-  /// invocation or the function signature does not match the call signature.
+  /// invocation or the function signature does not match the call signature, or
+  /// the call target is an alias.
   Function *getCalledFunction() const {
     if (auto *F = dyn_cast_or_null<Function>(getCalledOperand()))
       if (F->getValueType() == getFunctionType())

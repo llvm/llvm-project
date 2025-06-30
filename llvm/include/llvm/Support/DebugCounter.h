@@ -60,7 +60,7 @@ public:
     int64_t Begin;
     int64_t End;
     LLVM_ABI void print(llvm::raw_ostream &OS);
-    bool contains(int64_t Idx) { return Idx >= Begin && Idx <= End; }
+    bool contains(int64_t Idx) const { return Idx >= Begin && Idx <= End; }
   };
 
   LLVM_ABI static void printChunks(raw_ostream &OS, ArrayRef<Chunk>);

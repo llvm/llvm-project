@@ -2246,8 +2246,7 @@ define <vscale x 32 x i1> @icmp_eq_vv_nxv32i32(<vscale x 32 x i32> %va, <vscale 
 ; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vv v16, v24, v8, v0.t
-; CHECK-NEXT:    add a0, a1, a1
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v16, v6, a1
 ; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -2283,8 +2282,7 @@ define <vscale x 32 x i1> @icmp_eq_vx_nxv32i32(<vscale x 32 x i32> %va, i32 %b, 
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
-; CHECK-NEXT:    add a0, a2, a2
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v16, v25, a2
 ; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    ret
@@ -2316,8 +2314,7 @@ define <vscale x 32 x i1> @icmp_eq_vx_swap_nxv32i32(<vscale x 32 x i32> %va, i32
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vx v16, v8, a0, v0.t
-; CHECK-NEXT:    add a0, a2, a2
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslideup.vx v16, v25, a2
 ; CHECK-NEXT:    vmv1r.v v0, v16
 ; CHECK-NEXT:    ret

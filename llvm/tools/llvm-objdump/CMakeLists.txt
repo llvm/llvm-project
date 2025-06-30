@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   BinaryFormat
   DebugInfoBTF
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   Demangle
   MC
   MCDisassembler

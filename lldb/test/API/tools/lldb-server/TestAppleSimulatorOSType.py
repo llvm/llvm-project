@@ -14,40 +14,12 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
     READ_LINES = 10
 
     def check_simulator_ostype(self, sdk, platform_name, arch=platform.machine()):
-        cmd = ["xcrun", "simctl", "list", "-j", "devices"]
-        cmd_str = " ".join(cmd)
-        self.trace(cmd_str)
-        sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
-        try:
-            sim_devices = json.loads(sim_devices_str)["devices"]
-        except json.decoder.JSONDecodeError:
-            self.fail(
-                "Could not parse '{}' output. Authorization denied?".format(cmd_str)
-            )
-        # Find an available simulator for the requested platform
+        # Get simulator
         deviceUDID = None
-        deviceRuntime = None
-        for simulator in sim_devices:
-            if isinstance(simulator, dict):
-                runtime = simulator["name"]
-                devices = simulator["devices"]
-            else:
-                runtime = simulator
-                devices = sim_devices[simulator]
-            if not platform_name in runtime.lower():
-                continue
-            for device in devices:
-                if "availability" in device and device["availability"] != "(available)":
-                    continue
-                if "isAvailable" in device and not device["isAvailable"]:
-                    continue
-                if deviceRuntime and runtime < deviceRuntime:
-                    continue
-                deviceUDID = device["udid"]
-                deviceRuntime = runtime
-                # Stop searching in this runtime
-                break
-
+        try:
+            deviceUDID = lldbutil.get_latest_apple_simulator(platform_name, self.trace)
+        except json.decoder.JSONDecodeError:
+            self.fail("Could not parse output. Authorization denied?")
         if not deviceUDID:
             self.skipTest(
                 "Could not find a simulator for {} ({})".format(platform_name, arch)
@@ -78,34 +50,20 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
             },
             compiler=clang,
         )
-        exe_path = os.path.realpath(self.getBuildArtifact(exe_name))
-        cmd = [
-            "xcrun",
-            "simctl",
-            "spawn",
-            "-s",
-            deviceUDID,
-            exe_path,
-            "print-pid",
-            "sleep:10",
-        ]
-        self.trace(" ".join(cmd))
-        sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
-        # Get the PID from the process output
-        pid = None
 
-        # Read the first READ_LINES to try to find the PID.
-        for _ in range(0, self.READ_LINES):
-            stderr = sim_launcher.stderr.readline().decode("utf-8")
-            if not stderr:
-                continue
-            match = re.match(r"PID: (.*)", stderr)
-            if match:
-                pid = int(match.group(1))
-                break
+        # Launch the executable in the simulator
+        exe_path, matched_groups = lldbutil.launch_exe_in_apple_simulator(
+            deviceUDID,
+            self.getBuildArtifact(exe_name),
+            ["print-pid", "sleep:10"],
+            self.READ_LINES,
+            [r"PID: (.*)"],
+            self.trace,
+        )
 
         # Make sure we found the PID.
-        self.assertIsNotNone(pid)
+        self.assertIsNotNone(matched_groups[0])
+        pid = int(matched_groups[0])
 
         # Launch debug monitor attaching to the simulated process
         server = self.connect_to_debug_monitor(attach_pid=pid)

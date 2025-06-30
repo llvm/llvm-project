@@ -403,6 +403,9 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
       const dw_offset_t attr_offset = offset;
       form_value.SetUnit(cu);
       form_value.SetForm(abbrevDecl->getFormByIndex(idx));
+      if (abbrevDecl->getAttrIsImplicitConstByIndex(idx))
+        form_value.SetValue(abbrevDecl->getAttrImplicitConstValueByIndex(idx));
+
       if (form_value.ExtractValue(data, &offset)) {
         if (end_attr_offset_ptr)
           *end_attr_offset_ptr = offset;
@@ -611,7 +614,11 @@ void DWARFDebugInfoEntry::BuildFunctionAddressRangeTable(
     DWARFUnit *cu, DWARFDebugAranges *debug_aranges) const {
   Log *log = GetLog(DWARFLog::DebugInfo);
   if (m_tag) {
-    if (m_tag == DW_TAG_subprogram) {
+    // Subprogram forward declarations don't have
+    // DW_AT_ranges/DW_AT_low_pc/DW_AT_high_pc attributes, so don't even try
+    // getting address range information for them.
+    if (m_tag == DW_TAG_subprogram &&
+        !GetAttributeValueAsOptionalUnsigned(cu, DW_AT_declaration)) {
       if (llvm::Expected<llvm::DWARFAddressRangesVector> ranges =
               GetAttributeAddressRanges(cu, /*check_hi_lo_pc=*/true)) {
         for (const auto &r : *ranges)

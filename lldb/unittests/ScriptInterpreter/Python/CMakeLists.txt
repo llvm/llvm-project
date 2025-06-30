@@ -8,12 +8,12 @@ add_lldb_unittest(ScriptInterpreterPythonTests
   PythonDataObjectsTests.cpp
   PythonTestSuite.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbHost
     lldbPluginScriptInterpreterPython
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
   )
 
 if(Python3_RPATH)

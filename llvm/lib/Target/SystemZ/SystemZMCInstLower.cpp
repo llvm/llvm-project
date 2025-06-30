@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZMCInstLower.h"
-#include "MCTargetDesc/SystemZMCExpr.h"
+#include "MCTargetDesc/SystemZMCAsmInfo.h"
 #include "SystemZAsmPrinter.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCExpr.h"
@@ -16,15 +16,15 @@
 
 using namespace llvm;
 
-// Return the VK_* enumeration for MachineOperand target flags Flags.
-static SystemZMCExpr::Specifier getSpecifierForTFlags(unsigned Flags) {
+// Return the S_* enumeration for MachineOperand target flags Flags.
+static SystemZ::Specifier getSpecifierForTFlags(unsigned Flags) {
   switch (Flags & SystemZII::MO_SYMBOL_MODIFIER) {
     case 0:
-      return SystemZMCExpr::VK_None;
+      return SystemZ::S_None;
     case SystemZII::MO_GOT:
-      return SystemZMCExpr::VK_GOT;
+      return SystemZ::S_GOT;
     case SystemZII::MO_INDNTPOFF:
-      return SystemZMCExpr::VK_INDNTPOFF;
+      return SystemZ::S_INDNTPOFF;
   }
   llvm_unreachable("Unrecognised MO_ACCESS_MODEL");
 }
@@ -34,7 +34,7 @@ SystemZMCInstLower::SystemZMCInstLower(MCContext &ctx,
   : Ctx(ctx), AsmPrinter(asmprinter) {}
 
 const MCExpr *SystemZMCInstLower::getExpr(const MachineOperand &MO,
-                                          SystemZMCExpr::Specifier Spec) const {
+                                          SystemZ::Specifier Spec) const {
   const MCSymbol *Symbol;
   bool HasOffset = true;
   switch (MO.getType()) {
@@ -85,7 +85,7 @@ MCOperand SystemZMCInstLower::lowerOperand(const MachineOperand &MO) const {
     return MCOperand::createImm(MO.getImm());
 
   default: {
-    SystemZMCExpr::Specifier Kind = getSpecifierForTFlags(MO.getTargetFlags());
+    auto Kind = getSpecifierForTFlags(MO.getTargetFlags());
     return MCOperand::createExpr(getExpr(MO, Kind));
   }
   }

@@ -1323,6 +1323,14 @@ m_NSWAdd(const LHS &L, const RHS &R) {
                                                                             R);
 }
 template <typename LHS, typename RHS>
+inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                 OverflowingBinaryOperator::NoSignedWrap, true>
+m_c_NSWAdd(const LHS &L, const RHS &R) {
+  return OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                   OverflowingBinaryOperator::NoSignedWrap,
+                                   true>(L, R);
+}
+template <typename LHS, typename RHS>
 inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Sub,
                                  OverflowingBinaryOperator::NoSignedWrap>
 m_NSWSub(const LHS &L, const RHS &R) {
@@ -3046,35 +3054,8 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
   return InsertValue_match<Ind, Val_t, Elt_t>(Val, Elt);
 }
 
-/// Matches patterns for `vscale`. This can either be a call to `llvm.vscale` or
-/// the constant expression
-///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
-/// under the right conditions determined by DataLayout.
-struct VScaleVal_match {
-  template <typename ITy> bool match(ITy *V) const {
-    if (m_Intrinsic<Intrinsic::vscale>().match(V))
-      return true;
-
-    Value *Ptr;
-    if (m_PtrToInt(m_Value(Ptr)).match(V)) {
-      if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-        auto *DerefTy =
-            dyn_cast<ScalableVectorType>(GEP->getSourceElementType());
-        if (GEP->getNumIndices() == 1 && DerefTy &&
-            DerefTy->getElementType()->isIntegerTy(8) &&
-            m_Zero().match(GEP->getPointerOperand()) &&
-            m_SpecificInt(1).match(GEP->idx_begin()->get()))
-          return true;
-      }
-    }
-
-    return false;
-  }
-};
-
-inline VScaleVal_match m_VScale() {
-  return VScaleVal_match();
-}
+/// Matches a call to `llvm.vscale()`.
+inline IntrinsicID_match m_VScale() { return m_Intrinsic<Intrinsic::vscale>(); }
 
 template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty

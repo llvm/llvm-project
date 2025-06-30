@@ -6,7 +6,7 @@ target triple = "aarch64-linux-gnu"
 ; is an alias.  (The alias is created by GlobalMerge.)
 ; CHECK: adrp {{.*}}, __stack_chk_guard
 ; CHECK: ldr {{.*}}, [{{.*}}, :lo12:__stack_chk_guard]
-; CHECK: .set __stack_chk_guard, .L_MergedGlobals+4
+; CHECK: __stack_chk_guard = .L_MergedGlobals+4
 
 @__stack_chk_guard = internal global [8 x i32] zeroinitializer, align 4
 @x = internal global i32 0, align 4

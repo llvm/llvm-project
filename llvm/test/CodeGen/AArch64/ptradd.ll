@@ -90,18 +90,17 @@ define <3 x ptr> @vector_gep_v3i32(<3 x ptr> %b, <3 x i32> %off) {
 ; CHECK-GI-LABEL: vector_gep_v3i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    smov x9, v3.s[0]
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    smov x8, v3.s[1]
-; CHECK-GI-NEXT:    mov v4.d[0], x9
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    fmov x9, d2
-; CHECK-GI-NEXT:    mov v4.d[1], x8
+; CHECK-GI-NEXT:    smov x10, v3.s[1]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    mov w8, v3.s[2]
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v4.2d
+; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    mov v1.d[1], x10
 ; CHECK-GI-NEXT:    add x8, x9, w8, sxtw
 ; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -164,13 +163,12 @@ define <3 x ptr> @vector_gep_v3i64(<3 x ptr> %b, <3 x i64> %off) {
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    fmov x9, d5
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
-; CHECK-GI-NEXT:    mov v0.d[0], x8
-; CHECK-GI-NEXT:    fmov x8, d1
 ; CHECK-GI-NEXT:    mov v0.d[1], x8
 ; CHECK-GI-NEXT:    fmov x8, d2
 ; CHECK-GI-NEXT:    add x8, x8, x9
@@ -201,19 +199,12 @@ entry:
 }
 
 define <2 x ptr> @vector_gep_v4i128(<2 x ptr> %b, <2 x i128> %off) {
-; CHECK-SD-LABEL: vector_gep_v4i128:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d1, x0
-; CHECK-SD-NEXT:    mov v1.d[1], x2
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_gep_v4i128:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov v1.d[0], x0
-; CHECK-GI-NEXT:    mov v1.d[1], x2
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_gep_v4i128:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    mov v1.d[1], x2
+; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %g = getelementptr i8, <2 x ptr> %b, <2 x i128> %off
   ret <2 x ptr> %g

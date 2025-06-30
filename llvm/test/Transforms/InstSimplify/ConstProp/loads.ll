@@ -441,3 +441,39 @@ define i128 @load-128bit(){
   %1 = load i128, ptr @global128, align 4
   ret i128 %1
 }
+
+
+@i40_struct = constant { i40, i8 } { i40 0, i8 1 }
+@i40_array = constant [2 x i40] [i40 0, i40 1]
+
+define i8 @load_i40_struct_padding() {
+; CHECK-LABEL: @load_i40_struct_padding(
+; CHECK-NEXT:    ret i8 0
+;
+  %v = load i8, ptr getelementptr (i8, ptr @i40_struct, i64 6)
+  ret i8 %v
+}
+
+define i16 @load_i40_struct_partial_padding() {
+; CHECK-LABEL: @load_i40_struct_partial_padding(
+; CHECK-NEXT:    ret i16 0
+;
+  %v = load i16, ptr getelementptr (i8, ptr @i40_struct, i64 4)
+  ret i16 %v
+}
+
+define i8 @load_i40_array_padding() {
+; CHECK-LABEL: @load_i40_array_padding(
+; CHECK-NEXT:    ret i8 0
+;
+  %v = load i8, ptr getelementptr (i8, ptr @i40_array, i64 6)
+  ret i8 %v
+}
+
+define i16 @load_i40_array_partial_padding() {
+; CHECK-LABEL: @load_i40_array_partial_padding(
+; CHECK-NEXT:    ret i16 0
+;
+  %v = load i16, ptr getelementptr (i8, ptr @i40_array, i64 4)
+  ret i16 %v
+}

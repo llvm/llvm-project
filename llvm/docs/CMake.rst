@@ -482,11 +482,14 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING**:STRING
   Enhances Debugify's ability to detect line number errors by storing extra
   information inside Instructions, removing false positives from Debugify's
-  results at the cost of performance. Allowed values are `DISABLED` (default)
-  and `COVERAGE`. `COVERAGE` tracks whether and why a line number was
-  intentionally dropped or not generated for an instruction, allowing Debugify
-  to avoid reporting these as errors; this comes with a small performance cost
-  of ~0.1%. `COVERAGE` is an ABI-breaking option.
+  results at the cost of performance. Allowed values are `DISABLED` (default),
+  `COVERAGE`, and `COVERAGE_AND_ORIGIN`. `COVERAGE` tracks whether and why a
+  line number was intentionally dropped or not generated for an instruction,
+  allowing Debugify to avoid reporting these as errors; this comes with a small
+  performance cost of ~0.1%. `COVERAGE_AND_ORIGIN` additionally stores a
+  stacktrace of the point where each DebugLoc is unintentionally dropped,
+  allowing for much easier bug triaging at the cost of a ~10x performance
+  slowdown. `COVERAGE` and `COVERAGE_AND_ORIGIN` are ABI-breaking options.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
@@ -585,7 +588,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly;pstl``
+  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly``
 
   .. note::
     Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
@@ -607,7 +610,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
+  ``libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
 
   To enable all of them, use:
 
@@ -707,7 +710,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   For example, ar will be symlinked to llvm-ar.
 
 **LLVM_INSTALL_CCTOOLS_SYMLINKS**:BOOL
-  Install symliks from the cctools tool names to the corresponding LLVM tools.
+  Install symlinks from the cctools tool names to the corresponding LLVM tools.
   For example, lipo will be symlinked to llvm-lipo.
 
 **LLVM_INSTALL_OCAMLDOC_HTML_DIR**:STRING

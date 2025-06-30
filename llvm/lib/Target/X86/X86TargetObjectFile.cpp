@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetObjectFile.h"
-#include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCValue.h"
@@ -25,7 +25,7 @@ const MCExpr *X86_64MachoTargetObjectFile::getTTypeGlobalReference(
   if ((Encoding & DW_EH_PE_indirect) && (Encoding & DW_EH_PE_pcrel)) {
     const MCSymbol *Sym = TM.getSymbol(GV);
     const MCExpr *Res =
-        MCSymbolRefExpr::create(Sym, X86MCExpr::VK_GOTPCREL, getContext());
+        MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, getContext());
     const MCExpr *Four = MCConstantExpr::create(4, getContext());
     return MCBinaryExpr::createAdd(Res, Four, getContext());
   }
@@ -48,18 +48,18 @@ const MCExpr *X86_64MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
   // foo@GOTPCREL+4+<offset>.
   unsigned FinalOff = Offset+MV.getConstant()+4;
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, X86MCExpr::VK_GOTPCREL, getContext());
+      MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOff, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
 
 X86ELFTargetObjectFile::X86ELFTargetObjectFile() {
-  PLTRelativeSpecifier = X86MCExpr::VK_PLT;
+  PLTRelativeSpecifier = X86::S_PLT;
 }
 
 const MCExpr *X86ELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
-  return MCSymbolRefExpr::create(Sym, X86MCExpr::VK_DTPOFF, getContext());
+  return MCSymbolRefExpr::create(Sym, X86::S_DTPOFF, getContext());
 }
 
 const MCExpr *X86_64ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
@@ -67,7 +67,7 @@ const MCExpr *X86_64ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   int64_t FinalOffset = Offset + MV.getConstant();
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, X86MCExpr::VK_GOTPCREL, getContext());
+      MCSymbolRefExpr::create(Sym, X86::S_GOTPCREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }

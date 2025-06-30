@@ -29,7 +29,7 @@ program acc_loop
 
 ! CHECK: acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}{{$}}
 
  !$acc loop seq
   DO i = 1, n
@@ -65,7 +65,7 @@ program acc_loop
 
 ! CHECK:      acc.loop gang private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop gang(num: 8)
   DO i = 1, n
@@ -75,7 +75,7 @@ program acc_loop
 ! CHECK:      [[GANGNUM1:%.*]] = arith.constant 8 : i32
 ! CHECK:      acc.loop gang({num=[[GANGNUM1]] : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop gang(num: gangNum)
   DO i = 1, n
@@ -85,7 +85,7 @@ program acc_loop
 ! CHECK:      [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      acc.loop gang({num=[[GANGNUM2]] : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
  !$acc loop gang(num: gangNum, static: gangStatic)
   DO i = 1, n
@@ -94,7 +94,7 @@ program acc_loop
 
 ! CHECK: acc.loop gang({num=%{{.*}} : i32, static=%{{.*}} : i32}) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop vector
   DO i = 1, n
@@ -103,7 +103,7 @@ program acc_loop
 
 ! CHECK:      acc.loop vector private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop vector(128)
   DO i = 1, n
@@ -113,7 +113,7 @@ program acc_loop
 ! CHECK: [[CONSTANT128:%.*]] = arith.constant 128 : i32
 ! CHECK:      acc.loop vector([[CONSTANT128]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: }{{$}}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop vector(vectorLength)
   DO i = 1, n
@@ -123,7 +123,7 @@ program acc_loop
 ! CHECK:      [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
 ! CHECK:      acc.loop vector([[VECTORLENGTH]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
 !$acc loop worker
   DO i = 1, n
@@ -132,7 +132,7 @@ program acc_loop
 
 ! CHECK:      acc.loop worker private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop worker(128)
   DO i = 1, n
@@ -142,7 +142,7 @@ program acc_loop
 ! CHECK: [[WORKER128:%.*]] = arith.constant 128 : i32
 ! CHECK:      acc.loop worker([[WORKER128]] : i32) private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop private(c)
   DO i = 1, n
@@ -151,7 +151,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   ! When the induction variable is explicitly private - only a single private entry should be created.
   !$acc loop private(i)
@@ -161,7 +161,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop private(c, d)
   DO i = 1, n
@@ -170,7 +170,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop private(c) private(d)
   DO i = 1, n
@@ -179,7 +179,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_10x10xf32 -> %{{.*}} : !fir.ref<!fir.array<10x10xf32>>, @privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(2)
   DO i = 1, n
@@ -189,7 +189,7 @@ program acc_loop
 ! CHECK:      [[TILESIZE:%.*]] = arith.constant 2 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
  !$acc loop tile(*)
   DO i = 1, n
@@ -198,7 +198,7 @@ program acc_loop
 ! CHECK:      [[TILESIZEM1:%.*]] = arith.constant -1 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZEM1]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(2, 2)
   DO i = 1, n
@@ -211,7 +211,7 @@ program acc_loop
 ! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(tileSize)
   DO i = 1, n
@@ -220,7 +220,7 @@ program acc_loop
 
 ! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop tile(tileSize, tileSize)
   DO i = 1, n
@@ -231,7 +231,7 @@ program acc_loop
 
 ! CHECK:      acc.loop {{.*}} tile({%{{.*}} : i32, %{{.*}} : i32}) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop collapse(2)
   DO i = 1, n
@@ -244,7 +244,7 @@ program acc_loop
 ! CHECK:        fir.store %arg0 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        fir.store %arg1 to %{{.*}} : !fir.ref<i32>
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], inclusiveUpperbound = array<i1: true, true>}
+! CHECK-NEXT: } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>]{{.*}}}
 
   !$acc loop
   DO i = 1, n
@@ -257,9 +257,9 @@ program acc_loop
 ! CHECK:      acc.loop {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:          acc.loop {{.*}} control(%arg1 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:            acc.yield
-! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT:   } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop reduction(+:reduction_r) reduction(*:reduction_i)
   do i = 1, n
@@ -269,7 +269,7 @@ program acc_loop
 
 ! CHECK:      acc.loop private(@privatization_ref_i32 -> %{{.*}} : !fir.ref<i32>) reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
  !$acc loop gang(dim: gangDim, static: gangStatic)
   DO i = 1, n
@@ -278,7 +278,7 @@ program acc_loop
 
 ! CHECK: acc.loop gang({dim=%{{.*}}, static=%{{.*}} : i32}) {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop gang(dim: 1)
   DO i = 1, n
@@ -287,7 +287,7 @@ program acc_loop
 
 ! CHECK:      acc.loop gang({dim={{.*}} : i32}) {{.*}} control(%arg0 : i32) = (%{{.*}} : i32) to (%{{.*}} : i32) step (%{{.*}} : i32) {
 ! CHECK:        acc.yield
-! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>}
+! CHECK-NEXT: } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
 
   !$acc loop
   DO i = 1, n
@@ -335,4 +335,4 @@ end subroutine
 ! CHECK: %[[P_J:.*]] = acc.private varPtr(%[[DC_J]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "j"}
 ! CHECK: %[[P_K:.*]] = acc.private varPtr(%[[DC_K]] : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "k"}
 ! CHECK: acc.loop combined(parallel) private(@privatization_ref_i32 -> %[[P_I]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_J]] : !fir.ref<i32>, @privatization_ref_i32 -> %[[P_K]] : !fir.ref<i32>) control(%{{.*}} : i32, %{{.*}} : i32, %{{.*}} : i32) = (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32) to (%c10{{.*}}, %c100{{.*}}, %c200{{.*}} : i32, i32, i32)  step (%c1{{.*}}, %c1{{.*}}, %c1{{.*}} : i32, i32, i32)
-! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>}
+! CHECK: } attributes {inclusiveUpperbound = array<i1: true, true, true>, independent = [#acc.device_type<none>]}

@@ -48,10 +48,10 @@ define internal void @SubRegLivenessUndefInPhi(i64 %cond) {
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v9
 ; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a1, a0, 2
 ; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vadd.vi v10, v9, 1
 ; CHECK-NEXT:    vadd.vi v11, v9, 3
-; CHECK-NEXT:    add a1, a0, a0
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0
 ; CHECK-NEXT:    vslideup.vx v12, v10, a0

@@ -885,9 +885,8 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 define i8 @test_not_cttz_i8(i8 %a) nounwind {
 ; LA32R-LABEL: test_not_cttz_i8:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    nor $a1, $a0, $zero
-; LA32R-NEXT:    addi.w $a1, $a1, -1
-; LA32R-NEXT:    and $a0, $a0, $a1
+; LA32R-NEXT:    addi.w $a1, $a0, 1
+; LA32R-NEXT:    andn $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    andi $a1, $a1, 85
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
@@ -921,9 +920,8 @@ define i8 @test_not_cttz_i8(i8 %a) nounwind {
 define i16 @test_not_cttz_i16(i16 %a) nounwind {
 ; LA32R-LABEL: test_not_cttz_i16:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    nor $a1, $a0, $zero
-; LA32R-NEXT:    addi.w $a1, $a1, -1
-; LA32R-NEXT:    and $a0, $a0, $a1
+; LA32R-NEXT:    addi.w $a1, $a0, 1
+; LA32R-NEXT:    andn $a0, $a0, $a1
 ; LA32R-NEXT:    srli.w $a1, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a2, 5
 ; LA32R-NEXT:    ori $a2, $a2, 1365

@@ -68,6 +68,7 @@ set(supported_sources
   type-info.cpp
   unit.cpp
   utf.cpp
+  work-queue.cpp
 )
 
 # List of source not used for GPU offloading.
@@ -131,6 +132,7 @@ set(gpu_sources
   type-code.cpp
   type-info.cpp
   utf.cpp
+  work-queue.cpp
   complex-powi.cpp
   reduce.cpp
   reduction.cpp

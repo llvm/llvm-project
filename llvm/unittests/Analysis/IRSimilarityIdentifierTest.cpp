@@ -24,9 +24,6 @@
 using namespace llvm;
 using namespace IRSimilarity;
 
-LLVM_ABI extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
-LLVM_ABI extern cl::opt<bool> UseNewDbgInfoFormat;
-
 static std::unique_ptr<Module> makeLLVMModule(LLVMContext &Context,
                                               StringRef ModuleStr) {
   SMDiagnostic Err;

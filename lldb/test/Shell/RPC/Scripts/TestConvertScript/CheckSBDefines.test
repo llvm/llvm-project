@@ -1,0 +1,22 @@
+RUN: mkdir -p %t/Outputs
+
+# Run the convert script on SBDefines.h.
+RUN: %python %p/../../../../../scripts/convert-lldb-header-to-rpc-header.py %p/Inputs/SBDefines.h %t/Outputs/SBDefines.h
+
+# Check the output
+RUN: cat %t/Outputs/SBDefines.h | FileCheck %s
+
+# The include guards must change from LLDB_LLDB_API_SBDEFINES_H to LLDB_RPC_API_SBDEFINES_H.
+CHECK: #ifndef LLDB_RPC_API_SBDEFINES_H
+CHECK: #define LLDB_RPC_API_SBDEFINES_H
+
+# Includes of other lldb headers must begin with "lldb-rpc-".
+# Also, the includes for lldb-forward.h and lldb-versioning.h should be removed.
+CHECK: #include "lldb-rpc-defines.h"
+CHECK-NOT: #include "lldb-rpc-forward.h"
+CHECK: #include "lldb-rpc-enumerations.h"
+CHECK: #include "lldb-rpc-types.h"
+CHECK-NOT: #include "lldb-rpc-versioning.h"
+
+# The comment that closes the include guard should match the guard.
+CHECK: #endif // LLDB_RPC_API_SBDEFINES_H

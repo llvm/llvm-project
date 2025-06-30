@@ -1452,7 +1452,7 @@ void ELFState<ELFT>::writeSectionContent(
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 2)
+      if (E.Version > 3)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
@@ -1483,6 +1483,8 @@ void ELFState<ELFT>::writeSectionContent(
     if (!E.BBRanges)
       continue;
     uint64_t TotalNumBlocks = 0;
+    bool EmitCallsiteOffsets =
+        FeatureOrErr->CallsiteOffsets || E.hasAnyCallsiteOffsets();
     for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
       CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
@@ -1500,6 +1502,15 @@ void ELFState<ELFT>::writeSectionContent(
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
         SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
+        if (EmitCallsiteOffsets) {
+          size_t NumCallsiteOffsets =
+              BBE.CallsiteOffsets ? BBE.CallsiteOffsets->size() : 0;
+          SHeader.sh_size += CBA.writeULEB128(NumCallsiteOffsets);
+          if (BBE.CallsiteOffsets) {
+            for (uint32_t Offset : *BBE.CallsiteOffsets)
+              SHeader.sh_size += CBA.writeULEB128(Offset);
+          }
+        }
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
       }

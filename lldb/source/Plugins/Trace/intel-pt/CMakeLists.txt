@@ -35,14 +35,14 @@ add_lldb_library(lldbPluginTraceIntelPT PLUGIN
   TraceIntelPTBundleLoader.cpp
   TraceIntelPTBundleSaver.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbCore
     lldbSymbol
     lldbTarget
     lldbPluginTraceCommon
     ${LIBIPT_LIBRARY}
-  LINK_COMPONENTS
-    Support
   )
 
 

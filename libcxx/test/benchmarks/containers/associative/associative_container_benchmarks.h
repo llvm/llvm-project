@@ -13,12 +13,14 @@
 #include <iterator>
 #include <random>
 #include <string>
+#include <ranges>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "benchmark/benchmark.h"
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 namespace support {
 
@@ -65,6 +67,8 @@ void associative_container_benchmarks(std::string container) {
                       std::pair<typename Container::iterator, bool>>;
 
   static constexpr bool is_ordered_container = requires(Container c, Key k) { c.lower_bound(k); };
+
+  static constexpr bool is_map_like = requires { typename Container::mapped_type; };
 
   // These benchmarks are structured to perform the operation being benchmarked
   // a small number of times at each iteration, in order to offset the cost of
@@ -321,6 +325,48 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
+  if constexpr (is_map_like) {
+    bench("insert(iterator, iterator) (product_iterator from same type)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
+      Container source(in.begin(), in.end());
+
+      Container c;
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.insert(source.begin(), source.end());
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container();
+        st.ResumeTiming();
+      }
+    });
+
+#if TEST_STD_VER >= 23
+    bench("insert(iterator, iterator) (product_iterator from zip_view)", [=](auto& st) {
+      const std::size_t size = st.range(0);
+      std::vector<Key> keys  = generate_unique_keys(size + (size / 10));
+      std::sort(keys.begin(), keys.end());
+      std::vector<typename Container::mapped_type> mapped(keys.size());
+
+      auto source = std::views::zip(keys, mapped);
+
+      Container c;
+
+      for ([[maybe_unused]] auto _ : st) {
+        c.insert(source.begin(), source.end());
+        benchmark::DoNotOptimize(c);
+        benchmark::ClobberMemory();
+
+        st.PauseTiming();
+        c = Container();
+        st.ResumeTiming();
+      }
+    });
+#endif
+  }
   /////////////////////////
   // Erasure
   /////////////////////////

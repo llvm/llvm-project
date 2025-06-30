@@ -2311,6 +2311,14 @@ TEST(FindReferences, WithinAST) {
             $(S::deleteObject)[[de^lete]] S;
           }
         };
+      )cpp",
+      // Array designators
+      R"cpp(
+        const int $def[[F^oo]] = 0;
+        int Bar[] = {
+          [$(Bar)[[F^oo]]...$(Bar)[[Fo^o]] + 1] = 0,
+          [$(Bar)[[^Foo]] + 2] = 1
+        };
       )cpp"};
   for (const char *Test : Tests)
     checkFindRefs(Test);

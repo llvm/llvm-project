@@ -1,13 +1,3 @@
-set(EXTRA_CXXFLAGS "")
-
-if (CXX_SUPPORTS_NO_GNU_ANONYMOUS_STRUCT)
-  set(EXTRA_CXXFLAGS ${EXTRA_CXXFLAGS} -Wno-gnu-anonymous-struct)
-endif ()
-
-if (CXX_SUPPORTS_NO_NESTED_ANON_TYPES)
-  set(EXTRA_CXXFLAGS ${EXTRA_CXXFLAGS} -Wno-nested-anon-types)
-endif ()
-
 add_lldb_library(lldbPluginObjCLanguage PLUGIN
   ObjCLanguage.cpp
   CF.cpp
@@ -36,6 +26,14 @@ add_lldb_library(lldbPluginObjCLanguage PLUGIN
     lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
-
-  EXTRA_CXXFLAGS ${EXTRA_CXXFLAGS}
 )
+
+if (CXX_SUPPORTS_NO_GNU_ANONYMOUS_STRUCT)
+  target_compile_options(lldbPluginObjCLanguage
+    PRIVATE -Wno-gnu-anonymous-struct)
+endif ()
+
+if (CXX_SUPPORTS_NO_NESTED_ANON_TYPES)
+  target_compile_options(lldbPluginObjCLanguage
+    PRIVATE -Wno-nested-anon-types)
+endif ()

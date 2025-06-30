@@ -151,26 +151,6 @@ void MCWasmStreamer::emitIdent(StringRef IdentString) {
   // sections in the object format
 }
 
-void MCWasmStreamer::emitInstToData(const MCInst &Inst,
-                                    const MCSubtargetInfo &STI) {
-  MCAssembler &Assembler = getAssembler();
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Append the encoded instruction to the current data fragment (or create a
-  // new such fragment if the current fragment is not a data fragment).
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
-}
-
 void MCWasmStreamer::finishImpl() {
   emitFrames(nullptr);
 

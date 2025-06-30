@@ -110,6 +110,9 @@
 /* Define if building LLVM with BUILD_SHARED_LIBS */
 #cmakedefine LLVM_BUILD_SHARED_LIBS
 
+/* Define if exporting LLVM public interface for shared library */
+#cmakedefine LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS
+
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 #cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}
 
@@ -131,6 +134,10 @@
 
 /* Define to 1 to enable expensive checks for debug location coverage checking,
    and to 0 otherwise. */
-#cmakedefine01 LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE
+
+/* Define to 1 to enable expensive tracking of the origin of debug location
+   coverage bugs, and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 #endif

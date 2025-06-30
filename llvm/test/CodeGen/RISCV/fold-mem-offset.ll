@@ -213,12 +213,12 @@ define i64 @test_sh3add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32I-NEXT:    slli a2, a2, 3
 ; RV32I-NEXT:    add a1, a0, a1
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    lw a2, 404(a0)
-; RV32I-NEXT:    lw a3, 400(a1)
+; RV32I-NEXT:    lw a2, 400(a1)
 ; RV32I-NEXT:    lw a1, 404(a1)
+; RV32I-NEXT:    lw a3, 404(a0)
 ; RV32I-NEXT:    lw a4, 400(a0)
-; RV32I-NEXT:    add a1, a2, a1
-; RV32I-NEXT:    add a0, a4, a3
+; RV32I-NEXT:    add a1, a3, a1
+; RV32I-NEXT:    add a0, a4, a2
 ; RV32I-NEXT:    sltu a2, a0, a4
 ; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
@@ -240,12 +240,12 @@ define i64 @test_sh3add_uw(ptr %p, i32 signext %x, i32 signext %y) {
 ; RV32ZBA:       # %bb.0: # %entry
 ; RV32ZBA-NEXT:    sh3add a1, a1, a0
 ; RV32ZBA-NEXT:    sh3add a0, a2, a0
-; RV32ZBA-NEXT:    lw a2, 404(a0)
-; RV32ZBA-NEXT:    lw a3, 400(a1)
+; RV32ZBA-NEXT:    lw a2, 400(a1)
 ; RV32ZBA-NEXT:    lw a1, 404(a1)
+; RV32ZBA-NEXT:    lw a3, 404(a0)
 ; RV32ZBA-NEXT:    lw a4, 400(a0)
-; RV32ZBA-NEXT:    add a1, a2, a1
-; RV32ZBA-NEXT:    add a0, a4, a3
+; RV32ZBA-NEXT:    add a1, a3, a1
+; RV32ZBA-NEXT:    add a0, a4, a2
 ; RV32ZBA-NEXT:    sltu a2, a0, a4
 ; RV32ZBA-NEXT:    add a1, a1, a2
 ; RV32ZBA-NEXT:    ret

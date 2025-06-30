@@ -23,6 +23,8 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
 
+#include "llvm/Support/Compiler.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "avr-disassembler"
@@ -50,7 +52,8 @@ static MCDisassembler *createAVRDisassembler(const Target &T,
   return new AVRDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAVRDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheAVRTarget(),
                                          createAVRDisassembler);

@@ -443,12 +443,12 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (mem & (zmm3 ^ zmm2))
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (m32bcst & (zmm3 ^ zmm2))
 ; AVX512F-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsllw $2, %ymm0, %ymm2
 ; AVX512F-NEXT:    vpsrlw $6, %ymm0, %ymm3
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (mem & (zmm3 ^ zmm2))
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 = zmm3 ^ (m32bcst & (zmm3 ^ zmm2))
 ; AVX512F-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpsrlw $7, %ymm0, %ymm2
@@ -463,17 +463,17 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %amt) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm2
 ; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm3
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (mem & (ymm3 ^ ymm2))
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (m32bcst & (ymm3 ^ ymm2))
 ; AVX512VL-NEXT:    vpsllw $5, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsllw $2, %ymm0, %ymm2
 ; AVX512VL-NEXT:    vpsrlw $6, %ymm0, %ymm3
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (mem & (ymm3 ^ ymm2))
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 ^ (m32bcst & (ymm3 ^ ymm2))
 ; AVX512VL-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpsrlw $7, %ymm0, %ymm2
 ; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 | (ymm2 & mem)
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm3 = ymm3 | (ymm2 & m32bcst)
 ; AVX512VL-NEXT:    vpaddb %ymm1, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -1641,7 +1641,7 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512F-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (mem & (zmm0 ^ zmm1))
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm1))
 ; AVX512F-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512F-NEXT:    retq
 ;
@@ -1649,14 +1649,14 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512VL-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-LABEL: splatconstant_funnnel_v32i8:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512BW-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (mem & (zmm0 ^ zmm1))
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm1))
 ; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BW-NEXT:    retq
 ;
@@ -1664,14 +1664,14 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512VLBW-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512VLBW-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; AVX512VLBW-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VBMI2-LABEL: splatconstant_funnnel_v32i8:
 ; AVX512VBMI2:       # %bb.0:
 ; AVX512VBMI2-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512VBMI2-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512VBMI2-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (mem & (zmm0 ^ zmm1))
+; AVX512VBMI2-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm0 ^ (m32bcst & (zmm0 ^ zmm1))
 ; AVX512VBMI2-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VBMI2-NEXT:    retq
 ;
@@ -1679,7 +1679,7 @@ define <32 x i8> @splatconstant_funnnel_v32i8(<32 x i8> %x) nounwind {
 ; AVX512VLVBMI2:       # %bb.0:
 ; AVX512VLVBMI2-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; AVX512VLVBMI2-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX512VLVBMI2-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; AVX512VLVBMI2-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; AVX512VLVBMI2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatconstant_funnnel_v32i8:

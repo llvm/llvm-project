@@ -9,11 +9,10 @@
 #include "src/math/tgammaf.h"
 #include "src/__support/common.h"
 
-#include "declarations.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, tgammaf, (float x)) { return __nv_tgammaf(x); }
+LLVM_LIBC_FUNCTION(float, tgammaf, (float)) { return 0.0; }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -130,7 +130,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
+              TST->getTemplateName(), Args, /*CanonicalArgs=*/{}, QT);
         }
         break;
       }
@@ -228,7 +228,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }
@@ -1143,7 +1143,7 @@ class TemplateDiff {
 
     Ty = Context.getTemplateSpecializationType(
         TemplateName(CTSD->getSpecializedTemplate()),
-        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
+        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/{},
         Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();

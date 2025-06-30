@@ -24,7 +24,7 @@ static bool timer_fired(false);
 extern "C" void handle_sigalrm(int) { timer_fired = true; }
 
 TEST_F(LlvmLibcSysTimeSetitimerTest, SmokeTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   struct sigaction sa;
   sa.sa_handler = handle_sigalrm;
   LIBC_NAMESPACE::sigemptyset(&sa.sa_mask);

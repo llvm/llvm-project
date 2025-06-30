@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -test-constant-fold -mlir-print-debuginfo | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -test-single-fold -mlir-print-debuginfo | FileCheck %s
 
 // CHECK-LABEL: func @fold_and_merge
 func.func @fold_and_merge() -> (i32, i32) {

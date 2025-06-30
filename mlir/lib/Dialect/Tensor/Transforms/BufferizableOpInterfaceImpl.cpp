@@ -54,8 +54,9 @@ struct CastOpInterface
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
     auto castOp = cast<tensor::CastOp>(op);
-    auto maybeSrcBufferType = bufferization::getBufferType(
-        castOp.getSource(), options, state, invocationStack);
+    auto maybeSrcBufferType =
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
+            castOp.getSource(), options, state, invocationStack));
     if (failed(maybeSrcBufferType))
       return failure();
     Attribute memorySpace = maybeSrcBufferType->getMemorySpace();
@@ -500,8 +501,8 @@ struct FromElementsOpInterface
         /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    FailureOr<BaseMemRefType> memrefType =
-        bufferization::getBufferType(*tensorAlloc, options, state);
+    FailureOr<BaseMemRefType> memrefType = bufferization::detail::asMemRefType(
+        bufferization::getBufferType(*tensorAlloc, options, state));
     if (failed(memrefType))
       return failure();
     Value buffer = rewriter.create<bufferization::ToBufferOp>(
@@ -758,8 +759,9 @@ struct PadOpInterface
                 SmallVector<Value> &invocationStack) const {
     // Infer memory space from the source tensor.
     auto padOp = cast<tensor::PadOp>(op);
-    auto maybeSrcBufferType = bufferization::getBufferType(
-        padOp.getSource(), options, state, invocationStack);
+    auto maybeSrcBufferType =
+        bufferization::detail::asMemRefType(bufferization::getBufferType(
+            padOp.getSource(), options, state, invocationStack));
     if (failed(maybeSrcBufferType))
       return failure();
     MemRefLayoutAttrInterface layout;

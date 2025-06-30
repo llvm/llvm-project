@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/limits_macros.h" // UINT_MAX
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/poll/poll.h"
 #include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcPollTest, SmokeTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   int ret = LIBC_NAMESPACE::poll(nullptr, 0, 0);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(0, ret);
 }
 TEST(LlvmLibcPollTest, SmokeFailureTest) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   int ret = LIBC_NAMESPACE::poll(nullptr, UINT_MAX, 0);
   ASSERT_ERRNO_EQ(EINVAL);
   ASSERT_EQ(-1, ret);

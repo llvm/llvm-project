@@ -16,6 +16,7 @@
 //   void insert(InputIterator first, InputIterator last);
 
 #include <flat_map>
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <deque>
@@ -104,6 +105,12 @@ int main(int, char**) {
   {
     auto insert_func = [](auto& m, const auto& newValues) { m.insert(newValues.begin(), newValues.end()); };
     test_insert_range_exception_guarantee(insert_func);
+  }
+  {
+    std::flat_multimap<int, int, std::less<int>, SillyReserveVector<int>, SillyReserveVector<int>> m{{1, 1}, {2, 2}};
+    std::vector<std::pair<int, int>> v{{3, 3}, {4, 4}};
+    m.insert(v.begin(), v.end());
+    assert(std::ranges::equal(m, std::vector<std::pair<int, int>>{{1, 1}, {2, 2}, {3, 3}, {4, 4}}));
   }
   return 0;
 }

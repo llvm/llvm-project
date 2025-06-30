@@ -968,6 +968,29 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
 
   // FIXME: Do we need to add an alignment parameter to the intrinsic?
   unsigned VectorWidth = AddrType->getNumElements();
+  auto CreateHistogramUpdateValue = [&](IntrinsicInst *CI, Value *Load,
+                                        Value *Inc) -> Value * {
+    Value *UpdateOp;
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::experimental_vector_histogram_add:
+      UpdateOp = Builder.CreateAdd(Load, Inc);
+      break;
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+      UpdateOp =
+          Builder.CreateIntrinsic(Intrinsic::uadd_sat, {EltTy}, {Load, Inc});
+      break;
+    case Intrinsic::experimental_vector_histogram_umin:
+      UpdateOp = Builder.CreateIntrinsic(Intrinsic::umin, {EltTy}, {Load, Inc});
+      break;
+    case Intrinsic::experimental_vector_histogram_umax:
+      UpdateOp = Builder.CreateIntrinsic(Intrinsic::umax, {EltTy}, {Load, Inc});
+      break;
+
+    default:
+      llvm_unreachable("Unexpected histogram intrinsic");
+    }
+    return UpdateOp;
+  };
 
   // Shorten the way if the mask is a vector of constants.
   if (isConstantIntVector(Mask)) {
@@ -976,8 +999,9 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
-      Value *Add = Builder.CreateAdd(Load, Inc);
-      Builder.CreateStore(Add, Ptr);
+      Value *Update =
+          CreateHistogramUpdateValue(cast<IntrinsicInst>(CI), Load, Inc);
+      Builder.CreateStore(Update, Ptr);
     }
     CI->eraseFromParent();
     return;
@@ -997,8 +1021,9 @@ static void scalarizeMaskedVectorHistogram(const DataLayout &DL, CallInst *CI,
     Builder.SetInsertPoint(CondBlock->getTerminator());
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     LoadInst *Load = Builder.CreateLoad(EltTy, Ptr, "Load" + Twine(Idx));
-    Value *Add = Builder.CreateAdd(Load, Inc);
-    Builder.CreateStore(Add, Ptr);
+    Value *UpdateOp =
+        CreateHistogramUpdateValue(cast<IntrinsicInst>(CI), Load, Inc);
+    Builder.CreateStore(UpdateOp, Ptr);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = ThenTerm->getSuccessor(0);
@@ -1089,6 +1114,9 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
     default:
       break;
     case Intrinsic::experimental_vector_histogram_add:
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+    case Intrinsic::experimental_vector_histogram_umin:
+    case Intrinsic::experimental_vector_histogram_umax:
       if (TTI.isLegalMaskedVectorHistogram(CI->getArgOperand(0)->getType(),
                                            CI->getArgOperand(1)->getType()))
         return false;

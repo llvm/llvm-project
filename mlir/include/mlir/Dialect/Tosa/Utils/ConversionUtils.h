@@ -243,6 +243,11 @@ bool getConstShapeValues(Operation *op,
 // returns a small vector of int64_t values that attr contains
 SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
                                         const int rank);
+
+// returns true iff constant indices for scatter op contains unique indices
+// per batch
+bool hasUniqueConstantScatterIndices(ShapedType indicesType,
+                                     DenseIntElementsAttr indicesAttr);
 } // namespace tosa
 } // namespace mlir
 

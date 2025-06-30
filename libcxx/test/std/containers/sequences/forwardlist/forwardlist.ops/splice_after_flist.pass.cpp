@@ -8,7 +8,7 @@
 
 // <forward_list>
 
-// void splice_after(const_iterator p, forward_list&& x);
+// void splice_after(const_iterator p, forward_list&& x); // constexpr since C++26
 
 #include <forward_list>
 #include <cassert>
@@ -19,13 +19,13 @@
 #include "min_allocator.h"
 
 typedef int T;
-const T t1[]                 = {0, 1, 2, 3, 4, 5, 6, 7};
-const T t2[]                 = {10, 11, 12, 13, 14, 15};
-const std::ptrdiff_t size_t1 = std::end(t1) - std::begin(t1);
-const std::ptrdiff_t size_t2 = std::end(t2) - std::begin(t2);
+TEST_CONSTEXPR const T t1[]                 = {0, 1, 2, 3, 4, 5, 6, 7};
+TEST_CONSTEXPR const T t2[]                 = {10, 11, 12, 13, 14, 15};
+TEST_CONSTEXPR const std::ptrdiff_t size_t1 = std::end(t1) - std::begin(t1);
+TEST_CONSTEXPR const std::ptrdiff_t size_t2 = std::end(t2) - std::begin(t2);
 
 template <class C>
-void testd(const C& c, int p, int l) {
+TEST_CONSTEXPR_CXX26 void testd(const C& c, int p, int l) {
   typename C::const_iterator i = c.begin();
   int n1                       = 0;
   for (; n1 < p; ++n1, ++i)
@@ -37,7 +37,7 @@ void testd(const C& c, int p, int l) {
   assert(std::distance(c.begin(), c.end()) == size_t1 + l);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     // splicing different containers
     typedef std::forward_list<T> C;
@@ -65,6 +65,15 @@ int main(int, char**) {
       }
     }
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

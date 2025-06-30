@@ -104,8 +104,10 @@ def ErrorCode : Enum {
     Etor<"UNIMPLEMENTED", "generic error code for features currently unimplemented by the device/backend">,
     Etor<"UNSUPPORTED", "generic error code for features unsupported by the device/backend">,
     Etor<"ASSEMBLE_FAILURE", "assembler failure while processing binary image">,
+    Etor<"COMPILE_FAILURE", "jit compile failure while processing binary image">,
     Etor<"LINK_FAILURE", "linker failure while processing binary image">,
     Etor<"BACKEND_FAILURE", "the plugin backend is in an invalid or unsupported state">,
+    Etor<"UNINITIALIZED", "not initialized">,
 
     // Handle related errors - only makes sense for liboffload
     Etor<"INVALID_NULL_HANDLE", "a handle argument is null when it should not be">,
@@ -148,6 +150,16 @@ def : Struct {
   ];
 }
 
+def : Struct {
+  let name = "ol_dimensions_t";
+  let desc = "A three element vector";
+  let members = [
+    StructMember<"uint32_t", "x", "X">,
+    StructMember<"uint32_t", "y", "Y">,
+    StructMember<"uint32_t", "z", "Z">,
+  ];
+}
+
 def : Function {
   let name = "olInit";
   let desc = "Perform initialization of the Offload library and plugins";
@@ -164,7 +176,7 @@ def : Function {
   let desc = "Release the resources in use by Offload";
   let details = [
     "This decrements an internal reference count. When this reaches 0, all resources will be released",
-    "Subsequent API calls made after this are not valid"
+    "Subsequent API calls to methods other than `olInit` made after resources are released will return OL_ERRC_UNINITIALIZED"
   ];
   let params = [];
   let returns = [];

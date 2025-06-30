@@ -34,8 +34,7 @@ define i32 @test_rev_w_srl16(i16 %a) {
 ; CHECK-GI-LABEL: test_rev_w_srl16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xffff
-; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    lsr w0, w8, #16
+; CHECK-GI-NEXT:    rev16 w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i16 %a to i32
@@ -45,12 +44,18 @@ entry:
 }
 
 define i32 @test_rev_w_srl16_load(ptr %a) {
-; CHECK-LABEL: test_rev_w_srl16_load:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    lsr w0, w8, #16
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_rev_w_srl16_load:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldrh w8, [x0]
+; CHECK-SD-NEXT:    rev w8, w8
+; CHECK-SD-NEXT:    lsr w0, w8, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_rev_w_srl16_load:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldrh w8, [x0]
+; CHECK-GI-NEXT:    rev16 w0, w8
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i16, ptr %a
   %1 = zext i16 %0 to i32
@@ -71,8 +76,7 @@ define i32 @test_rev_w_srl16_add(i8 %a, i8 %b) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w1, #0xff
 ; CHECK-GI-NEXT:    add w8, w8, w0, uxtb
-; CHECK-GI-NEXT:    rev w8, w8
-; CHECK-GI-NEXT:    lsr w0, w8, #16
+; CHECK-GI-NEXT:    rev16 w0, w8
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i8 %a to i32
@@ -96,8 +100,7 @@ define i64 @test_rev_x_srl32(i32 %a) {
 ; CHECK-GI-LABEL: test_rev_x_srl32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov w8, w0
-; CHECK-GI-NEXT:    rev x8, x8
-; CHECK-GI-NEXT:    lsr x0, x8, #32
+; CHECK-GI-NEXT:    rev32 x0, x8
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = zext i32 %a to i64
@@ -107,12 +110,18 @@ entry:
 }
 
 define i64 @test_rev_x_srl32_load(ptr %a) {
-; CHECK-LABEL: test_rev_x_srl32_load:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr w8, [x0]
-; CHECK-NEXT:    rev x8, x8
-; CHECK-NEXT:    lsr x0, x8, #32
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_rev_x_srl32_load:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr w8, [x0]
+; CHECK-SD-NEXT:    rev x8, x8
+; CHECK-SD-NEXT:    lsr x0, x8, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_rev_x_srl32_load:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldr w8, [x0]
+; CHECK-GI-NEXT:    rev32 x0, x8
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i32, ptr %a
   %1 = zext i32 %0 to i64
@@ -122,18 +131,11 @@ entry:
 }
 
 define i64 @test_rev_x_srl32_shift(i64 %a) {
-; CHECK-SD-LABEL: test_rev_x_srl32_shift:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ubfx x8, x0, #2, #29
-; CHECK-SD-NEXT:    rev32 x0, x8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_rev_x_srl32_shift:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ubfx x8, x0, #2, #29
-; CHECK-GI-NEXT:    rev x8, x8
-; CHECK-GI-NEXT:    lsr x0, x8, #32
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_rev_x_srl32_shift:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ubfx x8, x0, #2, #29
+; CHECK-NEXT:    rev32 x0, x8
+; CHECK-NEXT:    ret
 entry:
   %0 = shl i64 %a, 33
   %1 = lshr i64 %0, 35

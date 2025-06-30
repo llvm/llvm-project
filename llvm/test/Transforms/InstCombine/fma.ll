@@ -972,6 +972,19 @@ define <2 x half> @fma_negone_vec_partial_undef(<2 x half> %x, <2 x half> %y) {
   ret <2 x half> %sub
 }
 
+define <2 x float> @fmuladd_unary_shuffle_ops(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: @fmuladd_unary_shuffle_ops(
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]], <2 x float> [[C:%.*]])
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x float> [[R1]]
+;
+  %a = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %b = shufflevector <2 x float> %y, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %c = shufflevector <2 x float> %z, <2 x float> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x float> @llvm.fmuladd(<2 x float> %a, <2 x float> %b, <2 x float> %c)
+  ret <2 x float> %r
+}
+
 ; negative tests
 
 define half @fma_non_negone(half %x, half %y) {

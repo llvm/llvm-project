@@ -374,6 +374,19 @@ define ptr @notmalloc_memset(i64 %size, ptr %notmalloc) {
   ret ptr %call1
 }
 
+; This should create a customalloc_zeroed call and eliminate the memset
+define ptr @customalloc_memset(i64 %size, i64 %align) {
+; CHECK-LABEL: @customalloc_memset
+; CHECK-NEXT:  [[CALL:%.*]] = call ptr @customalloc_zeroed(i64 [[SIZE:%.*]], i64 [[ALIGN:%.*]])
+; CHECK-NEXT:  ret ptr [[CALL]]
+  %call = call ptr @customalloc(i64 %size, i64 %align)
+  call void @llvm.memset.p0.i64(ptr %call, i8 0, i64 %size, i1 false)
+  ret ptr %call
+}
+
+declare ptr @customalloc(i64, i64) allockind("alloc") "alloc-family"="customalloc" "alloc-variant-zeroed"="customalloc_zeroed"
+declare ptr @customalloc_zeroed(i64, i64) allockind("alloc,zeroed") "alloc-family"="customalloc"
+
 ; This should not create recursive call to calloc.
 define ptr @calloc(i64 %nmemb, i64 %size) inaccessiblememonly {
 ; CHECK-LABEL: @calloc(

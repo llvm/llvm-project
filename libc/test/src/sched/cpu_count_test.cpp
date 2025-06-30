@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_getcpucount.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -17,7 +17,7 @@
 
 TEST(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));

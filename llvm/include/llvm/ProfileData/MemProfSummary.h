@@ -14,6 +14,7 @@
 #define LLVM_PROFILEDATA_MEMPROFSUMMARY_H
 
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace memprof {
@@ -46,11 +47,12 @@ public:
   uint64_t getMaxColdTotalSize() const { return MaxColdTotalSize; }
   uint64_t getMaxWarmTotalSize() const { return MaxWarmTotalSize; }
   uint64_t getMaxHotTotalSize() const { return MaxHotTotalSize; }
-  void printSummaryYaml(raw_ostream &OS) const;
+  LLVM_ABI void printSummaryYaml(raw_ostream &OS) const;
   /// Write to indexed MemProf profile.
-  void write(ProfOStream &OS) const;
+  LLVM_ABI void write(ProfOStream &OS) const;
   /// Read from indexed MemProf profile.
-  static std::unique_ptr<MemProfSummary> deserialize(const unsigned char *&);
+  LLVM_ABI static std::unique_ptr<MemProfSummary>
+  deserialize(const unsigned char *&);
 };
 
 } // namespace memprof

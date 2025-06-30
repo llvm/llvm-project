@@ -7,6 +7,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.inttypes
     libc.include.limits
     libc.include.math
+    libc.include.setjmp
     libc.include.stdlib
     libc.include.string
     libc.include.strings

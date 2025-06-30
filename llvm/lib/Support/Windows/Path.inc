@@ -748,7 +748,7 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
     PathHash = (static_cast<uint64_t>(Info.nFileIndexHigh) << 32ULL) |
                static_cast<uint64_t>(Info.nFileIndexLow);
   } else {
-    PathHash = hash_combine_range(ntPath.begin(), ntPath.end());
+    PathHash = hash_combine_range(ntPath);
   }
 
   Result = file_status(

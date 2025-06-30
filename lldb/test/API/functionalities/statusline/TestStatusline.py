@@ -44,7 +44,7 @@ class TestStatusline(PExpectTest):
         self.expect(
             "set set show-statusline true",
             [
-                "\x1b[0;{}r".format(self.TERMINAL_HEIGHT - 1),
+                "\x1b[1;{}r".format(self.TERMINAL_HEIGHT - 1),
                 "a.out | main.c:2:11 | breakpoint 1.1                        ",
             ],
         )
@@ -66,7 +66,7 @@ class TestStatusline(PExpectTest):
 
         # Hide the statusline and check or the control character.
         self.expect(
-            "set set show-statusline false", ["\x1b[0;{}r".format(self.TERMINAL_HEIGHT)]
+            "set set show-statusline false", ["\x1b[1;{}r".format(self.TERMINAL_HEIGHT)]
         )
 
     def test_no_color(self):

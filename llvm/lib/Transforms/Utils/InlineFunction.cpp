@@ -1775,6 +1775,7 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
   AllocaInst *NewAlloca =
       new AllocaInst(ByValType, Arg->getType()->getPointerAddressSpace(),
                      nullptr, Alignment, Arg->getName());
+  NewAlloca->setDebugLoc(DebugLoc::getCompilerGenerated());
   NewAlloca->insertBefore(Caller->begin()->begin());
   IFI.StaticAllocas.push_back(NewAlloca);
 
@@ -1926,16 +1927,11 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
       }
     }
 
-    // Remove debug info intrinsics if we're not keeping inline info.
+    // Remove debug info records if we're not keeping inline info.
     if (NoInlineLineTables) {
       BasicBlock::iterator BI = FI->begin();
       while (BI != FI->end()) {
-        if (isa<DbgInfoIntrinsic>(BI)) {
-          BI = BI->eraseFromParent();
-          continue;
-        } else {
-          BI->dropDbgRecords();
-        }
+        BI->dropDbgRecords();
         ++BI;
       }
     }
@@ -2237,7 +2233,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
 // profile. Note: we only update the "name" and "index" operands in the
 // instrumentation intrinsics, we leave the hash and total nr of indices as-is,
 // it's not worth updating those.
-static const std::pair<std::vector<int64_t>, std::vector<int64_t>>
+static std::pair<std::vector<int64_t>, std::vector<int64_t>>
 remapIndices(Function &Caller, BasicBlock *StartBB,
              PGOContextualProfile &CtxProf, uint32_t CalleeCounters,
              uint32_t CalleeCallsites) {
@@ -2340,16 +2336,14 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
           Worklist.push_back(Succ);
   }
 
-  assert(
-      llvm::all_of(CalleeCounterMap, [&](const auto &V) { return V != 0; }) &&
-      "Counter index mapping should be either to -1 or to non-zero index, "
-      "because the 0 "
-      "index corresponds to the entry BB of the caller");
-  assert(
-      llvm::all_of(CalleeCallsiteMap, [&](const auto &V) { return V != 0; }) &&
-      "Callsite index mapping should be either to -1 or to non-zero index, "
-      "because there should have been at least a callsite - the inlined one "
-      "- which would have had a 0 index.");
+  assert(!llvm::is_contained(CalleeCounterMap, 0) &&
+         "Counter index mapping should be either to -1 or to non-zero index, "
+         "because the 0 "
+         "index corresponds to the entry BB of the caller");
+  assert(!llvm::is_contained(CalleeCallsiteMap, 0) &&
+         "Callsite index mapping should be either to -1 or to non-zero index, "
+         "because there should have been at least a callsite - the inlined one "
+         "- which would have had a 0 index.");
 
   return {std::move(CalleeCounterMap), std::move(CalleeCallsiteMap)};
 }
@@ -3258,6 +3252,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
     // Add an unconditional branch to make this look like the CallInst case...
     CreatedBranchToNormalDest = BranchInst::Create(II->getNormalDest(), CB.getIterator());
+    // We intend to replace this DebugLoc with another later.
+    CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getTemporary());
 
     // Split the basic block.  This guarantees that no PHI nodes will have to be
     // updated due to new incoming edges, and make the invoke case more
@@ -3359,6 +3355,12 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     Returns[0]->eraseFromParent();
     ReturnBB->eraseFromParent();
   } else if (!CB.use_empty()) {
+    // In this case there are no returns to use, so there is no clear source
+    // location for the "return".
+    // FIXME: It may be correct to use the scope end line of the function here,
+    // since this likely means we are falling out of the function.
+    if (CreatedBranchToNormalDest)
+      CreatedBranchToNormalDest->setDebugLoc(DebugLoc::getUnknown());
     // No returns, but something is using the return value of the call.  Just
     // nuke the result.
     CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));

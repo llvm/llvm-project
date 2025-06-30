@@ -25,7 +25,7 @@ static void runTest(
   auto *F = M.getFunction(FuncName);
   ASSERT_NE(F, nullptr) << "Could not find " << FuncName;
 
-  TargetLibraryInfoImpl TLII;
+  TargetLibraryInfoImpl TLII(M.getTargetTriple());
   TargetLibraryInfo TLI(TLII);
   AssumptionCache AC(*F);
   DominatorTree DT(*F);

@@ -1,0 +1,82 @@
+# This test validates the plugin list command.
+# Currently it works only for system-runtime plugins and we only have one
+# system runtime plugin so testing is a bit limited.
+#
+# Note that commands that return errors will stop running a script, so we
+# have new RUN lines for any command that is expected to return an error.
+
+# RUN: %lldb -s %s -o exit 2>&1 | FileCheck %s
+
+# Test plugin list without an argument will list all plugins.
+plugin list
+# CHECK-LABEL: plugin list
+# CHECK-DAG: instrumentation-runtime
+# CHECK-DAG:  [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+# CHECK-DAG: system-runtime
+# CHECK-DAG:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin list works with fully qualified name.
+plugin list system-runtime.systemruntime-macosx
+# CHECK-LABEL: plugin list system-runtime.systemruntime-macosx
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin list on plugin namespace works.
+plugin list system-runtime
+# CHECK-LABEL: plugin list system-runtime
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin list on multiple args works.
+plugin list system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK-LABEL: plugin list system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+# CHECK: instrumentation-runtime
+# CHECK:  [+] AddressSanitizer               AddressSanitizer instrumentation runtime plugin.
+
+# Test json output for plugin list.
+plugin list --json
+# CHECK-LABEL plugin list --json
+# CHECK: {
+# CHECK-DAG:  "instrumentation-runtime":
+# CHECK-DAG:  "system-runtime":
+# CHECK: }
+
+# Test json output for plugin list with a namespace
+plugin list system-runtime --json
+# CHECK-LABEL plugin list --json
+# CHECK: {
+# CHECK:  "system-runtime": [
+# CHECK:    {
+# CHECK-DAG:  "enabled": true
+# CHECK-DAG:  "name": "systemruntime-macosx"
+# CHECK:    }
+# CHECK:  ]
+# CHECK: }
+
+# Test json output for listing multiple plugins
+plugin list --json system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK-LABEL plugin list --json system-runtime instrumentation-runtime.AddressSanitizer
+# CHECK: {
+# CHECK-DAG:  "instrumentation-runtime":
+# CHECK-DAG:    "name": "AddressSanitizer"
+# CHECK-DAG:  "system-runtime":
+# CHECK: }
+
+
+# Test plugin list does not match a plugin name by substring.
+# RUN: %lldb -o "plugin list macosx" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+
+# Test plugin list does not match a plugin namespace by substring.
+# RUN: %lldb -o "plugin list system-runtime." 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+
+# Test plugin list returns an error for unknown second argument
+# RUN: %lldb -o "plugin list system-runtime foo" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+
+# Test plugin list returns an error for unknown second argument
+# RUN: %lldb -o "plugin list --json system-runtime foo" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+
+# Test plugin list for unknown plugin returns an error.
+# RUN: %lldb -o "plugin list some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# ERROR_PLUGIN_NOT_FOUND: error: Found no matching plugins

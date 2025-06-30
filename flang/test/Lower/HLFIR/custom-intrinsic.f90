@@ -115,10 +115,10 @@ end function
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFmax_arrayEmax_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
 ! CHECK:           ^bb0(%[[VAL_13:.*]]: index):
-! CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
-! CHECK:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_18:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             %[[VAL_19:.*]] = arith.select %[[VAL_18]], %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             hlfir.yield_element %[[VAL_19]] : i32
@@ -288,10 +288,10 @@ end function
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFmin_arrayEmin_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
 ! CHECK:           ^bb0(%[[VAL_13:.*]]: index):
-! CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
-! CHECK:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
-! CHECK:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_15:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_16:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+! CHECK-DAG:             %[[VAL_17:.*]] = fir.load %[[VAL_16]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_18:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             %[[VAL_19:.*]] = arith.select %[[VAL_18]], %[[VAL_15]], %[[VAL_17]] : i32
 ! CHECK:             hlfir.yield_element %[[VAL_19]] : i32

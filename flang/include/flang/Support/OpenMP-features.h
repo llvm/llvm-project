@@ -15,16 +15,8 @@ namespace Fortran::common {
 template <typename FortranPredefinitions>
 void setOpenMPMacro(int version, FortranPredefinitions &predefinitions) {
   switch (version) {
-  case 20:
-    predefinitions.emplace_back("_OPENMP", "200011");
-    break;
-  case 25:
-    predefinitions.emplace_back("_OPENMP", "200505");
-    break;
-  case 30:
-    predefinitions.emplace_back("_OPENMP", "200805");
-    break;
   case 31:
+  default:
     predefinitions.emplace_back("_OPENMP", "201107");
     break;
   case 40:
@@ -42,9 +34,8 @@ void setOpenMPMacro(int version, FortranPredefinitions &predefinitions) {
   case 52:
     predefinitions.emplace_back("_OPENMP", "202111");
     break;
-  case 11:
-  default:
-    predefinitions.emplace_back("_OPENMP", "199911");
+  case 60:
+    predefinitions.emplace_back("_OPENMP", "202411");
     break;
   }
 }

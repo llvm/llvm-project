@@ -16,6 +16,5 @@
 #include <clc/math/gentype.inc>
 
 #undef __CLC_FUNCTION
-#undef __FLOAT_ONLY
 
 #endif // __CLC_MATH_CLC_HALF_EXP2_H__

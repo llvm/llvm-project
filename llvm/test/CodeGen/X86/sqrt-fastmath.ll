@@ -183,7 +183,7 @@ define <4 x float> @sqrt_v4f32_check_denorms(<4 x float> %x) #3 {
   ret <4 x float> %call
 }
 
-define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #3 {
+define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #7 {
 ; SSE-LABEL: sqrt_v4f32_check_denorms_ieee_ninf:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm1
@@ -230,11 +230,11 @@ define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #3 {
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
+  %call = tail call fast ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
   ret <4 x float> %call
 }
 
-define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #6 {
+define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #8 {
 ; SSE-LABEL: sqrt_v4f32_check_denorms_dynamic_ninf:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    rsqrtps %xmm0, %xmm1
@@ -281,7 +281,7 @@ define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #6 {
 ; AVX512-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
 ; AVX512-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %call = tail call ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
+  %call = tail call fast ninf afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %x) #2
   ret <4 x float> %call
 }
 
@@ -1019,3 +1019,8 @@ attributes #3 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt"
 attributes #4 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="ieee,preserve-sign" }
 attributes #5 = { "unsafe-fp-math"="true" "reciprocal-estimates"="all:0" }
 attributes #6 = { "unsafe-fp-math"="true" "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" }
+
+; Attributes without "unsafe-fp-math"="true"
+; TODO: Merge with previous attributes when this attribute can be deleted.
+attributes #7 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,ieee" } ; #3
+attributes #8 = { "reciprocal-estimates"="sqrt,vec-sqrt" "denormal-fp-math"="preserve-sign,dynamic" } ; #6

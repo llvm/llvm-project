@@ -273,8 +273,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
   std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
     std::move(*OptRecordFileOrErr);
 
-  if (OptRecordFile &&
-      CodeGenOpts.getProfileUse() != CodeGenOptions::ProfileNone)
+  if (OptRecordFile && CodeGenOpts.getProfileUse() !=
+                           llvm::driver::ProfileInstrKind::ProfileNone)
     Ctx.setDiagnosticsHotnessRequested(true);
 
   if (CodeGenOpts.MisExpect) {

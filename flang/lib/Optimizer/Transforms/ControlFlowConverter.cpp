@@ -212,9 +212,12 @@ public:
     }
 
     rewriter.setInsertionPointToEnd(condBlock);
-    rewriter.create<mlir::cf::CondBranchOp>(
+    auto branchOp = rewriter.create<mlir::cf::CondBranchOp>(
         loc, ifOp.getCondition(), ifOpBlock, llvm::ArrayRef<mlir::Value>(),
         otherwiseBlock, llvm::ArrayRef<mlir::Value>());
+    llvm::ArrayRef<int32_t> weights = ifOp.getWeights();
+    if (!weights.empty())
+      branchOp.setWeights(weights);
     rewriter.replaceOp(ifOp, continueBlock->getArguments());
     return success();
   }
