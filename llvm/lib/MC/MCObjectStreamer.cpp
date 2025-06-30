@@ -390,6 +390,22 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
   emitInstToFragment(Inst, STI);
 }
 
+void MCObjectStreamer::emitInstToData(const MCInst &Inst,
+                                      const MCSubtargetInfo &STI) {
+  MCDataFragment *DF = getOrCreateDataFragment();
+  SmallVector<MCFixup, 1> Fixups;
+  SmallString<256> Code;
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  auto CodeOffset = DF->getContents().size();
+  for (MCFixup &Fixup : Fixups) {
+    Fixup.setOffset(Fixup.getOffset() + CodeOffset);
+    DF->getFixups().push_back(Fixup);
+  }
+  DF->setHasInstructions(STI);
+  DF->appendContents(Code);
+}
+
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
                                           const MCSubtargetInfo &STI) {
   // Always create a new, separate fragment here, because its size can change
