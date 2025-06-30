@@ -37,11 +37,14 @@ public:
   addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                            llvm::opt::ArgStringList &CC1Args) const override;
 
+  bool HasNativeLLVMSupport() const override { return UseLLD; }
+
 protected:
   Tool *buildLinker() const override;
 
 private:
   std::string computeSysRoot() const override;
+  bool UseLLD;
 };
 
 } // end namespace toolchains
