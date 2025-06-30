@@ -240,17 +240,17 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
 
   switch (PropName) {
   case OL_PLATFORM_INFO_NAME:
-    return Info.WriteString(IsHost ? "Host" : Platform->Plugin->getName());
+    return Info.writeString(IsHost ? "Host" : Platform->Plugin->getName());
   case OL_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
-    return Info.WriteString("Unknown platform vendor");
+    return Info.writeString("Unknown platform vendor");
   case OL_PLATFORM_INFO_VERSION: {
-    return Info.WriteString(formatv("v{0}.{1}.{2}", OL_VERSION_MAJOR,
+    return Info.writeString(formatv("v{0}.{1}.{2}", OL_VERSION_MAJOR,
                                     OL_VERSION_MINOR, OL_VERSION_PATCH)
                                 .str());
   }
   case OL_PLATFORM_INFO_BACKEND: {
-    return Info.Write<ol_platform_backend_t>(Platform->BackendType);
+    return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -280,40 +280,40 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   assert(Device != OffloadContext::get().HostDevice());
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
-  auto MakeError = [&](ErrorCode Code, StringRef Err) {
+  auto makeError = [&](ErrorCode Code, StringRef Err) {
     std::string ErrBuffer;
     llvm::raw_string_ostream(ErrBuffer) << PropName << ": " << Err;
     return Plugin::error(ErrorCode::UNIMPLEMENTED, ErrBuffer.c_str());
   };
 
   // Find the info if it exists under any of the given names
-  auto GetInfoString =
+  auto getInfoString =
       [&](std::vector<std::string> Names) -> llvm::Expected<const char *> {
     for (auto Name : Names) {
       if (auto Entry = Device->Info.get(Name)) {
         if (!std::holds_alternative<std::string>((*Entry)->Value))
-          return MakeError(ErrorCode::BACKEND_FAILURE,
+          return makeError(ErrorCode::BACKEND_FAILURE,
                            "plugin returned incorrect type");
         return std::get<std::string>((*Entry)->Value).c_str();
       }
     }
 
-    return MakeError(ErrorCode::UNIMPLEMENTED,
+    return makeError(ErrorCode::UNIMPLEMENTED,
                      "plugin did not provide a response for this information");
   };
 
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
-    return Info.Write<void *>(Device->Platform);
+    return Info.write<void *>(Device->Platform);
   case OL_DEVICE_INFO_TYPE:
-    return Info.Write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
+    return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
   case OL_DEVICE_INFO_NAME:
-    return Info.WriteString(GetInfoString({"Device Name"}));
+    return Info.writeString(getInfoString({"Device Name"}));
   case OL_DEVICE_INFO_VENDOR:
-    return Info.WriteString(GetInfoString({"Vendor Name"}));
+    return Info.writeString(getInfoString({"Vendor Name"}));
   case OL_DEVICE_INFO_DRIVER_VERSION:
-    return Info.WriteString(
-        GetInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
+    return Info.writeString(
+        getInfoString({"CUDA Driver Version", "HSA Runtime Version"}));
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
@@ -330,15 +330,15 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
 
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
-    return Info.Write<void *>(Device->Platform);
+    return Info.write<void *>(Device->Platform);
   case OL_DEVICE_INFO_TYPE:
-    return Info.Write<ol_device_type_t>(OL_DEVICE_TYPE_HOST);
+    return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_HOST);
   case OL_DEVICE_INFO_NAME:
-    return Info.WriteString("Virtual Host Device");
+    return Info.writeString("Virtual Host Device");
   case OL_DEVICE_INFO_VENDOR:
-    return Info.WriteString("Liboffload");
+    return Info.writeString("Liboffload");
   case OL_DEVICE_INFO_DRIVER_VERSION:
-    return Info.WriteString(LLVM_VERSION_STRING);
+    return Info.writeString(LLVM_VERSION_STRING);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
