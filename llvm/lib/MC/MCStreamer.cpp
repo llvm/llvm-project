@@ -405,11 +405,13 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     StringRef Name = Symbol->getName();
     // Only numeric labels are considered safe in inline assembly
     // Skip compiler-generated temporary labels (like .Ltmp0, .Ltmp1, etc.)
-    if (!Name.empty() && !std::isdigit(Name.front()) && !Name.starts_with(".Ltmp")) {
+    if (!Name.empty() && !std::isdigit(Name.front()) &&
+        !Name.starts_with(".Ltmp")) {
       getContext().reportWarning(
           Loc, "non-numeric label '" + Name +
                    "' in inline assembly strict mode may be unsafe for "
-                   "external jumps; consider using numeric labels (1:, 2:, etc.) instead");
+                   "external jumps; consider using numeric labels (1:, 2:, "
+                   "etc.) instead");
     }
   }
 
