@@ -751,8 +751,10 @@ foreach mx = SchedMxListFW in {
   foreach sew = SchedSEWSet<mx, isF=1, isWidening=1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListFW, isF=1>.c;
 
-    // Pattern for vfwsub/vfwadd.vv, vfwsub/vfwadd.vf: 4/4/5/8
-    // Pattern for vfwsub/vfwadd.wv, vfwsub/vfwadd.wf: 5/5/9/17
+    // Pattern for vfwsub/vfwadd.vv, vfwsub/vfwadd.vf: e16mf4=4, e16mf2=4, e16m1=4, e16m2=5,
+    // e16m4=8, e32mf2=4, e32m1=4, e32m2=5, e32m4=8
+    // Pattern for vfwsub/vfwadd.wv, vfwsub/vfwadd.wf: e16mf4=5, e16mf2=5, e16m1=5, e16m2=9,
+    // e16m4=17, e32mf2=5, e32m1=5, e32m2=9, e32m4=17
     // TODO: Split .wf/.wv variants into separate scheduling classes to use 5/5/9/17
     defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = !mul(LMulLat, 4) in {
