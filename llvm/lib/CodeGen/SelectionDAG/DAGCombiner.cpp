@@ -17697,7 +17697,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // If 'unsafe math' or reassoc and nsz, fold lots of things.
   // TODO: break out portions of the transformations below for which Unsafe is
   //       considered and which do not require both nsz and reassoc
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros())) &&
       AllowNewConst) {
     // fadd (fadd x, c1), c2 -> fadd x, c1 + c2
@@ -17784,7 +17784,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
     }
   } // enable-unsafe-fp-math && AllowNewConst
 
-  if (((Options.UnsafeFPMath && Options.NoSignedZerosFPMath) ||
+  if ((Options.NoSignedZerosFPMath ||
        (Flags.hasAllowReassociation() && Flags.hasNoSignedZeros()))) {
     // Fold fadd(vecreduce(x), vecreduce(y)) -> vecreduce(fadd(x, y))
     if (SDValue SD = reassociateReduction(ISD::VECREDUCE_FADD, ISD::FADD, DL,
