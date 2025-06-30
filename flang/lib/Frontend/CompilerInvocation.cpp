@@ -14,7 +14,6 @@
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
-#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/OpenMP-features.h"
@@ -1808,7 +1807,6 @@ void CompilerInvocation::setLoweringOptions() {
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
-  loweringOpts.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
 
   const Fortran::common::LangOptions &langOptions = getLangOpts();
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
