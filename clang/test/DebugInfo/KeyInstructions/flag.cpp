@@ -4,18 +4,18 @@
 // RUN: %clang -### -target x86_64 -c -gdwarf %s 2>&1 | FileCheck %s --check-prefixes=NO-KEY-INSTRUCTIONS
 
 //// Help hidden.
-// RUN %clang --help | FileCheck %s --check-prefix=HELP
+// RUN: %clang --help | FileCheck %s --check-prefix=HELP
 // HELP-NOT: key-instructions
 
 // KEY-INSTRUCTIONS: "-gkey-instructions"
 
 // NO-KEY-INSTRUCTIONS-NOT: key-instructions
 
-// RUN %clang %s | FileCheck %s --check-prefix=SMOKETEST-OFF
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -debug-info-kind=line-tables-only -emit-llvm -o - | FileCheck %s --check-prefix=SMOKETEST-OFF
 void f() {}
-// SMOKETEST-OFF-NOT: keyInstructions
+// SMOKETEST-OFF-NOT: keyInstructions:
 // SMOKETEST-OFF-NOT: atomGroup
 
-// RUN %clang %s -gkey-instructions | FileCheck %s --check-prefix=SMOKETEST-ON
+// RUN: %clang_cc1 %s -triple x86_64-linux-gnu -gkey-instructions -debug-info-kind=line-tables-only -emit-llvm -o - | FileCheck %s --check-prefix=SMOKETEST-ON
 // SMOKETEST-ON: keyInstructions: true
 // SMOKETEST-ON: atomGroup: 1
