@@ -16,12 +16,12 @@ TEST_MAIN(int, char **, char **) {
 
   // realloc to same size returns the same pointer.
   void *same = LIBC_NAMESPACE::realloc(alloc, 32);
-  EXPECT_NE(same, nullptr);
+  EXPECT_EQ(same, alloc);
   EXPECT_EQ(reinterpret_cast<int *>(same)[0], 42);
 
   // realloc to smaller size returns same pointer.
   void *smaller = LIBC_NAMESPACE::realloc(same, 16);
-  EXPECT_NE(smaller, nullptr);
+  EXPECT_EQ(smaller, alloc);
   EXPECT_EQ(reinterpret_cast<int *>(smaller)[0], 42);
 
   // realloc to larger size returns new pointer and preserves contents.
