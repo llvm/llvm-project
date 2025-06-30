@@ -239,7 +239,8 @@ static bool isCandidate(const MachineInstr *MI, Register &DefedReg,
                   // Check if the operand is a use of the same register.
                   // If it is a kill, then we found a candidate and can continue
                   // to the next operand.
-                  if (UMO.getReg() == MO.getReg() && UMO.isKill()) {
+                  if (UMO.getReg() == MO.getReg() && UMO.isKill() &&
+                      UMO.readsReg()) {
                     found = true;
                     continue;
                   }
