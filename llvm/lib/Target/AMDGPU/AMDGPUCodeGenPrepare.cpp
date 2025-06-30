@@ -29,6 +29,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -107,7 +108,7 @@ public:
   bool FlowChanged = false;
   mutable Function *SqrtF32 = nullptr;
   mutable Function *LdexpF32 = nullptr;
-  mutable SetVector<Value *> DeadVals;
+  mutable SmallVector<WeakVH> DeadVals;
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
 
@@ -285,15 +286,14 @@ bool AMDGPUCodeGenPrepareImpl::run() {
 
   for (BasicBlock &BB : reverse(F)) {
     for (Instruction &I : make_early_inc_range(reverse(BB))) {
-      if (!DeadVals.contains(&I))
+      if (!isInstructionTriviallyDead(&I, TLI))
         MadeChange |= visit(I);
     }
   }
 
   while (!DeadVals.empty()) {
-    RecursivelyDeleteTriviallyDeadInstructions(
-        DeadVals.pop_back_val(), TLI, /*MSSAU*/ nullptr,
-        [&](Value *V) { DeadVals.remove(V); });
+    if (auto *I = dyn_cast_or_null<Instruction>(DeadVals.pop_back_val()))
+      RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
   }
 
   return MadeChange;
@@ -415,7 +415,7 @@ bool AMDGPUCodeGenPrepareImpl::replaceMulWithMul24(BinaryOperator &I) const {
   Value *NewVal = insertValues(Builder, Ty, ResultVals);
   NewVal->takeName(&I);
   I.replaceAllUsesWith(NewVal);
-  DeadVals.insert(&I);
+  DeadVals.push_back(&I);
 
   return true;
 }
@@ -489,10 +489,10 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
                                           FoldedT, FoldedF);
   NewSelect->takeName(&BO);
   BO.replaceAllUsesWith(NewSelect);
-  DeadVals.insert(&BO);
+  DeadVals.push_back(&BO);
   if (CastOp)
-    DeadVals.insert(CastOp);
-  DeadVals.insert(Sel);
+    DeadVals.push_back(CastOp);
+  DeadVals.push_back(Sel);
   return true;
 }
 
@@ -888,7 +888,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   if (NewVal) {
     FDiv.replaceAllUsesWith(NewVal);
     NewVal->takeName(&FDiv);
-    DeadVals.insert(&FDiv);
+    DeadVals.push_back(&FDiv);
   }
 
   return true;
@@ -1299,7 +1299,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
                                       const SITargetLowering *TLI,
                                       const TargetTransformInfo &TTI,
                                       const DataLayout &DL,
-                                      SetVector<Value *> &DeadVals) {
+                                      SmallVector<WeakVH> &DeadVals) {
   unsigned Opc = I->getOpcode();
   Type *OldType = I->getType();
 
@@ -1354,7 +1354,7 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
 
   Value *Zext = Builder.CreateZExt(Arith, OldType);
   I->replaceAllUsesWith(Zext);
-  DeadVals.insert(I);
+  DeadVals.push_back(I);
   return true;
 }
 
@@ -1430,7 +1430,7 @@ bool AMDGPUCodeGenPrepareImpl::visitBinaryOperator(BinaryOperator &I) {
 
     if (NewDiv) {
       I.replaceAllUsesWith(NewDiv);
-      DeadVals.insert(&I);
+      DeadVals.push_back(&I);
       Changed = true;
     }
   }
@@ -1486,7 +1486,7 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
     Value *ValTrunc = Builder.CreateTrunc(WidenLoad, IntNTy);
     Value *ValOrig = Builder.CreateBitCast(ValTrunc, I.getType());
     I.replaceAllUsesWith(ValOrig);
-    DeadVals.insert(&I);
+    DeadVals.push_back(&I);
     return true;
   }
 
@@ -1528,7 +1528,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
 
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
-  DeadVals.insert(&I);
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -1816,7 +1816,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   }
 
   I.replaceAllUsesWith(Vec);
-  DeadVals.insert(&I);
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -1897,7 +1897,7 @@ bool AMDGPUCodeGenPrepareImpl::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   auto *Intrin = B.CreateIntrinsic(
       I.getType(), Intrinsic::amdgcn_addrspacecast_nonnull, {I.getOperand(0)});
   I.replaceAllUsesWith(Intrin);
-  DeadVals.insert(&I);
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -1994,7 +1994,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
   Value *Fract = applyFractPat(Builder, FractArg);
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
-  DeadVals.insert(&I);
+  DeadVals.push_back(&I);
   return true;
 }
 
@@ -2041,7 +2041,7 @@ bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Value *NewSqrt = insertValues(Builder, Sqrt.getType(), ResultVals);
   NewSqrt->takeName(&Sqrt);
   Sqrt.replaceAllUsesWith(NewSqrt);
-  DeadVals.insert(&Sqrt);
+  DeadVals.push_back(&Sqrt);
   return true;
 }
 
