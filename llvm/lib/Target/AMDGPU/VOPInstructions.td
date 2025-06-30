@@ -348,7 +348,8 @@ class VOP3OpSel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3OpSel_gfx10<op, p>;
 class VOP3FP8OpSel_src_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   bits<2> byte_sel;
   let Inst{11-12} = byte_sel; // NB: bit order is intentionally reversed!
-  let Inst{14-13} = 0;  // op_sel2/3
+  let Inst{13} = !if(!and(p.HasOpSel, p.HasSrc2), src2_modifiers{2}, 0);
+  let Inst{14} = !if(!and(p.HasOpSel, p.HasDst), src0_modifiers{3}, 0);
 }
 
  class VOP3FP8OpSel_dst_bytesel_gfx11_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
@@ -526,7 +527,7 @@ class VOP3PXe <bits<7> op, VOPProfile MFMAPfl, bit acc_cd = 0> : Enc128, VOP3Pe_
   bits<9> scale_src1;
 
   //MFMALdScaleModifierOp transforms 2 bit opsel input to 4 bit value
-  //where opsel and opselHi are in 3rd and 4th bit. 
+  //where opsel and opselHi are in 3rd and 4th bit.
   bits<4> src0_modifiers;
   bits<4> src1_modifiers;
 
@@ -869,14 +870,14 @@ class VOP3_DPPe_Common_Base<bits<10> op, VOPProfile P> : Enc96 {
   let Inst{9}     = !if(P.HasSrc1Mods, src1_modifiers{1}, 0);
   let Inst{10}    = !if(P.HasSrc2Mods, src2_modifiers{1}, 0);
   // 16-bit select fields which can be interpreted as OpSel or hi/lo suffix
-  let Inst{11} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0),
-                                 !if(P.HasFP8SrcByteSel, byte_sel{1}, ?));
-  let Inst{12} = !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0),
-                                 !if(P.HasFP8SrcByteSel, byte_sel{0}, ?));
-  let Inst{13} = !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0),
-                                 !if(P.HasFP8DstByteSel, byte_sel{0}, ?));
-  let Inst{14} = !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0),
-                                 !if(P.HasFP8DstByteSel, byte_sel{1}, ?));
+  let Inst{11} = !if(P.HasFP8SrcByteSel, byte_sel{1},
+                 !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{2}, 0), ?));
+  let Inst{12} = !if(P.HasFP8SrcByteSel, byte_sel{0},
+                 !if(P.HasOpSel, !if(P.HasSrc1Mods, src1_modifiers{2}, 0), ?));
+  let Inst{13} = !if(P.HasFP8DstByteSel, byte_sel{0},
+                 !if(P.HasOpSel, !if(P.HasSrc2Mods, src2_modifiers{2}, 0), ?));
+  let Inst{14} = !if(P.HasFP8DstByteSel, byte_sel{1},
+                 !if(P.HasOpSel, !if(P.HasSrc0Mods, src0_modifiers{3}, 0), ?));
   let Inst{15}    = !if(P.HasClamp, clamp, 0);
   let Inst{25-16} = op;
   let Inst{31-26} = 0x35;
