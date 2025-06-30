@@ -972,7 +972,7 @@ public:
 
   virtual InstructionCost
   getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
-                         TTI::TargetCostKind CostKind) const {
+                         bool Negated, TTI::TargetCostKind CostKind) const {
     return 1;
   }
 

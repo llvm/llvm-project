@@ -3261,7 +3261,10 @@ public:
 
   InstructionCost
   getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *Ty,
+                         bool Negated,
                          TTI::TargetCostKind CostKind) const override {
+    if (Negated)
+      return InstructionCost::getInvalid(CostKind);
     // Without any native support, this is equivalent to the cost of
     // vecreduce.add(mul(ext(Ty A), ext(Ty B))) or
     // vecreduce.add(mul(A, B)).

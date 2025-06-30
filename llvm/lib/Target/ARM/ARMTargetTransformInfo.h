@@ -300,6 +300,7 @@ public:
                            TTI::TargetCostKind CostKind) const override;
   InstructionCost
   getMulAccReductionCost(bool IsUnsigned, Type *ResTy, VectorType *ValTy,
+                         bool Negated,
                          TTI::TargetCostKind CostKind) const override;
 
   InstructionCost

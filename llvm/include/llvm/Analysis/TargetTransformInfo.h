@@ -1651,8 +1651,10 @@ public:
   /// extensions. This is the cost of as:
   /// ResTy vecreduce.add(mul (A, B)).
   /// ResTy vecreduce.add(mul(ext(Ty A), ext(Ty B)).
+  /// The multiply can optionally be negated, which signifies that it is a sub
+  /// reduction.
   LLVM_ABI InstructionCost getMulAccReductionCost(
-      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      bool IsUnsigned, Type *ResTy, VectorType *Ty, bool Negated,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
