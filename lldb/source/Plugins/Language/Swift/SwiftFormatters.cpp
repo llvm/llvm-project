@@ -828,6 +828,7 @@ public:
       "isEscalated",
       "isEnqueued",
       "isComplete",
+      "isSuspended",
       "isRunning",
       // clang-format on
   };
@@ -964,7 +965,9 @@ public:
       RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
     case 13:
       RETURN_CHILD(m_is_complete_sp, isComplete, bool_type);
-    case 14: {
+    case 14:
+      RETURN_CHILD(m_is_suspended_sp, isSuspended, bool_type);
+    case 15: {
       if (m_task_info.hasIsRunning)
         RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
       return {};
@@ -996,8 +999,8 @@ public:
                 m_is_child_task_sp, m_is_future_sp, m_is_group_child_task_sp,
                 m_is_async_let_task_sp, m_is_cancelled_sp,
                 m_is_status_record_locked_sp, m_is_escalated_sp,
-                m_is_enqueued_sp, m_is_complete_sp, m_parent_task_sp,
-                m_child_tasks_sp, m_is_running_sp})
+                m_is_enqueued_sp, m_is_complete_sp, m_is_suspended_sp,
+                m_parent_task_sp, m_child_tasks_sp, m_is_running_sp})
             child.reset();
         }
       }
@@ -1039,6 +1042,7 @@ private:
   ValueObjectSP m_is_escalated_sp;
   ValueObjectSP m_is_enqueued_sp;
   ValueObjectSP m_is_complete_sp;
+  ValueObjectSP m_is_suspended_sp;
   ValueObjectSP m_parent_task_sp;
   ValueObjectSP m_child_tasks_sp;
   ValueObjectSP m_is_running_sp;
@@ -1934,6 +1938,7 @@ bool lldb_private::formatters::swift::TaskPriority_SummaryProvider(
 
 static const std::pair<StringRef, StringRef> TASK_FLAGS[] = {
     {"isComplete", "complete"},
+    {"isSuspended", "suspended"},
     {"isRunning", "running"},
     {"isCancelled", "cancelled"},
     {"isEscalated", "escalated"},
