@@ -16145,41 +16145,6 @@ SDValue SITargetLowering::performPtrAddCombine(SDNode *N,
       return Folded;
   }
 
-  // Transform (ptradd a, b) -> (or disjoint a, b) if it is equivalent and if
-  // that transformation can't block an offset folding at any use of the ptradd.
-  // This should be done late, after legalization, so that it doesn't block
-  // other ptradd combines that could enable more offset folding.
-  bool HasIntermediateAssertAlign =
-      N0->getOpcode() == ISD::AssertAlign && N0->getOperand(0)->isAnyAdd();
-  // This is a hack to work around an ordering problem for DAGs like this:
-  //   (ptradd (AssertAlign (ptradd p, c1), k), c2)
-  // If the outer ptradd is handled first by the DAGCombiner, it can be
-  // transformed into a disjoint or. Then, when the generic AssertAlign combine
-  // pushes the AssertAlign through the inner ptradd, it's too late for the
-  // ptradd reassociation to trigger.
-  if (!DCI.isBeforeLegalizeOps() && !HasIntermediateAssertAlign &&
-      DAG.haveNoCommonBitsSet(N0, N1)) {
-    bool TransformCanBreakAddrMode = any_of(N->users(), [&](SDNode *User) {
-      if (auto *LoadStore = dyn_cast<MemSDNode>(User);
-          LoadStore && LoadStore->getBasePtr().getNode() == N) {
-        unsigned AS = LoadStore->getAddressSpace();
-        // Currently, we only really need ptradds to fold offsets into flat
-        // memory instructions.
-        if (AS != AMDGPUAS::FLAT_ADDRESS)
-          return false;
-        TargetLoweringBase::AddrMode AM;
-        AM.HasBaseReg = true;
-        EVT VT = LoadStore->getMemoryVT();
-        Type *AccessTy = VT.getTypeForEVT(*DAG.getContext());
-        return isLegalAddressingMode(DAG.getDataLayout(), AM, AccessTy, AS);
-      }
-      return false;
-    });
-
-    if (!TransformCanBreakAddrMode)
-      return DAG.getNode(ISD::OR, DL, VT, N0, N1, SDNodeFlags::Disjoint);
-  }
-
   if (N1.getOpcode() != ISD::ADD || !N1.hasOneUse())
     return SDValue();
 
