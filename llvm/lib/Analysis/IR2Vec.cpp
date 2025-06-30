@@ -293,7 +293,7 @@ Error IR2VecVocabAnalysis::parseVocabSection(
             "' section of the vocabulary are not of the same dimension");
 
   return Error::success();
-};
+}
 
 // FIXME: Make this optional. We can avoid file reads
 // by auto-generating a default vocabulary during the build time.
