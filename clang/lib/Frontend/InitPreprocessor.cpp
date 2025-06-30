@@ -865,6 +865,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
                                        const LangOptions &LangOpts,
                                        const FrontendOptions &FEOpts,
                                        const PreprocessorOptions &PPOpts,
+                                       const CodeGenOptions &CGOpts,
                                        MacroBuilder &Builder) {
   // Compiler version introspection macros.
   Builder.defineMacro("__llvm__");  // LLVM Backend
@@ -1073,9 +1074,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__clang_wide_literal_encoding__", "\"UTF-16\"");
   }
 
-  if (LangOpts.Optimize)
+  if (CGOpts.OptimizationLevel != 0)
     Builder.defineMacro("__OPTIMIZE__");
-  if (LangOpts.OptimizeSize)
+  if (CGOpts.OptimizeSize != 0)
     Builder.defineMacro("__OPTIMIZE_SIZE__");
 
   if (LangOpts.FastMath)
@@ -1396,7 +1397,7 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (LangOpts.GNUCVersion)
     addLockFreeMacros("__GCC_ATOMIC_");
 
-  if (LangOpts.NoInlineDefine)
+  if (CGOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
     Builder.defineMacro("__NO_INLINE__");
 
   if (unsigned PICLevel = LangOpts.PICLevel) {
@@ -1556,8 +1557,7 @@ static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
 void clang::InitializePreprocessor(Preprocessor &PP,
                                    const PreprocessorOptions &InitOpts,
                                    const PCHContainerReader &PCHContainerRdr,
-                                   const FrontendOptions &FEOpts,
-                                   const CodeGenOptions &CodeGenOpts) {
+                                   const FrontendOptions &FEOpts) {
   const LangOptions &LangOpts = PP.getLangOpts();
   std::string PredefineBuffer;
   PredefineBuffer.reserve(4080);
@@ -1575,10 +1575,12 @@ void clang::InitializePreprocessor(Preprocessor &PP,
     // macros. This is not the right way to handle this.
     if ((LangOpts.CUDA || LangOpts.isTargetDevice()) && PP.getAuxTargetInfo())
       InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
-                                 PP.getPreprocessorOpts(), Builder);
+                                 PP.getPreprocessorOpts(), PP.getCodeGenOpts(),
+                                 Builder);
 
     InitializePredefinedMacros(PP.getTargetInfo(), LangOpts, FEOpts,
-                               PP.getPreprocessorOpts(), Builder);
+                               PP.getPreprocessorOpts(), PP.getCodeGenOpts(),
+                               Builder);
 
     // Install definitions to make Objective-C++ ARC work well with various
     // C++ Standard Library implementations.
@@ -1605,7 +1607,7 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   // The PGO instrumentation profile macros are driven by options
   // -fprofile[-instr]-generate/-fcs-profile-generate/-fprofile[-instr]-use,
   // hence they are not guarded by InitOpts.UsePredefines.
-  InitializePGOProfileMacros(CodeGenOpts, Builder);
+  InitializePGOProfileMacros(PP.getCodeGenOpts(), Builder);
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
   // that they come from the command line.
