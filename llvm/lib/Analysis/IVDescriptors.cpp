@@ -51,6 +51,7 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
     return true;
@@ -719,16 +720,13 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
         (isFindLastIVRecurrenceKind(Kind) && !SE.isKnownPositive(Step)))
       return std::nullopt;
 
-    // Keep the minimum value of the recurrence type as the sentinel value.
-    // The maximum acceptable range for the increasing induction variable,
-    // called the valid range, will be defined as
-
     // Keep the minimum (FindLast) or maximum (FindFirst) value of the
     // recurrence type as the sentinel value. The maximum acceptable range for
     // the induction variable, called the valid range, will be defined as
     //   [<sentinel value> + 1, <sentinel value>)
     // where <sentinel value> is [Signed|Unsigned]Min(<recurrence type>) for
-    // FindLastIV or [Signed|Unsigned]Max(<recurrence type>) for FindFirstIV.
+    // FindLastIV or [Signed|Unsigned]Max(<recurrence type>) for FindFirstIV,
+    // noting that this is a wrapped range since Start > End.
     // TODO: This range restriction can be lifted by adding an additional
     // virtual OR reduction.
     auto CheckRange = [&](bool IsSigned) {
@@ -741,10 +739,9 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                   : APInt::getMinValue(NumBits);
         ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       } else {
-        assert(IsSigned && "Only FindFirstIV with SMax is supported currently");
-        ValidRange =
-            ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                       APInt::getSignedMaxValue(NumBits) - 1);
+        APInt Sentinel = IsSigned ? APInt::getSignedMaxValue(NumBits)
+                                  : APInt::getMaxValue(NumBits);
+        ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       }
 
       LLVM_DEBUG(dbgs() << "LV: "
@@ -770,6 +767,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
 
     if (CheckRange(true))
       return RecurKind::FindFirstIVSMin;
+    if (CheckRange(false))
+      return RecurKind::FindFirstIVUMin;
     return std::nullopt;
   };
 
@@ -1183,6 +1182,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Mul;
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
