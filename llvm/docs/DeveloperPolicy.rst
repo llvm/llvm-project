@@ -555,7 +555,7 @@ Obtaining Other Access or Permissions
 
 To obtain access other than commit access, you can raise an issue like the one
 for obtaining commit access. However, instead of including PRs you have authored,
-include evidence of your need for this type of access.
+include evidence of your need for the type of access you want.
 
 For example, if you are helping to triage issues and want the ability to add
 labels, include links to issues you have triaged previously and explain how
