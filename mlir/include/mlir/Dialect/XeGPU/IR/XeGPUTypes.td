@@ -156,6 +156,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return MemorySpace::Global;
     }
 
+    // get the ChunkSize for blocked TensorDesc
     int getArrayLength() {
       auto attr = getEncoding();
       auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
@@ -180,7 +181,8 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return bool(getEncodingAsScatterTensorDescAttr());
     }
 
-    int getChunkSize() {
+    // get the ChunkSize for scattered TensorDesc
+    int getChunkSizeAsInt() {
       auto attr = getEncoding();
       auto scatter_attr = mlir::dyn_cast_if_present<ScatterTensorDescAttr>(attr);
       assert(scatter_attr && "invalid on non ScatterTensorDescAttr.");

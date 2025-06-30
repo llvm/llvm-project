@@ -125,6 +125,16 @@ ScatterTensorDescAttr::get(mlir::MLIRContext *context,
   return Base::get(context, scopeAttr, chunkSizeAttr);
 }
 
+LogicalResult ScatterTensorDescAttr::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    MemorySpaceAttr memory_space, IntegerAttr chunk_size) {
+  int64_t chunkSize = chunk_size.getInt();
+  if (chunkSize <= 0)
+    return emitError() << "invalid chunk size";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // XeGPU_LayoutAttr
 //===----------------------------------------------------------------------===//

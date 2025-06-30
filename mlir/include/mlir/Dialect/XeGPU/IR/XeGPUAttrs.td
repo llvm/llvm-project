@@ -42,9 +42,18 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr">: $array_length,
-    OptionalParameter<"BoolAttr">: $boundary_check
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location">: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of continuous blocks to load">: $array_length,
+    DefaultValuedParameter<
+      "BoolAttr",
+      "BoolAttr::get($_ctxt, 1)",
+      "Checking the out of boundary access">: $boundary_check
   );
 
   let builders = [
@@ -68,10 +77,7 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
         It is default to `Global`.
 
     2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
-      The default value is 1. While XeGPU supports a range of chunk sizes, hardware
-      may only allow specific values (e.g., 1, 2, 3, 4, 8, 16, 32, 64, 128, 256).
-      Therefore, XeGPU will legalize the chunk size as needed prior to lowering to
-      hardware instructions.
+      The default value is 1.
   }];
 
   let parameters = (ins
@@ -99,6 +105,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       return getChunkSize().getInt();
     }
   }];
+
+  let genVerifyDecl = 1;
  }
 
 //===----------------------------------------------------------------------===//

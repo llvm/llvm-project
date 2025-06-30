@@ -81,7 +81,7 @@ isValidGatherScatterParams(Type maskTy, VectorType valueTy,
   auto maskShape = getShapeOf(maskTy);
   auto valueShape = getShapeOf(valueTy);
   auto tdescShape = getShapeOf(tdescTy);
-  auto chunkSize = tdescTy.getChunkSize();
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
 
   if (valueTy.getElementType() != tdescTy.getElementType())
     return emitError()
@@ -441,7 +441,7 @@ LogicalResult CreateDescOp::verify() {
            << ", TensorDesc: " << tdescMemorySpace;
 
   // check total size
-  auto chunkSize = tdescTy.getChunkSize();
+  auto chunkSize = tdescTy.getChunkSizeAsInt();
   SmallVector<int64_t> shape(getOffsetsType().getShape());
   if (chunkSize != 1)
     shape.push_back(chunkSize);
@@ -545,7 +545,7 @@ LogicalResult UpdateOffsetOp::verify() {
 
   SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
   SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
-  if (tdescTy.getChunkSize() > 1)
+  if (tdescTy.getChunkSizeAsInt() > 1)
     expectedOffsetShape.pop_back();
 
   if (expectedOffsetShape != offsetShape)
