@@ -2,7 +2,7 @@
 
 
 ; CHECK-LABEL: t1
-; CHECK: call fmax
+; CHECK: dfmax
 
 define dso_local double @t1(double %a, double %b) local_unnamed_addr {
 entry:
@@ -11,7 +11,7 @@ entry:
 }
 
 ; CHECK-LABEL: t2
-; CHECK: call fmin
+; CHECK: dfmin
 
 define dso_local double @t2(double %a, double %b) local_unnamed_addr {
 entry:
@@ -20,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: t3
-; CHECK: call fmaxf
+; CHECK: sfmax
 
 define dso_local float @t3(float %a, float %b) local_unnamed_addr {
 entry:
@@ -29,7 +29,7 @@ entry:
 }
 
 ; CHECK-LABEL: t4
-; CHECK: call fminf
+; CHECK: sfmin
 
 define dso_local float @t4(float %a, float %b) local_unnamed_addr {
 entry:

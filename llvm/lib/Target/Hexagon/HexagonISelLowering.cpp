@@ -1493,9 +1493,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   // - indexed loads and stores (pre-/post-incremented),
   // - ANY_EXTEND_VECTOR_INREG, ATOMIC_CMP_SWAP_WITH_SUCCESS, CONCAT_VECTORS,
   //   ConstantFP, FCEIL, FCOPYSIGN, FEXP, FEXP2, FFLOOR, FGETSIGN,
-  //   FLOG, FLOG2, FLOG10, FMAXIMUMNUM, FMINIMUMNUM, FNEARBYINT, FRINT, FROUND,
-  //   TRAP, FTRUNC, PREFETCH, SIGN_EXTEND_VECTOR_INREG,
-  //   ZERO_EXTEND_VECTOR_INREG,
+  //   FLOG, FLOG2, FLOG10, FMAXIMUMNUM, FMAXNUM, FMINIMUMNUM, FMINNUM
+  //   FNEARBYINT, FRINT, FROUND, TRAP, FTRUNC, PREFETCH,
+  //   SIGN_EXTEND_VECTOR_INREG, ZERO_EXTEND_VECTOR_INREG,
   // which default to "expand" for at least one type.
 
   // Misc operations.
@@ -1648,7 +1648,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     ISD::FCOS,    ISD::FPOW,    ISD::FLOG,    ISD::FLOG2,
     ISD::FLOG10,  ISD::FEXP,    ISD::FEXP2,   ISD::FCEIL,   ISD::FTRUNC,
     ISD::FRINT,   ISD::FNEARBYINT,            ISD::FROUND,  ISD::FFLOOR,
-    ISD::FMINIMUMNUM,           ISD::FMAXIMUMNUM,
+    ISD::FMINIMUMNUM, ISD::FMINNUM, ISD::FMAXIMUMNUM, ISD::FMAXNUM,
     ISD::FSINCOS, ISD::FLDEXP,
     // Misc:
     ISD::BR_CC,   ISD::SELECT_CC,             ISD::ConstantPool,
@@ -1783,7 +1783,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FDIV, MVT::f32, Custom);
 
   setOperationAction(ISD::FMINIMUMNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXIMUMNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
 
   setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
   setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
@@ -1832,7 +1834,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   }
   if (Subtarget.hasV67Ops()) {
     setOperationAction(ISD::FMINIMUMNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXIMUMNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
   }
 
