@@ -107,9 +107,9 @@ class SMX60GetComplexFPLatency<string mx> {
   );
 }
 
-// High reduction scaling pattern (12,12,12,15,21,33,57): progressive from M1
-// Used for: FP reductions (fractional=12)
-class SMX60GetHighReductionLatency<string mx> {
+// FP reduction scaling pattern (12,12,12,15,21,33,57): progressive from M1
+// Used for: FP reductions
+class GetFPReductionLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 15,
     !eq(mx, "M2") : 21,
@@ -893,7 +893,7 @@ foreach mx = SchedMxListF in {
     // Pattern for vfredmax.vs, vfredmin.vs: 12,12,15,21,33,57
     // Pattern for vfredusum.vs is slightly lower for e16/e32
     // We use the worst-case for simplificity
-    let Latency = SMX60GetHighReductionLatency<mx>.c in {
+    let Latency = GetFPReductionLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFRedMinMaxV_From", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
