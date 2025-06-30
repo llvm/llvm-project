@@ -20,10 +20,10 @@ define ptx_device float @t1_f32(float %x, float %y, float %z,
 ; CHECK-UNSAFE-NEXT:    st.param.b32 [func_retval0], %r7;
 ; CHECK-UNSAFE-NEXT:    ret;
                                 float %u, float %v) {
-  %a = fmul float %x, %y
-  %b = fmul float %u, %v
-  %c = fadd float %a, %b
-  %d = fadd float %c, %z
+  %a = fmul reassoc float %x, %y
+  %b = fmul reassoc float %u, %v
+  %c = fadd reassoc float %a, %b
+  %d = fadd reassoc float %c, %z
   ret float %d
 }
 
@@ -43,10 +43,10 @@ define ptx_device double @t1_f64(double %x, double %y, double %z,
 ; CHECK-UNSAFE-NEXT:    st.param.b64 [func_retval0], %rd7;
 ; CHECK-UNSAFE-NEXT:    ret;
                                  double %u, double %v) {
-  %a = fmul double %x, %y
-  %b = fmul double %u, %v
-  %c = fadd double %a, %b
-  %d = fadd double %c, %z
+  %a = fmul reassoc double %x, %y
+  %b = fmul reassoc double %u, %v
+  %c = fadd reassoc double %a, %b
+  %d = fadd reassoc double %c, %z
   ret double %d
 }
 
