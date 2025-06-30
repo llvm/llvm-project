@@ -174,6 +174,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           case Instruction::ZExt:
           case Instruction::Mul:
           case Instruction::FMul:
+            // Opcodes above can only use EVL after wide inductions have been
+            // expanded.
             if (!VerifyLate) {
               errs() << "EVL used by unexpected VPInstruction\n";
               return false;
@@ -188,8 +190,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             return false;
           }
           if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-            errs() << "Result of VPInstruction with EVL operand is not used by "
-                      "VPEVLBasedIVPHIRecipe\n";
+            errs() << "Result of VPInstruction::Add with EVL operand is "
+                      "not used by VPEVLBasedIVPHIRecipe\n";
             return false;
           }
           return true;
