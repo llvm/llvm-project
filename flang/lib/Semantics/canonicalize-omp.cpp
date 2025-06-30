@@ -171,7 +171,8 @@ private:
         auto &nestedBeginLoopDirective =
             std::get<parser::OmpLoopDirective>(nestedBeginDirective.t);
         if ((nestedBeginLoopDirective.v == llvm::omp::Directive::OMPD_unroll ||
-                nestedBeginLoopDirective.v == llvm::omp::Directive::OMPD_tile) &&
+                nestedBeginLoopDirective.v ==
+                    llvm::omp::Directive::OMPD_tile) &&
             !(nestedBeginLoopDirective.v == llvm::omp::Directive::OMPD_unroll &&
                 dir.v == llvm::omp::Directive::OMPD_tile)) {
           // iterate through the remaining block items to find the end directive
@@ -198,7 +199,8 @@ private:
               std::optional<parser::NestedConstruct>{parser::NestedConstruct{
                   common::Indirection{std::move(*ompLoopCons)}}};
           nextIt = block.erase(nextIt);
-        } else if (nestedBeginLoopDirective.v == llvm::omp::Directive::OMPD_unroll &&
+        } else if (nestedBeginLoopDirective.v ==
+                llvm::omp::Directive::OMPD_unroll &&
             dir.v == llvm::omp::Directive::OMPD_tile) {
           // if a loop has been unrolled, the user can not then tile that loop
           // as it has been unrolled
@@ -221,7 +223,8 @@ private:
         } else {
           messages_.Say(nestedBeginLoopDirective.source,
               "Only Loop Transformation Constructs or Loop Nests can be nested within Loop Constructs"_err_en_US,
-              parser::ToUpperCaseLetters(nestedBeginLoopDirective.source.ToString()));
+              parser::ToUpperCaseLetters(
+                  nestedBeginLoopDirective.source.ToString()));
         }
       } else {
         missingDoConstruct(dir, messages_);
