@@ -206,14 +206,24 @@ LogicalResult PatternApplicator::matchAndRewrite(
           } else {
             LLVM_DEBUG(llvm::dbgs() << "Trying to match \""
                                     << bestPattern->getDebugName() << "\"\n");
-
             const auto *pattern =
                 static_cast<const RewritePattern *>(bestPattern);
-            result = pattern->matchAndRewrite(op, rewriter);
 
+#ifndef NDEBUG
+            OpBuilder::Listener *oldListener = rewriter.getListener();
+            RewriterBase::CatalogingListener *catalogingListener =
+                new RewriterBase::CatalogingListener(oldListener,
+                                                     pattern->getDebugName());
+            rewriter.setListener(catalogingListener);
+#endif
+            result = pattern->matchAndRewrite(op, rewriter);
             LLVM_DEBUG(llvm::dbgs()
                        << "\"" << bestPattern->getDebugName() << "\" result "
                        << succeeded(result) << "\n");
+#ifndef NDEBUG
+            rewriter.setListener(oldListener);
+            delete catalogingListener;
+#endif
           }
 
           // Process the result of the pattern application.
