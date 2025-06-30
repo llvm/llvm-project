@@ -3356,6 +3356,8 @@ public:
   getTrivialTypeSourceInfo(QualType T,
                            SourceLocation Loc = SourceLocation()) const;
 
+  CXXOperatorSourceInfo *getCXXOperatorSourceInfo(SourceRange R) const;
+
   /// Add a deallocation callback that will be invoked when the
   /// ASTContext is destroyed.
   ///

@@ -58,7 +58,7 @@ void MultiplexExternalSemaSource::CompleteRedeclChain(const Decl *D) {
     Sources[i]->CompleteRedeclChain(D);
 }
 
-Selector MultiplexExternalSemaSource::GetExternalSelector(uint32_t ID) {
+Selector MultiplexExternalSemaSource::GetExternalSelector(uint64_t ID) {
   Selector Sel;
   for(size_t i = 0; i < Sources.size(); ++i) {
     Sel = Sources[i]->GetExternalSelector(ID);

@@ -1004,7 +1004,8 @@ CXXMethodDecl *Sema::CreateLambdaCallOperator(SourceRange IntroducerRange,
   DeclarationName MethodName =
       Context.DeclarationNames.getCXXOperatorName(OO_Call);
   DeclarationNameLoc MethodNameLoc =
-      DeclarationNameLoc::makeCXXOperatorNameLoc(IntroducerRange.getBegin());
+      DeclarationNameLoc::makeCXXOperatorNameLoc(
+        Context.getCXXOperatorSourceInfo(IntroducerRange.getBegin()));
   CXXMethodDecl *Method = CXXMethodDecl::Create(
       Context, Class, SourceLocation(),
       DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
