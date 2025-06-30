@@ -505,7 +505,9 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
               cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
                   ->getValue())
               ->getZExtValue();
-      if (EM == SPIRV::ExecutionMode::FPFastMathDefault)
+      if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
+          EM == SPIRV::ExecutionMode::ContractionOff ||
+          EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
         continue;
 
       MCInst Inst;
@@ -712,11 +714,9 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
         Inst.addOperand(MCOperand::createReg(TypeReg));
       }
       if (!SPIRVTypeFound) {
-        std::string DiagMsg;
-        raw_string_ostream OS(DiagMsg);
-        TargetTy->print(OS);
-        DiagMsg = "Could not find SPIRV type for target type: " + DiagMsg;
-        report_fatal_error(DiagMsg.c_str(), false);
+        // The module does not contain this FP type, so we don't need to emit
+        // FPFastMathDefault for it.
+        continue;
       }
 
       unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;

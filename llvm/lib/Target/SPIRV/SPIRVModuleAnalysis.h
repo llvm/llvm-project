@@ -182,7 +182,11 @@ struct ModuleAnalysisInfo {
   InstrList MS[NUM_MODULE_SECTIONS];
   // The table maps MBB number to SPIR-V unique ID register.
   DenseMap<std::pair<const MachineFunction *, int>, MCRegister> BBNumToRegMap;
-  // The table maps function pointers to their default FP fast math info.
+  // The table maps function pointers to their default FP fast math info. It can
+  // be assumed that the SmallVector is sorted by the bit width of the type. The
+  // first element is the smallest bit width, and the last element is the
+  // largest bit width, therefore, we will have {half, float, double, fp128} in
+  // the order of their bit widths.
   DenseMap<const Function *, SmallVector<FPFastMathDefaultInfo, 4>>
       FPFastMathDefaultInfoMap;
 

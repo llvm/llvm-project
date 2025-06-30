@@ -18,7 +18,7 @@
 ; CHECKN-NOT: OpExecutionMode
 ; CHECKN: OpSource
 
-define spir_kernel void @foo1() {
+define spir_kernel void @foo1(float %f) {
 entry:
   ret void
 }
@@ -33,7 +33,7 @@ entry:
   ret void
 }
 
-define spir_kernel void @foo4() {
+define spir_kernel void @foo4(float %f) {
 entry:
   ret void
 }

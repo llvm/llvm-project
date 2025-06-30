@@ -1019,4 +1019,22 @@ unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
   return foldImm(ResType->getOperand(2), MRI);
 }
 
+size_t computeFPFastMathDefaultInfoVecIndex(size_t BitWidth) {
+  switch (BitWidth) {
+  case 16: // half
+    return 0;
+  case 32: // float
+    return 1;
+  case 64: // double
+    return 2;
+  case 128: // fp128
+    return 3;
+  default:
+    report_fatal_error("Expected BitWidth to be 16, 32, 64, or 128", false);
+  }
+  assert(false && "Unreachable code");
+  // This return is just to avoid compiler warnings.
+  return 0;
+}
+
 } // namespace llvm

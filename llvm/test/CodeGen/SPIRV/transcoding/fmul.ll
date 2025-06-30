@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV:     OpName %[[#r1:]] "r1"
 ; CHECK-SPIRV:     OpName %[[#r2:]] "r2"
@@ -13,7 +13,7 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#r3]] FPFastMathMode NotInf
 ; CHECK-SPIRV-DAG: OpDecorate %[[#r4]] FPFastMathMode NSZ
 ; CHECK-SPIRV-DAG: OpDecorate %[[#r5]] FPFastMathMode AllowRecip
-; CHECK-SPIRV-DAG: OpDecorate %[[#r6]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|Fast
+; CHECK-SPIRV-DAG: OpDecorate %[[#r6]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
 ; CHECK-SPIRV-DAG: OpDecorate %[[#r7]] FPFastMathMode NotNaN|NotInf
 ; CHECK-SPIRV:     %[[#float:]] = OpTypeFloat 32
 ; CHECK-SPIRV:     %[[#r1]] = OpFMul %[[#float]]
