@@ -1672,9 +1672,9 @@ define <4 x float> @test_v4f32_fma_x_c1_fmul_x_c2(<4 x float> %x) #0 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %m0 = fmul <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
-  %m1 = fmul <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
-  %a  = fadd <4 x float> %m0, %m1
+  %m0 = fmul contract reassoc <4 x float> %x, <float 1.0, float 2.0, float 3.0, float 4.0>
+  %m1 = fmul contract reassoc <4 x float> %x, <float 4.0, float 3.0, float 2.0, float 1.0>
+  %a  = fadd contract reassoc <4 x float> %m0, %m1
   ret <4 x float> %a
 }
 
@@ -1697,9 +1697,9 @@ define <4 x float> @test_v4f32_fma_fmul_x_c1_c2_y(<4 x float> %x, <4 x float> %y
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd132ps {{.*#+}} xmm0 = (xmm0 * mem) + xmm1
 ; AVX512-NEXT:    retq
-  %m0 = fmul <4 x float> %x,  <float 1.0, float 2.0, float 3.0, float 4.0>
-  %m1 = fmul <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
-  %a  = fadd <4 x float> %m1, %y
+  %m0 = fmul contract reassoc <4 x float> %x,  <float 1.0, float 2.0, float 3.0, float 4.0>
+  %m1 = fmul contract reassoc <4 x float> %m0, <float 4.0, float 3.0, float 2.0, float 1.0>
+  %a  = fadd contract reassoc <4 x float> %m1, %y
   ret <4 x float> %a
 }
 
