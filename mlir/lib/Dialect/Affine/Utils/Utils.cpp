@@ -80,11 +80,26 @@ public:
   ///         let remainder = srem a, b;
   ///             negative = a < 0 in
   ///         select negative, remainder + b, remainder.
+  ///
+  /// Special case for power of 2: use bitwise AND (x & (n-1)) for non-negative
+  /// x.
   Value visitModExpr(AffineBinaryOpExpr expr) {
     if (auto rhsConst = dyn_cast<AffineConstantExpr>(expr.getRHS())) {
       if (rhsConst.getValue() <= 0) {
         emitError(loc, "modulo by non-positive value is not supported");
         return nullptr;
+      }
+
+      // Special case: x mod n where n is a power of 2 can be optimized to x &
+      // (n-1)
+      int64_t rhsValue = rhsConst.getValue();
+      if (rhsValue > 0 && (rhsValue & (rhsValue - 1)) == 0) {
+        auto lhs = visit(expr.getLHS());
+        assert(lhs && "unexpected affine expr lowering failure");
+
+        Value maskCst =
+            builder.create<arith::ConstantIndexOp>(loc, rhsValue - 1);
+        return builder.create<arith::AndIOp>(loc, lhs, maskCst);
       }
     }
 
