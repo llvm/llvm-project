@@ -68,9 +68,9 @@ C++ Specific Potentially Breaking Changes
 
 - Added ``!nonnull/!align`` metadata to load of references for better codegen.
 
-- Fully implemented `CWG400 Using-declarations and the "struct hack" `
-  `<https://wg21.link/CWG400>`_. Invalid member using-declaration whose
-  nested-name-specifier doesn't refer to a base class such as
+- Fully implemented `CWG400 Using-declarations and the `
+  `"struct hack" <https://wg21.link/CWG400>`_. Invalid member using-declaration
+  whose nested-name-specifier doesn't refer to a base class such as
   ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
 
 ABI Changes in This Version
