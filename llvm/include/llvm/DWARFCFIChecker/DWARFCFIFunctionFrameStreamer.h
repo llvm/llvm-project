@@ -39,7 +39,7 @@ public:
                            std::unique_ptr<CFIFunctionFrameReceiver> Receiver)
       : MCStreamer(Context), LastInstruction(std::nullopt),
         Receiver(std::move(Receiver)), LastDirectiveIndex(0) {
-    assert(this->Receiver && "Analyzer should not be null");
+    assert(this->Receiver && "Receiver should not be null");
   }
 
   bool hasRawTextSupport() const override { return true; }
