@@ -1046,7 +1046,7 @@ foreach mx = ["M2", "M4", "M8"] in {
 
     defvar BasicLat = SMX60GetBasicLatency<mx>.c;
     defvar ExpLat = !mul(BasicLat, BasicLat);
-    let Latency = !mul(BasicLat, BasicLat) in {
+    let Latency = ExpLat in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
