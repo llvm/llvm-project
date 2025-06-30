@@ -1707,8 +1707,8 @@ static bool hasZeroDimVectors(Operation *op) {
          llvm::any_of(op->getResultTypes(), hasZeroDimVectorType);
 }
 
-/// All BroadcastOps and SplatOps, as well as ShapeCastOps that only prepends
-/// 1s, are considered 'broadcastlike'.
+/// All BroadcastOps and SplatOps, as well as ShapeCastOps that only prepend
+/// 1s, are considered to be 'broadcastlike'.
 static bool isBroadcastLike(Operation *op) {
   if (isa<BroadcastOp, SplatOp>(op))
     return true;
@@ -1717,9 +1717,12 @@ static bool isBroadcastLike(Operation *op) {
   if (!shapeCast)
     return false;
 
-  // Check that it just prepends 1s, like (2,3) -> (1,1,2,3).
+  // Check that shape_cast **only** prepends 1s, like (2,3) -> (1,1,2,3).
   // Condition 1: dst has hight rank.
   // Condition 2: src shape is a suffix of dst shape.
+  //
+  // Note that checking that dst shape has a prefix of 1s is not sufficient,
+  // for example (2,3) -> (1,3,2) is not broadcast-like.
   VectorType srcType = shapeCast.getSourceVectorType();
   ArrayRef<int64_t> srcShape = srcType.getShape();
   uint64_t srcRank = srcType.getRank();
@@ -1727,51 +1730,84 @@ static bool isBroadcastLike(Operation *op) {
   return dstShape.size() >= srcRank && dstShape.take_back(srcRank) == srcShape;
 }
 
-/// Fold extractOp with scalar result coming from BroadcastOp or SplatOp.
+/// Fold extract(broadcast(X)) to either extract(X) or just X.
+///
+/// Example:
+///
+///        broadcast           extract
+/// (3, 4) --------> (2, 3, 4) ------> (4)
+///
+/// becomes
+///                  extract
+/// (3,4) ---------------------------> (4)
+///
+///
+/// The variable names used in this implementation use names which correspond to
+/// the above shapes as,
+///
+/// - (3, 4) is `input` shape.
+/// - (2, 3, 4) is `broadcast` shape.
+/// - (4) is `extract` shape.
+///
+/// This folding is possible when the suffix of `input` shape is the same as
+/// `extract` shape.
 static Value foldExtractFromBroadcast(ExtractOp extractOp) {
 
-  Operation *broadcastLikeOp = extractOp.getVector().getDefiningOp();
-  if (!broadcastLikeOp || !isBroadcastLike(broadcastLikeOp))
+  Operation *defOp = extractOp.getVector().getDefiningOp();
+  if (!defOp || !isBroadcastLike(defOp))
     return Value();
 
-  Value src = broadcastLikeOp->getOperand(0);
+  Value input = defOp->getOperand(0);
 
   // Replace extract(broadcast(X)) with X
-  if (extractOp.getType() == src.getType())
-    return src;
+  if (extractOp.getType() == input.getType())
+    return input;
 
   // Get required types and ranks in the chain
-  //    src -> broadcastDst -> dst
-  auto srcType = llvm::dyn_cast<VectorType>(src.getType());
-  auto dstType = llvm::dyn_cast<VectorType>(extractOp.getType());
-  unsigned srcRank = srcType ? srcType.getRank() : 0;
-  unsigned broadcastDstRank = extractOp.getSourceVectorType().getRank();
-  unsigned dstRank = dstType ? dstType.getRank() : 0;
+  //    input -> broadcast -> extract
+  auto inputType = llvm::dyn_cast<VectorType>(input.getType());
+  auto extractType = llvm::dyn_cast<VectorType>(extractOp.getType());
+  unsigned inputRank = inputType ? inputType.getRank() : 0;
+  unsigned broadcastRank = extractOp.getSourceVectorType().getRank();
+  unsigned extractRank = extractType ? extractType.getRank() : 0;
 
   // Cannot do without the broadcast if overall the rank increases.
-  if (dstRank > srcRank)
+  if (extractRank > inputRank)
     return Value();
 
-  assert(srcType && "src must be a vector type because of previous checks");
+  // Proof by contradiction that, at this point, input is a vector.
+  //     Suppose input is a scalar.
+  // ==> inputRank is 0.
+  // ==> extractRank is 0 (because extractRank <= inputRank).
+  // ==> extract is scalar (because rank-0 extraction is always scalar).
+  // ==> input and extract are scalar, so same type.
+  // ==> returned early (check same type).
+  //     Contradiction!
+  assert(inputType && "input must be a vector type because of previous checks");
+  ArrayRef<int64_t> inputShape = inputType.getShape();
 
-  ArrayRef<int64_t> srcShape = srcType.getShape();
-  if (dstType && dstType.getShape() != srcShape.take_back(dstRank))
+  // In the case where there is a broadcast dimension in the suffix, it is not
+  // possible to replace extract(broadcast(X)) with extract(X). Example:
+  //
+  //     broadcast       extract
+  // (1) --------> (3,4) ------> (4)
+  if (extractType &&
+      extractType.getShape() != inputShape.take_back(extractRank))
     return Value();
 
   // Replace extract(broadcast(X)) with extract(X).
   // First, determine the new extraction position.
-  unsigned deltaOverall = srcRank - dstRank;
-  unsigned deltaBroadcast = broadcastDstRank - srcRank;
-
+  unsigned deltaOverall = inputRank - extractRank;
+  unsigned deltaBroadcast = broadcastRank - inputRank;
   SmallVector<OpFoldResult> oldPositions = extractOp.getMixedPosition();
   SmallVector<OpFoldResult> newPositions(deltaOverall);
   IntegerAttr zero = OpBuilder(extractOp.getContext()).getIndexAttr(0);
-  for (auto [i, size] : llvm::enumerate(srcShape.take_front(deltaOverall))) {
+  for (auto [i, size] : llvm::enumerate(inputShape.take_front(deltaOverall))) {
     newPositions[i] = size == 1 ? zero : oldPositions[i + deltaBroadcast];
   }
   auto [staticPos, dynPos] = decomposeMixedValues(newPositions);
   extractOp->setOperands(
-      llvm::to_vector(llvm::concat<Value>(ValueRange(src), dynPos)));
+      llvm::to_vector(llvm::concat<Value>(ValueRange(input), dynPos)));
   extractOp.setStaticPosition(staticPos);
   return extractOp.getResult();
 }
@@ -2217,12 +2253,12 @@ public:
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
 
-    Operation *broadcastLikeOp = extractOp.getVector().getDefiningOp();
+    Operation *defOp = extractOp.getVector().getDefiningOp();
     VectorType outType = dyn_cast<VectorType>(extractOp.getType());
-    if (!broadcastLikeOp || !isBroadcastLike(broadcastLikeOp) || !outType)
+    if (!defOp || !isBroadcastLike(defOp) || !outType)
       return failure();
 
-    Value source = broadcastLikeOp->getOperand(0);
+    Value source = defOp->getOperand(0);
     if (isBroadcastableTo(source.getType(), outType) !=
         BroadcastableToResult::Success)
       return failure();
