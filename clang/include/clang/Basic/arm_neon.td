@@ -466,15 +466,15 @@ def VLD1_LANE : WInst<"vld1_lane", ".(c*!).I",
 def VLD1_DUP  : WInst<"vld1_dup", ".(c*!)",
                       "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
 def VST1      : WInst<"vst1", "v*(.!)",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs">;
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
 def VST1_X2   : WInst<"vst1_x2", "v*(2!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VST1_X3   : WInst<"vst1_x3", "v*(3!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VST1_X4   : WInst<"vst1_x4", "v*(4!)",
-                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPs">;
+                      "cfilsUcUiUlUsQcQfQiQlQsQUcQUiQUlQUsPcPsQPcQPsmQm">;
 def VST1_LANE : WInst<"vst1_lane", "v*(.!)I",
-                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPs",
+                      "QUcQUsQUiQUlQcQsQiQlQfQPcQPsUcUsUiUlcsilfPcPsmQm",
                       [ImmCheck<2, ImmCheckLaneIndex, 1>]>;
 
 let ArchGuard = "(__ARM_FP & 2)" in {
@@ -510,14 +510,14 @@ def VLD3_LANE : WInst<"vld3_lane", "3(c*!)3I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm
                       [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 def VLD4_LANE : WInst<"vld4_lane", "4(c*!)4I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<6, ImmCheckLaneIndex, 1>]>;
-def VST2 : WInst<"vst2", "v*(2!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST3 : WInst<"vst3", "v*(3!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST4 : WInst<"vst4", "v*(4!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPs">;
-def VST2_LANE : WInst<"vst2_lane", "v*(2!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VST2 : WInst<"vst2", "v*(2!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VST3 : WInst<"vst3", "v*(3!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VST4 : WInst<"vst4", "v*(4!)", "QUcQUsQUiQcQsQiQfQPcQPsUcUsUiUlcsilfPcPsmQm">;
+def VST2_LANE : WInst<"vst2_lane", "v*(2!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<3, ImmCheckLaneIndex, 1>]>;
-def VST3_LANE : WInst<"vst3_lane", "v*(3!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VST3_LANE : WInst<"vst3_lane", "v*(3!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<4, ImmCheckLaneIndex, 1>]>;
-def VST4_LANE : WInst<"vst4_lane", "v*(4!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPs",
+def VST4_LANE : WInst<"vst4_lane", "v*(4!)I", "QUsQUiQsQiQfQPsUcUsUicsifPcPsmQm",
                       [ImmCheck<5, ImmCheckLaneIndex, 1>]>;
 let ArchGuard = "(__ARM_FP & 2)" in {
 def VLD2_F16      : WInst<"vld2", "2(c*!)", "hQh">;
