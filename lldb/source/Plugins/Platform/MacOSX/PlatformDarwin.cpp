@@ -1156,15 +1156,11 @@ lldb_private::PlatformDarwin::ResolveSDKPathFromDebugInfo(
 
   ModuleSP exe_module_sp = target->GetExecutableModule();
   if (!exe_module_sp)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Failed to get module from target"));
+    return llvm::createStringError("Failed to get module from target");
 
   SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
   if (!sym_file)
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        llvm::formatv("Failed to get symbol file from module"));
+    return llvm::createStringError("Failed to get symbol file from module");
 
   XcodeSDK merged_sdk;
   for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
@@ -1185,9 +1181,8 @@ lldb_private::PlatformDarwin::ResolveSDKPathFromDebugInfo(
     return FileSpec(*path_or_err);
 
   return llvm::createStringError(
-      llvm::inconvertibleErrorCode(),
       llvm::formatv("Failed to resolve SDK path: {0}",
-                    llvm::toString(path_or_err.takeError())));
+                    llvm::toString(path_or_err.takeError()));
 }
 
 ConstString PlatformDarwin::GetFullNameForDylib(ConstString basename) {
