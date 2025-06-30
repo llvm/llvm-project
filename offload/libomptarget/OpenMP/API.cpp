@@ -39,6 +39,9 @@ EXTERN void ompx_dump_mapping_tables() {
 using namespace llvm::omp::target::ompt;
 #endif
 
+int checkTargetAddressMapping(const void *Ptr, size_t Size, int DeviceNum,
+                              const char *Name);
+
 void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                           const char *Name);
 void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
@@ -168,31 +171,25 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   DP("Call to omp_target_is_present for device %d and address " DPxMOD "\n",
      DeviceNum, DPxPTR(Ptr));
 
-  if (!Ptr) {
-    DP("Call to omp_target_is_present with NULL ptr, returning false\n");
-    return false;
-  }
-
-  if (DeviceNum == omp_get_initial_device()) {
-    DP("Call to omp_target_is_present on host, returning true\n");
-    return true;
-  }
-
-  auto DeviceOrErr = PM->getDevice(DeviceNum);
-  if (!DeviceOrErr)
-    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
-
   // omp_target_is_present tests whether a host pointer refers to storage that
   // is mapped to a given device. However, due to the lack of the storage size,
   // only check 1 byte. Cannot set size 0 which checks whether the pointer (zero
   // length array) is mapped instead of the referred storage.
-  TargetPointerResultTy TPR =
-      DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), 1,
-                                                   /*UpdateRefCount=*/false,
-                                                   /*UseHoldRefCount=*/false);
-  int Rc = TPR.isPresent();
-  DP("Call to omp_target_is_present returns %d\n", Rc);
-  return Rc;
+  return checkTargetAddressMapping(Ptr, 1, DeviceNum, "omp_target_is_present");
+}
+
+EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
+                                    int DeviceNum) {
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  DP("Call to omp_target_is_accessible for device %d and address " DPxMOD
+     " with size %zu\n",
+     DeviceNum, DPxPTR(Ptr), Size);
+
+  // omp_target_is_accessible tests whether a host pointer refers to storage
+  // that is mapped to a given device and is accessible from the device. The
+  // storage size is provided.
+  return checkTargetAddressMapping(Ptr, Size, DeviceNum,
+                                   "omp_target_is_accessible");
 }
 
 EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
