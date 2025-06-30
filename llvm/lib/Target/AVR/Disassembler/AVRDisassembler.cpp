@@ -371,10 +371,19 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
   // LD Rd, Z+ : 1001 000d dddd 0001
   // LD Rd, -Z : 1001 000d dddd 0010
   //
+  // and 3 LPM instructions
+  // LPM Rd,Z : 1001 000d dddd 0100
+  // LPM Rd,Z+: 1001 000d dddd 0101
+  // LPM R0,Z : 1001 0101 1100 1000
+  //
   // and 3 ELPM instructions
   // ELPM Rd,Z : 1001 000d dddd 0110
   // ELPM Rd,Z+: 1001 000d dddd 0111
   // ELPM R0,Z : 1001 0101 1101 1000
+  if (Insn == 0x95c8) {
+    Inst.setOpcode(AVR::LPM);
+    return MCDisassembler::Success;
+  }
   if (Insn == 0x95d8) {
     Inst.setOpcode(AVR::ELPM);
     return MCDisassembler::Success;
@@ -383,11 +392,15 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
   if ((Insn & 0xfc00) != 0x9000 || (Insn & 0xf) == 0)
     return MCDisassembler::Fail;
 
-  // ELPM Rd,Z(+) and POP
+  // (E)LPM Rd,Z(+) and POP
   if ((Insn & 0xfe00) == 0x9000) {
     switch (Insn & 0xf) {
-    case 0xF:
-      Inst.setOpcode(AVR::POPRd);
+    case 0x4:
+      Inst.setOpcode(AVR::LPMRdZ);
+      Inst.addOperand(MCOperand::createReg(RegVal));
+      return MCDisassembler::Success;
+    case 0x5:
+      Inst.setOpcode(AVR::LPMRdZPi);
       Inst.addOperand(MCOperand::createReg(RegVal));
       return MCDisassembler::Success;
     case 0x6:
@@ -396,6 +409,10 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
       return MCDisassembler::Success;
     case 0x7:
       Inst.setOpcode(AVR::ELPMRdZPi);
+      Inst.addOperand(MCOperand::createReg(RegVal));
+      return MCDisassembler::Success;
+    case 0xF:
+      Inst.setOpcode(AVR::POPRd);
       Inst.addOperand(MCOperand::createReg(RegVal));
       return MCDisassembler::Success;
     }
