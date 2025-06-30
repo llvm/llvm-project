@@ -747,6 +747,8 @@ let SubtargetPredicate = isGFX1250Plus in {
   let mayRaiseFPException = 0, SchedRW = [WriteFloatCvt] in {
     defm V_CVT_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_fp8",
       V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
+    defm V_CVT_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_f16_bf8",
+      V_CVT_F16_F8_Profile, V_CVT_F16_F8_True16_Profile, V_CVT_F16_F8_Fake16_Profile>;
     defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
       int_amdgcn_cvt_pk_f16_fp8>;
@@ -757,9 +759,11 @@ let SubtargetPredicate = isGFX1250Plus in {
 
   let True16Predicate = UseRealTrue16Insts in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_t16_e64, 1>;
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_t16_e64, 1>;
   }
   let True16Predicate = UseFakeTrue16Insts in {
     def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_fp8, V_CVT_F16_FP8_fake16_e64, 1>;
+    def : Cvt_F_F8_Pat_ByteSel<int_amdgcn_cvt_f16_bf8, V_CVT_F16_BF8_fake16_e64, 1>;
   }
 } // End SubtargetPredicate = isGFX1250Plus
 
@@ -1099,6 +1103,7 @@ defm V_CVT_F32_BF16          : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x072, "v_c
 defm V_CVT_PK_F16_FP8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x075>;
 defm V_CVT_PK_F16_BF8        : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x076>;
 defm V_CVT_F16_FP8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x077>;
+defm V_CVT_F16_BF8           : VOP1_Real_FULL_t16_and_fake16_gfx1250<0x078>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.
