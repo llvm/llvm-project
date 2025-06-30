@@ -93,14 +93,14 @@ template <typename ReflectionContext, bool ObjCEnabled, unsigned PointerSize>
 class TargetReflectionContext : public ReflectionContextInterface {
   DescriptorFinderForwarder m_forwader;
   ReflectionContext m_reflection_ctx;
-  swift::reflection::TypeConverter m_type_converter;
+  swift::reflection::TypeConverter &m_type_converter;
 
 public:
   TargetReflectionContext(
       std::shared_ptr<swift::reflection::MemoryReader> reader,
       SwiftMetadataCache *swift_metadata_cache)
       : m_reflection_ctx(reader, swift_metadata_cache, &m_forwader),
-        m_type_converter(m_reflection_ctx.getBuilder()) {
+        m_type_converter(m_reflection_ctx.getBuilder().getTypeConverter()) {
     m_type_converter.enableErrorCache();
   }
 
