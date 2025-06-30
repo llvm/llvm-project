@@ -112,6 +112,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -5032,9 +5033,27 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
       Check(mdconst::dyn_extract<ConstantInt>(MDO),
             "!prof brunch_weights operand is not a const int");
     }
+  } else if (ProfName == MDProfLabels::ValueProfile) {
+    Check(isValueProfileMD(MD), "invalid value profiling metadata", MD);
+    ConstantInt *KindInt = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+    Check(KindInt, "VP !prof missing kind argument", MD);
+
+    auto Kind = KindInt->getZExtValue();
+    Check(Kind >= InstrProfValueKind::IPVK_First &&
+              Kind <= InstrProfValueKind::IPVK_Last,
+          "Invalid VP !prof kind", MD);
+    Check(MD->getNumOperands() % 2 == 1,
+          "VP !prof should have an even number "
+          "of arguments after 'VP'",
+          MD);
+    if (Kind == InstrProfValueKind::IPVK_IndirectCallTarget ||
+        Kind == InstrProfValueKind::IPVK_MemOPSize)
+      Check(isa<CallBase>(I),
+            "VP !prof indirect call or memop size expected to be applied to "
+            "CallBase instructions only",
+            MD);
   } else {
-    Check(ProfName == MDProfLabels::ValueProfile,
-          "expected either branch_weights or VP profile name", MD);
+    CheckFailed("expected either branch_weights or VP profile name", MD);
   }
 }
 
