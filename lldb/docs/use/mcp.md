@@ -46,7 +46,7 @@ forward communication over stdio over the network connection.
 └──────────┘               └──────────┘               └──────────┘
 ```
 
-Configuration example for [Claude Code][https://modelcontextprotocol.io/quickstart/user]:
+Configuration example for [Claude Code](https://modelcontextprotocol.io/quickstart/user):
 
 ```json
 {
@@ -59,7 +59,7 @@ Configuration example for [Claude Code][https://modelcontextprotocol.io/quicksta
 }
 ```
 
-Configuration example for [Visual Studio Code][https://code.visualstudio.com/docs/copilot/chat/mcp-servers]:
+Configuration example for [Visual Studio Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers):
 
 ```json
 {
