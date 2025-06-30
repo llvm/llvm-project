@@ -2767,10 +2767,6 @@ class DependentBitIntTypeLoc final
     : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, DependentBitIntTypeLoc,
                                        DependentBitIntType> {};
 
-class PredefinedSugarTypeLoc final
-    : public InheritingConcreteTypeLoc<TypeSpecTypeLoc, PredefinedSugarTypeLoc,
-                                       PredefinedSugarType> {};
-
 class ObjCProtocolLoc {
   ObjCProtocolDecl *Protocol = nullptr;
   SourceLocation Loc = SourceLocation();
@@ -2785,6 +2781,15 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(Loc, Loc);
   }
+};
+
+struct PredefinedSugarTypeLocInfo {}; // Nothing.
+
+class PredefinedSugarTypeLoc final
+    : public ConcreteTypeLoc<UnqualTypeLoc, PredefinedSugarTypeLoc,
+                             PredefinedSugarType, PredefinedSugarTypeLocInfo> {
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
 };
 
 } // namespace clang

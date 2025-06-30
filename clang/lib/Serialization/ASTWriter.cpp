@@ -704,7 +704,7 @@ void TypeLocWriter::VisitDependentBitIntTypeLoc(
 
 void TypeLocWriter::VisitPredefinedSugarTypeLoc(
     clang::PredefinedSugarTypeLoc TL) {
-  addSourceLocation(TL.getNameLoc());
+  // Nothing to do.
 }
 
 void ASTWriter::WriteTypeAbbrevs() {

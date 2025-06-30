@@ -7455,7 +7455,7 @@ void TypeLocReader::VisitDependentBitIntTypeLoc(
 }
 
 void TypeLocReader::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  // Nothing to do.
 }
 
 void ASTRecordReader::readTypeLoc(TypeLoc TL) {
