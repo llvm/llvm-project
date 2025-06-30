@@ -215,10 +215,10 @@ LogicalResult PatternApplicator::matchAndRewrite(
 
 #ifndef NDEBUG
             OpBuilder::Listener *oldListener = rewriter.getListener();
-            auto catalogingListener =
+            auto loggingListener =
                 std::make_unique<RewriterBase::PatternLoggingListener>(
                     oldListener, pattern->getDebugName());
-            rewriter.setListener(catalogingListener.get());
+            rewriter.setListener(loggingListener.get());
             auto resetListenerCallback = llvm::make_scope_exit(
                 [&] { rewriter.setListener(oldListener); });
 #endif
