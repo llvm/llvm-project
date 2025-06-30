@@ -158,8 +158,8 @@ struct CUDAKernelTy : public GenericKernelTy {
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Return maximum block size for maximum occupancy
-  Expected<size_t> maxGroupSize(GenericDeviceTy &,
-                                size_t DynamicMemSize) const override {
+  Expected<uint64_t> maxGroupSize(GenericDeviceTy &,
+                                  uint64_t DynamicMemSize) const override {
     int minGridSize;
     int maxBlockSize;
     auto Res = cuOccupancyMaxPotentialBlockSize(
