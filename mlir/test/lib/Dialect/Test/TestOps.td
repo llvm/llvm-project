@@ -3615,29 +3615,16 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op", [BufferizableOpInterface]> {
+def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
+    [DeclareOpInterfaceMethods<BufferizableOpInterface,
+        ["bufferize", "bufferizesToMemoryRead",
+         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
   let arguments = (ins
     Arg<TestTensorType>:$input
   );
   let results = (outs
     Arg<TestTensorType>:$output
   );
-  let extraClassDeclaration = [{
-    // BufferizableOpInterface
-    bool bufferizesToMemoryRead(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    bool bufferizesToMemoryWrite(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::LogicalResult bufferize(
-      mlir::RewriterBase& rewriter,
-      const mlir::bufferization::BufferizationOptions& options,
-      mlir::bufferization::BufferizationState &state);
-  }];
 
   let extraClassDefinition = [{
     bool test::TestDummyTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
@@ -3665,33 +3652,13 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
-def TestCreateTensorOp : TEST_Op<"create_tensor_op", [BufferizableOpInterface]> {
+def TestCreateTensorOp : TEST_Op<"create_tensor_op",
+    [DeclareOpInterfaceMethods<BufferizableOpInterface,
+        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+         "bufferizesToMemoryWrite", "getAliasingValues",
+         "bufferizesToAllocation"]>]> {
   let arguments = (ins);
   let results = (outs Arg<TestTensorType>:$output);
-  let extraClassDeclaration = [{
-    // BufferizableOpInterface
-    bool bufferizesToMemoryRead(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    bool bufferizesToMemoryWrite(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    bool bufferizesToAllocation(mlir::Value value);
-
-    mlir::bufferization::AliasingValueList getAliasingValues(mlir::OpOperand&,
-      const mlir::bufferization::AnalysisState&);
-
-    mlir::LogicalResult bufferize(
-      mlir::RewriterBase& rewriter,
-      const mlir::bufferization::BufferizationOptions& options,
-      mlir::bufferization::BufferizationState &state);
-
-    mlir::FailureOr<mlir::bufferization::BufferLikeType> getBufferType(
-      mlir::Value value, const mlir::bufferization::BufferizationOptions &,
-      const mlir::bufferization::BufferizationState &,
-      llvm::SmallVector<::mlir::Value> &);
-  }];
-
   let extraClassDefinition = [{
     bool test::TestCreateTensorOp::bufferizesToMemoryRead(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
