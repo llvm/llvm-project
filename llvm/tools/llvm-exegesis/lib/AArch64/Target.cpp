@@ -115,6 +115,10 @@ public:
   ExegesisAArch64Target()
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
 
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
+
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, MCRegister Reg,
                                const APInt &Value) const override {
@@ -152,6 +156,50 @@ private:
     PM.add(createAArch64ExpandPseudoPass());
   }
 };
+
+Error ExegesisAArch64Target::randomizeTargetMCOperand(
+    const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
+    const BitVector &ForbiddenRegs) const {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  const auto OperandType = Op.getExplicitOperandInfo().OperandType;
+  //  FIXME: Implement opcode-specific immediate value handling for system
+  //  instructions:
+  //   - MRS/MSR: Use valid system register encodings (e.g., NZCV, FPCR, FPSR)
+  //   - MSRpstatesvcrImm1: Use valid PSTATE field encodings (e.g., SPSel,
+  //   DAIFSet)
+  //   - SYSLxt/SYSxt: Use valid system instruction encodings with proper
+  //   CRn/CRm/op values
+  //   - UDF: Use valid undefined instruction immediate ranges (0-65535)
+  //   Currently defaulting to immediate value 0, which may cause invalid
+  //   encodings or unreliable benchmark results for these system-level
+  //   instructions.
+  switch (OperandType) {
+  case MCOI::OperandType::OPERAND_UNKNOWN: {
+    unsigned Opcode = Instr.getOpcode();
+    switch (Opcode) {
+    case AArch64::MOVIv2s_msl:
+    case AArch64::MOVIv4s_msl:
+    case AArch64::MVNIv2s_msl:
+    case AArch64::MVNIv4s_msl:
+      AssignedValue = MCOperand::createImm(8); // or 16
+      return Error::success();
+    default:
+      AssignedValue = MCOperand::createImm(0);
+      return Error::success();
+    }
+  }
+  case MCOI::OperandType::OPERAND_PCREL:
+  case MCOI::OperandType::OPERAND_FIRST_TARGET:
+    AssignedValue = MCOperand::createImm(0);
+    return Error::success();
+  default:
+    break;
+  }
+
+  return make_error<Failure>(
+      Twine("Unimplemented operand type: MCOI::OperandType:")
+          .concat(Twine(static_cast<int>(OperandType))));
+}
 
 } // namespace
 
