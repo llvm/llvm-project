@@ -1,6 +1,6 @@
 ; Tests that CoroSplit can succesfully determine allocas should live on the frame
 ; if their aliases are used across suspension points through PHINode.
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(lifetime-move,coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define ptr @f(i1 %n) presplitcoroutine {
 entry:
@@ -31,6 +31,8 @@ resume:
   br label %cleanup
 
 cleanup:
+  call void @llvm.lifetime.end.p0(i64 8, ptr %x)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %y)
   %mem = call ptr @llvm.coro.free(token %id, ptr %hdl)
   call void @free(ptr %mem)
   br label %suspend
