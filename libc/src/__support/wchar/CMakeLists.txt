@@ -6,6 +6,18 @@ add_header_library(
     libc.hdr.types.char32_t    
 )
 
+add_header_library(
+  string_converter
+  HDRS
+    string_converter.h
+  DEPENDS
+    libc.hdr.types.char8_t
+    libc.hdr.types.char32_t
+    libc.src.__support.error_or
+    .mbstate
+    .character_converter 
+)
+
 add_object_library(
   character_converter
   HDRS

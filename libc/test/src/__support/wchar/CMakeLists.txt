@@ -19,3 +19,13 @@ add_libc_test(
   DEPENDS
     libc.src.__support.wchar.character_converter
 )
+
+add_libc_test(
+  string_converter_test.cpp
+  SUITE
+    libc-support-tests
+  SRCS
+    string_converter_test.cpp
+  DEPENDS
+    libc.src.__support.wchar.string_converter
+)
