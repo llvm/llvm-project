@@ -227,7 +227,7 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       OldGEPI->insertBefore(GEP.getIterator());
 
       IRBuilder<> Builder(&GEP);
-      SmallVector<Value *> Indices(GEP.idx_begin(), GEP.idx_end());
+      SmallVector<Value *> Indices(GEP.indices());
       Value *NewGEP =
           Builder.CreateGEP(GEP.getSourceElementType(), OldGEPI, Indices,
                             GEP.getName(), GEP.getNoWrapFlags());
