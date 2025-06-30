@@ -15,6 +15,7 @@
 #include "Clauses.h"
 
 #include "ClauseFinder.h"
+#include "flang/Evaluate/fold.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
@@ -24,9 +25,29 @@
 #include <flang/Parser/parse-tree.h>
 #include <flang/Parser/tools.h>
 #include <flang/Semantics/tools.h>
+#include <flang/Semantics/type.h>
 #include <llvm/Support/CommandLine.h>
 
 #include <iterator>
+
+using namespace Fortran::semantics;
+
+template <typename T>
+MaybeIntExpr EvaluateIntExpr(SemanticsContext &context, const T &expr) {
+  if (MaybeExpr maybeExpr{
+          Fold(context.foldingContext(), AnalyzeExpr(context, expr))}) {
+    if (auto *intExpr{Fortran::evaluate::UnwrapExpr<SomeIntExpr>(*maybeExpr)}) {
+      return std::move(*intExpr);
+    }
+  }
+  return std::nullopt;
+}
+
+template <typename T>
+std::optional<std::int64_t> EvaluateInt64(SemanticsContext &context,
+                                          const T &expr) {
+  return Fortran::evaluate::ToInt64(EvaluateIntExpr(context, expr));
+}
 
 llvm::cl::opt<bool> treatIndexAsSection(
     "openmp-treat-index-as-section",
@@ -38,14 +59,21 @@ namespace lower {
 namespace omp {
 
 int64_t getCollapseValue(const List<Clause> &clauses) {
-  auto iter = llvm::find_if(clauses, [](const Clause &clause) {
-    return clause.id == llvm::omp::Clause::OMPC_collapse;
-  });
-  if (iter != clauses.end()) {
-    const auto &collapse = std::get<clause::Collapse>(iter->u);
-    return evaluate::ToInt64(collapse.v).value();
+  int64_t collapseValue = 1;
+  int64_t numTileSizes = 0;
+  for (auto &clause : clauses) {
+    if (clause.id == llvm::omp::Clause::OMPC_collapse) {
+      const auto &collapse = std::get<clause::Collapse>(clause.u);
+      collapseValue = evaluate::ToInt64(collapse.v).value();
+    } else if (clause.id == llvm::omp::Clause::OMPC_sizes) {
+      const auto &sizes = std::get<clause::Sizes>(clause.u);
+      numTileSizes = sizes.v.size();
+    }
   }
-  return 1;
+
+  collapseValue = collapseValue - numTileSizes;
+  int64_t result = collapseValue > numTileSizes ? collapseValue : numTileSizes;
+  return result;
 }
 
 void genObjectList(const ObjectList &objects,
@@ -606,11 +634,48 @@ static void convertLoopBounds(lower::AbstractConverter &converter,
   }
 }
 
+// Populates the sizes vector with values if the given OpenMPConstruct
+// Contains a loop construct with an inner tiling construct.
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes, SemanticsContext &semaCtx) {
+  if (!ompCons)
+    return;
+
+  if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
+    const auto &innerOptional = std::get<
+        std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+        ompLoop->t);
+    if (innerOptional.has_value()) {
+      const auto &innerLoopDirective = innerOptional.value().value();
+      const auto &innerBegin =
+          std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
+      const auto &innerDirective =
+          std::get<parser::OmpLoopDirective>(innerBegin.t).v;
+
+      if (innerDirective == llvm::omp::Directive::OMPD_tile) {
+        // Get the size values from parse tree and convert to a vector
+        const auto &innerClauseList{
+            std::get<parser::OmpClauseList>(innerBegin.t)};
+        for (const auto &clause : innerClauseList.v)
+          if (const auto tclause{
+                  std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+            for (auto &tval : tclause->v) {
+              if (const auto v{EvaluateInt64(semaCtx, tval)})
+                tileSizes.push_back(*v);
+            }
+          }
+      }
+    }
+  }
+}
+
 bool collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) {
+
   bool found = false;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
@@ -627,6 +692,38 @@ bool collectLoopRelatedInfo(
     found = true;
   }
 
+  // Collect sizes from tile directive if present
+  std::int64_t sizesLengthValue = 0l;
+  if (auto *ompCons{eval.getIf<parser::OpenMPConstruct>()}) {
+    if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
+      const auto &innerOptional = std::get<
+          std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+          ompLoop->t);
+      if (innerOptional.has_value()) {
+        const auto &innerLoopDirective = innerOptional.value().value();
+        const auto &innerBegin =
+            std::get<parser::OmpBeginLoopDirective>(innerLoopDirective.t);
+        const auto &innerDirective =
+            std::get<parser::OmpLoopDirective>(innerBegin.t).v;
+
+        if (innerDirective == llvm::omp::Directive::OMPD_tile) {
+          // Get the size values from parse tree and convert to a vector
+          const auto &innerClauseList{
+              std::get<parser::OmpClauseList>(innerBegin.t)};
+          for (const auto &clause : innerClauseList.v)
+            if (const auto tclause{
+                    std::get_if<parser::OmpClause::Sizes>(&clause.u)}) {
+              sizesLengthValue = tclause->v.size();
+              found = true;
+            }
+        }
+      }
+    }
+  }
+
+  collapseValue = collapseValue - sizesLengthValue;
+  collapseValue =
+      collapseValue < sizesLengthValue ? sizesLengthValue : collapseValue;
   std::size_t loopVarTypeSize = 0;
   do {
     lower::pft::Evaluation *doLoop =
@@ -659,7 +756,6 @@ bool collectLoopRelatedInfo(
   } while (collapseValue > 0);
 
   convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
-
   return found;
 }
 } // namespace omp

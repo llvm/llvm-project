@@ -166,6 +166,12 @@ bool collectLoopRelatedInfo(
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    Fortran::semantics::SemanticsContext &semaCtx);
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran
