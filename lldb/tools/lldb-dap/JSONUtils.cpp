@@ -572,9 +572,7 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
 
   EmplaceSafeString(object, "name", frame_name);
 
-  auto target = frame.GetThread().GetProcess().GetTarget();
-  std::optional<protocol::Source> source =
-      dap.ResolveSource(frame.GetPCAddress());
+  std::optional<protocol::Source> source = dap.ResolveSource(frame);
 
   if (source && !IsAssemblySource(*source)) {
     // This is a normal source with a valid line entry.
@@ -586,8 +584,7 @@ llvm::json::Value CreateStackFrame(DAP &dap, lldb::SBFrame &frame,
     // This is a source where the disassembly is used, but there is a valid
     // symbol. Calculate the line of the current PC from the start of the
     // current symbol.
-    lldb::SBTarget target = frame.GetThread().GetProcess().GetTarget();
-    lldb::SBInstructionList inst_list = target.ReadInstructions(
+    lldb::SBInstructionList inst_list = dap.target.ReadInstructions(
         frame.GetSymbol().GetStartAddress(), frame.GetPCAddress(), nullptr);
     size_t inst_line = inst_list.GetSize();
 
