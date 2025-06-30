@@ -3049,6 +3049,12 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   if (match(OneUse, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return new ShuffleVectorInst(Builder.CreateFNegFMF(X, &I), Mask);
 
+  // fneg (reverse x) --> reverse (fneg x)
+  if (match(OneUse, m_VecReverse(m_Value(X)))) {
+    Value *Reverse = Builder.CreateVectorReverse(Builder.CreateFNegFMF(X, &I));
+    return replaceInstUsesWith(I, Reverse);
+  }
+
   return nullptr;
 }
 

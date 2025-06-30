@@ -23,6 +23,9 @@ struct MyClass {
   typedef int MyTypedef;
   
   class NestedClass;
+  
+  friend struct Foo;
+  template<typename T> friend void friendFunction(int);
 protected:
   int protectedMethod();
 
@@ -86,6 +89,44 @@ protected:
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
+// CHECK-NOT:     "Friends": [
+// CHECK-NOT:       {
+// CHECK-NOT:         "IsClass": false,
+// CHECK-NOT:         "Params": [
+// CHECK-NOT:           {
+// CHECK-NOT:             "Name": "",
+// CHECK-NOT:             "Type": "int"
+// CHECK-NOT:           }
+// CHECK-NOT:         ],
+// CHECK-NOT:         "Reference": {
+// CHECK-NOT:           "Name": "friendFunction",
+// CHECK-NOT:           "Path": "",
+// CHECK-NOT:           "QualName": "friendFunction",
+// CHECK-NOT:           "USR": "{{[0-9A-F]*}}"
+// CHECK-NOT:         },
+// CHECK-NOT:         "ReturnType": {
+// CHECK-NOT:           "IsBuiltIn": true,
+// CHECK-NOT:           "IsTemplate": false,
+// CHECK-NOT:           "Name": "void",
+// CHECK-NOT:           "QualName": "void",
+// CHECK-NOT:           "USR": "0000000000000000000000000000000000000000"
+// CHECK-NOT:         },
+// CHECK-NOT:         "Template": {
+// CHECK-NOT:           "Parameters": [
+// CHECK-NOT:             "typename T"
+// CHECK-NOT:           ]
+// CHECK-NOT:         }
+// CHECK-NOT:       },
+// CHECK-NOT:       {
+// CHECK-NOT:         "IsClass": true,
+// CHECK-NOT:         "Reference": {
+// CHECK-NOT:           "Name": "Foo",
+// CHECK-NOT:           "Path": "GlobalNamespace",
+// CHECK-NOT:           "QualName": "Foo",
+// CHECK-NOT:           "USR": "{{[0-9A-F]*}}"
+// CHECK-NOT:         },
+// CHECK-NOT:       },
+// CHECK-NOT:    ],
 // COM:           FIXME: FullName is not emitted correctly.
 // CHECK-NEXT:    "FullName": "",
 // CHECK-NEXT:    "IsTypedef": false,
