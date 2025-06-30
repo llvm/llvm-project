@@ -222,6 +222,11 @@ defm V_ALIGNBIT_B32 : VOP3Inst_t16_with_profiles <"v_alignbit_b32",
                                                    fshr, null_frag>;
 
 defm V_ALIGNBYTE_B32 : VOP3Inst <"v_alignbyte_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_alignbyte>;
+
+// In gfx9 and 10, opsel is allowed for V_ALIGNBIT_B32 and V_ALIGNBYTE_B32
+defm V_ALIGNBIT_B32_opsel : VOP3Inst <"v_alignbit_b32_opsel", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_OPSEL>>;
+defm V_ALIGNBYTE_B32_opsel : VOP3Inst <"v_alignbyte_b32_opsel", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_OPSEL>>;
+
 let True16Predicate = UseRealTrue16Insts in
 defm V_ALIGNBYTE_B32_t16 : VOP3Inst <"v_alignbyte_b32_t16", VOP3_Profile_True16<VOP_I32_I32_I32_I16, VOP3_OPSEL>>;
 let True16Predicate = UseFakeTrue16Insts in
@@ -1947,6 +1952,9 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
   }
 } // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10"
 
+defm V_ALIGNBIT_B32_opsel  : VOP3OpSel_Real_gfx10_with_name<0x14e, "V_ALIGNBIT_B32_opsel", "v_alignbit_b32">;
+defm V_ALIGNBYTE_B32_opsel  : VOP3OpSel_Real_gfx10_with_name<0x14f, "V_ALIGNBYTE_B32_opsel", "v_alignbyte_b32">;
+
 defm V_READLANE_B32  : VOP3_Real_No_Suffix_gfx10<0x360>;
 
 let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VGPR_32:$vdst_in) in {
@@ -2241,6 +2249,17 @@ multiclass VOP3_Real_BITOP3_gfx9<bits<10> op, string AsmName, bit isSingle = 0> 
   }
 }
 
+// Instructions such as v_alignbyte_b32 allows op_sel in gfx9, but not in vi.
+// The following is created to support that.
+multiclass VOP3OpSel_Real_gfx9_with_names<bits<10> op, string opName, string AsmName> {
+  defvar psName = opName#"_e64";
+  def _gfx9 : VOP3_Real<!cast<VOP3_Pseudo>(psName), SIEncodingFamily.VI>, // note: encoding family is VI
+            VOP3OpSel_gfx9 <op, !cast<VOP3_Pseudo>(psName).Pfl> {
+              VOP3_Pseudo ps = !cast<VOP3_Pseudo>(psName);
+              let AsmString = AsmName # ps.AsmOperands;
+            }
+}
+
 } // End AssemblerPredicate = isGFX9Only, DecoderNamespace = "GFX9"
 
 defm V_MAD_U64_U32      : VOP3be_Real_vi <0x1E8>;
@@ -2305,6 +2324,9 @@ defm V_INTERP_P2_LEGACY_F16 : VOP3Interp_F16_Real_gfx9 <0x276, "V_INTERP_P2_F16"
 
 defm V_MAD_LEGACY_U16       : VOP3_F16_Real_gfx9 <0x1eb, "V_MAD_U16",       "v_mad_legacy_u16">;
 defm V_MAD_LEGACY_I16       : VOP3_F16_Real_gfx9 <0x1ec, "V_MAD_I16",       "v_mad_legacy_i16">;
+
+defm V_ALIGNBIT_B32_opsel   : VOP3OpSel_Real_gfx9_with_names <0x1ce, "V_ALIGNBIT_B32_opsel", "v_alignbit_b32">;
+defm V_ALIGNBYTE_B32_opsel  : VOP3OpSel_Real_gfx9_with_names <0x1cf, "V_ALIGNBYTE_B32_opsel", "v_alignbyte_b32">;
 
 defm V_MAD_F16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x203, "v_mad_f16">;
 defm V_MAD_U16_gfx9         : VOP3OpSel_F16_Real_gfx9 <0x204, "v_mad_u16">;
