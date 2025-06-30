@@ -41,6 +41,7 @@ namespace llvm {
 
 struct BitcodeFileContents;
 class StringTableBuilder;
+class TargetMachine;
 
 namespace irsymtab {
 
@@ -164,8 +165,8 @@ struct Header {
 /// Fills in Symtab and StrtabBuilder with a valid symbol and string table for
 /// Mods.
 LLVM_ABI Error build(ArrayRef<Module *> Mods, SmallVector<char, 0> &Symtab,
-                     StringTableBuilder &StrtabBuilder,
-                     BumpPtrAllocator &Alloc);
+                     StringTableBuilder &StrtabBuilder, BumpPtrAllocator &Alloc,
+                     const TargetMachine *TM = nullptr);
 
 /// This represents a symbol that has been read from a storage::Symbol and
 /// possibly a storage::Uncommon.
