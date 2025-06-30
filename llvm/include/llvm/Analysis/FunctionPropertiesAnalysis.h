@@ -208,7 +208,8 @@ private:
 
   DominatorTree &getUpdatedDominatorTree(FunctionAnalysisManager &FAM) const;
 
-  DenseSet<const BasicBlock *> Successors, CallUsers;
+  DenseSet<const BasicBlock *> Successors;
+  DenseSet<const BasicBlock *> CallUsers;
 
   // Edges we might potentially need to remove from the dominator tree.
   SmallVector<DominatorTree::UpdateType, 2> DomTreeUpdates;

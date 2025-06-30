@@ -453,10 +453,8 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
     // readVocabulary method in ir2vec::Embeddings.
     auto setEmbedding = [&](const ir2vec::Embedding &Embedding,
                             FeatureIndex Index) {
-      auto Embedding_float =
-          std::vector<float>(Embedding.begin(), Embedding.end());
-      std::memcpy(ModelRunner->getTensor<float>(Index), Embedding_float.data(),
-                  Embedding.size() * sizeof(float));
+      llvm::transform(Embedding, ModelRunner->getTensor<float>(Index),
+                      [](double Val) { return static_cast<float>(Val); });
     };
 
     setEmbedding(CalleeBefore.getFunctionEmbedding(),
