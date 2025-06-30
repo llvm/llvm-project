@@ -123,7 +123,7 @@ class GetFPReductionLatency<string mx> {
 
 // Reduction scaling pattern (5,5,5,7,11,19,35): progressive from M1
 // Used for: integer reductions (fractional=5)
-class SMX60GetReductionLatency<string mx> {
+class GetIntReductionLatency<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 7,
     !eq(mx, "M2") : 11,
@@ -865,7 +865,7 @@ foreach mx = SchedMxList in {
   foreach sew = SchedSEWSet<mx>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxList>.c;
 
-    let Latency = SMX60GetReductionLatency<mx>.c in {
+    let Latency = GetIntReductionLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
 
       // Pattern for vredsum:                  5/5/5/7/11/19/35
@@ -881,7 +881,7 @@ foreach mx = SchedMxListWRed in {
   foreach sew = SchedSEWSet<mx, 0, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListWRed>.c;
 
-    let Latency = SMX60GetReductionLatency<mx>.c in {
+    let Latency = GetIntReductionLatency<mx>.c in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVIWRedV_From", [SMX60_VIEU], mx, sew, IsWorstCase>;
     }
   }
