@@ -10,10 +10,9 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
-using namespace clang::ast_matchers;
+using namespace clang::ast_matchers; // NOLINT
 
 namespace clang::tidy::bugprone {
 namespace {
@@ -25,8 +24,10 @@ AST_MATCHER_P(QualType, isSharedPointer,
               clang::ast_matchers::internal::Matcher<NamedDecl>, InnerMatcher) {
   if (const auto *RD = Node.getTypePtr()->getAsCXXRecordDecl(); RD != nullptr) {
     return InnerMatcher.matches(*RD, Finder, Builder);
-  } else if (const auto *ED = Node.getTypePtr()->getAs<ElaboratedType>();
-             ED != nullptr) {
+  }
+
+  if (const auto *ED = Node.getTypePtr()->getAs<ElaboratedType>();
+      ED != nullptr) {
     if (const auto *TS = ED->getNamedType()
                              .getTypePtr()
                              ->getAs<TemplateSpecializationType>();
@@ -44,17 +45,16 @@ AST_MATCHER_P(QualType, isSharedPointer,
 MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      SharedPointerClasses(utils::options::parseStringList(
-          Options.get("SharedPointerClasses",
-                      "::std::shared_ptr;::boost::shared_pointer"))) {}
+      SharedPointerClasses(utils::options::parseStringList(Options.get(
+          "SharedPointerClasses", "::std::shared_ptr;::boost::shared_ptr"))) {}
 
 void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
-  auto isStdMove =
+  auto IsStdMove =
       callee(functionDecl(hasAnyName("::std::move", "::std::forward")));
 
-  auto resolvedType = callExpr(anyOf(
+  auto ResolvedType = callExpr(anyOf(
       // Resolved type, direct move.
-      callExpr(isStdMove,
+      callExpr(IsStdMove,
                hasArgument(
                    0, cxxOperatorCallExpr(
                           hasOverloadedOperatorName("*"),
@@ -65,28 +65,26 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
                           callee(cxxMethodDecl()))))
           .bind("call"),
       // Resolved type, move out of get().
-      callExpr(
-          isStdMove,
-          hasArgument(
-              0, unaryOperator(
-                     hasOperatorName("*"),
-                     hasUnaryOperand(allOf(
-                         hasDescendant(declRefExpr(hasType(qualType(
-                             isSharedPointer(matchers::matchesAnyListedName(
-                                 SharedPointerClasses)))))),
-                         cxxMemberCallExpr(
-                             callee(cxxMethodDecl(hasName("get")))))))))
+      callExpr(IsStdMove,
+               hasArgument(
+                   0, unaryOperator(hasOperatorName("*"),
+
+                                    hasUnaryOperand(cxxMemberCallExpr(
+                                        callee(cxxMethodDecl(hasName("get"))),
+                                        on(hasType(qualType(isSharedPointer(
+                                            matchers::matchesAnyListedName(
+                                                SharedPointerClasses))))))))))
           .bind("get_call")));
 
-  Finder->addMatcher(resolvedType, this);
+  Finder->addMatcher(ResolvedType, this);
 
-  auto isStdMoveUnresolved = callee(unresolvedLookupExpr(
+  auto IsStdMoveUnresolved = callee(unresolvedLookupExpr(
       hasAnyDeclaration(namedDecl(hasUnderlyingDecl(hasName("::std::move"))))));
 
-  auto unresolvedType = callExpr(anyOf(
+  auto UnResolvedType = callExpr(anyOf(
       // Unresolved type, direct move.
       callExpr(
-          isStdMoveUnresolved,
+          IsStdMoveUnresolved,
           hasArgument(0, unaryOperator(
                              hasOperatorName("*"),
                              hasUnaryOperand(declRefExpr(hasType(qualType(
@@ -99,7 +97,7 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
       // just fetch the variable. This does leave a gap where a temporary
       // shared_ptr wouldn't be caught, but moving out of a temporary
       // shared pointer is a truly wild thing to do so it should be okay.
-      callExpr(isStdMoveUnresolved,
+      callExpr(IsStdMoveUnresolved,
                hasArgument(
                    0, unaryOperator(
                           hasOperatorName("*"),
@@ -110,15 +108,15 @@ void MoveSharedPointerContentsCheck::registerMatchers(MatchFinder *Finder) {
                                   SharedPointerClasses)))))))))))
           .bind("unresolved_get_call")));
 
-  Finder->addMatcher(unresolvedType, this);
+  Finder->addMatcher(UnResolvedType, this);
 }
 
 void MoveSharedPointerContentsCheck::check(
     const MatchFinder::MatchResult &Result) {
   const CallExpr *Call = nullptr;
-  for (const llvm::StringRef binding :
+  for (const llvm::StringRef Binding :
        {"unresolved_call", "unresolved_get_call", "get_call", "call"}) {
-    if (const auto *C = Result.Nodes.getNodeAs<CallExpr>(binding);
+    if (const auto *C = Result.Nodes.getNodeAs<CallExpr>(Binding);
         C != nullptr) {
       Call = C;
       break;
