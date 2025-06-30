@@ -23,7 +23,6 @@
 #include <condition_variable>
 #include <thread>
 
-
 std::mutex mux;
 
 int main(int, char**) {
