@@ -1717,7 +1717,7 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPVectorEndPointerSC,
                             ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
         IndexedTy(IndexedTy), Stride(Stride) {
-    assert(Stride != 0 && "Unexpected stride");
+    assert(Stride != 0 && "Stride cannot be zero");
   }
 
   VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
