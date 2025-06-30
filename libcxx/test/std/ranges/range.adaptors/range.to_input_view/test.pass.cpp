@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
-#include "../../../../support/assert_macros.h"
+#include "assert_macros.h"
 #include <iterator>
 #include <memory>
 #include <ranges>
