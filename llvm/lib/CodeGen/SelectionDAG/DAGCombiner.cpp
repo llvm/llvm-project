@@ -18324,9 +18324,8 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   // TODO: Limit this transform based on optsize/minsize - it always creates at
   //       least 1 extra instruction. But the perf win may be substantial enough
   //       that only minsize should restrict this.
-  bool UnsafeMath = DAG.getTarget().Options.UnsafeFPMath;
   const SDNodeFlags Flags = N->getFlags();
-  if (LegalDAG || (!UnsafeMath && !Flags.hasAllowReciprocal()))
+  if (LegalDAG || !Flags.hasAllowReciprocal())
     return SDValue();
 
   // Skip if current node is a reciprocal/fneg-reciprocal.
@@ -18363,7 +18362,7 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
 
       // This division is eligible for optimization only if global unsafe math
       // is enabled or if this division allows reciprocal formation.
-      if (UnsafeMath || U->getFlags().hasAllowReciprocal())
+      if (U->getFlags().hasAllowReciprocal())
         Users.insert(U);
     }
   }
