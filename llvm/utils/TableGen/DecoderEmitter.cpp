@@ -84,7 +84,7 @@ static cl::opt<bool> LargeTable(
              "in the table instead of the default 16 bits."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
-static cl::opt<bool> UseFnTableInDecodeToMCInst(
+static cl::opt<bool> UseFnTableInDecodetoMCInst(
     "use-fn-table-in-decode-to-mcinst",
     cl::desc(
         "Use a table of function pointers instead of a switch case in the\n"
@@ -251,8 +251,7 @@ public:
 //
 // BIT_UNFILTERED is used as the init value for a filter position.  It is used
 // only for filter processings.
-class BitValue {
-public:
+struct BitValue {
   enum bit_value_t : uint8_t {
     BIT_FALSE,     // '0'
     BIT_TRUE,      // '1'
@@ -261,17 +260,17 @@ public:
   };
 
   BitValue(bit_value_t V) : V(V) {}
-  BitValue(const Init *Init) {
-    if (const BitInit *Bit = dyn_cast<BitInit>(Init))
+  explicit BitValue(const Init *Init) {
+    if (const auto *Bit = dyn_cast<BitInit>(Init))
       V = Bit->getValue() ? BIT_TRUE : BIT_FALSE;
     else
       V = BIT_UNSET;
   }
   BitValue(const BitsInit &Bits, unsigned Idx) : BitValue(Bits.getBit(Idx)) {}
 
-  bool isSet(void) const { return V == BIT_TRUE || V == BIT_FALSE; }
-  bool isUnset(void) const { return V == BIT_UNSET; }
-  std::optional<uint64_t> getValue(void) const {
+  bool isSet() const { return V == BIT_TRUE || V == BIT_FALSE; }
+  bool isUnset() const { return V == BIT_UNSET; }
+  std::optional<uint64_t> getValue() const {
     if (isSet())
       return static_cast<uint64_t>(V);
     return std::nullopt;
@@ -279,7 +278,19 @@ public:
   bit_value_t getRawValue() const { return V; }
 
   // For printing a bit value.
-  operator StringRef() const { return StringRef("01_.").slice(V, V + 1); }
+  operator StringRef() const {
+    switch (V) {
+    case BIT_FALSE:
+      return "0";
+    case BIT_TRUE:
+      return "1";
+    case BIT_UNSET:
+      return "_";
+    case BIT_UNFILTERED:
+      return ".";
+    }
+    llvm_unreachable("Unknow bit value");
+  }
 
   bool operator==(bit_value_t Other) const { return Other == V; }
   bool operator!=(bit_value_t Other) const { return Other != V; }
@@ -318,7 +329,7 @@ static const BitsInit &getBitsField(const Record &Def, StringRef FieldName) {
     else if (const BitInit *BI = dyn_cast<BitInit>(SI.Value))
       Bits.push_back(BI);
     else
-      Bits.insert(Bits.end(), SI.BitWidth, UnsetInit::get(Def.getRecords()));
+      Bits.append(SI.BitWidth, UnsetInit::get(Def.getRecords()));
   }
 
   return *BitsInit::get(Def.getRecords(), Bits);
@@ -1072,7 +1083,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
       "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
       "MCDisassembler *Decoder, bool &DecodeComplete";
 
-  if (UseFnTableInDecodeToMCInst) {
+  if (UseFnTableInDecodetoMCInst) {
     // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
       OS << Indent << "template <typename InsnType>\n";
@@ -1095,7 +1106,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   Indent += 2;
   OS << Indent << "DecodeComplete = true;\n";
 
-  if (UseFnTableInDecodeToMCInst) {
+  if (UseFnTableInDecodetoMCInst) {
     // Build a table of function pointers.
     OS << Indent << "using DecodeFnTy = DecodeStatus (*)(" << DecodeParams
        << ");\n";
@@ -1282,7 +1293,7 @@ std::pair<unsigned, bool> FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   // FIXME: emitDecoder() function can take a buffer directly rather than
   // a stream.
   raw_svector_ostream S(Decoder);
-  indent Indent(UseFnTableInDecodeToMCInst ? 2 : 4);
+  indent Indent(UseFnTableInDecodetoMCInst ? 2 : 4);
   bool HasCompleteDecoder = emitDecoder(S, Indent, Opc);
 
   // Using the full decoder string as the key value here is a bit
@@ -1430,16 +1441,13 @@ void FilterChooser::emitSoftFailTableEntry(DecoderTableInfo &TableInfo,
     if (B != BitValue::BIT_TRUE)
       continue;
 
-    switch (IB.getRawValue()) {
-    case BitValue::BIT_FALSE:
+    if (IB == BitValue::BIT_FALSE) {
       // The bit is meant to be false, so emit a check to see if it is true.
       PositiveMask.setBit(i);
-      break;
-    case BitValue::BIT_TRUE:
+    } else if (IB == BitValue::BIT_TRUE) {
       // The bit is meant to be true, so emit a check to see if it is false.
       NegativeMask.setBit(i);
-      break;
-    default:
+    } else {
       // The bit is not set; this must be an error!
       errs() << "SoftFail Conflict: bit SoftFail{" << i << "} in "
              << AllInstructions[Opc] << " is set but Inst{" << i
