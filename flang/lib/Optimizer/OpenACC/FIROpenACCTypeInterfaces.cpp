@@ -306,6 +306,10 @@ static bool isArrayLike(mlir::Type type) {
 }
 
 static bool isCompositeLike(mlir::Type type) {
+  // class(*) is not a composite type since it does not have a determined type.
+  if (fir::isUnlimitedPolymorphicType(type))
+    return false;
+
   return mlir::isa<fir::RecordType, fir::ClassType, mlir::TupleType>(type);
 }
 
@@ -322,8 +326,13 @@ OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
                                                         mlir::Value var) const {
   // Class-type does not behave like a normal box because it does not hold an
   // element type. Thus special handle it here.
-  if (mlir::isa<fir::ClassType>(type))
+  if (mlir::isa<fir::ClassType>(type)) {
+    // class(*) is not a composite type since it does not have a determined
+    // type.
+    if (fir::isUnlimitedPolymorphicType(type))
+      return mlir::acc::VariableTypeCategory::uncategorized;
     return mlir::acc::VariableTypeCategory::composite;
+  }
 
   mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
   assert(eleTy && "expect to be able to unwrap the element type");
@@ -409,8 +418,12 @@ categorizePointee(mlir::Type pointer,
     return mlir::acc::VariableTypeCategory::composite;
   if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
     return mlir::acc::VariableTypeCategory::nonscalar;
+  // Assumed-type (type(*))does not have a determined type that can be
+  // categorized.
+  if (mlir::isa<mlir::NoneType>(eleTy))
+    return mlir::acc::VariableTypeCategory::uncategorized;
   // "pointers" - in the sense of raw address point-of-view, are considered
-  // scalars. However
+  // scalars.
   if (mlir::isa<fir::LLVMPointerType>(eleTy))
     return mlir::acc::VariableTypeCategory::scalar;
 
