@@ -14848,6 +14848,16 @@ void test_vst1q_s64(int64_t *a, int64x2_t b) {
   vst1q_s64(a, b);
 }
 
+// CHECK-LABEL: define dso_local void @test_vst1q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], <16 x i8> [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store <16 x i8> [[VAL]], ptr [[A]], align 1
+// CHECK-NEXT:    ret void
+//
+void test_vst1q_mf8(mfloat8_t *a, mfloat8x16_t val) {
+  vst1q_mf8(a, val);
+}
+
 // CHECK-LABEL: define dso_local void @test_vst1q_f16(
 // CHECK-SAME: ptr noundef [[A:%.*]], <8 x half> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -14999,6 +15009,16 @@ void test_vst1_s32(int32_t *a, int32x2_t b) {
 //
 void test_vst1_s64(int64_t *a, int64x1_t b) {
   vst1_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst1_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], <8 x i8> [[VAL:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    store <8 x i8> [[VAL]], ptr [[A]], align 1
+// CHECK-NEXT:    ret void
+//
+void test_vst1_mf8(mfloat8_t *a, mfloat8x8_t val) {
+  vst1_mf8(a, val);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst1_f16(
@@ -15181,6 +15201,18 @@ void test_vst2q_s32(int32_t *a, int32x4x2_t b) {
 //
 void test_vst2q_s64(int64_t *a, int64x2x2_t b) {
   vst2q_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst2q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], [2 x <16 x i8>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <16 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <16 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v16i8.p0(<16 x i8> [[B_COERCE_FCA_0_EXTRACT]], <16 x i8> [[B_COERCE_FCA_1_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst2q_mf8(mfloat8_t *a, mfloat8x16x2_t b) {
+  vst2q_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst2q_f16(
@@ -15383,6 +15415,18 @@ void test_vst2_s32(int32_t *a, int32x2x2_t b) {
 //
 void test_vst2_s64(int64_t *a, int64x1x2_t b) {
   vst2_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst2_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], [2 x <8 x i8>] alignstack(8) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <8 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <8 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st2.v8i8.p0(<8 x i8> [[B_COERCE_FCA_0_EXTRACT]], <8 x i8> [[B_COERCE_FCA_1_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst2_mf8(mfloat8_t *a, mfloat8x8x2_t b) {
+  vst2_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst2_f16(
@@ -15607,6 +15651,19 @@ void test_vst3q_s32(int32_t *a, int32x4x3_t b) {
 //
 void test_vst3q_s64(int64_t *a, int64x2x3_t b) {
   vst3q_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst3q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], [3 x <16 x i8>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [3 x <16 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [3 x <16 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [3 x <16 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st3.v16i8.p0(<16 x i8> [[B_COERCE_FCA_0_EXTRACT]], <16 x i8> [[B_COERCE_FCA_1_EXTRACT]], <16 x i8> [[B_COERCE_FCA_2_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst3q_mf8(mfloat8_t *a, mfloat8x16x3_t b) {
+  vst3q_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst3q_f16(
@@ -15845,6 +15902,19 @@ void test_vst3_s32(int32_t *a, int32x2x3_t b) {
 //
 void test_vst3_s64(int64_t *a, int64x1x3_t b) {
   vst3_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst3_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], [3 x <8 x i8>] alignstack(8) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [3 x <8 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [3 x <8 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [3 x <8 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st3.v8i8.p0(<8 x i8> [[B_COERCE_FCA_0_EXTRACT]], <8 x i8> [[B_COERCE_FCA_1_EXTRACT]], <8 x i8> [[B_COERCE_FCA_2_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst3_mf8(mfloat8_t *a, mfloat8x8x3_t b) {
+  vst3_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst3_f16(
@@ -16106,6 +16176,20 @@ void test_vst4q_s32(int32_t *a, int32x4x4_t b) {
 //
 void test_vst4q_s64(int64_t *a, int64x2x4_t b) {
   vst4q_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst4q_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], [4 x <16 x i8>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 3
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st4.v16i8.p0(<16 x i8> [[B_COERCE_FCA_0_EXTRACT]], <16 x i8> [[B_COERCE_FCA_1_EXTRACT]], <16 x i8> [[B_COERCE_FCA_2_EXTRACT]], <16 x i8> [[B_COERCE_FCA_3_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst4q_mf8(mfloat8_t *a, mfloat8x16x4_t b) {
+  vst4q_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst4q_f16(
@@ -16380,6 +16464,20 @@ void test_vst4_s32(int32_t *a, int32x2x4_t b) {
 //
 void test_vst4_s64(int64_t *a, int64x1x4_t b) {
   vst4_s64(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst4_mf8(
+// CHECK-SAME: ptr noundef [[A:%.*]], [4 x <8 x i8>] alignstack(8) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 3
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st4.v8i8.p0(<8 x i8> [[B_COERCE_FCA_0_EXTRACT]], <8 x i8> [[B_COERCE_FCA_1_EXTRACT]], <8 x i8> [[B_COERCE_FCA_2_EXTRACT]], <8 x i8> [[B_COERCE_FCA_3_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst4_mf8(mfloat8_t *a, mfloat8x8x4_t b) {
+  vst4_mf8(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst4_f16(
@@ -16789,6 +16887,18 @@ poly64x1x4_t test_vld1_p64_x4(poly64_t const *a) {
   return vld1_p64_x4(a);
 }
 
+// CHECK-LABEL: define dso_local void @test_vst1q_mf8_x2(
+// CHECK-SAME: ptr noundef [[A:%.*]], [2 x <16 x i8>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <16 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <16 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v16i8.p0(<16 x i8> [[B_COERCE_FCA_0_EXTRACT]], <16 x i8> [[B_COERCE_FCA_1_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst1q_mf8_x2(mfloat8_t *a, mfloat8x16x2_t b) {
+  vst1q_mf8_x2(a, b);
+}
+
 // CHECK-LABEL: define dso_local void @test_vst1q_f64_x2(
 // CHECK-SAME: ptr noundef [[A:%.*]], [2 x <2 x double>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -16821,6 +16931,18 @@ void test_vst1q_f64_x2(float64_t *a, float64x2x2_t b) {
 //
 void test_vst1q_p64_x2(poly64_t *a, poly64x2x2_t b) {
   vst1q_p64_x2(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst1_mf8_x2(
+// CHECK-SAME: ptr noundef [[A:%.*]], [2 x <8 x i8>] alignstack(8) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x <8 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x <8 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st1x2.v8i8.p0(<8 x i8> [[B_COERCE_FCA_0_EXTRACT]], <8 x i8> [[B_COERCE_FCA_1_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst1_mf8_x2(mfloat8_t *a, mfloat8x8x2_t b) {
+  vst1_mf8_x2(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst1_f64_x2(
@@ -16857,6 +16979,19 @@ void test_vst1_f64_x2(float64_t *a, float64x1x2_t b) {
 //
 void test_vst1_p64_x2(poly64_t *a, poly64x1x2_t b) {
   vst1_p64_x2(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst1q_mf8_x3(
+// CHECK-SAME: ptr noundef [[A:%.*]], [3 x <16 x i8>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [3 x <16 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [3 x <16 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [3 x <16 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st1x3.v16i8.p0(<16 x i8> [[B_COERCE_FCA_0_EXTRACT]], <16 x i8> [[B_COERCE_FCA_1_EXTRACT]], <16 x i8> [[B_COERCE_FCA_2_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst1q_mf8_x3(mfloat8_t *a, mfloat8x16x3_t b) {
+  vst1q_mf8_x3(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst1q_f64_x3(
@@ -16898,6 +17033,19 @@ void test_vst1q_f64_x3(float64_t *a, float64x2x3_t b) {
 //
 void test_vst1q_p64_x3(poly64_t *a, poly64x2x3_t b) {
   vst1q_p64_x3(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst1_mf8_x3(
+// CHECK-SAME: ptr noundef [[A:%.*]], [3 x <8 x i8>] alignstack(8) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [3 x <8 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [3 x <8 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [3 x <8 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st1x3.v8i8.p0(<8 x i8> [[B_COERCE_FCA_0_EXTRACT]], <8 x i8> [[B_COERCE_FCA_1_EXTRACT]], <8 x i8> [[B_COERCE_FCA_2_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst1_mf8_x3(mfloat8_t *a, mfloat8x8x3_t b) {
+  vst1_mf8_x3(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst1_f64_x3(
@@ -16942,6 +17090,20 @@ void test_vst1_f64_x3(float64_t *a, float64x1x3_t b) {
 //
 void test_vst1_p64_x3(poly64_t *a, poly64x1x3_t b) {
   vst1_p64_x3(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst1q_mf8_x4(
+// CHECK-SAME: ptr noundef [[A:%.*]], [4 x <16 x i8>] alignstack(16) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x <16 x i8>] [[B_COERCE]], 3
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st1x4.v16i8.p0(<16 x i8> [[B_COERCE_FCA_0_EXTRACT]], <16 x i8> [[B_COERCE_FCA_1_EXTRACT]], <16 x i8> [[B_COERCE_FCA_2_EXTRACT]], <16 x i8> [[B_COERCE_FCA_3_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst1q_mf8_x4(mfloat8_t *a, mfloat8x16x4_t b) {
+  vst1q_mf8_x4(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst1q_f64_x4(
@@ -16990,6 +17152,20 @@ void test_vst1q_f64_x4(float64_t *a, float64x2x4_t b) {
 //
 void test_vst1q_p64_x4(poly64_t *a, poly64x2x4_t b) {
   vst1q_p64_x4(a, b);
+}
+
+// CHECK-LABEL: define dso_local void @test_vst1_mf8_x4(
+// CHECK-SAME: ptr noundef [[A:%.*]], [4 x <8 x i8>] alignstack(8) [[B_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[B_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 0
+// CHECK-NEXT:    [[B_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 1
+// CHECK-NEXT:    [[B_COERCE_FCA_2_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 2
+// CHECK-NEXT:    [[B_COERCE_FCA_3_EXTRACT:%.*]] = extractvalue [4 x <8 x i8>] [[B_COERCE]], 3
+// CHECK-NEXT:    call void @llvm.aarch64.neon.st1x4.v8i8.p0(<8 x i8> [[B_COERCE_FCA_0_EXTRACT]], <8 x i8> [[B_COERCE_FCA_1_EXTRACT]], <8 x i8> [[B_COERCE_FCA_2_EXTRACT]], <8 x i8> [[B_COERCE_FCA_3_EXTRACT]], ptr [[A]])
+// CHECK-NEXT:    ret void
+//
+void test_vst1_mf8_x4(mfloat8_t *a, mfloat8x8x4_t b) {
+  vst1_mf8_x4(a, b);
 }
 
 // CHECK-LABEL: define dso_local void @test_vst1_f64_x4(
