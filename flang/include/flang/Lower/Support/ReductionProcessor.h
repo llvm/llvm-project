@@ -13,7 +13,7 @@
 #ifndef FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 #define FORTRAN_LOWER_REDUCTIONPROCESSOR_H
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Parser/parse-tree.h"
