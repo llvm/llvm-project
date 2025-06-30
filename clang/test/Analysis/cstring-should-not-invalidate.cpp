@@ -1,9 +1,8 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection
-// -analyzer-config c++-inlining=constructors -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 
 // expected-no-diagnostics
 
-typedef unsigned int size_t;
+typedef decltype(sizeof(int)) size_t;
 
 char *strncpy(char *dest, const char *src, size_t x);
 
