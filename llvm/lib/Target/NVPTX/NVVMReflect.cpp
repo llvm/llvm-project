@@ -88,13 +88,8 @@ ModulePass *llvm::createNVVMReflectPass(unsigned SmVersion) {
 }
 
 static cl::opt<bool>
-    NVVMReflectEnabled("nvvm-reflect-enable", cl::init(false), cl::Hidden,
+    NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
                        cl::desc("NVVM reflection, enabled by default"));
-
-char NVVMReflectLegacyPass::ID = 0;
-INITIALIZE_PASS(NVVMReflectLegacyPass, "nvvm-reflect",
-                "Replace occurrences of __nvvm_reflect() calls with 0/1", false,
-                false)
 
 // Allow users to specify additional key/value pairs to reflect. These key/value
 // pairs are the last to be added to the ReflectMap, and therefore will take
@@ -108,6 +103,11 @@ static cl::list<std::string> ReflectList(
 static cl::opt<bool> NVVMReflectDCE(
     "nvvm-reflect-dce", cl::init(false), cl::Hidden,
     cl::desc("Delete dead blocks introduced by reflect call elimination"));
+
+char NVVMReflectLegacyPass::ID = 0;
+INITIALIZE_PASS(NVVMReflectLegacyPass, "nvvm-reflect",
+                "Replace occurrences of __nvvm_reflect() calls with 0/1", false,
+                false)
 
 // Set the ReflectMap with, first, the value of __CUDA_FTZ from module metadata,
 // and then the key/value pairs from the command line.
@@ -188,6 +188,8 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
                       << "(" << ReflectArg << ") with value " << ReflectVal
                       << "\n");
     auto *NewValue = ConstantInt::get(Call->getType(), ReflectVal);
+    dbgs() << "NewValue: " << *NewValue << "\n";
+    dbgs() << "Call: " << *Call << "\n";
     ReflectReplacements.push_back({Call, NewValue});
   }
 
@@ -216,35 +218,25 @@ NVVMReflect::findTransitivelyDeadBlocks(BasicBlock *DeadBB) {
 
 /// Replace calls to __nvvm_reflect with corresponding constant values. Then
 /// clean up through constant folding and propagation and dead block
-/// elimination.
-///
-/// The purpose of this cleanup is not optimization because that could be
-/// handled by later passes
-/// (i.e. SCCP, SimplifyCFG, etc.), but for correctness. Reflect calls are most
-/// commonly used to query the arch number and select a valid instruction for
-/// the arch. Therefore, you need to eliminate blocks that become dead because
-/// they may contain invalid instructions for the arch. The purpose of the
-/// cleanup is to do the minimal amount of work to leave the code in a valid
-/// state.
+/// elimination, if NVVMReflectDCE is enabled.
 void NVVMReflect::replaceReflectCalls(
     SmallVector<std::pair<CallInst *, Constant *>, 8> &ReflectReplacements,
     const DataLayout &DL) {
   SmallVector<Instruction *, 8> Worklist;
   SetVector<BasicBlock *> DeadBlocks;
 
-  // Replace an instruction with a constant and add all users to the worklist,
-  // then delete the instruction
+  // Replace an instruction with a constant and add all users to the worklist
   auto ReplaceInstructionWithConst = [&](Instruction *I, Constant *C) {
     for (auto *U : I->users())
       if (auto *UI = dyn_cast<Instruction>(U))
         Worklist.push_back(UI);
     I->replaceAllUsesWith(C);
-    if (isInstructionTriviallyDead(I))
-      I->eraseFromParent();
   };
 
-  for (auto &[Call, NewValue] : ReflectReplacements)
+  for (auto &[Call, NewValue] : ReflectReplacements) {
     ReplaceInstructionWithConst(Call, NewValue);
+    Call->eraseFromParent();
+  }
 
   // Constant fold reflect results. If NVVMReflectDCE is enabled, we will
   // alternate between constant folding/propagation and dead block elimination.
@@ -257,6 +249,8 @@ void NVVMReflect::replaceReflectCalls(
       auto *I = Worklist.pop_back_val();
       if (auto *C = ConstantFoldInstruction(I, DL)) {
         ReplaceInstructionWithConst(I, C);
+        if (isInstructionTriviallyDead(I))
+          I->eraseFromParent();
       } else if (I->isTerminator()) {
         BasicBlock *BB = I->getParent();
         SmallVector<BasicBlock *, 8> Succs(successors(BB));
