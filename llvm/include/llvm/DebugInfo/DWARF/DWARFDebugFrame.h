@@ -139,6 +139,7 @@ public:
   }
   int32_t getConstant() const { return Offset; }
   bool getDereference() const { return Dereference; }
+
   /// Some opcodes will modify the CFA location's register only, so we need
   /// to be able to modify the CFA register when evaluating DWARF Call Frame
   /// Information opcodes.
