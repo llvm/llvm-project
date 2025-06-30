@@ -423,7 +423,7 @@ define float @repeated_div_recip_allowed_ftz_sel(i1 %pred, float %a, float %b, f
   ret float %w
 }
 
-define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0 {
+define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) {
 ; CHECK-LABEL: repeated_div_fast(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -444,14 +444,14 @@ define float @repeated_div_fast(i1 %pred, float %a, float %b, float %divisor) #0
 ; CHECK-NEXT:    selp.f32 %r8, %r7, %r6, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
-  %z = fmul float %x, %y
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv contract arcp afn float %b, %divisor
+  %z = fmul contract float %x, %y
   %w = select i1 %pred, float %z, float %y
   ret float %w
 }
 
-define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) #0 {
+define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor) {
 ; CHECK-LABEL: repeated_div_fast_sel(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -469,13 +469,13 @@ define float @repeated_div_fast_sel(i1 %pred, float %a, float %b, float %divisor
 ; CHECK-NEXT:    div.approx.f32 %r5, %r3, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
+  %x = fdiv afn float %a, %divisor
+  %y = fdiv afn float %b, %divisor
   %w = select i1 %pred, float %x, float %y
   ret float %w
 }
 
-define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor) #1 {
 ; CHECK-LABEL: repeated_div_fast_ftz(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -496,14 +496,14 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 ; CHECK-NEXT:    selp.f32 %r8, %r7, %r6, %p1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r8;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
-  %z = fmul float %x, %y
+  %x = fdiv arcp float %a, %divisor
+  %y = fdiv contract arcp afn float %b, %divisor
+  %z = fmul contract float %x, %y
   %w = select i1 %pred, float %z, float %y
   ret float %w
 }
 
-define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #0 #1 {
+define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %divisor) #1 {
 ; CHECK-LABEL: repeated_div_fast_ftz_sel(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
@@ -521,8 +521,8 @@ define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %div
 ; CHECK-NEXT:    div.approx.ftz.f32 %r5, %r3, %r4;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r5;
 ; CHECK-NEXT:    ret;
-  %x = fdiv float %a, %divisor
-  %y = fdiv float %b, %divisor
+  %x = fdiv afn float %a, %divisor
+  %y = fdiv afn float %b, %divisor
   %w = select i1 %pred, float %x, float %y
   ret float %w
 }
