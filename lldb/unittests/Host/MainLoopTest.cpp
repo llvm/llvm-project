@@ -124,7 +124,9 @@ TEST_F(MainLoopTest, NoSpuriousPipeReads) {
           // pipe is empty, and we should not be called anymore.
           char X;
           size_t len = sizeof(X);
-          EXPECT_THAT_EXPECTED(r->Read(&X, len).ToError(), llvm::HasValue(1));
+          ASSERT_THAT_ERROR(r->Read(&X, len).ToError(), llvm::Succeeded());
+          EXPECT_EQ(len, sizeof(X));
+          EXPECT_EQ(X, 'X');
         }
         ++callback_count;
       },
@@ -159,6 +161,7 @@ TEST_F(MainLoopTest, NoSpuriousSocketReads) {
           EXPECT_THAT_ERROR(socketpair[1]->Read(&X, len).ToError(),
                             llvm::Succeeded());
           EXPECT_EQ(len, sizeof(X));
+          EXPECT_EQ(X, 'X');
         }
         ++callback_count;
       },
