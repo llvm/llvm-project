@@ -813,9 +813,11 @@ foreach mx = ["MF4", "MF2"] in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
     // Pattern for vfdiv.vf: 10/10
-    // Pattern for vfdiv.vv: 7/7
     let Latency = 10 in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
+    // Pattern for vfdiv.vv: 7/7
+    let Latency = 7 in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VFP], mx, sew, IsWorstCase>;
     }
   }
