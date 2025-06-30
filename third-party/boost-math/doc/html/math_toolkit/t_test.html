@@ -1,0 +1,272 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>t-tests</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../statistics.html" title="Chapter 6. Statistics">
+<link rel="prev" href="anderson_darling.html" title="The Anderson-Darling Test">
+<link rel="next" href="z_test.html" title="z-tests">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="anderson_darling.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../statistics.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="z_test.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.t_test"></a><a class="link" href="t_test.html" title="t-tests"><span class="emphasis"><em>t</em></span>-tests</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.t_test.h0"></a>
+      <span class="phrase"><a name="math_toolkit.t_test.synopsis"></a></span><a class="link" href="t_test.html#math_toolkit.t_test.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">t_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span> <span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Size</span> <span class="special">=</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">one_sample_t_test</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">sample_mean</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">sample_variance</span><span class="special">,</span> <span class="identifier">Size</span> <span class="identifier">num_samples</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">assumed_mean</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ForwardIterator</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">ForwardIterator</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">one_sample_t_test</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">begin</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">end</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">assumed_mean</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">one_sample_t_test</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span> <span class="identifier">assumed_mean</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ForwardIterator</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">ForwardIterator</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">two_sample_t_test</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">begin_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">end_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">two_sample_t_test</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">u</span><span class="special">,</span> <span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">ForwardIterator</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">std</span><span class="special">::</span><span class="identifier">iterator_traits</span><span class="special">&lt;</span><span class="identifier">ForwardIterator</span><span class="special">&gt;::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">paired_samples_t_test</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">begin_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">end_1</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">begin_2</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Real</span> <span class="special">=</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span><span class="special">&gt;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">pair</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">,</span> <span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">paired_samples_t_test</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">u</span><span class="special">,</span> <span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">);</span>
+
+<span class="special">}</span>
+</pre>
+<h4>
+<a name="math_toolkit.t_test.h1"></a>
+      <span class="phrase"><a name="math_toolkit.t_test.background"></a></span><a class="link" href="t_test.html#math_toolkit.t_test.background">Background</a>
+    </h4>
+<p>
+      A set of C++11 compatible functions for various <a href="https://en.wikipedia.org/wiki/Student's_t-test" target="_top">Student's
+      t-tests</a>. The input can be any real number or set of real numbers. In
+      the event that the input is an integer or a set of integers typename Real will
+      be deduced as a double precision type.
+    </p>
+<h4>
+<a name="math_toolkit.t_test.h2"></a>
+      <span class="phrase"><a name="math_toolkit.t_test.one_sample_t_test"></a></span><a class="link" href="t_test.html#math_toolkit.t_test.one_sample_t_test">One-sample
+      <span class="emphasis"><em>t</em></span>-test</a>
+    </h4>
+<p>
+      A one-sample <span class="emphasis"><em>t</em></span>-test attempts to answer the question "given
+      a sample mean, is it likely that the population mean of my data is a certain
+      value?" The test statistic is
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/one_sample_t_test_statistic.svg" width="97" height="59"></object></span>
+    </p>
+<p>
+      where µ<sub>0</sub> is the assumed mean, <span class="emphasis"><em>s</em></span><sup>2</sup> is the sample variance,
+      and <span class="emphasis"><em>n</em></span> is the number of samples. If the absolute value
+      of the test statistic is large, then we have low confidence that the population
+      mean is equal to µ<sub>0</sub>, and if the absolute value of the test statistic is small,
+      we have high confidence. We now ask the question "what constitutes large
+      and small in this context?"
+    </p>
+<p>
+      Under reasonable assumptions, the test statistic <span class="emphasis"><em>t</em></span> can
+      be assumed to come from a Student's <span class="emphasis"><em>t</em></span>-distribution. Since
+      we wish to know if the sample mean deviates from the true mean in either direction,
+      the test is two-tailed. Hence the <span class="emphasis"><em>p</em></span>-value is straightforward
+      to calculate from the Student's <span class="emphasis"><em>t</em></span>-distribution on <span class="emphasis"><em>n</em></span>
+      - 1 degrees of freedom, but nonetheless it is convenient to have it computed
+      here.
+    </p>
+<p>
+      An example usage is as follows:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">random</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">t_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">random_device</span> <span class="identifier">rd</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937</span> <span class="identifier">gen</span><span class="special">{</span><span class="identifier">rd</span><span class="special">()};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">normal_distribution</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dis</span><span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">1024</span><span class="special">);</span>
+<span class="keyword">for</span> <span class="special">(</span><span class="keyword">auto</span> <span class="special">&amp;</span> <span class="identifier">x</span> <span class="special">:</span> <span class="identifier">v</span><span class="special">)</span> <span class="special">{</span>
+  <span class="identifier">x</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">auto</span> <span class="special">[</span><span class="identifier">t</span><span class="special">,</span> <span class="identifier">p</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">one_sample_t_test</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="number">0.0</span><span class="special">);</span>
+</pre>
+<p>
+      The test statistic is the first element of the pair, and the <span class="emphasis"><em>p</em></span>-value
+      is the second element.
+    </p>
+<h4>
+<a name="math_toolkit.t_test.h3"></a>
+      <span class="phrase"><a name="math_toolkit.t_test.independent_two_sample_t_test"></a></span><a class="link" href="t_test.html#math_toolkit.t_test.independent_two_sample_t_test">Independent
+      two-sample <span class="emphasis"><em>t</em></span>-test</a>
+    </h4>
+<p>
+      A two-sample <span class="emphasis"><em>t</em></span>-test determines if the means of two sets
+      of data have a statistically significant difference from each other. There
+      are two underlying implementations based off the variances of the sets of data.
+      If <span class="emphasis"><em>s</em></span><sub>1</sub> and <span class="emphasis"><em>s</em></span><sub>2</sub> are within a factor of
+      2 of each other the following formulas will be used:
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/two_sample_t_statistic.svg" width="114" height="51"></object></span>
+    </p>
+<p>
+      where
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/two_sample_pooled_variance.svg" width="213" height="46"></object></span>
+    </p>
+<p>
+      If <span class="emphasis"><em>s</em></span><sub>1</sub> and <span class="emphasis"><em>s</em></span><sub>2</sub> are not within a factor
+      of 2 of each other Welch's t-test will be used:
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/welchs_t_statistic.svg" width="82" height="38"></object></span>
+    </p>
+<p>
+      where
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/welchs_t_variance.svg" width="109" height="46"></object></span>
+    </p>
+<p>
+      and
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/welchs_t_dof.svg" width="157" height="75"></object></span>
+    </p>
+<p>
+      An example of usage is as follows:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">random</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">t_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">random_device</span> <span class="identifier">rd</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">mt19937</span> <span class="identifier">gen</span><span class="special">{</span><span class="identifier">rd</span><span class="special">()};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">normal_distribution</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dis</span><span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">u</span><span class="special">(</span><span class="number">1024</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">1024</span><span class="special">);</span>
+<span class="keyword">for</span><span class="special">(</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">size_t</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="identifier">u</span><span class="special">.</span><span class="identifier">size</span><span class="special">();</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+<span class="special">{</span>
+  <span class="identifier">u</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+  <span class="identifier">v</span><span class="special">[</span><span class="identifier">i</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">dis</span><span class="special">(</span><span class="identifier">gen</span><span class="special">);</span>
+<span class="special">}</span>
+
+<span class="keyword">auto</span> <span class="special">[</span><span class="identifier">t</span><span class="special">,</span> <span class="identifier">p</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">two_sample_t_test</span><span class="special">(</span><span class="identifier">u</span><span class="special">,</span> <span class="identifier">v</span><span class="special">);</span>
+</pre>
+<p>
+      <span class="emphasis"><em>Nota bene:</em></span> The sample sizes for the two sets of data do
+      not need to be equal.
+    </p>
+<p>
+      <span class="emphasis"><em>Nota bene:</em></span> std::distance is used in the implementation
+      leading to lower performance with ForwardIterator than RandomAccessIterator.
+    </p>
+<h4>
+<a name="math_toolkit.t_test.h4"></a>
+      <span class="phrase"><a name="math_toolkit.t_test.dependent_t_test_for_paired_samp"></a></span><a class="link" href="t_test.html#math_toolkit.t_test.dependent_t_test_for_paired_samp">Dependent
+      <span class="emphasis"><em>t</em></span>-test for paired samples</a>
+    </h4>
+<p>
+      This test is used when the samples are dependent such as when one sample has
+      been tested twice, or when two samples have been paired. Much like the independent
+      t-test it is used to determine if the means of two sets of data have a statistically
+      significant difference from each other.
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../graphs/paired_sample_t_statistic.svg" width="82" height="40"></object></span>
+    </p>
+<p>
+      where <span class="emphasis"><em>X</em></span><sub>D</sub> and <span class="emphasis"><em>s</em></span><sub>D</sub> are the mean and standard
+      deviation of the differences between all pairs.
+    </p>
+<p>
+      An example of usage is as follows:
+    </p>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">vector</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">random</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">t_test</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">first_test</span> <span class="special">{</span><span class="number">35</span><span class="special">,</span> <span class="number">50</span><span class="special">,</span> <span class="number">90</span><span class="special">,</span> <span class="number">78</span><span class="special">};</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">int</span><span class="special">&gt;</span> <span class="identifier">second_test</span> <span class="special">{</span><span class="number">67</span><span class="special">,</span> <span class="number">46</span><span class="special">,</span> <span class="number">86</span><span class="special">,</span> <span class="number">91</span><span class="special">};</span>
+
+<span class="keyword">auto</span> <span class="special">[</span><span class="identifier">t</span><span class="special">,</span> <span class="identifier">p</span><span class="special">]</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">paired_samples_t_test</span><span class="special">(</span><span class="identifier">first_test</span><span class="special">,</span> <span class="identifier">second_test</span><span class="special">);</span>
+</pre>
+<h4>
+<a name="math_toolkit.t_test.h5"></a>
+      <span class="phrase"><a name="math_toolkit.t_test.performance"></a></span><a class="link" href="t_test.html#math_toolkit.t_test.performance">Performance</a>
+    </h4>
+<p>
+      There are two cases: Where the mean and sample variance have already been computed,
+      and the case where the mean and sample variance must be computed on the fly.
+    </p>
+<pre class="programlisting"><span class="special">----------------------------------------------</span>
+<span class="identifier">Benchmark</span>                                <span class="identifier">Time</span>
+<span class="special">----------------------------------------------</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8</span>               <span class="number">291</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">210.058</span><span class="identifier">M</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16</span>             <span class="number">1064</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">114.697</span><span class="identifier">M</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32</span>              <span class="number">407</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">599.213</span><span class="identifier">M</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">64</span>              <span class="number">595</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">821.086</span><span class="identifier">M</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">128</span>            <span class="number">1475</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">662.071</span><span class="identifier">M</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">256</span>            <span class="number">1746</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1118.85</span><span class="identifier">M</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">512</span>            <span class="number">3303</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.15492</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">1024</span>           <span class="number">6404</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.19139</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2048</span>          <span class="number">12461</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.2245</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4096</span>          <span class="number">24805</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.23029</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8192</span>          <span class="number">49639</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.22956</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16384</span>         <span class="number">98685</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.23698</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">32768</span>        <span class="number">197434</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.23656</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">65536</span>        <span class="number">393929</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.23952</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">131072</span>       <span class="number">790967</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.23466</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">262144</span>      <span class="number">1582366</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.23434</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">524288</span>      <span class="number">3141112</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.24358</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">1048576</span>     <span class="number">6260407</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.24792</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">2097152</span>    <span class="number">12521811</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.24784</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">4194304</span>    <span class="number">25076257</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.24619</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">8388608</span>    <span class="number">50226183</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.2444</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;/</span><span class="number">16777216</span>  <span class="number">100522789</span> <span class="identifier">ns</span> <span class="identifier">bytes_per_second</span><span class="special">=</span><span class="number">1.24353</span><span class="identifier">G</span><span class="special">/</span><span class="identifier">s</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_BigO</span>           <span class="number">5.99</span> <span class="identifier">N</span>
+<span class="identifier">OneSampleTTest</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span><span class="identifier">_RMS</span>               <span class="number">0</span> <span class="special">%</span>
+<span class="identifier">OneSampleTTestKnownMeanAndVariance</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span>        <span class="number">207</span> <span class="identifier">ns</span>
+</pre>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="anderson_darling.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../statistics.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="z_test.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<math xmlns="http://www.w3.org/1998/Math/MathML">
+ <mrow>
+   <mi>ln</mi>
+   <mo stretchy="false">Γ</mo>
+   <mrow>
+    <mrow>
+     <mo stretchy="false">(</mo>
+     <mrow>
+      <mi>z</mi>
+     </mrow>
+     <mo stretchy="false">)</mo>
+    </mrow>
+    <mo stretchy="false">≈</mo>
+    <mrow>
+     <mo stretchy="false">(</mo>
+     <mrow>
+      <mrow>
+       <mi>z</mi>
+       <mo stretchy="false">−</mo>
+       <mfrac>
+        <mn>1</mn>
+        <mn>2</mn>
+       </mfrac>
+      </mrow>
+     </mrow>
+     <mo stretchy="false">)</mo>
+    </mrow>
+   </mrow>
+   <mi>ln</mi>
+   <mrow>
+    <mrow>
+     <mrow>
+      <mo stretchy="false">(</mo>
+      <mrow>
+       <mi>z</mi>
+      </mrow>
+      <mo stretchy="false">)</mo>
+     </mrow>
+     <mo stretchy="false">−</mo>
+     <mi>z</mi>
+    </mrow>
+    <mo stretchy="false">+</mo>
+    <mrow>
+     <mfrac>
+      <mn>1</mn>
+      <mn>2</mn>
+     </mfrac>
+    </mrow>
+   </mrow>
+   <mi>ln</mi>
+   <mrow>
+    <mrow>
+     <mo stretchy="false">(</mo>
+     <mrow>
+      <mn>2</mn>
+      <mo stretchy="false">π</mo>
+     </mrow>
+     <mo stretchy="false">)</mo>
+    </mrow>
+    <mo stretchy="false">+</mo>
+    <mrow>
+     <munderover>
+      <mo stretchy="false">∑</mo>
+      <mrow>
+       <mrow>
+        <mi>k</mi>
+        <mo stretchy="false">=</mo>
+        <mn>1</mn>
+       </mrow>
+      </mrow>
+      <mrow>
+       <mo stretchy="false">∞</mo>
+      </mrow>
+     </munderover>
+     <mrow>
+      <mfrac>
+       <msub>
+        <mi>B</mi>
+        <mrow>
+         <mn>2k</mn>
+        </mrow>
+       </msub>
+       <mrow>
+        <mn>2k</mn>
+        <mrow>
+         <mo stretchy="false">(</mo>
+         <mrow>
+          <mrow>
+           <mn>2k</mn>
+           <mo stretchy="false">−</mo>
+           <mn>1</mn>
+          </mrow>
+         </mrow>
+         <mo stretchy="false">)</mo>
+        </mrow>
+        <msup>
+         <mi>z</mi>
+         <mrow>
+          <mrow>
+           <mn>2k</mn>
+           <mo stretchy="false">−</mo>
+           <mn>1</mn>
+          </mrow>
+         </mrow>
+        </msup>
+       </mrow>
+      </mfrac>
+     </mrow>
+    </mrow>
+   </mrow>
+  </mrow>
+</math>

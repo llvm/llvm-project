@@ -1,0 +1,32 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtext>Ei</mtext>
+    <mfenced>
+      <mrow>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <mi>z</mi>
+    <mo>+</mo>
+    <mfrac>
+      <msup>
+        <mi>e</mi>
+        <mi>z</mi>
+      </msup>
+      <mi>z</mi>
+    </mfrac>
+    <mfenced>
+      <mrow>
+        <mi>c</mi>
+        <mo>+</mo>
+        <mi>R</mi>
+        <mfenced>
+          <mrow>
+            <mi>t</mi>
+          </mrow>
+        </mfenced>
+      </mrow>
+    </mfenced>
+  </mrow>
+</math>

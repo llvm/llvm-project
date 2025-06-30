@@ -1,0 +1,109 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Jacobi Polynomials</title>
+<link rel="stylesheet" href="../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../sf_poly.html" title="Polynomials">
+<link rel="prev" href="gegenbauer.html" title="Gegenbauer Polynomials">
+<link rel="next" href="../bessel.html" title="Bessel Functions">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="gegenbauer.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_poly.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../bessel.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h3 class="title">
+<a name="math_toolkit.sf_poly.jacobi"></a><a class="link" href="jacobi.html" title="Jacobi Polynomials">Jacobi Polynomials</a>
+</h3></div></div></div>
+<h5>
+<a name="math_toolkit.sf_poly.jacobi.h0"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.jacobi.synopsis"></a></span><a class="link" href="jacobi.html#math_toolkit.sf_poly.jacobi.synopsis">Synopsis</a>
+      </h5>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">special_functions</span><span class="special">/</span><span class="identifier">jacobi</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+</pre>
+<pre class="programlisting"><span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">{</span> <span class="keyword">namespace</span> <span class="identifier">math</span><span class="special">{</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">Real</span> <span class="identifier">jacobi</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">Real</span> <span class="identifier">jacobi_derivative</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">x</span><span class="special">,</span> <span class="keyword">unsigned</span> <span class="identifier">k</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">Real</span> <span class="identifier">jacobi_prime</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">typename</span> <span class="identifier">Real</span><span class="special">&gt;</span>
+<span class="identifier">Real</span> <span class="identifier">jacobi_double_prime</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">Real</span> <span class="identifier">x</span><span class="special">);</span>
+
+<span class="special">}}</span> <span class="comment">// namespaces</span>
+</pre>
+<p>
+        Jacobi polynomials are a family of orthogonal polynomials.
+      </p>
+<p>
+        A basic usage is as follows:
+      </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">jacobi</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="number">0.5</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">alpha</span> <span class="special">=</span> <span class="number">0.3</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">beta</span> <span class="special">=</span> <span class="number">7.2</span><span class="special">;</span>
+<span class="keyword">unsigned</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">3</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">jacobi</span><span class="special">(</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">x</span><span class="special">);</span>
+</pre>
+<p>
+        All derivatives of the Jacobi polynomials are available. The <span class="emphasis"><em>k</em></span>-th
+        derivative of the <span class="emphasis"><em>n</em></span>-th Gegenbauer polynomial is given
+        by
+      </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">jacobi_derivative</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">x</span> <span class="special">=</span> <span class="number">0.5</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">alpha</span> <span class="special">=</span> <span class="number">0.3</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">beta</span> <span class="special">=</span> <span class="number">7.2</span><span class="special">;</span>
+<span class="keyword">unsigned</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">3</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">y</span> <span class="special">=</span> <span class="identifier">jacobi_derivative</span><span class="special">(</span><span class="identifier">n</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">,</span> <span class="identifier">beta</span><span class="special">,</span> <span class="identifier">x</span><span class="special">,</span> <span class="identifier">k</span><span class="special">);</span>
+</pre>
+<p>
+        For consistency with the rest of the library, <code class="computeroutput"><span class="identifier">jacobi_prime</span></code>
+        is provided which simply returns <code class="computeroutput"><span class="identifier">jacobi_derivative</span><span class="special">(</span><span class="identifier">n</span><span class="special">,</span>
+        <span class="identifier">lambda</span><span class="special">,</span>
+        <span class="identifier">x</span><span class="special">,</span><span class="number">1</span><span class="special">)</span></code>.
+      </p>
+<p>
+        <span class="inlinemediaobject"><object type="image/svg+xml" data="../../../graphs/jacobi.svg"></object></span>
+      </p>
+<h4>
+<a name="math_toolkit.sf_poly.jacobi.h1"></a>
+        <span class="phrase"><a name="math_toolkit.sf_poly.jacobi.implementation"></a></span><a class="link" href="jacobi.html#math_toolkit.sf_poly.jacobi.implementation">Implementation</a>
+      </h4>
+<p>
+        The implementation uses the 3-term recurrence for the Jacobi polynomials,
+        rising.
+      </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="gegenbauer.html"><img src="../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../sf_poly.html"><img src="../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../index.html"><img src="../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../bessel.html"><img src="../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>
