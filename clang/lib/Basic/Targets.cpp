@@ -752,9 +752,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<LoongArch32TargetInfo>>(Triple,
                                                                       Opts);
-    case llvm::Triple::OpenBSD:
-      return std::make_unique<OpenBSDTargetInfo<LoongArch32TargetInfo>>(Triple,
-                                                                        Opts);
     default:
       return std::make_unique<LoongArch32TargetInfo>(Triple, Opts);
     }
