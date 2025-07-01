@@ -5530,6 +5530,18 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
       CC = ISD::getSetCCInverse(CC, LHS.getValueType());
     }
 
+    ConstantSDNode *RHSVal = dyn_cast<ConstantSDNode>(RHS);
+    if (Opcode == ARMISD::CSNEG && RHSVal && RHSVal->isOne()) {
+      assert(CTVal && CFVal && "Expected constant operands for CSNEG.");
+      // Use a CSINV to transform "a == C ? 1 : -1" to "a == C ? a : -1" to
+      // avoid materializing C.
+      if (CTVal == RHSVal && CC == ISD::SETEQ) {
+        Opcode = ARMISD::CSINV;
+        TrueVal = LHS;
+        FalseVal = DAG.getConstant(0, dl, FalseVal.getValueType());
+      }
+    }
+
     if (Opcode) {
       // If one of the constants is cheaper than another, materialise the
       // cheaper one and let the csel generate the other.

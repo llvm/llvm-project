@@ -385,9 +385,8 @@ entry:
 define i32 @test_cneg(i32 %x) {
 ; CHECK-LABEL: test_cneg:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movs r1, #1
 ; CHECK-NEXT:    cmp r0, #1
-; CHECK-NEXT:    cneg r0, r1, ne
+; CHECK-NEXT:    cinv r0, r0, ne
 ; CHECK-NEXT:    bx lr
   %cmp = icmp eq i32 %x, 1
   %res = select i1 %cmp, i32 1, i32 -1
