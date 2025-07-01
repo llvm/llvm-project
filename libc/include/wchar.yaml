@@ -17,6 +17,13 @@ functions:
     return_type: size_t
     arguments:
       - type: const wchar_t *
+  - name: wcsnlen
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+      - type: size_t
   - name: wctob
     standards:
       - stdc
@@ -38,6 +45,14 @@ functions:
       - type: const char *__restrict
       - type: size_t
       - type: mbstate_t *__restrict
+  - name: mbtowc
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const char *__restrict
+      - type: size_t
   - name: wmemset
     standards:
       - stdc
@@ -83,6 +98,13 @@ functions:
       - type: const wchar_t *
       - type: wchar_t
   - name: wcsspn
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: const wchar_t *
+      - type: const wchar_t *
+  - name: wcscspn
     standards:
       - stdc
     return_type: size_t
@@ -167,6 +189,13 @@ functions:
       - type: char *__restrict
       - type: wchar_t
       - type: mbstate_t *__restrict
+  - name: wctomb
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: char *
+      - type: wchar_t
   - name: wcscpy
     standards:
       - stdc
@@ -174,3 +203,26 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcstok
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: wchar_t** __restrict
+  - name: wcpcpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+  - name: wcpncpy
+    standards:
+      - stdc
+    return_type: wchar_t *
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t

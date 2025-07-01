@@ -110,6 +110,14 @@ TEST_F(SelectionDAGPatternMatchTest, matchValueType) {
 
   using namespace SDPatternMatch;
   EXPECT_TRUE(sd_match(Op0, m_SpecificVT(Int32VT)));
+  EXPECT_TRUE(sd_match(Op0, m_SpecificScalarVT(Int32VT)));
+  EXPECT_TRUE(sd_match(Op0, m_SpecificScalarVT(Int32VT, m_Value())));
+  EXPECT_FALSE(sd_match(Op0, m_SpecificScalarVT(Float32VT)));
+  EXPECT_FALSE(sd_match(Op0, m_SpecificScalarVT(Float32VT, m_Value())));
+  EXPECT_TRUE(sd_match(Op2, m_SpecificVectorElementVT(Int32VT)));
+  EXPECT_TRUE(sd_match(Op2, m_SpecificVectorElementVT(Int32VT, m_Value())));
+  EXPECT_FALSE(sd_match(Op2, m_SpecificVectorElementVT(Float32VT)));
+  EXPECT_FALSE(sd_match(Op2, m_SpecificVectorElementVT(Float32VT, m_Value())));
   EVT BindVT;
   EXPECT_TRUE(sd_match(Op1, m_VT(BindVT)));
   EXPECT_EQ(BindVT, Float32VT);
@@ -178,6 +186,12 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   SDValue ExtractELT =
       DAG->getNode(ISD::EXTRACT_VECTOR_ELT, DL, Int32VT, V1, Op3);
 
+  SDValue Ch = DAG->getEntryNode();
+  SDValue BasePtr = DAG->getRegister(1, MVT::i64);
+  SDValue Offset = DAG->getUNDEF(MVT::i64);
+  MachinePointerInfo PtrInfo;
+  SDValue Load = DAG->getLoad(MVT::i32, DL, Ch, BasePtr, PtrInfo);
+
   using namespace SDPatternMatch;
   ISD::CondCode CC;
   EXPECT_TRUE(sd_match(ICMP_UGT, m_SetCC(m_Value(), m_Value(),
@@ -230,6 +244,13 @@ TEST_F(SelectionDAGPatternMatchTest, matchTernaryOp) {
   EXPECT_FALSE(sd_match(
       InsertSubvector,
       m_InsertSubvector(m_Specific(V2), m_Specific(V3), m_SpecificInt(3))));
+
+  EXPECT_TRUE(sd_match(
+      Load, m_Load(m_Specific(Ch), m_Specific(BasePtr), m_Specific(Offset))));
+
+  EXPECT_FALSE(
+      sd_match(Load.getValue(1), m_Load(m_Specific(Ch), m_Specific(BasePtr),
+                                        m_Specific(Offset))));
 }
 
 TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
@@ -263,6 +284,11 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   SDValue UMin = DAG->getNode(ISD::UMIN, DL, Int32VT, Op1, Op0);
   SDValue Rotl = DAG->getNode(ISD::ROTL, DL, Int32VT, Op0, Op1);
   SDValue Rotr = DAG->getNode(ISD::ROTR, DL, Int32VT, Op1, Op0);
+
+  SDValue SMulLoHi = DAG->getNode(ISD::SMUL_LOHI, DL,
+                                  DAG->getVTList(Int32VT, Int32VT), Op0, Op1);
+  SDValue PartsDiff =
+      DAG->getNode(ISD::SUB, DL, Int32VT, SMulLoHi, SMulLoHi.getValue(1));
 
   SDValue ICMP_GT = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGT);
   SDValue ICMP_GE = DAG->getSetCC(DL, MVT::i1, Op0, Op1, ISD::SETGE);
@@ -346,6 +372,15 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(UMin, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULT, m_UMinLike(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(UMinLikeULE, m_UMinLike(m_Value(), m_Value())));
+
+  // By default, it matches any of the results.
+  EXPECT_TRUE(
+      sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI), m_Opc(ISD::SMUL_LOHI))));
+  // Matching a specific result.
+  EXPECT_TRUE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
+                                        m_Result<1>(m_Opc(ISD::SMUL_LOHI)))));
+  EXPECT_FALSE(sd_match(PartsDiff, m_Sub(m_Opc(ISD::SMUL_LOHI),
+                                         m_Result<0>(m_Opc(ISD::SMUL_LOHI)))));
 
   SDValue BindVal;
   EXPECT_TRUE(sd_match(SFAdd, m_ChainedBinOp(ISD::STRICT_FADD, m_Value(BindVal),

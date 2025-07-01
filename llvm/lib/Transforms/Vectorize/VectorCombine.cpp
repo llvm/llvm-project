@@ -21,6 +21,7 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -72,14 +73,15 @@ public:
                 const DominatorTree &DT, AAResults &AA, AssumptionCache &AC,
                 const DataLayout *DL, TTI::TargetCostKind CostKind,
                 bool TryEarlyFoldsOnly)
-      : F(F), Builder(F.getContext()), TTI(TTI), DT(DT), AA(AA), AC(AC), DL(DL),
-        CostKind(CostKind), TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
+      : F(F), Builder(F.getContext(), InstSimplifyFolder(*DL)), TTI(TTI),
+        DT(DT), AA(AA), AC(AC), DL(DL), CostKind(CostKind),
+        TryEarlyFoldsOnly(TryEarlyFoldsOnly) {}
 
   bool run();
 
 private:
   Function &F;
-  IRBuilder<> Builder;
+  IRBuilder<InstSimplifyFolder> Builder;
   const TargetTransformInfo &TTI;
   const DominatorTree &DT;
   AAResults &AA;
@@ -113,6 +115,7 @@ private:
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
+  bool foldBitOpOfBitcasts(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool scalarizeVPIntrinsic(Instruction &I);
@@ -528,7 +531,7 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 /// Create a shuffle that translates (shifts) 1 element from the input vector
 /// to a new element location.
 static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
-                                 unsigned NewIndex, IRBuilder<> &Builder) {
+                                 unsigned NewIndex, IRBuilderBase &Builder) {
   // The shuffle mask is poison except for 1 lane that is being translated
   // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
   // ShufMask = { 2, poison, poison, poison }
@@ -544,7 +547,7 @@ static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
 /// unnecessary instructions.
 static ExtractElementInst *translateExtract(ExtractElementInst *ExtElt,
                                             unsigned NewIndex,
-                                            IRBuilder<> &Builder) {
+                                            IRBuilderBase &Builder) {
   // Shufflevectors can only be created for fixed-width vectors.
   Value *X = ExtElt->getVectorOperand();
   if (!isa<FixedVectorType>(X->getType()))
@@ -800,6 +803,66 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   Worklist.pushValue(NewIns0);
   Worklist.pushValue(NewIns1);
   replaceValue(I, *NewBO);
+  return true;
+}
+
+bool VectorCombine::foldBitOpOfBitcasts(Instruction &I) {
+  // Match: bitop(bitcast(x), bitcast(y)) -> bitcast(bitop(x, y))
+  Value *LHSSrc, *RHSSrc;
+  if (!match(&I, m_BitwiseLogic(m_BitCast(m_Value(LHSSrc)),
+                                m_BitCast(m_Value(RHSSrc)))))
+    return false;
+
+  // Source types must match
+  if (LHSSrc->getType() != RHSSrc->getType())
+    return false;
+  if (!LHSSrc->getType()->getScalarType()->isIntegerTy())
+    return false;
+
+  // Only handle vector types
+  auto *SrcVecTy = dyn_cast<FixedVectorType>(LHSSrc->getType());
+  auto *DstVecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!SrcVecTy || !DstVecTy)
+    return false;
+
+  // Same total bit width
+  assert(SrcVecTy->getPrimitiveSizeInBits() ==
+             DstVecTy->getPrimitiveSizeInBits() &&
+         "Bitcast should preserve total bit width");
+
+  // Cost Check :
+  // OldCost = bitlogic + 2*bitcasts
+  // NewCost = bitlogic + bitcast
+  auto *BinOp = cast<BinaryOperator>(&I);
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), DstVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, LHSSrc->getType(),
+                           TTI::CastContextHint::None) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, RHSSrc->getType(),
+                           TTI::CastContextHint::None);
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(BinOp->getOpcode(), SrcVecTy) +
+      TTI.getCastInstrCost(Instruction::BitCast, DstVecTy, SrcVecTy,
+                           TTI::CastContextHint::None);
+
+  LLVM_DEBUG(dbgs() << "Found a bitwise logic op of bitcasted values: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+
+  if (NewCost > OldCost)
+    return false;
+
+  // Create the operation on the source type
+  Value *NewOp = Builder.CreateBinOp(BinOp->getOpcode(), LHSSrc, RHSSrc,
+                                     BinOp->getName() + ".inner");
+  if (auto *NewBinOp = dyn_cast<BinaryOperator>(NewOp))
+    NewBinOp->copyIRFlags(BinOp);
+
+  Worklist.pushValue(NewOp);
+
+  // Bitcast the result back
+  Value *Result = Builder.CreateBitCast(NewOp, I.getType());
+  replaceValue(I, *Result);
   return true;
 }
 
@@ -1398,10 +1461,12 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
   LLVM_DEBUG(dbgs() << "Found two mergeable reductions: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
-  Value *VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
-  if (auto *PDInst = dyn_cast<PossiblyDisjointInst>(&I))
-    if (auto *PDVectorBO = dyn_cast<PossiblyDisjointInst>(VectorBO))
-      PDVectorBO->setIsDisjoint(PDInst->isDisjoint());
+  Value *VectorBO;
+  if (BinOpOpc == Instruction::Or)
+    VectorBO = Builder.CreateOr(V0, V1, "",
+                                cast<PossiblyDisjointInst>(I).isDisjoint());
+  else
+    VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
 
   Instruction *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
   replaceValue(I, *Rdx);
@@ -1458,7 +1523,7 @@ public:
   }
 
   /// Freeze the ToFreeze and update the use in \p User to use it.
-  void freeze(IRBuilder<> &Builder, Instruction &UserI) {
+  void freeze(IRBuilderBase &Builder, Instruction &UserI) {
     assert(isSafeWithFreeze() &&
            "should only be used when freezing is required");
     assert(is_contained(ToFreeze->users(), &UserI) &&
@@ -2556,7 +2621,7 @@ static Value *generateNewInstTree(ArrayRef<InstLane> Item, FixedVectorType *Ty,
                                   const SmallPtrSet<Use *, 4> &IdentityLeafs,
                                   const SmallPtrSet<Use *, 4> &SplatLeafs,
                                   const SmallPtrSet<Use *, 4> &ConcatLeafs,
-                                  IRBuilder<> &Builder,
+                                  IRBuilderBase &Builder,
                                   const TargetTransformInfo *TTI) {
   auto [FrontU, FrontLane] = Item.front();
 
@@ -2914,17 +2979,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
                     << "\n");
   LLVM_DEBUG(dbgs() << "  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
+  bool MadeChanges = false;
   if (NewCost < OldCost) {
     Builder.SetInsertPoint(Shuffle);
     Value *NewShuffle = Builder.CreateShuffleVector(
         Shuffle->getOperand(0), Shuffle->getOperand(1), ConcatMask);
     LLVM_DEBUG(dbgs() << "Created new shuffle: " << *NewShuffle << "\n");
     replaceValue(*Shuffle, *NewShuffle);
+    MadeChanges = true;
   }
 
   // See if we can re-use foldSelectShuffle, getting it to reduce the size of
   // the shuffle into a nicer order, as it can ignore the order of the shuffles.
-  return foldSelectShuffle(*Shuffle, true);
+  MadeChanges |= foldSelectShuffle(*Shuffle, true);
+  return MadeChanges;
 }
 
 /// Determine if its more efficient to fold:
@@ -3082,10 +3150,10 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
       auto *SSV = cast<ShuffleVectorInst>(SVOp0);
       SVOp0 = SSV->getOperand(0);
       SVOp1 = SSV->getOperand(1);
-      for (unsigned I = 0, E = Mask.size(); I != E; I++) {
-        if (Mask[I] >= static_cast<int>(SSV->getShuffleMask().size()))
+      for (int &Elem : Mask) {
+        if (Elem >= static_cast<int>(SSV->getShuffleMask().size()))
           return false;
-        Mask[I] = Mask[I] < 0 ? Mask[I] : SSV->getMaskValue(Mask[I]);
+        Elem = Elem < 0 ? Elem : SSV->getMaskValue(Elem);
       }
     }
     if (SVOp0 == Op1 && SVOp1 == Op0) {
@@ -3628,6 +3696,11 @@ bool VectorCombine::run() {
         break;
       case Instruction::BitCast:
         MadeChange |= foldBitcastShuffle(I);
+        break;
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
+        MadeChange |= foldBitOpOfBitcasts(I);
         break;
       default:
         MadeChange |= shrinkType(I);

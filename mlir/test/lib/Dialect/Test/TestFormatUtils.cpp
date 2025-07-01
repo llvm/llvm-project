@@ -381,3 +381,26 @@ void test::printAttrElideType(AsmPrinter &printer, Operation *op, TypeAttr type,
                               Attribute attr) {
   printer.printAttributeWithoutType(attr);
 }
+
+//===----------------------------------------------------------------------===//
+// CustomDirectiveDummyRegionRef
+//===----------------------------------------------------------------------===//
+
+ParseResult test::parseDummyRegionRef(OpAsmParser &parser, Region &region) {
+  return success();
+}
+
+void test::printDummyRegionRef(OpAsmPrinter &printer, Operation *op,
+                               Region &region) { /* do nothing */ }
+
+//===----------------------------------------------------------------------===//
+// CustomDirectiveDummySuccessorRef
+//===----------------------------------------------------------------------===//
+
+ParseResult test::parseDummySuccessorRef(OpAsmParser &parser,
+                                         Block *successor) {
+  return success();
+}
+
+void test::printDummySuccessorRef(OpAsmPrinter &printer, Operation *op,
+                                  Block *successor) { /* do nothing */ }

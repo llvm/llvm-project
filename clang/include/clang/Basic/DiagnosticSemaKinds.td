@@ -1767,7 +1767,9 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}"
+           "%TriviallyCopyable{trivially copyable}|"
+           "%Empty{empty}|"
+           "%StandardLayout{standard-layout}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1787,6 +1789,16 @@ def note_unsatisfied_trait_reason
            "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
+           "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%VirtualFunction{has a virtual function %1}|"
+           "%NonEmptyBase{has a base class %1 that is not empty}|"
+           "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
+           "%NonStandardLayoutBase{has a non-standard-layout base %1}|"
+           "%MixedAccess{has mixed access specifiers}|"
+           "%MixedAccessField{field %1 has a different access specifier than field %2}|"
+           "%MultipleDataBase{has multiple base classes with data members}|"
+           "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
+           "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"
@@ -13054,10 +13066,13 @@ def err_invalid_hlsl_resource_type: Error<
 def err_hlsl_spirv_only: Error<"%0 is only available for the SPIR-V target">;
 def err_hlsl_vk_literal_must_contain_constant: Error<"the argument to vk::Literal must be a vk::integral_constant">;
 
+def subst_hlsl_format_ranges: TextSubstitution<
+  "%select{t|u|b|s}0[%1;%select{%3]|unbounded)}2">;
+
 def err_hlsl_resource_range_overlap: Error<
-  "resource ranges %select{t|u|b|s}0[%1;%2] and %select{t|u|b|s}3[%4;%5] "
-  "overlap within space = %6 and visibility = "
-  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}7">;
+  "resource ranges %sub{subst_hlsl_format_ranges}0,1,2,3 and %sub{subst_hlsl_format_ranges}4,5,6,7 "
+  "overlap within space = %8 and visibility = "
+  "%select{All|Vertex|Hull|Domain|Geometry|Pixel|Amplification|Mesh}9">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<

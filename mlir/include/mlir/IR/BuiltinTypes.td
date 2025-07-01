@@ -839,6 +839,25 @@ def Builtin_MemRef : Builtin_Type<"MemRef", "memref", [
     ///
     bool areTrailingDimsContiguous(int64_t n);
 
+    /// Return the number of trailing dimensions that are contiguous.
+    ///
+    /// Examples:
+    ///   - memref<5x3x2xi8, strided<[6,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 3
+    ///   - memref<5x3x2xi8, strided<[12,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 2 (dimension 0 is non-contiguous)
+    ///   - memref<5x3x2xi8, strided<[12,4,1]>>, the number of collapsable
+    ///     trailing dimensions is 1 (dimension 1 is non-contiguous)
+    ///   - memref<5x3x2xi8, strided<[12,4,2]>>, the number of collapsable
+    ///     trailing dimensions is 0 (dimension 2 is non-contiguous)
+    ///   - memref<?x3x2xi8, strided<[6,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 3
+    ///   - memref<?x3x2xi8, strided<[12,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 2 (dimension 0 is non-contiguous)
+    ///   - memref<5x?x2xi8, strided<[?,2,1]>>, the number of collapsable
+    ///     trailing dimensions is 2 (stride 0 is dynamic)
+    int64_t getNumContiguousTrailingDims();
+
     /// Return a version of this type with identity layout if it can be
     /// determined statically that the layout is the canonical contiguous
     /// strided layout. Otherwise pass the layout into `simplifyAffineMap`

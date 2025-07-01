@@ -152,9 +152,9 @@ public:
   };
 
   // Implement isa<T> support.
-  static inline bool classof(const SymExpr *SE) {
-    Kind k = SE->getKind();
-    return k >= BEGIN_SYMBOLS && k <= END_SYMBOLS;
+  static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
+  static constexpr bool classof(Kind K) {
+    return K >= BEGIN_SYMBOLS && K <= END_SYMBOLS;
   }
 };
 

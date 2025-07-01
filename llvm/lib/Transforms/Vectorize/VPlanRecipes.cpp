@@ -49,6 +49,8 @@ using VectorParts = SmallVector<Value *, 2>;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
+  case VPExpressionSC:
+    return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPInterleaveSC:
@@ -73,8 +75,6 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
-  case VPExtendedReductionSC:
-  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -99,6 +99,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
+  case VPExpressionSC:
+    return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
@@ -123,8 +125,6 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
-  case VPExtendedReductionSC:
-  case VPMulAccumulateReductionSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -147,6 +147,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
+  case VPExpressionSC:
+    return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
@@ -163,8 +165,6 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
-  case VPExtendedReductionSC:
-  case VPMulAccumulateReductionSC:
   case VPScalarIVStepsSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
@@ -415,7 +415,63 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPIRMetadata(), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
+  assert((getNumOperandsForOpcode(Opcode) == -1u ||
+          getNumOperandsForOpcode(Opcode) == getNumOperands()) &&
+         "number of operands does not match opcode");
 }
+
+#ifndef NDEBUG
+unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
+  if (Instruction::isUnaryOp(Opcode) || Instruction::isCast(Opcode))
+    return 1;
+
+  if (Instruction::isBinaryOp(Opcode))
+    return 2;
+
+  switch (Opcode) {
+  case VPInstruction::StepVector:
+    return 0;
+  case Instruction::Alloca:
+  case Instruction::ExtractValue:
+  case Instruction::Freeze:
+  case Instruction::Load:
+  case VPInstruction::AnyOf:
+  case VPInstruction::BranchOnCond:
+  case VPInstruction::CalculateTripCountMinusVF:
+  case VPInstruction::CanonicalIVIncrementForPart:
+  case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ExtractLastElement:
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::FirstActiveLane:
+  case VPInstruction::Not:
+    return 1;
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case Instruction::Store:
+  case VPInstruction::ActiveLaneMask:
+  case VPInstruction::BranchOnCount:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::FirstOrderRecurrenceSplice:
+  case VPInstruction::LogicalAnd:
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WideIVStep:
+    return 2;
+  case Instruction::Select:
+  case VPInstruction::ComputeAnyOfResult:
+  case VPInstruction::ReductionStartVector:
+    return 3;
+  case VPInstruction::ComputeFindIVResult:
+    return 4;
+  case Instruction::Call:
+  case Instruction::GetElementPtr:
+  case Instruction::PHI:
+  case Instruction::Switch:
+    // Cannot determine the number of operands from the opcode.
+    return -1u;
+  }
+  llvm_unreachable("all cases should be handled above");
+}
+#endif
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this);
@@ -495,6 +551,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case Instruction::ExtractElement: {
     assert(State.VF.isVector() && "Only extract elements from vectors");
+    if (getOperand(1)->isLiveIn()) {
+      unsigned IdxToExtract =
+          cast<ConstantInt>(getOperand(1)->getLiveInIRValue())->getZExtValue();
+      return State.get(getOperand(0), VPLane(IdxToExtract));
+    }
     Value *Vec = State.get(getOperand(0));
     Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
     return Builder.CreateExtractElement(Vec, Idx, Name);
@@ -608,6 +669,34 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSplat(
         State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
   }
+  case VPInstruction::BuildStructVector: {
+    // For struct types, we need to build a new 'wide' struct type, where each
+    // element is widened, i.e., we create a struct of vectors.
+    auto *StructTy =
+        cast<StructType>(State.TypeAnalysis.inferScalarType(getOperand(0)));
+    Value *Res = PoisonValue::get(toVectorizedTy(StructTy, State.VF));
+    for (const auto &[LaneIndex, Op] : enumerate(operands())) {
+      for (unsigned FieldIndex = 0; FieldIndex != StructTy->getNumElements();
+           FieldIndex++) {
+        Value *ScalarValue =
+            Builder.CreateExtractValue(State.get(Op, true), FieldIndex);
+        Value *VectorValue = Builder.CreateExtractValue(Res, FieldIndex);
+        VectorValue =
+            Builder.CreateInsertElement(VectorValue, ScalarValue, LaneIndex);
+        Res = Builder.CreateInsertValue(Res, VectorValue, FieldIndex);
+      }
+    }
+    return Res;
+  }
+  case VPInstruction::BuildVector: {
+    auto *ScalarTy = State.TypeAnalysis.inferScalarType(getOperand(0));
+    auto NumOfElements = ElementCount::getFixed(getNumOperands());
+    Value *Res = PoisonValue::get(toVectorizedTy(ScalarTy, NumOfElements));
+    for (const auto &[Idx, Op] : enumerate(operands()))
+      Res = State.Builder.CreateInsertElement(Res, State.get(Op, true),
+                                              State.Builder.getInt32(Idx));
+    return Res;
+  }
   case VPInstruction::ReductionStartVector: {
     if (State.VF.isScalar())
       return State.get(getOperand(0), true);
@@ -636,14 +725,14 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return createAnyOfReduction(Builder, ReducedPartRdx,
                                 State.get(getOperand(1), VPLane(0)), OrigPhi);
   }
-  case VPInstruction::ComputeFindLastIVResult: {
+  case VPInstruction::ComputeFindIVResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-    [[maybe_unused]] RecurKind RK = RdxDesc.getRecurrenceKind();
-    assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
+    RecurKind RK = RdxDesc.getRecurrenceKind();
+    assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&
            "In-loop FindLastIV reduction is not supported yet");
@@ -652,14 +741,24 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // sentinel value, followed by one operand for each part of the reduction.
     unsigned UF = getNumOperands() - 3;
     Value *ReducedPartRdx = State.get(getOperand(3));
-    for (unsigned Part = 1; Part < UF; ++Part) {
-      ReducedPartRdx = createMinMaxOp(Builder, RecurKind::SMax, ReducedPartRdx,
-                                      State.get(getOperand(3 + Part)));
+    RecurKind MinMaxKind;
+    bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RK);
+    if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) {
+      MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
+    } else {
+      assert(RecurrenceDescriptor::isFindFirstIVRecurrenceKind(RK) &&
+             "Kind must either be FindLastIV or FindFirstIV");
+      assert(IsSigned && "Only FindFirstIV with SMax is currently supported");
+      MinMaxKind = RecurKind::SMin;
     }
+    for (unsigned Part = 1; Part < UF; ++Part)
+      ReducedPartRdx = createMinMaxOp(Builder, MinMaxKind, ReducedPartRdx,
+                                      State.get(getOperand(3 + Part)));
 
     Value *Start = State.get(getOperand(1), true);
     Value *Sentinel = getOperand(2)->getLiveInIRValue();
-    return createFindLastIVReduction(Builder, ReducedPartRdx, Start, Sentinel);
+    return createFindLastIVReduction(Builder, ReducedPartRdx, RK, Start,
+                                     Sentinel);
   }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
@@ -669,10 +768,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
 
     RecurKind RK = RdxDesc.getRecurrenceKind();
-    assert(!RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK) &&
-           "should be handled by ComputeFindLastIVResult");
+    assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
+           "should be handled by ComputeFindIVResult");
 
-    Type *ResultTy = State.TypeAnalysis.inferScalarType(this);
     // The recipe's operands are the reduction phi, followed by one operand for
     // each part of the reduction.
     unsigned UF = getNumOperands() - 1;
@@ -684,15 +782,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (hasFastMathFlags())
       Builder.setFastMathFlags(getFastMathFlags());
 
-    // If the vector reduction can be performed in a smaller type, we truncate
-    // then extend the loop exit value to enable InstCombine to evaluate the
-    // entire expression in the smaller type.
-    // TODO: Handle this in truncateToMinBW.
-    if (State.VF.isVector() && ResultTy != RdxDesc.getRecurrenceType()) {
-      Type *RdxVecTy = VectorType::get(RdxDesc.getRecurrenceType(), State.VF);
-      for (unsigned Part = 0; Part < UF; ++Part)
-        RdxParts[Part] = Builder.CreateTrunc(RdxParts[Part], RdxVecTy);
-    }
     // Reduce all of the unrolled parts into a single vector.
     Value *ReducedPartRdx = RdxParts[0];
     if (PhiR->isOrdered()) {
@@ -717,13 +806,6 @@ Value *VPInstruction::generate(VPTransformState &State) {
       // All ops in the reduction inherit fast-math-flags from the recurrence
       // descriptor.
       ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
-
-      // If the reduction can be performed in a smaller type, we need to extend
-      // the reduction to the wider type before we branch to the original loop.
-      if (ResultTy != RdxDesc.getRecurrenceType())
-        ReducedPartRdx = RdxDesc.isSigned()
-                             ? Builder.CreateSExt(ReducedPartRdx, ResultTy)
-                             : Builder.CreateZExt(ReducedPartRdx, ResultTy);
     }
 
     return ReducedPartRdx;
@@ -758,13 +840,38 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreatePtrAdd(Ptr, Addend, Name, getGEPNoWrapFlags());
   }
   case VPInstruction::AnyOf: {
-    Value *A = State.get(getOperand(0));
-    return Builder.CreateOrReduce(A);
+    Value *Res = State.get(getOperand(0));
+    for (VPValue *Op : drop_begin(operands()))
+      Res = Builder.CreateOr(Res, State.get(Op));
+    return Builder.CreateOrReduce(Res);
   }
   case VPInstruction::FirstActiveLane: {
-    Value *Mask = State.get(getOperand(0));
-    return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
-                                                true, Name);
+    if (getNumOperands() == 1) {
+      Value *Mask = State.get(getOperand(0));
+      return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
+                                                  true, Name);
+    }
+    // If there are multiple operands, create a chain of selects to pick the
+    // first operand with an active lane and add the number of lanes of the
+    // preceding operands.
+    Value *RuntimeVF =
+        getRuntimeVF(State.Builder, State.Builder.getInt64Ty(), State.VF);
+    unsigned LastOpIdx = getNumOperands() - 1;
+    Value *Res = nullptr;
+    for (int Idx = LastOpIdx; Idx >= 0; --Idx) {
+      Value *TrailingZeros = Builder.CreateCountTrailingZeroElems(
+          Builder.getInt64Ty(), State.get(getOperand(Idx)), true, Name);
+      Value *Current = Builder.CreateAdd(
+          Builder.CreateMul(RuntimeVF, Builder.getInt64(Idx)), TrailingZeros);
+      if (Res) {
+        Value *Cmp = Builder.CreateICmpNE(TrailingZeros, RuntimeVF);
+        Res = Builder.CreateSelect(Cmp, Current, Res);
+      } else {
+        Res = Current;
+      }
+    }
+
+    return Res;
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -860,7 +967,7 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == Instruction::ExtractElement ||
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
-         getOpcode() == VPInstruction::ComputeFindLastIVResult ||
+         getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
@@ -894,10 +1001,11 @@ void VPInstruction::execute(VPTransformState &State) {
   if (!hasResult())
     return;
   assert(GeneratedValue && "generate must produce a value");
-  assert(
-      (GeneratedValue->getType()->isVectorTy() == !GeneratesPerFirstLaneOnly ||
-       State.VF.isScalar()) &&
-      "scalar value but not only first lane defined");
+  assert((((GeneratedValue->getType()->isVectorTy() ||
+            GeneratedValue->getType()->isStructTy()) ==
+           !GeneratesPerFirstLaneOnly) ||
+          State.VF.isScalar()) &&
+         "scalar value but not only first lane defined");
   State.set(this, GeneratedValue,
             /*IsScalar*/ GeneratesPerFirstLaneOnly);
 }
@@ -911,6 +1019,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractLastElement:
@@ -959,7 +1069,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindLastIVResult:
+  case VPInstruction::ComputeFindIVResult:
     return Op == getOperand(1);
   };
   llvm_unreachable("switch should return");
@@ -1033,6 +1143,12 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
+  case VPInstruction::BuildStructVector:
+    O << "buildstructvector";
+    break;
+  case VPInstruction::BuildVector:
+    O << "buildvector";
+    break;
   case VPInstruction::ExtractLastElement:
     O << "extract-last-element";
     break;
@@ -1042,8 +1158,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";
     break;
-  case VPInstruction::ComputeFindLastIVResult:
-    O << "compute-find-last-iv-result";
+  case VPInstruction::ComputeFindIVResult:
+    O << "compute-find-iv-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
@@ -2447,30 +2563,182 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             Ctx.CostKind);
 }
 
-InstructionCost
-VPExtendedReductionRecipe::computeCost(ElementCount VF,
-                                       VPCostContext &Ctx) const {
-  unsigned Opcode = RecurrenceDescriptor::getOpcode(getRecurrenceKind());
-  Type *RedTy = Ctx.Types.inferScalarType(this);
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp()), VF));
-  assert(RedTy->isIntegerTy() &&
-         "ExtendedReduction only support integer type currently.");
-  return Ctx.TTI.getExtendedReductionCost(Opcode, isZExt(), RedTy, SrcVecTy,
-                                          std::nullopt, Ctx.CostKind);
+VPExpressionRecipe::VPExpressionRecipe(
+    ExpressionTypes ExpressionType,
+    ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
+    : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
+      ExpressionRecipes(SetVector<VPSingleDefRecipe *>(
+                            ExpressionRecipes.begin(), ExpressionRecipes.end())
+                            .takeVector()),
+      ExpressionType(ExpressionType) {
+  assert(!ExpressionRecipes.empty() && "Nothing to combine?");
+  assert(
+      none_of(ExpressionRecipes,
+              [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); }) &&
+      "expression cannot contain recipes with side-effects");
+
+  // Maintain a copy of the expression recipes as a set of users.
+  SmallPtrSet<VPUser *, 4> ExpressionRecipesAsSetOfUsers;
+  for (auto *R : ExpressionRecipes)
+    ExpressionRecipesAsSetOfUsers.insert(R);
+
+  // Recipes in the expression, except the last one, must only be used by
+  // (other) recipes inside the expression. If there are other users, external
+  // to the expression, use a clone of the recipe for external users.
+  for (VPSingleDefRecipe *R : ExpressionRecipes) {
+    if (R != ExpressionRecipes.back() &&
+        any_of(R->users(), [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
+          return !ExpressionRecipesAsSetOfUsers.contains(U);
+        })) {
+      // There are users outside of the expression. Clone the recipe and use the
+      // clone those external users.
+      VPSingleDefRecipe *CopyForExtUsers = R->clone();
+      R->replaceUsesWithIf(CopyForExtUsers, [&ExpressionRecipesAsSetOfUsers](
+                                                VPUser &U, unsigned) {
+        return !ExpressionRecipesAsSetOfUsers.contains(&U);
+      });
+      CopyForExtUsers->insertBefore(R);
+    }
+    if (R->getParent())
+      R->removeFromParent();
+  }
+
+  // Internalize all external operands to the expression recipes. To do so,
+  // create new temporary VPValues for all operands defined by a recipe outside
+  // the expression. The original operands are added as operands of the
+  // VPExpressionRecipe itself.
+  for (auto *R : ExpressionRecipes) {
+    for (const auto &[Idx, Op] : enumerate(R->operands())) {
+      auto *Def = Op->getDefiningRecipe();
+      if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
+        continue;
+      addOperand(Op);
+      LiveInPlaceholders.push_back(new VPValue());
+      R->setOperand(Idx, LiveInPlaceholders.back());
+    }
+  }
 }
 
-InstructionCost
-VPMulAccumulateReductionRecipe::computeCost(ElementCount VF,
-                                            VPCostContext &Ctx) const {
+void VPExpressionRecipe::decompose() {
+  for (auto *R : ExpressionRecipes)
+    R->insertBefore(this);
+
+  for (const auto &[Idx, Op] : enumerate(operands()))
+    LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
+
+  replaceAllUsesWith(ExpressionRecipes.back());
+  ExpressionRecipes.clear();
+}
+
+InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
+                                                VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
-  auto *SrcVecTy =
-      cast<VectorType>(toVectorTy(Ctx.Types.inferScalarType(getVecOp0()), VF));
-  return Ctx.TTI.getMulAccReductionCost(isZExt(), RedTy, SrcVecTy,
-                                        Ctx.CostKind);
+  auto *SrcVecTy = cast<VectorType>(
+      toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
+  assert(RedTy->isIntegerTy() &&
+         "VPExpressionRecipe only supports integer types currently.");
+  switch (ExpressionType) {
+  case ExpressionTypes::ExtendedReduction: {
+    unsigned Opcode = RecurrenceDescriptor::getOpcode(
+        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
+    return Ctx.TTI.getExtendedReductionCost(
+        Opcode,
+        cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
+            Instruction::ZExt,
+        RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
+  }
+  case ExpressionTypes::MulAccReduction:
+    return Ctx.TTI.getMulAccReductionCost(false, RedTy, SrcVecTy, Ctx.CostKind);
+
+  case ExpressionTypes::ExtMulAccReduction:
+    return Ctx.TTI.getMulAccReductionCost(
+        cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
+            Instruction::ZExt,
+        RedTy, SrcVecTy, Ctx.CostKind);
+  }
+}
+
+bool VPExpressionRecipe::mayReadOrWriteMemory() const {
+  return any_of(ExpressionRecipes, [](VPSingleDefRecipe *R) {
+    return R->mayReadFromMemory() || R->mayWriteToMemory();
+  });
+}
+
+bool VPExpressionRecipe::mayHaveSideEffects() const {
+  assert(
+      none_of(ExpressionRecipes,
+              [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); }) &&
+      "expression cannot contain recipes with side-effects");
+  return false;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXPRESSION ";
+  printAsOperand(O, SlotTracker);
+  O << " = ";
+  auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
+  unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+
+  switch (ExpressionType) {
+  case ExpressionTypes::ExtendedReduction: {
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    O << " +";
+    O << " reduce." << Instruction::getOpcodeName(Opcode) << " (";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    Red->printFlags(O);
+
+    auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+      << *Ext0->getResultType();
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << ")";
+    break;
+  }
+  case ExpressionTypes::MulAccReduction:
+  case ExpressionTypes::ExtMulAccReduction: {
+    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    O << " + ";
+    O << "reduce."
+      << Instruction::getOpcodeName(
+             RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
+      << " (";
+    O << "mul";
+    bool IsExtended = ExpressionType == ExpressionTypes::ExtMulAccReduction;
+    auto *Mul = cast<VPWidenRecipe>(IsExtended ? ExpressionRecipes[2]
+                                               : ExpressionRecipes[0]);
+    Mul->printFlags(O);
+    if (IsExtended)
+      O << "(";
+    getOperand(0)->printAsOperand(O, SlotTracker);
+    if (IsExtended) {
+      auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+      O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
+        << *Ext0->getResultType() << "), (";
+    } else {
+      O << ", ";
+    }
+    getOperand(1)->printAsOperand(O, SlotTracker);
+    if (IsExtended) {
+      auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
+      O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
+        << *Ext1->getResultType() << ")";
+    }
+    if (Red->isConditional()) {
+      O << ", ";
+      Red->getCondOp()->printAsOperand(O, SlotTracker);
+    }
+    O << ")";
+    break;
+  }
+  }
+}
+
 void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
   O << Indent << "REDUCE ";
@@ -2513,58 +2781,6 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 
-void VPExtendedReductionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                      VPSlotTracker &SlotTracker) const {
-  O << Indent << "EXTENDED-REDUCE ";
-  printAsOperand(O, SlotTracker);
-  O << " = ";
-  getChainOp()->printAsOperand(O, SlotTracker);
-  O << " +";
-  O << " reduce."
-    << Instruction::getOpcodeName(
-           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
-    << " (";
-  getVecOp()->printAsOperand(O, SlotTracker);
-  printFlags(O);
-  O << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType();
-  if (isConditional()) {
-    O << ", ";
-    getCondOp()->printAsOperand(O, SlotTracker);
-  }
-  O << ")";
-}
-
-void VPMulAccumulateReductionRecipe::print(raw_ostream &O, const Twine &Indent,
-                                           VPSlotTracker &SlotTracker) const {
-  O << Indent << "MULACC-REDUCE ";
-  printAsOperand(O, SlotTracker);
-  O << " = ";
-  getChainOp()->printAsOperand(O, SlotTracker);
-  O << " + ";
-  O << "reduce."
-    << Instruction::getOpcodeName(
-           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
-    << " (";
-  O << "mul";
-  printFlags(O);
-  if (isExtended())
-    O << "(";
-  getVecOp0()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
-      << "), (";
-  else
-    O << ", ";
-  getVecOp1()->printAsOperand(O, SlotTracker);
-  if (isExtended())
-    O << " " << Instruction::getOpcodeName(ExtOp) << " to " << *getResultType()
-      << ")";
-  if (isConditional()) {
-    O << ", ";
-    getCondOp()->printAsOperand(O, SlotTracker);
-  }
-  O << ")";
-}
 #endif
 
 /// A helper function to scalarize a single Instruction in the innermost loop.
@@ -2627,45 +2843,27 @@ static void scalarizeInstruction(const Instruction *Instr,
 
 void VPReplicateRecipe::execute(VPTransformState &State) {
   Instruction *UI = getUnderlyingInstr();
-  if (State.Lane) { // Generate a single instance.
-    assert((State.VF.isScalar() || !isSingleScalar()) &&
-           "uniform recipe shouldn't be predicated");
-    assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
-    scalarizeInstruction(UI, this, *State.Lane, State);
-    // Insert scalar instance packing it into a vector.
-    if (State.VF.isVector() && shouldPack()) {
-      Value *WideValue;
-      // If we're constructing lane 0, initialize to start from poison.
-      if (State.Lane->isFirstLane()) {
-        assert(!State.VF.isScalable() && "VF is assumed to be non scalable.");
-        WideValue = PoisonValue::get(VectorType::get(UI->getType(), State.VF));
-      } else {
-        WideValue = State.get(this);
-      }
-      State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
-                                                          *State.Lane));
-    }
-    return;
-  }
 
-  if (IsSingleScalar) {
-    // Uniform within VL means we need to generate lane 0.
+  if (!State.Lane) {
+    assert(IsSingleScalar && "VPReplicateRecipes outside replicate regions "
+                             "must have already been unrolled");
     scalarizeInstruction(UI, this, VPLane(0), State);
     return;
   }
 
-  // A store of a loop varying value to a uniform address only needs the last
-  // copy of the store.
-  if (isa<StoreInst>(UI) && vputils::isSingleScalar(getOperand(1))) {
-    auto Lane = VPLane::getLastLaneForVF(State.VF);
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
-    return;
+  assert((State.VF.isScalar() || !isSingleScalar()) &&
+         "uniform recipe shouldn't be predicated");
+  assert(!State.VF.isScalable() && "Can't scalarize a scalable vector");
+  scalarizeInstruction(UI, this, *State.Lane, State);
+  // Insert scalar instance packing it into a vector.
+  if (State.VF.isVector() && shouldPack()) {
+    Value *WideValue =
+        State.Lane->isFirstLane()
+            ? PoisonValue::get(VectorType::get(UI->getType(), State.VF))
+            : State.get(this);
+    State.set(this, State.packScalarIntoVectorizedValue(this, WideValue,
+                                                        *State.Lane));
   }
-
-  // Generate scalar instances for all VF lanes.
-  const unsigned EndLane = State.VF.getFixedValue();
-  for (unsigned Lane = 0; Lane < EndLane; ++Lane)
-    scalarizeInstruction(UI, this, VPLane(Lane), State);
 }
 
 bool VPReplicateRecipe::shouldPack() const {
