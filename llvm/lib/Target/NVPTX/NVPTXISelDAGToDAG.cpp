@@ -543,7 +543,7 @@ unsigned int NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
 
 unsigned int NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
   // No "scope" modifier for SM/PTX versions which do not support scoped atomics
-  if (!Subtarget->hasAtomScope() || !Subtarget->hasMemoryOrdering())
+  if (!Subtarget->hasAtomScope())
     return NVPTX::Scope::Thread;
   return Scopes[N->getSyncScopeID()];
 }
