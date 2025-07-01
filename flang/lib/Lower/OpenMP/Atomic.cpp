@@ -157,6 +157,7 @@ struct WithType {
       }
       break;
     case common::TypeCategory::Derived:
+      (void)Derived;
       break;
     }
     llvm_unreachable("Unhandled type");
@@ -438,7 +439,7 @@ genReducedMinMax(const semantics::SomeExpr &orig,
                  const semantics::SomeExpr *atomArg,
                  const std::vector<semantics::SomeExpr> &args) {
   // Take a list of arguments to a min/max operation, e.g. [a0, a1, ...]
-  // One of the a_i's, say a_t, must be atom (or a convert of atom).
+  // One of the a_i's, say a_t, must be atomArg.
   // Generate tmp = min/max(a0, a1, ... [except a_t]). Then generate
   // call = min/max(a_t, tmp).
   // Return "call".
@@ -608,13 +609,14 @@ genAtomicUpdate(lower::AbstractConverter &converter,
   auto [opcode, args] = evaluate::GetTopLevelOperation(input);
   assert(!args.empty() && "Update operation without arguments");
 
-  const semantics::SomeExpr *atomArg = [&]() {
+  // Pass args as an argument to avoid capturing a structured binding.
+  const semantics::SomeExpr *atomArg = [&](auto &args) {
     for (const semantics::SomeExpr &e : args) {
       if (evaluate::IsSameOrConvertOf(e, atom))
         return &e;
     }
     llvm_unreachable("Atomic variable not in argument list");
-  }();
+  }(args);
 
   if (opcode == evaluate::operation::Operator::Min ||
       opcode == evaluate::operation::Operator::Max) {
