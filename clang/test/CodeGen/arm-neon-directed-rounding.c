@@ -166,7 +166,7 @@ float32x4_t test_vrndnq_f32(float32x4_t a) {
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
 // CHECK-A32-NEXT:    [[VRNDP_V_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
-// CHECK-A32-NEXT:    [[VRNDP_V1_I:%.*]] = call <2 x float> @llvm.arm.neon.vrintp.v2f32(<2 x float> [[VRNDP_V_I]])
+// CHECK-A32-NEXT:    [[VRNDP_V1_I:%.*]] = call <2 x float> @llvm.ceil.v2f32(<2 x float> [[VRNDP_V_I]])
 // CHECK-A32-NEXT:    [[VRNDP_V2_I:%.*]] = bitcast <2 x float> [[VRNDP_V1_I]] to <8 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[VRNDP_V2_I]] to <2 x i32>
 // CHECK-A32-NEXT:    [[TMP3:%.*]] = bitcast <2 x i32> [[TMP2]] to <2 x float>
@@ -191,7 +191,7 @@ float32x2_t test_vrndp_f32(float32x2_t a) {
 // CHECK-A32-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
 // CHECK-A32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
 // CHECK-A32-NEXT:    [[VRNDPQ_V_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
-// CHECK-A32-NEXT:    [[VRNDPQ_V1_I:%.*]] = call <4 x float> @llvm.arm.neon.vrintp.v4f32(<4 x float> [[VRNDPQ_V_I]])
+// CHECK-A32-NEXT:    [[VRNDPQ_V1_I:%.*]] = call <4 x float> @llvm.ceil.v4f32(<4 x float> [[VRNDPQ_V_I]])
 // CHECK-A32-NEXT:    [[VRNDPQ_V2_I:%.*]] = bitcast <4 x float> [[VRNDPQ_V1_I]] to <16 x i8>
 // CHECK-A32-NEXT:    [[TMP2:%.*]] = bitcast <16 x i8> [[VRNDPQ_V2_I]] to <4 x i32>
 // CHECK-A32-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <4 x float>
