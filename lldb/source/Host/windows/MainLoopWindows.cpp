@@ -125,7 +125,7 @@ class SocketEvent : public MainLoopWindows::IOEvent {
 public:
   explicit SocketEvent(SOCKET socket)
       : IOEvent((IOObject::WaitableHandle)WSACreateEvent()), m_socket(socket) {
-    assert(event != WSA_INVALID_EVENT);
+    assert(m_event != WSA_INVALID_EVENT);
   }
 
   ~SocketEvent() override { WSACloseEvent((HANDLE)m_event); }
