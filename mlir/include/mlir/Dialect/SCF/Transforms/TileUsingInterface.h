@@ -272,9 +272,10 @@ FailureOr<SmallVector<Operation *>> yieldReplacementForFusedProducer(
 struct SCFTileAndFuseResult {
   /// List of untiled operations that were fused with the tiled consumer.
   llvm::SetVector<Operation *> fusedProducers;
-  /// List of tiled and fused operations generated. The first one in this list
-  /// is guaranteed to be the tiled operations generated during tiling of the
-  /// generated operation.
+  /// List of tiled and fused operations generated. The first element is always
+  /// the tiled version of the original consumer operation processed by
+  /// `tileConsumerAndFuseProducersUsingSCF`, followed by any operations that
+  /// were fused with it.
   llvm::SetVector<Operation *> tiledAndFusedOps;
   /// The `scf.for` operations that iterate over the tiles.
   SmallVector<LoopLikeOpInterface> loops;
@@ -312,19 +313,23 @@ tileConsumerAndFuseProducersUsingSCF(RewriterBase &rewriter,
                                      TilingInterface consumer,
                                      const SCFTileAndFuseOptions &options);
 
-/// Fuse the consumer of the source of `candidateSliceOp` by computing the
-/// required slice of the consumer in-place.  Note that the method
-/// replaces the uses of `candidateSliceOp` with the tiled and fused consumer
-/// value but does not delete the slice operation.
+/// Fuse the consumer `candidateSlices` by computing the required slice of the
+/// consumer in-place. All the entries of `candidateSlices` are expected to map
+/// to the same consumer. The method returns an error if the consumer cannot be
+/// tiled in a manner that is consistent for all the passed slices. Note that
+/// the method replaces the uses of `candidateSlices` with the tiled and fused
+/// consumer value but does not delete the slice operations.
 struct SCFFuseConsumerOfSliceResult {
-  OpOperand *origConsumerOperand; // Original untiled consumer's operand.
-  OpOperand
-      *tiledAndFusedConsumerOperand; // Tiled and fused consumer's operand.
+  // Original untiled consumer operands.
+  SmallVector<OpOperand *> origConsumerOperands;
+  // Tiled and fused consumer operands.
+  SmallVector<OpOperand *> tiledAndFusedConsumerOperands;
   SmallVector<Operation *> tiledOps;
 };
 FailureOr<scf::SCFFuseConsumerOfSliceResult>
-tileAndFuseConsumerOfSlice(RewriterBase &rewriter, Operation *candidateSliceOp,
-                           MutableArrayRef<LoopLikeOpInterface> loops);
+tileAndFuseConsumerOfSlices(RewriterBase &rewriter,
+                            ArrayRef<Operation *> candidateSlices,
+                            MutableArrayRef<LoopLikeOpInterface> loops);
 
 /// Method to lower an `op` that implements the `TilingInterface` to
 /// loops/scalars.

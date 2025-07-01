@@ -33,13 +33,7 @@ define internal i32 @foo() {
 ; CHECK-NEXT:    st.param.b64 [param1], %rd4;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    prototype_0 : .callprototype (.param .b32 _) _ (.param .align 1 .b8 _[1], .param .b64 _);
-; CHECK-NEXT:    call (retval0),
-; CHECK-NEXT:    %rd1,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    )
-; CHECK-NEXT:    , prototype_0;
+; CHECK-NEXT:    call (retval0), %rd1, (param0, param1), prototype_0;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
@@ -76,13 +70,7 @@ define internal i32 @bar() {
 ; CHECK-NEXT:    st.param.b64 [param1], %rd5;
 ; CHECK-NEXT:    .param .b32 retval0;
 ; CHECK-NEXT:    prototype_1 : .callprototype (.param .b32 _) _ (.param .align 8 .b8 _[8], .param .b64 _);
-; CHECK-NEXT:    call (retval0),
-; CHECK-NEXT:    %rd1,
-; CHECK-NEXT:    (
-; CHECK-NEXT:    param0,
-; CHECK-NEXT:    param1
-; CHECK-NEXT:    )
-; CHECK-NEXT:    , prototype_1;
+; CHECK-NEXT:    call (retval0), %rd1, (param0, param1), prototype_1;
 ; CHECK-NEXT:    ld.param.b32 %r1, [retval0];
 ; CHECK-NEXT:    } // callseq 1
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;

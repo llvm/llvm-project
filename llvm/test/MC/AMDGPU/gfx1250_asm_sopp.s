@@ -16,3 +16,15 @@ s_wait_xcnt 0xf
 s_setprio_inc_wg 100
 // GFX1250: [0x64,0x00,0xbe,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_monitor_sleep 1
+// GFX1250: s_monitor_sleep 1                       ; encoding: [0x01,0x00,0x84,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_monitor_sleep 32768
+// GFX1250: s_monitor_sleep 0x8000                  ; encoding: [0x00,0x80,0x84,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+s_monitor_sleep 0
+// GFX1250: s_monitor_sleep 0                       ; encoding: [0x00,0x00,0x84,0xbf]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU

@@ -308,10 +308,8 @@ void WinException::endFuncletImpl() {
 const MCExpr *WinException::create32bitRef(const MCSymbol *Value) {
   if (!Value)
     return MCConstantExpr::create(0, Asm->OutContext);
-  return MCSymbolRefExpr::create(Value, useImageRel32
-                                            ? MCSymbolRefExpr::VK_COFF_IMGREL32
-                                            : MCSymbolRefExpr::VK_None,
-                                 Asm->OutContext);
+  auto Spec = useImageRel32 ? uint16_t(MCSymbolRefExpr::VK_COFF_IMGREL32) : 0;
+  return MCSymbolRefExpr::create(Value, Spec, Asm->OutContext);
 }
 
 const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {

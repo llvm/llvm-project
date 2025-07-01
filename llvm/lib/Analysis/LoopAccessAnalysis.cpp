@@ -190,9 +190,9 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
 
 /// Returns \p A + \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
-static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
-                                   ScalarEvolution &SE) {
-  if (!SE.willNotOverflow(Instruction::Add, false, A, B))
+static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
+                                     ScalarEvolution &SE) {
+  if (!SE.willNotOverflow(Instruction::Add, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getAddExpr(A, B);
 }
@@ -201,7 +201,7 @@ static const SCEV *addSCEVOverflow(const SCEV *A, const SCEV *B,
 /// return nullptr. \p A and \p B must have the same type.
 static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
                                    ScalarEvolution &SE) {
-  if (!SE.willNotOverflow(Instruction::Mul, false, A, B))
+  if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getMulExpr(A, B);
 }
@@ -240,11 +240,11 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
       SE.getMinusSCEV(AR->getStart(), StartPtr), WiderTy);
 
   const SCEV *OffsetAtLastIter =
-      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, false), SE);
+      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
   if (!OffsetAtLastIter)
     return false;
 
-  const SCEV *OffsetEndBytes = addSCEVOverflow(
+  const SCEV *OffsetEndBytes = addSCEVNoOverflow(
       OffsetAtLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
   if (!OffsetEndBytes)
     return false;
@@ -253,7 +253,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
     // For positive steps, check if
     //  (AR->getStart() - StartPtr) + (MaxBTC  * Step) + EltSize <= DerefBytes,
     // while making sure none of the computations unsigned wrap themselves.
-    const SCEV *EndBytes = addSCEVOverflow(StartOffset, OffsetEndBytes, SE);
+    const SCEV *EndBytes = addSCEVNoOverflow(StartOffset, OffsetEndBytes, SE);
     if (!EndBytes)
       return false;
     return SE.isKnownPredicate(CmpInst::ICMP_ULE, EndBytes,
@@ -949,18 +949,12 @@ getStrideFromAddRec(const SCEVAddRecExpr *AR, const Loop *Lp, Type *AccessTy,
   int64_t Size = AllocSize.getFixedValue();
 
   // Huge step value - give up.
-  if (APStepVal->getBitWidth() > 64)
+  std::optional<int64_t> StepVal = APStepVal->trySExtValue();
+  if (!StepVal)
     return std::nullopt;
-
-  int64_t StepVal = APStepVal->getSExtValue();
 
   // Strided access.
-  int64_t Stride = StepVal / Size;
-  int64_t Rem = StepVal % Size;
-  if (Rem)
-    return std::nullopt;
-
-  return Stride;
+  return *StepVal % Size ? std::nullopt : std::make_optional(*StepVal / Size);
 }
 
 /// Check whether \p AR is a non-wrapping AddRec. If \p Ptr is not nullptr, use
@@ -2135,15 +2129,18 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
           DL, SE, *(PSE.getSymbolicMaxBackedgeTakenCount()), *Dist, MaxStride))
     return Dependence::NoDep;
 
-  // Attempt to prove strided accesses independent.
-  const APInt *ConstDist = nullptr;
-  if (match(Dist, m_scev_APInt(ConstDist))) {
-    uint64_t Distance = ConstDist->abs().getZExtValue();
+  // The rest of this function relies on ConstDist being at most 64-bits, which
+  // is checked earlier. Will assert if the calling code changes.
+  const APInt *APDist = nullptr;
+  uint64_t ConstDist =
+      match(Dist, m_scev_APInt(APDist)) ? APDist->abs().getZExtValue() : 0;
 
+  // Attempt to prove strided accesses independent.
+  if (APDist) {
     // If the distance between accesses and their strides are known constants,
     // check whether the accesses interlace each other.
-    if (Distance > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
-        areStridedAccessesIndependent(Distance, *CommonStride, TypeByteSize)) {
+    if (ConstDist > 0 && CommonStride && CommonStride > 1 && HasSameSize &&
+        areStridedAccessesIndependent(ConstDist, *CommonStride, TypeByteSize)) {
       LLVM_DEBUG(dbgs() << "LAA: Strided accesses are independent\n");
       return Dependence::NoDep;
     }
@@ -2184,8 +2181,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
         FoundNonConstantDistanceDependence |= ShouldRetryWithRuntimeCheck;
         return Dependence::Unknown;
       }
-      if (!HasSameSize || couldPreventStoreLoadForward(
-                              ConstDist->abs().getZExtValue(), TypeByteSize)) {
+      if (!HasSameSize ||
+          couldPreventStoreLoadForward(ConstDist, TypeByteSize)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Forward but may prevent st->ld forwarding\n");
         return Dependence::ForwardButPreventsForwarding;

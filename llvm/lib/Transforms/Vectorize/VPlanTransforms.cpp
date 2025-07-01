@@ -1140,6 +1140,24 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Look through ExtractLastElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+    return;
+  }
+
+  // Look through ExtractPenultimateElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 2));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -1202,9 +1220,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
         continue;
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
@@ -2180,6 +2198,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
+  assert(all_of(Plan.getVF().users(),
+                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                        VPWidenIntOrFpInductionRecipe>) &&
+         "User of VF that we can't transform to EVL.");
+  Plan.getVF().replaceAllUsesWith(&EVL);
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
   VPInstruction *PrevEVL = nullptr;
@@ -2196,11 +2220,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
-  }
-
-  for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
-      R->setOperand(1, &EVL);
   }
 
   SmallVector<VPRecipeBase *> ToErase;
@@ -2282,12 +2301,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
-  // of the VF directly. At the moment, widened inductions cannot be updated, so
-  // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(
-      Header->phis(),
-      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
-  if (ContainsWidenInductions)
+  // of the VF directly. At the moment, widened pointer inductions cannot be
+  // updated, so bail out if the plan contains any.
+  bool ContainsWidenPointerInductions =
+      any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
+  if (ContainsWidenPointerInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -2609,6 +2627,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     Inc = SplatVF;
     Prev = WidenIVR->getLastUnrolledPartOperand();
   } else {
+    if (VPRecipeBase *R = VF->getDefiningRecipe())
+      Builder.setInsertPoint(R->getParent(), std::next(R->getIterator()));
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
     if (StepTy->isFloatingPointTy())
@@ -3233,7 +3253,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
@@ -3310,8 +3330,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
 /// BranchOnCond recipe.
-void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
-                                                        ElementCount VF) {
+void VPlanTransforms::addBranchWeightToMiddleTerminator(
+    VPlan &Plan, ElementCount VF, std::optional<unsigned> VScaleForTuning) {
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   auto *MiddleTerm =
       dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
@@ -3323,6 +3343,8 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
          "must have a BranchOnCond");
   // Assume that `TripCount % VectorStep ` is equally distributed.
   unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  if (VF.isScalable() && VScaleForTuning.has_value())
+    VectorStep *= *VScaleForTuning;
   assert(VectorStep > 0 && "trip count should not be zero");
   MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
   MDNode *BranchWeights =

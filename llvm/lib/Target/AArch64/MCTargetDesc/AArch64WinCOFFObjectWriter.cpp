@@ -65,10 +65,10 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   const MCExpr *Expr = Fixup.getValue();
 
   if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-    AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
+    AArch64::Specifier Spec = A64E->getSpecifier();
     switch (AArch64::getSymbolLoc(Spec)) {
-    case AArch64MCExpr::VK_ABS:
-    case AArch64MCExpr::VK_SECREL:
+    case AArch64::S_ABS:
+    case AArch64::S_SECREL:
       // Supported
       break;
     default:
@@ -102,8 +102,6 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
       return COFF::IMAGE_REL_ARM64_ADDR32;
     case MCSymbolRefExpr::VK_COFF_IMGREL32:
       return COFF::IMAGE_REL_ARM64_ADDR32NB;
-    case MCSymbolRefExpr::VK_SECREL:
-      return COFF::IMAGE_REL_ARM64_SECREL;
     }
 
   case FK_Data_8:
@@ -117,10 +115,10 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
 
   case AArch64::fixup_aarch64_add_imm12:
     if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-      AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-      if (Spec == AArch64MCExpr::VK_SECREL_LO12)
+      AArch64::Specifier Spec = A64E->getSpecifier();
+      if (Spec == AArch64::S_SECREL_LO12)
         return COFF::IMAGE_REL_ARM64_SECREL_LOW12A;
-      if (Spec == AArch64MCExpr::VK_SECREL_HI12)
+      if (Spec == AArch64::S_SECREL_HI12)
         return COFF::IMAGE_REL_ARM64_SECREL_HIGH12A;
     }
     return COFF::IMAGE_REL_ARM64_PAGEOFFSET_12A;
@@ -131,8 +129,8 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
   case AArch64::fixup_aarch64_ldst_imm12_scale8:
   case AArch64::fixup_aarch64_ldst_imm12_scale16:
     if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
-      AArch64MCExpr::Specifier Spec = A64E->getSpecifier();
-      if (Spec == AArch64MCExpr::VK_SECREL_LO12)
+      AArch64::Specifier Spec = A64E->getSpecifier();
+      if (Spec == AArch64::S_SECREL_LO12)
         return COFF::IMAGE_REL_ARM64_SECREL_LOW12L;
     }
     return COFF::IMAGE_REL_ARM64_PAGEOFFSET_12L;
