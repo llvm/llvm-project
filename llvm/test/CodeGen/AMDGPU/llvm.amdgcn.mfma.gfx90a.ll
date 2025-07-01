@@ -210,14 +210,26 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_bits:
-; GCN: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 0{{$}}
-; GCN: v_accvgpr_write_b32 a[[A_HIGH_BITS_0:[0-9]+]], 64
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_HIGH_BITS_0]]
+; GFX90A: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 0{{$}}
+; GFX90A: v_accvgpr_write_b32 a[[A_HIGH_BITS_0:[0-9]+]], 64
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_HIGH_BITS_0]]
+
+; GFX942: s_mov_b32 s[[S_LOW_BITS_0:[0-9]+]], 0{{$}}
+; GFX942: s_mov_b32 s[[S_HIGH_BITS_64:[0-9]+]], 64
+; GFX942: v_mov_b64_e32 v[[[V_LOW_BITS_0:[0-9]+]]:[[V_HIGH_BITS_64:[0-9]+]]], s[[[S_LOW_BITS_0]]:[[S_HIGH_BITS_64]]]
+; GFX942: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], v[[V_LOW_BITS_0]]
+; GFX942: v_accvgpr_write_b32 a[[A_HIGH_BITS_0:[0-9]+]], v[[V_HIGH_BITS_64]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
 
 ; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
 ; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
@@ -234,14 +246,23 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_int_64_in_high_and_low:
-; GCN: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 64{{$}}
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 64{{$}}
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_LOW_BITS_0]]
+
+; GFX942: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 64{{$}}
+; GFX942: v_accvgpr_mov_b32 a[[A_HIGH_BITS_0:[0-9]+]], a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
 
 ; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
 ; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
@@ -258,14 +279,23 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_imm_f32_1_in_high_and_low:
-; GCN: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 1.0
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
-; GCN: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 1.0
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX90A: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_LOW_BITS_0]]
+
+; GFX942: v_accvgpr_write_b32 a[[A_LOW_BITS_0:[0-9]+]], 1.0
+; GFX942: v_accvgpr_mov_b32 a[[A_HIGH_BITS_0:[0-9]+]], a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a[[LAST_CONST_REG:[0-9]+]], a[[A_HIGH_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
+; GFX942: v_accvgpr_mov_b32 a{{[0-9]+}}, a[[A_LOW_BITS_0]]
 
 ; GFX90A: v_mfma_f64_16x16x4f64 [[M1:a\[[0-9]+:[0-9]+\]]], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a{{\[}}[[A_LOW_BITS_0]]:[[LAST_CONST_REG]]{{\]$}}
 ; GFX90A: v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], [[M1]] cbsz:1 abid:2 blgp:3
@@ -294,8 +324,11 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}test_mfma_f64_16x16x4f64_splat_lit:
-; GCN-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
-; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x405ec000
+; GFX90A-DAG: v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
+; GFX90A-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x405ec000
+; GFX942-DAG: s_mov_b32 s[[S_LOW_BITS:[0-9]+]], 0{{$}}
+; GFX942-DAG: s_mov_b32 s[[S_HIGH_BITS:[0-9]+]], 0x405ec000
+; GFX942-DAG: v_mov_b64_e32 v[{{[0-9]+:[0-9]+}}], s[[[S_LOW_BITS]]:[[S_HIGH_BITS]]]
 ; GFX90A:  v_mfma_f64_16x16x4f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a[{{[0-9]+:[0-9]+}}]{{$}}
 ; GFX942:  v_mfma_f64_16x16x4_f64 a[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], v[{{[0-9]+:[0-9]+}}], a[{{[0-9]+:[0-9]+}}]{{$}}
 ; GCN:     global_store_dwordx4
