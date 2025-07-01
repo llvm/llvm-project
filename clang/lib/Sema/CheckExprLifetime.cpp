@@ -1304,6 +1304,13 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
   if (LK == LK_FullExpression)
     return;
 
+  if (LK == LK_Extended && SemaRef.getLangOpts().CPlusPlus23) {
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(InitEntity->getDecl())) {
+      if (VD->isCXXForRangeImplicitVar())
+        return;
+    }
+  }
+
   // FIXME: consider moving the TemporaryVisitor and visitLocalsRetained*
   // functions to a dedicated class.
   auto TemporaryVisitor = [&](const IndirectLocalPath &Path, Local L,
@@ -1341,14 +1348,6 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
       }
 
       if (IsGslPtrValueFromGslTempOwner && DiagLoc.isValid()) {
-
-        if (SemaRef.getLangOpts().CPlusPlus23) {
-          if (const VarDecl *VD =
-                  dyn_cast_if_present<VarDecl>(InitEntity->getDecl());
-              VD && VD->isCXXForRangeImplicitVar())
-            return false;
-        }
-
         SemaRef.Diag(DiagLoc, diag::warn_dangling_lifetime_pointer)
             << DiagRange;
         return false;
