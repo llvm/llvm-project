@@ -915,7 +915,7 @@ Sections:
   {
     SCOPED_TRACE("unsupported version");
     DoCheck(UnsupportedLowVersionYamlString,
-            "deprecated SHT_LLVM_BB_ADDR_MAP version: 1");
+            "unsupported SHT_LLVM_BB_ADDR_MAP version: 1");
   }
 
   // Check that we fail when function entry count is enabled but not provided.

@@ -835,10 +835,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
     Version = Data.getU8(Cur);
     if (!Cur)
       break;
-    if (Version < 2)
-      return createError("deprecated SHT_LLVM_BB_ADDR_MAP version: " +
-                         Twine(static_cast<int>(Version)));
-    if (Version > 3)
+    if (Version < 2 || Version > 3)
       return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                          Twine(static_cast<int>(Version)));
     Feature = Data.getU8(Cur); // Feature byte
