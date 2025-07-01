@@ -1368,14 +1368,24 @@ namespace {
     llvm::FunctionCallee EndCatchFn;
     llvm::FunctionCallee RethrowFn;
     llvm::Value *SavedExnVar;
+    llvm::Value *FinallyExecutedFlag;
 
     PerformFinally(const Stmt *Body, llvm::Value *ForEHVar,
                    llvm::FunctionCallee EndCatchFn,
-                   llvm::FunctionCallee RethrowFn, llvm::Value *SavedExnVar)
+                   llvm::FunctionCallee RethrowFn, llvm::Value *SavedExnVar,
+                   llvm::Value *FinallyExecutedFlag)
         : Body(Body), ForEHVar(ForEHVar), EndCatchFn(EndCatchFn),
-          RethrowFn(RethrowFn), SavedExnVar(SavedExnVar) {}
+          RethrowFn(RethrowFn), SavedExnVar(SavedExnVar),
+          FinallyExecutedFlag(FinallyExecutedFlag) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
+      // Only execute the finally block if it hasn't already run.
+      llvm::BasicBlock *RunFinallyBB = CGF.createBasicBlock("finally.run");
+      llvm::BasicBlock *SkipFinallyBB = CGF.createBasicBlock("finally.skip");
+      llvm::Value *AlreadyExecuted = CGF.Builder.CreateFlagLoad(FinallyExecutedFlag, "finally.executed");
+      CGF.Builder.CreateCondBr(AlreadyExecuted, SkipFinallyBB, RunFinallyBB);
+      CGF.EmitBlock(RunFinallyBB);
+      CGF.Builder.CreateFlagStore(true, FinallyExecutedFlag);
       // Enter a cleanup to call the end-catch function if one was provided.
       if (EndCatchFn)
         CGF.EHStack.pushCleanup<CallEndCatchForFinally>(NormalAndEHCleanup,
@@ -1429,6 +1439,7 @@ namespace {
       // Now make sure we actually have an insertion point or the
       // cleanup gods will hate us.
       CGF.EnsureInsertPoint();
+      CGF.EmitBlock(SkipFinallyBB);
     }
   };
 } // end anonymous namespace
@@ -1478,10 +1489,12 @@ void CodeGenFunction::FinallyInfo::enter(CodeGenFunction &CGF, const Stmt *body,
   ForEHVar = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), "finally.for-eh");
   CGF.Builder.CreateFlagStore(false, ForEHVar);
 
-  // Enter a normal cleanup which will perform the @finally block.
+  // Allocate a flag to ensure the finally block is only executed once.
+  llvm::Value *FinallyExecutedFlag = CGF.CreateTempAlloca(CGF.Builder.getInt1Ty(), "finally.executed");
+  CGF.Builder.CreateFlagStore(false, FinallyExecutedFlag);
   CGF.EHStack.pushCleanup<PerformFinally>(NormalCleanup, body,
                                           ForEHVar, endCatchFn,
-                                          rethrowFn, SavedExnVar);
+                                          rethrowFn, SavedExnVar, FinallyExecutedFlag);
 
   // Enter a catch-all scope.
   llvm::BasicBlock *catchBB = CGF.createBasicBlock("finally.catchall");
@@ -1724,10 +1737,18 @@ void CodeGenFunction::VolatilizeTryBlocks(
 namespace {
 struct PerformSEHFinally final : EHScopeStack::Cleanup {
   llvm::Function *OutlinedFinally;
-  PerformSEHFinally(llvm::Function *OutlinedFinally)
-      : OutlinedFinally(OutlinedFinally) {}
+  llvm::Value *FinallyExecutedFlag;
+  PerformSEHFinally(llvm::Function *OutlinedFinally, llvm::Value *FinallyExecutedFlag)
+      : OutlinedFinally(OutlinedFinally), FinallyExecutedFlag(FinallyExecutedFlag) {}
 
   void Emit(CodeGenFunction &CGF, Flags F) override {
+    // Only execute the finally block if it hasn't already run.
+    llvm::BasicBlock *RunFinallyBB = CGF.createBasicBlock("finally.run");
+    llvm::BasicBlock *SkipFinallyBB = CGF.createBasicBlock("finally.skip");
+    llvm::Value *AlreadyExecuted = CGF.Builder.CreateFlagLoad(FinallyExecutedFlag, "finally.executed");
+    CGF.Builder.CreateCondBr(AlreadyExecuted, SkipFinallyBB, RunFinallyBB);
+    CGF.EmitBlock(RunFinallyBB);
+    CGF.Builder.CreateFlagStore(true, FinallyExecutedFlag);
     ASTContext &Context = CGF.getContext();
     CodeGenModule &CGM = CGF.CGM;
 
@@ -1769,6 +1790,8 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
 
     auto Callee = CGCallee::forDirect(OutlinedFinally);
     CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args);
+    
+    CGF.EmitBlock(SkipFinallyBB);
   }
 };
 } // end anonymous namespace
@@ -2164,7 +2187,10 @@ llvm::Value *CodeGenFunction::EmitSEHAbnormalTermination() {
 
 void CodeGenFunction::pushSEHCleanup(CleanupKind Kind,
                                      llvm::Function *FinallyFunc) {
-  EHStack.pushCleanup<PerformSEHFinally>(Kind, FinallyFunc);
+  // Allocate a flag to ensure the finally block is only executed once.
+  llvm::Value *FinallyExecutedFlag = CreateTempAlloca(Builder.getInt1Ty(), "finally.executed");
+  Builder.CreateFlagStore(false, FinallyExecutedFlag);
+  EHStack.pushCleanup<PerformSEHFinally>(Kind, FinallyFunc, FinallyExecutedFlag);
 }
 
 void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
@@ -2175,8 +2201,11 @@ void CodeGenFunction::EnterSEHTryStmt(const SEHTryStmt &S) {
     llvm::Function *FinallyFunc =
         HelperCGF.GenerateSEHFinallyFunction(*this, *Finally);
 
+    // Allocate a flag to ensure the finally block is only executed once.
+    llvm::Value *FinallyExecutedFlag = CreateTempAlloca(Builder.getInt1Ty(), "finally.executed");
+    Builder.CreateFlagStore(false, FinallyExecutedFlag);
     // Push a cleanup for __finally blocks.
-    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHCleanup, FinallyFunc);
+    EHStack.pushCleanup<PerformSEHFinally>(NormalAndEHCleanup, FinallyFunc, FinallyExecutedFlag);
     return;
   }
 
