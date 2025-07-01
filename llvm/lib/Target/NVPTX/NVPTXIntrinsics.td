@@ -759,10 +759,14 @@ def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1", "int_nvvm_prefetch
 def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1", "int_nvvm_prefetch_local_L1">;
 def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2", "int_nvvm_prefetch_global_L2">;
 def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2", "int_nvvm_prefetch_local_L2">;
-def PREFETCH_CONST_TENSORMAP : PREFETCH_INTRS<"prefetch.const.tensormap", "int_nvvm_prefetch_const_tensormap">;
-def PREFETCH_GENERIC_TENSORMAP : PREFETCH_INTRS<"prefetch.tensormap", "int_nvvm_prefetch_generic_tensormap">;
-def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal", "int_nvvm_prefetch_global_L2_evict_normal">;
-def PREFETCH_GLOBAL_L2_EVICT_LAST   : PREFETCH_INTRS<"prefetch.global.L2::evict_last", "int_nvvm_prefetch_global_L2_evict_last">;
+def PREFETCH_CONST_TENSORMAP : PREFETCH_INTRS<"prefetch.const.tensormap", 
+                               "int_nvvm_prefetch_const_tensormap">;
+def PREFETCH_GENERIC_TENSORMAP : PREFETCH_INTRS<"prefetch.tensormap", 
+                                 "int_nvvm_prefetch_generic_tensormap">;
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal", 
+                                      "int_nvvm_prefetch_global_L2_evict_normal">;
+def PREFETCH_GLOBAL_L2_EVICT_LAST   : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
+                                      "int_nvvm_prefetch_global_L2_evict_last">;
 
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", "int_nvvm_prefetchu_L1">;
 
