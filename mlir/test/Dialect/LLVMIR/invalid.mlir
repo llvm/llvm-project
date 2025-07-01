@@ -1894,7 +1894,7 @@ llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
 // -----
 
 llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
-  // expected-error@+1 {{LLVM pointer type address space must be 1 (global) or 4 (generic)}}
+  // expected-error@+1 {{op operand #0 must be LLVM pointer in address space 1 or LLVM pointer in address space 4}}
   xevm.prefetch %arg0 <{cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr)
   llvm.return
 }

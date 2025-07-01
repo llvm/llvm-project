@@ -362,7 +362,8 @@ def XeVM_MemfenceOp
 
 def XeVM_PrefetchOp
     : XeVM_Op<"prefetch">,
-      Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr,
+      Arguments<(ins Arg<AnyTypeOf<[LLVM_PointerInAddressSpace<1>,
+                                    LLVM_PointerInAddressSpace<4>]>>:$ptr,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
   let summary = "Prefetch data into a cache subsystem.";
   let description = [{
@@ -377,8 +378,6 @@ def XeVM_PrefetchOp
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
   }];
-
-  let hasVerifier = 1;
 }
 
 def XeVM_BlockPrefetch2dOp

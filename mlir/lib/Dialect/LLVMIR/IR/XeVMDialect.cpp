@@ -17,11 +17,11 @@
 using namespace mlir;
 using namespace mlir::xevm;
 
-#include <mlir/Dialect/LLVMIR/XeVMOpsDialect.cpp.inc>
-#include <mlir/Dialect/LLVMIR/XeVMOpsEnums.cpp.inc>
+#include "mlir/Dialect/LLVMIR/XeVMOpsDialect.cpp.inc"
+#include "mlir/Dialect/LLVMIR/XeVMOpsEnums.cpp.inc"
 
 namespace {
-constexpr uint32_t subgroupSize = 16;
+static constexpr uint32_t subgroupSize = 16;
 
 template <typename Op>
 LogicalResult verifyMatrixInput(Op op) {
@@ -315,15 +315,6 @@ LogicalResult MMAOp::verify() {
   return success();
 }
 
-LogicalResult PrefetchOp::verify() {
-  auto ptrTy = mlir::dyn_cast<LLVM::LLVMPointerType>(getOperand().getType());
-  auto addrSpace = ptrTy.getAddressSpace();
-  if (addrSpace != 1 && addrSpace != 4)
-    return emitOpError(
-        "LLVM pointer type address space must be 1 (global) or 4 (generic)");
-  return success();
-}
-
 LogicalResult
 XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,
@@ -355,7 +346,6 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
 }
 
 void XeVMDialect::initialize() {
-  // NOLINTBEGIN
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/XeVMOps.cpp.inc"
@@ -365,7 +355,6 @@ void XeVMDialect::initialize() {
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/XeVMOpsAttributes.cpp.inc"
       >();
-  // NOLINTEND
   declarePromisedInterface<mlir::gpu::TargetAttrInterface,
                            mlir::xevm::XeVMTargetAttr>();
 }
