@@ -200,8 +200,8 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
   }
   const char *RegName = MCRI->getName(*MaybeLLVMReg);
 
-  // Each case is annotated with its corresponding number as described in the
-  // `DWARFCFIAnalysis`.
+  // Each case is annotated with its corresponding number as described in
+  // `llvm/include/llvm/DWARFCFIChecker/DWARFCFIAnalysis.h`.
 
   // TODO: Expressions are not supported yet, but if wanted to be supported,
   // structure equality for expressions is more than just checking if they are
