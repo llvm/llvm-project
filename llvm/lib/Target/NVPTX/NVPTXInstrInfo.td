@@ -2029,7 +2029,7 @@ multiclass ST_VEC<DAGOperand O, bit support_v8 = false> {
       (outs),
       (ins O:$src1, O:$src2, O:$src3, O:$src4,
            O:$src5, O:$src6, O:$src7, O:$src8,
-           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth, 
+           AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp, i32imm:$fromWidth,
            ADDR:$addr),
       "st${sem:sem}${scope:scope}${addsp:addsp}.v8.b$fromWidth "
       "\t[$addr], "
