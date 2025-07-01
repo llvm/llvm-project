@@ -455,14 +455,12 @@ INITIALIZE_PASS_DEPENDENCY(RegionInfoPass)
 INITIALIZE_PASS_END(StructurizeCFGLegacyPass, "structurizecfg",
                     "Structurize the CFG", false, false)
 
-/// Because the SCC order of Then and Else blocks is arbitrary, structurization
-/// can introduce unnecessary VGPR copies due to register coalescing
-/// interference.
-/// For example, if the Else block has a zero-cost instruction and
-/// the Then block modifies the VGPR value, only one value is live at a time in
-/// merge block before structurization. After structurization, the coalescer may
-/// incorrectly treat the Then value as live in the Else block (via the path
-/// Then → Flow → Else), leading to unnecessary VGPR copies.
+/// Structurization can introduce unnecessary VGPR copies due to register
+/// coalescing interference. For example, if the Else block has a zero-cost
+/// instruction and the Then block modifies the VGPR value, only one value is
+/// live at a time in merge block before structurization. After structurization,
+/// the coalescer may incorrectly treat the Then value as live in the Else block
+/// (via the path Then → Flow → Else), leading to unnecessary VGPR copies.
 ///
 /// This function examines phi nodes whose incoming values are zero-cost
 /// instructions in the Else block. It identifies such values that can be safely
