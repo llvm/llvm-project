@@ -3247,10 +3247,18 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
   // all_true (setcc <X>, 0, ne) => (all_true X)
   assert(N->getOpcode() == ISD::INTRINSIC_WO_CHAIN);
   using namespace llvm::SDPatternMatch;
-  SDLoc DL(N);
-  auto CombineSetCC =
-      [&N, &DAG, &DL](Intrinsic::WASMIntrinsics InPre, ISD::CondCode SetType,
-                      Intrinsic::WASMIntrinsics InPost) -> SDValue {
+
+  SDValue LHS;
+  if (!sd_match(N->getOperand(1),
+                m_c_SetCC(m_Value(LHS), m_Zero(), m_CondCode())))
+    return SDValue();
+  EVT LT = LHS.getValueType();
+  if (LT.getScalarSizeInBits() > 128 / LT.getVectorNumElements())
+    return SDValue();
+
+  auto CombineSetCC = [&N, &DAG](Intrinsic::WASMIntrinsics InPre,
+                                 ISD::CondCode SetType,
+                                 Intrinsic::WASMIntrinsics InPost) {
     if (N->getConstantOperandVal(0) != InPre)
       return SDValue();
 
@@ -3259,11 +3267,7 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
                                               m_SpecificCondCode(SetType))))
       return SDValue();
 
-    EVT LT = LHS.getValueType();
-    unsigned NumElts = LT.getVectorNumElements();
-    if (LT.getScalarSizeInBits() > 128 / NumElts)
-      return SDValue();
-
+    SDLoc DL(N);
     SDValue Ret = DAG.getZExtOrTrunc(
         DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
                     {DAG.getConstant(InPost, DL, MVT::i32), LHS}),
