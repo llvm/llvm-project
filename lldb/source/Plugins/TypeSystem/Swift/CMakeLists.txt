@@ -13,3 +13,9 @@ add_lldb_library(lldbPluginTypeSystemSwift PLUGIN
   LINK_COMPONENTS
     Support
 )
+
+# Enforce synchronization between Swift compiler updates and LLDB via PR testing.
+check_cxx_compiler_flag("-Werror=switch" CXX_SUPPORTS_ERROR_SWITCH)
+if (CXX_SUPPORTS_ERROR_SWITCH)
+  target_compile_options(lldbPluginTypeSystemSwift PRIVATE -Werror=switch)
+endif()
