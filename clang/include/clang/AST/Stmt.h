@@ -789,7 +789,7 @@ protected:
     /// The kind of this overloaded operator. One of the enumerator
     /// value of OverloadedOperatorKind.
     LLVM_PREFERRED_TYPE(OverloadedOperatorKind)
-    unsigned OperatorKind : 6;
+    uint64_t OperatorKind : 6;
   };
 
   class CXXRewrittenBinaryOperatorBitfields {
@@ -800,7 +800,7 @@ protected:
     uint64_t : NumCallExprBits;
 
     LLVM_PREFERRED_TYPE(bool)
-    unsigned IsReversed : 1;
+    uint64_t IsReversed : 1;
   };
 
   class CXXBoolLiteralExprBitfields {
