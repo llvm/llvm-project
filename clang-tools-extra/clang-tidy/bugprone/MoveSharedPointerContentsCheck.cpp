@@ -12,6 +12,8 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
+using namespace clang::ast_matchers;
+
 namespace clang::tidy::bugprone {
 namespace {
 
@@ -48,34 +50,6 @@ MoveSharedPointerContentsCheck::MoveSharedPointerContentsCheck(
 
 void MoveSharedPointerContentsCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  using ast_matchers::anyOf;
-  using ast_matchers::callee;
-  using ast_matchers::callExpr;
-  using ast_matchers::cxxDependentScopeMemberExpr;
-  using ast_matchers::cxxMemberCallExpr;
-  using ast_matchers::cxxMethodDecl;
-  using ast_matchers::cxxOperatorCallExpr;
-  using ast_matchers::declRefExpr;
-  using ast_matchers::functionDecl;
-  using ast_matchers::hasAnyDeclaration;
-  using ast_matchers::hasAnyName;
-  using ast_matchers::hasArgument;
-  using ast_matchers::hasDescendant;
-  using ast_matchers::hasMemberName;
-  using ast_matchers::hasName;
-  using ast_matchers::hasOperatorName;
-  using ast_matchers::hasOverloadedOperatorName;
-  using ast_matchers::hasType;
-  using ast_matchers::hasUnaryOperand;
-  using ast_matchers::hasUnderlyingDecl;
-  using ast_matchers::namedDecl;
-  using ast_matchers::on;
-  using ast_matchers::qualType;
-  using ast_matchers::to;
-  using ast_matchers::unaryOperator;
-  using ast_matchers::unresolvedLookupExpr;
-  using ast_matchers::varDecl;
-
   auto IsStdMove =
       callee(functionDecl(hasAnyName("::std::move", "::std::forward")));
 
