@@ -212,6 +212,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
+  flag to specify the function used for forwarding instead of ``std::forward``.
+
 - Improved :doc:`cppcoreguidelines-special-member-functions
   <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
   adding the option `IgnoreMacros` to ignore classes defined in macros.
