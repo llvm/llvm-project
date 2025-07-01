@@ -4662,7 +4662,6 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val, unsigned Depth) const {
 
   // vscale(power-of-two) is a power-of-two for some targets
   if (Val.getOpcode() == ISD::VSCALE &&
-      getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
       isKnownToBeAPowerOfTwo(Val.getOperand(0), Depth + 1))
     return true;
 
