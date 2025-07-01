@@ -46,7 +46,9 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader, /*HasUncountableExit=*/true);
+  // This is incorrect (wrong style), but will be fixed by a later PR.
+  auto Plan = buildVPlan(LoopHeader,
+                         EarlyExitStyle::ReadOnlyUncountableExitsInVectorLoop);
   VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
   VPlanTransforms::optimize(*Plan);
 

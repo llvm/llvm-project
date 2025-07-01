@@ -785,6 +785,21 @@ createLVAnalysis(const char *PassName, StringRef RemarkName, Loop *TheLoop,
   return OptimizationRemarkAnalysis(PassName, RemarkName, DL, CodeRegion);
 }
 
+/// Returns an appropriate style of handling uncountable early exits based on
+/// the exits in the scalar loop. For now it's a 1-1 mapping, but in future
+/// we may choose different styles based on target preference and/or number
+/// of exits in the loop.
+static EarlyExitStyle getEarlyExitStyle(UncountableEarlyExitDetail Detail) {
+  switch (Detail) {
+  case UncountableEarlyExitDetail::None:
+    return EarlyExitStyle::NoUncountableEarlyExit;
+  case UncountableEarlyExitDetail::ReadOnly:
+    return EarlyExitStyle::ReadOnlyUncountableExitsInVectorLoop;
+  case UncountableEarlyExitDetail::ReadWrite:
+    return EarlyExitStyle::MaskedHandleLastIterationInScalarLoop;
+  }
+}
+
 namespace llvm {
 
 /// Return a value for Step multiplied by VF.
@@ -8179,7 +8194,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
+  VPlanTransforms::handleEarlyExits(
+      *Plan, getEarlyExitStyle(Legal->getUncountableEarlyExitDetail()));
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
@@ -8432,7 +8448,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
   VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
+                                    EarlyExitStyle::NoUncountableEarlyExit);
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
                                   /*TailFolded*/ false);
 

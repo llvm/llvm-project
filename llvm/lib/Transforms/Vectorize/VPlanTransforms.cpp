@@ -4033,7 +4033,8 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
                                                   VPBasicBlock *HeaderVPBB,
                                                   VPBasicBlock *LatchVPBB,
-                                                  VPBasicBlock *MiddleVPBB) {
+                                                  VPBasicBlock *MiddleVPBB,
+                                                  EarlyExitStyle Style) {
   struct EarlyExitInfo {
     VPBasicBlock *EarlyExitingVPBB;
     VPIRBasicBlock *EarlyExitVPBB;
@@ -4110,6 +4111,9 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
 
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
+
+  assert(Style == EarlyExitStyle::ReadOnlyUncountableExitsInVectorLoop &&
+         "Early exit store masking not implemented");
 
   // Create the vector.early.exit blocks.
   SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs(Exits.size());

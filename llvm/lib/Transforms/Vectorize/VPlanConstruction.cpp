@@ -905,16 +905,14 @@ void VPlanTransforms::createInLoopReductionRecipes(
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       bool HasUncountableEarlyExit) {
+void VPlanTransforms::handleEarlyExits(VPlan &Plan, EarlyExitStyle Style) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
-  VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+  VPBasicBlock *HeaderVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
-  if (HasUncountableEarlyExit) {
-    handleUncountableEarlyExits(Plan, cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
-                                MiddleVPBB);
+  if (Style != EarlyExitStyle::NoUncountableEarlyExit) {
+    handleUncountableEarlyExits(Plan, HeaderVPBB, LatchVPBB, MiddleVPBB, Style);
     return;
   }
 
