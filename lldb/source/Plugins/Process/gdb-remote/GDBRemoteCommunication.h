@@ -12,9 +12,11 @@
 #include "GDBRemoteCommunicationHistory.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/HostThread.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#include <future>
 #include <mutex>
 #include <string>
 
