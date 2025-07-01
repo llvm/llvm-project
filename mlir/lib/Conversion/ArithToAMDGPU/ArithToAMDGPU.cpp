@@ -19,13 +19,10 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/LogicalResult.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_ARITHTOAMDGPUCONVERSIONPASS
