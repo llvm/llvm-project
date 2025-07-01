@@ -711,9 +711,11 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   Value *PtrBase = GEPLHS->getOperand(0);
   if (PtrBase == RHS && CanFold(GEPLHS->getNoWrapFlags())) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
+    GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags();
+    // Do not access GEPLHS after EmitGEPOffset, as the instruction may be
+    // destroyed.
     Value *Offset = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
-    return NewICmp(GEPLHS->getNoWrapFlags(), Offset,
-                   Constant::getNullValue(Offset->getType()));
+    return NewICmp(NW, Offset, Constant::getNullValue(Offset->getType()));
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
