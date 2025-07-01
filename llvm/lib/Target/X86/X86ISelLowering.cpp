@@ -61737,6 +61737,9 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::VR128XRegClass);
         return std::make_pair(0U, &X86::VR128RegClass);
       case MVT::f128:
+        if (!Subtarget.is64Bit())
+          break;
+        [[fallthrough]];
       case MVT::v16i8:
       case MVT::v8i16:
       case MVT::v4i32:
