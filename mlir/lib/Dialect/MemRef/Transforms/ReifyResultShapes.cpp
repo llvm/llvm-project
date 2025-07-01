@@ -33,9 +33,14 @@ namespace memref {
 
 using namespace mlir;
 
-LogicalResult
-mlir::memref::reifyOpResultShapes(RewriterBase &rewriter,
-                                  ReifyRankedShapedTypeOpInterface op) {
+/// Reifies the results of `op`, potentially replacing `op` with a reified
+/// version. Returns `failure` if `mlir::reifyResultShapes` returned failure,
+/// otherwise it always succeeds. Users of this transform should always expect
+/// it to modify the IR, even when it fails. If any of the result types changes,
+/// the transform will insert cast operations to the old type to keep the IR
+/// consistent.
+static LogicalResult reifyOpResultShapes(RewriterBase &rewriter,
+                                         ReifyRankedShapedTypeOpInterface op) {
   LLVM_DEBUG({ DBGS() << " reifying op: " << op << "\n"; });
   // Get the reified out shapes.
   ReifiedRankedShapedTypeDims reifiedResultShapes;
@@ -93,6 +98,11 @@ mlir::memref::reifyOpResultShapes(RewriterBase &rewriter,
   // We now have outTypes that need to be turned to cast ops.
   Location loc = op->getLoc();
   SmallVector<Value> newResults;
+  // TODO: `mlir::reifyResultShapes` and op verifiers may not agree atm.
+  // This is a confluence problem that will need to be addressed.
+  // For now, we know PadOp and ConcatOp are fine.
+  assert((isa<tensor::PadOp, tensor::ConcatOp>(op.getOperation())) &&
+         "incorrect op");
   Operation *newOp = rewriter.clone(*op);
   for (auto [reifiedTy, oldRes] : llvm::zip(outTypes, op->getResults())) {
     OpResult newRes = newOp->getResult(oldRes.getResultNumber());
@@ -137,8 +147,6 @@ void ReifyResultShapesPass::runOnOperation() {
   getOperation()->walk([&](ReifyRankedShapedTypeOpInterface op) {
     // Handle ops that are not DPS and that do not carry an tied operand shapes.
     // For now, limit to tensor::PadOp and tensor::ConcatOp.
-    if (isa<DestinationStyleOpInterface>(op.getOperation()))
-      return;
     if (!isa<tensor::PadOp, tensor::ConcatOp>(op.getOperation()))
       return;
     ops.push_back(op);
@@ -146,6 +154,6 @@ void ReifyResultShapesPass::runOnOperation() {
   IRRewriter rewriter(&getContext());
   for (ReifyRankedShapedTypeOpInterface op : ops) {
     rewriter.setInsertionPoint(op);
-    (void)memref::reifyOpResultShapes(rewriter, op);
+    (void)reifyOpResultShapes(rewriter, op);
   }
 }
