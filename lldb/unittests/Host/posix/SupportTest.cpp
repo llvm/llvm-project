@@ -26,7 +26,7 @@ TEST(Support, getProcFile_Pid) {
 }
 #endif // #ifndef __APPLE__
 
-#if (defined(_AIX) || defined(__linux__)) && defined(LLVM_ENABLE_THREADING)
+#if defined(_AIX) || defined(__linux__)
 TEST(Support, getProcFile_Tid) {
   auto BufferOrError = getProcFile(getpid(), llvm::get_threadid(),
 #ifdef _AIX
@@ -38,4 +38,4 @@ TEST(Support, getProcFile_Tid) {
   ASSERT_TRUE(BufferOrError);
   ASSERT_TRUE(*BufferOrError);
 }
-#endif // #ifdef _AIX && LLVM_ENABLE_THREADING
+#endif // #if defined(_AIX) || defined(__linux__)
