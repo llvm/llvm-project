@@ -1579,6 +1579,58 @@ ExprResult Sema::ActOnTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
   return BuildTypeTrait(Kind, KWLoc, ConvertedArgs, RParenLoc);
 }
 
+bool Sema::BuiltinIsBaseOf(SourceLocation RhsTLoc, QualType LhsT,
+                           QualType RhsT) {
+  // C++0x [meta.rel]p2
+  // Base is a base class of Derived without regard to cv-qualifiers or
+  // Base and Derived are not unions and name the same class type without
+  // regard to cv-qualifiers.
+
+  const RecordType *lhsRecord = LhsT->getAs<RecordType>();
+  const RecordType *rhsRecord = RhsT->getAs<RecordType>();
+  if (!rhsRecord || !lhsRecord) {
+    const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
+    const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
+    if (!LHSObjTy || !RHSObjTy)
+      return false;
+
+    ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
+    ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
+    if (!BaseInterface || !DerivedInterface)
+      return false;
+
+    if (RequireCompleteType(RhsTLoc, RhsT,
+                            diag::err_incomplete_type_used_in_type_trait_expr))
+      return false;
+
+    return BaseInterface->isSuperClassOf(DerivedInterface);
+  }
+
+  assert(Context.hasSameUnqualifiedType(LhsT, RhsT) ==
+         (lhsRecord == rhsRecord));
+
+  // Unions are never base classes, and never have base classes.
+  // It doesn't matter if they are complete or not. See PR#41843
+  if (lhsRecord && lhsRecord->getDecl()->isUnion())
+    return false;
+  if (rhsRecord && rhsRecord->getDecl()->isUnion())
+    return false;
+
+  if (lhsRecord == rhsRecord)
+    return true;
+
+  // C++0x [meta.rel]p2:
+  //   If Base and Derived are class types and are different types
+  //   (ignoring possible cv-qualifiers) then Derived shall be a
+  //   complete type.
+  if (RequireCompleteType(RhsTLoc, RhsT,
+                          diag::err_incomplete_type_used_in_type_trait_expr))
+    return false;
+
+  return cast<CXXRecordDecl>(rhsRecord->getDecl())
+      ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
+}
+
 static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
                                     const TypeSourceInfo *Lhs,
                                     const TypeSourceInfo *Rhs,
@@ -1590,58 +1642,9 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
          "Cannot evaluate traits of dependent types");
 
   switch (BTT) {
-  case BTT_IsBaseOf: {
-    // C++0x [meta.rel]p2
-    // Base is a base class of Derived without regard to cv-qualifiers or
-    // Base and Derived are not unions and name the same class type without
-    // regard to cv-qualifiers.
+  case BTT_IsBaseOf:
+    return Self.BuiltinIsBaseOf(Rhs->getTypeLoc().getBeginLoc(), LhsT, RhsT);
 
-    const RecordType *lhsRecord = LhsT->getAs<RecordType>();
-    const RecordType *rhsRecord = RhsT->getAs<RecordType>();
-    if (!rhsRecord || !lhsRecord) {
-      const ObjCObjectType *LHSObjTy = LhsT->getAs<ObjCObjectType>();
-      const ObjCObjectType *RHSObjTy = RhsT->getAs<ObjCObjectType>();
-      if (!LHSObjTy || !RHSObjTy)
-        return false;
-
-      ObjCInterfaceDecl *BaseInterface = LHSObjTy->getInterface();
-      ObjCInterfaceDecl *DerivedInterface = RHSObjTy->getInterface();
-      if (!BaseInterface || !DerivedInterface)
-        return false;
-
-      if (Self.RequireCompleteType(
-              Rhs->getTypeLoc().getBeginLoc(), RhsT,
-              diag::err_incomplete_type_used_in_type_trait_expr))
-        return false;
-
-      return BaseInterface->isSuperClassOf(DerivedInterface);
-    }
-
-    assert(Self.Context.hasSameUnqualifiedType(LhsT, RhsT) ==
-           (lhsRecord == rhsRecord));
-
-    // Unions are never base classes, and never have base classes.
-    // It doesn't matter if they are complete or not. See PR#41843
-    if (lhsRecord && lhsRecord->getDecl()->isUnion())
-      return false;
-    if (rhsRecord && rhsRecord->getDecl()->isUnion())
-      return false;
-
-    if (lhsRecord == rhsRecord)
-      return true;
-
-    // C++0x [meta.rel]p2:
-    //   If Base and Derived are class types and are different types
-    //   (ignoring possible cv-qualifiers) then Derived shall be a
-    //   complete type.
-    if (Self.RequireCompleteType(
-            Rhs->getTypeLoc().getBeginLoc(), RhsT,
-            diag::err_incomplete_type_used_in_type_trait_expr))
-      return false;
-
-    return cast<CXXRecordDecl>(rhsRecord->getDecl())
-        ->isDerivedFrom(cast<CXXRecordDecl>(lhsRecord->getDecl()));
-  }
   case BTT_IsVirtualBaseOf: {
     const RecordType *BaseRecord = LhsT->getAs<RecordType>();
     const RecordType *DerivedRecord = RhsT->getAs<RecordType>();

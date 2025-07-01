@@ -304,7 +304,8 @@ namespace llvm {
     /*implicit*/ MutableArrayRef() = default;
 
     /// Construct an empty MutableArrayRef from std::nullopt.
-    /*implicit*/ MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
+    /*implicit*/ LLVM_DEPRECATED("Use {} or MutableArrayRef<T>() instead", "{}")
+    MutableArrayRef(std::nullopt_t) : ArrayRef<T>() {}
 
     /// Construct a MutableArrayRef from a single element.
     /*implicit*/ MutableArrayRef(T &OneElt) : ArrayRef<T>(OneElt) {}
@@ -326,11 +327,6 @@ namespace llvm {
                       std::is_integral<decltype(std::declval<C &>().size())>>,
                   void>>
     /*implicit*/ constexpr MutableArrayRef(const C &V) : ArrayRef<T>(V) {}
-
-    /// Construct a MutableArrayRef from a std::array
-    template <size_t N>
-    /*implicit*/ constexpr MutableArrayRef(std::array<T, N> &Arr)
-        : ArrayRef<T>(Arr) {}
 
     /// Construct a MutableArrayRef from a C array.
     template <size_t N>
