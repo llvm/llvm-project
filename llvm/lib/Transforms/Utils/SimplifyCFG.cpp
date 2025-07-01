@@ -6239,27 +6239,29 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       // all the values uniquely identify the CaseValues.
       APInt AndMask = APInt::getAllOnes(MinCaseVal->getBitWidth());
 
+      // Find mininal value and compute the conjuction of the values.
       for (auto *Case : CaseValues) {
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
         AndMask &= Case->getValue();
       }
 
-      KnownBits Known = computeKnownBits(Condition, DL);
-      unsigned ConditionWidth = Condition->getType()->getIntegerBitWidth();
-      APInt ActiveBits =
-          APInt(ConditionWidth, Known.countMaxActiveBits(), false);
+      if (!AndMask.isZero()) {
+        KnownBits Known = computeKnownBits(Condition, DL);
+        // Compute the number of bits that are free to vary.
+        unsigned FreeBits = Known.countMaxActiveBits() - AndMask.popcount();
+        // Compute 2^FreeBits in order to check whether all the possible
+        // combination of the free bits matches the number of cases.
+        APInt TopBit = APInt::getOneBitSet(
+            Condition->getType()->getIntegerBitWidth(), FreeBits);
 
-      APInt One(ConditionWidth, 1, false);
-      // To make sure, that the representation of the accepted values is
-      // actually unique we check, wheter the conjucted bits and the another
-      // conjuction with the input value will only be true for exactly CaseCount
-      // number times.
-      if ((One << (ActiveBits - AndMask.popcount())) == CaseCount) {
-        Value *And = Builder.CreateAnd(Condition, AndMask);
-        Value *Cmp = Builder.CreateICmpEQ(
-            And, Constant::getIntegerValue(And->getType(), AndMask));
-        return Builder.CreateSelect(Cmp, ResultVector[0].first, DefaultResult);
+        if (TopBit == CaseCount) {
+          Value *And = Builder.CreateAnd(Condition, AndMask);
+          Value *Cmp = Builder.CreateICmpEQ(
+              And, Constant::getIntegerValue(And->getType(), AndMask));
+          return Builder.CreateSelect(Cmp, ResultVector[0].first,
+                                      DefaultResult);
+        }
       }
 
       // Mark the bits case number touched.
