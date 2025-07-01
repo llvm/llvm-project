@@ -11336,6 +11336,9 @@ SDValue RISCVTargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
 
   if (OrigIdx == 0 && Vec.isUndef())
     return Op;
+  if (OrigIdx == 0 && Vec.getOpcode() == ISD::FREEZE &&
+      Vec.getOperand(0).isUndef())
+    return DAG.getInsertSubvector(DL, DAG.getUNDEF(VecVT), SubVec, OrigIdx);
 
   // We don't have the ability to slide mask vectors up indexed by their i1
   // elements; the smallest we can do is i8. Often we are able to bitcast to
