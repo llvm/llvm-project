@@ -3105,10 +3105,12 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                        VPWidenIntOrFpInductionRecipe>) &&
-         "User of VF that we can't transform to EVL.");
+  assert(
+      all_of(
+          Plan.getVF().users(),
+          IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                  VPWidenIntOrFpInductionRecipe, VPWidenStridedLoadRecipe>) &&
+      "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
