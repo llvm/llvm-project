@@ -358,16 +358,14 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
         Target.BoolAlign);
   Check("short", llvm::Type::getIntNTy(Context, Target.ShortWidth),
         Target.ShortAlign);
-  // FIXME: M68k specifies incorrect wrong int and long alignments in Clang
-  // and incorrect long long alignment in both LLVM and Clang.
-  if (Triple.getArch() != llvm::Triple::m68k) {
-    Check("int", llvm::Type::getIntNTy(Context, Target.IntWidth),
-          Target.IntAlign);
-    Check("long", llvm::Type::getIntNTy(Context, Target.LongWidth),
-          Target.LongAlign);
+  Check("int", llvm::Type::getIntNTy(Context, Target.IntWidth),
+        Target.IntAlign);
+  Check("long", llvm::Type::getIntNTy(Context, Target.LongWidth),
+        Target.LongAlign);
+  // FIXME: M68k specifies incorrect long long alignment in both LLVM and Clang.
+  if (Triple.getArch() != llvm::Triple::m68k)
     Check("long long", llvm::Type::getIntNTy(Context, Target.LongLongWidth),
           Target.LongLongAlign);
-  }
   // FIXME: There are int128 alignment mismatches on multiple targets.
   if (Target.hasInt128Type() && !Target.getTargetOpts().ForceEnableInt128 &&
       !Triple.isAMDGPU() && !Triple.isSPIRV() &&
@@ -396,9 +394,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
   if (Target.hasIbm128Type())
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
 
-  // FIXME: Clang specifies incorrect pointer alignment for m68k.
-  if (Triple.getArch() != llvm::Triple::m68k)
-    Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+  Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
 #endif
 }
 
