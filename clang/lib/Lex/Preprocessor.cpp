@@ -79,11 +79,11 @@ ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
 Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
                            DiagnosticsEngine &diags, const LangOptions &opts,
-                           const CodeGenOptions &CGOpts, SourceManager &SM,
-                           HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
+                           SourceManager &SM, HeaderSearch &Headers,
+                           ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
-    : PPOpts(PPOpts), Diags(&diags), LangOpts(opts), CGOpts(CGOpts),
+    : PPOpts(PPOpts), Diags(&diags), LangOpts(opts),
       FileMgr(Headers.getFileMgr()), SourceMgr(SM),
       ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
       TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),

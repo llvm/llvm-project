@@ -194,7 +194,6 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   LangOptions LangOpts;
   LangOpts.SkipODRCheckInGMF = true;
-  CodeGenOptions CGOpts;
 
   FileManager FileMgr(FileSystemOptions(), VFS);
 
@@ -205,13 +204,14 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
 
   PreprocessorOptions PPOpts;
   TrivialModuleLoader ModuleLoader;
-  Preprocessor PP(PPOpts, *Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo,
+  Preprocessor PP(PPOpts, *Diags, LangOpts, SourceMgr, HeaderInfo,
                   ModuleLoader);
 
   IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   PCHContainerOperations PCHOperations;
+  CodeGenOptions CodeGenOpts;
   ASTReader Reader(PP, *ModCache, /*ASTContext=*/nullptr,
-                   PCHOperations.getRawReader(), {});
+                   PCHOperations.getRawReader(), CodeGenOpts, {});
 
   // We don't need any listener here. By default it will use a validator
   // listener.

@@ -1649,7 +1649,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
   // Codegen options.
   Record.clear();
-  const CodeGenOptions &CGOpts = PP.getCodeGenOpts();
+  const CodeGenOptions &CGOpts = getCodeGenOpts();
 #define CODEGENOPT(Name, Bits, Default)
 #define COMPATIBLE_VALUE_CODEGENOPT(Name, Bits, Default, Description)          \
   Record.push_back(static_cast<unsigned>(CGOpts.Name));
@@ -5396,11 +5396,12 @@ void ASTWriter::SetSelectorOffset(Selector Sel, uint32_t Offset) {
 
 ASTWriter::ASTWriter(llvm::BitstreamWriter &Stream,
                      SmallVectorImpl<char> &Buffer, ModuleCache &ModCache,
+                     const CodeGenOptions &CodeGenOpts,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      bool IncludeTimestamps, bool BuildingImplicitModule,
                      bool GeneratingReducedBMI)
     : Stream(Stream), Buffer(Buffer), ModCache(ModCache),
-      IncludeTimestamps(IncludeTimestamps),
+      CodeGenOpts(CodeGenOpts), IncludeTimestamps(IncludeTimestamps),
       BuildingImplicitModule(BuildingImplicitModule),
       GeneratingReducedBMI(GeneratingReducedBMI) {
   for (const auto &Ext : Extensions) {

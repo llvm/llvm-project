@@ -14,7 +14,6 @@
 #ifndef LLVM_CLANG_LEX_PREPROCESSOR_H
 #define LLVM_CLANG_LEX_PREPROCESSOR_H
 
-#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -156,7 +155,6 @@ class Preprocessor {
   const PreprocessorOptions &PPOpts;
   DiagnosticsEngine        *Diags;
   const LangOptions &LangOpts;
-  const CodeGenOptions &CGOpts;
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   FileManager       &FileMgr;
@@ -1183,9 +1181,8 @@ private:
 
 public:
   Preprocessor(const PreprocessorOptions &PPOpts, DiagnosticsEngine &diags,
-               const LangOptions &LangOpts, const CodeGenOptions &CGOPts,
-               SourceManager &SM, HeaderSearch &Headers,
-               ModuleLoader &TheModuleLoader,
+               const LangOptions &LangOpts, SourceManager &SM,
+               HeaderSearch &Headers, ModuleLoader &TheModuleLoader,
                IdentifierInfoLookup *IILookup = nullptr,
                bool OwnsHeaderSearch = false,
                TranslationUnitKind TUKind = TU_Complete);
@@ -1219,7 +1216,6 @@ public:
   void setDiagnostics(DiagnosticsEngine &D) { Diags = &D; }
 
   const LangOptions &getLangOpts() const { return LangOpts; }
-  const CodeGenOptions &getCodeGenOpts() const { return CGOpts; }
   const TargetInfo &getTargetInfo() const { return *Target; }
   const TargetInfo *getAuxTargetInfo() const { return AuxTarget; }
   FileManager &getFileManager() const { return FileMgr; }

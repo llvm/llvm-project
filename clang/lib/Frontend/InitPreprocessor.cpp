@@ -1557,7 +1557,8 @@ static void InitializePGOProfileMacros(const CodeGenOptions &CodeGenOpts,
 void clang::InitializePreprocessor(Preprocessor &PP,
                                    const PreprocessorOptions &InitOpts,
                                    const PCHContainerReader &PCHContainerRdr,
-                                   const FrontendOptions &FEOpts) {
+                                   const FrontendOptions &FEOpts,
+                                   const CodeGenOptions &CodeGenOpts) {
   const LangOptions &LangOpts = PP.getLangOpts();
   std::string PredefineBuffer;
   PredefineBuffer.reserve(4080);
@@ -1575,12 +1576,11 @@ void clang::InitializePreprocessor(Preprocessor &PP,
     // macros. This is not the right way to handle this.
     if ((LangOpts.CUDA || LangOpts.isTargetDevice()) && PP.getAuxTargetInfo())
       InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
-                                 PP.getPreprocessorOpts(), PP.getCodeGenOpts(),
+                                 PP.getPreprocessorOpts(), CodeGenOpts,
                                  Builder);
 
     InitializePredefinedMacros(PP.getTargetInfo(), LangOpts, FEOpts,
-                               PP.getPreprocessorOpts(), PP.getCodeGenOpts(),
-                               Builder);
+                               PP.getPreprocessorOpts(), CodeGenOpts, Builder);
 
     // Install definitions to make Objective-C++ ARC work well with various
     // C++ Standard Library implementations.
@@ -1607,7 +1607,7 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   // The PGO instrumentation profile macros are driven by options
   // -fprofile[-instr]-generate/-fcs-profile-generate/-fprofile[-instr]-use,
   // hence they are not guarded by InitOpts.UsePredefines.
-  InitializePGOProfileMacros(PP.getCodeGenOpts(), Builder);
+  InitializePGOProfileMacros(CodeGenOpts, Builder);
 
   // Add on the predefines from the driver.  Wrap in a #line directive to report
   // that they come from the command line.

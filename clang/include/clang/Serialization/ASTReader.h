@@ -509,6 +509,9 @@ private:
   /// The AST consumer.
   ASTConsumer *Consumer = nullptr;
 
+  /// The codegen options.
+  const CodeGenOptions &CodeGenOpts;
+
   /// The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
 
@@ -1797,6 +1800,7 @@ public:
   /// deserializing.
   ASTReader(Preprocessor &PP, ModuleCache &ModCache, ASTContext *Context,
             const PCHContainerReader &PCHContainerRdr,
+            const CodeGenOptions &CodeGenOpts,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             StringRef isysroot = "",
             DisableValidationForModuleKind DisableValidationKind =
@@ -1815,6 +1819,7 @@ public:
   SourceManager &getSourceManager() const { return SourceMgr; }
   FileManager &getFileManager() const { return FileMgr; }
   DiagnosticsEngine &getDiags() const { return Diags; }
+  const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
 
   /// Flags that indicate what kind of AST loading failures the client
   /// of the AST reader can directly handle.

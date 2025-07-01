@@ -58,8 +58,9 @@ protected:
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
     PreprocessorOptions PPOpts;
     std::unique_ptr<Preprocessor> PP = std::make_unique<Preprocessor>(
-        PPOpts, Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo, ModLoader,
-        /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
+        PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+        /*IILookup =*/nullptr,
+        /*OwnsHeaderSearch =*/false);
     if (!PreDefines.empty())
       PP->setPredefines(PreDefines);
     PP->Initialize(*Target);
@@ -106,7 +107,6 @@ protected:
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
-  CodeGenOptions CGOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
   std::unique_ptr<Preprocessor> PP;

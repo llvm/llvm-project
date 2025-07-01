@@ -50,7 +50,6 @@ protected:
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
-  CodeGenOptions CGOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
 
@@ -63,8 +62,7 @@ protected:
     TrivialModuleLoader ModLoader;
     PreprocessorOptions PPOpts;
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-    Preprocessor PP(PPOpts, Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo,
-                    ModLoader,
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
 
     PP.Initialize(*Target);

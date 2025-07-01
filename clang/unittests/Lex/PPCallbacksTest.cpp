@@ -149,7 +149,6 @@ protected:
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
-  CodeGenOptions CGOpts;
   std::shared_ptr<TargetOptions> TargetOpts;
   IntrusiveRefCntPtr<TargetInfo> Target;
 
@@ -201,9 +200,8 @@ protected:
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     PreprocessorOptions PPOpts;
-    Preprocessor PP(PPOpts, Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo,
-                    ModLoader, /*IILookup=*/nullptr,
-                    /*OwnsHeaderSearch=*/false);
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     return InclusionDirectiveCallback(PP)->FilenameRange;
   }
 
@@ -220,9 +218,8 @@ protected:
     AddFakeHeader(HeaderInfo, HeaderPath, SystemHeader);
 
     PreprocessorOptions PPOpts;
-    Preprocessor PP(PPOpts, Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo,
-                    ModLoader, /*IILookup=*/nullptr,
-                    /*OwnsHeaderSearch=*/false);
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     return InclusionDirectiveCallback(PP)->FileType;
   }
 
@@ -247,8 +244,7 @@ protected:
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-    Preprocessor PP(PPOpts, Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo,
-                    ModLoader,
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     PP.Initialize(*Target);
     auto *Callbacks = new CondDirectiveCallbacks;
@@ -273,8 +269,7 @@ protected:
 
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
 
-    Preprocessor PP(PPOpts, Diags, LangOpts, CGOpts, SourceMgr, HeaderInfo,
-                    ModLoader,
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                     /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
     PP.Initialize(*Target);
 
@@ -304,8 +299,8 @@ protected:
     HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, OpenCLLangOpts,
                             Target.get());
 
-    Preprocessor PP(PPOpts, Diags, OpenCLLangOpts, CGOpts, SourceMgr,
-                    HeaderInfo, ModLoader, /*IILookup=*/nullptr,
+    Preprocessor PP(PPOpts, Diags, OpenCLLangOpts, SourceMgr, HeaderInfo,
+                    ModLoader, /*IILookup=*/nullptr,
                     /*OwnsHeaderSearch=*/false);
     PP.Initialize(*Target);
 
@@ -443,9 +438,8 @@ TEST_F(PPCallbacksTest, FileNotFoundSkipped) {
 
   DiagnosticConsumer *DiagConsumer = new DiagnosticConsumer;
   DiagnosticsEngine FileNotFoundDiags(DiagID, DiagOpts, DiagConsumer);
-  Preprocessor PP(PPOpts, FileNotFoundDiags, LangOpts, CGOpts, SourceMgr,
-                  HeaderInfo, ModLoader, /*IILookup=*/nullptr,
-                  /*OwnsHeaderSearch=*/false);
+  Preprocessor PP(PPOpts, FileNotFoundDiags, LangOpts, SourceMgr, HeaderInfo,
+                  ModLoader, /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
 
   class FileNotFoundCallbacks : public PPCallbacks {

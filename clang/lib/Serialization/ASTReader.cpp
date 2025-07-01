@@ -494,7 +494,7 @@ bool PCHValidator::ReadLanguageOptions(const LangOptions &LangOpts,
 bool PCHValidator::ReadCodeGenOptions(const CodeGenOptions &CGOpts,
                                       StringRef ModuleFilename, bool Complain,
                                       bool AllowCompatibleDifferences) {
-  const CodeGenOptions &ExistingCGOpts = PP.getCodeGenOpts();
+  const CodeGenOptions &ExistingCGOpts = Reader.getCodeGenOpts();
   return checkCodegenOptions(ExistingCGOpts, CGOpts, ModuleFilename,
                              Complain ? &Reader.Diags : nullptr,
                              AllowCompatibleDifferences);
@@ -11055,6 +11055,7 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
 ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      ASTContext *Context,
                      const PCHContainerReader &PCHContainerRdr,
+                     const CodeGenOptions &CodeGenOpts,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      StringRef isysroot,
                      DisableValidationForModuleKind DisableValidationKind,
@@ -11069,6 +11070,7 @@ ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
       StackHandler(Diags), PP(PP), ContextObj(Context),
+      CodeGenOpts(CodeGenOpts),
       ModuleMgr(PP.getFileManager(), ModCache, PCHContainerRdr,
                 PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),

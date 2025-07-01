@@ -49,7 +49,8 @@ class CodeGenOptions;
 /// environment ready to process a single file.
 void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
                             const PCHContainerReader &PCHContainerRdr,
-                            const FrontendOptions &FEOpts);
+                            const FrontendOptions &FEOpts,
+                            const CodeGenOptions &CodeGenOptions);
 
 /// DoPrintPreprocessedInput - Implement -E mode.
 void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,

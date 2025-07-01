@@ -449,11 +449,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   HeaderSearch *HeaderInfo =
       new HeaderSearch(getHeaderSearchOpts(), getSourceManager(),
                        getDiagnostics(), getLangOpts(), &getTarget());
-  PP = std::make_shared<Preprocessor>(
-      Invocation->getPreprocessorOpts(), getDiagnostics(), getLangOpts(),
-      getCodeGenOpts(), getSourceManager(), *HeaderInfo, *this,
-      /*IdentifierInfoLookup=*/nullptr,
-      /*OwnsHeaderSearch=*/true, TUKind);
+  PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOpts(),
+                                      getDiagnostics(), getLangOpts(),
+                                      getSourceManager(), *HeaderInfo, *this,
+                                      /*IdentifierInfoLookup=*/nullptr,
+                                      /*OwnsHeaderSearch=*/true, TUKind);
   getTarget().adjust(getDiagnostics(), getLangOpts());
   PP->Initialize(getTarget(), getAuxTarget());
 
@@ -466,7 +466,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Predefine macros and configure the preprocessor.
   InitializePreprocessor(*PP, PPOpts, getPCHContainerReader(),
-                         getFrontendOpts());
+                         getFrontendOpts(), getCodeGenOpts());
 
   // Initialize the header search object.  In CUDA compilations, we use the aux
   // triple (the host triple) to initialize our header search, since we need to
@@ -614,7 +614,7 @@ void CompilerInstance::createPCHExternalASTSource(
   TheASTReader = createPCHExternalASTSource(
       Path, getHeaderSearchOpts().Sysroot, DisableValidation,
       AllowPCHWithCompilerErrors, getPreprocessor(), getModuleCache(),
-      getASTContext(), getPCHContainerReader(),
+      getASTContext(), getPCHContainerReader(), getCodeGenOpts(),
       getFrontendOpts().ModuleFileExtensions, DependencyCollectors,
       DeserializationListener, OwnDeserializationListener, Preamble,
       getFrontendOpts().UseGlobalModuleIndex);
@@ -625,6 +625,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     DisableValidationForModuleKind DisableValidation,
     bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
     ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
+    const CodeGenOptions &CodeGenOpts,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
@@ -633,7 +634,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
       PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
-      PP, ModCache, &Context, PCHContainerRdr, Extensions,
+      PP, ModCache, &Context, PCHContainerRdr, CodeGenOpts, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
       HSOpts.ModulesValidateSystemHeaders,
@@ -1746,7 +1747,8 @@ void CompilerInstance::createASTReader() {
                                               "Reading modules", *timerGroup);
   TheASTReader = new ASTReader(
       getPreprocessor(), getModuleCache(), &getASTContext(),
-      getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
+      getPCHContainerReader(), getCodeGenOpts(),
+      getFrontendOpts().ModuleFileExtensions,
       Sysroot.empty() ? "" : Sysroot.c_str(),
       PPOpts.DisablePCHOrModuleValidation,
       /*AllowASTWithCompilerErrors=*/FEOpts.AllowPCMWithCompilerErrors,
