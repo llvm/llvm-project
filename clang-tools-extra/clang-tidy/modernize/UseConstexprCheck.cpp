@@ -908,7 +908,7 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
     for (const Decl *D : Func->redecls())
       if (const auto *FDecl = llvm::dyn_cast<FunctionDecl>(D))
         Diag << FixItHint::CreateInsertion(FDecl->getInnerLocStart(),
-                                           "constexpr ");
+                                           ConstexprString + " ");
   }
   for (const auto &[Var, FuncCtx] : VariableMapping) {
     if (FuncCtx && getLangOpts().CPlusPlus23 && Var->isStaticLocal() &&
@@ -919,7 +919,8 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
     auto Diag =
         diag(Var->getLocation(), "variable %0 can be declared 'constexpr'")
         << Var << R
-        << FixItHint::CreateInsertion(Var->getInnerLocStart(), "constexpr ");
+        << FixItHint::CreateInsertion(Var->getInnerLocStart(),
+                                      ConstexprString + " ");
     if (const std::optional<Token> ConstToken =
             utils::lexer::getQualifyingToken(
                 tok::TokenKind::kw_const,
@@ -938,10 +939,12 @@ UseConstexprCheck::UseConstexprCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       ConservativeLiteralType(Options.get("ConservativeLiteralType", true)),
       AddConstexprToMethodOfClassWithoutConstexprConstructor(Options.get(
-          "AddConstexprToMethodOfClassWithoutConstexprConstructor", false)) {}
+          "AddConstexprToMethodOfClassWithoutConstexprConstructor", false)),
+      ConstexprString(Options.get("ConstexprString", "constexpr")) {}
 void UseConstexprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ConservativeLiteralType", ConservativeLiteralType);
   Options.store(Opts, "AddConstexprToMethodOfClassWithoutConstexprConstructor",
                 AddConstexprToMethodOfClassWithoutConstexprConstructor);
+  Options.store(Opts, "ConstexprString", ConstexprString);
 }
 } // namespace clang::tidy::modernize

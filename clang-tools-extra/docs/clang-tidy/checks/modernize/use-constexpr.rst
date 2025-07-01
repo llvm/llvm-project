@@ -38,3 +38,8 @@ Options
   ``constexpr`` to a member function is superfluous. This option controls if
   ``constexpr`` should be added anyways. Default is ``false``.
 
+.. option:: ConstexprString
+
+  The string to use to specify something as ``constexpr``, for example, a macro.
+  Default is ``constexpr``.
+

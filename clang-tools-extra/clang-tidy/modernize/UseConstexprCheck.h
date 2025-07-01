@@ -34,6 +34,7 @@ public:
 private:
   const bool ConservativeLiteralType;
   const bool AddConstexprToMethodOfClassWithoutConstexprConstructor;
+  const std::string ConstexprString;
   llvm::SmallPtrSet<const FunctionDecl *, 32> Functions;
   llvm::DenseMap<const VarDecl *, const FunctionDecl *> VariableMapping;
 };
