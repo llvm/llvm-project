@@ -1602,6 +1602,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
   // Figure out what objects these things are pointing to if we can.
   const Value *O1 = getUnderlyingObject(V1, MaxLookupSearchDepth);
   const Value *O2 = getUnderlyingObject(V2, MaxLookupSearchDepth);
+  removeRoundTripCasts(O1);
+  removeRoundTripCasts(O2);
 
   // Null values in the default address space don't point to any object, so they
   // don't alias any other pointer.
