@@ -12,6 +12,6 @@
 #include <ranges>
 
 int main() {
-  static_assert(std::ranges::range<std::optional<int>>, "std::ranges::range<std::optional<int>> is false");
+  static_assert(std::ranges::range<std::optional<int>>);
   return 0;
 }
