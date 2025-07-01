@@ -348,7 +348,7 @@ define dso_local void @qux() {
 ; CHECK-PTX-NEXT:    .local .align 8 .b8 __local_depot7[24];
 ; CHECK-PTX-NEXT:    .reg .b64 %SP;
 ; CHECK-PTX-NEXT:    .reg .b64 %SPL;
-; CHECK-PTX-NEXT:    .reg .b32 %r<3>;
+; CHECK-PTX-NEXT:    .reg .b32 %r<2>;
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0: // %entry
