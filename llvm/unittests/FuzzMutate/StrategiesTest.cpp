@@ -89,10 +89,12 @@ void IterateOnSource(StringRef Source, IRMutator &Mutator) {
   }
 }
 
+using ModuleVerifier = std::function<void(Module &)>;
+
 static void
 mutateAndVerifyModule(StringRef Source, std::unique_ptr<IRMutator> &Mutator,
                       int repeat = 100,
-                      const std::function<void(Module &)> *Check = nullptr) {
+                      ArrayRef<ModuleVerifier> ExtraModuleVerifiers = {}) {
   LLVMContext Ctx;
   auto M = parseAssembly(Source.data(), Ctx);
   std::mt19937 mt(Seed);
@@ -100,8 +102,8 @@ mutateAndVerifyModule(StringRef Source, std::unique_ptr<IRMutator> &Mutator,
   for (int i = 0; i < repeat; i++) {
     Mutator->mutateModule(*M, RandInt(mt), IRMutator::getModuleSize(*M) + 1024);
     ASSERT_FALSE(verifyModule(*M, &errs()));
-    if (Check) {
-      (*Check)(*M);
+    for (auto &ModuleVerifier : ExtraModuleVerifiers) {
+      ModuleVerifier(*M);
     }
   }
 }
@@ -109,10 +111,10 @@ mutateAndVerifyModule(StringRef Source, std::unique_ptr<IRMutator> &Mutator,
 template <class Strategy>
 static void
 mutateAndVerifyModule(StringRef Source, int repeat = 100,
-                      const std::function<void(Module &)> *Check = nullptr) {
+                      ArrayRef<ModuleVerifier> ExtraModuleVerifiers = {}) {
   auto Mutator = createMutator<Strategy>();
   ASSERT_TRUE(Mutator);
-  mutateAndVerifyModule(Source, Mutator, repeat, Check);
+  mutateAndVerifyModule(Source, Mutator, repeat, ExtraModuleVerifiers);
 }
 
 TEST(InjectorIRStrategyTest, EmptyModule) {
@@ -782,7 +784,7 @@ TEST(AllStrategies, AMDGCNLegalAddrspace) {
   }\n\
   ";
 
-  std::function<void(Module &)> AddrSpaceCheck = [](Module &M) {
+  ModuleVerifier AddrSpaceVerifier = [](Module &M) {
     Function *F = M.getFunction("strict_wwm_amdgpu_cs_main");
     EXPECT_TRUE(F != nullptr);
     for (BasicBlock &BB : *F) {
@@ -798,7 +800,7 @@ TEST(AllStrategies, AMDGCNLegalAddrspace) {
 
   int Repeat = 100;
   mutateAndVerifyModule<SinkInstructionStrategy>(Source, Repeat,
-                                                 &AddrSpaceCheck);
+                                                 {AddrSpaceVerifier});
 }
 
 } // namespace
