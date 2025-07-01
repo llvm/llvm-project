@@ -72,6 +72,11 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   getActionDefinitionsBuilder(G_FCMP).legalForCartesianProduct({S1},
                                                                {S32, S64});
 
+  // Add unsigned 3-way comparison support
+  getActionDefinitionsBuilder(G_UCMP)
+      .legalFor({S32, S64})
+      .clampScalar(0, S32, S64);
+
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct({S64}, {S32, S64});
 
