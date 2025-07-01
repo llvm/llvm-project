@@ -21186,8 +21186,7 @@ Instruction *ARMTargetLowering::makeDMB(IRBuilderBase &Builder,
 // Based on http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
 Instruction *ARMTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                  Instruction *Inst,
-                                                 AtomicOrdering Ord,
-                                                 SyncScope::ID SSID) const {
+                                                 AtomicOrdering Ord) const {
   switch (Ord) {
   case AtomicOrdering::NotAtomic:
   case AtomicOrdering::Unordered:
@@ -21212,8 +21211,7 @@ Instruction *ARMTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
 Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                   Instruction *Inst,
-                                                  AtomicOrdering Ord,
-                                                  SyncScope::ID SSID) const {
+                                                  AtomicOrdering Ord) const {
   switch (Ord) {
   case AtomicOrdering::NotAtomic:
   case AtomicOrdering::Unordered:

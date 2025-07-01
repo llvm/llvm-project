@@ -234,12 +234,10 @@ public:
 
   Instruction *
   emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                   AtomicOrdering Ord,
-                   SyncScope::ID SSID = SyncScope::System) const override;
+                   AtomicOrdering Ord) const override;
   Instruction *
   emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                    AtomicOrdering Ord,
-                    SyncScope::ID SSID = SyncScope::System) const override;
+                    AtomicOrdering Ord) const override;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;

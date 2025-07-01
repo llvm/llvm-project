@@ -23238,8 +23238,7 @@ void RISCVTargetLowering::LowerAsmOperandForConstraint(
 
 Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
-                                                   AtomicOrdering Ord,
-                                                   SyncScope::ID SSID) const {
+                                                   AtomicOrdering Ord) const {
   if (Subtarget.hasStdExtZtso()) {
     if (isa<LoadInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
       return Builder.CreateFence(Ord);
@@ -23255,8 +23254,7 @@ Instruction *RISCVTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
 Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
-                                                    AtomicOrdering Ord,
-                                                    SyncScope::ID SSID) const {
+                                                    AtomicOrdering Ord) const {
   if (Subtarget.hasStdExtZtso()) {
     if (isa<StoreInst>(Inst) && Ord == AtomicOrdering::SequentiallyConsistent)
       return Builder.CreateFence(Ord);
