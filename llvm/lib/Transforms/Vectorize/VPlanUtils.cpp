@@ -471,10 +471,9 @@ unsigned vputils::getVFScaleFactor(VPRecipeBase *R) {
   return 1;
 }
 
-std::optional<VPValue *>
-vputils::getRecipesForUncountableExit(VPlan &Plan,
-                                      SmallVectorImpl<VPRecipeBase *> &Recipes,
-                                      SmallVectorImpl<VPRecipeBase *> &GEPs) {
+std::optional<VPValue *> vputils::getRecipesForUncountableExit(
+    VPlan &Plan, SmallVectorImpl<VPRecipeBase *> &Recipes,
+    SmallVectorImpl<VPRecipeBase *> &GEPs, VPBasicBlock *LatchVPBB) {
   // Given a VPlan like the following (just including the recipes contributing
   // to loop control exiting here, not the actual work), we're looking to match
   // the recipes contributing to the uncountable exit condition comparison
@@ -517,13 +516,18 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   // preheader:
   // No successors
   // }
+  // TODO: If the early approach is acceptable, update the above comment.
 
   // Find the uncountable loop exit condition.
-  auto *Region = Plan.getVectorLoopRegion();
+  // TODO: Determine what we should be matching here after reviewers have
+  //       had a chance to look; BranchOnTwoConds or BranchOnCond with Or.
   VPValue *UncountableCondition = nullptr;
-  if (!match(Region->getExitingBasicBlock()->getTerminator(),
-             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
-                                m_VPValue())))
+  if (!match(LatchVPBB->getTerminator(),
+             m_CombineOr(
+                 m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                    m_VPValue()),
+                 m_BranchOnCond(m_c_BinaryOr(
+                     m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue())))))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -547,22 +551,59 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
       Worklist.push_back(Op1);
       Worklist.push_back(Op2);
       Recipes.push_back(V->getDefiningRecipe());
+    } else if (match(V, m_UnmaskedLoad(m_VPValue(Op1)))) {
+      // TODO: I think there's be a way to match the GEP above and capture it
+      // too.
+      // TODO: Do we need to check the number of operands for the GEP, as below?
+      Recipes.push_back(V->getDefiningRecipe());
+      if (!match(Op1, m_GetElementPtr(m_LiveIn(), m_VPValue())))
+        return std::nullopt;
+      Recipes.push_back(Op1->getDefiningRecipe());
+      GEPs.push_back(Op1->getDefiningRecipe());
     } else if (auto *Load = dyn_cast<VPWidenLoadRecipe>(V)) {
       // Reject masked loads for the time being; they make the exit condition
       // more complex.
       if (Load->isMasked())
         return std::nullopt;
 
+      Recipes.push_back(Load);
+
+      // Look through vector-pointer recipes.
       VPValue *GEP = Load->getAddr();
+      if (auto *VecPtrR = dyn_cast<VPVectorPointerRecipe>(GEP)) {
+        Recipes.push_back(VecPtrR);
+        GEP = VecPtrR->getOperand(0);
+      }
+
+      // We only support two-operand GEPS with match
+      if (auto *R = GEP->getDefiningRecipe(); !R || R->getNumOperands() != 2)
+        return std::nullopt;
+
       if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue())))
         return std::nullopt;
 
-      Recipes.push_back(Load);
       Recipes.push_back(GEP->getDefiningRecipe());
       GEPs.push_back(GEP->getDefiningRecipe());
     } else
       return std::nullopt;
   }
+
+  // If we couldn't match anything, don't return the condition. It may be
+  // defined outside the loop.
+  if (Recipes.empty() || GEPs.empty())
+    return std::nullopt;
+
+#ifndef NDEBUG
+  // Check dominance ordering
+  VPRecipeBase *RA = Recipes.front();
+  VPDominatorTree VPDT(Plan);
+  bool Ordered = all_of(drop_begin(Recipes), [&VPDT, &RA](VPRecipeBase *RB) {
+    bool Dominates = VPDT.properlyDominates(RB, RA);
+    RA = RB;
+    return Dominates;
+  });
+  assert(Ordered && "Uncountable exit recipes unordered");
+#endif
 
   return UncountableCondition;
 }

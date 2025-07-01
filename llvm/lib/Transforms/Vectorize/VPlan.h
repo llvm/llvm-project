@@ -76,6 +76,23 @@ typedef unsigned ID;
 
 using VPlanPtr = std::unique_ptr<VPlan>;
 
+// Different methods of handling early exits.
+//
+// For MaskedHandleLastIterationInScalarLoop, all memory operations besides the
+// load(s) required to determine whether an uncountable exit occurred will be
+// masked based on that condition. If an uncountable exit is taken, then all
+// lanes before the exiting lane will complete, leaving just the final lane to
+// execute in the scalar tail.
+//
+// For ReadOnlyUncountableExitsInVectorLoop, there are no side effects to worry
+// about, so we can instead process any uncountable exit inside the vector
+// body and branch to an appropriate exit block, matching the behaviour of the
+// scalar loop.
+enum class EarlyExitStyleTy {
+  MaskedHandleLastIterationInScalarLoop = 0,
+  ReadOnlyUncountableExitsInVectorLoop
+};
+
 /// VPBlockBase is the building block of the Hierarchical Control-Flow Graph.
 /// A VPBlockBase can be either a VPBasicBlock or a VPRegionBlock.
 class LLVM_ABI_FOR_TEST VPBlockBase {

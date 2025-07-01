@@ -791,7 +791,8 @@ m_SpecificCmp(CmpPredicate MatchPred, const Op0_t &Op0, const Op1_t &Op1) {
 template <typename Op0_t, typename Op1_t>
 using GEPLikeRecipe_match = match_combine_or<
     Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
-                 /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>,
+                 /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe,
+                 VPInstruction>,
     match_combine_or<
         VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>,
         VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>>>;
@@ -801,8 +802,8 @@ inline GEPLikeRecipe_match<Op0_t, Op1_t> m_GetElementPtr(const Op0_t &Op0,
                                                          const Op1_t &Op1) {
   return m_CombineOr(
       Recipe_match<std::tuple<Op0_t, Op1_t>, Instruction::GetElementPtr,
-                   /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe>(
-          Op0, Op1),
+                   /*Commutative*/ false, VPReplicateRecipe, VPWidenGEPRecipe,
+                   VPInstruction>(Op0, Op1),
       m_CombineOr(
           VPInstruction_match<VPInstruction::PtrAdd, Op0_t, Op1_t>(Op0, Op1),
           VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0,
@@ -901,6 +902,12 @@ inline Load_match<Addr_t, Mask_t> m_MaskedLoad(const Addr_t &Addr,
   return Load_match<Addr_t, Mask_t>(Addr, Mask);
 }
 
+template <typename Addr_t>
+inline VPInstruction_match<Instruction::Load, Addr_t>
+m_UnmaskedLoad(const Addr_t &Addr) {
+  return m_VPInstruction<Instruction::Load, Addr_t>(Addr);
+}
+
 template <typename Addr_t, typename Val_t, typename Mask_t> struct Store_match {
   Addr_t Addr;
   Val_t Val;
@@ -924,6 +931,12 @@ template <typename Addr_t, typename Val_t, typename Mask_t>
 inline Store_match<Addr_t, Val_t, Mask_t>
 m_MaskedStore(const Addr_t &Addr, const Val_t &Val, const Mask_t &Mask) {
   return Store_match<Addr_t, Val_t, Mask_t>(Addr, Val, Mask);
+}
+
+template <typename Addr_t, typename Val_t>
+inline VPInstruction_match<Instruction::Store, Addr_t, Val_t>
+m_UnmaskedStore(const Addr_t &Addr, const Val_t &Val) {
+  return m_VPInstruction<Instruction::Store, Addr_t, Val_t>(Addr, Val);
 }
 
 template <typename Op0_t, typename Op1_t>
