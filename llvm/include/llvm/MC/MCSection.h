@@ -675,8 +675,8 @@ public:
 
 /// Fragment representing the .cv_def_range directive.
 class MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
-  SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 2> Ranges;
-  SmallString<32> FixedSizePortion;
+  ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges;
+  StringRef FixedSizePortion;
 
   /// CodeViewContext has the real knowledge about this format, so let it access
   /// our members.
@@ -693,7 +693,7 @@ public:
     return Ranges;
   }
 
-  StringRef getFixedSizePortion() const { return FixedSizePortion.str(); }
+  StringRef getFixedSizePortion() const { return FixedSizePortion; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_CVDefRange;
