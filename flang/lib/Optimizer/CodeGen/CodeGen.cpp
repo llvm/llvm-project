@@ -1344,13 +1344,18 @@ getTypeDescriptor(ModOpTy mod, mlir::ConversionPatternRewriter &rewriter,
           ? fir::NameUniquer::getTypeDescriptorAssemblyName(recType.getName())
           : fir::NameUniquer::getTypeDescriptorName(recType.getName());
   mlir::Type llvmPtrTy = ::getLlvmPtrType(mod.getContext());
+  mlir::DataLayout dataLayout(mod);
   if (auto global = mod.template lookupSymbol<fir::GlobalOp>(name))
-    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
-                                                    global.getSymName());
+    return replaceWithAddrOfOrASCast(
+        rewriter, loc, fir::factory::getGlobalAddressSpace(&dataLayout),
+        fir::factory::getProgramAddressSpace(&dataLayout), global.getSymName(),
+        llvmPtrTy);
   // The global may have already been translated to LLVM.
   if (auto global = mod.template lookupSymbol<mlir::LLVM::GlobalOp>(name))
-    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
-                                                    global.getSymName());
+    return replaceWithAddrOfOrASCast(
+        rewriter, loc, global.getAddrSpace(),
+        fir::factory::getProgramAddressSpace(&dataLayout), global.getSymName(),
+        llvmPtrTy);
   // Type info derived types do not have type descriptors since they are the
   // types defining type descriptors.
   if (options.ignoreMissingTypeDescriptors ||
