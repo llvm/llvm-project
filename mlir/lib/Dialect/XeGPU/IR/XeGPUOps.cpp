@@ -122,7 +122,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
         ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        staticOffsets /* const offsets */, {} /* empty const shape*/,
+        builder.getDenseI64ArrayAttr(staticOffsets)  /* const offsets */, 
+        {} /* empty const shape*/,
         {} /* empty const strides*/);
 }
 
@@ -218,6 +219,263 @@ LogicalResult CreateNdDescOp::verify() {
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
   return success();
+}
+
+
+ParseResult parseOptionalDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
+    SmallVectorImpl<Type> *valueTypes = nullptr,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
+inline ParseResult parseOptionalDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+  DenseBoolArrayAttr scalableFlags;
+  return parseOptionalDynamicIndexList(parser, values, integers, scalableFlags,
+                               valueTypes, delimiter);
+}
+
+ParseResult parseOptionalDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
+    SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
+
+  SmallVector<int64_t, 4> integerVals;
+  SmallVector<bool, 4> scalableVals;
+  auto parseIntegerOrValue = [&]() {
+    OpAsmParser::UnresolvedOperand operand;
+    auto res = parser.parseOptionalOperand(operand);
+
+    // When encountering `[`, assume that this is a scalable index.
+    scalableVals.push_back(parser.parseOptionalLSquare().succeeded());
+
+    if (res.has_value() && succeeded(res.value())) {
+      values.push_back(operand);
+      integerVals.push_back(ShapedType::kDynamic);
+      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
+        return failure();
+    } else {
+      int64_t integer;
+      if (failed(parser.parseInteger(integer)))
+        return failure();
+      integerVals.push_back(integer);
+    }
+
+    // If this is assumed to be a scalable index, verify that there's a closing
+    // `]`.
+    if (scalableVals.back() && parser.parseOptionalRSquare().failed())
+      return failure();
+    return success();
+  };
+  if (parser.parseOptionalLSquare().succeeded()) {
+    if ( parser.parseCommaSeparatedList(parseIntegerOrValue) || parser.parseRSquare() )
+      return parser.emitError(parser.getNameLoc())
+            << "expected SSA value or integer";
+    integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
+    scalableFlags = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
+    return success();
+  }
+  return success();
+}
+
+
+::mlir::ParseResult CreateNdDescOp::parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result) {
+  ::mlir::OpAsmParser::UnresolvedOperand sourceRawOperand{};
+  ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand> sourceOperands(&sourceRawOperand, 1);  ::llvm::SMLoc sourceOperandsLoc;
+  (void)sourceOperandsLoc;
+  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> offsetsOperands;
+  ::llvm::SMLoc offsetsOperandsLoc;
+  (void)offsetsOperandsLoc;
+  ::mlir::DenseI64ArrayAttr const_offsetsAttr;
+  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> shapeOperands;
+  ::llvm::SMLoc shapeOperandsLoc;
+  (void)shapeOperandsLoc;
+  ::mlir::DenseI64ArrayAttr const_shapeAttr;
+  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> stridesOperands;
+  ::llvm::SMLoc stridesOperandsLoc;
+  (void)stridesOperandsLoc;
+  ::mlir::DenseI64ArrayAttr const_stridesAttr;
+  ::mlir::Type sourceRawType{};
+  ::llvm::ArrayRef<::mlir::Type> sourceTypes(&sourceRawType, 1);
+  ::mlir::Type TensorDescRawType{};
+  ::llvm::ArrayRef<::mlir::Type> TensorDescTypes(&TensorDescRawType, 1);
+
+  sourceOperandsLoc = parser.getCurrentLocation();
+  if (parser.parseOperand(sourceRawOperand))
+    return ::mlir::failure();
+
+      auto optionalOffsetResult = [&]() -> ::mlir::OptionalParseResult {
+      {
+        // skip the "offsets :" at the begining if it exists 
+        if (::mlir::succeeded(parser.parseOptionalKeyword("offsets"))) {
+          if (parser.parseColon())
+         return ::mlir::failure();
+        }
+        offsetsOperandsLoc = parser.getCurrentLocation();
+        auto odsResult = parseOptionalDynamicIndexList(parser, offsetsOperands, const_offsetsAttr);
+        // Debug print for offsets parsing using LLVM_DEBUG
+        LLVM_DEBUG(llvm::dbgs() << "parseOptionalDynamicIndexList returned: " << (odsResult ? "failure" : "success") << "\n");
+        LLVM_DEBUG(llvm::dbgs() << "offsetsOperands size: " << offsetsOperands.size() << "\n");
+        if (const_offsetsAttr)
+          LLVM_DEBUG(llvm::dbgs() << "const_offsetsAttr: " << const_offsetsAttr << "\n");
+        if (const_offsetsAttr)
+          result.getOrAddProperties<CreateNdDescOp::Properties>().const_offsets = const_offsetsAttr;
+      }
+        return ::mlir::success();
+      }();
+
+      if (optionalOffsetResult.has_value() && ::mlir::failed(*optionalOffsetResult)) {
+        LLVM_DEBUG(llvm::dbgs() << "optionalOffsetResult failed\n");
+        return ::mlir::failure();
+      } 
+
+  if (::mlir::succeeded(parser.parseOptionalKeyword("shape"))) {
+    LLVM_DEBUG(llvm::dbgs() << "Parsing 'shape' keyword\n");
+    if (parser.parseColon())
+      return ::mlir::failure();
+    {
+      shapeOperandsLoc = parser.getCurrentLocation();
+      auto odsResult = parseDynamicIndexList(parser, shapeOperands, const_shapeAttr);
+      LLVM_DEBUG(llvm::dbgs() << "parseDynamicIndexList for shape returned: " << (odsResult ? "failure" : "success") << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "shapeOperands size: " << shapeOperands.size() << "\n");
+      if (const_shapeAttr)
+        LLVM_DEBUG(llvm::dbgs() << "const_shapeAttr: " << const_shapeAttr << "\n");
+      if (odsResult) return ::mlir::failure();
+      if (const_shapeAttr)
+        result.getOrAddProperties<CreateNdDescOp::Properties>().const_shape = const_shapeAttr;
+    }
+
+    if (parser.parseKeyword("strides"))
+      return ::mlir::failure();
+    if (parser.parseColon())
+      return ::mlir::failure();
+    {
+      stridesOperandsLoc = parser.getCurrentLocation();
+      auto odsResult = parseDynamicIndexList(parser, stridesOperands, const_stridesAttr);
+      LLVM_DEBUG(llvm::dbgs() << "parseDynamicIndexList for strides returned: " << (odsResult ? "failure" : "success") << "\n");
+      LLVM_DEBUG(llvm::dbgs() << "stridesOperands size: " << stridesOperands.size() << "\n");
+      if (const_stridesAttr)
+        LLVM_DEBUG(llvm::dbgs() << "const_stridesAttr: " << const_stridesAttr << "\n");
+      if (odsResult) return ::mlir::failure();
+      if (const_stridesAttr)
+        result.getOrAddProperties<CreateNdDescOp::Properties>().const_strides = const_stridesAttr;
+    }
+  }
+  {
+    auto loc = parser.getCurrentLocation();(void)loc;
+    if (parser.parseOptionalAttrDict(result.attributes))
+      return ::mlir::failure();
+    if (failed(verifyInherentAttrs(result.name, result.attributes, [&]() {
+        return parser.emitError(loc) << "'" << result.name.getStringRef() << "' op ";
+      })))
+      return ::mlir::failure();
+  }
+  if (parser.parseColon())
+    return ::mlir::failure();
+
+  {
+    ::mlir::Type type;
+    if (parser.parseCustomTypeWithFallback(type))
+      return ::mlir::failure();
+    sourceRawType = type;
+  }
+  if (parser.parseArrow())
+    return ::mlir::failure();
+
+  if (parser.parseType(TensorDescRawType))
+    return ::mlir::failure();
+
+  ::llvm::copy(::llvm::ArrayRef<int32_t>({1, static_cast<int32_t>(offsetsOperands.size()), static_cast<int32_t>(shapeOperands.size()), static_cast<int32_t>(stridesOperands.size())}), result.getOrAddProperties<CreateNdDescOp::Properties>().operandSegmentSizes.begin());
+
+  ::mlir::Type odsBuildableType0 = parser.getBuilder().getIndexType();
+  result.addTypes(TensorDescTypes);
+
+  if (parser.resolveOperands(sourceOperands, sourceTypes, sourceOperandsLoc, result.operands))
+    return ::mlir::failure();
+
+  if (parser.resolveOperands(offsetsOperands, odsBuildableType0, offsetsOperandsLoc, result.operands))
+    return ::mlir::failure();
+
+  if (parser.resolveOperands(shapeOperands, odsBuildableType0, shapeOperandsLoc, result.operands))
+    return ::mlir::failure();
+
+  if (parser.resolveOperands(stridesOperands, odsBuildableType0, stridesOperandsLoc, result.operands))
+    return ::mlir::failure();
+  return ::mlir::success();
+}
+
+void CreateNdDescOp::print(::mlir::OpAsmPrinter &_odsPrinter) {
+  _odsPrinter << ' ';
+  _odsPrinter << getSource();
+  // Print offsets if getConstOffsetsAttr() exists, is not empty, and its first value is not int64_t::max.
+  auto constOffsetsAttr = getConstOffsetsAttr();
+  bool printOffsets = false;
+  if (constOffsetsAttr && constOffsetsAttr.size() > 0) {
+    auto firstVal = constOffsetsAttr.asArrayRef()[0];
+    if (firstVal != std::numeric_limits<int64_t>::max()) {
+      printOffsets = true;
+    }
+  }
+  if (printOffsets) {
+
+    printDynamicIndexList(_odsPrinter, *this, getOffsets(), getConstOffsetsAttr());
+  }
+  if (((!getShape().empty()) || (getConstShapeAttr()))) {
+    _odsPrinter << ' ' << "shape";
+    _odsPrinter << ' ' << ":";
+    _odsPrinter << ' ';
+    printDynamicIndexList(_odsPrinter, *this, getShape(), getConstShapeAttr());
+    _odsPrinter << ' ' << "strides";
+    _odsPrinter << ' ' << ":";
+    _odsPrinter << ' ';
+    printDynamicIndexList(_odsPrinter, *this, getStrides(), getConstStridesAttr());
+  }
+  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;
+  elidedAttrs.push_back("operandSegmentSizes");
+  elidedAttrs.push_back("const_offsets");
+  elidedAttrs.push_back("const_shape");
+  elidedAttrs.push_back("const_strides");
+  _odsPrinter.printOptionalAttrDict((*this)->getAttrs(), elidedAttrs);
+  _odsPrinter << ' ' << ":";
+  _odsPrinter << ' ';
+  {
+    auto type = getSource().getType();
+    if (auto validType = ::llvm::dyn_cast<::mlir::Type>(type))
+      _odsPrinter.printStrippedAttrOrType(validType);
+   else
+     _odsPrinter << type;
+  }
+  _odsPrinter << ' ' << "->";
+  _odsPrinter << ' ';
+  // _odsPrinter << getTensorDesc().getType();
+
+
+  _odsPrinter << "!xegpu.tensor_desc<";
+
+  auto tDesc = getTensorDesc().getType(); 
+  auto shape = tDesc.getShape();
+  for (int64_t dim : shape) {
+    if (mlir::ShapedType::isDynamic(dim))
+      _odsPrinter << '?';
+    else
+      _odsPrinter << dim;
+    _odsPrinter << 'x';
+  }
+
+  _odsPrinter << tDesc.getElementType();
+
+  if (auto encoding = tDesc.getEncoding())
+    _odsPrinter << ", " << encoding;
+
+  if (auto layout = tDesc.getLayout())
+    _odsPrinter << ", " << layout;
+
+  _odsPrinter << ">";
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -634,6 +892,7 @@ LogicalResult ConvertLayoutOp::verify() {
 
   return mlir::success();
 }
+
 
 } // namespace xegpu
 } // namespace mlir
