@@ -760,14 +760,10 @@ def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
 def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
 def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
 def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
-def PREFETCH_CONST_TENSORMAP        : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-                                      "prefetch.const.tensormap",
-                                      [(int_nvvm_prefetch_tensormap_p4 addr:$addr)]>,
-                                      Requires<[hasPTX<80>, hasSM<90>]>;
-                                      
+def PREFETCH_CONST_TENSORMAP        : PREFETCH_INTRS<"prefetch.const.tensormap">;                                   
 def PREFETCH_GENERIC_TENSORMAP      : BasicNVPTXInst<(outs), (ins ADDR:$addr),
                                       "prefetch.tensormap",
-                                      [(int_nvvm_prefetch_tensormap_p0 addr:$addr)]>,
+                                      [(int_nvvm_prefetch_generic_tensormap addr:$addr)]>,
                                       Requires<[hasPTX<80>, hasSM<90>]>;
 
 def PREFETCH_GLOBAL_L2_EVICT_NORMAL : BasicNVPTXInst<(outs), (ins ADDR:$addr),
