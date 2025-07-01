@@ -5473,6 +5473,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_summaries_dir_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
 
+  std::string SummaryFormat = "json";
+  if (Arg *A = Args.getLastArg(options::OPT_summary_format_EQ)) {
+    // FIXME: This logic is duplicated, so something is clearly wrong here...
+    StringRef Format = A->getValue();
+    if (Format == "json" || Format == "yaml")
+      SummaryFormat = Format;
+
+    Args.AddLastArg(CmdArgs, options::OPT_summary_format_EQ);
+  }
+
+  // FIXME: This arg shouldn't exist...
   if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
     llvm::SmallString<10> input;
     for (const auto &II : Inputs) {
@@ -5496,7 +5507,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       if (!summaryFile.empty()) {
-        llvm::sys::path::replace_extension(summaryFile, "json");
+        llvm::sys::path::replace_extension(summaryFile, SummaryFormat);
         CmdArgs.push_back(
             Args.MakeArgString(Twine("-summary-file=") + summaryFile));
       }

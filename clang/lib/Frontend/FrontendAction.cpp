@@ -978,10 +978,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
     // FIXME: this is a quick shortcut so large summaries are only evaluated
     // once, we should think about implementing it in a reasonable way...
-    static const char *reducedCache =
-        "reduced-summary-so-that-we-do-not-have-to-evaluate-it-every-time.json";
-    FileManager &FileMgr = CI.getFileManager();
+    static const char *reducedCacheName =
+        "reduced-summary-so-that-we-do-not-have-to-evaluate-it-every-time";
+    const std::string summaryExtension =
+        '.' + CI.getFrontendOpts().SummaryFormat;
 
+    FileManager &FileMgr = CI.getFileManager();
     StringRef SummaryDirPath = CI.getFrontendOpts().SummaryDirPath;
     if (auto SummaryDir = FileMgr.getOptionalDirectoryRef(SummaryDirPath)) {
       std::error_code EC;
@@ -989,7 +991,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       llvm::sys::path::native(SummaryDir->getName(), DirNative);
 
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
-      std::string cacheFile = DirNative.str().str() + '/' + reducedCache;
+      std::string cacheFile =
+          DirNative.str().str() + '/' + reducedCacheName + summaryExtension;
 
       std::vector<std::string> paths;
 
@@ -999,7 +1002,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                            DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
-          if (llvm::sys::path::extension(Dir->path()) != ".json")
+          if (llvm::sys::path::extension(Dir->path()) != summaryExtension)
             continue;
 
           paths.emplace_back(Dir->path().str());

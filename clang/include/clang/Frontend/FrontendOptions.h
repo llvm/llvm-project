@@ -540,6 +540,9 @@ public:
   /// The directory used to load summary files.
   std::string SummaryDirPath;
 
+  /// The format of the emitted summary files.
+  std::string SummaryFormat;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),

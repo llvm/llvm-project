@@ -765,7 +765,15 @@ void CompilerInstance::createSummaryConsumer() {
 }
 
 void CompilerInstance::createSummarySerializer() {
-  TheSummarySerializer.reset(new JSONSummarySerializer(getSummaryContext()));
+  StringRef Format = getFrontendOpts().SummaryFormat;
+  SummarySerializer *Serializer;
+
+  if (Format == "yaml")
+    Serializer = new YAMLSummarySerializer(getSummaryContext());
+  else
+    Serializer = new JSONSummarySerializer(getSummaryContext());
+
+  TheSummarySerializer.reset(Serializer);
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,

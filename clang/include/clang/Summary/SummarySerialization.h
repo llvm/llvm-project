@@ -30,6 +30,7 @@ public:
 };
 
 class YAMLSummarySerializer : public SummarySerializer {
+public:
   YAMLSummarySerializer(SummaryContext &SummaryCtx)
       : SummarySerializer(SummaryCtx){};
 
