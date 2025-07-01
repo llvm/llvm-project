@@ -8359,6 +8359,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
+  VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
+                        OrigLoop);
   // Create partial reduction recipes for scaled reductions and transform
   // recipes to abstract recipes if it is legal and beneficial and clamp the
   // range for better cost estimation.
@@ -8372,6 +8374,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                    Range);
   }
+
+  // Convert memory recipes to strided access recipes if the strided access is
+  // legal and profitable.
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, CostCtx,
+                 Range);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
