@@ -2404,6 +2404,8 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   // instructions will have been done so, now deal with any remaining.
   ScoreBrackets.applyWaitcnt(Wait);
 
+  // TODO-GFX13: VaVdst can be merged into VNBR once expert scheduling mode
+  // is more thoroughly tested.
   // ExpCnt can be merged into VINTERP.
   // Note that VINTERP wait_exp:7 always means "no wait" even if EXPcnt is
   // higher than 7.

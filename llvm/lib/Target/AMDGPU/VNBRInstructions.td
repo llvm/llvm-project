@@ -71,6 +71,8 @@ class VNBR_Pseudo<string opName, dag outs, dag regIns, string asmRegOps> :
     SIMCInstr<NAME, SIEncodingFamily.NONE> {
   let isPseudo = 1;
   let isCodeGenOnly = 1;
+  let Uses = [MODE, EXEC];
+  let UseNamedOperandTable = 1;
 
   string Mnemonic = !tolower(opName);
   string AsmOperands = asmRegOps # "$sema_id$sema_wave_id$"
@@ -80,14 +82,23 @@ class VNBR_Pseudo<string opName, dag outs, dag regIns, string asmRegOps> :
   let WaveSizePredicate = isWave32;
 }
 
-multiclass VNBR_Pseudopair {
+// TODO-GFX13: Handle conditional write of vdst_refl with tied input operands
+multiclass VNBR_write_only {
   def NAME : VNBR_Pseudo<NAME, (outs GVGPR_32:$vdst, GVGPR_32:$vdst_refl),
-                         (ins GVGPR_32:$vsrc), "$vdst, $vdst_refl, $vsrc">;
+                         (ins GVGPR_32:$vsrc), "$vdst, $vdst_refl, $vsrc"> {
+    let SchedRW = [Write32Bit, Write32Bit];
+  }
+}
+
+multiclass VNBR_Pseudopair {
+  defm NAME : VNBR_write_only;
   def _no_write : VNBR_Pseudo<NAME, (outs), (ins), " off, off, off">;
 }
 
+let isConvergent = 1 in {
 defm V_SEND_VGPR_NEXT_B32 : VNBR_Pseudopair;
 defm V_SEND_VGPR_PREV_B32 : VNBR_Pseudopair;
+}
 
 //===----------------------------------------------------------------------===//
 // VNBR Real Instructions
@@ -96,19 +107,28 @@ defm V_SEND_VGPR_PREV_B32 : VNBR_Pseudopair;
 multiclass VNBR_Real_Base<GFXGen gen, VNBR_Pseudo ps> {
   def gen.Suffix : InstSI<ps.OutOperandList, ps.InOperandList,
                           ps.Mnemonic#ps.AsmOperands> {
+    let isPseudo = 0;
+    let isCodeGenOnly = 0;
+    // copy relevant pseudo op flags
     let SubtargetPredicate = ps.SubtargetPredicate;
     let WaveSizePredicate = ps.WaveSizePredicate;
-
-    let DecoderNamespace = gen.DecoderNamespace;
+    let SchedRW            = ps.SchedRW;
+    let Uses               = ps.Uses;
+    let UseNamedOperandTable = ps.UseNamedOperandTable;
+    let isConvergent       = ps.isConvergent;
   }
 }
 
-multiclass VNBR_Realpair<GFXGen gen, bits<4> op> {
+multiclass VNBR_Real_write_only<GFXGen gen, bits<4> op> {
   defvar ps = !cast<VNBR_Pseudo>(NAME);
-  defm NAME : VNBR_Real_Base<gen, ps>, VNBRe<op>;
+  defm NAME : VNBR_Real_Base<gen, ps>, VNBRe<op>, Select<gen, ps.PseudoInstr>;
+}
+
+multiclass VNBR_Realpair<GFXGen gen, bits<4> op> {
+  defm NAME : VNBR_Real_write_only<gen, op>;
 
   defvar noWritePs = !cast<VNBR_Pseudo>(NAME#"_no_write");
-  defm _no_write : VNBR_Real_Base<gen, noWritePs>, VNBRe_no_write<op>;
+  defm _no_write : VNBR_Real_Base<gen, noWritePs>, VNBRe_no_write<op>, Select<gen, noWritePs.PseudoInstr>;
 }
 
 defm V_SEND_VGPR_NEXT_B32 : VNBR_Realpair<GFX13Gen, 0x0>;

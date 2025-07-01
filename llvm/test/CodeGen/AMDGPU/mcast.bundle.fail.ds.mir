@@ -1,6 +1,6 @@
 # RUN: not --crash llc -march=amdgcn -mcpu=gfx1300 -verify-machineinstrs -run-pass=bundle-indexed-load-store -o /dev/null %s 2>&1 | FileCheck %s
 
-# CHECK: LLVM ERROR: Failed to bundle multicast dest
+# CHECK: LLVM ERROR: Failed to bundle instruction that must have laneshared
 ---
 name:            ds
 machineFunctionInfo:

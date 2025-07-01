@@ -4940,8 +4940,7 @@ AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 bool AMDGPUAsmParser::validateRegOperands(const MCInst &Inst,
                                           const OperandVector &Operands) {
   unsigned Opc = Inst.getOpcode();
-  if (isVOPMAsmOnly(Opc) || Opc == V_SEND_VGPR_NEXT_B32_gfx13 ||
-      Opc == V_SEND_VGPR_PREV_B32_gfx13)
+  if (isVOPMAsmOnly(Opc) || isVNBR(Opc))
     return true;
 
   const MCRegisterInfo &MRI = *getMRI();

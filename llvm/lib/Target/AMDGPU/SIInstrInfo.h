@@ -904,7 +904,7 @@ public:
   // Instructions for which we care if their destination ends up in a laneshared
   // VGPR.
   // Async multicast to LDS instructions have no issue.
-  static bool isMulticastToVGPRs(const MachineInstr &MI) {
+  static bool mustHaveLanesharedResult(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case AMDGPU::CLUSTER_LOAD_B32:
     case AMDGPU::CLUSTER_LOAD_B64:
@@ -915,6 +915,8 @@ public:
       // case AMDGPU::DDS_LOAD_MCAST_B32:
       // case AMDGPU::DDS_LOAD_MCAST_B64:
       // case AMDGPU::DDS_LOAD_MCAST_B128:
+    case AMDGPU::V_SEND_VGPR_NEXT_B32:
+    case AMDGPU::V_SEND_VGPR_PREV_B32:
       return true;
     default:
       return false;

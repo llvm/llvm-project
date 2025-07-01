@@ -430,9 +430,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUSpatialClusterKernelAttr>()) {
+  if (FD->hasAttr<AMDGPUSpatialClusterKernelAttr>())
     F->addFnAttr("amdgpu-spatial-cluster");
-  }
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
     uint32_t X =

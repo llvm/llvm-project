@@ -688,6 +688,9 @@ bool isGenericAtomic(unsigned Opc);
 LLVM_READNONE
 bool isCvt_F32_Fp8_Bf8_e64(unsigned Opc);
 
+LLVM_READNONE
+bool isVNBR(unsigned Opc);
+
 namespace VOPD {
 
 enum Component : unsigned {

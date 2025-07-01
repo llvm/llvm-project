@@ -596,7 +596,11 @@ bool IsPromotableToVGPR(Value &V, const DataLayout &DL,
       }
       if (Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b32 ||
           Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b64 ||
-          Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b128) {
+          Intr->getIntrinsicID() == Intrinsic::amdgcn_load_mcast_b128 ||
+          Intr->getIntrinsicID() ==
+              Intrinsic::amdgcn_spatial_cluster_send_next ||
+          Intr->getIntrinsicID() ==
+              Intrinsic::amdgcn_spatial_cluster_send_prev) {
         RejectIsError = true;
         continue;
       }

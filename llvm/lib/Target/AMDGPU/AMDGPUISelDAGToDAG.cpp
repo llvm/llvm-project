@@ -2982,6 +2982,32 @@ void AMDGPUDAGToDAGISel::SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectSpatialClusterChainIntrinsic(SDNode *N,
+                                                            unsigned IntrID) {
+  // TODO: Select this with a tablegen pattern. Currently tablegen
+  // complains about mayLoad/mayStore mismatch with IntrInaccessibleMemOnly
+  SDLoc SL(N);
+  unsigned ChainModeBitNum =
+      IntrID == Intrinsic::amdgcn_spatial_cluster_is_chain_start ||
+              IntrID == Intrinsic::amdgcn_spatial_cluster_set_chain_start
+          ? 12
+          : 13;
+  SDValue ChainMODEBit =
+      CurDAG->getTargetConstant(AMDGPU::Hwreg::HwregEncoding::encode(
+                                    AMDGPU::Hwreg::ID_MODE, ChainModeBitNum, 1),
+                                SL, MVT::i32);
+  if (IntrID == Intrinsic::amdgcn_spatial_cluster_is_chain_start ||
+      IntrID == Intrinsic::amdgcn_spatial_cluster_is_chain_end) {
+    CurDAG->SelectNodeTo(N, AMDGPU::S_GETREG_B32, N->getVTList(),
+                         {ChainMODEBit, N->getOperand(0)});
+  } else {
+    SDNode *SpatialChain = N->getOperand(2).getNode();
+    CurDAG->SelectNodeTo(
+        N, AMDGPU::S_SETREG_B32, N->getVTList(),
+        {SDValue(SpatialChain, 0), ChainMODEBit, N->getOperand(0)});
+  }
+}
+
 static unsigned gwsIntrinToOpcode(unsigned IntrID) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
@@ -3702,6 +3728,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
         .getInfo<SIMachineFunctionInfo>()
         ->setInitWholeWave();
     break;
+  case Intrinsic::amdgcn_spatial_cluster_is_chain_start:
+  case Intrinsic::amdgcn_spatial_cluster_is_chain_end:
+    SelectSpatialClusterChainIntrinsic(N, IntrID);
+    return;
   }
 
   SelectCode(N);
@@ -3834,6 +3864,114 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   }
 }
 
+void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
+  assert(N->getOperand(0).getValueType() == MVT::Other && "Expected chain");
+  SDValue Chain = N->getOperand(0);
+  unsigned Opcode;
+  unsigned SemOpNo = 4;
+  unsigned SemOpNoRefl = 6;
+  bool IsSend = false;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_spatial_cluster_send_next:
+    switch (dyn_cast<ConstantSDNode>(N->getOperand(7))->getZExtValue()) {
+    case 0:
+      Opcode = AMDGPU::V_SEND_VGPR_NEXT_B32;
+      break;
+    default:
+      return SelectCode(N);
+    }
+    IsSend = true;
+    break;
+  case Intrinsic::amdgcn_spatial_cluster_send_prev:
+    switch (dyn_cast<ConstantSDNode>(N->getOperand(7))->getZExtValue()) {
+    case 0:
+      Opcode = AMDGPU::V_SEND_VGPR_PREV_B32;
+      break;
+    default:
+      return SelectCode(N);
+    }
+    IsSend = true;
+    break;
+  case Intrinsic::amdgcn_spatial_cluster_signal_next:
+    Opcode = AMDGPU::V_SEND_VGPR_NEXT_B32_no_write;
+    break;
+  case Intrinsic::amdgcn_spatial_cluster_signal_prev:
+    Opcode = AMDGPU::V_SEND_VGPR_PREV_B32_no_write;
+    break;
+  default:
+    return SelectCode(N);
+  }
+
+  if (!IsSend) {
+    SemOpNo = 2;
+    SemOpNoRefl = 3;
+  }
+  SDLoc SL(N);
+  SDValue Sem = N->getOperand(SemOpNo);
+  SDValue SemRefl = N->getOperand(SemOpNoRefl);
+  auto GetSemNodes = [&](SDValue SemNode) -> std::pair<SDValue, SDValue> {
+    if (auto *SemAddr = dyn_cast<ConstantSDNode>(SemNode)) {
+      const int64_t NullPtr =
+          AMDGPUTargetMachine::getNullPointerValue(AMDGPUAS::LOCAL_ADDRESS);
+      bool IsNull = SemAddr->getSExtValue() == NullPtr;
+      unsigned SemID = IsNull ? 0 : (SemAddr->getZExtValue() >> 4) & 0xF;
+      unsigned WaveID = IsNull ? 0 : (SemAddr->getZExtValue() >> 8) & 0xF;
+      return {CurDAG->getTargetConstant(SemID, SL, MVT::i32),
+              CurDAG->getTargetConstant(WaveID, SL, MVT::i32)};
+    }
+    reportFatalInternalError("Invalid semaddr - non constant");
+  };
+  auto [SemID, WaveID] = GetSemNodes(Sem);
+  auto [SemReflID, SemReflWaveID] = GetSemNodes(SemRefl);
+  // TODO-GFX13: Make this 15 and handle in SIInsertWaitcnts.
+  SDValue WaitVDst = CurDAG->getTargetConstant(0, SL, MVT::i32);
+  if (IsSend) {
+    SmallVector<SDValue, 9> SendOps = {// regIns
+                                       N->getOperand(2),
+                                       // ins
+                                       SemID, WaveID, SemReflID, SemReflWaveID,
+                                       WaitVDst, Chain};
+    MachineSDNode *Send = CurDAG->getMachineNode(Opcode, SL, MVT::i32, MVT::i32,
+                                                 MVT::Other, SendOps);
+    SmallVector<SDValue, 4> StoreOps;
+    SDNode *Shift =
+        CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
+                               {N->getOperand(3), // offset refl
+                                CurDAG->getTargetConstant(2, SL, MVT::i32)});
+    StoreOps.push_back(SDValue(Send, 0));
+    StoreOps.push_back(SDValue(Shift, 0)); // dst
+    StoreOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
+    StoreOps.push_back(SDValue(Send, 2)); // chain
+    MachineSDNode *VStore =
+        CurDAG->getMachineNode(AMDGPU::V_STORE_IDX, SL, MVT::Other, StoreOps);
+    SmallVector<SDValue, 4> StoreOpsRefl;
+    SDNode *ShiftRefl =
+        CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
+                               {N->getOperand(5), // offset refl
+                                CurDAG->getTargetConstant(2, SL, MVT::i32)});
+    StoreOpsRefl.push_back(SDValue(Send, 1));
+    StoreOpsRefl.push_back(SDValue(ShiftRefl, 0)); // dst
+    StoreOpsRefl.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
+    StoreOpsRefl.push_back(SDValue(VStore, 0)); // chain
+    SDNode *Selected =
+        CurDAG->SelectNodeTo(N, AMDGPU::V_STORE_IDX, MVT::Other, StoreOpsRefl);
+    // Synthesize MMOs for V_STORE_IDX.
+    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
+    MachineFunction &MF = CurDAG->getMachineFunction();
+    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+        StorePtrI, MachineMemOperand::MOStore, 4, Align(4));
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(VStore), {StoreMMO});
+    MachineMemOperand *StoreReflMMO = MF.getMachineMemOperand(
+        StorePtrI, StoreMMO->getFlags(), StoreMMO->getSize(),
+        StoreMMO->getBaseAlign(), StoreMMO->getAAInfo());
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {StoreReflMMO});
+  } else {
+    CurDAG->SelectNodeTo(
+        N, Opcode, N->getVTList(),
+        {SemID, WaveID, SemReflID, SemReflWaveID, WaitVDst, Chain});
+  }
+}
+
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(1);
   switch (IntrID) {
@@ -3860,6 +3998,16 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
     SelectLOAD_MCAST(cast<MemIntrinsicSDNode>(N), IntrID);
     return;
   }
+  case Intrinsic::amdgcn_spatial_cluster_send_next:
+  case Intrinsic::amdgcn_spatial_cluster_send_prev:
+  case Intrinsic::amdgcn_spatial_cluster_signal_next:
+  case Intrinsic::amdgcn_spatial_cluster_signal_prev:
+    SelectSpatialClusterVNBR(N, IntrID);
+    return;
+  case Intrinsic::amdgcn_spatial_cluster_set_chain_start:
+  case Intrinsic::amdgcn_spatial_cluster_set_chain_end:
+    SelectSpatialClusterChainIntrinsic(N, IntrID);
+    return;
   default:
     break;
   }

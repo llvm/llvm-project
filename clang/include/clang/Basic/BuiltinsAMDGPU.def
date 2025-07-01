@@ -1213,5 +1213,14 @@ TARGET_BUILTIN(__builtin_amdgcn_map_shared_rank, "v*11v*3i", "n", "gfx13-insts")
 TARGET_BUILTIN(__builtin_amdgcn_query_shared_rank, "ivC*11", "n", "gfx13-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_wavegroup_id_in_cluster, "i", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_is_chain_start, "b", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_is_chain_end, "b", "nc", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_set_chain_start, "vb", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_set_chain_end, "vb", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_send_next, "vii*10v*3i*10v*3i", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_send_prev, "vii*10v*3i*10v*3i", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_signal_next, "vv*3v*3", "n", "gfx13-insts")
+TARGET_BUILTIN(__builtin_amdgcn_spatial_cluster_signal_prev, "vv*3v*3", "n", "gfx13-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

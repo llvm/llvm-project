@@ -479,3 +479,125 @@ body:             |
     %12:vreg_128_align2 = V_CONVOLVE_BF16_BF16_1x1_4x4_ITER_4 killed %6:vreg_128_align2, killed %7:vreg_128_align2, killed %8:vgpr_32, killed %9:vgpr_32, killed %10:vgpr_32, killed %11:vgpr_32, 12290, -1, 0, 0, implicit $exec
     V_STORE_IDX %12:vreg_128_align2, %3:sreg_32_xexec_hi, 0, implicit $exec :: (store (s128), addrspace 10)
 ...
+
+---
+name:            multiple-defs-vopm-cvt-to-tensor
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: multiple-defs-vopm-cvt-to-tensor
+    ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 3, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dstb, [[S_LSHL_B32_]], 4, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 4, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dstb, [[S_LSHL_B32_]], 3, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ;
+    ; ALLOC-LABEL: name: multiple-defs-vopm-cvt-to-tensor
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 3, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dstb, $idx1, 4, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 4, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dstb, $idx1, 3, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ;
+    ; LOWERED-LABEL: name: multiple-defs-vopm-cvt-to-tensor
+    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: undef $vgpr3, undef $vgpr4 = V_CVT_TO_TENSOR_F16_F32_4x2x16 undef $vgpr0_vgpr1_vgpr2_vgpr3, 1, 3, -1, 4113, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr4, undef $vgpr3 = V_CVT_TO_TENSOR_F16_F32_4x2x16 undef $vgpr0_vgpr1_vgpr2_vgpr3, 1, 3, -1, 4113, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %1:vreg_128_align2 = V_LOAD_IDX %0:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    %2:vgpr_32, %3:vgpr_32 = V_CVT_TO_TENSOR_F16_F32_4x2x16 %1, 1, 3, -1, 0, 0, implicit $exec
+    V_STORE_IDX %2:vgpr_32, %0:sreg_32_xexec_hi, 3, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX %3:vgpr_32, %0:sreg_32_xexec_hi, 4, implicit $exec :: (store (s32), addrspace 10)
+    %4:vreg_128_align2 = V_LOAD_IDX %0:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    %5:vgpr_32, %6:vgpr_32 = V_CVT_TO_TENSOR_F16_F32_4x2x16 %4, 1, 3, -1, 0, 0, implicit $exec
+    V_STORE_IDX %5:vgpr_32, %0:sreg_32_xexec_hi, 4, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX %6:vgpr_32, %0:sreg_32_xexec_hi, 3, implicit $exec :: (store (s32), addrspace 10)
+...
+
+---
+name:            multiple-defs-vopm-cvt-to-tensor-swapped
+machineFunctionInfo:
+  laneSharedVGPRSize: 1000
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr33'
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: multiple-defs-vopm-cvt-to-tensor-swapped
+    ; GCN: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 3, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dstb, [[S_LSHL_B32_]], 4, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ; GCN-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit [[S_LSHL_B32_]], implicit $exec {
+    ; GCN-NEXT:   $stg_srca = V_LOAD_IDX [[S_LSHL_B32_]], 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; GCN-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dstb, [[S_LSHL_B32_]], 4, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT:   V_STORE_IDX internal $stg_dsta, [[S_LSHL_B32_]], 3, implicit $exec :: (store (s32), addrspace 10)
+    ; GCN-NEXT: }
+    ;
+    ; ALLOC-LABEL: name: multiple-defs-vopm-cvt-to-tensor-swapped
+    ; ALLOC: [[S_LSHL_B32_:%[0-9]+]]:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    ; ALLOC-NEXT: $idx1 = S_SET_GPR_IDX_U32 [[S_LSHL_B32_]]
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 3, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dstb, $idx1, 4, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ; ALLOC-NEXT: BUNDLE implicit-def $stg_srca, implicit-def $stg_dsta, implicit-def $stg_dstb, implicit $idx1, implicit $exec {
+    ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX $idx1, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    ; ALLOC-NEXT:   $stg_dsta, $stg_dstb = V_CVT_TO_TENSOR_F16_F32_4x2x16 internal $stg_srca, 1, 3, -1, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dstb, $idx1, 4, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT:   V_STORE_IDX internal $stg_dsta, $idx1, 3, implicit $exec :: (store (s32), addrspace 10)
+    ; ALLOC-NEXT: }
+    ;
+    ; LOWERED-LABEL: name: multiple-defs-vopm-cvt-to-tensor-swapped
+    ; LOWERED: S_WAIT_LOADCNT_DSCNT 0
+    ; LOWERED-NEXT: S_WAIT_EXPCNT 0
+    ; LOWERED-NEXT: S_WAIT_SAMPLECNT 0
+    ; LOWERED-NEXT: S_WAIT_BVHCNT 0
+    ; LOWERED-NEXT: S_WAIT_KMCNT 0
+    ; LOWERED-NEXT: renamable $sgpr0 = S_LSHL_B32 1, 2, implicit-def dead $scc
+    ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
+    ; LOWERED-NEXT: undef $vgpr3, undef $vgpr4 = V_CVT_TO_TENSOR_F16_F32_4x2x16 undef $vgpr0_vgpr1_vgpr2_vgpr3, 1, 3, -1, 4113, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef $vgpr3, undef $vgpr4 = V_CVT_TO_TENSOR_F16_F32_4x2x16 undef $vgpr0_vgpr1_vgpr2_vgpr3, 1, 3, -1, 4113, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
+    %1:vreg_128_align2 = V_LOAD_IDX %0:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    %2:vgpr_32, %3:vgpr_32 = V_CVT_TO_TENSOR_F16_F32_4x2x16 %1, 1, 3, -1, 0, 0, implicit $exec
+    V_STORE_IDX %2:vgpr_32, %0:sreg_32_xexec_hi, 3, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX %3:vgpr_32, %0:sreg_32_xexec_hi, 4, implicit $exec :: (store (s32), addrspace 10)
+    %4:vreg_128_align2 = V_LOAD_IDX %0:sreg_32_xexec_hi, 0, implicit $exec :: (dereferenceable load (s128), addrspace 10)
+    %6:vgpr_32, %5:vgpr_32 = V_CVT_TO_TENSOR_F16_F32_4x2x16 %4, 1, 3, -1, 0, 0, implicit $exec
+    V_STORE_IDX %5:vgpr_32, %0:sreg_32_xexec_hi, 4, implicit $exec :: (store (s32), addrspace 10)
+    V_STORE_IDX %6:vgpr_32, %0:sreg_32_xexec_hi, 3, implicit $exec :: (store (s32), addrspace 10)
+...
