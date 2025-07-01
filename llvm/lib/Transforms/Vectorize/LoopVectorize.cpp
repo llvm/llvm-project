@@ -4183,7 +4183,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
                 [](const auto *R) { return Instruction::Select; })
             .Case<VPWidenStoreRecipe>(
                 [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
+            .Case<VPWidenLoadRecipe, VPWidenStridedLoadRecipe>(
                 [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
@@ -4282,6 +4282,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenPointerInductionSC:
       case VPDef::VPReductionPHISC:
       case VPDef::VPInterleaveSC:
+      case VPDef::VPWidenStridedLoadSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
       case VPDef::VPWidenStoreEVLSC:
