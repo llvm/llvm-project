@@ -191,9 +191,9 @@ def XeVM_BlockLoad2dOp
     : XeVM_Op<"blockload2d">,
       Results<(outs FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$res)>,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
-          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
-          I1Attr:$transpose, I1Attr:$pack_register,
+          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
+          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
+          I32Attr:$v_blocks, I1Attr:$transpose, I1Attr:$pack_register,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block load";
@@ -202,7 +202,9 @@ def XeVM_BlockLoad2dOp
     The `xevm.blockload2d` operation loads a two dimensional matrix tile
     from a base matrix residing in global memory. The parameters are:
       $ptr - the base address of the base matrix containing the tile to load
-      $base_width, $base_height, the shape of the base matrix in number of elements.
+      $base_width, $base_height, $base_pitch - the shape of the base matrix.
+      pitch is the physical stride between the first columns of the current row
+      and the subsequent row. All units are in bytes.
       $x, $y, $tile_width, $tile_height - the starting offsets and shape of
       the tile to load in number of elements.
       $elem_size_in_bits - the size in bits of the matrix element type
@@ -225,9 +227,10 @@ def XeVM_BlockLoad2dOp
     ```mlir
       %base_width_a = arith.constant 32 : i32
       %base_height_a = arith.constant 8 : i32
+      %base_pitch_a = arith.constant 32 : i32
       %x = arith.constant 0 : i32
       %y = arith.constant 0 : i32
-      %loaded_a = xevm.blockload2d %src, %base_width_a, %base_height_a, %x, %y
+      %loaded_a = xevm.blockload2d %src, %base_width_a, %base_height_a, %base_pitch_a, %x, %y
                     <{elem_size_in_bits=16 : i32, tile_width=16 : i32, tile_height=8 : i32,
                       v_blocks=1 : i32, transpose=false : i32, pack_register=false,
                       cache_control=#xevm.load_cache_control<Default>}>
@@ -248,8 +251,8 @@ def XeVM_BlockLoad2dOp
 def XeVM_BlockStore2dOp
     : XeVM_Op<"blockstore2d">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemWrite]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
-          I32Attr:$tile_width, I32Attr:$tile_height,
+          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
+          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
           FixedVectorOfRankAndType<[1], [XeVM_ElemType]>:$stored_val,
           OptionalAttr<XeVM_StoreCacheControlAttr>:$cache_control)> {
 
@@ -259,9 +262,11 @@ def XeVM_BlockStore2dOp
     The `xevm.blockstore2d` operation stores a two dimensional tile into a
     larger matrix residing in global memory. The parameters are:
       $ptr - the base address of the target matrix where to store the tile
-      $base_width, $base_height, the shape of the target matrix in number of elements.
+      $base_width, $base_height, $base_pitch - the shape of the target matrix. pitch is the
+      physical stride between the first columns of the current row and the subsequent row.
+      All units are in bytes.
       $x, $y, $tile_width, $tile_height - the starting offsets and shape of the tile to store
-        in number of elements.
+      in number of elements.
       $elem_size_in_bits - the size in bits of the matrix element
         - 32 for f32, tf32
         - 16 for f16, int16, bf16
@@ -273,9 +278,10 @@ def XeVM_BlockStore2dOp
     ```mlir
       %base_width_c = arith.constant 64 : i32
       %base_height_c = arith.constant 8 : i32
+      %base_pitch_c = arith.constant 64 : i32
       %x = arith.constant 0 : i32
       %y = arith.constant 0 : i32
-      xevm.blockstore2d %dst, %base_width_c, %base_height_c, %x, %y, %src
+      xevm.blockstore2d %dst, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %src
         <{elem_size_in_bits=32 : i32, tile_width=16 : i32, tile_height=8 : i32,
           cache_control=#xevm.load_cache_control<Default>}>
         : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
@@ -377,8 +383,9 @@ def XeVM_PrefetchOp
 def XeVM_BlockPrefetch2dOp
     : XeVM_Op<"blockprefetch2d">,
       Arguments<(ins Arg<LLVM_AnyPointer, "", [MemRead]>:$ptr, I32:$base_width,
-          I32:$base_height, I32:$x, I32:$y, I32Attr:$elem_size_in_bits,
-          I32Attr:$tile_width, I32Attr:$tile_height, I32Attr:$v_blocks,
+          I32:$base_height, I32:$base_pitch, I32:$x, I32:$y,
+          I32Attr:$elem_size_in_bits, I32Attr:$tile_width, I32Attr:$tile_height,
+          I32Attr:$v_blocks,
           OptionalAttr<XeVM_LoadCacheControlAttr>:$cache_control)> {
 
   let summary = "2D block prefetch";
@@ -387,7 +394,9 @@ def XeVM_BlockPrefetch2dOp
     The `xevm.blockprefetch2d` operation prefetches a two dimensional tile
     from a larger base matrix residing in global memory. The parameters are:
       $ptr - the base address of the base matrix containing the tile to prefetch
-      $base_width, $base_height - the shape of the base matrix in number of elements.
+      $base_width, $base_height, $base_pitch - the shape of the base matrix.
+      pitch is the physical stride between the first columns of the current row
+      and the subsequent row. All units are in bytes.
       $x, $y, $tile_width, $tile_height - the starting offsets and shape of tile
       to prefetch in number of elements.
       $elem_size_in_bits - the size in bits of the matrix element
@@ -399,7 +408,7 @@ def XeVM_BlockPrefetch2dOp
 
     Example:
     ```mlir
-      xevm.blockprefetch2d %ptr, %base_width, %base_height, %x, %y
+      xevm.blockprefetch2d %ptr, %base_width, %base_height, %base_pitch, %x, %y
         <{elem_size_in_bits=8 : i32, tile_width=32 : i32, tile_height=8 : i32,
           v_blocks=1 : i32, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}>
         : (!llvm.ptr<1>, i32, i32, i32, i32, i32)
