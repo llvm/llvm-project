@@ -132,6 +132,7 @@ class LLVM_ABI MCSection {
 public:
   friend MCAssembler;
   friend MCObjectStreamer;
+  friend class MCEncodedFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
   enum SectionVariant {
@@ -208,6 +209,10 @@ private:
   // subsection 0 list is replaced with concatenated fragments from all
   // subsections.
   SmallVector<std::pair<unsigned, FragList>, 1> Subsections;
+
+  // Content and fixup storage for fragments
+  SmallVector<char, 0> ContentStorage;
+  SmallVector<MCFixup, 0> FixupStorage;
 
 protected:
   // TODO Make Name private when possible.
@@ -296,9 +301,12 @@ public:
 
 /// Interface implemented by fragments that contain encoded instructions and/or
 /// data.
-///
 class MCEncodedFragment : public MCFragment {
   uint8_t BundlePadding = 0;
+  uint32_t ContentStart = 0;
+  uint32_t ContentEnd = 0;
+  uint32_t FixupStart = 0;
+  uint32_t FixupEnd = 0;
 
 protected:
   MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
@@ -318,7 +326,10 @@ public:
     case MCFragment::FT_Data:
     case MCFragment::FT_Dwarf:
     case MCFragment::FT_DwarfFrame:
+    case MCFragment::FT_LEB:
     case MCFragment::FT_PseudoProbe:
+    case MCFragment::FT_CVInlineLines:
+    case MCFragment::FT_CVDefRange:
       return true;
     }
   }
@@ -348,48 +359,64 @@ public:
     HasInstructions = true;
     this->STI = &STI;
   }
-};
 
-/// Interface implemented by fragments that contain encoded instructions and/or
-/// data and also have fixups registered.
-///
-template <unsigned ContentsSize, unsigned FixupsSize>
-class MCEncodedFragmentWithFixups : public MCEncodedFragment {
-  SmallVector<char, ContentsSize> Contents;
+  // Content-related functions manage parent's storage using ContentStart and
+  // ContentSize.
+  void clearContents() { ContentEnd = ContentStart; }
+  // Get a SmallVector reference. The caller should call doneAppending to update
+  // `ContentEnd`.
+  SmallVectorImpl<char> &getContentsForAppending() {
+    SmallVectorImpl<char> &S = getParent()->ContentStorage;
+    if (LLVM_UNLIKELY(ContentEnd != S.size())) {
+      // Move the elements to the end. Reserve space to avoid invalidating
+      // S.begin()+I for `append`.
+      auto Size = ContentEnd - ContentStart;
+      auto I = std::exchange(ContentStart, S.size());
+      S.reserve(S.size() + Size);
+      S.append(S.begin() + I, S.begin() + I + Size);
+    }
+    return S;
+  }
+  void doneAppending() { ContentEnd = getParent()->ContentStorage.size(); }
+  void appendContents(ArrayRef<char> Contents) {
+    getContentsForAppending().append(Contents.begin(), Contents.end());
+    doneAppending();
+  }
+  void appendContents(size_t Num, char Elt) {
+    getContentsForAppending().append(Num, Elt);
+    doneAppending();
+  }
+  void setContents(ArrayRef<char> Contents);
+  MutableArrayRef<char> getContents() {
+    return MutableArrayRef(getParent()->ContentStorage)
+        .slice(ContentStart, ContentEnd - ContentStart);
+  }
+  ArrayRef<char> getContents() const {
+    return ArrayRef(getParent()->ContentStorage)
+        .slice(ContentStart, ContentEnd - ContentStart);
+  }
 
-  /// The list of fixups in this fragment.
-  SmallVector<MCFixup, FixupsSize> Fixups;
-
-protected:
-  MCEncodedFragmentWithFixups(MCFragment::FragmentType FType,
-                              bool HasInstructions)
-      : MCEncodedFragment(FType, HasInstructions) {}
-
-public:
-  SmallVectorImpl<char> &getContents() { return Contents; }
-  const SmallVectorImpl<char> &getContents() const { return Contents; }
-
-  void appendContents(ArrayRef<char> C) { Contents.append(C.begin(), C.end()); }
-  void appendContents(size_t Num, char Elt) { Contents.append(Num, Elt); }
-  void setContents(ArrayRef<char> C) { Contents.assign(C.begin(), C.end()); }
-
-  void addFixup(MCFixup Fixup) { Fixups.push_back(Fixup); }
-  SmallVectorImpl<MCFixup> &getFixups() { return Fixups; }
-  const SmallVectorImpl<MCFixup> &getFixups() const { return Fixups; }
-
-  static bool classof(const MCFragment *F) {
-    MCFragment::FragmentType Kind = F->getKind();
-    return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data ||
-           Kind == MCFragment::FT_CVDefRange || Kind == MCFragment::FT_Dwarf ||
-           Kind == MCFragment::FT_DwarfFrame;
+  // Fixup-related functions manage parent's storage using FixupStart and
+  // FixupSize.
+  void clearFixups() { FixupEnd = FixupStart; }
+  void addFixup(MCFixup Fixup);
+  void appendFixups(ArrayRef<MCFixup> Fixups);
+  void setFixups(ArrayRef<MCFixup> Fixups);
+  MutableArrayRef<MCFixup> getFixups() {
+    return MutableArrayRef(getParent()->FixupStorage)
+        .slice(FixupStart, FixupEnd - FixupStart);
+  }
+  ArrayRef<MCFixup> getFixups() const {
+    return ArrayRef(getParent()->FixupStorage)
+        .slice(FixupStart, FixupEnd - FixupStart);
   }
 };
 
 /// Fragment for data and encoded instructions.
 ///
-class MCDataFragment : public MCEncodedFragmentWithFixups<32, 4> {
+class MCDataFragment : public MCEncodedFragment {
 public:
-  MCDataFragment() : MCEncodedFragmentWithFixups<32, 4>(FT_Data, false) {}
+  MCDataFragment() : MCEncodedFragment(FT_Data, false) {}
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Data;
@@ -402,13 +429,13 @@ public:
 /// A relaxable fragment holds on to its MCInst, since it may need to be
 /// relaxed during the assembler layout and relaxation stage.
 ///
-class MCRelaxableFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class MCRelaxableFragment : public MCEncodedFragment {
   /// The instruction this is a fragment for.
   MCInst Inst;
 
 public:
   MCRelaxableFragment(const MCInst &Inst, const MCSubtargetInfo &STI)
-      : MCEncodedFragmentWithFixups(FT_Relaxable, true), Inst(Inst) {
+      : MCEncodedFragment(FT_Relaxable, true), Inst(Inst) {
     this->STI = &STI;
   }
 
@@ -557,7 +584,7 @@ public:
   }
 };
 
-class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
+class MCLEBFragment final : public MCEncodedFragment {
   /// True if this is a sleb128, false if uleb128.
   bool IsSigned;
 
@@ -566,24 +593,19 @@ class MCLEBFragment final : public MCEncodedFragmentWithFixups<8, 0> {
 
 public:
   MCLEBFragment(const MCExpr &Value, bool IsSigned)
-      : MCEncodedFragmentWithFixups<8, 0>(FT_LEB, false), IsSigned(IsSigned),
-        Value(&Value) {
-    getContents().push_back(0);
-  }
+      : MCEncodedFragment(FT_LEB, false), IsSigned(IsSigned), Value(&Value) {}
 
   const MCExpr &getValue() const { return *Value; }
   void setValue(const MCExpr *Expr) { Value = Expr; }
 
   bool isSigned() const { return IsSigned; }
 
-  /// @}
-
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_LEB;
   }
 };
 
-class MCDwarfLineAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class MCDwarfLineAddrFragment : public MCEncodedFragment {
   /// The value of the difference between the two line numbers
   /// between two .loc dwarf directives.
   int64_t LineDelta;
@@ -594,8 +616,8 @@ class MCDwarfLineAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
 
 public:
   MCDwarfLineAddrFragment(int64_t LineDelta, const MCExpr &AddrDelta)
-      : MCEncodedFragmentWithFixups<8, 1>(FT_Dwarf, false),
-        LineDelta(LineDelta), AddrDelta(&AddrDelta) {}
+      : MCEncodedFragment(FT_Dwarf, false), LineDelta(LineDelta),
+        AddrDelta(&AddrDelta) {}
 
   int64_t getLineDelta() const { return LineDelta; }
 
@@ -606,15 +628,14 @@ public:
   }
 };
 
-class MCDwarfCallFrameFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class MCDwarfCallFrameFragment : public MCEncodedFragment {
   /// The expression for the difference of the two symbols that
   /// make up the address delta between two .cfi_* dwarf directives.
   const MCExpr *AddrDelta;
 
 public:
   MCDwarfCallFrameFragment(const MCExpr &AddrDelta)
-      : MCEncodedFragmentWithFixups<8, 1>(FT_DwarfFrame, false),
-        AddrDelta(&AddrDelta) {}
+      : MCEncodedFragment(FT_DwarfFrame, false), AddrDelta(&AddrDelta) {}
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
   void setAddrDelta(const MCExpr *E) { AddrDelta = E; }
@@ -642,13 +663,12 @@ public:
 
 /// Fragment representing the binary annotations produced by the
 /// .cv_inline_linetable directive.
-class MCCVInlineLineTableFragment : public MCFragment {
+class MCCVInlineLineTableFragment : public MCEncodedFragment {
   unsigned SiteFuncId;
   unsigned StartFileId;
   unsigned StartLineNum;
   const MCSymbol *FnStartSym;
   const MCSymbol *FnEndSym;
-  SmallString<8> Contents;
 
   /// CodeViewContext has the real knowledge about this format, so let it access
   /// our members.
@@ -658,15 +678,12 @@ public:
   MCCVInlineLineTableFragment(unsigned SiteFuncId, unsigned StartFileId,
                               unsigned StartLineNum, const MCSymbol *FnStartSym,
                               const MCSymbol *FnEndSym)
-      : MCFragment(FT_CVInlineLines, false), SiteFuncId(SiteFuncId),
+      : MCEncodedFragment(FT_CVInlineLines, false), SiteFuncId(SiteFuncId),
         StartFileId(StartFileId), StartLineNum(StartLineNum),
         FnStartSym(FnStartSym), FnEndSym(FnEndSym) {}
 
   const MCSymbol *getFnStartSym() const { return FnStartSym; }
   const MCSymbol *getFnEndSym() const { return FnEndSym; }
-
-  SmallString<8> &getContents() { return Contents; }
-  const SmallString<8> &getContents() const { return Contents; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_CVInlineLines;
@@ -674,7 +691,7 @@ public:
 };
 
 /// Fragment representing the .cv_def_range directive.
-class MCCVDefRangeFragment : public MCEncodedFragmentWithFixups<32, 4> {
+class MCCVDefRangeFragment : public MCEncodedFragment {
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges;
   StringRef FixedSizePortion;
 
@@ -686,8 +703,9 @@ public:
   MCCVDefRangeFragment(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion)
-      : MCEncodedFragmentWithFixups<32, 4>(FT_CVDefRange, false),
-        Ranges(Ranges), FixedSizePortion(FixedSizePortion) {}
+      : MCEncodedFragment(FT_CVDefRange, false),
+        Ranges(Ranges.begin(), Ranges.end()),
+        FixedSizePortion(FixedSizePortion) {}
 
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> getRanges() const {
     return Ranges;
@@ -739,15 +757,14 @@ public:
   }
 };
 
-class MCPseudoProbeAddrFragment : public MCEncodedFragmentWithFixups<8, 1> {
+class MCPseudoProbeAddrFragment : public MCEncodedFragment {
   /// The expression for the difference of the two symbols that
   /// make up the address delta between two .pseudoprobe directives.
   const MCExpr *AddrDelta;
 
 public:
   MCPseudoProbeAddrFragment(const MCExpr *AddrDelta)
-      : MCEncodedFragmentWithFixups<8, 1>(FT_PseudoProbe, false),
-        AddrDelta(AddrDelta) {}
+      : MCEncodedFragment(FT_PseudoProbe, false), AddrDelta(AddrDelta) {}
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
 
