@@ -27,9 +27,11 @@ namespace markup {
 /// should trim them if need be.
 class Block {
 public:
+  virtual void renderEscapedMarkdown(llvm::raw_ostream &OS) const = 0;
   virtual void renderMarkdown(llvm::raw_ostream &OS) const = 0;
   virtual void renderPlainText(llvm::raw_ostream &OS) const = 0;
   virtual std::unique_ptr<Block> clone() const = 0;
+  std::string asEscapedMarkdown() const;
   std::string asMarkdown() const;
   std::string asPlainText() const;
 
@@ -42,6 +44,7 @@ public:
 /// One must introduce different paragraphs to create separate blocks.
 class Paragraph : public Block {
 public:
+  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override;
   void renderMarkdown(llvm::raw_ostream &OS) const override;
   void renderPlainText(llvm::raw_ostream &OS) const override;
   std::unique_ptr<Block> clone() const override;
@@ -89,6 +92,7 @@ private:
 
 class ListItemParagraph : public Paragraph {
 public:
+  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override;
   void renderMarkdown(llvm::raw_ostream &OS) const override;
 };
 
@@ -102,6 +106,7 @@ public:
   // A BulletList rendered in markdown is a tight list if it is not a nested
   // list and no item contains multiple paragraphs. Otherwise, it is a loose
   // list.
+  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override;
   void renderMarkdown(llvm::raw_ostream &OS) const override;
   void renderPlainText(llvm::raw_ostream &OS) const override;
   std::unique_ptr<Block> clone() const override;
@@ -137,6 +142,7 @@ public:
 
   BulletList &addBulletList();
 
+  std::string asEscapedMarkdown() const;
   /// Doesn't contain any trailing newlines.
   /// It is expected that the result of this function
   /// is rendered as markdown.

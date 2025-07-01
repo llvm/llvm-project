@@ -10,6 +10,7 @@
 #include "Annotations.h"
 #include "Config.h"
 #include "Hover.h"
+#include "Protocol.h"
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
@@ -3125,7 +3126,7 @@ TEST(Hover, All) {
     Expected.SymRange = T.range();
     Case.ExpectedBuilder(Expected);
 
-    SCOPED_TRACE(H->present().asPlainText());
+    SCOPED_TRACE(H->present(MarkupKind::PlainText));
     EXPECT_EQ(H->NamespaceScope, Expected.NamespaceScope);
     EXPECT_EQ(H->LocalScope, Expected.LocalScope);
     EXPECT_EQ(H->Name, Expected.Name);
@@ -3217,7 +3218,7 @@ TEST(Hover, Providers) {
     ASSERT_TRUE(H);
     HoverInfo Expected;
     Case.ExpectedBuilder(Expected);
-    SCOPED_TRACE(H->present().asMarkdown());
+    SCOPED_TRACE(H->present(MarkupKind::Markdown));
     EXPECT_EQ(H->Provider, Expected.Provider);
   }
 }
@@ -3237,7 +3238,7 @@ TEST(Hover, ParseProviderInfo) {
                {HIFooBar, "### `foo`\n\nprovided by `<bar.h>`"}};
 
   for (const auto &Case : Cases)
-    EXPECT_EQ(Case.HI.present().asMarkdown(), Case.ExpectedMarkdown);
+    EXPECT_EQ(Case.HI.present(MarkupKind::Markdown), Case.ExpectedMarkdown);
 }
 
 TEST(Hover, UsedSymbols) {
@@ -3287,7 +3288,7 @@ TEST(Hover, UsedSymbols) {
     ASSERT_TRUE(H);
     HoverInfo Expected;
     Case.ExpectedBuilder(Expected);
-    SCOPED_TRACE(H->present().asMarkdown());
+    SCOPED_TRACE(H->present(MarkupKind::Markdown));
     EXPECT_EQ(H->UsedSymbolNames, Expected.UsedSymbolNames);
   }
 }
@@ -3757,7 +3758,7 @@ provides Foo, Bar, Baz, Foobar, Qux and 1 more)"}};
     Config Cfg;
     Cfg.Hover.ShowAKA = true;
     WithContextValue WithCfg(Config::Key, std::move(Cfg));
-    EXPECT_EQ(HI.present().asPlainText(), C.ExpectedRender);
+    EXPECT_EQ(HI.present(MarkupKind::PlainText), C.ExpectedRender);
   }
 }
 
@@ -3863,7 +3864,7 @@ TEST(Hover, PresentHeadings) {
   HI.Kind = index::SymbolKind::Variable;
   HI.Name = "foo";
 
-  EXPECT_EQ(HI.present().asMarkdown(), "### variable `foo`");
+  EXPECT_EQ(HI.present(MarkupKind::Markdown), "### variable `foo`");
 }
 
 // This is a separate test as rulers behave differently in markdown vs
@@ -3885,14 +3886,14 @@ TEST(Hover, PresentRulers) {
       "```cpp\n"
       "def\n"
       "```";
-  EXPECT_EQ(HI.present().asMarkdown(), ExpectedMarkdown);
+  EXPECT_EQ(HI.present(MarkupKind::Markdown), ExpectedMarkdown);
 
   llvm::StringRef ExpectedPlaintext = R"pt(variable foo
 
 Value = val
 
 def)pt";
-  EXPECT_EQ(HI.present().asPlainText(), ExpectedPlaintext);
+  EXPECT_EQ(HI.present(MarkupKind::PlainText), ExpectedPlaintext);
 }
 
 TEST(Hover, SpaceshipTemplateNoCrash) {

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "support/Markup.h"
+#include "clang/Basic/CharInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,6 +56,101 @@ bool looksLikeTag(llvm::StringRef Contents) {
   return true; // Potentially incomplete tag.
 }
 
+// Tests whether C should be backslash-escaped in markdown.
+// The string being escaped is Before + C + After. This is part of a paragraph.
+// StartsLine indicates whether `Before` is the start of the line.
+// After may not be everything until the end of the line.
+//
+// It's always safe to escape punctuation, but want minimal escaping.
+// The strategy is to escape the first character of anything that might start
+// a markdown grammar construct.
+bool needsLeadingEscapePlaintext(char C, llvm::StringRef Before,
+                                 llvm::StringRef After, bool StartsLine) {
+  assert(Before.take_while(llvm::isSpace).empty());
+  auto RulerLength = [&]() -> /*Length*/ unsigned {
+    if (!StartsLine || !Before.empty())
+      return false;
+    llvm::StringRef A = After.rtrim();
+    return llvm::all_of(A, [C](char D) { return C == D; }) ? 1 + A.size() : 0;
+  };
+  auto IsBullet = [&]() {
+    return StartsLine && Before.empty() &&
+           (After.empty() || After.starts_with(" "));
+  };
+  auto SpaceSurrounds = [&]() {
+    return (After.empty() || llvm::isSpace(After.front())) &&
+           (Before.empty() || llvm::isSpace(Before.back()));
+  };
+  auto WordSurrounds = [&]() {
+    return (!After.empty() && llvm::isAlnum(After.front())) &&
+           (!Before.empty() && llvm::isAlnum(Before.back()));
+  };
+
+  switch (C) {
+  case '\\': // Escaped character.
+    return true;
+  case '`': // Code block or inline code
+    // Any number of backticks can delimit an inline code block that can end
+    // anywhere (including on another line). We must escape them all.
+    return true;
+  case '~': // Code block
+    return StartsLine && Before.empty() && After.starts_with("~~");
+  case '#': { // ATX heading.
+    if (!StartsLine || !Before.empty())
+      return false;
+    llvm::StringRef Rest = After.ltrim(C);
+    return Rest.empty() || Rest.starts_with(" ");
+  }
+  case ']': // Link or link reference.
+    // We escape ] rather than [ here, because it's more constrained:
+    //   ](...) is an in-line link
+    //   ]: is a link reference
+    // The following are only links if the link reference exists:
+    //   ] by itself is a shortcut link
+    //   ][...] is an out-of-line link
+    // Because we never emit link references, we don't need to handle these.
+    return After.starts_with(":") || After.starts_with("(");
+  case '=': // Setex heading.
+    return RulerLength() > 0;
+  case '_': // Horizontal ruler or matched delimiter.
+    if (RulerLength() >= 3)
+      return true;
+    // Not a delimiter if surrounded by space, or inside a word.
+    // (The rules at word boundaries are subtle).
+    return !(SpaceSurrounds() || WordSurrounds());
+  case '-': // Setex heading, horizontal ruler, or bullet.
+    if (RulerLength() > 0)
+      return true;
+    return IsBullet();
+  case '+': // Bullet list.
+    return IsBullet();
+  case '*': // Bullet list, horizontal ruler, or delimiter.
+    return IsBullet() || RulerLength() >= 3 || !SpaceSurrounds();
+  case '<': // HTML tag (or autolink, which we choose not to escape)
+    return looksLikeTag(After);
+  case '>': // Quote marker. Needs escaping at start of line.
+    return StartsLine && Before.empty();
+  case '&': { // HTML entity reference
+    auto End = After.find(';');
+    if (End == llvm::StringRef::npos)
+      return false;
+    llvm::StringRef Content = After.substr(0, End);
+    if (Content.consume_front("#")) {
+      if (Content.consume_front("x") || Content.consume_front("X"))
+        return llvm::all_of(Content, llvm::isHexDigit);
+      return llvm::all_of(Content, llvm::isDigit);
+    }
+    return llvm::all_of(Content, llvm::isAlpha);
+  }
+  case '.': // Numbered list indicator. Escape 12. -> 12\. at start of line.
+  case ')':
+    return StartsLine && !Before.empty() &&
+           llvm::all_of(Before, llvm::isDigit) && After.starts_with(" ");
+  default:
+    return false;
+  }
+}
+
 /// \brief Tests whether \p C should be backslash-escaped in markdown.
 ///
 /// The MarkupContent LSP specification defines that `markdown` content needs to
@@ -74,7 +170,7 @@ bool looksLikeTag(llvm::StringRef Contents) {
 /// \param After The string that follows \p C .
 //  This is used to determine if \p C is part of a tag or an entity reference.
 /// \returns true if \p C should be escaped, false otherwise.
-bool needsLeadingEscape(char C, llvm::StringRef After) {
+bool needsLeadingEscapeMarkdown(char C, llvm::StringRef After) {
   switch (C) {
   case '<': // HTML tag (or autolink, which we choose not to escape)
     return looksLikeTag(After);
@@ -95,12 +191,23 @@ bool needsLeadingEscape(char C, llvm::StringRef After) {
   }
 }
 
+bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
+                        bool StartsLine, bool EscapeMarkdown) {
+  if (EscapeMarkdown)
+    return needsLeadingEscapePlaintext(C, Before, After, StartsLine);
+  return needsLeadingEscapeMarkdown(C, After);
+}
+
 /// Escape a markdown text block. Ensures the punctuation will not introduce
 /// any of the markdown constructs.
-std::string renderText(llvm::StringRef Input, bool StartsLine) {
+std::string renderText(llvm::StringRef Input, bool StartsLine,
+                       bool EscapeMarkdown = false) {
   std::string R;
   for (unsigned I = 0; I < Input.size(); ++I) {
-    if (needsLeadingEscape(Input[I], Input.substr(I + 1)))
+    if (Input.substr(0, I).take_while(llvm::isSpace).empty() &&
+        !isWhitespace(Input[I]) &&
+        needsLeadingEscape(Input[I], Input.substr(0, I), Input.substr(I + 1),
+                           StartsLine, EscapeMarkdown))
       R.push_back('\\');
     R.push_back(Input[I]);
   }
@@ -204,6 +311,9 @@ std::string renderBlocks(llvm::ArrayRef<std::unique_ptr<Block>> Children,
 // https://github.com/microsoft/vscode/issues/88416 for details.
 class Ruler : public Block {
 public:
+  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override {
+    renderMarkdown(OS);
+  }
   void renderMarkdown(llvm::raw_ostream &OS) const override {
     // Note that we need an extra new line before the ruler, otherwise we might
     // make previous block a title instead of introducing a ruler.
@@ -218,6 +328,9 @@ public:
 
 class CodeBlock : public Block {
 public:
+  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override {
+    renderMarkdown(OS);
+  }
   void renderMarkdown(llvm::raw_ostream &OS) const override {
     std::string Marker = getMarkerForCodeBlock(Contents);
     // No need to pad from previous blocks, as they should end with a new line.
@@ -261,6 +374,12 @@ std::string indentLines(llvm::StringRef Input) {
 class Heading : public Paragraph {
 public:
   Heading(size_t Level) : Level(Level) {}
+
+  void renderEscapedMarkdown(llvm::raw_ostream &OS) const override {
+    OS << std::string(Level, '#') << ' ';
+    Paragraph::renderEscapedMarkdown(OS);
+  }
+
   void renderMarkdown(llvm::raw_ostream &OS) const override {
     OS << std::string(Level, '#') << ' ';
     Paragraph::renderMarkdown(OS);
@@ -271,6 +390,13 @@ private:
 };
 
 } // namespace
+
+std::string Block::asEscapedMarkdown() const {
+  std::string R;
+  llvm::raw_string_ostream OS(R);
+  renderEscapedMarkdown(OS);
+  return llvm::StringRef(OS.str()).trim().str();
+}
 
 std::string Block::asMarkdown() const {
   std::string R;
@@ -284,6 +410,33 @@ std::string Block::asPlainText() const {
   llvm::raw_string_ostream OS(R);
   renderPlainText(OS);
   return llvm::StringRef(OS.str()).trim().str();
+}
+
+void Paragraph::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
+  bool NeedsSpace = false;
+  bool HasChunks = false;
+  for (auto &C : Chunks) {
+    if (C.SpaceBefore || NeedsSpace)
+      OS << " ";
+    switch (C.Kind) {
+    case ChunkKind::PlainText:
+      OS << renderText(C.Contents, !HasChunks, true);
+      break;
+    case ChunkKind::InlineCode:
+      OS << renderInlineBlock(C.Contents);
+      break;
+    case ChunkKind::Bold:
+      OS << renderText("**" + C.Contents + "**", !HasChunks, true);
+      break;
+    case ChunkKind::Emphasized:
+      OS << renderText("*" + C.Contents + "*", !HasChunks, true);
+      break;
+    }
+    HasChunks = true;
+    NeedsSpace = C.SpaceAfter;
+  }
+  // A paragraph in markdown is separated by a blank line.
+  OS << "\n\n";
 }
 
 void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
@@ -421,6 +574,17 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
 BulletList::BulletList() = default;
 BulletList::~BulletList() = default;
 
+void BulletList::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
+  for (auto &D : Items) {
+    std::string M = D.asEscapedMarkdown();
+    // Instead of doing this we might prefer passing Indent to children to get
+    // rid of the copies, if it turns out to be a bottleneck.
+    OS << "- " << indentLines(M) << '\n';
+  }
+  // We need a new line after list to terminate it in markdown.
+  OS << "\n\n";
+}
+
 void BulletList::renderMarkdown(llvm::raw_ostream &OS) const {
   for (auto &D : Items) {
     std::string M = D.asMarkdown();
@@ -522,6 +686,10 @@ void Document::addRuler() { Children.push_back(std::make_unique<Ruler>()); }
 void Document::addCodeBlock(std::string Code, std::string Language) {
   Children.emplace_back(
       std::make_unique<CodeBlock>(std::move(Code), std::move(Language)));
+}
+
+std::string Document::asEscapedMarkdown() const {
+  return renderBlocks(Children, &Block::renderEscapedMarkdown);
 }
 
 std::string Document::asMarkdown() const {

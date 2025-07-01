@@ -15,6 +15,7 @@
 #include "Headers.h"
 #include "IncludeCleaner.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Analysis.h"
@@ -1533,6 +1534,26 @@ markup::Document HoverInfo::present() const {
   }
 
   return Output;
+}
+
+std::string HoverInfo::present(MarkupKind Kind) const {
+  if (Kind == MarkupKind::Markdown) {
+    const Config &Cfg = Config::current();
+    if ((Cfg.Documentation.CommentFormat ==
+         Config::CommentFormatPolicy::Markdown) ||
+        (Cfg.Documentation.CommentFormat ==
+         Config::CommentFormatPolicy::Doxygen))
+      // If the user prefers Markdown, we use the present() method to generate
+      // the Markdown output.
+      return present().asMarkdown();
+    if (Cfg.Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::PlainText)
+      // If the user prefers plain text, we use the present() method to generate
+      // the plain text output.
+      return present().asEscapedMarkdown();
+  }
+
+  return present().asPlainText();
 }
 
 // If the backtick at `Offset` starts a probable quoted range, return the range
