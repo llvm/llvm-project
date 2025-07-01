@@ -109,6 +109,18 @@ TEST(EmbeddingTest, ConstructorsAndAccessors) {
   }
 }
 
+TEST(EmbeddingTest, AddVectorsOutOfPlace) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = {0.5, 1.5, -1.0};
+
+  Embedding E3 = E1 + E2;
+  EXPECT_THAT(E3, ElementsAre(1.5, 3.5, 2.0));
+
+  // Check that E1 and E2 are unchanged
+  EXPECT_THAT(E1, ElementsAre(1.0, 2.0, 3.0));
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
+}
+
 TEST(EmbeddingTest, AddVectors) {
   Embedding E1 = {1.0, 2.0, 3.0};
   Embedding E2 = {0.5, 1.5, -1.0};
@@ -117,6 +129,18 @@ TEST(EmbeddingTest, AddVectors) {
   EXPECT_THAT(E1, ElementsAre(1.5, 3.5, 2.0));
 
   // Check that E2 is unchanged
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
+}
+
+TEST(EmbeddingTest, SubtractVectorsOutOfPlace) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = {0.5, 1.5, -1.0};
+
+  Embedding E3 = E1 - E2;
+  EXPECT_THAT(E3, ElementsAre(0.5, 0.5, 4.0));
+
+  // Check that E1 and E2 are unchanged
+  EXPECT_THAT(E1, ElementsAre(1.0, 2.0, 3.0));
   EXPECT_THAT(E2, ElementsAre(0.5, 1.5, -1.0));
 }
 
@@ -135,6 +159,15 @@ TEST(EmbeddingTest, ScaleVector) {
   Embedding E1 = {1.0, 2.0, 3.0};
   E1 *= 0.5f;
   EXPECT_THAT(E1, ElementsAre(0.5, 1.0, 1.5));
+}
+
+TEST(EmbeddingTest, ScaleVectorOutOfPlace) {
+  Embedding E1 = {1.0, 2.0, 3.0};
+  Embedding E2 = E1 * 0.5f;
+  EXPECT_THAT(E2, ElementsAre(0.5, 1.0, 1.5));
+
+  // Check that E1 is unchanged
+  EXPECT_THAT(E1, ElementsAre(1.0, 2.0, 3.0));
 }
 
 TEST(EmbeddingTest, AddScaledVector) {
@@ -178,6 +211,12 @@ TEST(EmbeddingTest, AccessOutOfBounds) {
   EXPECT_DEATH(E[3], "Index out of bounds");
   EXPECT_DEATH(E[-1], "Index out of bounds");
   EXPECT_DEATH(E[4] = 4.0, "Index out of bounds");
+}
+
+TEST(EmbeddingTest, MismatchedDimensionsAddVectorsOutOfPlace) {
+  Embedding E1 = {1.0, 2.0};
+  Embedding E2 = {1.0};
+  EXPECT_DEATH(E1 + E2, "Vectors must have the same dimension");
 }
 
 TEST(EmbeddingTest, MismatchedDimensionsAddVectors) {
