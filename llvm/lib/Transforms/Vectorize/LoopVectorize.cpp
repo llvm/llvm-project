@@ -3163,7 +3163,8 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
             .Case(
                 [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
-            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
+            .Case<VPWidenLoadRecipe, VPWidenStridedLoadRecipe>(
+                [](const auto *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
@@ -3263,6 +3264,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPReductionPHISC:
       case VPRecipeBase::VPInterleaveEVLSC:
       case VPRecipeBase::VPInterleaveSC:
+      case VPRecipeBase::VPWidenStridedLoadSC:
       case VPRecipeBase::VPWidenLoadEVLSC:
       case VPRecipeBase::VPWidenLoadSC:
       case VPRecipeBase::VPWidenStoreEVLSC:
@@ -6323,8 +6325,11 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
           Ptr, &Plan.getVF(), getLoadStoreType(I),
           /*Stride*/ -1, ReverseFlags, VPI->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Flags,
-                                            VPI->getDebugLoc());
+      const DataLayout &DL = I->getDataLayout();
+      auto *StrideTy = DL.getIndexType(Ptr->getUnderlyingValue()->getType());
+      VPValue *StrideOne = Plan.getConstantInt(StrideTy, 1);
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), StrideOne,
+                                            Flags, VPI->getDebugLoc());
     }
     Builder.setInsertPoint(VPI);
     Builder.insert(VectorPtr);
@@ -6925,6 +6930,17 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                    Range);
   }
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, CM.isEpilogueAllowed());
+
+  // Convert memory recipes to strided access recipes if the strided access is
+  // legal and profitable.
+  RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, CostCtx,
+                 Range);
+
   // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
   if (Range.Start.isScalar())
     Range.End = Range.Start * 2;
@@ -6932,12 +6948,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
   for (ElementCount VF : Range)
     Plan->addVF(VF);
   Plan->setName("Initial VPlan");
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, CM.isEpilogueAllowed());
 
   // Replace VPValues for known constant strides.
   RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,

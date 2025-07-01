@@ -81,31 +81,24 @@ define void @foo(ptr %p, ptr %p.strided, i64 %n, i64 %stride) {
 ; NO-UNIT-STRIDE-MV-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT12]]
 ; NO-UNIT-STRIDE-MV-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; NO-UNIT-STRIDE-MV:       [[VECTOR_PH]]:
-; NO-UNIT-STRIDE-MV-NEXT:    [[BROADCAST_SPLATINSERT15:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[STRIDE]], i64 0
-; NO-UNIT-STRIDE-MV-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT15]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-; NO-UNIT-STRIDE-MV-NEXT:    [[TMP35:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
-; NO-UNIT-STRIDE-MV-NEXT:    [[INDUCTION:%.*]] = add nsw <vscale x 2 x i64> splat (i64 1), [[TMP35]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[TMP28:%.*]] = shl i64 [[STRIDE]], 3
 ; NO-UNIT-STRIDE-MV-NEXT:    br label %[[HEADER:.*]]
 ; NO-UNIT-STRIDE-MV:       [[HEADER]]:
 ; NO-UNIT-STRIDE-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[HEADER]] ]
-; NO-UNIT-STRIDE-MV-NEXT:    [[STEP_ADD_3:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[HEADER]] ]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[AVL:%.*]] = phi i64 [ 63, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[HEADER]] ]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP25:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; NO-UNIT-STRIDE-MV-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
-; NO-UNIT-STRIDE-MV-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP26]], i64 0
-; NO-UNIT-STRIDE-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT14]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; NO-UNIT-STRIDE-MV-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[TMP34:%.*]] = mul <vscale x 2 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT16]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[TMP34:%.*]] = mul i64 [[OFFSET_IDX]], [[STRIDE]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP30:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP31:%.*]] = getelementptr i64, ptr [[OUT]], i64 [[OFFSET_IDX]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[TMP40:%.*]] = getelementptr i64, ptr [[P_STRIDED]], <vscale x 2 x i64> [[TMP34]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[TMP29:%.*]] = getelementptr i64, ptr [[P_STRIDED]], i64 [[TMP34]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[WIDE_LOAD19:%.*]] = call <vscale x 2 x i64> @llvm.vp.load.nxv2i64.p0(ptr align 8 [[TMP30]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP25]]), !alias.scope [[META0:![0-9]+]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[WIDE_MASKED_GATHER22:%.*]] = call <vscale x 2 x i64> @llvm.vp.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> align 8 [[TMP40]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP25]]), !alias.scope [[META3:![0-9]+]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[WIDE_MASKED_GATHER22:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i64(ptr align 8 [[TMP29]], i64 [[TMP28]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP25]]), !alias.scope [[META3:![0-9]+]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP49:%.*]] = add <vscale x 2 x i64> [[WIDE_LOAD19]], [[WIDE_MASKED_GATHER22]]
 ; NO-UNIT-STRIDE-MV-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP49]], ptr align 8 [[TMP31]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP25]]), !alias.scope [[META5:![0-9]+]], !noalias [[META7:![0-9]+]]
+; NO-UNIT-STRIDE-MV-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i64
 ; NO-UNIT-STRIDE-MV-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP26]], [[INDEX]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP26]]
-; NO-UNIT-STRIDE-MV-NEXT:    [[VEC_IND_NEXT]] = add nsw <vscale x 2 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
 ; NO-UNIT-STRIDE-MV-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; NO-UNIT-STRIDE-MV-NEXT:    br i1 [[TMP32]], label %[[MIDDLE_BLOCK:.*]], label %[[HEADER]], !llvm.loop [[LOOP8:![0-9]+]]
 ; NO-UNIT-STRIDE-MV:       [[MIDDLE_BLOCK]]:

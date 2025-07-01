@@ -436,6 +436,7 @@ public:
     VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
+    VPWidenStridedLoadSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,
@@ -650,6 +651,7 @@ public:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPWidenLoadEVLSC:
     case VPRecipeBase::VPWidenLoadSC:
+    case VPRecipeBase::VPWidenStridedLoadSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
     case VPRecipeBase::VPInterleaveEVLSC:
@@ -2095,10 +2097,6 @@ protected:
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
   bool isIndexLoopInvariant(unsigned I) const {
     return getOperand(I + 1)->isDefinedOutsideLoopRegions();
   }
@@ -2128,6 +2126,30 @@ public:
 
   /// This recipe generates a GEP instruction.
   unsigned getOpcode() const { return Instruction::GetElementPtr; }
+
+  bool isPointerLoopInvariant() const {
+    return getOperand(0)->isDefinedOutsideLoopRegions();
+  }
+
+  std::optional<unsigned> getUniqueVariantIndex() const {
+    std::optional<unsigned> VarIdx;
+    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
+      if (isIndexLoopInvariant(I))
+        continue;
+
+      if (VarIdx)
+        return std::nullopt;
+      VarIdx = I;
+    }
+    return VarIdx;
+  }
+
+  /// Returns the element type for the first \p I indices of this recipe.
+  Type *getIndexedType(unsigned I) const {
+    auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
+    SmallVector<Value *, 4> Ops(GEP->idx_begin(), GEP->idx_begin() + I);
+    return GetElementPtrInst::getIndexedType(SourceElementTy, Ops);
+  }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
@@ -2228,22 +2250,26 @@ protected:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of \p
+/// SourceElementTy, with the \p Stride expressed in units of \p
 /// SourceElementTy. Unrolling adds an extra offset operand for unrolled parts >
 /// 0 and it produces `GEP Ptr, Offset`. The offset for unrolled part 0 is 0.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
                         GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPRecipeBase::VPVectorPointerSC, Ptr,
+      : VPRecipeWithIRFlags(VPRecipeBase::VPVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, Stride}),
                             getScalarTypeOrInfer(Ptr), GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPVectorPointerSC)
 
+  VPValue *getStride() const { return getOperand(1); }
+
   VPValue *getOffset() {
-    return getNumOperands() == 2 ? getOperand(1) : nullptr;
+    return getNumOperands() > 2 ? getOperand(2) : nullptr;
   }
 
   void execute(VPTransformState &State) override;
@@ -2265,8 +2291,9 @@ public:
   }
 
   VPVectorPointerRecipe *clone() override {
-    auto *Clone = new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
-                                            getGEPNoWrapFlags(), getDebugLoc());
+    auto *Clone =
+        new VPVectorPointerRecipe(getOperand(0), SourceElementTy, getStride(),
+                                  getGEPNoWrapFlags(), getDebugLoc());
     if (auto *Off = getOffset())
       Clone->addOperand(Off);
     return Clone;
@@ -3667,6 +3694,60 @@ protected:
 #endif
 };
 
+/// A recipe for strided load operations, using the base address, stride, VF,
+/// and an optional mask. This recipe will generate a vp.strided.load intrinsic
+/// call to represent memory accesses with a fixed stride.
+struct VPWidenStridedLoadRecipe final : public VPSingleDefRecipe,
+                                        public VPWidenMemoryRecipe {
+  VPWidenStridedLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Stride,
+                           VPValue *VF, VPValue *Mask,
+                           const VPIRMetadata &Metadata, DebugLoc DL)
+      : VPSingleDefRecipe(VPRecipeBase::VPWidenStridedLoadSC,
+                          {Addr, Stride, VF}, Load.getType(), &Load, DL),
+        VPWidenMemoryRecipe(Load, /*Consecutive=*/false, Metadata) {
+    setMask(Mask);
+  }
+
+  VPWidenStridedLoadRecipe *clone() override {
+    return new VPWidenStridedLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                        getStride(), getVF(), getMask(), *this,
+                                        getDebugLoc());
+  }
+
+  VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStridedLoadSC);
+
+  /// Return the stride operand.
+  VPValue *getStride() const { return getOperand(1); }
+
+  /// Return the VF operand.
+  VPValue *getVF() const { return getOperand(2); }
+
+  /// Generate a strided load.
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPWidenStridedLoadRecipe.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // All operands except the mask are only used for the first lane.
+    return Op == getAddr() || Op == getStride() || Op == getVF();
+  }
+
+protected:
+  VPRecipeBase *getAsRecipe() override { return this; }
+  const VPRecipeBase *getAsRecipe() const override { return this; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+};
+
 /// A recipe for widening store operations, using the stored value, the address
 /// to store to and an optional mask.
 struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
@@ -4132,9 +4213,9 @@ struct CastInfo<VPPhiAccessors, VPRecipeBase>
 /// Support casting from VPRecipeBase / VPUser -> VPWidenMemoryRecipe.
 template <>
 struct CastInfo<VPWidenMemoryRecipe, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<VPWidenMemoryRecipe, VPWidenLoadRecipe,
-                                  VPWidenLoadEVLRecipe, VPWidenStoreRecipe,
-                                  VPWidenStoreEVLRecipe> {};
+    : vpdetail::CastInfoMixinImpl<
+          VPWidenMemoryRecipe, VPWidenLoadRecipe, VPWidenStridedLoadRecipe,
+          VPWidenLoadEVLRecipe, VPWidenStoreRecipe, VPWidenStoreEVLRecipe> {};
 template <>
 struct CastInfo<VPWidenMemoryRecipe, const VPRecipeBase *>
     : public ConstStrippingForwardingCast<
