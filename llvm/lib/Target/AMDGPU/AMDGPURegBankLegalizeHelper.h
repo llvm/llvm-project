@@ -111,9 +111,9 @@ private:
              SmallSet<Register, 4> &SgprWaterfallOperandRegs);
 
   void lowerVccExtToSel(MachineInstr &MI);
-  const std::pair<Register, Register> unpackZExt(Register Reg);
-  const std::pair<Register, Register> unpackSExt(Register Reg);
-  const std::pair<Register, Register> unpackAExt(Register Reg);
+  std::pair<Register, Register> unpackZExt(Register Reg);
+  std::pair<Register, Register> unpackSExt(Register Reg);
+  std::pair<Register, Register> unpackAExt(Register Reg);
   void lowerUnpackBitShift(MachineInstr &MI);
   void lowerV_BFE(MachineInstr &MI);
   void lowerS_BFE(MachineInstr &MI);

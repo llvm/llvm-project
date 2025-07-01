@@ -727,10 +727,8 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
 
   if (auto stringAttr = dyn_cast<StringAttr>(attr)) {
-    return llvm::ConstantDataArray::get(
-        moduleTranslation.getLLVMContext(),
-        ArrayRef<char>{stringAttr.getValue().data(),
-                       stringAttr.getValue().size()});
+    return llvm::ConstantDataArray::get(moduleTranslation.getLLVMContext(),
+                                        ArrayRef<char>{stringAttr.getValue()});
   }
 
   // Handle arrays of structs that cannot be represented as DenseElementsAttr
@@ -777,7 +775,7 @@ ModuleTranslation::ModuleTranslation(Operation *module,
 }
 
 ModuleTranslation::~ModuleTranslation() {
-  if (ompBuilder)
+  if (ompBuilder && !ompBuilder->isFinalized())
     ompBuilder->finalize();
 }
 
@@ -1922,7 +1920,7 @@ ModuleTranslation::getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr) {
   if (!scopeInserted)
     return scopeIt->second;
   llvm::LLVMContext &ctx = llvmModule->getContext();
-  auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
+  auto dummy = llvm::MDNode::getTemporary(ctx, {});
   // Convert the domain metadata node if necessary.
   auto [domainIt, insertedDomain] = aliasDomainMetadataMapping.try_emplace(
       aliasScopeAttr.getDomain(), nullptr);
@@ -2225,8 +2223,6 @@ ModuleTranslation::getOrInsertNamedModuleMetadata(StringRef name) {
   return llvmModule->getOrInsertNamedMetadata(name);
 }
 
-void ModuleTranslation::StackFrame::anchor() {}
-
 static std::unique_ptr<llvm::Module>
 prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
                   StringRef name) {
@@ -2332,6 +2328,10 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // Add the necessary debug info module flags, if they were not encoded in MLIR
   // beforehand.
   translator.debugTranslation->addModuleFlagsIfNotPresent();
+
+  // Call the OpenMP IR Builder callbacks prior to verifying the module
+  if (auto *ompBuilder = translator.getOpenMPBuilder())
+    ompBuilder->finalize();
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

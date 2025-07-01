@@ -452,12 +452,16 @@ static InstructionCost costShuffleViaSplitting(const RISCVTTIImpl &TTI,
         if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
                  .second)
           return;
-        Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                   RegMask, CostKind, 0, nullptr);
+        Cost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc,
+            FixedVectorType::get(SingleOpTy->getElementType(), RegMask.size()),
+            SingleOpTy, RegMask, CostKind, 0, nullptr);
       },
       [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
-        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
-                                   CostKind, 0, nullptr);
+        Cost += TTI.getShuffleCost(
+            TTI::SK_PermuteTwoSrc,
+            FixedVectorType::get(SingleOpTy->getElementType(), RegMask.size()),
+            SingleOpTy, RegMask, CostKind, 0, nullptr);
       });
   return Cost;
 }
@@ -526,11 +530,11 @@ costShuffleViaVRegSplitting(const RISCVTTIImpl &TTI, MVT LegalVT,
           return;
         ++NumShuffles;
         Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                   RegMask, CostKind, 0, nullptr);
+                                   SingleOpTy, RegMask, CostKind, 0, nullptr);
       },
       [&](ArrayRef<int> RegMask, unsigned Idx1, unsigned Idx2, bool NewReg) {
-        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
-                                   CostKind, 0, nullptr);
+        Cost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
+                                   SingleOpTy, RegMask, CostKind, 0, nullptr);
         NumShuffles += 2;
       });
   // Note: check that we do not emit too many shuffles here to prevent code
@@ -601,22 +605,29 @@ InstructionCost RISCVTTIImpl::getSlideCost(FixedVectorType *Tp,
   return FirstSlideCost + SecondSlideCost + MaskCost;
 }
 
-InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
-                                             VectorType *Tp, ArrayRef<int> Mask,
-                                             TTI::TargetCostKind CostKind,
-                                             int Index, VectorType *SubTp,
-                                             ArrayRef<const Value *> Args,
-                                             const Instruction *CxtI) const {
-  Kind = improveShuffleKindFromMask(Kind, Mask, Tp, Index, SubTp);
-  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+InstructionCost
+RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                             VectorType *SrcTy, ArrayRef<int> Mask,
+                             TTI::TargetCostKind CostKind, int Index,
+                             VectorType *SubTp, ArrayRef<const Value *> Args,
+                             const Instruction *CxtI) const {
+  assert((Mask.empty() || DstTy->isScalableTy() ||
+          Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
+         "Expected the Mask to match the return size if given");
+  assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
+         "Expected the same scalar types");
+
+  Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // First, handle cases where having a fixed length vector enables us to
   // give a more accurate cost than falling back to generic scalable codegen.
   // TODO: Each of these cases hints at a modeling gap around scalable vectors.
-  if (auto *FVTp = dyn_cast<FixedVectorType>(Tp);
+  if (auto *FVTp = dyn_cast<FixedVectorType>(SrcTy);
       FVTp && ST->hasVInstructions() && LT.second.isFixedLengthVector()) {
     InstructionCost VRegSplittingCost = costShuffleViaVRegSplitting(
-        *this, LT.second, ST->getRealVLen(), Tp, Mask, CostKind);
+        *this, LT.second, ST->getRealVLen(),
+        Kind == TTI::SK_InsertSubvector ? DstTy : SrcTy, Mask, CostKind);
     if (VRegSplittingCost.isValid())
       return VRegSplittingCost;
     switch (Kind) {
@@ -655,7 +666,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           for (unsigned I = 0; I != NumSlides; ++I) {
             unsigned InsertIndex = SubVectorSize * (1 << I);
             FixedVectorType *SubTp =
-                FixedVectorType::get(Tp->getElementType(), InsertIndex);
+                FixedVectorType::get(SrcTy->getElementType(), InsertIndex);
             FixedVectorType *DestTp =
                 FixedVectorType::getDoubleElementsVectorType(SubTp);
             std::pair<InstructionCost, MVT> DestLT =
@@ -664,7 +675,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             // destination vector register group for vslideup cannot overlap the
             // source.
             Cost += DestLT.first * TLI->getLMULCost(DestLT.second);
-            Cost += getShuffleCost(TTI::SK_InsertSubvector, DestTp, {},
+            Cost += getShuffleCost(TTI::SK_InsertSubvector, DestTp, DestTp, {},
                                    CostKind, InsertIndex, SubTp);
           }
           return Cost;
@@ -680,7 +691,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
                             LT.second.getVectorNumElements() <= 256)) {
         VectorType *IdxTy =
-            getVRGatherIndexType(LT.second, *ST, Tp->getContext());
+            getVRGatherIndexType(LT.second, *ST, SrcTy->getContext());
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         return IndexCost +
                getRISCVInstructionCost(RISCV::VRGATHER_VV, LT.second, CostKind);
@@ -699,8 +710,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       // (shuffle) mask.
       if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
                             LT.second.getVectorNumElements() <= 256)) {
-        auto &C = Tp->getContext();
-        auto EC = Tp->getElementCount();
+        auto &C = SrcTy->getContext();
+        auto EC = SrcTy->getElementCount();
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
         VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
@@ -769,6 +780,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // Example sequence:
     // vsetivli     zero, 4, e8, mf2, tu, ma (ignored)
     // vslideup.vi  v8, v9, 2
+    LT = getTypeLegalizationCost(DstTy);
     return LT.first *
            getRISCVInstructionCost(RISCV::VSLIDEUP_VI, LT.second, CostKind);
   case TTI::SK_Select: {
@@ -846,14 +858,15 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // TODO: Cases to improve here:
     // * Illegal vector types
     // * i64 on RV32
-    if (Tp->getElementType()->isIntegerTy(1)) {
+    if (SrcTy->getElementType()->isIntegerTy(1)) {
       VectorType *WideTy =
-          VectorType::get(IntegerType::get(Tp->getContext(), 8),
-                          cast<VectorType>(Tp)->getElementCount());
-      return getCastInstrCost(Instruction::ZExt, WideTy, Tp,
+          VectorType::get(IntegerType::get(SrcTy->getContext(), 8),
+                          cast<VectorType>(SrcTy)->getElementCount());
+      return getCastInstrCost(Instruction::ZExt, WideTy, SrcTy,
                               TTI::CastContextHint::None, CostKind) +
-             getShuffleCost(TTI::SK_Reverse, WideTy, {}, CostKind, 0, nullptr) +
-             getCastInstrCost(Instruction::Trunc, Tp, WideTy,
+             getShuffleCost(TTI::SK_Reverse, WideTy, WideTy, {}, CostKind, 0,
+                            nullptr) +
+             getCastInstrCost(Instruction::Trunc, SrcTy, WideTy,
                               TTI::CastContextHint::None, CostKind);
     }
 
@@ -899,7 +912,8 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return FixedCost + LT.first * (GatherCost + SlideCost);
   }
   }
-  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index,
+                               SubTp);
 }
 
 static unsigned isM1OrSmaller(MVT VT) {
@@ -1025,8 +1039,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       auto Mask = createStrideMask(Index, Factor, VF);
       Mask.resize(VF * Factor, -1);
       InstructionCost ShuffleCost =
-          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, VecTy, Mask,
-                         CostKind, 0, nullptr, {});
+          getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, VecTy, VecTy,
+                         Mask, CostKind, 0, nullptr, {});
       Cost += ShuffleCost;
     }
     return Cost;
@@ -1052,7 +1066,7 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
   // shuffle that goes into the wide store
   auto Mask = createInterleaveMask(VF, Factor);
   InstructionCost ShuffleCost =
-      getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, FVTy, Mask,
+      getShuffleCost(TTI::ShuffleKind::SK_PermuteSingleSrc, FVTy, FVTy, Mask,
                      CostKind, 0, nullptr, {});
   return MemCost + ShuffleCost;
 }
@@ -1523,7 +1537,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // To support type-based query from vectorizer, set the index to 0.
     // Note that index only change the cost from vslide.vx to vslide.vi and in
     // current implementations they have same costs.
-    return getShuffleCost(TTI::SK_Splice,
+    return getShuffleCost(TTI::SK_Splice, cast<VectorType>(ICA.getReturnType()),
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
   }

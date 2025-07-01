@@ -1713,11 +1713,9 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                                    : SystemZ::NoRegister)
           .Case("r15",
                 Subtarget.isTargetELF() ? SystemZ::R15D : SystemZ::NoRegister)
-          .Default(SystemZ::NoRegister);
+          .Default(Register());
 
-  if (Reg)
-    return Reg;
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 Register SystemZTargetLowering::getExceptionPointerRegister(
@@ -2389,9 +2387,8 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Build a sequence of copy-to-reg nodes, chained and glued together.
-  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
-    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[I].first,
-                             RegsToPass[I].second, Glue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, N, Glue);
     Glue = Chain.getValue(1);
   }
 
@@ -2402,9 +2399,8 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are
   // known live into the call.
-  for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I)
-    Ops.push_back(DAG.getRegister(RegsToPass[I].first,
-                                  RegsToPass[I].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();

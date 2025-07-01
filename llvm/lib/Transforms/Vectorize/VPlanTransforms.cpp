@@ -1140,6 +1140,24 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Look through ExtractLastElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractLastElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 1));
+    return;
+  }
+
+  // Look through ExtractPenultimateElement (BuildVector ....).
+  if (match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
+                    m_BuildVector()))) {
+    auto *BuildVector = cast<VPInstruction>(R.getOperand(0));
+    Def->replaceAllUsesWith(
+        BuildVector->getOperand(BuildVector->getNumOperands() - 2));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -1161,6 +1179,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&U);
       return PhiR && PhiR->isInLoop();
     });
+    return;
+  }
+
+  if (match(Def,
+            m_VPInstruction<VPInstruction::ExtractLastElement>(
+                m_VPInstruction<VPInstruction::Broadcast>(m_VPValue(A))))) {
+    Def->replaceAllUsesWith(A);
     return;
   }
 
@@ -1195,9 +1220,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
         continue;
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
@@ -2173,6 +2198,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
+  assert(all_of(Plan.getVF().users(),
+                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                        VPWidenIntOrFpInductionRecipe>) &&
+         "User of VF that we can't transform to EVL.");
+  Plan.getVF().replaceAllUsesWith(&EVL);
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
   VPInstruction *PrevEVL = nullptr;
@@ -2189,11 +2220,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
-  }
-
-  for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
-      R->setOperand(1, &EVL);
   }
 
   SmallVector<VPRecipeBase *> ToErase;
@@ -2275,12 +2301,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
-  // of the VF directly. At the moment, widened inductions cannot be updated, so
-  // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(
-      Header->phis(),
-      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
-  if (ContainsWidenInductions)
+  // of the VF directly. At the moment, widened pointer inductions cannot be
+  // updated, so bail out if the plan contains any.
+  bool ContainsWidenPointerInductions =
+      any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
+  if (ContainsWidenPointerInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -2602,6 +2627,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     Inc = SplatVF;
     Prev = WidenIVR->getLastUnrolledPartOperand();
   } else {
+    if (VPRecipeBase *R = VF->getDefiningRecipe())
+      Builder.setInsertPoint(R->getParent(), std::next(R->getIterator()));
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
     if (StepTy->isFloatingPointTy())
@@ -3100,28 +3127,22 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 /// that feeds a store interleave group at index \p Idx, \p WideMember0 is the
 /// recipe feeding the same interleave group at index 0. A VPWidenLoadRecipe can
 /// be narrowed to an index-independent load if it feeds all wide ops at all
-/// indices (checked by via the operands of the wide recipe at lane0, \p
-/// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
-/// is defined at \p Idx of a load interleave group.
+/// indices (\p OpV must be the operand at index \p OpIdx for both the recipe at
+/// lane 0, \p WideMember0, and \p WideMember). A VPInterleaveRecipe can be
+/// narrowed to a wide load, if \p V is defined at \p Idx of a load interleave
+/// group.
 static bool canNarrowLoad(VPWidenRecipe *WideMember0, VPWidenRecipe *WideMember,
-                          VPValue *V, unsigned Idx) {
-  auto *DefR = V->getDefiningRecipe();
+                          unsigned OpIdx, VPValue *OpV, unsigned Idx) {
+  auto *DefR = OpV->getDefiningRecipe();
   if (!DefR)
-    return false;
+    return WideMember0->getOperand(OpIdx) == OpV;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
-    return !W->getMask() &&
-           all_of(zip(WideMember0->operands(), WideMember->operands()),
-                  [V](const auto P) {
-                    // V must be as at the same places in both WideMember0 and
-                    // WideMember.
-                    const auto &[WideMember0Op, WideMemberOp] = P;
-                    return (WideMember0Op == V) == (WideMemberOp == V);
-                  });
+    return !W->getMask() && WideMember0->getOperand(OpIdx) == OpV;
 
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
     return IR->getInterleaveGroup()->getFactor() ==
                IR->getInterleaveGroup()->getNumMembers() &&
-           IR->getVPValue(Idx) == V;
+           IR->getVPValue(Idx) == OpV;
   return false;
 }
 
@@ -3232,13 +3253,15 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
-      if (any_of(R->operands(), [WideMember0, Idx = I, R](VPValue *V) {
-            return !canNarrowLoad(WideMember0, R, V, Idx);
-          }))
+      if (any_of(enumerate(R->operands()),
+                 [WideMember0, Idx = I, R](const auto &P) {
+                   const auto &[OpIdx, OpV] = P;
+                   return !canNarrowLoad(WideMember0, R, OpIdx, OpV, Idx);
+                 }))
         return;
     }
     StoreGroups.push_back(InterleaveR);
@@ -3248,7 +3271,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     return;
 
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
-  auto NarrowOp = [](VPRecipeBase *R) -> VPValue * {
+  auto NarrowOp = [](VPValue *V) -> VPValue * {
+    auto *R = V->getDefiningRecipe();
+    if (!R)
+      return V;
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
       // process one original iteration.
@@ -3277,11 +3303,10 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(
             StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
       for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
-        WideMember0->setOperand(
-            Idx, NarrowOp(WideMember0->getOperand(Idx)->getDefiningRecipe()));
+        WideMember0->setOperand(Idx, NarrowOp(WideMember0->getOperand(Idx)));
       Res = WideMember0;
     } else {
-      Res = NarrowOp(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+      Res = NarrowOp(StoreGroup->getStoredValues()[0]);
     }
 
     auto *S = new VPWidenStoreRecipe(
@@ -3305,8 +3330,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
 /// BranchOnCond recipe.
-void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
-                                                        ElementCount VF) {
+void VPlanTransforms::addBranchWeightToMiddleTerminator(
+    VPlan &Plan, ElementCount VF, std::optional<unsigned> VScaleForTuning) {
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   auto *MiddleTerm =
       dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
@@ -3318,6 +3343,8 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
          "must have a BranchOnCond");
   // Assume that `TripCount % VectorStep ` is equally distributed.
   unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  if (VF.isScalable() && VScaleForTuning.has_value())
+    VectorStep *= *VScaleForTuning;
   assert(VectorStep > 0 && "trip count should not be zero");
   MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
   MDNode *BranchWeights =
