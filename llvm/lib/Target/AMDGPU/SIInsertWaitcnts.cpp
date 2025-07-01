@@ -1786,8 +1786,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                                  bool FlushVmCnt) {
   setForceEmitWaitcnt();
 
-  if (MI.isMetaInstruction())
-    return false;
+  assert(!MI.isMetaInstruction());
 
   AMDGPU::Waitcnt Wait;
 
