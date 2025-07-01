@@ -1,12 +1,12 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple arm64-windows -S \
+// RUN: %clang_cc1 -triple arm64-windows -fms-compatibility -S \
 // RUN: -o - %s | FileCheck %s -check-prefix CHECK-ASM
 
-// RUN: %clang_cc1 -triple arm64-windows -emit-llvm \
+// RUN: %clang_cc1 -triple arm64-windows -fms-compatibility -emit-llvm \
 // RUN: -o - %s | FileCheck %s -check-prefix CHECK-IR
 
-// RUN: %clang_cc1 -triple arm64-darwin -emit-llvm \
+// RUN: %clang_cc1 -triple arm64-darwin -fms-compatibility -emit-llvm \
 // RUN: -o - %s | FileCheck %s -check-prefix CHECK-IR
 
 // From winnt.h
