@@ -258,6 +258,31 @@ void CIRGenFunction::emitDelegateCXXConstructorCall(
                          /*Delegating=*/true, thisAddr, delegateArgs, loc);
 }
 
+void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
+  const auto *assignOp = cast<CXXMethodDecl>(curGD.getDecl());
+  assert(assignOp->isCopyAssignmentOperator() ||
+         assignOp->isMoveAssignmentOperator());
+  const Stmt *rootS = assignOp->getBody();
+  assert(isa<CompoundStmt>(rootS) &&
+         "Body of an implicit assignment operator should be compound stmt.");
+  const auto *rootCS = cast<CompoundStmt>(rootS);
+
+  assert(!cir::MissingFeatures::incrementProfileCounter());
+  assert(!cir::MissingFeatures::runCleanupsScope());
+
+  // Classic codegen uses a special class to attempt to replace member
+  // initializers with memcpy. We could possibly defer that to the
+  // lowering or optimization phases to keep the memory accesses more
+  // explicit. For now, we don't insert memcpy at all, though in some
+  // cases the AST contains a call to memcpy.
+  assert(!cir::MissingFeatures::assignMemcpyizer());
+  for (Stmt *s : rootCS->body())
+    if (emitStmt(s, /*useCurrentScope=*/true).failed())
+      cgm.errorNYI(s->getSourceRange(),
+                   std::string("emitImplicitAssignmentOperatorBody: ") +
+                       s->getStmtClassName());
+}
+
 void CIRGenFunction::emitDelegatingCXXConstructorCall(
     const CXXConstructorDecl *ctor, const FunctionArgList &args) {
   assert(ctor->isDelegatingConstructor());

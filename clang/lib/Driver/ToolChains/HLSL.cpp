@@ -182,13 +182,15 @@ std::string getSpirvExtArg(ArrayRef<std::string> SpvExtensionArgs) {
       (Twine("-spirv-ext=+") + SpvExtensionArgs.front()).str();
   SpvExtensionArgs = SpvExtensionArgs.slice(1);
   for (auto Extension : SpvExtensionArgs) {
-    LlvmOption = (Twine(LlvmOption) + ",+" + Extension).str();
+    if (Extension != "KHR")
+      Extension = (Twine("+") + Extension).str();
+    LlvmOption = (Twine(LlvmOption) + "," + Extension).str();
   }
   return LlvmOption;
 }
 
 bool isValidSPIRVExtensionName(const std::string &str) {
-  std::regex pattern("SPV_[a-zA-Z0-9_]+");
+  std::regex pattern("KHR|SPV_[a-zA-Z0-9_]+");
   return std::regex_match(str, pattern);
 }
 

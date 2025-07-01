@@ -72,6 +72,9 @@ libc_test_library(
         "//libc:llvm_libc_macros_stdfix_macros",
         "//llvm:Support",
     ],
+    # Force linking in this library's `main()` to surface
+    # a duplicate symbol error if a test defines its own main.
+    alwayslink = True,
 )
 
 libc_test_library(
