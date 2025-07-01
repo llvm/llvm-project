@@ -2979,17 +2979,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
                     << "\n");
   LLVM_DEBUG(dbgs() << "  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
+  bool MadeChanges = false;
   if (NewCost < OldCost) {
     Builder.SetInsertPoint(Shuffle);
     Value *NewShuffle = Builder.CreateShuffleVector(
         Shuffle->getOperand(0), Shuffle->getOperand(1), ConcatMask);
     LLVM_DEBUG(dbgs() << "Created new shuffle: " << *NewShuffle << "\n");
     replaceValue(*Shuffle, *NewShuffle);
+    MadeChanges = true;
   }
 
   // See if we can re-use foldSelectShuffle, getting it to reduce the size of
   // the shuffle into a nicer order, as it can ignore the order of the shuffles.
-  return foldSelectShuffle(*Shuffle, true);
+  MadeChanges |= foldSelectShuffle(*Shuffle, true);
+  return MadeChanges;
 }
 
 /// Determine if its more efficient to fold:
