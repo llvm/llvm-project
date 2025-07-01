@@ -174,8 +174,7 @@ static FormSize g_form_sizes[] = {
     {1, 8},  // 0x14 DW_FORM_ref8
     {0, 0},  // 0x15 DW_FORM_ref_udata
     {0, 0},  // 0x16 DW_FORM_indirect
-    {0,
-     0}, // 0x17 DW_FORM_sec_offset (4 bytes for DWARF32, 8 bytes for DWARF64)
+    {0, 0}, // 0x17 DW_FORM_sec_offset (4 bytes for DWARF32,8 bytes for DWARF64)
     {0, 0},  // 0x18 DW_FORM_exprloc
     {1, 0},  // 0x19 DW_FORM_flag_present
     {0, 0},  // 0x1a DW_FORM_strx (ULEB128)
