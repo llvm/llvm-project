@@ -631,8 +631,10 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
       std::string name = xegpu::getLayoutName(result);
       if (auto layout = op->getAttrOfType<xegpu::LayoutAttr>(name)) {
         op->removeAttr(name);
-        if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op))
-          op->setAttr(name, layout.dropSgLayoutAndData());
+        if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {
+          if (auto newLayout = layout.dropSgLayoutAndData())
+            op->setAttr(name, newLayout);
+        }
       }
     }
   });
