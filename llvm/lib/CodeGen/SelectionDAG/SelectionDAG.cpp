@@ -5627,6 +5627,12 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
                                              PoisonOnly, Depth + 1) ||
            !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
+  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_UNDEF:
+    // If the amount is zero then the result will be poison.
+    // TODO: Add isKnownNeverZero DemandedElts handling.
+    return !isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
   case ISD::SCALAR_TO_VECTOR:
     // Check if we demand any upper (undef) elements.
     return !PoisonOnly && DemandedElts.ugt(1);
