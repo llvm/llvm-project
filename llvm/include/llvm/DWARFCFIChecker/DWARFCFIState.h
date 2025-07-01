@@ -41,7 +41,7 @@ private:
   MCContext *Context;
   std::vector<dwarf::UnwindRow *> Table;
 
-  std::optional<dwarf::CFIProgram> convert(MCCFIInstruction Directive);
+  dwarf::CFIProgram convert(MCCFIInstruction Directive);
 };
 
 } // namespace llvm

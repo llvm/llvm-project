@@ -32,13 +32,7 @@ DWARFCFIState::getCurrentUnwindRow() const {
 }
 
 void DWARFCFIState::update(const MCCFIInstruction &Directive) {
-  auto MaybeCFIP = convert(Directive);
-  if (!MaybeCFIP) {
-    Context->reportWarning(Directive.getLoc(),
-                           "this directive is not supported, ignoring it");
-    return;
-  }
-  auto CFIP = *MaybeCFIP;
+  auto CFIP = convert(Directive);
 
   auto MaybeCurrentRow = getCurrentUnwindRow();
 
@@ -70,8 +64,7 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   Table.push_back(NewRow);
 }
 
-std::optional<dwarf::CFIProgram>
-DWARFCFIState::convert(MCCFIInstruction Directive) {
+dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
   auto CFIP = dwarf::CFIProgram(
       /* CodeAlignmentFactor */ 1, /* DataAlignmentFactor */ 1,
       Context->getTargetTriple().getArch());
@@ -125,7 +118,9 @@ DWARFCFIState::convert(MCCFIInstruction Directive) {
     break;
   case MCCFIInstruction::OpEscape:
     // TODO: DWARFExpressions are not supported yet, ignoring expression here.
-    return std::nullopt;
+    Context->reportWarning(Directive.getLoc(),
+                           "this directive is not supported, ignoring it");
+    break;
   case MCCFIInstruction::OpRestore:
     CFIP.addInstruction(dwarf::DW_CFA_restore);
     break;
