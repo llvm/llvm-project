@@ -2083,6 +2083,26 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
+
+    /// Add an entry to the 'async-only' attribute (clause spelled without
+    /// arguments). DeviceType array is supplied even though it should always be
+    /// empty, so this can mirror other versions of this function.
+    void addAsyncOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add a value to the 'async'. DeviceType array is supplied even though it
+    /// should always be empty, so this can mirror other versions of this
+    /// function.
+    void addAsyncOperand(MLIRContext *, mlir::Value,
+                         llvm::ArrayRef<DeviceType>);
+
+    /// Add an entry to the 'wait-only' attribute (clause spelled without
+    /// arguments). DeviceType array is supplied even though it should always be
+    /// empty, so this can mirror other versions of this function.
+    void addWaitOnly(MLIRContext *, llvm::ArrayRef<DeviceType>);
+    /// Add an array-like entry  to the 'wait'. DeviceType array is supplied
+    /// even though it should always be empty, so this can mirror other versions
+    /// of this function.
+    void addWaitOperands(MLIRContext *, bool hasDevnum, mlir::ValueRange,
+                         llvm::ArrayRef<DeviceType>);
   }];
 
   let assemblyFormat = [{
