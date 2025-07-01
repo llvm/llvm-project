@@ -386,7 +386,10 @@ std::vector<MCInst> ExegesisAArch64Target::generateMemoryInitialSetup() const {
 
 std::vector<MCInst> ExegesisAArch64Target::setStackRegisterToAuxMem() const {
   std::vector<MCInst> instructions; // NOP
-  // TODO: Implement this, Found no need for this in AArch64.
+  // Motivation unclear, found no need for this in AArch64.
+  // TODO:  Implement this, if required.
+  dbgs() << "Warning: setStackRegisterToAuxMem called but not required for "
+            "AArch64\n";
   return instructions;
 }
 
@@ -407,6 +410,8 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   std::vector<MCInst> ConfigurePerfCounterCode; // NOP
   // FIXME: SYSCALL exits with EBADF error - file descriptor is invalid
   // No file is opened previosly to add as file descriptor
+  errs() << "Warning: configurePerfCounter not implemented, measurements will "
+            "be unreliable\n";
   return ConfigurePerfCounterCode;
 }
 
