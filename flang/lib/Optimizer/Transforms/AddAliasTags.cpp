@@ -73,7 +73,12 @@ public:
   }
 
   void processFunctionScopes(mlir::func::FuncOp func);
-  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp);
+  // For the given fir.declare returns the dominating fir.dummy_scope
+  // operation.
+  fir::DummyScopeOp getDeclarationScope(fir::DeclareOp declareOp) const;
+  // For the given fir.declare returns the outermost fir.dummy_scope
+  // in the current function.
+  fir::DummyScopeOp getOutermostScope(fir::DeclareOp declareOp) const;
 
 private:
   mlir::DominanceInfo &domInfo;
@@ -119,9 +124,8 @@ void PassState::processFunctionScopes(mlir::func::FuncOp func) {
   }
 }
 
-// For the given fir.declare returns the dominating fir.dummy_scope
-// operation.
-fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
+fir::DummyScopeOp
+PassState::getDeclarationScope(fir::DeclareOp declareOp) const {
   auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
   assert(func && "fir.declare does not have parent func.func");
   auto &scopeOps = sortedScopeOperations.at(func);
@@ -129,6 +133,15 @@ fir::DummyScopeOp PassState::getDeclarationScope(fir::DeclareOp declareOp) {
     if (domInfo.dominates(&**II, &*declareOp))
       return *II;
   }
+  return nullptr;
+}
+
+fir::DummyScopeOp PassState::getOutermostScope(fir::DeclareOp declareOp) const {
+  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
+  assert(func && "fir.declare does not have parent func.func");
+  auto &scopeOps = sortedScopeOperations.at(func);
+  if (!scopeOps.empty())
+    return scopeOps[0];
   return nullptr;
 }
 
@@ -278,6 +291,15 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       name = alloc.getUniqName();
     else
       unknownAllocOp = true;
+
+    if (auto declOp = source.origin.instantiationPoint) {
+      // Use the outermost scope for local allocations,
+      // because using the innermost scope may result
+      // in incorrect TBAA, when calls are inlined in MLIR.
+      auto declareOp = mlir::dyn_cast<fir::DeclareOp>(declOp);
+      assert(declareOp && "Instantiation point must be fir.declare");
+      scopeOp = state.getOutermostScope(declareOp);
+    }
 
     if (unknownAllocOp) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
