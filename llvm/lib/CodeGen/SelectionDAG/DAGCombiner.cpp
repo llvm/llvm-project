@@ -28992,6 +28992,7 @@ static SDValue matchMergedBFX(SDValue Root, SelectionDAG &DAG,
 
   EVT VT = Root.getValueType();
 
+  // TODO: Support vectors?
   if (!VT.isScalarInteger() || Root.getOpcode() != ISD::AND)
     return SDValue();
 
@@ -29067,8 +29068,8 @@ SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
           TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
     return C;
 
-  if ((Cond == ISD::SETNE || Cond == ISD::SETEQ) &&
-      N0.getOpcode() == ISD::AND && isNullConstant(N1)) {
+  if (ISD::isIntEqualitySetCC(Cond) && N0.getOpcode() == ISD::AND &&
+      isNullConstant(N1)) {
 
     if (SDValue Res = matchMergedBFX(N0, DAG, TLI))
       return DAG.getSetCC(DL, VT, Res, N1, Cond);
