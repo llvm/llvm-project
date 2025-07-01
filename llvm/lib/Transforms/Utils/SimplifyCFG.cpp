@@ -6246,7 +6246,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       }
 
       KnownBits Known = computeKnownBits(Condition, DL);
-      unsigned int ConditionWidth = Condition->getType()->getIntegerBitWidth();
+      unsigned ConditionWidth = Condition->getType()->getIntegerBitWidth();
       APInt ActiveBits =
           APInt(ConditionWidth, Known.countMaxActiveBits(), false);
 
