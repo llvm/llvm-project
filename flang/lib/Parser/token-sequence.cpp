@@ -30,6 +30,7 @@ void TokenSequence::clear() {
 
 void TokenSequence::pop_back() {
   CHECK(!start_.empty());
+  // If the last token is empty then `nextStart_ == start_.back()`.
   CHECK(nextStart_ >= start_.back());
   std::size_t bytes{nextStart_ - start_.back()};
   nextStart_ = start_.back();
