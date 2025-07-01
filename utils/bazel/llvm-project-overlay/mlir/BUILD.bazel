@@ -11176,6 +11176,7 @@ cc_library(
         ":Dialect",
         ":DialectUtils",
         ":FuncDialect",
+        ":FuncTransforms",
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
