@@ -17,9 +17,9 @@ in subsequent runs of this check.
 For variables, the check will only detect variables that can be declared
 ``constexpr`` if they are already ``const``.
 This is because this check would have to duplicate the expensive analysis of the
-:doc:`misc-const-correctness<clang-tidy/checks/misc/const-correctness>` check.
+:doc:`misc-const-correctness<../misc/const-correctness>` check.
 Therefore, it is recommended to have 
-:doc:`misc-const-correctness<clang-tidy/checks/misc/const-correctness>` enabled
+:doc:`misc-const-correctness<../misc/const-correctness>` enabled
 in the Clang-Tidy config when this check is, so that all opportunities for
 ``const`` and also ``constexpr`` are explored.
 
@@ -60,5 +60,5 @@ Options
 
   The string to use with C++23 to specify a function-local variable as 
   ``static constexpr``, for example, a macro. Default is ``static constexpr``
-  (concatenating ``static `` with the `ConstexprString` option).
+  (concatenating ``static`` with the `ConstexprString` option).
 
