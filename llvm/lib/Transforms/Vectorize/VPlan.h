@@ -1749,10 +1749,6 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
 
 /// A recipe for handling GEP instructions.
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
   bool isIndexLoopInvariant(unsigned I) const {
     return getOperand(I + 1)->isDefinedOutsideLoopRegions();
   }
@@ -1780,6 +1776,30 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
+
+  bool isPointerLoopInvariant() const {
+    return getOperand(0)->isDefinedOutsideLoopRegions();
+  }
+
+  std::optional<unsigned> getUniqueVariantIndex() const {
+    std::optional<unsigned> VarIdx;
+    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
+      if (isIndexLoopInvariant(I))
+        continue;
+
+      if (VarIdx)
+        return std::nullopt;
+      VarIdx = I;
+    }
+    return VarIdx;
+  }
+
+  Type *getIndexedType(unsigned I) const {
+    auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
+    Type *SourceElementType = GEP->getSourceElementType();
+    SmallVector<Value *, 4> Ops(GEP->idx_begin(), GEP->idx_begin() + I);
+    return GetElementPtrInst::getIndexedType(SourceElementType, Ops);
+  }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
