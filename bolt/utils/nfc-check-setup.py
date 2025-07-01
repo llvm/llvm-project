@@ -92,7 +92,7 @@ def main():
     source_dir = None
     # find the repo directory
     try:
-        CMCacheFilename=f"{args.build_dir}/CMakeCache.txt"
+        CMCacheFilename = f"{args.build_dir}/CMakeCache.txt"
         with open(CMCacheFilename) as f:
             for line in f:
                 m = re.match(r"LLVM_SOURCE_DIR:STATIC=(.*)", line)
@@ -104,6 +104,7 @@ def main():
         sys.exit(e)
 
     # build the current commit
+    print ("NFC-Setup: Building current revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
@@ -143,6 +144,7 @@ def main():
     new_ref = get_git_ref_or_rev(source_dir)
 
     # build the previous commit
+    print ("NFC-Setup: Building previous revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
