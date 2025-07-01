@@ -27,10 +27,12 @@ class TestStatusline(PExpectTest):
         self.expect("run", substrs=["stop reason"])
         self.resize()
 
-    def resize(self):
+    def resize(self, height=None, width=None):
+        height = self.TERMINAL_HEIGHT if not height else height
+        width = self.TERMINAL_WIDTH if not width else width
         # Change the terminal dimensions. When we launch the tests, we reset
         # all the settings, leaving the terminal dimensions unset.
-        self.child.setwinsize(self.TERMINAL_HEIGHT, self.TERMINAL_WIDTH)
+        self.child.setwinsize(height, width)
 
     def test(self):
         """Basic test for the statusline."""
@@ -104,3 +106,16 @@ class TestStatusline(PExpectTest):
         self.resize()
 
         self.expect("set set show-statusline true", ["no target"])
+
+    @skipIfEditlineSupportMissing
+    def test_resize(self):
+        """Test that move the cursor when resizing."""
+        self.launch(timeout=self.TIMEOUT)
+        self.resize()
+        self.expect("set set show-statusline true", ["no target"])
+        self.resize(20, 60)
+        # Check for the newline followed by the escape code to move the cursor
+        # up one line.
+        self.child.expect(re.escape("\n\x1b[1A"))
+        # Check for the escape code to move the cursor back to column 8.
+        self.child.expect(re.escape("\x1b[8G"))
