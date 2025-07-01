@@ -124,7 +124,6 @@ constexpr unsigned kMaxUnsigned = std::numeric_limits<unsigned>::max();
 ///
 /// TODO: Implement mask compression to reduce the number of intermediate poison
 /// values.
-///
 class VectorShuffleTreeBuilder {
 public:
   VectorShuffleTreeBuilder() = delete;
@@ -142,8 +141,8 @@ public:
 
 private:
   // IR input information.
-  FromElementsOp fromElementsOp;
-  SmallVector<ToElementsOp> toElementsDefs;
+  FromElementsOp fromElemsOp;
+  SmallVector<ToElementsOp> toElemsDefs;
 
   // Shuffle tree configuration.
   unsigned numLevels;
@@ -162,16 +161,19 @@ private:
 
 VectorShuffleTreeBuilder::VectorShuffleTreeBuilder(
     FromElementsOp fromElemOp, ArrayRef<ToElementsOp> toElemDefs)
-    : fromElementsOp(fromElemOp), toElementsDefs(toElemDefs) {
+    : fromElemsOp(fromElemOp), toElemsDefs(toElemDefs) {
+  assert(fromElemsOp && "from_elements op is required");
+  assert(!toElemsDefs.empty() && "At least one to_elements op is required");
+}
 
-  assert(fromElementsOp && "from_elements op is required");
-  assert(!toElementsDefs.empty() && "At least one to_elements op is required");
-
-  // Duplicate the last vector if the number of `vector.to_elements` is odd to
-  // simplify the shuffle tree algorithm.
-  if (toElementsDefs.size() % 2 != 0) {
-    toElementsDefs.push_back(toElementsDefs.back());
-  }
+/// Duplicate the last operation, value or interval if the total number of them
+/// is odd. This is useful to simplify the shuffle tree algorithm given that
+/// vectors are shuffled in pairs and duplication would lead to the last shuffle
+/// to have a single (duplicated) input vector.
+template <typename T>
+static void duplicateLastIfOdd(SmallVectorImpl<T> &values) {
+  if (values.size() % 2 != 0)
+    values.push_back(values.back());
 }
 
 // ===--------------------------------------------------------------------===//
@@ -207,20 +209,20 @@ void VectorShuffleTreeBuilder::computeInputVectorIntervals() {
   // Map `vector.to_elements` ops to their ordinal position in the
   // `vector.from_elements` operand list. Make sure duplicated
   // `vector.to_elements` ops are mapped to the its first occurrence.
-  DenseMap<ToElementsOp, unsigned> toElementsToInputOrdinal;
-  for (const auto &[idx, toElementsOp] : llvm::enumerate(toElementsDefs))
-    toElementsToInputOrdinal.insert({toElementsOp, idx});
+  DenseMap<ToElementsOp, unsigned> toElemsToInputOrdinal;
+  for (const auto &[idx, toElemsOp] : llvm::enumerate(toElemsDefs))
+    toElemsToInputOrdinal.insert({toElemsOp, idx});
 
   // Compute intervals for each input vector in the shuffle tree. The first
   // level computation is special-cased to keep the implementation simpler.
 
-  SmallVector<Interval> firstLevelIntervals(toElementsDefs.size(),
+  SmallVector<Interval> firstLevelIntervals(toElemsDefs.size(),
                                             {kMaxUnsigned, kMaxUnsigned});
 
   for (const auto &[idx, element] :
-       llvm::enumerate(fromElementsOp.getElements())) {
-    auto toElementsOp = cast<ToElementsOp>(element.getDefiningOp());
-    unsigned inputIdx = toElementsToInputOrdinal[toElementsOp];
+       llvm::enumerate(fromElemsOp.getElements())) {
+    auto toElemsOp = cast<ToElementsOp>(element.getDefiningOp());
+    unsigned inputIdx = toElemsToInputOrdinal[toElemsOp];
     Interval &currentInterval = firstLevelIntervals[inputIdx];
 
     // Set lower bound to the first occurrence of the `vector.to_elements`.
@@ -231,19 +233,13 @@ void VectorShuffleTreeBuilder::computeInputVectorIntervals() {
     currentInterval.second = idx;
   }
 
-  // If the number of `vector.to_elements` is odd and the last op was
-  // duplicated, the interval for the duplicated op was not computed in the
-  // previous step as all the input occurrences were mapped to the original op.
-  // We copy the interval of the original op to the interval of the duplicated
-  // op manually.
-  if (firstLevelIntervals.back().second == kMaxUnsigned)
-    firstLevelIntervals.back() = *std::prev(firstLevelIntervals.end(), 2);
-
+  duplicateLastIfOdd(toElemsDefs);
+  duplicateLastIfOdd(firstLevelIntervals);
   inputIntervalsPerLevel.push_back(std::move(firstLevelIntervals));
 
   // Compute intervals for the remaining levels.
   unsigned outputNumElements =
-      cast<VectorType>(fromElementsOp.getResult().getType()).getNumElements();
+      cast<VectorType>(fromElemsOp.getResult().getType()).getNumElements();
   for (unsigned level = 1; level < numLevels; ++level) {
     const auto &prevLevelIntervals = inputIntervalsPerLevel[level - 1];
     SmallVector<Interval> currentLevelIntervals(
@@ -265,6 +261,7 @@ void VectorShuffleTreeBuilder::computeInputVectorIntervals() {
                    outputNumElements - 1);
     }
 
+    duplicateLastIfOdd(currentLevelIntervals);
     inputIntervalsPerLevel.push_back(std::move(currentLevelIntervals));
   }
 }
@@ -311,9 +308,9 @@ void VectorShuffleTreeBuilder::dump() {
     ++indLv;
     llvm::dbgs() << llvm::indent(indLv, kIndScale) << "* Inputs:\n";
     ++indLv;
-    for (const auto &toElementsOp : toElementsDefs)
-      llvm::dbgs() << llvm::indent(indLv, kIndScale) << toElementsOp << "\n";
-    llvm::dbgs() << llvm::indent(indLv, kIndScale) << fromElementsOp << "\n\n";
+    for (const auto &toElemsOp : toElemsDefs)
+      llvm::dbgs() << llvm::indent(indLv, kIndScale) << toElemsOp << "\n";
+    llvm::dbgs() << llvm::indent(indLv, kIndScale) << fromElemsOp << "\n\n";
     --indLv;
 
     llvm::dbgs() << llvm::indent(indLv, kIndScale)
@@ -366,9 +363,7 @@ void VectorShuffleTreeBuilder::dump() {
 /// corresponding utility functions.
 LogicalResult VectorShuffleTreeBuilder::computeShuffleTree() {
   // Initialize shuffle tree information based on its size.
-  assert(toElementsDefs.size() > 1 &&
-         "At least two 'vector.to_elements' ops are required");
-  numLevels = llvm::Log2_64(toElementsDefs.size());
+  numLevels = std::max(1u, llvm::Log2_64_Ceil(toElemsDefs.size()));
   vectorSizePerLevel.resize(numLevels, 0);
   inputIntervalsPerLevel.reserve(numLevels);
 
@@ -402,17 +397,18 @@ LogicalResult VectorShuffleTreeBuilder::computeShuffleTree() {
 ///   %2_1 = PermutationShuffleMask(%2, %1) = [2, 6, -1, -1, 7, 2, 0, 6]
 ///   %0_0 = PermutationShuffleMask(%0, %0) = [1, 1, -1, -1, -1, -1, 4, -1]
 ///
-/// TODO: Implement mask compression.
+/// TODO: Implement mask compression to reduce the number of intermediate poison
+/// values.
 static SmallVector<int64_t> computePermutationShuffleMask(
     ToElementsOp toElementOp0, const Interval &interval0,
     ToElementsOp toElementOp1, const Interval &interval1,
-    FromElementsOp fromElementsOp, unsigned outputVectorSize) {
+    FromElementsOp fromElemsOp, unsigned outputVectorSize) {
   SmallVector<int64_t> mask(outputVectorSize, ShuffleOp::kPoisonIndex);
   unsigned inputVectorSize =
       toElementOp0.getSource().getType().getNumElements();
 
   for (const auto &[inputIdx, element] :
-       llvm::enumerate(fromElementsOp.getElements())) {
+       llvm::enumerate(fromElemsOp.getElements())) {
     auto currentToElemOp = cast<ToElementsOp>(element.getDefiningOp());
     // Match `vector.from_elements` operands to the two input ops.
     if (currentToElemOp != toElementOp0 && currentToElemOp != toElementOp1)
@@ -476,8 +472,8 @@ static SmallVector<int64_t> computePermutationShuffleMask(
 ///   // Level 1, vector length = 9
 ///   PropagationShuffleMask(%2_1, %0_0) = [0, 1, 8, 9, 4, 5, 6, 7, 14]
 ///
-/// TODO: Implement mask compression.
-///
+/// TODO: Implement mask compression to reduce the number of intermediate poison
+/// values.
 static SmallVector<int64_t> computePropagationShuffleMask(
     ShuffleOp lhsShuffleOp, const Interval &lhsInterval, ShuffleOp rhsShuffleOp,
     const Interval &rhsInterval, unsigned outputVectorSize) {
@@ -487,6 +483,7 @@ static SmallVector<int64_t> computePropagationShuffleMask(
   assert(inputVectorSize == rhsShuffleMask.size() &&
          "Expected both shuffle masks to have the same size");
 
+  bool hasSameInput = lhsShuffleOp == rhsShuffleOp;
   unsigned lhsRhsOffset = rhsInterval.first - lhsInterval.first;
   SmallVector<int64_t> mask(outputVectorSize, ShuffleOp::kPoisonIndex);
 
@@ -496,6 +493,9 @@ static SmallVector<int64_t> computePropagationShuffleMask(
   for (unsigned i = 0; i < inputVectorSize; ++i) {
     if (lhsShuffleMask[i] != ShuffleOp::kPoisonIndex)
       mask[i] = i;
+
+    if (hasSameInput)
+      continue;
 
     unsigned rhsIdx = i + lhsRhsOffset;
     if (rhsShuffleMask[i] != ShuffleOp::kPoisonIndex) {
@@ -565,15 +565,19 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
 
   // Initialize work list with the `vector.to_elements` sources.
   SmallVector<Value> levelInputs;
-  llvm::transform(
-      toElementsDefs, std::back_inserter(levelInputs),
-      [](ToElementsOp toElementsOp) { return toElementsOp.getSource(); });
+  llvm::transform(toElemsDefs, std::back_inserter(levelInputs),
+                  [](ToElementsOp toElemsOp) { return toElemsOp.getSource(); });
+  // TODO: Check that every pair of input has the same vector size. Otherwise,
+  // promote the narrower one to the wider one.
 
   // Build shuffle tree by combining pairs of vectors.
-  Location loc = fromElementsOp.getLoc();
+  Location loc = fromElemsOp.getLoc();
   unsigned currentLevel = 0;
   for (const auto &[levelVectorSize, inputIntervals] :
        llvm::zip_equal(vectorSizePerLevel, inputIntervalsPerLevel)) {
+
+    duplicateLastIfOdd(levelInputs);
+
     LLVM_DEBUG(llvm::dbgs()
                << llvm::indent(1, kIndScale) << "* Processing level "
                << currentLevel << " (vector size: " << levelVectorSize
@@ -593,8 +597,8 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
       SmallVector<int64_t> shuffleMask;
       if (currentLevel == 0) {
         shuffleMask = computePermutationShuffleMask(
-            toElementsDefs[i], lhsInterval, toElementsDefs[i + 1], rhsInterval,
-            fromElementsOp, levelVectorSize);
+            toElemsDefs[i], lhsInterval, toElemsDefs[i + 1], rhsInterval,
+            fromElemsOp, levelVectorSize);
       } else {
         auto lhsShuffleOp = cast<ShuffleOp>(lhsVector.getDefiningOp());
         auto rhsShuffleOp = cast<ShuffleOp>(rhsVector.getDefiningOp());
@@ -621,17 +625,17 @@ Value VectorShuffleTreeBuilder::generateShuffleTree(PatternRewriter &rewriter) {
 /// returned in order of appearance in the `vector.from_elements`'s operand
 /// list.
 static LogicalResult
-getToElementsDefiningOps(FromElementsOp fromElementsOp,
-                         SmallVectorImpl<ToElementsOp> &toElementsDefs) {
-  SetVector<ToElementsOp> toElementsDefsSet;
-  for (Value element : fromElementsOp.getElements()) {
-    auto toElementsOp = element.getDefiningOp<ToElementsOp>();
-    if (!toElementsOp)
+getToElementsDefiningOps(FromElementsOp fromElemsOp,
+                         SmallVectorImpl<ToElementsOp> &toElemsDefs) {
+  SetVector<ToElementsOp> toElemsDefsSet;
+  for (Value element : fromElemsOp.getElements()) {
+    auto toElemsOp = element.getDefiningOp<ToElementsOp>();
+    if (!toElemsOp)
       return failure();
-    toElementsDefsSet.insert(toElementsOp);
+    toElemsDefsSet.insert(toElemsOp);
   }
 
-  toElementsDefs.assign(toElementsDefsSet.begin(), toElementsDefsSet.end());
+  toElemsDefs.assign(toElemsDefsSet.begin(), toElemsDefsSet.end());
   return success();
 }
 
@@ -642,30 +646,53 @@ struct ToFromElementsToShuffleTreeRewrite final
 
   using OpRewritePattern::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(vector::FromElementsOp fromElementsOp,
+  LogicalResult matchAndRewrite(vector::FromElementsOp fromElemsOp,
                                 PatternRewriter &rewriter) const override {
-    VectorType resultType = fromElementsOp.getType();
-    if (resultType.getRank() != 1 || resultType.isScalable())
-      return failure();
+    VectorType resultType = fromElemsOp.getType();
+    if (resultType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          fromElemsOp, "Multi-dimensional vectors are not supported yet");
+    if (resultType.isScalable())
+      return rewriter.notifyMatchFailure(
+          fromElemsOp,
+          "'vector.from_elements' does not support scalable vectors");
 
-    SmallVector<ToElementsOp> toElementsDefs;
-    if (failed(getToElementsDefiningOps(fromElementsOp, toElementsDefs)))
-      return failure();
+    SmallVector<ToElementsOp> toElemsDefs;
+    if (failed(getToElementsDefiningOps(fromElemsOp, toElemsDefs)))
+      return rewriter.notifyMatchFailure(fromElemsOp, "unsupported sources");
+
+    int64_t numElements =
+        toElemsDefs.front().getSource().getType().getNumElements();
+    for (ToElementsOp toElemsOp : toElemsDefs) {
+      if (toElemsOp.getSource().getType().getNumElements() != numElements)
+        return rewriter.notifyMatchFailure(
+            fromElemsOp, "unsupported sources with different vector sizes");
+    }
+
+    if (llvm::any_of(toElemsDefs, [](ToElementsOp toElemsOp) {
+          return !toElemsOp.getSource().getType().hasRank();
+        })) {
+      return rewriter.notifyMatchFailure(fromElemsOp,
+                                         "0-D vectors are not supported");
+    }
 
     // Avoid generating a shuffle tree for trivial `vector.to_elements` ->
     // `vector.from_elements` forwarding cases that do not require shuffling.
-    if (toElementsDefs.size() == 1) {
-      ToElementsOp toElementsOp0 = toElementsDefs.front();
-      if (llvm::equal(fromElementsOp.getElements(), toElementsOp0.getResults()))
-        return failure();
+    if (toElemsDefs.size() == 1) {
+      ToElementsOp toElemsOp0 = toElemsDefs.front();
+      if (llvm::equal(fromElemsOp.getElements(), toElemsOp0.getResults())) {
+        return rewriter.notifyMatchFailure(
+            fromElemsOp, "trivial forwarding case does not require shuffling");
+      }
     }
 
-    VectorShuffleTreeBuilder shuffleTreeBuilder(fromElementsOp, toElementsDefs);
+    VectorShuffleTreeBuilder shuffleTreeBuilder(fromElemsOp, toElemsDefs);
     if (failed(shuffleTreeBuilder.computeShuffleTree()))
-      return failure();
+      return rewriter.notifyMatchFailure(fromElemsOp,
+                                         "failed to compute shuffle tree");
 
     Value finalShuffle = shuffleTreeBuilder.generateShuffleTree(rewriter);
-    rewriter.replaceOp(fromElementsOp, finalShuffle);
+    rewriter.replaceOp(fromElemsOp, finalShuffle);
     return success();
   }
 };
