@@ -11,7 +11,16 @@
 using namespace omptest;
 using namespace logging;
 
-Logger *Log = nullptr;
+Logger::Logger(Level LogLevel, std::ostream &OutStream, bool FormatOutput)
+    : LoggingLevel(LogLevel), OutStream(OutStream), FormatOutput(FormatOutput) {
+  // Flush any buffered output
+  OutStream << std::flush;
+}
+
+Logger::~Logger() {
+  // Flush any buffered output
+  OutStream << std::flush;
+}
 
 std::map<Level, std::set<FormatOption>> AggregatedFormatOptions{
     {Level::DIAGNOSTIC, {FormatOption::COLOR_LightBlue}},
@@ -76,26 +85,10 @@ std::string logging::format(const std::string &Message,
   return SS.str();
 }
 
-Logger::Logger(Level LogLevel, std::ostream &OutStream, bool FormatOutput)
-    : LoggingLevel(LogLevel), OutStream(OutStream), FormatOutput(FormatOutput) {
-  // Flush any buffered output
-  OutStream << std::flush;
-}
-
-Logger::~Logger() {
-  // Flush any buffered output
-  OutStream << std::flush;
-}
-
-Logger &Logger::get(Level LogLevel, std::ostream &OutStream,
-                    bool FormatOutput) {
-  if (Log == nullptr)
-    Log = new Logger(LogLevel, OutStream, FormatOutput);
-
-  return *Log;
-}
-
 void Logger::log(Level LogLevel, const std::string &Message) const {
+  // Serialize logging
+  std::lock_guard<std::mutex> Lock(LogMutex);
+
   if (LoggingLevel > LogLevel)
     return;
 
@@ -109,6 +102,8 @@ void Logger::log(Level LogLevel, const std::string &Message) const {
 
 void Logger::eventMismatch(const omptest::OmptAssertEvent &OffendingEvent,
                            const std::string &Message, Level LogLevel) const {
+  // Serialize logging
+  std::lock_guard<std::mutex> Lock(LogMutex);
   if (LoggingLevel > LogLevel)
     return;
 
@@ -134,6 +129,8 @@ void Logger::eventMismatch(const omptest::OmptAssertEvent &OffendingEvent,
 void Logger::eventMismatch(const omptest::OmptAssertEvent &ExpectedEvent,
                            const omptest::OmptAssertEvent &ObservedEvent,
                            const std::string &Message, Level LogLevel) const {
+  // Serialize logging
+  std::lock_guard<std::mutex> Lock(LogMutex);
   if (LoggingLevel > LogLevel)
     return;
 

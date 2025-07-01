@@ -107,6 +107,19 @@
   OMPT_ASSERTER_SUPPRESS_EVENT(EventReporter, EventTy);                        \
   OMPT_ASSERTER_SUPPRESS_EVENT(SequenceAsserter, EventTy);
 
+// Set logging level for asserters
+#define OMPT_ASSERTER_LOG_LEVEL(Asserter, LogLevel)                            \
+  Asserter->getLog()->setLoggingLevel(LogLevel);
+
+// Set colored logging for asserters
+#define OMPT_ASSERTER_LOG_COLORED(Asserter, ColoredLog)                        \
+  Asserter->getLog()->setLoggingLevel(ColoredLog);
+
+#define OMPT_LOG_COLORED(ColoredLog)                                           \
+  OMPT_ASSERTER_LOGLEVEL(SetAsserter, ColoredLog);                             \
+  OMPT_ASSERTER_LOGLEVEL(EventReporter, ColoredLog);                           \
+  OMPT_ASSERTER_LOGLEVEL(SequenceAsserter, ColoredLog);
+
 #define OMPT_ASSERT_SYNC_POINT(SyncPointName)                                  \
   flush_traced_devices();                                                      \
   OmptCallbackHandler::get().handleAssertionSyncPoint(SyncPointName);
