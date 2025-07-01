@@ -22,38 +22,38 @@ namespace llvm {
 class Module;
 class Function;
 
-/// Splits the given module \p M in parts. Every output part is being passed to
-/// \p Callback for further possible processing. Every part corresponds to a
-/// module's subset that is transitively reachable from some entry point group.
-/// Every entry point group is defined by \p EntryPointCategorizer (EPC) as
-/// follows: 1) If the function is not an entry point then Categorizer returns
-/// std::nullopt. Therefore, the function doesn't belong to any group. However,
-/// the function and global objects still can be associated with some output
-/// parts if it is transitively used from some entry points. 2) If the function
-/// belongs to some entry point group then EPC returns an integer which is an
-/// identifier of the group. If two entry point belong to one group then EPC
-/// returns exact identifiers for both of them.
+/// Splits the given module \p M into parts. Each output part is passed to
+/// \p Callback for further possible processing. Each part corresponds to a
+/// subset of the module that is transitively reachable from some entry point
+/// group. Each entry point group is defined by \p EntryPointCategorizer (EPC)
+/// as follows: 1) If the function is not an entry point, then the Categorizer
+/// returns std::nullopt. Therefore, the function doesn't belong to any group.
+/// However, the function and global objects can still be associated with some
+/// output parts if they are transitively used from some entry points. 2) If the
+/// function belongs to an entry point group, then EPC returns an integer which
+/// is an identifier of the group. If two entry points belong to one group, then
+/// EPC returns the same identifier for both of them.
 ///
-/// Let A and B be global objects in the module. Transitive dependency relation
-/// is defined such that: If global object A is used by global object B in any
-/// way (e.g., store, bitcast, phi node, call), then "A" -> "B". Transitivity is
-/// defined such that: If "A" -> "B" and "B" -> "C", then "A" -> "C". Examples
-/// of dependencies:
+/// Let A and B be global objects in the module. The transitive dependency
+/// relation is defined such that: If global object A is used by global object B
+/// in any way (e.g., store, bitcast, phi node, call), then "A" -> "B".
+/// Transitivity is defined such that: If "A" -> "B" and "B" -> "C", then "A" ->
+/// "C". Examples of dependencies:
 /// - Function FA calls function FB
 /// - Function FA uses global variable GA
-/// - Global variable GA references (initialized with) function FB
-/// - Function FA stores address of a function FB somewhere
+/// - Global variable GA references (is initialized with) function FB
+/// - Function FA stores the address of function FB somewhere
 ///
 /// The following cases are treated as dependencies between global objects:
-/// 1. Global object A is used within by a global object B in any way (store,
-///    bitcast, phi node, call, etc.): "A" -> "B" edge will be added to the
+/// 1. Global object A is used by global object B in any way (store,
+///    bitcast, phi node, call, etc.): an "A" -> "B" edge will be added to the
 ///    graph;
-/// 2. function A performs an indirect call of a function with signature S and
-///    there is a function B with signature S. "A" -> "B" edge will be added to
-///    the graph;
+/// 2. Function A performs an indirect call of a function with signature S, and
+///    there is a function B with signature S. An "A" -> "B" edge will be added
+///    to the graph;
 ///
-/// FIXME: For now the algorithm supposes no recursion in the input Module. That
-/// is going to be fixed in the near future.
+/// FIXME: For now, the algorithm assumes no recursion in the input Module. This
+/// will be addressed in the near future.
 void splitModuleTransitiveFromEntryPoints(
     std::unique_ptr<Module> M,
     function_ref<std::optional<int>(const Function &F)> EntryPointCategorizer,

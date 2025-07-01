@@ -224,7 +224,6 @@ void collectFunctionsAndGlobalVariablesToExtract(
 ModuleDesc extractSubModule(const Module &M,
                             const SetVector<const GlobalValue *> &GVs,
                             EntryPointGroup ModuleEntryPoints) {
-  // For each group of entry points collect all dependencies.
   ValueToValueMapTy VMap;
   // Clone definitions only for needed globals. Others will be added as
   // declarations and removed later.
