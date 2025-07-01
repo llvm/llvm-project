@@ -125,21 +125,21 @@ void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
     WriteBitcodeToFile(M, OS);
 }
 
-/// FunctionCategorizer is used for splitting by category either by module-id or
-/// by kernels. It doesn't provide categories for functions other than kernels.
-/// Categorizer computes a string key for the given Function and records the
-/// association between the string key and an integer category. If a string key
-/// is already belongs to some category than the corresponding integer category
-/// is returned.
-class FunctionCategorizer {
+/// EntryPointCategorizer is used for splitting by category either by module-id
+/// or by kernels. It doesn't provide categories for functions other than
+/// kernels. Categorizer computes a string key for the given Function and
+/// records the association between the string key and an integer category. If a
+/// string key is already belongs to some category than the corresponding
+/// integer category is returned.
+class EntryPointCategorizer {
 public:
-  FunctionCategorizer(SplitByCategoryType Type) : Type(Type) {}
+  EntryPointCategorizer(SplitByCategoryType Type) : Type(Type) {}
 
-  FunctionCategorizer() = delete;
-  FunctionCategorizer(FunctionCategorizer &) = delete;
-  FunctionCategorizer &operator=(const FunctionCategorizer &) = delete;
-  FunctionCategorizer(FunctionCategorizer &&) = default;
-  FunctionCategorizer &operator=(FunctionCategorizer &&) = default;
+  EntryPointCategorizer() = delete;
+  EntryPointCategorizer(EntryPointCategorizer &) = delete;
+  EntryPointCategorizer &operator=(const EntryPointCategorizer &) = delete;
+  EntryPointCategorizer(EntryPointCategorizer &&) = default;
+  EntryPointCategorizer &operator=(EntryPointCategorizer &&) = default;
 
   /// Returns integer specifying the category for the given \p F.
   /// If the given function isn't a kernel then returns std::nullopt.
@@ -229,8 +229,9 @@ Error runSplitModuleByCategory(std::unique_ptr<Module> M) {
     writeModuleToFile(*MPart, ModulePath, OutputAssembly);
   };
 
-  auto Categorizer = FunctionCategorizer(SplitByCategory);
-  splitModuleByCategory(std::move(M), Categorizer, PostSplitCallback);
+  auto Categorizer = EntryPointCategorizer(SplitByCategory);
+  splitModuleTransitiveFromEntryPoints(std::move(M), Categorizer,
+                                       PostSplitCallback);
   return Error::success();
 }
 

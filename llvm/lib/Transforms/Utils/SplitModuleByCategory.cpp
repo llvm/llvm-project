@@ -96,7 +96,7 @@ bool isKernel(const Function &F) {
 }
 
 // Represents "dependency" or "use" graph of global objects (functions and
-// global variables) in a module. It is used during device code split to
+// global variables) in a module. It is used during code split to
 // understand which global variables and functions (other than entry points)
 // should be included into a split module.
 //
@@ -255,12 +255,12 @@ ModuleDesc extractCallGraph(const Module &M, EntryPointGroup ModuleEntryPoints,
 using EntryPointGroupVec = SmallVector<EntryPointGroup>;
 
 /// Module Splitter.
-/// It gets a module (in a form of module descriptor, to get additional info)
-/// and a collection of entry points groups. Each group specifies subset entry
-/// points from input module that should be included in a split module.
+/// It gets a module and a collection of entry points groups.
+/// Each group specifies subset entry points from input module that should be
+/// included in a split module.
 class ModuleSplitter {
 private:
-  ModuleDesc Input;
+  std::unique_ptr<Module> M;
   EntryPointGroupVec Groups;
   DependencyGraph DG;
 
@@ -273,36 +273,33 @@ private:
   }
 
 public:
-  ModuleSplitter(ModuleDesc MD, EntryPointGroupVec GroupVec)
-      : Input(std::move(MD)), Groups(std::move(GroupVec)),
-        DG(Input.getModule()) {
+  ModuleSplitter(std::unique_ptr<Module> Module, EntryPointGroupVec GroupVec)
+      : M(std::move(Module)), Groups(std::move(GroupVec)), DG(*M) {
     assert(!Groups.empty() && "Entry points groups collection is empty!");
   }
 
   /// Gets next subsequence of entry points in an input module and provides
   /// split submodule containing these entry points and their dependencies.
   ModuleDesc getNextSplit() {
-    return extractCallGraph(Input.getModule(), drawEntryPointGroup(), DG);
+    return extractCallGraph(*M, drawEntryPointGroup(), DG);
   }
 
   /// Check that there are still submodules to split.
   bool hasMoreSplits() const { return Groups.size() > 0; }
 };
 
-EntryPointGroupVec
-selectEntryPointGroups(const Module &M,
-                       function_ref<std::optional<int>(const Function &F)> FC) {
+EntryPointGroupVec selectEntryPointGroups(
+    const Module &M, function_ref<std::optional<int>(const Function &F)> EPC) {
   // std::map is used here to ensure stable ordering of entry point groups,
   // which is based on their contents, this greatly helps LIT tests
   std::map<int, EntryPointSet> EntryPointsMap;
 
   for (const auto &F : M.functions())
-    if (std::optional<int> Category = FC(F); Category)
+    if (std::optional<int> Category = EPC(F); Category)
       EntryPointsMap[*Category].insert(&F);
 
   EntryPointGroupVec Groups;
   Groups.reserve(EntryPointsMap.size());
-  // Start with properties of a source module
   for (auto &[Key, EntryPoints] : EntryPointsMap)
     Groups.emplace_back(Key, std::move(EntryPoints));
 
@@ -311,13 +308,12 @@ selectEntryPointGroups(const Module &M,
 
 } // namespace
 
-void llvm::splitModuleByCategory(
+void llvm::splitModuleTransitiveFromEntryPoints(
     std::unique_ptr<Module> M,
-    function_ref<std::optional<int>(const Function &F)> FunctionCategorizer,
+    function_ref<std::optional<int>(const Function &F)> EntryPointCategorizer,
     function_ref<void(std::unique_ptr<Module> Part)> Callback) {
-  EntryPointGroupVec Groups = selectEntryPointGroups(*M, FunctionCategorizer);
-  ModuleDesc MD = std::move(M);
-  ModuleSplitter Splitter(std::move(MD), std::move(Groups));
+  EntryPointGroupVec Groups = selectEntryPointGroups(*M, EntryPointCategorizer);
+  ModuleSplitter Splitter(std::move(M), std::move(Groups));
   while (Splitter.hasMoreSplits()) {
     ModuleDesc MD = Splitter.getNextSplit();
     Callback(std::move(MD.releaseModule()));
