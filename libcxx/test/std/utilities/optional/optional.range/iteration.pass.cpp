@@ -8,13 +8,12 @@
 
 // UNSUPPORTED: std-at-least-c++26
 
-#include <iostream>
+#include <cassert>
 #include <optional>
 
 int main() {
   std::optional<int> val = 2;
-  for (const auto& elem : val) {
-    std::cout << elem << std::endl;
-  }
+  for (const auto& elem : val)
+    assert(elem == 2);
   return 0;
 }
