@@ -611,12 +611,12 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
     };
 
     LHSVar = SimplifyVar(LHSVar, Env1);
-    LHSVar = SimplifyVar(RHSVar, Env2);
+    RHSVar = SimplifyVar(RHSVar, Env2);
 
     // Handle special cases.
     if (LHSVar == RHSVar)
       return LHSVar ? *LHSVar : MergedEnv.makeAtomicBoolValue();
-    else if (isa<TopBoolValue>(LHSVar) || isa<TopBoolValue>(RHSVar))
+    else if (isa_and_nonnull<TopBoolValue>(LHSVar) || isa_and_nonnull<TopBoolValue>(RHSVar))
       return MergedEnv.makeTopBoolValue();
 
     if (!LHSVar)
@@ -671,24 +671,32 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
     auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
-    if (isa_and_present<TopBoolValue>(LHSVar) ||
-        isa_and_present<TopBoolValue>(RHSVar))
+    const auto SimplifyVar = [&](BoolValue *VarToSimplify,
+                                 const Environment &Env) -> BoolValue * {
+      SatisfiabilityResult SatResult =
+          computeSatisfiability(VarToSimplify, Env);
+      switch (SatResult) {
+      case SR::Nullptr:
+        return nullptr;
+      case SR::Top:
+        return &MergedEnv.makeTopBoolValue();
+      case SR::True:
+        return &MergedEnv.getBoolLiteralValue(true);
+      case SR::False:
+        return &MergedEnv.getBoolLiteralValue(false);
+      case SR::Unknown:
+        return VarToSimplify;
+      }
+    };
+
+    LHSVar = SimplifyVar(LHSVar, Env1);
+    RHSVar = SimplifyVar(RHSVar, Env2);
+
+    // Handle special cases.
+    if (isa_and_nonnull<TopBoolValue>(LHSVar) || isa_and_nonnull<TopBoolValue>(RHSVar))
       return CR::Top;
-
-    if (LHSVar == RHSVar)
-      return CR::Same;
-
-    SatisfiabilityResult LHSResult = computeSatisfiability(LHSVar, Env1);
-    SatisfiabilityResult RHSResult = computeSatisfiability(RHSVar, Env2);
-
-    if (LHSResult == SR::Top || RHSResult == SR::Top)
-      return CR::Top;
-
-    if (LHSResult == SR::Unknown || RHSResult == SR::Unknown)
-      return CR::Unknown;
-
-    if (LHSResult == RHSResult)
-      return CR::Same;
+    else if (LHSVar == RHSVar)
+      return LHSVar ? CR::Same : CR::Unknown;
 
     return CR::Different;
   };
@@ -718,28 +726,41 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
   if (!Type->isAnyPointerType())
     return ComparisonResult::Unknown;
 
+  // Evaluate values, but different values compare to Unknown.
   auto FastCompareValues = [&](llvm::StringRef Name) -> CR {
     auto *LHSVar = cast_or_null<BoolValue>(Val1.getProperty(Name));
     auto *RHSVar = cast_or_null<BoolValue>(Val2.getProperty(Name));
 
-    SatisfiabilityResult LHSResult = shallowComputeSatisfiability(LHSVar, Env1);
-    SatisfiabilityResult RHSResult = shallowComputeSatisfiability(RHSVar, Env2);
+    const auto SimplifyVar = [&](BoolValue *VarToSimplify,
+                                 const Environment &Env) -> BoolValue * {
+      SatisfiabilityResult SatResult =
+          shallowComputeSatisfiability(VarToSimplify, Env);
+      switch (SatResult) {
+      case SR::Nullptr:
+        return nullptr;
+      case SR::Top:
+        return &MergedEnv.makeTopBoolValue();
+      case SR::True:
+        return &MergedEnv.getBoolLiteralValue(true);
+      case SR::False:
+        return &MergedEnv.getBoolLiteralValue(false);
+      case SR::Unknown:
+        return VarToSimplify;
+      }
+    };
 
-    if (LHSResult == SR::Top || RHSResult == SR::Top) {
+    LHSVar = SimplifyVar(LHSVar, Env1);
+    RHSVar = SimplifyVar(RHSVar, Env2);
+
+    // Handle special cases.
+    if (isa_and_nonnull<TopBoolValue>(LHSVar) || isa_and_nonnull<TopBoolValue>(RHSVar)) {
       Val2.setProperty(Name, Env2.makeTopBoolValue());
       return CR::Top;
-    }
+    } else if (LHSVar == RHSVar)
+      return LHSVar ? CR::Same : CR::Unknown;
 
-    if (LHSResult == SR::Unknown || RHSResult == SR::Unknown)
-      return CR::Unknown;
-
-    if (LHSResult == RHSResult)
-      return CR::Same;
-
-    Val2.setProperty(Name, Env2.makeTopBoolValue());
     return CR::Different;
   };
-
   CR NullComparison = FastCompareValues(kIsNull);
   CR NonnullComparison = FastCompareValues(kIsNonnull);
 
