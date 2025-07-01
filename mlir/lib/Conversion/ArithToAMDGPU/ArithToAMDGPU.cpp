@@ -500,20 +500,23 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   paddedScaleShape.insert(paddedScaleShape.end(),
                           inShape.size() - originalScaleShape.size(), 1);
 
-  auto ratio = computeShapeRatio(inShape, paddedScaleShape);
-  if (!ratio)
-    return failure();
+  auto maybeRatio = computeShapeRatio(inShape, paddedScaleShape);
+  assert(maybeRatio &&
+         "failed to derive block size from broadcast or splat operation");
 
-  const int64_t blockSize = computeProduct(*ratio);
+  SmallVector<int64_t> ratio =
+      maybeRatio.value_or(SmallVector<int64_t>(inShape.size(), 1));
+
+  int64_t blockSize = computeProduct(ratio);
 
   Value zero = rewriter.create<arith::ConstantOp>(
       loc, outType, rewriter.getFloatAttr(outType, 0.0));
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, outVecType, zero);
 
-  for (SmallVector<int64_t> offsets : StaticTileOffsetRange(inShape, *ratio)) {
+  for (SmallVector<int64_t> offsets : StaticTileOffsetRange(inShape, ratio)) {
     SmallVector<int64_t> strides(offsets.size(), 1);
     Value block = rewriter.create<vector::ExtractStridedSliceOp>(
-        loc, in, offsets, *ratio, strides);
+        loc, in, offsets, ratio, strides);
     VectorType block1DType = VectorType::get(blockSize, inType);
     Value block1D =
         rewriter.create<vector::ShapeCastOp>(loc, block1DType, block);
@@ -539,7 +542,7 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
           loc, scaleExt, blockResult, i, 1);
     }
 
-    VectorType resultType = VectorType::get(*ratio, outType);
+    VectorType resultType = VectorType::get(ratio, outType);
     Value cast =
         rewriter.create<vector::ShapeCastOp>(loc, resultType, blockResult);
     result = rewriter.create<vector::InsertStridedSliceOp>(loc, cast, result,
@@ -608,18 +611,21 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
   paddedScaleShape.insert(paddedScaleShape.end(),
                           inShape.size() - originalScaleShape.size(), 1);
 
-  auto ratio = computeShapeRatio(inShape, paddedScaleShape);
-  if (!ratio)
-    return failure();
+  auto maybeRatio = computeShapeRatio(inShape, paddedScaleShape);
+  assert(maybeRatio &&
+         "failed to derive block size from broadcast or splat operation");
 
-  const int64_t blockSize = computeProduct(*ratio);
+  SmallVector<int64_t> ratio =
+      maybeRatio.value_or(SmallVector<int64_t>(inShape.size(), 1));
+
+  int64_t blockSize = computeProduct(ratio);
 
   Value result = rewriter.createOrFold<vector::SplatOp>(loc, outVecType, zero);
 
-  for (SmallVector<int64_t> offsets : StaticTileOffsetRange(inShape, *ratio)) {
+  for (SmallVector<int64_t> offsets : StaticTileOffsetRange(inShape, ratio)) {
     SmallVector<int64_t> strides(offsets.size(), 1);
     Value block = rewriter.create<vector::ExtractStridedSliceOp>(
-        loc, in, offsets, *ratio, strides);
+        loc, in, offsets, ratio, strides);
     VectorType block1DType = VectorType::get(blockSize, inType);
     Value block1D =
         rewriter.create<vector::ShapeCastOp>(loc, block1DType, block);
@@ -646,7 +652,7 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
           loc, scaleTrunc, blockResult, i, 1);
     }
 
-    VectorType resultType = VectorType::get(*ratio, outType);
+    VectorType resultType = VectorType::get(ratio, outType);
     Value cast =
         rewriter.create<vector::ShapeCastOp>(loc, resultType, blockResult);
     result = rewriter.create<vector::InsertStridedSliceOp>(loc, cast, result,
