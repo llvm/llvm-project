@@ -13,7 +13,6 @@
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -1036,23 +1035,27 @@ struct VectorToElementOpConvert final
     if (!srcType)
       return failure();
 
-    // If the input vector was size 1, then it would have been converted to a
-    // scalar. Replace with it directly
+    SmallVector<Value> results(toElementsOp->getNumResults());
+    Location loc = toElementsOp.getLoc();
+
+    // Input vectors of size 1 are converted to scalars by the type converter.
+    // We cannot use `spirv::CompositeExtractOp` directly in this case.
+    // For a scalar source, the result is just the scalar itself.
     if (isa<spirv::ScalarType>(adaptor.getSource().getType())) {
-      rewriter.replaceOp(toElementsOp, adaptor.getSource());
+      results[0] = adaptor.getSource();
+      rewriter.replaceOp(toElementsOp, results);
       return success();
     }
-
-    Location loc = toElementsOp.getLoc();
-    SmallVector<Value> results(toElementsOp->getNumResults());
 
     for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
       if (element.use_empty())
         continue;
 
-      auto spirvType = getTypeConverter()->convertType(element.getType());
+      auto elementType = getTypeConverter()->convertType(element.getType());
+      if (!elementType)
+        return failure();
       Value result = rewriter.create<spirv::CompositeExtractOp>(
-          loc, spirvType, adaptor.getSource(),
+          loc, elementType, adaptor.getSource(),
           rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
       results[idx] = result;
     }
