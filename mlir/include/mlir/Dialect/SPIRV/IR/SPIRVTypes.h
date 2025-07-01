@@ -486,14 +486,15 @@ class TensorArmType
 public:
   using Base::Base;
 
-  using ShapedType::Trait<TensorArmType>::getElementTypeBitWidth;
-  using ShapedType::Trait<TensorArmType>::getRank;
-  using ShapedType::Trait<TensorArmType>::getNumElements;
-  using ShapedType::Trait<TensorArmType>::isDynamicDim;
-  using ShapedType::Trait<TensorArmType>::hasStaticShape;
-  using ShapedType::Trait<TensorArmType>::getNumDynamicDims;
-  using ShapedType::Trait<TensorArmType>::getDimSize;
-  using ShapedType::Trait<TensorArmType>::getDynamicDimIndex;
+  using ShapedTypeTraits = ShapedType::Trait<TensorArmType>;
+  using ShapedTypeTraits::getDimSize;
+  using ShapedTypeTraits::getDynamicDimIndex;
+  using ShapedTypeTraits::getElementTypeBitWidth;
+  using ShapedTypeTraits::getNumDynamicDims;
+  using ShapedTypeTraits::getNumElements;
+  using ShapedTypeTraits::getRank;
+  using ShapedTypeTraits::hasStaticShape;
+  using ShapedTypeTraits::isDynamicDim;
 
   static constexpr StringLiteral name = "spirv.arm.tensor";
 
