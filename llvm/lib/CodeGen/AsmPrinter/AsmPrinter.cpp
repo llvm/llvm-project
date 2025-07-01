@@ -1391,7 +1391,8 @@ static uint32_t getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
 }
 
 static llvm::object::BBAddrMap::Features
-getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
+getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges,
+                    bool HasCalls) {
   // Ensure that the user has not passed in additional options while also
   // specifying all or none.
   if ((PgoAnalysisMapFeatures.isSet(PGOMapFeaturesEnum::None) ||
@@ -1424,10 +1425,11 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
           BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
           static_cast<bool>(BBAddrMapSkipEmitBBEntries),
-          false};
+          HasCalls};
 }
 
-void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
+void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF,
+                                      bool HasCalls) {
   MCSection *BBAddrMapSection =
       getObjFileLowering().getBBAddrMapSection(*MF.getSection());
   assert(BBAddrMapSection && ".llvm_bb_addr_map section is not initialized.");
@@ -1440,7 +1442,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   uint8_t BBAddrMapVersion = OutStreamer->getContext().getBBAddrMapVersion();
   OutStreamer->emitInt8(BBAddrMapVersion);
   OutStreamer->AddComment("feature");
-  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size());
+  auto Features = getBBAddrMapFeature(MF, MBBSectionRanges.size(), HasCalls);
   OutStreamer->emitInt8(Features.encode());
   // Emit BB Information for each basic block in the function.
   if (Features.MultiBBRange) {
@@ -1493,13 +1495,24 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
-      // Emit the basic block size. When BBs have alignments, their size cannot
-      // always be computed from their offsets.
-      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
+      const MCSymbol *CurrentLabel = MBBSymbol;
+      if (HasCalls) {
+        const SmallVectorImpl<MCSymbol *> &CallsiteSymbols =
+            MBB.getCallsiteSymbols();
+        OutStreamer->AddComment("number of callsites");
+        OutStreamer->emitULEB128IntValue(CallsiteSymbols.size());
+        for (const MCSymbol *CallsiteSymbol : CallsiteSymbols) {
+          // Emit the callsite offset.
+          emitLabelDifferenceAsULEB128(CallsiteSymbol, CurrentLabel);
+          CurrentLabel = CallsiteSymbol;
+        }
+      }
+      // Emit the offset to the end of the block, which can be used to compute
+      // the total block size.
+      emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), CurrentLabel);
       // Emit the Metadata.
       OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     }
-
     PrevMBBEndSymbol = MBB.getEndSymbol();
   }
 
@@ -1802,6 +1815,7 @@ void AsmPrinter::emitFunctionBody() {
 
   // Print out code for the function.
   bool HasAnyRealCode = false;
+  bool HasCalls = false;
   int NumInstsInFunction = 0;
   bool IsEHa = MMI->getModule()->getModuleFlag("eh-asynch");
 
@@ -1827,6 +1841,11 @@ void AsmPrinter::emitFunctionBody() {
       if (!MI.isPosition() && !MI.isImplicitDef() && !MI.isKill() &&
           !MI.isDebugInstr()) {
         HasAnyRealCode = true;
+      }
+      if (MI.isCall()) {
+        HasCalls = true;
+        if (MF->getTarget().Options.BBAddrMap)
+          OutStreamer->emitLabel(MBB.createCallsiteSymbol());
       }
 
       // If there is a pre-instruction symbol, emit a label for it here.
@@ -2114,7 +2133,7 @@ void AsmPrinter::emitFunctionBody() {
   // BB labels are requested for this function. Skip empty functions.
   if (HasAnyRealCode) {
     if (MF->getTarget().Options.BBAddrMap)
-      emitBBAddrMapSection(*MF);
+      emitBBAddrMapSection(*MF, HasCalls);
     else if (PgoAnalysisMapFeatures.getBits() != 0)
       MF->getContext().reportWarning(
           SMLoc(), "pgo-analysis-map is enabled for function " + MF->getName() +
