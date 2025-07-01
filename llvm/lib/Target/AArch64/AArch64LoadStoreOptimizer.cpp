@@ -2529,15 +2529,14 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
     return E;
   }
 
+  unsigned Count = 0;
   MachineBasicBlock *CurMBB = I->getParent();
   // choice of next block to visit is liveins-based
   bool VisitSucc = CurMBB->getParent()->getRegInfo().tracksLiveness();
 
   while (true) {
-    MachineBasicBlock::iterator CurEnd = CurMBB->end();
-
-    for (unsigned Count = 0; MBBI != CurEnd && Count < Limit;
-         MBBI = next_nodbg(MBBI, CurEnd)) {
+    for (MachineBasicBlock::iterator CurEnd = CurMBB->end();
+         MBBI != CurEnd && Count < Limit; MBBI = next_nodbg(MBBI, CurEnd)) {
       MachineInstr &MI = *MBBI;
 
       // Don't count transient instructions towards the search limit since there
@@ -2563,30 +2562,31 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
         return E;
     }
 
-    if (VisitSucc) {
-      // Try to go downward to successors along a CF path w/o side enters
-      // such that BaseReg is alive along it but not at its exits
-      MachineBasicBlock *SuccToVisit = nullptr;
-      unsigned LiveSuccCount = 0;
-      for (MachineBasicBlock *Succ : CurMBB->successors()) {
-        if (Succ->isLiveIn(BaseReg)) {
-          if (LiveSuccCount++) {
+    if (!VisitSucc || Limit <= Count)
+      break;
+
+    // Try to go downward to successors along a CF path w/o side enters
+    // such that BaseReg is alive along it but not at its exits
+    MachineBasicBlock *SuccToVisit = nullptr;
+    unsigned LiveSuccCount = 0;
+    MCRegister RegNoBAse = BaseReg;
+    for (MachineBasicBlock *Succ : CurMBB->successors()) {
+      for (MCRegAliasIterator AI(BaseReg, TRI, true); AI.isValid(); ++AI) {
+        if (Succ->isLiveIn(*AI)) {
+          if (LiveSuccCount++)
             return E;
-          }
-          if (Succ->pred_size() == 1) {
+          if (Succ->pred_size() == 1)
             SuccToVisit = Succ;
-          }
+          break;
         }
       }
-      if (!SuccToVisit) {
-        break;
-      }
-      CurMBB = SuccToVisit;
-      MBBI = CurMBB->begin();
-    } else {
-      break;
     }
+    if (!SuccToVisit)
+      break;
+    CurMBB = SuccToVisit;
+    MBBI = CurMBB->begin();
   }
+
   return E;
 }
 
