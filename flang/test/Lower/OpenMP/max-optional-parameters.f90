@@ -20,7 +20,7 @@
 !CHECK: } else {
 !CHECK:   fir.result %[[V8]] : f32
 !CHECK: }
-!CHECK: omp.atomic.update %[[VAL_A]]#0 : !fir.ref<f32> {
+!CHECK: omp.atomic.update memory_order(relaxed) %[[VAL_A]]#0 : !fir.ref<f32> {
 !CHECK: ^bb0(%[[ARG:[a-z0-9]+]]: f32):
 !CHECK:   %[[V10:[0-9]+]] = arith.cmpf ogt, %[[ARG]], %[[V9]] fastmath<contract> : f32
 !CHECK:   %[[V11:[0-9]+]] = arith.select %[[V10]], %[[ARG]], %[[V9]] : f32
@@ -52,7 +52,7 @@ end
 !CHECK: } else {
 !CHECK:   fir.result %[[V8]] : i32
 !CHECK: }
-!CHECK: omp.atomic.update %[[VAL_A]]#0 : !fir.ref<i32> {
+!CHECK: omp.atomic.update memory_order(relaxed) %[[VAL_A]]#0 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:[a-z0-9]+]]: i32):
 !CHECK:   %[[V10:[0-9]+]] = arith.cmpi slt, %[[ARG]], %[[V9]] : i32
 !CHECK:   %[[V11:[0-9]+]] = arith.select %[[V10]], %[[ARG]], %[[V9]] : i32
