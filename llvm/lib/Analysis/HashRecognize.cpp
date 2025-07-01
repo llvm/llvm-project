@@ -591,6 +591,12 @@ HashRecognize::recognizeCRC() const {
     if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != ByteOrderSwapped)
       return "Loop with non-unit bitshifts";
 
+    // Ensure that the PHIs have exactly two uses:
+    // the bit-shift, and the XOR (or a cast feeding into the XOR).
+    if (!ConditionalRecurrence.Phi->hasNUses(2) ||
+        !SimpleRecurrence.Phi->hasNUses(2))
+      return "Recurrences have stray uses";
+
     // Check that the SelectInst ConditionalRecurrence.Step is conditional on
     // the XOR of SimpleRecurrence.Phi and ConditionalRecurrence.Phi.
     if (!isConditionalOnXorOfPHIs(cast<SelectInst>(ConditionalRecurrence.Step),
