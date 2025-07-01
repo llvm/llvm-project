@@ -4,13 +4,27 @@
 // where L# refers to the level of the tree the shuffle belongs to, and SH# refers to
 // the shuffle index within that level.
 
-func.func @to_from_elements_single_input_shuffle(%a: vector<8xf32>) -> vector<8xf32> {
+func.func @trivial_forwarding(%a: vector<8xf32>) -> vector<8xf32> {
+  %0:8 = vector.to_elements %a : vector<8xf32>
+  %1 = vector.from_elements %0#0, %0#1, %0#2, %0#3, %0#4, %0#5, %0#6, %0#7 : vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// No shuffle tree needed for trivial forwarding case.
+
+// CHECK-LABEL: func @trivial_forwarding(
+//  CHECK-SAME:     %[[A:.*]]: vector<8xf32>
+//       CHECK:   return %[[A]] : vector<8xf32>
+
+// -----
+
+func.func @single_input_shuffle(%a: vector<8xf32>) -> vector<8xf32> {
   %0:8 = vector.to_elements %a : vector<8xf32>
   %1 = vector.from_elements %0#7, %0#0, %0#6, %0#1, %0#5, %0#2, %0#4, %0#3 : vector<8xf32>
   return %1 : vector<8xf32>
 }
 
-// CHECK-LABEL: func @to_from_elements_single_input_shuffle(
+// CHECK-LABEL: func @single_input_shuffle(
 //  CHECK-SAME:     %[[A:.*]]: vector<8xf32>
       // CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[A]] [7, 0, 6, 1, 5, 2, 4, 3] : vector<8xf32>, vector<8xf32>
       // CHECK:   return %[[L0SH0]]
@@ -32,7 +46,7 @@ func.func @from_elements_to_elements_single_shuffle(%a: vector<8xf32>,
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_concat_4x8_to_32(%a: vector<8xf32>,
+func.func @shuffle_tree_concat_4x8_to_32(%a: vector<8xf32>,
                                                           %b: vector<8xf32>,
                                                           %c: vector<8xf32>,
                                                           %d: vector<8xf32>) -> vector<32xf32> {
@@ -47,7 +61,7 @@ func.func @to_from_elements_shuffle_tree_concat_4x8_to_32(%a: vector<8xf32>,
   return %4 : vector<32xf32>
 }
 
-// CHECK-LABEL: func @to_from_elements_shuffle_tree_concat_4x8_to_32(
+// CHECK-LABEL: func @shuffle_tree_concat_4x8_to_32(
 //  CHECK-SAME:     %[[A:.*]]: vector<8xf32>, %[[B:.*]]: vector<8xf32>, %[[C:.*]]: vector<8xf32>, %[[D:.*]]: vector<8xf32>
 //       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[B]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
 //       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[C]], %[[D]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : vector<8xf32>, vector<8xf32>
@@ -56,7 +70,7 @@ func.func @to_from_elements_shuffle_tree_concat_4x8_to_32(%a: vector<8xf32>,
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_concat_3x4_to_12(%a: vector<4xf32>,
+func.func @shuffle_tree_concat_3x4_to_12(%a: vector<4xf32>,
                                                           %b: vector<4xf32>,
                                                           %c: vector<4xf32>) -> vector<12xf32> {
   %0:4 = vector.to_elements %a : vector<4xf32>
@@ -66,7 +80,7 @@ func.func @to_from_elements_shuffle_tree_concat_3x4_to_12(%a: vector<4xf32>,
   return %3 : vector<12xf32>
 }
 
-// CHECK-LABEL: func @to_from_elements_shuffle_tree_concat_3x4_to_12(
+// CHECK-LABEL: func @shuffle_tree_concat_3x4_to_12(
 //  CHECK-SAME:     %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[C:.*]]: vector<4xf32>
 //       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[B]] [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xf32>, vector<4xf32>
 //       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[C]], %[[C]] [0, 1, 2, 3, -1, -1, -1, -1] : vector<4xf32>, vector<4xf32>
@@ -75,7 +89,7 @@ func.func @to_from_elements_shuffle_tree_concat_3x4_to_12(%a: vector<4xf32>,
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_concat_64x4_256(
+func.func @shuffle_tree_concat_64x4_256(
   %a: vector<4xf32>, %b: vector<4xf32>, %c: vector<4xf32>, %d: vector<4xf32>,
   %e: vector<4xf32>, %f: vector<4xf32>, %g: vector<4xf32>, %h: vector<4xf32>,
   %i: vector<4xf32>, %j: vector<4xf32>, %k: vector<4xf32>, %l: vector<4xf32>,
@@ -172,7 +186,7 @@ func.func @to_from_elements_shuffle_tree_concat_64x4_256(
   return %64 : vector<256xf32>
 }
 
-// CHECK-LABEL: func.func @to_from_elements_shuffle_tree_concat_64x4_256(
+// CHECK-LABEL: func.func @shuffle_tree_concat_64x4_256(
 //  CHECK-SAME:     %[[A:.+]]: vector<4xf32>, %[[B:.+]]: vector<4xf32>, %[[C:.+]]: vector<4xf32>, %[[D:.+]]: vector<4xf32>, %[[E:.+]]: vector<4xf32>, %[[F:.+]]: vector<4xf32>, %[[G:.+]]: vector<4xf32>, %[[H:.+]]: vector<4xf32>, %[[I:.+]]: vector<4xf32>, %[[J:.+]]: vector<4xf32>, %[[K:.+]]: vector<4xf32>, %[[L:.+]]: vector<4xf32>, %[[M:.+]]: vector<4xf32>, %[[N:.+]]: vector<4xf32>, %[[O:.+]]: vector<4xf32>, %[[P:.+]]: vector<4xf32>, %[[Q:.+]]: vector<4xf32>, %[[R:.+]]: vector<4xf32>, %[[S:.+]]: vector<4xf32>, %[[T:.+]]: vector<4xf32>, %[[U:.+]]: vector<4xf32>, %[[V:.+]]: vector<4xf32>, %[[W:.+]]: vector<4xf32>, %[[X:.+]]: vector<4xf32>, %[[Y:.+]]: vector<4xf32>, %[[Z:.+]]: vector<4xf32>, %[[AA:.+]]: vector<4xf32>, %[[AB:.+]]: vector<4xf32>, %[[AC:.+]]: vector<4xf32>, %[[AD:.+]]: vector<4xf32>, %[[AE:.+]]: vector<4xf32>, %[[AF:.+]]: vector<4xf32>, %[[AG:.+]]: vector<4xf32>, %[[AH:.+]]: vector<4xf32>, %[[AI:.+]]: vector<4xf32>, %[[AJ:.+]]: vector<4xf32>, %[[AK:.+]]: vector<4xf32>, %[[AL:.+]]: vector<4xf32>, %[[AM:.+]]: vector<4xf32>, %[[AN:.+]]: vector<4xf32>, %[[AO:.+]]: vector<4xf32>, %[[AP:.+]]: vector<4xf32>, %[[AQ:.+]]: vector<4xf32>, %[[AR:.+]]: vector<4xf32>, %[[AS:.+]]: vector<4xf32>, %[[AT:.+]]: vector<4xf32>, %[[AU:.+]]: vector<4xf32>, %[[AV:.+]]: vector<4xf32>, %[[AW:.+]]: vector<4xf32>, %[[AX:.+]]: vector<4xf32>, %[[AY:.+]]: vector<4xf32>, %[[AZ:.+]]: vector<4xf32>, %[[BA:.+]]: vector<4xf32>, %[[BB:.+]]: vector<4xf32>, %[[BC:.+]]: vector<4xf32>, %[[BD:.+]]: vector<4xf32>, %[[BE:.+]]: vector<4xf32>, %[[BF:.+]]: vector<4xf32>, %[[BG:.+]]: vector<4xf32>, %[[BH:.+]]: vector<4xf32>, %[[BI:.+]]: vector<4xf32>, %[[BJ:.+]]: vector<4xf32>, %[[BK:.+]]: vector<4xf32>, %[[BL:.+]]: vector<4xf32>)
 //       CHECK:   %[[L0SH0:.+]] = vector.shuffle %[[A]], %[[B]] [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xf32>, vector<4xf32>
 //       CHECK:   %[[L0SH1:.+]] = vector.shuffle %[[C]], %[[D]] [0, 1, 2, 3, 4, 5, 6, 7] : vector<4xf32>, vector<4xf32>
@@ -241,7 +255,7 @@ func.func @to_from_elements_shuffle_tree_concat_64x4_256(
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_arbitrary_4x4_to_16(%a: vector<4xf32>,
+func.func @shuffle_tree_arbitrary_4x4_to_16(%a: vector<4xf32>,
                                                              %b: vector<4xf32>,
                                                              %c: vector<4xf32>,
                                                              %d: vector<4xf32>) -> vector<16xf32> {
@@ -255,7 +269,7 @@ func.func @to_from_elements_shuffle_tree_arbitrary_4x4_to_16(%a: vector<4xf32>,
 
 // TODO: Implement mask compression to reduce the number of intermediate poison values.
 
-// CHECK-LABEL: func @to_from_elements_shuffle_tree_arbitrary_4x4_to_16(
+// CHECK-LABEL: func @shuffle_tree_arbitrary_4x4_to_16(
 //  CHECK-SAME:     %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[C:.*]]: vector<4xf32>, %[[D:.*]]: vector<4xf32>
 //       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[D]], %[[A]] [3, 4, -1, -1, 0, -1, 7, -1, 5, 2, -1, -1, -1, 6, 1] : vector<4xf32>, vector<4xf32>
 //       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[C]], %[[B]] [2, 5, -1, 1, -1, 6, -1, -1, 4, 3, 7, -1, -1, 0, -1] : vector<4xf32>, vector<4xf32>
@@ -264,7 +278,7 @@ func.func @to_from_elements_shuffle_tree_arbitrary_4x4_to_16(%a: vector<4xf32>,
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_arbitrary_3x4_to_12(%a: vector<4xf32>,
+func.func @shuffle_tree_arbitrary_3x4_to_12(%a: vector<4xf32>,
                                                              %b: vector<4xf32>,
                                                              %c: vector<4xf32>) -> vector<12xf32> {
   %0:4 = vector.to_elements %a : vector<4xf32>
@@ -276,7 +290,7 @@ func.func @to_from_elements_shuffle_tree_arbitrary_3x4_to_12(%a: vector<4xf32>,
 
 // TODO: Implement mask compression to reduce the number of intermediate poison values.
 
-// CHECK-LABEL: func @to_from_elements_shuffle_tree_arbitrary_3x4_to_12(
+// CHECK-LABEL: func @shuffle_tree_arbitrary_3x4_to_12(
 //  CHECK-SAME:     %[[A:.*]]: vector<4xf32>, %[[B:.*]]: vector<4xf32>, %[[C:.*]]: vector<4xf32>
 //       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[B]] [2, 5, -1, 1, 4, -1, 0, 7, -1, 3, 6] : vector<4xf32>, vector<4xf32>
 //       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[C]], %[[C]] [0, -1, -1, 2, -1, -1, 3, -1, -1, 1, -1] : vector<4xf32>, vector<4xf32>
@@ -285,7 +299,7 @@ func.func @to_from_elements_shuffle_tree_arbitrary_3x4_to_12(%a: vector<4xf32>,
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_arbitrary_3x5_to_9(%a: vector<5xf32>,
+func.func @shuffle_tree_arbitrary_3x5_to_9(%a: vector<5xf32>,
                                                             %b: vector<5xf32>,
                                                             %c: vector<5xf32>) -> vector<9xf32> {
   %0:5 = vector.to_elements %a : vector<5xf32>
@@ -297,7 +311,7 @@ func.func @to_from_elements_shuffle_tree_arbitrary_3x5_to_9(%a: vector<5xf32>,
 
 // TODO: Implement mask compression to reduce the number of intermediate poison values.
 
-// CHECK-LABEL: func @to_from_elements_shuffle_tree_arbitrary_3x5_to_9(
+// CHECK-LABEL: func @shuffle_tree_arbitrary_3x5_to_9(
 //  CHECK-SAME:     %[[A:.*]]: vector<5xf32>, %[[B:.*]]: vector<5xf32>, %[[C:.*]]: vector<5xf32>
 //       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[C]], %[[B]] [2, 6, -1, -1, 7, 2, 0, 6] : vector<5xf32>, vector<5xf32>
 //       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[A]], %[[A]] [1, 1, -1, -1, -1, -1, 4, -1] : vector<5xf32>, vector<5xf32>
@@ -306,7 +320,7 @@ func.func @to_from_elements_shuffle_tree_arbitrary_3x5_to_9(%a: vector<5xf32>,
 
 // -----
 
-func.func @to_from_elements_shuffle_tree_broadcast_4x2_to_32(%a: vector<2xf32>,
+func.func @shuffle_tree_broadcast_4x2_to_32(%a: vector<2xf32>,
                                                              %b: vector<2xf32>,
                                                              %c: vector<2xf32>,
                                                              %d: vector<2xf32>) -> vector<32xf32> {
@@ -321,9 +335,66 @@ func.func @to_from_elements_shuffle_tree_broadcast_4x2_to_32(%a: vector<2xf32>,
   return %4 : vector<32xf32>
 }
 
-// CHECK-LABEL: func @to_from_elements_shuffle_tree_broadcast_4x2_to_32(
+// CHECK-LABEL: func @shuffle_tree_broadcast_4x2_to_32(
 //  CHECK-SAME:     %[[A:.*]]: vector<2xf32>, %[[B:.*]]: vector<2xf32>, %[[C:.*]]: vector<2xf32>, %[[D:.*]]: vector<2xf32>
       // CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[B]] [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3] : vector<2xf32>, vector<2xf32>
       // CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[C]], %[[D]] [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3] : vector<2xf32>, vector<2xf32>
       // CHECK:   %[[L1SH0:.*]] = vector.shuffle %[[L0SH0]], %[[L0SH1]] [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31] : vector<16xf32>, vector<16xf32>
       // CHECK:   return %[[L1SH0]] : vector<32xf32>
+
+// -----
+
+
+func.func @shuffle_tree_arbitrary_mixed_sizes(
+     %a : vector<2xf32>,
+     %b : vector<1xf32>,
+     %c : vector<3xf32>,
+     %d : vector<1xf32>,
+     %e : vector<5xf32>) -> vector<6xf32> {
+  %0:2 = vector.to_elements %a : vector<2xf32>
+  %1 = vector.to_elements %b : vector<1xf32>
+  %2:3 = vector.to_elements %c : vector<3xf32>
+  %3 = vector.to_elements %d : vector<1xf32>
+  %4:5 = vector.to_elements %e : vector<5xf32>
+  %5 = vector.from_elements %0#0, %2#0, %3, %4#0, %1, %4#3 : vector<6xf32>
+  return %5 : vector<6xf32>
+}
+
+// TODO: Support mixed vector sizes.
+
+//   CHECK-LABEL: func @shuffle_tree_arbitrary_mixed_sizes(
+// CHECK-COUNT-5:   vector.to_elements
+//        CHECK:    vector.from_elements
+
+// -----
+
+func.func @shuffle_tree_odd_intermediate_vectors(
+     %a : vector<2xf32>,
+     %b : vector<2xf32>,
+     %c : vector<2xf32>,
+     %d : vector<2xf32>,
+     %e : vector<2xf32>,
+     %f : vector<2xf32>) -> vector<6xf32> {
+  %0:2 = vector.to_elements %a : vector<2xf32>
+  %1:2 = vector.to_elements %b : vector<2xf32>
+  %2:2 = vector.to_elements %c : vector<2xf32>
+  %3:2 = vector.to_elements %d : vector<2xf32>
+  %4:2 = vector.to_elements %e : vector<2xf32>
+  %5:2 = vector.to_elements %f : vector<2xf32>
+  %6 = vector.from_elements %0#0, %1#1, %2#0, %3#1, %4#0, %5#1 : vector<6xf32>
+  return %6 : vector<6xf32>
+}
+
+// CHECK-LABEL: func @shuffle_tree_odd_intermediate_vectors(
+// CHECK-SAME:      %[[A:.*]]: vector<2xf32>, %[[B:.*]]: vector<2xf32>, %[[C:.*]]: vector<2xf32>, %[[D:.*]]: vector<2xf32>, %[[E:.*]]: vector<2xf32>, %[[F:.*]]: vector<2xf32>
+//       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[B]] [0, 3] : vector<2xf32>, vector<2xf32>
+//       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[C]], %[[D]] [0, 3] : vector<2xf32>, vector<2xf32>
+//       CHECK:   %[[L0SH2:.*]] = vector.shuffle %[[E]], %[[F]] [0, 3] : vector<2xf32>, vector<2xf32>
+//       CHECK:   %[[L1SH0:.*]] = vector.shuffle %[[L0SH0]], %[[L0SH1]] [0, 1, 2, 3] : vector<2xf32>, vector<2xf32>
+//       CHECK:   %[[L2SH0:.*]] = vector.shuffle %[[L0SH2]], %[[L0SH2]] [0, 1, -1, -1] : vector<2xf32>, vector<2xf32>
+//       CHECK:   %[[L3SH0:.*]] = vector.shuffle %[[L1SH0]], %[[L2SH0]] [0, 1, 2, 3, 4, 5] : vector<4xf32>, vector<4xf32>
+//       CHECK:   return %[[L3SH0]] : vector<6xf32>
+
+
+
+
