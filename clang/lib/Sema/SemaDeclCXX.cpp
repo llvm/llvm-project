@@ -2752,8 +2752,7 @@ CXXBaseSpecifier *Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
       std::string Quals =
           BaseType.getQualifiers().getAsString(Context.getPrintingPolicy());
       Diag(BaseLoc, diag::warn_qual_base_type)
-          << Quals << std::count(Quals.begin(), Quals.end(), ' ') + 1
-          << BaseType;
+          << Quals << llvm::count(Quals, ' ') + 1 << BaseType;
       Diag(BaseLoc, diag::note_base_class_specified_here) << BaseType;
     }
 
@@ -2866,8 +2865,7 @@ BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
     if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
       continue;
     if (AL.getKind() == ParsedAttr::UnknownAttribute)
-      Diag(AL.getLoc(), diag::warn_unknown_attribute_ignored)
-          << AL << AL.getRange();
+      DiagnoseUnknownAttribute(AL);
     else
       Diag(AL.getLoc(), diag::err_base_specifier_attribute)
           << AL << AL.isRegularKeywordAttribute() << AL.getRange();
@@ -4155,10 +4153,6 @@ ExprResult Sema::ActOnRequiresClause(ExprResult ConstraintExpr) {
   if (ConstraintExpr.isInvalid())
     return ExprError();
 
-  ConstraintExpr = CorrectDelayedTyposInExpr(ConstraintExpr);
-  if (ConstraintExpr.isInvalid())
-    return ExprError();
-
   if (DiagnoseUnexpandedParameterPack(ConstraintExpr.get(),
                                       UPPC_RequiresClause))
     return ExprError();
@@ -4208,23 +4202,20 @@ void Sema::ActOnFinishCXXInClassMemberInitializer(Decl *D,
     return;
   }
 
-  ExprResult Init = CorrectDelayedTyposInExpr(InitExpr, /*InitDecl=*/nullptr,
-                                              /*RecoverUncorrectedTypos=*/true);
-  assert(Init.isUsable() && "Init should at least have a RecoveryExpr");
-  if (!FD->getType()->isDependentType() && !Init.get()->isTypeDependent()) {
-    Init = ConvertMemberDefaultInitExpression(FD, Init.get(), InitLoc);
+  if (!FD->getType()->isDependentType() && !InitExpr.get()->isTypeDependent()) {
+    InitExpr = ConvertMemberDefaultInitExpression(FD, InitExpr.get(), InitLoc);
     // C++11 [class.base.init]p7:
     //   The initialization of each base and member constitutes a
     //   full-expression.
-    if (!Init.isInvalid())
-      Init = ActOnFinishFullExpr(Init.get(), /*DiscarededValue=*/false);
-    if (Init.isInvalid()) {
+    if (!InitExpr.isInvalid())
+      InitExpr = ActOnFinishFullExpr(InitExpr.get(), /*DiscarededValue=*/false);
+    if (InitExpr.isInvalid()) {
       FD->setInvalidDecl();
       return;
     }
   }
 
-  FD->setInClassInitializer(Init.get());
+  FD->setInClassInitializer(InitExpr.get());
 }
 
 /// Find the direct and/or virtual base specifiers that
@@ -4394,13 +4385,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
                           SourceLocation IdLoc,
                           Expr *Init,
                           SourceLocation EllipsisLoc) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Init, /*InitDecl=*/nullptr,
-                                             /*RecoverUncorrectedTypos=*/true);
-  if (!Res.isUsable())
-    return true;
-  Init = Res.get();
-
-  if (!ConstructorD)
+  if (!ConstructorD || !Init)
     return true;
 
   AdjustDeclIfTemplate(ConstructorD);
@@ -7173,7 +7158,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
     // "effectively constexpr" for better compatibility.
     // See https://github.com/llvm/llvm-project/issues/102293 for more info.
     if (isa<CXXDestructorDecl>(M)) {
-      auto Check = [](QualType T, auto &&Check) -> bool {
+      llvm::SmallDenseSet<QualType> Visited;
+      auto Check = [&Visited](QualType T, auto &&Check) -> bool {
+        if (!Visited.insert(T->getCanonicalTypeUnqualified()).second)
+          return false;
         const CXXRecordDecl *RD =
             T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
         if (!RD || !RD->isCompleteDefinition())
@@ -7182,16 +7170,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
         if (!RD->hasConstexprDestructor())
           return false;
 
-        QualType CanUnqualT = T.getCanonicalType().getUnqualifiedType();
         for (const CXXBaseSpecifier &B : RD->bases())
-          if (B.getType().getCanonicalType().getUnqualifiedType() !=
-                  CanUnqualT &&
-              !Check(B.getType(), Check))
+          if (!Check(B.getType(), Check))
             return false;
         for (const FieldDecl *FD : RD->fields())
-          if (FD->getType().getCanonicalType().getUnqualifiedType() !=
-                  CanUnqualT &&
-              !Check(FD->getType(), Check))
+          if (!Check(FD->getType(), Check))
             return false;
         return true;
       };
@@ -10572,29 +10555,6 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     RD.dropAttr<TrivialABIAttr>();
   };
 
-  // Ill-formed if the copy and move constructors are deleted.
-  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
-    // If the type is dependent, then assume it might have
-    // implicit copy or move ctor because we won't know yet at this point.
-    if (RD.isDependentType())
-      return true;
-    if (RD.needsImplicitCopyConstructor() &&
-        !RD.defaultedCopyConstructorIsDeleted())
-      return true;
-    if (RD.needsImplicitMoveConstructor() &&
-        !RD.defaultedMoveConstructorIsDeleted())
-      return true;
-    for (const CXXConstructorDecl *CD : RD.ctors())
-      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
-        return true;
-    return false;
-  };
-
-  if (!HasNonDeletedCopyOrMoveConstructor()) {
-    PrintDiagAndRemoveAttr(0);
-    return;
-  }
-
   // Ill-formed if the struct has virtual functions.
   if (RD.isPolymorphic()) {
     PrintDiagAndRemoveAttr(1);
@@ -10637,6 +10597,32 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
         PrintDiagAndRemoveAttr(5);
         return;
       }
+  }
+
+  if (IsCXXTriviallyRelocatableType(RD))
+    return;
+
+  // Ill-formed if the copy and move constructors are deleted.
+  auto HasNonDeletedCopyOrMoveConstructor = [&]() {
+    // If the type is dependent, then assume it might have
+    // implicit copy or move ctor because we won't know yet at this point.
+    if (RD.isDependentType())
+      return true;
+    if (RD.needsImplicitCopyConstructor() &&
+        !RD.defaultedCopyConstructorIsDeleted())
+      return true;
+    if (RD.needsImplicitMoveConstructor() &&
+        !RD.defaultedMoveConstructorIsDeleted())
+      return true;
+    for (const CXXConstructorDecl *CD : RD.ctors())
+      if (CD->isCopyOrMoveConstructor() && !CD->isDeleted())
+        return true;
+    return false;
+  };
+
+  if (!HasNonDeletedCopyOrMoveConstructor()) {
+    PrintDiagAndRemoveAttr(0);
+    return;
   }
 }
 
@@ -13633,82 +13619,40 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       RequireCompleteDeclContext(const_cast<CXXScopeSpec&>(SS), NamedContext))
     return true;
 
-  if (getLangOpts().CPlusPlus11) {
-    // C++11 [namespace.udecl]p3:
-    //   In a using-declaration used as a member-declaration, the
-    //   nested-name-specifier shall name a base class of the class
-    //   being defined.
+  // C++26 [namespace.udecl]p3:
+  //   In a using-declaration used as a member-declaration, each
+  //   using-declarator shall either name an enumerator or have a
+  //   nested-name-specifier naming a base class of the current class
+  //   ([expr.prim.this]). ...
+  // "have a nested-name-specifier naming a base class of the current class"
+  // was introduced by CWG400.
 
-    if (cast<CXXRecordDecl>(CurContext)->isProvablyNotDerivedFrom(
-                                 cast<CXXRecordDecl>(NamedContext))) {
+  if (cast<CXXRecordDecl>(CurContext)
+          ->isProvablyNotDerivedFrom(cast<CXXRecordDecl>(NamedContext))) {
 
-      if (Cxx20Enumerator) {
-        Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
-            << SS.getRange();
-        return false;
-      }
-
-      if (CurContext == NamedContext) {
-        Diag(SS.getBeginLoc(),
-             diag::err_using_decl_nested_name_specifier_is_current_class)
-            << SS.getRange();
-        return !getLangOpts().CPlusPlus20;
-      }
-
-      if (!cast<CXXRecordDecl>(NamedContext)->isInvalidDecl()) {
-        Diag(SS.getBeginLoc(),
-             diag::err_using_decl_nested_name_specifier_is_not_base_class)
-            << SS.getScopeRep() << cast<CXXRecordDecl>(CurContext)
-            << SS.getRange();
-      }
-      return true;
+    if (Cxx20Enumerator) {
+      Diag(NameLoc, diag::warn_cxx17_compat_using_decl_non_member_enumerator)
+          << SS.getRange();
+      return false;
     }
 
-    return false;
+    if (CurContext == NamedContext) {
+      Diag(SS.getBeginLoc(),
+           diag::err_using_decl_nested_name_specifier_is_current_class)
+          << SS.getRange();
+      return !getLangOpts().CPlusPlus20;
+    }
+
+    if (!cast<CXXRecordDecl>(NamedContext)->isInvalidDecl()) {
+      Diag(SS.getBeginLoc(),
+           diag::err_using_decl_nested_name_specifier_is_not_base_class)
+          << SS.getScopeRep() << cast<CXXRecordDecl>(CurContext)
+          << SS.getRange();
+    }
+    return true;
   }
 
-  // C++03 [namespace.udecl]p4:
-  //   A using-declaration used as a member-declaration shall refer
-  //   to a member of a base class of the class being defined [etc.].
-
-  // Salient point: SS doesn't have to name a base class as long as
-  // lookup only finds members from base classes.  Therefore we can
-  // diagnose here only if we can prove that can't happen,
-  // i.e. if the class hierarchies provably don't intersect.
-
-  // TODO: it would be nice if "definitely valid" results were cached
-  // in the UsingDecl and UsingShadowDecl so that these checks didn't
-  // need to be repeated.
-
-  llvm::SmallPtrSet<const CXXRecordDecl *, 4> Bases;
-  auto Collect = [&Bases](const CXXRecordDecl *Base) {
-    Bases.insert(Base);
-    return true;
-  };
-
-  // Collect all bases. Return false if we find a dependent base.
-  if (!cast<CXXRecordDecl>(CurContext)->forallBases(Collect))
-    return false;
-
-  // Returns true if the base is dependent or is one of the accumulated base
-  // classes.
-  auto IsNotBase = [&Bases](const CXXRecordDecl *Base) {
-    return !Bases.count(Base);
-  };
-
-  // Return false if the class has a dependent base or if it or one
-  // of its bases is present in the base set of the current context.
-  if (Bases.count(cast<CXXRecordDecl>(NamedContext)) ||
-      !cast<CXXRecordDecl>(NamedContext)->forallBases(IsNotBase))
-    return false;
-
-  Diag(SS.getRange().getBegin(),
-       diag::err_using_decl_nested_name_specifier_is_not_base_class)
-    << SS.getScopeRep()
-    << cast<CXXRecordDecl>(CurContext)
-    << SS.getRange();
-
-  return true;
+  return false;
 }
 
 Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
@@ -16441,9 +16385,8 @@ bool Sema::CompleteConstructorCall(CXXConstructorDecl *Constructor,
 
   DiagnoseSentinelCalls(Constructor, Loc, AllArgs);
 
-  CheckConstructorCall(Constructor, DeclInitType,
-                       llvm::ArrayRef(AllArgs.data(), AllArgs.size()), Proto,
-                       Loc);
+  CheckConstructorCall(Constructor, DeclInitType, llvm::ArrayRef(AllArgs),
+                       Proto, Loc);
 
   return Invalid;
 }

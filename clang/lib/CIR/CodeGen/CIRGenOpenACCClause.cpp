@@ -14,6 +14,8 @@
 
 #include "CIRGenFunction.h"
 
+#include "clang/AST/ExprCXX.h"
+
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -188,7 +190,7 @@ class OpenACCClauseCIREmitter final
   struct DataOperandInfo {
     mlir::Location beginLoc;
     mlir::Value varValue;
-    llvm::StringRef name;
+    std::string name;
     llvm::SmallVector<mlir::Value> bounds;
   };
 
@@ -225,6 +227,10 @@ class OpenACCClauseCIREmitter final
 
     mlir::Location exprLoc = cgf.cgm.getLoc(curVarExpr->getBeginLoc());
     llvm::SmallVector<mlir::Value> bounds;
+
+    std::string exprString;
+    llvm::raw_string_ostream os(exprString);
+    e->printPretty(os, nullptr, cgf.getContext().getPrintingPolicy());
 
     // Assemble the list of bounds.
     while (isa<ArraySectionExpr, ArraySubscriptExpr>(curVarExpr)) {
@@ -267,32 +273,51 @@ class OpenACCClauseCIREmitter final
       bounds.push_back(createBound(boundLoc, lowerBound, upperBound, extent));
     }
 
-    // TODO: OpenACC: if this is a member expr, emit the VarPtrPtr correctly.
-    if (isa<MemberExpr>(curVarExpr)) {
-      cgf.cgm.errorNYI(curVarExpr->getSourceRange(),
-                       "OpenACC Data clause member expr");
-      return {exprLoc, {}, {}, std::move(bounds)};
-    }
+    if (const auto *memExpr = dyn_cast<MemberExpr>(curVarExpr))
+      return {exprLoc, cgf.emitMemberExpr(memExpr).getPointer(), exprString,
+              std::move(bounds)};
 
     // Sema has made sure that only 4 types of things can get here, array
     // subscript, array section, member expr, or DRE to a var decl (or the
     // former 3 wrapping a var-decl), so we should be able to assume this is
     // right.
     const auto *dre = cast<DeclRefExpr>(curVarExpr);
-    const auto *vd = cast<VarDecl>(dre->getFoundDecl()->getCanonicalDecl());
-    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), vd->getName(),
+    return {exprLoc, cgf.emitDeclRefLValue(dre).getPointer(), exprString,
             std::move(bounds)};
+  }
+
+  mlir::acc::DataClauseModifier
+  convertModifiers(OpenACCModifierKind modifiers) {
+    using namespace mlir::acc;
+    static_assert(static_cast<int>(OpenACCModifierKind::Zero) ==
+                      static_cast<int>(DataClauseModifier::zero) &&
+                  static_cast<int>(OpenACCModifierKind::Readonly) ==
+                      static_cast<int>(DataClauseModifier::readonly) &&
+                  static_cast<int>(OpenACCModifierKind::AlwaysIn) ==
+                      static_cast<int>(DataClauseModifier::alwaysin) &&
+                  static_cast<int>(OpenACCModifierKind::AlwaysOut) ==
+                      static_cast<int>(DataClauseModifier::alwaysout) &&
+                  static_cast<int>(OpenACCModifierKind::Capture) ==
+                      static_cast<int>(DataClauseModifier::capture));
+
+    DataClauseModifier mlirModifiers{};
+
+    // The MLIR representation of this represents `always` as `alwaysin` +
+    // `alwaysout`.  So do a small fixup here.
+    if (isOpenACCModifierBitSet(modifiers, OpenACCModifierKind::Always)) {
+      mlirModifiers = mlirModifiers | DataClauseModifier::always;
+      modifiers &= ~OpenACCModifierKind::Always;
+    }
+
+    mlirModifiers = mlirModifiers | static_cast<DataClauseModifier>(modifiers);
+    return mlirModifiers;
   }
 
   template <typename BeforeOpTy, typename AfterOpTy>
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
-                      bool structured, bool implicit) {
+                      OpenACCModifierKind modifiers, bool structured,
+                      bool implicit) {
     DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
-
-    // TODO: OpenACC: we should comprehend the 'modifier-list' here for the data
-    // operand. At the moment, we don't have a uniform way to assign these
-    // properly, and the dialect cannot represent anything other than 'readonly'
-    // and 'zero' on copyin/copyout/create, so for now, we skip it.
 
     auto beforeOp =
         builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
@@ -303,28 +328,68 @@ class OpenACCClauseCIREmitter final
     {
       mlir::OpBuilder::InsertionGuard guardCase(builder);
       builder.setInsertionPointAfter(operation);
-      afterOp = builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp.getResult(),
-                                          opInfo.varValue, structured, implicit,
-                                          opInfo.name, opInfo.bounds);
+
+      if constexpr (std::is_same_v<AfterOpTy, mlir::acc::DeleteOp> ||
+                    std::is_same_v<AfterOpTy, mlir::acc::DetachOp>) {
+        // Detach/Delete ops don't have the variable reference here, so they
+        // take 1 fewer argument to their build function.
+        afterOp = builder.create<AfterOpTy>(
+            opInfo.beginLoc, beforeOp.getResult(), structured, implicit,
+            opInfo.name, opInfo.bounds);
+      } else {
+        afterOp = builder.create<AfterOpTy>(
+            opInfo.beginLoc, beforeOp.getResult(), opInfo.varValue, structured,
+            implicit, opInfo.name, opInfo.bounds);
+      }
     }
 
     // Set the 'rest' of the info for both operations.
     beforeOp.setDataClause(dataClause);
     afterOp.setDataClause(dataClause);
+    beforeOp.setModifiers(convertModifiers(modifiers));
+    afterOp.setModifiers(convertModifiers(modifiers));
 
     // Make sure we record these, so 'async' values can be updated later.
     dataOperands.push_back(beforeOp.getOperation());
     dataOperands.push_back(afterOp.getOperation());
   }
 
+  template <typename BeforeOpTy>
+  void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
+                      OpenACCModifierKind modifiers, bool structured,
+                      bool implicit) {
+    DataOperandInfo opInfo = getDataOperandInfo(dirKind, varOperand);
+    auto beforeOp =
+        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
+                                   implicit, opInfo.name, opInfo.bounds);
+    operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
+
+    // Set the 'rest' of the info for the operation.
+    beforeOp.setDataClause(dataClause);
+    beforeOp.setModifiers(convertModifiers(modifiers));
+
+    // Make sure we record these, so 'async' values can be updated later.
+    dataOperands.push_back(beforeOp.getOperation());
+  }
+
   // Helper function that covers for the fact that we don't have this function
   // on all operation types.
   mlir::ArrayAttr getAsyncOnlyAttr() {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>)
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       return operation.getAsyncOnlyAttr();
-    else if constexpr (isCombinedType<OpTy>)
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::EnterDataOp,
+                                      mlir::acc::ExitDataOp>) {
+      if (!operation.getAsyncAttr())
+        return mlir::ArrayAttr{};
+
+      llvm::SmallVector<mlir::Attribute> devTysTemp;
+      devTysTemp.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
+      return mlir::ArrayAttr::get(builder.getContext(), devTysTemp);
+    } else if constexpr (isCombinedType<OpTy>) {
       return operation.computeOp.getAsyncOnlyAttr();
+    }
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -336,10 +401,20 @@ class OpenACCClauseCIREmitter final
   // on all operation types.
   mlir::ArrayAttr getAsyncOperandsDeviceTypeAttr() {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>)
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
       return operation.getAsyncOperandsDeviceTypeAttr();
-    else if constexpr (isCombinedType<OpTy>)
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::EnterDataOp,
+                                      mlir::acc::ExitDataOp>) {
+      if (!operation.getAsyncOperand())
+        return mlir::ArrayAttr{};
+
+      llvm::SmallVector<mlir::Attribute> devTysTemp;
+      devTysTemp.push_back(mlir::acc::DeviceTypeAttr::get(
+          builder.getContext(), mlir::acc::DeviceType::None));
+      return mlir::ArrayAttr::get(builder.getContext(), devTysTemp);
+    } else if constexpr (isCombinedType<OpTy>) {
       return operation.computeOp.getAsyncOperandsDeviceTypeAttr();
+    }
 
     // Note: 'wait' has async as well, but it cannot have data clauses, so we
     // don't have to handle them here.
@@ -354,6 +429,9 @@ class OpenACCClauseCIREmitter final
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::DataOp>)
       return operation.getAsyncOperands();
+    else if constexpr (isOneOfTypes<OpTy, mlir::acc::EnterDataOp,
+                                    mlir::acc::ExitDataOp>)
+      return operation.getAsyncOperandMutable();
     else if constexpr (isCombinedType<OpTy>)
       return operation.computeOp.getAsyncOperands();
 
@@ -487,10 +565,11 @@ public:
   void VisitAsyncClause(const OpenACCAsyncClause &clause) {
     hasAsyncClause = true;
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
-      if (!clause.hasIntExpr())
+                               mlir::acc::KernelsOp, mlir::acc::DataOp,
+                               mlir::acc::EnterDataOp, mlir::acc::ExitDataOp>) {
+      if (!clause.hasIntExpr()) {
         operation.addAsyncOnly(builder.getContext(), lastDeviceTypeValues);
-      else {
+      } else {
 
         mlir::Value intExpr;
         {
@@ -517,8 +596,7 @@ public:
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain. Data, enter data, exit data,
-      // update constructs remain.
+      // unreachable. Combined constructs remain. update construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -535,12 +613,39 @@ public:
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      assert(!clause.isEmptySelfClause() && !clause.isConditionExprClause() &&
+             "var-list version of self required for update");
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
+            var, mlir::acc::DataClause::acc_update_self, {},
+            /*structured=*/false, /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. update construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitSelfClause");
+    }
+  }
+
+  void VisitHostClause(const OpenACCHostClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
+            var, mlir::acc::DataClause::acc_update_host, {},
+            /*structured=*/false, /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitHostClause");
+    }
+  }
+
+  void VisitDeviceClause(const OpenACCDeviceClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::UpdateDeviceOp>(
+            var, mlir::acc::DataClause::acc_update_device, {},
+            /*structured=*/false, /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitDeviceClause");
     }
   }
 
@@ -548,7 +653,9 @@ public:
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
                                mlir::acc::KernelsOp, mlir::acc::InitOp,
                                mlir::acc::ShutdownOp, mlir::acc::SetOp,
-                               mlir::acc::DataOp, mlir::acc::WaitOp>) {
+                               mlir::acc::DataOp, mlir::acc::WaitOp,
+                               mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
+                               mlir::acc::ExitDataOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else if constexpr (isCombinedType<OpTy>) {
@@ -558,9 +665,19 @@ public:
       // until we can write tests/know what we're doing with codegen to make
       // sure we get it right.
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, host_data, update constructs
-      // remain.
+      // unreachable. update construct remains.
       return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitIfPresentClause(const OpenACCIfPresentClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::HostDataOp>) {
+      operation.setIfPresent(true);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::UpdateOp>) {
+      // Last unimplemented one here, so just put it in this way instead.
+      return clauseNotImplemented(clause);
+    } else {
+      llvm_unreachable("unknown construct kind in VisitIfPresentClause");
     }
   }
 
@@ -592,7 +709,8 @@ public:
 
   void VisitWaitClause(const OpenACCWaitClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp,
+                               mlir::acc::EnterDataOp, mlir::acc::ExitDataOp>) {
       if (!clause.hasExprs()) {
         operation.addWaitOnly(builder.getContext(), lastDeviceTypeValues);
       } else {
@@ -608,7 +726,7 @@ public:
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Enter data, exit data, update constructs remain.
+      // unreachable. update construct remains.
       return clauseNotImplemented(clause);
     }
   }
@@ -776,17 +894,194 @@ public:
 
   void VisitCopyClause(const OpenACCCopyClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp>) {
-      for (auto var : clause.getVarList())
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-            var, mlir::acc::DataClause::acc_copy, /*structured=*/true,
+            var, mlir::acc::DataClause::acc_copy, clause.getModifierList(),
+            /*structured=*/true,
             /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
       // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. data, declare, combined constructs remain.
+      // unreachable. declare construct remains.
       return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCopyInClause(const OpenACCCopyInClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::EnterDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp>(
+            var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
+            /*structured=*/false, /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. declare construct remains.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCopyOutClause(const OpenACCCopyOutClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
+            var, mlir::acc::DataClause::acc_copyout, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::ExitDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::CopyoutOp>(
+            var, mlir::acc::DataClause::acc_copyout, clause.getModifierList(),
+            /*structured=*/false,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. declare construct remains.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitCreateClause(const OpenACCCreateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::EnterDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp>(
+            var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
+            /*structured=*/false, /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. declare construct remains.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitDeleteClause(const OpenACCDeleteClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ExitDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_delete, {},
+            /*structured=*/false,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitDeleteClause");
+    }
+  }
+
+  void VisitDetachClause(const OpenACCDetachClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ExitDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::GetDevicePtrOp, mlir::acc::DetachOp>(
+            var, mlir::acc::DataClause::acc_detach, {},
+            /*structured=*/false,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitDetachClause");
+    }
+  }
+
+  void VisitFinalizeClause(const OpenACCFinalizeClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ExitDataOp>) {
+      operation.setFinalize(true);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitFinalizeClause");
+    }
+  }
+
+  void VisitUseDeviceClause(const OpenACCUseDeviceClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::HostDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::UseDeviceOp>(
+            var, mlir::acc::DataClause::acc_use_device, {}, /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitUseDeviceClause");
+    }
+  }
+
+  void VisitDevicePtrClause(const OpenACCDevicePtrClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::DevicePtrOp>(
+            var, mlir::acc::DataClause::acc_deviceptr, {},
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. declare remains.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitNoCreateClause(const OpenACCNoCreateClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::NoCreateOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_no_create, {}, /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitNoCreateClause");
+    }
+  }
+
+  void VisitPresentClause(const OpenACCPresentClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
+            var, mlir::acc::DataClause::acc_present, {}, /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      // TODO: When we've implemented this for everything, switch this to an
+      // unreachable. declare remains.
+      return clauseNotImplemented(clause);
+    }
+  }
+
+  void VisitAttachClause(const OpenACCAttachClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::AttachOp, mlir::acc::DetachOp>(
+            var, mlir::acc::DataClause::acc_attach, {}, /*structured=*/true,
+            /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::EnterDataOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::AttachOp>(
+            var, mlir::acc::DataClause::acc_attach, {},
+            /*structured=*/false, /*implicit=*/false);
+    } else if constexpr (isCombinedType<OpTy>) {
+      applyToComputeOp(clause);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitAttachClause");
     }
   }
 };
@@ -824,6 +1119,10 @@ EXPL_SPEC(mlir::acc::InitOp)
 EXPL_SPEC(mlir::acc::ShutdownOp)
 EXPL_SPEC(mlir::acc::SetOp)
 EXPL_SPEC(mlir::acc::WaitOp)
+EXPL_SPEC(mlir::acc::HostDataOp)
+EXPL_SPEC(mlir::acc::EnterDataOp)
+EXPL_SPEC(mlir::acc::ExitDataOp)
+EXPL_SPEC(mlir::acc::UpdateOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>

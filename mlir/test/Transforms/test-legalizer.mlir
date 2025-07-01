@@ -300,17 +300,34 @@ func.func @create_illegal_block() {
 // -----
 
 // CHECK-LABEL: @undo_block_arg_replace
+// expected-remark@+1{{applyPartialConversion failed}}
+module {
 func.func @undo_block_arg_replace() {
-  // expected-remark@+1 {{op 'test.undo_block_arg_replace' is not legalizable}}
-  "test.undo_block_arg_replace"() ({
-  ^bb0(%arg0: i32):
-    // CHECK: ^bb0(%[[ARG:.*]]: i32):
-    // CHECK-NEXT: "test.return"(%[[ARG]]) : (i32)
+  // expected-error@+1{{failed to legalize operation 'test.block_arg_replace' that was explicitly marked illegal}}
+  "test.block_arg_replace"() ({
+  ^bb0(%arg0: i32, %arg1: i16):
+    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK-NEXT: "test.return"(%[[ARG0]]) : (i32)
 
     "test.return"(%arg0) : (i32) -> ()
-  }) : () -> ()
-  // expected-remark@+1 {{op 'func.return' is not legalizable}}
+  }) {trigger_rollback} : () -> ()
   return
+}
+}
+
+// -----
+
+// CHECK-LABEL: @replace_block_arg_1_to_n
+func.func @replace_block_arg_1_to_n() {
+  // CHECK: "test.block_arg_replace"
+  "test.block_arg_replace"() ({
+  ^bb0(%arg0: i32, %arg1: i16):
+    // CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i16):
+    // CHECK: %[[cast:.*]] = "test.cast"(%[[ARG1]], %[[ARG1]]) : (i16, i16) -> i32
+    // CHECK-NEXT: "test.return"(%[[cast]]) : (i32)
+    "test.return"(%arg0) : (i32) -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
 }
 
 // -----
@@ -461,12 +478,26 @@ func.func @convert_detached_signature() {
 
 // -----
 
+// CHECK: notifyOperationReplaced: test.erase_op
+// CHECK: notifyOperationErased: test.dummy_op_lvl_2
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationErased: test.dummy_op_lvl_1
+// CHECK: notifyBlockErased
+// CHECK: notifyOperationErased: test.erase_op
+// CHECK: notifyOperationInserted: test.valid, was unlinked
+// CHECK: notifyOperationReplaced: test.drop_operands_and_replace_with_valid
+// CHECK: notifyOperationErased: test.drop_operands_and_replace_with_valid
+
 // CHECK-LABEL: func @circular_mapping()
 //  CHECK-NEXT:   "test.valid"() : () -> ()
 func.func @circular_mapping() {
   // Regression test that used to crash due to circular
-  // unrealized_conversion_cast ops.
-  %0 = "test.erase_op"() : () -> (i64)
+  // unrealized_conversion_cast ops. 
+  %0 = "test.erase_op"() ({
+    "test.dummy_op_lvl_1"() ({
+      "test.dummy_op_lvl_2"() : () -> ()
+    }) : () -> ()
+  }): () -> (i64)
   "test.drop_operands_and_replace_with_valid"(%0) : (i64) -> ()
 }
 

@@ -8,6 +8,7 @@
 
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCAsmInfo.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include <optional>
@@ -1150,7 +1152,7 @@ public:
     // clang-format on
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Register:
       OS << "<register " << AMDGPUInstPrinter::getRegisterName(getReg())
@@ -1167,7 +1169,9 @@ public:
       OS << '\'' << getToken() << '\'';
       break;
     case Expression:
-      OS << "<expr " << *Expr << '>';
+      OS << "<expr ";
+      MAI.printExpr(OS, *Expr);
+      OS << '>';
       break;
     }
   }
@@ -1395,7 +1399,7 @@ private:
   MCRegister ParseRegList(RegisterKind &RegKind, unsigned &RegNum,
                           unsigned &RegWidth,
                           SmallVectorImpl<AsmToken> &Tokens);
-  bool ParseRegRange(unsigned& Num, unsigned& Width);
+  bool ParseRegRange(unsigned &Num, unsigned &Width, unsigned &SubReg);
   MCRegister getRegularReg(RegisterKind RegKind, unsigned RegNum,
                            unsigned SubReg, unsigned RegWidth, SMLoc Loc);
 
@@ -2857,7 +2861,8 @@ MCRegister AMDGPUAsmParser::getRegularReg(RegisterKind RegKind, unsigned RegNum,
   return Reg;
 }
 
-bool AMDGPUAsmParser::ParseRegRange(unsigned &Num, unsigned &RegWidth) {
+bool AMDGPUAsmParser::ParseRegRange(unsigned &Num, unsigned &RegWidth,
+                                    unsigned &SubReg) {
   int64_t RegLo, RegHi;
   if (!skipToken(AsmToken::LBrac, "missing register index"))
     return false;
@@ -2894,8 +2899,20 @@ bool AMDGPUAsmParser::ParseRegRange(unsigned &Num, unsigned &RegWidth) {
     return false;
   }
 
+  if (RegHi == RegLo) {
+    StringRef RegSuffix = getTokenStr();
+    if (RegSuffix == ".l") {
+      SubReg = AMDGPU::lo16;
+      lex();
+    } else if (RegSuffix == ".h") {
+      SubReg = AMDGPU::hi16;
+      lex();
+    }
+  }
+
   Num = static_cast<unsigned>(RegLo);
   RegWidth = 32 * ((RegHi - RegLo) + 1);
+
   return true;
 }
 
@@ -2949,7 +2966,7 @@ MCRegister AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
     RegWidth = 32;
   } else {
     // Range of registers: v[XX:YY]. ":YY" is optional.
-    if (!ParseRegRange(RegNum, RegWidth))
+    if (!ParseRegRange(RegNum, RegWidth, SubReg))
       return MCRegister();
   }
 
@@ -6437,26 +6454,26 @@ StringRef AMDGPUAsmParser::parseMnemonicSuffix(StringRef Name) {
   setForcedDPP(false);
   setForcedSDWA(false);
 
-  if (Name.ends_with("_e64_dpp")) {
+  if (Name.consume_back("_e64_dpp")) {
     setForcedDPP(true);
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 8);
+    return Name;
   }
-  if (Name.ends_with("_e64")) {
+  if (Name.consume_back("_e64")) {
     setForcedEncodingSize(64);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_e32")) {
+  if (Name.consume_back("_e32")) {
     setForcedEncodingSize(32);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_dpp")) {
+  if (Name.consume_back("_dpp")) {
     setForcedDPP(true);
-    return Name.substr(0, Name.size() - 4);
+    return Name;
   }
-  if (Name.ends_with("_sdwa")) {
+  if (Name.consume_back("_sdwa")) {
     setForcedSDWA(true);
-    return Name.substr(0, Name.size() - 5);
+    return Name;
   }
   return Name;
 }
@@ -9787,7 +9804,8 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 }
 
 /// Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUAsmParser() {
   RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
 }

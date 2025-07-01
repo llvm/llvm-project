@@ -674,6 +674,8 @@ defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 3, OpBuildND
 
 // Spec constant builtin records:
 defm : DemangledNativeBuiltin<"__spirv_SpecConstant", OpenCL_std, SpecConstant, 2, 2, OpSpecConstant>;
+defm : DemangledNativeBuiltin<"__spirv_SpecConstant", GLSL_std_450,
+                              SpecConstant, 2, 2, OpSpecConstant>;
 defm : DemangledNativeBuiltin<"__spirv_SpecConstantComposite", OpenCL_std, SpecConstant, 1, 0, OpSpecConstantComposite>;
 
 // Async Copy and Prefetch builtin records:

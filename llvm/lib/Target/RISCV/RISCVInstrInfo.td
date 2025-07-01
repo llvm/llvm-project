@@ -341,20 +341,32 @@ def simm12 : RISCVSImmLeafOp<12> {
 def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
-// A 13-bit signed immediate where the least significant bit is zero.
-def bare_simm13_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
-  let PrintMethod = "printBranchOperand";
-  let EncoderMethod = "getImmOpValueAsrN<1>";
-  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
+class BareSImm13Lsb0MaybeSym : Operand<OtherVT> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isShiftedInt<12, 1>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+}
+
+// A 13-bit signed immediate where the least significant bit is zero. The ImmLeaf
+// is needed so that the CompressInstEmitter can correctly add checks for the
+// compress patterns that involve instructions that use this operand. Similar to
+// bare_simm9_lsb0 in RISCVInstrInfoC.td.
+def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
+                       ImmLeaf<XLenVT, [{return isShiftedInt<12, 1>(Imm);}]> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsrN<1>";
+  let DecoderMethod = "decodeSImmOperandAndLslN<13, 1>";
   let OperandType = "OPERAND_PCREL";
 }
+
+// We need this (sort of) duplicate definition since adding ImmLeaf to
+// bare_simm13_lsb0 above makes it not sit well with codegen patterns where it
+// is used to match with a basic block (eg. BccPat<>).
+def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
   let MCOperandPredicate = [{
@@ -489,6 +501,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
+
+class AddrRegRegScale<int N>
+    : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
+class AddrRegZextRegScale<int N>
+    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<"#N#", 32>",
+                     [], [], 10>;
 
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
@@ -1433,11 +1451,7 @@ def : PatGprUimmLog2XLen<sra, SRAI>;
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
 def or_is_add : PatFrag<(ops node:$lhs, node:$rhs), (or node:$lhs, node:$rhs),[{
-  if (N->getFlags().hasDisjoint())
-    return true;
-  KnownBits Known0 = CurDAG->computeKnownBits(N->getOperand(0), 0);
-  KnownBits Known1 = CurDAG->computeKnownBits(N->getOperand(1), 0);
-  return KnownBits::haveNoCommonBitsSet(Known0, Known1);
+  return orIsAdd(N);
 }]>;
 def : PatGprSimm12<or_is_add, ADDI>;
 
@@ -1660,10 +1674,10 @@ multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
-            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0_bb:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0_bb:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
@@ -1678,7 +1692,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -2029,6 +2043,13 @@ let hasSideEffects = true in {
 def ReadFFLAGS : ReadSysReg<SysRegFFLAGS, [FFLAGS]>;
 def WriteFFLAGS : WriteSysReg<SysRegFFLAGS, [FFLAGS]>;
 }
+
+let hasPostISelHook = 1 in {
+def ReadFCSR : ReadSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSR : WriteSysReg<SysRegFCSR, [FRM, FFLAGS]>;
+def WriteFCSRImm : WriteSysRegImm<SysRegFCSR, [FRM, FFLAGS]>;
+}
+
 /// Other pseudo-instructions
 
 // Pessimistically assume the stack pointer will be clobbered
@@ -2251,6 +2272,9 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
+
+// Packed SIMD
+include "RISCVInstrInfoP.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"

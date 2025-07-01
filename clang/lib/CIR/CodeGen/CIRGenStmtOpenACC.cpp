@@ -102,6 +102,8 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
 
     emitOpenACCClauses(computeOp, loopOp, dirKind, dirLoc, clauses);
 
+    updateLoopOpParallelism(loopOp, /*isOrphan=*/false, dirKind);
+
     builder.create<TermOp>(end);
   }
 
@@ -235,25 +237,39 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     llvm_unreachable("invalid compute construct kind");
   }
 }
-mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
-    const OpenACCEnterDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
-    const OpenACCExitDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
-  return mlir::failure();
-}
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
-  return mlir::failure();
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  return emitOpenACCOpAssociatedStmt<HostDataOp, mlir::acc::TerminatorOp>(
+      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
+      s.getStructuredBlock());
 }
+
+mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
+    const OpenACCEnterDataConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  emitOpenACCOp<EnterDataOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+                             s.clauses());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
+    const OpenACCExitDataConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  emitOpenACCOp<ExitDataOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+                            s.clauses());
+  return mlir::success();
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s) {
-  cgm.errorNYI(s.getSourceRange(), "OpenACC Update Construct");
-  return mlir::failure();
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  emitOpenACCOp<UpdateOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+                          s.clauses());
+  return mlir::success();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {

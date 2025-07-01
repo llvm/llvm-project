@@ -96,7 +96,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    }
+    } attributes {independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -109,7 +109,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[CREATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   }
+// CHECK:   } attributes {independent = [#acc.device_type<none>]}
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -134,7 +134,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    }
+    } attributes {independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -147,7 +147,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   }
+// CHECK:   } attributes {independent = [#acc.device_type<none>]}
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -172,7 +172,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop private(@privatization_memref_10_f32 -> %p1 : memref<10xf32>) control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    }
+    } attributes {independent = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -185,7 +185,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   }
+// CHECK:   } attributes {independent = [#acc.device_type<none>]}
 // CHECK:   acc.yield
 // CHECK: }
 
@@ -210,7 +210,7 @@ func.func @test(%a: memref<10xf32>) {
     acc.loop control(%i : index) = (%lb : index) to (%c10 : index) step (%st : index) {
       %ci = memref.load %a[%i] : memref<10xf32>
       acc.yield
-    }
+    } attributes {seq = [#acc.device_type<none>]}
     acc.yield
   }
   return
@@ -223,7 +223,7 @@ func.func @test(%a: memref<10xf32>) {
 // CHECK:   acc.loop control(%[[I:.*]] : index) = (%{{.*}} : index) to (%{{.*}} : index)  step (%{{.*}} : index) {
 // DEVICE:    %{{.*}} = memref.load %[[PRIVATE:.*]][%[[I]]] : memref<10xf32>
 // CHECK:     acc.yield
-// CHECK:   }
+// CHECK:   } attributes {seq = [#acc.device_type<none>]}
 // CHECK:   acc.yield
 // CHECK: }
 

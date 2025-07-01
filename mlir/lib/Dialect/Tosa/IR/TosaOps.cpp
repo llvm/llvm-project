@@ -2533,16 +2533,26 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   }
 
   // Compute the output shape based on attributes: scale, offset, and border.
-  outputShape[1] =
+  const int64_t outputHeight =
       (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
        scaleInt[1]) +
       1;
 
-  outputShape[2] =
+  const int64_t outputWidth =
       (((inputWidth - 1) * scaleInt[2] - offsetInt[1] + borderInt[1]) /
        scaleInt[3]) +
       1;
 
+  if (outputHeight < 0 || outputWidth < 0) {
+    return emitOptionalError(
+        location,
+        "calculated output height and width must be non-negative, "
+        "got height = ",
+        outputHeight, ", width = ", outputWidth);
+  }
+
+  outputShape[1] = outputHeight;
+  outputShape[2] = outputWidth;
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
 }
@@ -2673,6 +2683,73 @@ LogicalResult tosa::ScatterOp::verify() {
           .failed()) {
     return failure();
   }
+
+  const ShapeAdaptor valuesInShape(getValuesIn().getType());
+  const ShapeAdaptor indicesShape(getIndices().getType());
+  const ShapeAdaptor inputShape(getInput().getType());
+  const ShapeAdaptor outputShape(getValuesOut().getType());
+
+  int64_t N = ShapedType::kDynamic;
+  int64_t K = ShapedType::kDynamic;
+  int64_t W = ShapedType::kDynamic;
+  int64_t C = ShapedType::kDynamic;
+  if (valuesInShape.hasRank()) {
+    N = valuesInShape.getDimSize(0);
+    K = valuesInShape.getDimSize(1);
+    C = valuesInShape.getDimSize(2);
+  }
+  if (indicesShape.hasRank()) {
+    const int64_t indicesN = indicesShape.getDimSize(0);
+    W = indicesShape.getDimSize(1);
+    if (N == ShapedType::kDynamic)
+      N = indicesN;
+    else if (indicesN != ShapedType::kDynamic && N != indicesN)
+      return emitOpError() << "requires indices dimension 0 to have size " << N
+                           << ", got " << indicesN;
+  }
+  if (inputShape.hasRank()) {
+    const int64_t inputN = inputShape.getDimSize(0);
+    const int64_t inputW = inputShape.getDimSize(1);
+    const int64_t inputC = inputShape.getDimSize(2);
+    if (N == ShapedType::kDynamic)
+      N = inputN;
+    else if (inputN != ShapedType::kDynamic && N != inputN)
+      return emitOpError() << "requires input dimension 0 to have size " << N
+                           << ", got " << inputN;
+    if (W == ShapedType::kDynamic)
+      W = inputW;
+    else if (inputW != ShapedType::kDynamic && W != inputW)
+      return emitOpError() << "requires input dimension 1 to have size " << W
+                           << ", got " << inputW;
+
+    if (C == ShapedType::kDynamic)
+      C = inputC;
+    else if (inputC != ShapedType::kDynamic && C != inputC)
+      return emitOpError() << "requires input dimension 2 to have size " << C
+                           << ", got " << inputC;
+  }
+  if (outputShape.hasRank()) {
+    const int64_t outputN = outputShape.getDimSize(0);
+    const int64_t outputK = outputShape.getDimSize(1);
+    const int64_t outputC = outputShape.getDimSize(2);
+    if (N != ShapedType::kDynamic && outputN != ShapedType::kDynamic &&
+        N != outputN)
+      return emitOpError() << "requires values_out dimension 0 to have size "
+                           << N << ", got " << outputN;
+    if (K == ShapedType::kDynamic)
+      K = outputK;
+    else if (outputK != ShapedType::kDynamic && K != outputK)
+      return emitOpError() << "requires values_out dimension 1 to have size "
+                           << K << ", got " << outputK;
+    if (C != ShapedType::kDynamic && outputC != ShapedType::kDynamic &&
+        C != outputC)
+      return emitOpError() << "requires values_out dimension 2 to have size "
+                           << C << ", got " << outputC;
+  }
+  if (K != ShapedType::kDynamic && W != ShapedType::kDynamic && !(K >= W))
+    return emitOpError() << "requires dimensions K >= W, got K=" << K
+                         << " and W=" << W;
+
   return success();
 }
 
@@ -3752,16 +3829,16 @@ LogicalResult ReverseOp::verify() {
 
 LogicalResult tosa::SelectOp::verify() {
   // verify input2 and input3 have same element type as output
-  if (verifySameElementTypes(*this, /* inType = */ getInput2().getType(),
+  if (verifySameElementTypes(*this, /* inType = */ getOnTrue().getType(),
                              /* outType = */ getOutput().getType())
           .failed() ||
-      verifySameElementTypes(*this, /* inType = */ getInput3().getType(),
+      verifySameElementTypes(*this, /* inType = */ getOnFalse().getType(),
                              /* outType = */ getOutput().getType())
           .failed()) {
     return failure();
   }
   // verify input1 has element type of bool
-  auto predicateType = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  auto predicateType = llvm::dyn_cast<ShapedType>(getPred().getType());
   if (!predicateType) {
     return emitOpError("expect shaped tensor for input1, got ")
            << getInput1().getType();

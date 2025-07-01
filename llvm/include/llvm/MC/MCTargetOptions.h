@@ -10,24 +10,13 @@
 #define LLVM_MC_MCTARGETOPTIONS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include <string>
 #include <vector>
 
 namespace llvm {
-
-enum class ExceptionHandling {
-  None,     ///< No exception support
-  DwarfCFI, ///< DWARF-like instruction based exceptions
-  SjLj,     ///< setjmp/longjmp based exceptions
-  ARM,      ///< ARM EHABI
-  WinEH,    ///< Windows Exception Handling
-  Wasm,     ///< WebAssembly Exception Handling
-  AIX,      ///< AIX Exception Handling
-  ZOS,      ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the PPA1
-            ///< is used instead of an .eh_frame section.
-};
 
 enum class EmitDwarfUnwindType {
   Always,          // Always emit dwarf unwind

@@ -596,6 +596,29 @@ func.func @dot_accumulate_2way(%a_vec: vector<2xi16>, %b_vec: vector<4xi8>, %c: 
   return
 }
 
+// CHECK-LABEL: @prefetch
+func.func @prefetch(%gen_ptr: !llvm.ptr, %local_ptr: !llvm.ptr<5>, %global_ptr: !llvm.ptr<1>) {
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L1, %{{.*}}
+  nvvm.prefetch level = L1, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %gen_ptr : !llvm.ptr<0>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %local_ptr : !llvm.ptr<5>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_last : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L2, %{{.*}}
+  nvvm.prefetch level = L2, %global_ptr, evict_priority = evict_normal : !llvm.ptr<1>
+  // CHECK:   nvvm.prefetch level = L1 uniform, %{{.*}}
+  nvvm.prefetch level = L1 uniform, %gen_ptr : !llvm.ptr
+  return
+}
+
 // -----
 
 // Just check these don't emit errors.

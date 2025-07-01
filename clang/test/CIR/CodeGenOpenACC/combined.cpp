@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 extern "C" void acc_combined(int N, int cond) {
-  // CHECK: cir.func @acc_combined(%[[ARG_N:.*]]: !s32i loc{{.*}}, %[[ARG_COND:.*]]: !s32i loc{{.*}}) {
+  // CHECK: cir.func{{.*}} @acc_combined(%[[ARG_N:.*]]: !s32i loc{{.*}}, %[[ARG_COND:.*]]: !s32i loc{{.*}}) {
   // CHECK-NEXT: %[[ALLOCA_N:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["N", init]
   // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
   // CHECK-NEXT: cir.store %[[ARG_N]], %[[ALLOCA_N]] : !s32i, !cir.ptr<!s32i>
@@ -74,7 +74,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.serial combined(loop) {
   // CHECK: acc.loop combined(serial) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {seq = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<nvidia>, #acc.device_type<radeon>, #acc.device_type<none>]} loc
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc kernels loop seq device_type(nvidia, radeon)
@@ -99,7 +99,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.serial combined(loop) {
   // CHECK: acc.loop combined(serial) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<nvidia>, #acc.device_type<radeon>], seq = [#acc.device_type<none>]} loc
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc kernels loop auto device_type(nvidia, radeon)
@@ -124,7 +124,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.serial combined(loop) {
   // CHECK: acc.loop combined(serial) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {independent = [#acc.device_type<nvidia>, #acc.device_type<radeon>]} loc
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<nvidia>, #acc.device_type<radeon>], seq = [#acc.device_type<none>]} loc
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc kernels loop independent device_type(nvidia, radeon)
@@ -143,7 +143,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.parallel combined(loop) {
   // CHECK: acc.loop combined(parallel) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1], collapseDeviceType = [#acc.device_type<none>]}
+  // CHECK-NEXT: } attributes {collapse = [1], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 
@@ -154,7 +154,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.serial combined(loop) {
   // CHECK: acc.loop combined(serial) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>]}
+  // CHECK-NEXT: } attributes {collapse = [1, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>], seq = [#acc.device_type<none>]}
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 
@@ -165,7 +165,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.kernels combined(loop) {
   // CHECK: acc.loop combined(kernels) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1, 2, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>]}
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>], collapse = [1, 2, 2], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>]}
   // CHECK: acc.terminator
   // CHECK-NEXT: } loc
   #pragma acc parallel loop collapse(1) device_type(radeon, nvidia) collapse(2) device_type(host) collapse(3)
@@ -175,7 +175,7 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.parallel combined(loop) {
   // CHECK: acc.loop combined(parallel) {
   // CHECK: acc.yield
-  // CHECK-NEXT: } attributes {collapse = [1, 2, 2, 3], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>, #acc.device_type<host>]}
+  // CHECK-NEXT: } attributes {collapse = [1, 2, 2, 3], collapseDeviceType = [#acc.device_type<none>, #acc.device_type<radeon>, #acc.device_type<nvidia>, #acc.device_type<host>], independent = [#acc.device_type<none>]}
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
 
@@ -1009,5 +1009,234 @@ extern "C" void acc_combined(int N, int cond) {
   // CHECK: acc.yield
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+}
+extern "C" void acc_combined_data_clauses(int *arg1, int *arg2) {
+  // CHECK: cir.func{{.*}} @acc_combined_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {
+  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
+  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
+  // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: cir.store %[[ARG2_PARAM]], %[[ARG2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
+
+#pragma acc parallel loop deviceptr(arg1)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[DEVPTR1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial loop deviceptr(arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[DEVPTR2:.*]] = acc.deviceptr varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc kernels loop deviceptr(arg1, arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[DEVPTR2:.*]] = acc.deviceptr varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[DEVPTR1]], %[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel loop deviceptr(arg1) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[DEVPTR1]] : !cir.ptr<!cir.ptr<!s32i>>) async {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial loop deviceptr(arg2) async device_type(nvidia)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[DEVPTR2:.*]] = acc.deviceptr varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>) async {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc kernels loop deviceptr(arg1, arg2) device_type(nvidia) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[DEVPTR1:.*]] = acc.deviceptr varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<nvidia>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[DEVPTR2:.*]] = acc.deviceptr varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<nvidia>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[DEVPTR1]], %[[DEVPTR2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<nvidia>]) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc parallel loop no_create(arg1)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc serial loop no_create(arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
+
+#pragma acc kernels loop no_create(arg1, arg2) device_type(host) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[NOCREATE1:.*]] = acc.nocreate varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[NOCREATE2:.*]] = acc.nocreate varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[NOCREATE1]], %[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[NOCREATE1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_no_create>, name = "arg1"}
+
+#pragma acc parallel loop present(arg1)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[PRESENT1:.*]] = acc.present varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[PRESENT1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_present>, name = "arg1"}
+
+#pragma acc serial loop present(arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[PRESENT2:.*]] = acc.present varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[PRESENT2]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT2]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_present>, name = "arg2"}
+
+#pragma acc kernels loop present(arg1, arg2) device_type(host) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[PRESENT1:.*]] = acc.present varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[PRESENT2:.*]] = acc.present varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[PRESENT1]], %[[PRESENT2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_present>, name = "arg2"}
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_present>, name = "arg1"}
+
+#pragma acc parallel loop attach(arg1)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[ATTACH1:.*]] = acc.attach varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: acc.parallel combined(loop) dataOperands(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_attach>, name = "arg1"}
+
+#pragma acc serial loop attach(arg2)
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[ATTACH2:.*]] = acc.attach varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.serial combined(loop) dataOperands(%[[ATTACH2]] : !cir.ptr<!cir.ptr<!s32i>>) {
+  // CHECK-NEXT: acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH2]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_attach>, name = "arg2"}
+
+#pragma acc kernels loop attach(arg1, arg2) device_type(host) async
+  for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: %[[ATTACH1:.*]] = acc.attach varPtr(%[[ARG1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg1"}
+  // CHECK-NEXT: %[[ATTACH2:.*]] = acc.attach varPtr(%[[ARG2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "arg2"}
+  // CHECK-NEXT: acc.kernels combined(loop) dataOperands(%[[ATTACH1]], %[[ATTACH2]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {
+  // CHECK-NEXT: acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH2]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_attach>, name = "arg2"}
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH1]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<host>]) {dataClause = #acc<data_clause acc_attach>, name = "arg1"}
+
+  // Checking the automatic-addition of parallelism clauses.
+#pragma acc parallel loop
+    for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: acc.parallel combined(loop) {
+  // CHECK-NEXT:  acc.loop combined(parallel) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {independent = [#acc.device_type<none>]} loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc kernels loop
+    for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: acc.kernels combined(loop) {
+  // CHECK-NEXT:  acc.loop combined(kernels) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } loc
+
+#pragma acc serial loop
+    for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: acc.serial combined(loop) {
+  // CHECK-NEXT:  acc.loop combined(serial) {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {seq = [#acc.device_type<none>]} loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial loop worker
+    for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: acc.serial combined(loop) {
+  // CHECK-NEXT:  acc.loop combined(serial) worker {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial loop vector
+    for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: acc.serial combined(loop) {
+  // CHECK-NEXT:  acc.loop combined(serial) vector {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } loc
+
+#pragma acc serial loop gang
+    for(unsigned I = 0; I < 5; ++I);
+  // CHECK-NEXT: acc.serial combined(loop) {
+  // CHECK-NEXT:  acc.loop combined(serial) gang {
+  // CHECK: acc.yield
+  // CHECK-NEXT: } attributes {auto_ = [#acc.device_type<none>]} loc
+  // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 }

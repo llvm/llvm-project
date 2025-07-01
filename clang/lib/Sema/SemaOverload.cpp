@@ -30,6 +30,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Overload.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/Template.h"
@@ -1490,7 +1491,7 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
   // If the function is a class member, its signature includes the
   // cv-qualifiers (if any) and ref-qualifier (if any) on the function itself.
   auto DiagnoseInconsistentRefQualifiers = [&]() {
-    if (SemaRef.LangOpts.CPlusPlus23)
+    if (SemaRef.LangOpts.CPlusPlus23 && !UseOverrideRules)
       return false;
     if (OldMethod->getRefQualifier() == NewMethod->getRefQualifier())
       return false;
@@ -2180,8 +2181,8 @@ static bool IsVectorConversion(Sema &S, QualType FromType, QualType ToType,
 
   if (ToType->isSVESizelessBuiltinType() ||
       FromType->isSVESizelessBuiltinType())
-    if (S.Context.areCompatibleSveTypes(FromType, ToType) ||
-        S.Context.areLaxCompatibleSveTypes(FromType, ToType)) {
+    if (S.ARM().areCompatibleSveTypes(FromType, ToType) ||
+        S.ARM().areLaxCompatibleSveTypes(FromType, ToType)) {
       ICK = ICK_SVE_Vector_Conversion;
       return true;
     }
@@ -3612,18 +3613,18 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
     QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
     CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
     bool IgnoreBaseAccess, MemberPointerConversionDirection Direction) {
-  const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
-  if (!FromPtrType) {
-    // This must be a null pointer to member pointer conversion
-    Kind = CK_NullToMemberPointer;
-    return MemberPointerConversionResult::Success;
-  }
-
   // Lock down the inheritance model right now in MS ABI, whether or not the
   // pointee types are the same.
   if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
     (void)isCompleteType(CheckLoc, FromType);
     (void)isCompleteType(CheckLoc, QualType(ToPtrType, 0));
+  }
+
+  const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
+  if (!FromPtrType) {
+    // This must be a null pointer to member pointer conversion
+    Kind = CK_NullToMemberPointer;
+    return MemberPointerConversionResult::Success;
   }
 
   // T == T, modulo cv
@@ -4735,9 +4736,9 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
   if (SCS1.Second == ICK_SVE_Vector_Conversion &&
       SCS2.Second == ICK_SVE_Vector_Conversion) {
     bool SCS1IsCompatibleSVEVectorConversion =
-        S.Context.areCompatibleSveTypes(SCS1.getFromType(), SCS1.getToType(2));
+        S.ARM().areCompatibleSveTypes(SCS1.getFromType(), SCS1.getToType(2));
     bool SCS2IsCompatibleSVEVectorConversion =
-        S.Context.areCompatibleSveTypes(SCS2.getFromType(), SCS2.getToType(2));
+        S.ARM().areCompatibleSveTypes(SCS2.getFromType(), SCS2.getToType(2));
 
     if (SCS1IsCompatibleSVEVectorConversion !=
         SCS2IsCompatibleSVEVectorConversion)
@@ -9272,11 +9273,10 @@ class BuiltinOperatorOverloadBuilder {
     /// the candidates into a unique set, then move from that set into the list
     /// of arithmetic types.
     llvm::SmallSetVector<CanQualType, 2> BitIntCandidates;
-    llvm::for_each(CandidateTypes, [&BitIntCandidates](
-                                       BuiltinCandidateTypeSet &Candidate) {
+    for (BuiltinCandidateTypeSet &Candidate : CandidateTypes) {
       for (QualType BitTy : Candidate.bitint_types())
         BitIntCandidates.insert(CanQualType::CreateUnsafe(BitTy));
-    });
+    }
     llvm::move(BitIntCandidates, std::back_inserter(ArithmeticTypes));
     LastPromotedIntegralType = ArithmeticTypes.size();
     LastPromotedArithmeticType = ArithmeticTypes.size();
@@ -11322,9 +11322,9 @@ OverloadingResult OverloadCandidateSet::BestViableFunction(Sema &S,
                                                            SourceLocation Loc,
                                                            iterator &Best) {
 
-  assert(shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
-         DeferredCandidatesCount == 0 &&
-             "Unexpected deferred template candidates");
+  assert((shouldDeferTemplateArgumentDeduction(S.getLangOpts()) ||
+          DeferredCandidatesCount == 0) &&
+         "Unexpected deferred template candidates");
 
   bool TwoPhaseResolution =
       DeferredCandidatesCount != 0 && !ResolutionByPerfectCandidateIsDisabled;
@@ -14055,8 +14055,10 @@ FunctionDecl *Sema::ResolveSingleFunctionTemplateSpecialization(
     //   specified and it, along with any default template arguments,
     //   identifies a single function template specialization, then the
     //   template-id is an lvalue for the function template specialization.
-    FunctionTemplateDecl *FunctionTemplate
-      = cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    FunctionTemplateDecl *FunctionTemplate =
+        dyn_cast<FunctionTemplateDecl>((*I)->getUnderlyingDecl());
+    if (!FunctionTemplate)
+      continue;
 
     // C++ [over.over]p2:
     //   If the name is a function template, template argument deduction is
@@ -16981,6 +16983,9 @@ ExprResult Sema::FixOverloadedFunctionReference(Expr *E, DeclAccessPair Found,
   }
 
   if (UnresolvedLookupExpr *ULE = dyn_cast<UnresolvedLookupExpr>(E)) {
+    if (Found.getAccess() == AS_none) {
+      CheckUnresolvedLookupAccess(ULE, Found);
+    }
     // FIXME: avoid copy.
     TemplateArgumentListInfo TemplateArgsBuffer, *TemplateArgs = nullptr;
     if (ULE->hasExplicitTemplateArgs()) {

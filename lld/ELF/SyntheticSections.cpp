@@ -322,14 +322,27 @@ GnuPropertySection::GnuPropertySection(Ctx &ctx)
                        ctx.arg.wordsize) {}
 
 void GnuPropertySection::writeTo(uint8_t *buf) {
+  uint32_t featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_386:
+  case EM_X86_64:
+    featureAndType = GNU_PROPERTY_X86_FEATURE_1_AND;
+    break;
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
+    llvm_unreachable(
+        "target machine does not support .note.gnu.property section");
+  }
+
   write32(ctx, buf, 4);                          // Name size
   write32(ctx, buf + 4, getSize() - 16);         // Content size
   write32(ctx, buf + 8, NT_GNU_PROPERTY_TYPE_0); // Type
   memcpy(buf + 12, "GNU", 4);               // Name string
-
-  uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                : GNU_PROPERTY_X86_FEATURE_1_AND;
 
   unsigned offset = 16;
   if (ctx.arg.andFeatures != 0) {
@@ -341,11 +354,11 @@ void GnuPropertySection::writeTo(uint8_t *buf) {
     offset += 16;
   }
 
-  if (!ctx.aarch64PauthAbiCoreInfo.empty()) {
+  if (ctx.aarch64PauthAbiCoreInfo) {
     write32(ctx, buf + offset + 0, GNU_PROPERTY_AARCH64_FEATURE_PAUTH);
-    write32(ctx, buf + offset + 4, ctx.aarch64PauthAbiCoreInfo.size());
-    memcpy(buf + offset + 8, ctx.aarch64PauthAbiCoreInfo.data(),
-           ctx.aarch64PauthAbiCoreInfo.size());
+    write32(ctx, buf + offset + 4, AArch64PauthAbiCoreInfo::size());
+    write64(ctx, buf + offset + 8, ctx.aarch64PauthAbiCoreInfo->platform);
+    write64(ctx, buf + offset + 16, ctx.aarch64PauthAbiCoreInfo->version);
   }
 }
 
@@ -353,8 +366,8 @@ size_t GnuPropertySection::getSize() const {
   uint32_t contentSize = 0;
   if (ctx.arg.andFeatures != 0)
     contentSize += ctx.arg.is64 ? 16 : 12;
-  if (!ctx.aarch64PauthAbiCoreInfo.empty())
-    contentSize += 4 + 4 + ctx.aarch64PauthAbiCoreInfo.size();
+  if (ctx.aarch64PauthAbiCoreInfo)
+    contentSize += 4 + 4 + AArch64PauthAbiCoreInfo::size();
   assert(contentSize != 0);
   return contentSize + 16;
 }
@@ -1926,11 +1939,8 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize(Ctx &ctx) {
   // For Rela, we also want to sort by r_addend when r_info is the same. This
   // enables us to group by r_addend as well.
   llvm::sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
-    if (a.r_info != b.r_info)
-      return a.r_info < b.r_info;
-    if (a.r_addend != b.r_addend)
-      return a.r_addend < b.r_addend;
-    return a.r_offset < b.r_offset;
+    return std::tie(a.r_info, a.r_addend, a.r_offset) <
+           std::tie(b.r_info, b.r_addend, b.r_offset);
   });
 
   // Group relocations with the same r_info. Note that each group emits a group
@@ -4016,10 +4026,9 @@ void MergeNoTailSection::finalizeContents() {
   // So far, section pieces have offsets from beginning of shards, but
   // we want offsets from beginning of the whole section. Fix them.
   parallelForEach(sections, [&](MergeInputSection *sec) {
-    for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
-      if (sec->pieces[i].live)
-        sec->pieces[i].outputOff +=
-            shardOffsets[getShardId(sec->pieces[i].hash)];
+    for (SectionPiece &piece : sec->pieces)
+      if (piece.live)
+        piece.outputOff += shardOffsets[getShardId(piece.hash)];
   });
 }
 
@@ -4957,7 +4966,7 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   ctx.in.iplt = std::make_unique<IpltSection>(ctx);
   add(*ctx.in.iplt);
 
-  if (ctx.arg.andFeatures || !ctx.aarch64PauthAbiCoreInfo.empty()) {
+  if (ctx.arg.andFeatures || ctx.aarch64PauthAbiCoreInfo) {
     ctx.in.gnuProperty = std::make_unique<GnuPropertySection>(ctx);
     add(*ctx.in.gnuProperty);
   }

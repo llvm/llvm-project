@@ -26,7 +26,7 @@
 
 namespace llvm {
 
-class NVPTXTTIImpl : public BasicTTIImplBase<NVPTXTTIImpl> {
+class NVPTXTTIImpl final : public BasicTTIImplBase<NVPTXTTIImpl> {
   typedef BasicTTIImplBase<NVPTXTTIImpl> BaseT;
   typedef TargetTransformInfo TTI;
   friend BaseT;

@@ -16,13 +16,15 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::readability {
 
 void MathMissingParenthesesCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(binaryOperator(unless(hasParent(binaryOperator())),
-                                    unless(isAssignmentOperator()),
-                                    unless(isComparisonOperator()),
-                                    unless(hasAnyOperatorName("&&", "||")),
-                                    hasDescendant(binaryOperator()))
-                         .bind("binOp"),
-                     this);
+  Finder->addMatcher(
+      binaryOperator(
+          unless(hasParent(binaryOperator(unless(isAssignmentOperator()),
+                                          unless(isComparisonOperator())))),
+          unless(isAssignmentOperator()), unless(isComparisonOperator()),
+          unless(hasAnyOperatorName("&&", "||")),
+          hasDescendant(binaryOperator()))
+          .bind("binOp"),
+      this);
 }
 
 static int getPrecedence(const BinaryOperator *BinOp) {

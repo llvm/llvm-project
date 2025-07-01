@@ -545,3 +545,23 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
   os << "op_asm_type_interface_type";
   return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
 }
+
+::mlir::FailureOr<::mlir::bufferization::BufferLikeType>
+TestTensorType::getBufferType(
+    const ::mlir::bufferization::BufferizationOptions &,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()>) {
+  return cast<bufferization::BufferLikeType>(
+      TestMemrefType::get(getContext(), getShape(), getElementType(), nullptr));
+}
+
+::mlir::LogicalResult TestTensorType::verifyCompatibleBufferType(
+    ::mlir::bufferization::BufferLikeType bufferType,
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) {
+  auto testMemref = dyn_cast<TestMemrefType>(bufferType);
+  if (!testMemref)
+    return emitError() << "expected TestMemrefType";
+
+  const bool valid = getShape() == testMemref.getShape() &&
+                     getElementType() == testMemref.getElementType();
+  return mlir::success(valid);
+}
