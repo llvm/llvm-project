@@ -758,6 +758,20 @@ define <vscale x 4 x float> @reverse_binop_reverse_intrinsic_splat_LHS(<vscale x
   ret <vscale x 4 x float> %maxnum.rev
 }
 
+; Negative test: Make sure that splats with poison aren't considered splats
+define <4 x float> @reverse_binop_reverse_intrinsic_splat_with_poison(<4 x float> %a) {
+; CHECK-LABEL: @reverse_binop_reverse_intrinsic_splat_with_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[A:%.*]], <4 x float> <float 1.000000e+00, float poison, float 1.000000e+00, float 1.000000e+00>)
+; CHECK-NEXT:    [[MAXNUM:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[MAXNUM_REV:%.*]] = tail call <4 x float> @llvm.vector.reverse.v4f32(<4 x float> [[MAXNUM]])
+; CHECK-NEXT:    ret <4 x float> [[MAXNUM_REV]]
+;
+  %a.rev = tail call <4 x float> @llvm.vector.reverse(<4 x float> %a)
+  %maxnum = call <4 x float> @llvm.maxnum.v4f32(<4 x float> <float 1.0, float 1.0, float poison, float 1.0>, <4 x float> %a.rev)
+  %maxnum.rev = tail call <4 x float> @llvm.vector.reverse(<4 x float> %maxnum)
+  ret <4 x float> %maxnum.rev
+}
+
 define <4 x float> @reverse_binop_reverse_intrinsic_constant_RHS(<4 x float> %a) {
 ; CHECK-LABEL: @reverse_binop_reverse_intrinsic_constant_RHS(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[A:%.*]], <4 x float> <float 3.000000e+00, float 2.000000e+00, float 1.000000e+00, float 0.000000e+00>)

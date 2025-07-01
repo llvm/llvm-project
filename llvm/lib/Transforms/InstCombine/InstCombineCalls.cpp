@@ -1478,9 +1478,8 @@ Value *InstCombinerImpl::foldReversedIntrinsicOperands(IntrinsicInst *II) {
       NewArgs.push_back(Arg);
     else if (match(&Arg, m_VecReverse(m_Value(X))))
       NewArgs.push_back(X);
-    else if (Value *Splat = getSplatValue(Arg))
-      NewArgs.push_back(Builder.CreateVectorSplat(
-          cast<VectorType>(Arg->getType())->getElementCount(), Splat));
+    else if (isSplatValue(Arg))
+      NewArgs.push_back(Arg);
     else if (match(&Arg, m_ImmConstant(C)))
       NewArgs.push_back(Builder.CreateVectorReverse(C));
     else
