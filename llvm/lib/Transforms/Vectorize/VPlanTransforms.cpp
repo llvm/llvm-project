@@ -2490,6 +2490,27 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
       .Default([&](VPRecipeBase *R) { return nullptr; });
 }
 
+static void convertToEVLReverse(VPlan &Plan, VPTypeAnalysis &TypeInfo,
+                                VPValue &AllOneMask, VPValue &EVL) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != VPInstruction::Reverse)
+        continue;
+
+      SmallVector<VPValue *> Ops(VPI->operands());
+      Ops.append({&AllOneMask, &EVL});
+      auto *NewReverse = new VPWidenIntrinsicRecipe(
+          Intrinsic::experimental_vp_reverse, Ops,
+          TypeInfo.inferScalarType(VPI), VPI->getDebugLoc());
+      NewReverse->insertBefore(VPI);
+      VPI->replaceAllUsesWith(NewReverse);
+      VPI->eraseFromParent();
+    }
+  }
+}
+
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
@@ -2604,6 +2625,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
     ToErase.push_back(CurRecipe);
   }
+  convertToEVLReverse(Plan, TypeInfo, *AllOneMask, EVL);
   // Remove dead EVL mask.
   if (EVLMask->getNumUsers() == 0)
     ToErase.push_back(EVLMask->getDefiningRecipe());
@@ -4112,4 +4134,35 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(
   MDNode *BranchWeights =
       MDB.createBranchWeights({1, VectorStep - 1}, /*IsExpected=*/false);
   MiddleTerm->addMetadata(LLVMContext::MD_prof, BranchWeights);
+}
+
+void VPlanTransforms::adjustRecipesForReverseAccesses(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *MemR = dyn_cast<VPWidenMemoryRecipe>(&R);
+      if (!MemR || !MemR->isReverse())
+        continue;
+
+      if (auto *L = dyn_cast<VPWidenLoadRecipe>(MemR)) {
+        auto *Reverse =
+            new VPInstruction(VPInstruction::Reverse, {L}, L->getDebugLoc());
+        Reverse->insertAfter(L);
+        L->replaceAllUsesWith(Reverse);
+        Reverse->setOperand(0, L);
+        continue;
+      }
+
+      if (auto *S = dyn_cast<VPWidenStoreRecipe>(MemR)) {
+        VPValue *StoredVal = S->getStoredValue();
+        auto *Reverse = new VPInstruction(VPInstruction::Reverse, {StoredVal},
+                                          S->getDebugLoc());
+        Reverse->insertBefore(S);
+        S->setOperand(1, Reverse);
+      }
+    }
+  }
 }
