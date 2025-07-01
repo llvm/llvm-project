@@ -229,12 +229,15 @@ define <4 x i32> @test_bit_sink_operand(<4 x i32> %src, <4 x i32> %dst, <4 x i32
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-GI-NEXT:    asr w9, w0, #31
+; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-GI-NEXT:    sxtw x9, w0
 ; CHECK-GI-NEXT:    mov w8, wzr
 ; CHECK-GI-NEXT:    add x10, sp, #16
 ; CHECK-GI-NEXT:    mov x11, sp
-; CHECK-GI-NEXT:    add w9, w0, w9, lsr #31
-; CHECK-GI-NEXT:    asr w9, w9, #1
+; CHECK-GI-NEXT:    sub x9, x9, x9, lsl #31
+; CHECK-GI-NEXT:    asr x9, x9, #32
+; CHECK-GI-NEXT:    add w9, w9, w0
+; CHECK-GI-NEXT:    add w9, w9, w9, lsr #31
 ; CHECK-GI-NEXT:  .LBB11_1: // %do.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    bit v1.16b, v0.16b, v2.16b
