@@ -271,8 +271,9 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   HalfArgsAndReturns = true;
 }
 
-void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
-  TargetInfo::adjust(Diags, Opts);
+void AMDGPUTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                              const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
   // ToDo: There are still a few places using default address space as private
   // address space in OpenCL, which needs to be cleaned up, then the references
   // to OpenCL can be removed from the following line.
