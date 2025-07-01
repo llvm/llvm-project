@@ -451,7 +451,7 @@ LogicalResult
 ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
                                            PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  constexpr const int64_t opWidth = 2;
+  constexpr int64_t opWidth = 2;
 
   Value in = op.getIn();
   Value scale = op.getScale();
@@ -555,7 +555,7 @@ LogicalResult
 ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
                                              PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  constexpr const int64_t opWidth = 2;
+  constexpr int64_t opWidth = 2;
 
   Value in = op.getIn();
   Value scale = op.getScale();
