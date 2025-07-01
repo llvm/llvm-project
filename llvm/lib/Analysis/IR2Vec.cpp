@@ -129,7 +129,6 @@ std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
-  llvm_unreachable("Unknown IR2Vec kind");
   return nullptr;
 }
 

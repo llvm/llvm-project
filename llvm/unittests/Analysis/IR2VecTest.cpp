@@ -228,16 +228,9 @@ TEST(IR2VecTest, CreateInvalidMode) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
-// static_cast an invalid int to IR2VecKind
-#ifndef NDEBUG
-#if GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH(Embedder::create(static_cast<IR2VecKind>(-1), *F, V),
-               "Unknown IR2Vec kind");
-#endif // GTEST_HAS_DEATH_TEST
-#else
+  // static_cast an invalid int to IR2VecKind
   auto Result = Embedder::create(static_cast<IR2VecKind>(-1), *F, V);
   EXPECT_FALSE(static_cast<bool>(Result));
-#endif // NDEBUG
 }
 
 TEST(IR2VecTest, LookupVocab) {
