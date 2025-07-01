@@ -712,9 +712,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   }
   Size = 4;
 
-  // Use uint64_t to match getInstruction48. decodeInstruction is templated
-  // on the Insn type.
-  uint64_t Insn = support::endian::read32le(Bytes.data());
+  uint32_t Insn = support::endian::read32le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList32) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
@@ -760,9 +758,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   }
   Size = 2;
 
-  // Use uint64_t to match getInstruction48. decodeInstruction is templated
-  // on the Insn type.
-  uint64_t Insn = support::endian::read16le(Bytes.data());
+  uint16_t Insn = support::endian::read16le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList16) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
@@ -796,9 +792,10 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
   }
   Size = 6;
 
-  uint64_t Insn = 0;
+  uint64_t InsnBits = 0;
   for (size_t i = Size; i-- != 0;)
-    Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
+    InsnBits += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
+  std::bitset<48> Insn(InsnBits);
 
   for (const DecoderListEntry &Entry : DecoderList48) {
     if (!Entry.haveContainedFeatures(STI.getFeatureBits()))

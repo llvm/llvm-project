@@ -721,6 +721,8 @@ include "PPCCallingConv.td"
 
 def PPCInstrInfo : InstrInfo {
   let isLittleEndianEncoding = 1;
+  // FIXME: Migrate PPC disassembler to work with non-templated decoder.
+  let GenerateTemplatedDecoder = true;
 }
 
 def PPCAsmWriter : AsmWriter {

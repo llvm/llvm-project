@@ -1137,7 +1137,6 @@ class OptionalDefOperand<ValueType ty, dag OpTypes, dag defaultops>
   let MIOperandInfo = OpTypes;
 }
 
-
 // InstrInfo - This class should only be instantiated once to provide parameters
 // which are global to the target machine.
 //
@@ -1158,6 +1157,12 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
+
+  // Option to choose bewteen templated and non-templated code from decoder
+  // emitter. This means that the generated `decodeInstruction` function will
+  // use auto-inferred types for the instruction payload instead of generating
+  // templated code using `InsnType` for the instruction payload.
+  bit GenerateTemplatedDecoder = false;
 }
 
 // Standard Pseudo Instructions.

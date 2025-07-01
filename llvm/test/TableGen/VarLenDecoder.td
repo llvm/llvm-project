@@ -3,7 +3,9 @@
 
 include "llvm/Target/Target.td"
 
-def ArchInstrInfo : InstrInfo { }
+def ArchInstrInfo : InstrInfo {
+  let GenerateTemplatedDecoder = false;
+}
 
 def Arch : Target {
   let InstructionSet = ArchInstrInfo;
@@ -47,6 +49,12 @@ def FOO32 : MyVarInst<MemOp32> {
   );
 }
 
+// Instruction length table
+// CHECK-LABEL: InstrLenTable
+// CHECK: 27,
+// CHECK-NEXT: 43,
+// CHECK-NEXT: };
+
 // CHECK-SMALL:      /* 0 */       MCD::OPC_ExtractField, 3, 5,  // Inst{7-3} ...
 // CHECK-SMALL-NEXT: /* 3 */       MCD::OPC_FilterValue, 8, 4, 0, // Skip to: 11
 // CHECK-SMALL-NEXT: /* 7 */       MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 0, // Opcode: FOO16
@@ -61,37 +69,34 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-LARGE-NEXT: /* 14 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
 // CHECK-LARGE-NEXT: /* 18 */      MCD::OPC_Fail,
 
-// Instruction length table
-// CHECK: 27,
-// CHECK-NEXT: 43,
-// CHECK-NEXT: };
-
+// CHECK-LABEL: decodeToMCInst
 // CHECK:      case 0:
-// CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
+// CHECK-NEXT: tmp = fieldFromInstruction(Insn, 8, 3);
 // CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
-// CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
+// CHECK-NEXT: tmp = fieldFromInstruction(Insn, 0, 3);
 // CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
-// CHECK-NEXT: tmp = fieldFromInstruction(insn, 11, 16);
+// CHECK-NEXT: tmp = fieldFromInstruction(Insn, 11, 16);
 // CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: return S;
 // CHECK-NEXT: case 1:
-// CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
+// CHECK-NEXT: tmp = fieldFromInstruction(Insn, 8, 3);
 // CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
-// CHECK-NEXT: tmp = fieldFromInstruction(insn, 0, 3);
+// CHECK-NEXT: tmp = fieldFromInstruction(Insn, 0, 3);
 // CHECK-NEXT: if (!Check(S, myCustomDecoder(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
 // CHECK-NEXT: tmp = 0x0;
-// CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 11, 16), 16, 16);
-// CHECK-NEXT: insertBits(tmp, fieldFromInstruction(insn, 27, 16), 0, 16);
+// CHECK-NEXT: insertBits(tmp, fieldFromInstruction(Insn, 11, 16), 16, 16);
+// CHECK-NEXT: insertBits(tmp, fieldFromInstruction(Insn, 27, 16), 0, 16);
 // CHECK-NEXT: MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT: return S;
 
+// CHECK-LABEL: decodeInstruction
 // CHECK-LABEL: case MCD::OPC_ExtractField: {
-// CHECK: makeUp(insn, Start + Len);
+// CHECK: makeUp(Insn, Start + Len);
 
 // CHECK-LABEL: case MCD::OPC_CheckField:
 // CHECK-NEXT:  case MCD::OPC_CheckFieldOrFail: {
-// CHECK: makeUp(insn, Start + Len);
+// CHECK: makeUp(Insn, Start + Len);
 
 // CHECK-LABEL: case MCD::OPC_Decode: {
 // CHECK: Len = InstrLenTable[Opc];
-// CHECK-NEXT: makeUp(insn, Len);
+// CHECK-NEXT: makeUp(Insn, Len);

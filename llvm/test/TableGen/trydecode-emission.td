@@ -8,7 +8,7 @@
 
 include "llvm/Target/Target.td"
 
-def archInstrInfo : InstrInfo { }
+def archInstrInfo : InstrInfo;
 
 def arch : Target {
   let InstructionSet = archInstrInfo;
@@ -34,6 +34,17 @@ def InstB : TestInstruction {
   let hasCompleteDecoder = 0;
 }
 
+// CHECK-LABEL: decodeNumToSkip
+// CHECK-NEXT:  unsigned NumToSkip = *Ptr++;
+// CHECK-NEXT:  NumToSkip |= (*Ptr++) << 8;
+// CHECK-NEXT:  return NumToSkip;
+
+// CHECK-LARGE-LABEL: decodeNumToSkip
+// CHECK-LARGE-NEXT:  unsigned NumToSkip = *Ptr++;
+// CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 8;
+// CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 16;
+// CHECK-LARGE-NEXT:  return NumToSkip;
+
 // CHECK:      /* 0 */       MCD::OPC_ExtractField, 4, 4,  // Inst{7-4} ...
 // CHECK-NEXT: /* 3 */       MCD::OPC_FilterValueOrFail, 0,
 // CHECK-NEXT: /* 5 */       MCD::OPC_CheckField, 2, 2, 0, 6, 0, // Skip to: 17
@@ -41,11 +52,7 @@ def InstB : TestInstruction {
 // CHECK-NEXT: /* 17 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: {{[0-9]+}}
 // CHECK-NEXT: /* 21 */      MCD::OPC_Fail,
 
-// CHECK: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-
-// CHECK:       unsigned NumToSkip = *Ptr++;
-// CHECK-NEXT:  NumToSkip |= (*Ptr++) << 8;
-// CHECK-NEXT:  return NumToSkip;
+// CHECK: if (!Check(S, DecodeInstB(MI, Insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
 
 // CHECK-LARGE:      /* 0 */       MCD::OPC_ExtractField, 4, 4,  // Inst{7-4} ...
 // CHECK-LARGE-NEXT: /* 3 */       MCD::OPC_FilterValueOrFail, 0,
@@ -54,9 +61,4 @@ def InstB : TestInstruction {
 // CHECK-LARGE-NEXT: /* 19 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: InstA, DecodeIdx: {{[0-9]+}}
 // CHECK-LARGE-NEXT: /* 23 */      MCD::OPC_Fail,
 
-// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
-
-// CHECK-LARGE:       unsigned NumToSkip = *Ptr++;
-// CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 8;
-// CHECK-LARGE-NEXT:  NumToSkip |= (*Ptr++) << 16;
-// CHECK-LARGE-NEXT:  return NumToSkip;
+// CHECK-LARGE: if (!Check(S, DecodeInstB(MI, Insn, Address, Decoder))) { DecodeComplete = false; return MCDisassembler::Fail; }
