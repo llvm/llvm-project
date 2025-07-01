@@ -46,6 +46,7 @@
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
+using namespace Fortran::semantics;
 
 //===----------------------------------------------------------------------===//
 // Code generation helper functions
@@ -487,6 +488,7 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
       return;
 
     const parser::OmpClauseList *beginClauseList = nullptr;
+    const parser::OmpClauseList *middleClauseList = nullptr;
     const parser::OmpClauseList *endClauseList = nullptr;
     common::visit(
         common::visitors{
@@ -504,6 +506,23 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
               beginClauseList =
                   &std::get<parser::OmpClauseList>(beginDirective.t);
 
+              // FIXME(JAN): For now we check if there is an inner
+              // OpenMPLoopConstruct, and extract the size clause from there
+              const auto &innerOptional = std::get<std::optional<
+                  common::Indirection<parser::OpenMPLoopConstruct>>>(
+                  ompConstruct.t);
+              if (innerOptional.has_value()) {
+                const auto &innerLoopDirective = innerOptional.value().value();
+                const auto &innerBegin =
+                    std::get<parser::OmpBeginLoopDirective>(
+                        innerLoopDirective.t);
+                const auto &innerDirective =
+                    std::get<parser::OmpLoopDirective>(innerBegin.t);
+                if (innerDirective.v == llvm::omp::Directive::OMPD_tile) {
+                  middleClauseList =
+                      &std::get<parser::OmpClauseList>(innerBegin.t);
+                }
+              }
               if (auto &endDirective =
                       std::get<std::optional<parser::OmpEndLoopDirective>>(
                           ompConstruct.t))
@@ -515,6 +534,9 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
 
     assert(beginClauseList && "expected begin directive");
     clauses.append(makeClauses(*beginClauseList, semaCtx));
+
+    if (middleClauseList)
+      clauses.append(makeClauses(*middleClauseList, semaCtx));
 
     if (endClauseList)
       clauses.append(makeClauses(*endClauseList, semaCtx));
@@ -990,6 +1012,7 @@ static void genLoopVars(
     storeOp =
         createAndSetPrivatizedLoopVar(converter, loc, indexVal, argSymbol);
   }
+
   firOpBuilder.setInsertionPointAfter(storeOp);
 }
 
@@ -1733,6 +1756,30 @@ genLoopNestClauses(lower::AbstractConverter &converter,
     cp.processCollapse(loc, eval, clauseOps, iv);
 
   clauseOps.loopInclusive = converter.getFirOpBuilder().getUnitAttr();
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  for (auto &clause : clauses) {
+    if (clause.id == llvm::omp::Clause::OMPC_collapse) {
+      const auto &collapse = std::get<clause::Collapse>(clause.u);
+      int64_t collapseValue = evaluate::ToInt64(collapse.v).value();
+      clauseOps.numCollapse = firOpBuilder.getI64IntegerAttr(collapseValue);
+    } else if (clause.id == llvm::omp::Clause::OMPC_sizes) {
+      // This case handles the stand-alone tiling construct
+      const auto &sizes = std::get<clause::Sizes>(clause.u);
+      llvm::SmallVector<int64_t> sizeValues;
+      for (auto &size : sizes.v) {
+        int64_t sizeValue = evaluate::ToInt64(size).value();
+        sizeValues.push_back(sizeValue);
+      }
+      clauseOps.tileSizes = sizeValues;
+    }
+  }
+
+  llvm::SmallVector<int64_t> sizeValues;
+  auto *ompCons{eval.getIf<parser::OpenMPConstruct>()};
+  collectTileSizesFromOpenMPConstruct(ompCons, sizeValues, semaCtx);
+  if (sizeValues.size() > 0)
+    clauseOps.tileSizes = sizeValues;
 }
 
 static void genLoopClauses(
@@ -2108,9 +2155,9 @@ static mlir::omp::LoopNestOp genLoopNestOp(
     return llvm::SmallVector<const semantics::Symbol *>(iv);
   };
 
-  auto *nestedEval =
-      getCollapsedLoopEval(eval, getCollapseValue(item->clauses));
-
+  uint64_t nestValue = getCollapseValue(item->clauses);
+  nestValue = nestValue < iv.size() ? iv.size() : nestValue;
+  auto *nestedEval = getCollapsedLoopEval(eval, nestValue);
   return genOpWithBody<mlir::omp::LoopNestOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, *nestedEval,
                         directive)
@@ -3335,6 +3382,8 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                        item);
     break;
   case llvm::omp::Directive::OMPD_tile:
+    newOp = genLoopOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
   case llvm::omp::Directive::OMPD_unroll: {
     unsigned version = semaCtx.langOptions().OpenMPVersion;
     TODO(loc, "Unhandled loop directive (" +
@@ -3759,6 +3808,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       std::get<parser::OmpBeginLoopDirective>(loopConstruct.t);
   List<Clause> clauses = makeClauses(
       std::get<parser::OmpClauseList>(beginLoopDirective.t), semaCtx);
+
   if (auto &endLoopDirective =
           std::get<std::optional<parser::OmpEndLoopDirective>>(
               loopConstruct.t)) {
@@ -3864,18 +3914,6 @@ void Fortran::lower::genOpenMPSymbolProperties(
 
   if (sym.test(semantics::Symbol::Flag::OmpDeclareTarget))
     lower::genDeclareTargetIntGlobal(converter, var);
-}
-
-int64_t
-Fortran::lower::getCollapseValue(const parser::OmpClauseList &clauseList) {
-  for (const parser::OmpClause &clause : clauseList.v) {
-    if (const auto &collapseClause =
-            std::get_if<parser::OmpClause::Collapse>(&clause.u)) {
-      const auto *expr = semantics::GetExpr(collapseClause->v);
-      return evaluate::ToInt64(*expr).value();
-    }
-  }
-  return 1;
 }
 
 void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
