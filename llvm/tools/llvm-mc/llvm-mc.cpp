@@ -531,9 +531,9 @@ int main(int argc, char **argv) {
   std::unique_ptr<MCInstPrinter> IP;
   if (ValidateCFI) {
     assert(FileType == OFT_Null);
-    auto *FFS = new CFIFunctionFrameStreamer(Ctx, std::move(FFA));
+    auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
     TheTarget->createNullTargetStreamer(*FFS);
-    Str.reset(FFS);
+    Str = std::move(FFS);
   } else if (FileType == OFT_AssemblyFile) {
     IP.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
