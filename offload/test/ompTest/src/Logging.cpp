@@ -87,7 +87,7 @@ std::string logging::format(const std::string &Message,
 
 void Logger::log(Level LogLevel, const std::string &Message) const {
   // Serialize logging
-  std::lock_guard<std::mutex> lock(LogMutex);
+  std::lock_guard<std::mutex> Lock(LogMutex);
 
   if (LoggingLevel > LogLevel)
     return;
@@ -103,7 +103,7 @@ void Logger::log(Level LogLevel, const std::string &Message) const {
 void Logger::eventMismatch(const omptest::OmptAssertEvent &OffendingEvent,
                            const std::string &Message, Level LogLevel) const {
   // Serialize logging
-  std::lock_guard<std::mutex> lock(LogMutex);
+  std::lock_guard<std::mutex> Lock(LogMutex);
   if (LoggingLevel > LogLevel)
     return;
 
@@ -130,7 +130,7 @@ void Logger::eventMismatch(const omptest::OmptAssertEvent &ExpectedEvent,
                            const omptest::OmptAssertEvent &ObservedEvent,
                            const std::string &Message, Level LogLevel) const {
   // Serialize logging
-  std::lock_guard<std::mutex> lock(LogMutex);
+  std::lock_guard<std::mutex> Lock(LogMutex);
   if (LoggingLevel > LogLevel)
     return;
 

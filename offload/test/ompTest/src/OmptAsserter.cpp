@@ -14,7 +14,7 @@ std::weak_ptr<logging::Logger> OmptAsserter::LoggingInstance;
 
 OmptAsserter::OmptAsserter() {
   // Protect static members access
-  std::lock_guard<std::mutex> lock(StaticMemberAccessMutex);
+  std::lock_guard<std::mutex> Lock(StaticMemberAccessMutex);
 
   // Upgrade OmptEventGroupInterface weak_ptr to shared_ptr
   {
@@ -197,6 +197,14 @@ void OmptSequencedAsserter::notifyImpl(OmptAssertEvent &&AE) {
 
   ++NumNotifications;
 
+  // Note: Order of these checks has semantic meaning.
+  // (1) Synchronization points should fail if there are remaining events,
+  // otherwise pass. (2) Regular notification while no further events are
+  // expected: fail. (3) Assertion suspension relies on a next expected event
+  // being available. (4) All other cases are considered 'regular' and match the
+  // next expected against the observed event. (5+6) Depending on the state /
+  // mode we signal failure if no other check has done already, or signaled pass
+  // by early-exit.
   if (consumeSyncPoint(AE) ||               // Handle observed SyncPoint event
       checkExcessNotify(AE) ||              // Check for remaining expected
       consumeSuspend() ||                   // Handle requested suspend
