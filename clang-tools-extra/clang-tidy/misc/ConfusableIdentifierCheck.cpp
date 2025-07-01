@@ -177,6 +177,9 @@ void ConfusableIdentifierCheck::check(
 
 void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
                                                const Decl *Parent) {
+  if (!ND || !Parent)
+    return;
+
   const IdentifierInfo *NDII = ND->getIdentifier();
   if (!NDII)
     return;
