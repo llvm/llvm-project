@@ -83,26 +83,20 @@ define i8 @smini8_zero(i8 %a) {
 ; ARM-LABEL: smini8_zero:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    sxtb r0, r0
-; ARM-NEXT:    cmp r0, #0
-; ARM-NEXT:    movpl r0, #0
+; ARM-NEXT:    and r0, r0, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: smini8_zero:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    sxtb r0, r0
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bmi .LBB3_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:  .LBB3_2:
+; THUMB-NEXT:    sxtb r1, r0
+; THUMB-NEXT:    asrs r0, r1, #31
+; THUMB-NEXT:    ands r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: smini8_zero:
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    sxtb r0, r0
-; THUMB2-NEXT:    cmp r0, #0
-; THUMB2-NEXT:    it pl
-; THUMB2-NEXT:    movpl r0, #0
+; THUMB2-NEXT:    and.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
   %c = call i8 @llvm.smin.i8(i8 %a, i8 0)
   ret i8 %c
@@ -114,26 +108,20 @@ define i16 @smini16_zero(i16 %a) {
 ; ARM-LABEL: smini16_zero:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    sxth r0, r0
-; ARM-NEXT:    cmp r0, #0
-; ARM-NEXT:    movpl r0, #0
+; ARM-NEXT:    and r0, r0, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: smini16_zero:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    sxth r0, r0
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bmi .LBB4_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:  .LBB4_2:
+; THUMB-NEXT:    sxth r1, r0
+; THUMB-NEXT:    asrs r0, r1, #31
+; THUMB-NEXT:    ands r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: smini16_zero:
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    sxth r0, r0
-; THUMB2-NEXT:    cmp r0, #0
-; THUMB2-NEXT:    it pl
-; THUMB2-NEXT:    movpl r0, #0
+; THUMB2-NEXT:    and.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
   %c = call i16 @llvm.smin.i16(i16 %a, i16 0)
   ret i16 %c
@@ -144,24 +132,18 @@ declare i32 @llvm.smin.i32(i32 %a, i32 %b) readnone
 define i32 @smini32_zero(i32 %a) {
 ; ARM-LABEL: smini32_zero:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    cmp r0, #0
-; ARM-NEXT:    movpl r0, #0
+; ARM-NEXT:    and r0, r0, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: smini32_zero:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bmi .LBB5_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:  .LBB5_2:
+; THUMB-NEXT:    asrs r1, r0, #31
+; THUMB-NEXT:    ands r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: smini32_zero:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    cmp r0, #0
-; THUMB2-NEXT:    it pl
-; THUMB2-NEXT:    movpl r0, #0
+; THUMB2-NEXT:    and.w r0, r0, r0, asr #31
 ; THUMB2-NEXT:    bx lr
   %c = call i32 @llvm.smin.i32(i32 %a, i32 0)
   ret i32 %c
