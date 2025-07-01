@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-use-constexpr
+.. title:: clang-tidy - modernize-use-constexpr
 
-misc-use-constexpr
-==================
+modernize-use-constexpr
+=======================
 
 Find functions and variables that can be declared 'constexpr'.
 

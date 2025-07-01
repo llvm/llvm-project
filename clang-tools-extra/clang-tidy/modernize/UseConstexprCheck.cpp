@@ -36,7 +36,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::misc {
+namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER(FunctionDecl, locationPermitsConstexpr) {
@@ -87,14 +87,16 @@ AST_MATCHER(Decl, allRedeclsInSameFile) {
 AST_MATCHER(FunctionDecl, isConstexprSpecified) {
   return Node.isConstexprSpecified();
 }
+} // namespace
 
-bool satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
-                                           ASTContext &Ctx) {
+static bool
+satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
+                                      ASTContext &Ctx) {
   const CXXRecordDecl *Rec = Ctor->getParent();
   llvm::SmallPtrSet<const RecordDecl *, 8> Bases{};
-  for (const CXXBaseSpecifier Base : Rec->bases()) {
+  for (const CXXBaseSpecifier Base : Rec->bases())
     Bases.insert(Base.getType()->getAsRecordDecl());
-  }
+
   llvm::SmallPtrSet<const FieldDecl *, 8> Fields{Rec->field_begin(),
                                                  Rec->field_end()};
   llvm::SmallPtrSet<const FieldDecl *, 4> Indirects{};
@@ -147,7 +149,7 @@ bool satisfiesConstructorPropertiesUntil20(const CXXConstructorDecl *Ctor,
   return true;
 }
 
-const Type *unwrapPointee(const Type *T) {
+static const Type *unwrapPointee(const Type *T) {
   if (!T->isPointerOrReferenceType())
     return T;
 
@@ -163,11 +165,11 @@ const Type *unwrapPointee(const Type *T) {
   return T;
 }
 
-bool isLiteralType(QualType QT, const ASTContext &Ctx,
-                   const bool ConservativeLiteralType);
+static bool isLiteralType(QualType QT, const ASTContext &Ctx,
+                          const bool ConservativeLiteralType);
 
-bool isLiteralType(const Type *T, const ASTContext &Ctx,
-                   const bool ConservativeLiteralType) {
+static bool isLiteralType(const Type *T, const ASTContext &Ctx,
+                          const bool ConservativeLiteralType) {
   if (!T)
     return false;
 
@@ -211,18 +213,18 @@ bool isLiteralType(const Type *T, const ASTContext &Ctx,
   return false;
 }
 
-bool isLiteralType(QualType QT, const ASTContext &Ctx,
-                   const bool ConservativeLiteralType) {
+static bool isLiteralType(QualType QT, const ASTContext &Ctx,
+                          const bool ConservativeLiteralType) {
   return isLiteralType(QT.getTypePtr(), Ctx, ConservativeLiteralType);
 }
 
-bool satisfiesProperties11(
+static bool satisfiesProperties11(
     const FunctionDecl *FDecl, ASTContext &Ctx,
     const bool ConservativeLiteralType,
     const bool AddConstexprToMethodOfClassWithoutConstexprConstructor) {
-  if (FDecl->isConstexprSpecified()) {
+  if (FDecl->isConstexprSpecified())
     return true;
-  }
+
   const LangOptions LO = Ctx.getLangOpts();
   const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
@@ -373,7 +375,7 @@ bool satisfiesProperties11(
 
 // The only difference between C++14 and C++17 is that `constexpr` lambdas
 // can be used in C++17.
-bool satisfiesProperties1417(
+static bool satisfiesProperties1417(
     const FunctionDecl *FDecl, ASTContext &Ctx,
     const bool ConservativeLiteralType,
     const bool AddConstexprToMethodOfClassWithoutConstexprConstructor) {
@@ -573,13 +575,13 @@ bool satisfiesProperties1417(
   return true;
 }
 
-bool satisfiesProperties20(
+static bool satisfiesProperties20(
     const FunctionDecl *FDecl, ASTContext &Ctx,
     const bool ConservativeLiteralType,
     const bool AddConstexprToMethodOfClassWithoutConstexprConstructor) {
-  if (FDecl->isConstexprSpecified()) {
+  if (FDecl->isConstexprSpecified())
     return true;
-  }
+
   const LangOptions LO = Ctx.getLangOpts();
   const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
@@ -732,12 +734,12 @@ bool satisfiesProperties20(
   return true;
 }
 
-bool satisfiesProperties2326(
+static bool satisfiesProperties2326(
     const FunctionDecl *FDecl, ASTContext &Ctx,
     const bool AddConstexprToMethodOfClassWithoutConstexprConstructor) {
-  if (FDecl->isConstexprSpecified()) {
+  if (FDecl->isConstexprSpecified())
     return true;
-  }
+
   const LangOptions LO = Ctx.getLangOpts();
   const CXXMethodDecl *Method = llvm::dyn_cast<CXXMethodDecl>(FDecl);
   if (Method && !Method->isStatic() &&
@@ -757,8 +759,7 @@ bool satisfiesProperties2326(
   return true;
 }
 
-// FIXME: add test for uncalled lambda that throws, and called lambda that
-// throws
+namespace {
 // FIXME: fix CXX23 allowing decomposition decls, but it is only a feature since
 // CXX26
 AST_MATCHER_P2(FunctionDecl, satisfiesProperties, bool, ConservativeLiteralType,
@@ -943,4 +944,4 @@ void UseConstexprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AddConstexprToMethodOfClassWithoutConstexprConstructor",
                 AddConstexprToMethodOfClassWithoutConstexprConstructor);
 }
-} // namespace clang::tidy::misc
+} // namespace clang::tidy::modernize

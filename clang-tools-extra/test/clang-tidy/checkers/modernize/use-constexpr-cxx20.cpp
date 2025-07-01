@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s misc-use-constexpr %t
+// RUN: %check_clang_tidy -std=c++20 %s modernize-use-constexpr %t
 
 namespace std {
 template <typename T = void>

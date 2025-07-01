@@ -270,6 +270,10 @@ Changes in existing checks
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
 
+- Added :doc:`modernize-use-constexpr
+  <clang-tidy/checks/modernize/use-constexpr>` check that finds functions and
+  variables that can be declared `constexpr`.
+
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
   arithmetic operations, ``constexpr`` and ``static`` values, and detecting

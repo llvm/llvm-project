@@ -277,7 +277,6 @@ Clang-Tidy Checks
    :doc:`misc-unused-parameters <misc/unused-parameters>`, "Yes"
    :doc:`misc-unused-using-decls <misc/unused-using-decls>`, "Yes"
    :doc:`misc-use-anonymous-namespace <misc/use-anonymous-namespace>`,
-   :doc:`misc-use-constexpr <misc/use-constexpr>`, "Yes"
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
@@ -301,6 +300,7 @@ Clang-Tidy Checks
    :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes"
    :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
+   :doc:`modernize-use-constexpr <modernize/use-constexpr>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"

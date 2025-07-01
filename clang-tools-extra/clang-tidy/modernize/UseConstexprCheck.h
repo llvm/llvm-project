@@ -6,20 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_USECONSTEXPRCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_USECONSTEXPRCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USECONSTEXPRCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USECONSTEXPRCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
-namespace clang::tidy::misc {
+namespace clang::tidy::modernize {
 
 /// Find functions and variables that can be declared 'constexpr'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/use-constexpr.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-constexpr.html
 class UseConstexprCheck : public ClangTidyCheck {
 public:
   UseConstexprCheck(StringRef Name, ClangTidyContext *Context);
@@ -38,6 +38,6 @@ private:
   llvm::DenseMap<const VarDecl *, const FunctionDecl *> VariableMapping;
 };
 
-} // namespace clang::tidy::misc
+} // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_USECONSTEXPRCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USECONSTEXPRCHECK_H

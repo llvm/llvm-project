@@ -19,7 +19,6 @@ set_target_properties(genconfusable PROPERTIES FOLDER "Clang Tools Extra/Sourceg
 
 add_clang_library(clangTidyMiscModule STATIC
   ConstCorrectnessCheck.cpp
-  UseConstexprCheck.cpp
   CoroutineHostileRAIICheck.cpp
   DefinitionsInHeadersCheck.cpp
   ConfusableIdentifierCheck.cpp

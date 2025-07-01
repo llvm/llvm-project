@@ -31,7 +31,6 @@
 #include "UnusedParametersCheck.h"
 #include "UnusedUsingDeclsCheck.h"
 #include "UseAnonymousNamespaceCheck.h"
-#include "UseConstexprCheck.h"
 #include "UseInternalLinkageCheck.h"
 
 namespace clang::tidy {
@@ -44,7 +43,6 @@ public:
         "misc-confusable-identifiers");
     CheckFactories.registerCheck<ConstCorrectnessCheck>(
         "misc-const-correctness");
-    CheckFactories.registerCheck<UseConstexprCheck>("misc-use-constexpr");
     CheckFactories.registerCheck<CoroutineHostileRAIICheck>(
         "misc-coroutine-hostile-raii");
     CheckFactories.registerCheck<DefinitionsInHeadersCheck>(
