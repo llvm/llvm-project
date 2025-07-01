@@ -11,6 +11,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -36,10 +37,13 @@ MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
 MCSection::~MCSection() {
+  // If ~MCRelaxableFragment becomes trivial (no longer store a MCInst member),
+  // this dtor can be made empty.
   for (auto &[_, Chain] : Subsections) {
     for (MCFragment *X = Chain.Head, *Y; X; X = Y) {
       Y = X->Next;
-      X->destroy();
+      if (auto *F = dyn_cast<MCRelaxableFragment>(X))
+        F->~MCRelaxableFragment();
     }
   }
 }
@@ -88,3 +92,39 @@ LLVM_DUMP_METHOD void MCSection::dump(
   }
 }
 #endif
+
+void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
+  auto &S = getParent()->ContentStorage;
+  if (ContentStart + Contents.size() > ContentEnd) {
+    ContentStart = S.size();
+    S.resize_for_overwrite(S.size() + Contents.size());
+  }
+  ContentEnd = ContentStart + Contents.size();
+  llvm::copy(Contents, S.begin() + ContentStart);
+}
+
+void MCEncodedFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
+
+void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (LLVM_UNLIKELY(FixupEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = FixupEnd - FixupStart;
+    auto I = std::exchange(FixupStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  S.append(Fixups.begin(), Fixups.end());
+  FixupEnd = S.size();
+}
+
+void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
+  auto &S = getParent()->FixupStorage;
+  if (FixupStart + Fixups.size() > FixupEnd) {
+    FixupStart = S.size();
+    S.resize_for_overwrite(S.size() + Fixups.size());
+  }
+  FixupEnd = FixupStart + Fixups.size();
+  llvm::copy(Fixups, S.begin() + FixupStart);
+}
