@@ -1644,20 +1644,6 @@ struct VPWidenSelectRecipe : public VPRecipeWithIRFlags, public VPIRMetadata {
 
 /// A recipe for handling GEP instructions.
 class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
-  bool areAllOperandsInvariant() const {
-    return all_of(operands(), [](VPValue *Op) {
-      return Op->isDefinedOutsideLoopRegions();
-    });
-  }
-
 public:
   VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands)
       : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {
@@ -1675,6 +1661,20 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPWidenGEPSC)
+
+  bool isPointerLoopInvariant() const {
+    return getOperand(0)->isDefinedOutsideLoopRegions();
+  }
+
+  bool isIndexLoopInvariant(unsigned I) const {
+    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
+  }
+
+  bool areAllOperandsInvariant() const {
+    return all_of(operands(), [](VPValue *Op) {
+      return Op->isDefinedOutsideLoopRegions();
+    });
+  }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
