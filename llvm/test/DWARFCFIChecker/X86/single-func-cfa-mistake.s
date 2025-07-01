@@ -11,13 +11,13 @@ f:
         .cfi_undefined %flags
 
         pushq   %rbp
-        # CHECK: warning: CFA offset is changed from 8 to 17, CFA register RSP is changed by an unknown amount
-        # CHECK: warning: uncheckable change happened to register RBP unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 8 to 17, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RBP unwinding rule structure is not implemented yet
         .cfi_def_cfa_offset 17
         .cfi_offset %rbp, -16
 
         movq    %rsp, %rbp
-        # CHECK: warning: CFA register changed from register RSP to register RBP
+        # CHECK:  warning: CFA register changed from register RSP to register RBP, validating this change is not implemented yet
         .cfi_def_cfa_register %rbp
 
         movl    %edi, -4(%rbp)
@@ -27,7 +27,7 @@ f:
         addl    $10, %eax
 
         popq    %rbp
-        # CHECK: warning: CFA register changed from register RBP to register RSP
+        # CHECK: warning: CFA register changed from register RBP to register RSP, validating this change is not implemented yet
         .cfi_def_cfa %rsp, 8
 
         retq

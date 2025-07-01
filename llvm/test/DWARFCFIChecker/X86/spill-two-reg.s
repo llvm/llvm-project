@@ -12,34 +12,40 @@ _start:
         .cfi_same_value %rsi
 
         pushq   %rbp
-        # CHECK: warning: uncheckable change happened to register RBP unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 8 to 16, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RBP unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset 8
         .cfi_offset %rbp, -16
 
         movq    %rsp, %rbp
 
         pushq   %rdi
-        # CHECK: warning: uncheckable change happened to register RDI unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 16 to 24, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RDI unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset 8
         .cfi_rel_offset %rdi, 0
 
         pushq   %rsi
-        # CHECK: warning: uncheckable change happened to register RSI unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 24 to 32, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RSI unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset 8
         .cfi_rel_offset %rsi, 0
         
         popq    %rsi
-        # CHECK: warning: uncheckable change happened to register RSI unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 32 to 24, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RSI unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rsi
 
         popq    %rdi
-        # CHECK: warning: uncheckable change happened to register RDI unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 24 to 16, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RDI unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rdi
 
         popq    %rbp
-        # CHECK: warning: uncheckable change happened to register RBP unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 16 to 8, and CFA register RSP is modified, but validating the modification amount is not implemented yet
+        # CHECK: warning: validating changes happening to register RBP unwinding rule structure is not implemented yet
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rbp
 

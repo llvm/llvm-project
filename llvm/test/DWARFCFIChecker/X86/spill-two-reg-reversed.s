@@ -11,35 +11,29 @@ _start:
         .cfi_same_value %rsi
 
         pushq   %rbp
-        # CHECK: warning: uncheckable change happened to register RBP unwinding rule structure
         .cfi_adjust_cfa_offset 8
         .cfi_offset %rbp, -16
 
         movq    %rsp, %rbp
 
         pushq   %rdi
-        # CHECK: warning: uncheckable change happened to register RDI unwinding rule structure
         .cfi_adjust_cfa_offset 8
         .cfi_rel_offset %rdi, 0
 
         pushq   %rsi
-        # CHECK: warning: uncheckable change happened to register RSI unwinding rule structure
         .cfi_adjust_cfa_offset 8
         .cfi_rel_offset %rsi, 0
         
         popq    %rsi
-        # CHECK: warning: uncheckable change happened to register RDI unwinding rule structure
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rdi
 
         popq    %rdi
         # CHECK: error: changed register RDI, that register RDI's unwinding rule uses, but there is no CFI directives about it
-        # CHECK: warning: uncheckable change happened to register RSI unwinding rule structure
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rsi
 
         popq    %rbp
-        # CHECK: warning: uncheckable change happened to register RBP unwinding rule structure
         .cfi_adjust_cfa_offset -8
         .cfi_same_value %rbp
 

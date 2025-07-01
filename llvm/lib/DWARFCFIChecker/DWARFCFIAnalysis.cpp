@@ -57,7 +57,7 @@ getCFARegOffsetInfo(const dwarf::UnwindRow &UnwindRow) {
 static SmallSet<DWARFRegNum, 4>
 getUnwindRuleRegSet(const dwarf::UnwindRow &UnwindRow, DWARFRegNum Reg) {
   auto MaybeLoc = UnwindRow.getRegisterLocations().getRegisterLocation(Reg);
-  assert(MaybeLoc && "The register should be included in the unwinding row");
+  assert(MaybeLoc && "the register should be included in the unwinding row");
   auto Loc = *MaybeLoc;
 
   switch (Loc.getLocation()) {
@@ -111,7 +111,7 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
   assert(MaybeCurrentRow && "there should be at least one row");
   auto MaybeCFA = getCFARegOffsetInfo(*MaybeCurrentRow);
   assert(MaybeCFA &&
-         "the CFA information should be describable in [Reg + Offset] in here");
+         "the CFA information should be describable in [reg + offset] in here");
   auto CFA = *MaybeCFA;
 
   // TODO: CFA register callee value is CFA's value, this should be in initial
@@ -129,8 +129,8 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
   const MCInstrDesc &MCInstInfo = MCII.get(Inst.getOpcode());
 
   auto MaybePrevRow = State.getCurrentUnwindRow();
-  assert(MaybePrevRow && "The analysis should have initialized the "
-                         "history with at least one row by now");
+  assert(MaybePrevRow && "the analysis should have initialized the "
+                         "state with at least one row by now");
   auto PrevRow = *MaybePrevRow;
 
   for (auto &&Directive : Directives)
@@ -157,7 +157,7 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
   }
 
   auto MaybeNextRow = State.getCurrentUnwindRow();
-  assert(MaybeNextRow && "Prev row existed, so should the current row.");
+  assert(MaybeNextRow && "previous row existed, so should the current row");
   auto NextRow = *MaybeNextRow;
 
   checkCFADiff(Inst, PrevRow, NextRow, Reads, Writes);
@@ -211,7 +211,7 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
     for (DWARFRegNum UsedReg : getUnwindRuleRegSet(PrevRow, Reg))
       if (Writes.count(UsedReg)) { // Case 1.b
         auto MaybeLLVMUsedReg = MCRI->getLLVMRegNum(UsedReg, IsEH);
-        assert(MaybeLLVMUsedReg && "Instructions will always write to a "
+        assert(MaybeLLVMUsedReg && "instructions will always write to a "
                                    "register that has an LLVM register number");
         Context->reportError(
             Inst.getLoc(),
@@ -224,18 +224,20 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
   }
   // Case 2
   if (PrevLoc.getLocation() != NextLoc.getLocation()) { // Case 2.a
-    Context->reportWarning(Inst.getLoc(),
-                           formatv("uncheckable change happened to register "
-                                   "{0} unwinding rule structure",
-                                   RegName));
+    Context->reportWarning(
+        Inst.getLoc(),
+        formatv("validating changes happening to register {0} unwinding "
+                "rule structure is not implemented yet",
+                RegName));
     return;
   }
   auto &&PrevRegSet = getUnwindRuleRegSet(PrevRow, Reg);
   if (PrevRegSet != getUnwindRuleRegSet(NextRow, Reg)) { // Case 2.b
     Context->reportWarning(
-        Inst.getLoc(), formatv("uncheckable change happened to register {0} "
-                               "unwinding rule register set",
-                               RegName));
+        Inst.getLoc(),
+        formatv("validating changes happening to register {0} unwinding "
+                "rule register set is not implemented yet",
+                RegName));
     return;
   }
   // Case 2.c
@@ -244,7 +246,8 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
       Context->reportWarning(
           Inst.getLoc(),
           formatv("register {0} unwinding rule's offset is changed, and one of "
-                  "the rule's registers is modified by an unknown amount",
+                  "the rule's registers is modified, but validating the "
+                  "modification amount is not implemented yet",
                   RegName));
       return;
     }
@@ -308,15 +311,17 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
   if (PrevCFA.Reg != NextCFA.Reg) { // Case 2.b
     Context->reportWarning(
         Inst.getLoc(),
-        formatv("CFA register changed from register {0} to register {1}",
+        formatv("CFA register changed from register {0} to register {1}, "
+                "validating this change is not implemented yet",
                 PrevCFARegName, NextCFARegName));
     return;
   }
   // Case 2.c
   if (Writes.count(PrevCFA.Reg)) { // Case 2.c.i
     Context->reportWarning(
-        Inst.getLoc(), formatv("CFA offset is changed from {0} to {1}, CFA "
-                               "register {2} is changed by an unknown amount",
+        Inst.getLoc(), formatv("CFA offset is changed from {0} to {1}, and CFA "
+                               "register {2} is modified, but validating the "
+                               "modification amount is not implemented yet",
                                PrevCFA.Offset, NextCFA.Offset, PrevCFARegName));
     return;
   }
