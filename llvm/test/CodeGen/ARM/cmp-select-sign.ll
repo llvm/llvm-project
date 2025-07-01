@@ -2,38 +2,37 @@
 ; RUN: llc -mtriple=armv7a < %s | FileCheck %s --check-prefix=ARM
 ; RUN: llc -mtriple=armv6m < %s | FileCheck %s --check-prefix=THUMB
 ; RUN: llc -mtriple=armv7m < %s | FileCheck %s --check-prefix=THUMB2
+; RUN: llc -mtriple=thumbv8.1m.main < %s | FileCheck %s --check-prefix=THUMBV8
 
 define i3 @sign_i3(i3 %a) {
 ; ARM-LABEL: sign_i3:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    sbfx r1, r0, #0, #3
-; ARM-NEXT:    mvn r0, #0
-; ARM-NEXT:    cmn r1, #1
-; ARM-NEXT:    movwgt r0, #1
+; ARM-NEXT:    lsl r0, r0, #29
+; ARM-NEXT:    mov r1, #1
+; ARM-NEXT:    orr r0, r1, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i3:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #29
-; THUMB-NEXT:    asrs r0, r0, #29
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bge .LBB0_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:    mvns r0, r0
-; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB0_2:
+; THUMB-NEXT:    asrs r1, r0, #31
 ; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i3:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    sbfx r1, r0, #0, #3
-; THUMB2-NEXT:    mov.w r0, #-1
-; THUMB2-NEXT:    cmp.w r1, #-1
-; THUMB2-NEXT:    it gt
-; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    lsls r0, r0, #29
+; THUMB2-NEXT:    movs r1, #1
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: sign_i3:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    lsls r0, r0, #29
+; THUMBV8-NEXT:    movs r1, #1
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i3 %a, -1
   %res = select i1 %c, i3 1, i3 -1
   ret i3 %res
@@ -42,34 +41,32 @@ define i3 @sign_i3(i3 %a) {
 define i4 @sign_i4(i4 %a) {
 ; ARM-LABEL: sign_i4:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    sbfx r1, r0, #0, #4
-; ARM-NEXT:    mvn r0, #0
-; ARM-NEXT:    cmn r1, #1
-; ARM-NEXT:    movwgt r0, #1
+; ARM-NEXT:    lsl r0, r0, #28
+; ARM-NEXT:    mov r1, #1
+; ARM-NEXT:    orr r0, r1, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i4:
 ; THUMB:       @ %bb.0:
 ; THUMB-NEXT:    lsls r0, r0, #28
-; THUMB-NEXT:    asrs r0, r0, #28
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bge .LBB1_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:    mvns r0, r0
-; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB1_2:
+; THUMB-NEXT:    asrs r1, r0, #31
 ; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i4:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    sbfx r1, r0, #0, #4
-; THUMB2-NEXT:    mov.w r0, #-1
-; THUMB2-NEXT:    cmp.w r1, #-1
-; THUMB2-NEXT:    it gt
-; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    lsls r0, r0, #28
+; THUMB2-NEXT:    movs r1, #1
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: sign_i4:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    lsls r0, r0, #28
+; THUMBV8-NEXT:    movs r1, #1
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i4 %a, -1
   %res = select i1 %c, i4 1, i4 -1
   ret i4 %res
@@ -78,33 +75,32 @@ define i4 @sign_i4(i4 %a) {
 define i8 @sign_i8(i8 %a) {
 ; ARM-LABEL: sign_i8:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    sxtb r1, r0
-; ARM-NEXT:    mvn r0, #0
-; ARM-NEXT:    cmn r1, #1
-; ARM-NEXT:    movwgt r0, #1
+; ARM-NEXT:    lsl r0, r0, #24
+; ARM-NEXT:    mov r1, #1
+; ARM-NEXT:    orr r0, r1, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i8:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    sxtb r0, r0
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bge .LBB2_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:    mvns r0, r0
-; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB2_2:
+; THUMB-NEXT:    lsls r0, r0, #24
+; THUMB-NEXT:    asrs r1, r0, #31
 ; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i8:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    sxtb r1, r0
-; THUMB2-NEXT:    mov.w r0, #-1
-; THUMB2-NEXT:    cmp.w r1, #-1
-; THUMB2-NEXT:    it gt
-; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    lsls r0, r0, #24
+; THUMB2-NEXT:    movs r1, #1
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: sign_i8:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    lsls r0, r0, #24
+; THUMBV8-NEXT:    movs r1, #1
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i8 %a, -1
   %res = select i1 %c, i8 1, i8 -1
   ret i8 %res
@@ -113,33 +109,32 @@ define i8 @sign_i8(i8 %a) {
 define i16 @sign_i16(i16 %a) {
 ; ARM-LABEL: sign_i16:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    sxth r1, r0
-; ARM-NEXT:    mvn r0, #0
-; ARM-NEXT:    cmn r1, #1
-; ARM-NEXT:    movwgt r0, #1
+; ARM-NEXT:    lsl r0, r0, #16
+; ARM-NEXT:    mov r1, #1
+; ARM-NEXT:    orr r0, r1, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i16:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    sxth r0, r0
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bge .LBB3_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:    mvns r0, r0
-; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB3_2:
+; THUMB-NEXT:    lsls r0, r0, #16
+; THUMB-NEXT:    asrs r1, r0, #31
 ; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i16:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    sxth r1, r0
-; THUMB2-NEXT:    mov.w r0, #-1
-; THUMB2-NEXT:    cmp.w r1, #-1
-; THUMB2-NEXT:    it gt
-; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    lsls r0, r0, #16
+; THUMB2-NEXT:    movs r1, #1
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: sign_i16:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    lsls r0, r0, #16
+; THUMBV8-NEXT:    movs r1, #1
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i16 %a, -1
   %res = select i1 %c, i16 1, i16 -1
   ret i16 %res
@@ -148,32 +143,28 @@ define i16 @sign_i16(i16 %a) {
 define i32 @sign_i32(i32 %a) {
 ; ARM-LABEL: sign_i32:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mvn r1, #0
-; ARM-NEXT:    cmn r0, #1
-; ARM-NEXT:    movwgt r1, #1
-; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    mov r1, #1
+; ARM-NEXT:    orr r0, r1, r0, asr #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: sign_i32:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    cmp r0, #0
-; THUMB-NEXT:    bge .LBB4_2
-; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, #0
-; THUMB-NEXT:    mvns r0, r0
-; THUMB-NEXT:    bx lr
-; THUMB-NEXT:  .LBB4_2:
+; THUMB-NEXT:    asrs r1, r0, #31
 ; THUMB-NEXT:    movs r0, #1
+; THUMB-NEXT:    orrs r0, r1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: sign_i32:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    mov.w r1, #-1
-; THUMB2-NEXT:    cmp.w r0, #-1
-; THUMB2-NEXT:    it gt
-; THUMB2-NEXT:    movgt r1, #1
-; THUMB2-NEXT:    mov r0, r1
+; THUMB2-NEXT:    movs r1, #1
+; THUMB2-NEXT:    orr.w r0, r1, r0, asr #31
 ; THUMB2-NEXT:    bx lr
+;
+; THUMBV8-LABEL: sign_i32:
+; THUMBV8:       @ %bb.0:
+; THUMBV8-NEXT:    movs r1, #1
+; THUMBV8-NEXT:    orr.w r0, r1, r0, asr #31
+; THUMBV8-NEXT:    bx lr
   %c = icmp sgt i32 %a, -1
   %res = select i1 %c, i32 1, i32 -1
   ret i32 %res
