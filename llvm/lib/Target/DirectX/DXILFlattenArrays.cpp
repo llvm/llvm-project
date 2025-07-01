@@ -20,6 +20,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstddef>
@@ -305,6 +306,8 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     unsigned BytesPerElem = Info.RootFlattenedArrayType->getArrayElementType()
                                 ->getPrimitiveSizeInBits() /
                             8;
+    assert(isPowerOf2_32(BytesPerElem) &&
+           "Bytes per element should be a power of 2");
 
     // Compute the 32-bit index for this flattened GEP from the constant and
     // variable byte offsets in the GEPInfo
@@ -316,14 +319,23 @@ bool DXILFlattenArraysVisitor::visitGetElementPtrInst(GetElementPtrInst &GEP) {
            "Constant byte offset for flat GEP index must fit within 32 bits");
     Value *FlattenedIndex = Builder.getInt32(ConstantOffset);
     for (auto [VarIndex, Multiplier] : Info.VariableOffsets) {
-      uint64_t Mul = Multiplier.udiv(BytesPerElem).getZExtValue();
-      assert(Mul < UINT32_MAX &&
-             "Multiplier for flat GEP index must fit within 32 bits");
+      assert(Multiplier.getActiveBits() <= 32 &&
+             "The multiplier for a flat GEP index must fit within 32 bits");
       assert(VarIndex->getType()->isIntegerTy(32) &&
              "Expected i32-typed GEP indices");
-      Value *ConstIntMul = Builder.getInt32(Mul);
-      Value *MulVarIndex = Builder.CreateMul(VarIndex, ConstIntMul);
-      FlattenedIndex = Builder.CreateAdd(FlattenedIndex, MulVarIndex);
+      Value *VI;
+      if (Multiplier.getZExtValue() % BytesPerElem != 0) {
+        // This can happen, e.g., with i8 GEPs. To handle this we just divide
+        // by BytesPerElem using an instruction after multiplying VarIndex by
+        // Multiplier.
+        VI = Builder.CreateMul(VarIndex,
+                               Builder.getInt32(Multiplier.getZExtValue()));
+        VI = Builder.CreateLShr(VI, Builder.getInt32(Log2_32(BytesPerElem)));
+      } else
+        VI = Builder.CreateMul(
+            VarIndex,
+            Builder.getInt32(Multiplier.getZExtValue() / BytesPerElem));
+      FlattenedIndex = Builder.CreateAdd(FlattenedIndex, VI);
     }
 
     // Construct a new GEP for the flattened array to replace the current GEP

@@ -273,5 +273,28 @@ define void @gep_scalar_flatten() {
   ret void
 }
 
+define void @gep_scalar_flatten_dynamic(i32 %index) {
+  ; CHECK-LABEL: gep_scalar_flatten_dynamic
+  ; CHECK-SAME: i32 [[INDEX:%.*]]) {
+  ; CHECK-NEXT:  [[ALLOCA:%.*]] = alloca [6 x i32], align 4
+  ; CHECK-NEXT:  [[I8INDEX:%.*]] = mul i32 [[INDEX]], 12
+  ; CHECK-NEXT:  [[MUL:%.*]] = mul i32 [[I8INDEX]], 1
+  ; CHECK-NEXT:  [[DIV:%.*]] = lshr i32 [[MUL]], 2
+  ; CHECK-NEXT:  [[ADD:%.*]] = add i32 0, [[DIV]]
+  ; CHECK-NEXT:  getelementptr inbounds nuw [6 x i32], ptr [[ALLOCA]], i32 0, i32 [[ADD]]
+  ; CHECK-NEXT:  [[I32INDEX:%.*]] = mul i32 [[INDEX]], 3
+  ; CHECK-NEXT:  [[MUL:%.*]] = mul i32 [[I32INDEX]], 1
+  ; CHECK-NEXT:  [[ADD:%.*]] = add i32 0, [[MUL]]
+  ; CHECK-NEXT:  getelementptr inbounds nuw [6 x i32], ptr [[ALLOCA]], i32 0, i32 [[ADD]]
+  ; CHECK-NEXT:  ret void
+  ;
+  %a = alloca [2 x [3 x i32]], align 4
+  %i8index = mul i32 %index, 12
+  %i8root = getelementptr inbounds nuw i8, [2 x [3 x i32]]* %a, i32 %i8index;
+  %i32index = mul i32 %index, 3
+  %i32root = getelementptr inbounds nuw i32, [2 x [3 x i32]]* %a, i32 %i32index;
+  ret void
+}
+
 ; Make sure we don't try to walk the body of a function declaration.
 declare void @opaque_function()
