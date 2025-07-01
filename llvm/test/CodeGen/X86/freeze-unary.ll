@@ -167,8 +167,7 @@ define i32 @freeze_ctlz_undef(i32 %a0) nounwind {
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    retq
-  %f0 = freeze i32 %a0
-  %x = call i32 @llvm.ctlz.i32(i32 %f0, i1 -1)
+  %x = call i32 @llvm.ctlz.i32(i32 %a0, i1 -1)
   %f = freeze i32 %x
   %c = icmp eq i32 %a0, 0
   %r = select i1 %c, i32 32, i32 %f
@@ -196,8 +195,7 @@ define i32 @freeze_ctlz_undef_nonzero(i32 %a0) nounwind {
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    retq
-  %f0 = freeze i32 %a0
-  %y = or i32 %f0, 1
+  %y = or i32 %a0, 1
   %x = call i32 @llvm.ctlz.i32(i32 %y, i1 -1)
   %f = freeze i32 %x
   %c = icmp eq i32 %y, 0
@@ -240,8 +238,7 @@ define i32 @freeze_cttz_undef(i32 %a0) nounwind {
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    retq
-  %f0 = freeze i32 %a0
-  %x = call i32 @llvm.cttz.i32(i32 %f0, i1 -1)
+  %x = call i32 @llvm.cttz.i32(i32 %a0, i1 -1)
   %f = freeze i32 %x
   %c = icmp eq i32 %a0, 0
   %r = select i1 %c, i32 32, i32 %f
@@ -265,8 +262,7 @@ define i32 @freeze_cttz_undef_nonzero(i32 %a0) nounwind {
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    retq
-  %f0 = freeze i32 %a0
-  %y = or i32 %f0, 1
+  %y = or i32 %a0, 1
   %x = call i32 @llvm.cttz.i32(i32 %y, i1 -1)
   %f = freeze i32 %x
   %c = icmp eq i32 %y, 0
