@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lib/Transforms/Vectorize/VPRecipeBuilder.h"
 #include "../lib/Transforms/Vectorize/VPlan.h"
+#include "../lib/Transforms/Vectorize/VPlanPatternMatch.h"
 #include "../lib/Transforms/Vectorize/VPlanUtils.h"
 #include "VPlanTestBase.h"
 #include "llvm/ADT/SmallVector.h"
@@ -17,6 +19,93 @@ namespace llvm {
 
 namespace {
 class VPUncountableExitTest : public VPlanTestIRBase {};
+
+// TODO: This performs part of VPlanTransforms::handleUncountableEarlyExits,
+//       perhaps we could share the code...
+static void combineExitConditions(VPlan &Plan) {
+  struct EarlyExitInfo {
+    VPBasicBlock *EarlyExitingVPBB;
+    VPIRBasicBlock *EarlyExitVPBB;
+    VPValue *CondToExit;
+  };
+
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+  using namespace VPlanPatternMatch;
+
+  VPDominatorTree VPDT(Plan);
+  VPBuilder Builder(LatchVPBB->getTerminator());
+  SmallVector<EarlyExitInfo> Exits;
+  for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
+      if (Pred == MiddleVPBB)
+        continue;
+      // Collect condition for this early exit.
+      auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
+      VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
+      VPValue *CondOfEarlyExitingVPBB;
+      [[maybe_unused]] bool Matched =
+          match(EarlyExitingVPBB->getTerminator(),
+                m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
+      assert(Matched && "Terminator must be BranchOnCond");
+      auto *CondToEarlyExit = TrueSucc == ExitBlock
+                                  ? CondOfEarlyExitingVPBB
+                                  : Builder.createNot(CondOfEarlyExitingVPBB);
+      assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+              VPDT.properlyDominates(
+                  CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
+                  LatchVPBB)) &&
+             "exit condition must dominate the latch");
+      Exits.push_back({
+          EarlyExitingVPBB,
+          ExitBlock,
+          CondToEarlyExit,
+      });
+    }
+  }
+
+  // For the negative test case.
+  if (Exits.empty())
+    return;
+
+  // Sort exits by dominance to get the correct program order.
+  llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
+    return VPDT.properlyDominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
+  });
+
+  // Build the AnyOf condition for the latch terminator using logical OR
+  // to avoid poison propagation from later exit conditions when an earlier
+  // exit is taken.
+  VPValue *Combined = Exits[0].CondToExit;
+  for (const EarlyExitInfo &Info : drop_begin(Exits))
+    Combined = Builder.createLogicalOr(Combined, Info.CondToExit);
+
+  VPValue *IsAnyExitTaken =
+      Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
+
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+         "Unexpected terminator");
+  auto *IsLatchExitTaken =
+      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
+                         LatchExitingBranch->getOperand(1));
+  LatchExitingBranch->eraseFromParent();
+  Builder.setInsertPoint(LatchVPBB);
+  VPValue *CombineAllExits = Builder.createOr(IsAnyExitTaken, IsLatchExitTaken);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, {CombineAllExits});
+
+  // Disconnect early exiting blocks from successors, remove branches. We
+  // currently don't support multiple uses for recipes involved in creating
+  // the uncountable exit condition.
+  for (auto &Exit : Exits) {
+    if (Exit.EarlyExitingVPBB == LatchVPBB)
+      continue;
+
+    Exit.EarlyExitingVPBB->getTerminator()->eraseFromParent();
+    VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
+  }
+}
 
 TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
   const char *ModuleString =
@@ -46,15 +135,18 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader, /*HasUncountableExit=*/true);
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
-  VPlanTransforms::optimize(*Plan);
+  VPlanPtr Plan = buildVPlan0(LoopHeader);
+  combineExitConditions(*Plan);
 
   SmallVector<VPRecipeBase *> Recipes;
   SmallVector<VPRecipeBase *> GEPs;
 
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan->getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs, LatchVPBB);
   ASSERT_TRUE(UncountableCondition.has_value());
   ASSERT_EQ(GEPs.size(), 1ull);
   ASSERT_EQ(Recipes.size(), 3ull);
@@ -82,15 +174,18 @@ TEST_F(VPUncountableExitTest, NoUncountableExit) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader);
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
-  VPlanTransforms::optimize(*Plan);
+  auto Plan = buildVPlan0(LoopHeader);
+  combineExitConditions(*Plan);
 
   SmallVector<VPRecipeBase *> Recipes;
   SmallVector<VPRecipeBase *> GEPs;
 
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan->getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs, LatchVPBB);
   ASSERT_FALSE(UncountableCondition.has_value());
   ASSERT_EQ(GEPs.size(), 0ull);
   ASSERT_EQ(Recipes.size(), 0ull);
