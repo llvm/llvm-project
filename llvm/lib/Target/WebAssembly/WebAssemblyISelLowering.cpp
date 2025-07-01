@@ -18,6 +18,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -184,6 +185,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Combine partial.reduce.add before legalization gets confused.
     setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
+
+    // Combine EXTRACT VECTOR ELT of AND(AND(X, SHUFFLE(X)), SHUFFLE(...)), 0
+    // to all_true
+    setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
 
     // Combine wide-vector muls, with extend inputs, to extmul_half.
     setTargetDAGCombine(ISD::MUL);
@@ -3361,6 +3366,87 @@ static SDValue performSETCCCombine(SDNode *N,
   }
   return SDValue();
 }
+static SmallVector<int> buildMaskArrayByPower(unsigned FromPower,
+                                              unsigned NumElements) {
+  // Generate 1-index array of elements from 2^Power to 2^(Power+1) exclusive
+  // The rest is filled with -1.
+  //
+  // For example, with NumElements = 4:
+  // When Power = 1: <1 -1 -1 -1>
+  // When Power = 2: <2  3 -1 -1>
+  // When Power = 4: <4  5  6  7>
+  assert(FromPower <= 256);
+  unsigned ToPower = NextPowerOf2(FromPower);
+  assert(FromPower < NumElements && ToPower <= NumElements);
+
+  SmallVector<int> Res;
+  for (unsigned I = FromPower; I < ToPower; I++)
+    Res.push_back(I);
+  Res.resize(NumElements, -1);
+
+  return Res;
+}
+static SDValue matchAndOfShuffle(SDNode *N, int Power = 1) {
+  // Matching on the case of
+  //
+  // Base case: A [bitcast for a] setcc(v, <0>, ne).
+  // Recursive case: N = and(X, shuffle(X, power mask)) where X is either
+  // recursive or base case.
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = N->getValueType(0);
+
+  SDValue LHS = N->getOperand(0);
+  int NumElements = VT.getVectorNumElements();
+
+  if (NumElements < Power)
+    return SDValue();
+
+  if (N->getOpcode() != ISD::AND && NumElements == Power) {
+    SDValue BitCast, Matched;
+
+    // Try for a setcc first.
+    if (sd_match(N, m_c_SetCC(m_Value(Matched), m_Zero(),
+                              m_SpecificCondCode(ISD::SETNE))))
+      return Matched;
+
+    // Now try for bitcast
+    if (!sd_match(N, m_BitCast(m_Value(BitCast))))
+      return SDValue();
+
+    if (!sd_match(BitCast, m_c_SetCC(m_Value(Matched), m_Zero(),
+                                     m_SpecificCondCode(ISD::SETNE))))
+      return SDValue();
+    return Matched;
+  }
+
+  SmallVector<int> PowerIndices = buildMaskArrayByPower(Power, NumElements);
+  if (sd_match(N, m_And(m_Value(LHS),
+                        m_Shuffle(m_Value(LHS), m_VectorVT(m_Opc(ISD::POISON)),
+                                  m_SpecificMask(PowerIndices)))))
+    return matchAndOfShuffle(LHS.getNode(), NextPowerOf2(Power));
+
+  return SDValue();
+}
+static SDValue performExtractVecEltCombine(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  SDLoc DL(N);
+
+  SDValue And;
+  if (!sd_match(N, m_ExtractElt(m_VectorVT(m_Value(And)), m_Zero())))
+    return SDValue();
+
+  if (SDValue Matched = matchAndOfShuffle(And.getNode()))
+    return DAG.getZExtOrTrunc(
+        DAG.getNode(
+            ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+            {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32), Matched}),
+        DL, N->getValueType(0));
+
+  return SDValue();
+}
 
 static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::MUL);
@@ -3476,6 +3562,8 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performTruncateCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return performLowerPartialReduction(N, DCI.DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+    return performExtractVecEltCombine(N, DCI.DAG);
   case ISD::MUL:
     return performMulCombine(N, DCI.DAG);
   }
