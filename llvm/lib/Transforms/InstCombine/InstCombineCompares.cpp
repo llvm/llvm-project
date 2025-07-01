@@ -711,9 +711,11 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   Value *PtrBase = GEPLHS->getOperand(0);
   if (PtrBase == RHS && CanFold(GEPLHS->getNoWrapFlags())) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
-    Value *Offset = EmitGEPOffset(GEPLHS);
-    return NewICmp(GEPLHS->getNoWrapFlags(), Offset,
-                   Constant::getNullValue(Offset->getType()));
+    GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags();
+    // Do not access GEPLHS after EmitGEPOffset, as the instruction may be
+    // destroyed.
+    Value *Offset = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
+    return NewICmp(NW, Offset, Constant::getNullValue(Offset->getType()));
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
@@ -1298,6 +1300,14 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // eq/ne (mul X, Y)) with (icmp eq/ne X/Y) and if X/Y is known non-zero that
     // will fold to a constant elsewhere.
   }
+
+  // (icmp eq/ne f(X), 0) -> (icmp eq/ne X, 0)
+  // where f(X) == 0 if and only if X == 0
+  if (ICmpInst::isEquality(Pred))
+    if (Value *Stripped = stripNullTest(Cmp.getOperand(0)))
+      return new ICmpInst(Pred, Stripped,
+                          Constant::getNullValue(Stripped->getType()));
+
   return nullptr;
 }
 

@@ -112,9 +112,19 @@ public:
   void MapDeclDIEToDefDIE(const lldb_private::plugin::dwarf::DWARFDIE &decl_die,
                           const lldb_private::plugin::dwarf::DWARFDIE &def_die);
 
-  lldb_private::plugin::dwarf::DWARFDIE GetCXXObjectParameter(
-      const lldb_private::plugin::dwarf::DWARFDIE &subprogram,
-      const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die);
+  /// Get the object parameter DIE if one exists, otherwise returns
+  /// a default DWARFDIE.
+  ///
+  /// \param[in] subprogram DIE of function for which to get the object
+  /// parameter. \param[in] containing_decl_ctx DIE representing declaration
+  /// context of \a subprogram. If this DIE isn't a valid declaration context
+  /// for class methods, assume no object parameter exists.
+  ///
+  /// \returns DIE of object parameter if one exists.
+  ///
+  lldb_private::plugin::dwarf::DWARFDIE
+  GetObjectParameter(const lldb_private::plugin::dwarf::DWARFDIE &subprogram,
+                     const lldb_private::plugin::dwarf::DWARFDIE &decl_ctx_die);
 
 protected:
   /// Protected typedefs and members.

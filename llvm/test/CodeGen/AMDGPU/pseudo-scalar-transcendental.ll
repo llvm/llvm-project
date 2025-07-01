@@ -410,19 +410,40 @@ define amdgpu_cs half @srcmods_neg_f16(half inreg %src) {
   ret half %result
 }
 
-declare half @llvm.exp2.f16(half)
-declare float @llvm.exp2.f32(float)
-declare half @llvm.amdgcn.exp2.f16(half)
-declare float @llvm.amdgcn.exp2.f32(float)
-declare half @llvm.log2.f16(half)
-declare float @llvm.log2.f32(float)
-declare half @llvm.amdgcn.log.f16(half)
-declare float @llvm.amdgcn.log.f32(float)
-declare half @llvm.amdgcn.rcp.f16(half)
-declare float @llvm.amdgcn.rcp.f32(float)
-declare half @llvm.sqrt.f16(half)
-declare float @llvm.sqrt.f32(float)
-declare half @llvm.amdgcn.sqrt.f16(half)
-declare float @llvm.amdgcn.sqrt.f32(float)
-declare half @llvm.fabs.f16(half)
-declare float @llvm.fabs.f32(float)
+; TODO: SelectionDAG should avoid generating v_rcp_iflag_f32.
+define amdgpu_cs float @fdiv_f32_i32(float inreg %a, i32 inreg %b) {
+; GFX12-SDAG-LABEL: fdiv_f32_i32:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_cvt_f32_u32 s1, s1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-SDAG-NEXT:    v_rcp_iflag_f32_e32 v0, s1
+; GFX12-SDAG-NEXT:    v_mul_f32_e32 v0, s0, v0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: fdiv_f32_i32:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_cvt_f32_u32 s1, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-GISEL-NEXT:    v_s_rcp_f32 s1, s1
+; GFX12-GISEL-NEXT:    s_mul_f32 s0, s0, s1
+; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
+  %uint = uitofp i32 %b to float
+  %result = fdiv afn float %a, %uint
+  ret float %result
+}
+
+define amdgpu_cs half @fdiv_f16_i16(half inreg %a, i16 inreg %b) {
+; GFX12-LABEL: fdiv_f16_i16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_cvt_f16_u16_e32 v0, s1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-NEXT:    v_rcp_f16_e32 v0, v0
+; GFX12-NEXT:    v_mul_f16_e32 v0, s0, v0
+; GFX12-NEXT:    ; return to shader part epilog
+  %uint = uitofp i16 %b to half
+  %result = fdiv afn half %a, %uint
+  ret half %result
+}
