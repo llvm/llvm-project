@@ -5601,7 +5601,7 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
 
   // Segmented shuffle matching.
   if (Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(SrcTy) &&
-      !Mask.empty() &&
+      !Mask.empty() && SrcTy->getPrimitiveSizeInBits().isNonZero() &&
       SrcTy->getPrimitiveSizeInBits().isKnownMultipleOf(
           AArch64::SVEBitsPerBlock)) {
 
