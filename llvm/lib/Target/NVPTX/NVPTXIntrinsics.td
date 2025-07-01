@@ -1882,22 +1882,22 @@ multiclass F_ATOMIC_2<RegTyInfo t, string sem_str, string as_str, string op_str,
 }
 
 multiclass F_ATOMIC_3<RegTyInfo t, string op_str> {
-  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # op_str
+  defvar asm_str = "atom${sem:sem}${scope:scope}${addsp:addsp}" # op_str # "\t$dst, [$addr], $b, $c;";
 
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def _rr : BasicNVPTXInst<(outs t.RC:$dst),
+    def _rr : NVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.RC:$b, t.RC:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
 
-    def _ir : BasicNVPTXInst<(outs t.RC:$dst),
+    def _ir : NVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.Imm:$b, t.RC:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
 
-    def _ri : BasicNVPTXInst<(outs t.RC:$dst),
+    def _ri : NVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.RC:$b, t.Imm:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
 
-    def _ii : BasicNVPTXInst<(outs t.RC:$dst),
+    def _ii : NVPTXInst<(outs t.RC:$dst),
       (ins ADDR:$addr, t.Imm:$b, t.Imm:$c, AtomicCode:$sem, AtomicCode:$scope, AtomicCode:$addsp),
       asm_str, []>;
   }
@@ -2030,10 +2030,6 @@ multiclass ATOM2S_impl<string OpStr, string IntTypeStr, string TypeStr,
 multiclass F_ATOMIC_3_INTRINSIC_PATTERN<RegTyInfo t, string OpStr, string InstructionName, string IntTypeStr> {
   foreach scope = ["cta", "sys"] in {
     foreach space = ["gen"] in {
-<<<<<<< HEAD
-      defm _#scope#space : ATOM3N_impl<OpStr, IntTypeStr, TypeStr, scope, space,
-                         t, !listconcat(Preds, [hasAtomScope])>;
-=======
       defvar intrinsic = !cast<SDPatternOperator>("int_nvvm_atomic_" # OpStr # "_" # space # "_" # IntTypeStr # "_" # scope);
       def : Pat<(t.Ty (intrinsic addr:$addr, t.Ty:$b, t.Ty:$c)),
             (!cast<Instruction>(InstructionName # "_rr") ADDR:$addr, t.Ty:$b, t.Ty:$c, Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
@@ -2046,7 +2042,6 @@ multiclass F_ATOMIC_3_INTRINSIC_PATTERN<RegTyInfo t, string OpStr, string Instru
 
       def : Pat<(t.Ty (intrinsic addr:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c))),
             (!cast<Instruction>(InstructionName # "_ii") ADDR:$addr, (t.Ty t.ImmNode:$b), (t.Ty t.ImmNode:$c), Ordering_not_atomic, !cast<PatLeaf>("Scope_" # scope), !cast<PatLeaf>("AddrSpace_" # space))>;
->>>>>>> Replace old F_ATOMIC_3 completely with a single-opcode variation
     }
   }
 }
@@ -2157,7 +2152,7 @@ def LDU_GLOBAL_v4i32 : VLDU_G_ELE_V4<"b32", B32>;
 // during the lifetime of the kernel.
 
 class LDG_G<NVPTXRegClass regclass>
-  : NVPTXInst<(outs regclass:$result), (ins LdStCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+  : NVPTXInst<(outs regclass:$result), (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
                "ld.global.nc.${Sign:sign}$fromWidth \t$result, [$src];", []>;
 
 def LD_GLOBAL_NC_i8  : LDG_G<B16>;
@@ -2170,19 +2165,19 @@ def LD_GLOBAL_NC_i64 : LDG_G<B64>;
 // Elementized vector ldg
 class VLDG_G_ELE_V2<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2),
-            (ins LdStCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
             "ld.global.nc.v2.${Sign:sign}$fromWidth \t{{$dst1, $dst2}}, [$src];", []>;
 
 
 class VLDG_G_ELE_V4<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4), 
-            (ins LdStCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+            (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
             "ld.global.nc.v4.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4}}, [$src];", []>;
 
 class VLDG_G_ELE_V8<NVPTXRegClass regclass> :
   NVPTXInst<(outs regclass:$dst1, regclass:$dst2, regclass:$dst3, regclass:$dst4,
                   regclass:$dst5, regclass:$dst6, regclass:$dst7, regclass:$dst8),
-             (ins LdStCode:$Sign, i32imm:$fromWidth, ADDR:$src),
+             (ins AtomicCode:$Sign, i32imm:$fromWidth, ADDR:$src),
              "ld.global.nc.v8.${Sign:sign}$fromWidth \t{{$dst1, $dst2, $dst3, $dst4, $dst5, $dst6, $dst7, $dst8}}, [$src];", []>;
 
 // FIXME: 8-bit LDG should be fixed once LDG/LDU nodes are made into proper loads.

@@ -6266,8 +6266,7 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
 
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
-                                                   AtomicOrdering Ord,
-                                                   SyncScope::ID SSID) const {
+                                                   AtomicOrdering Ord) const {
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
@@ -6285,8 +6284,7 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
-                                                    AtomicOrdering Ord,
-                                                    SyncScope::ID SSID) const {
+                                                    AtomicOrdering Ord) const {
   // Specialize for cmpxchg
   if (!isa<AtomicCmpXchgInst>(Inst))
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);

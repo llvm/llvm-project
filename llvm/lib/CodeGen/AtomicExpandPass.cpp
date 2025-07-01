@@ -453,9 +453,9 @@ bool AtomicExpandImpl::bracketInstWithFences(Instruction *I,
                                              SyncScope::ID SSID) {
   ReplacementIRBuilder Builder(I, *DL);
 
-  auto LeadingFence = TLI->emitLeadingFence(Builder, I, Order, SSID);
+  auto LeadingFence = TLI->emitLeadingFence(Builder, I, Order);
 
-  auto TrailingFence = TLI->emitTrailingFence(Builder, I, Order, SSID);
+  auto TrailingFence = TLI->emitTrailingFence(Builder, I, Order);
   // We have a guard here because not every atomic operation generates a
   // trailing fence.
   if (TrailingFence)

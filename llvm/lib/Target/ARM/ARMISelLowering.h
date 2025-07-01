@@ -675,11 +675,9 @@ class VectorType;
     emitAtomicCmpXchgNoStoreLLBalance(IRBuilderBase &Builder) const override;
 
     Instruction *emitLeadingFence(
-        IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord,
-        SyncScope::ID SSID = SyncScope::ID SyncScope::System) const override;
+        IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord) const override;
     Instruction *emitTrailingFence(
-        IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord,
-        SyncScope::ID SSID = SyncScope::ID SyncScope::System) const override;
+        IRBuilderBase &Builder, Instruction *Inst, AtomicOrdering Ord) const override;
 
     unsigned getMaxSupportedInterleaveFactor() const override;
 

@@ -12820,8 +12820,7 @@ Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
 // http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html
 Instruction *PPCTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                  Instruction *Inst,
-                                                 AtomicOrdering Ord,
-                                                 SyncScope::ID SSID) const {
+                                                 AtomicOrdering Ord) const {
   if (Ord == AtomicOrdering::SequentiallyConsistent)
     return callIntrinsic(Builder, Intrinsic::ppc_sync);
   if (isReleaseOrStronger(Ord))
@@ -12831,8 +12830,7 @@ Instruction *PPCTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 
 Instruction *PPCTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                   Instruction *Inst,
-                                                  AtomicOrdering Ord,
-                                                  SyncScope::ID SSID) const {
+                                                  AtomicOrdering Ord) const {
   if (Inst->hasAtomicLoad() && isAcquireOrStronger(Ord)) {
     // See http://www.cl.cam.ac.uk/~pes20/cpp/cpp0xmappings.html and
     // http://www.rdrop.com/users/paulmck/scalability/paper/N2745r.2011.03.04a.html

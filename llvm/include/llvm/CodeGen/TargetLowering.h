@@ -2327,13 +2327,11 @@ public:
   /// @{
   virtual Instruction *
   emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                   AtomicOrdering Ord,
-                   SyncScope::ID SSID = SyncScope::System) const;
+                   AtomicOrdering Ord) const;
 
   virtual Instruction *
   emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                    AtomicOrdering Ord,
-                    SyncScope::ID SSID = SyncScope::System) const;
+                    AtomicOrdering Ord) const;
   /// @}
 
   // Emits code that executes when the comparison result in the ll/sc
