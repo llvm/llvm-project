@@ -123,13 +123,14 @@ Embedder::Embedder(const Function &F, const Vocab &Vocabulary)
       Dimension(Vocabulary.begin()->second.size()), OpcWeight(::OpcWeight),
       TypeWeight(::TypeWeight), ArgWeight(::ArgWeight) {}
 
-Expected<std::unique_ptr<Embedder>>
-Embedder::create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary) {
+std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
+                                           const Vocab &Vocabulary) {
   switch (Mode) {
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
-  return make_error<StringError>("Unknown IR2VecKind", errc::invalid_argument);
+  llvm_unreachable("Unknown IR2Vec kind");
+  return nullptr;
 }
 
 // FIXME: Currently lookups are string based. Use numeric Keys
@@ -384,16 +385,12 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
 
   auto Vocab = IR2VecVocabResult.getVocabulary();
   for (Function &F : M) {
-    Expected<std::unique_ptr<Embedder>> EmbOrErr =
+    std::unique_ptr<Embedder> Emb =
         Embedder::create(IR2VecKind::Symbolic, F, Vocab);
-    if (auto Err = EmbOrErr.takeError()) {
-      handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-        OS << "Error creating IR2Vec embeddings: " << EI.message() << "\n";
-      });
+    if (!Emb) {
+      OS << "Error creating IR2Vec embeddings \n";
       continue;
     }
-
-    std::unique_ptr<Embedder> Emb = std::move(*EmbOrErr);
 
     OS << "IR2Vec embeddings for function " << F.getName() << ":\n";
     OS << "Function vector: ";
