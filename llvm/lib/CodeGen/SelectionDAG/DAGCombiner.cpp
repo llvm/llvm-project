@@ -18087,8 +18087,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // FIXME: use fast math flags instead of Options.UnsafeFPMath
   // TODO: Finally migrate away from global TargetOptions.
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-      (Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
+  if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
     if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
