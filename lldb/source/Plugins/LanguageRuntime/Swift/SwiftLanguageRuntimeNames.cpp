@@ -1499,9 +1499,52 @@ SwiftLanguageRuntime::GetGenericSignature(llvm::StringRef function_name,
   return signature;
 }
 
-std::string SwiftLanguageRuntime::GetParentNameIfClosure(StringRef name) {
+/// Returns true if a function called `symbol_name` exists in `module`.
+static bool SymbolExists(StringRef symbol_name, Module &module) {
+  SymbolContextList sc_list;
+  Module::LookupInfo lookup_info(ConstString(symbol_name),
+                                 lldb::FunctionNameType::eFunctionNameTypeFull,
+                                 lldb::eLanguageTypeSwift);
+  module.FindFunctions(lookup_info, CompilerDeclContext(),
+                       ModuleFunctionSearchOptions(), sc_list);
+  return !sc_list.IsEmpty();
+}
+
+/// There are two possible variants of constructors: allocating
+/// (Kind::Allocator) and initializing (Kind::Constructor). When mangling a
+/// closure, the "context" is arbitrarily chosen to be the Kind::Constructor
+/// variant. This function checks for the existence of the Kind::Constructor,
+/// given by the symbol `ctor_kind_mangled_name` in the module. If it exists,
+/// `ctor_kind_mangled_name` is returned. Otherwise, creates and returns the
+/// symbol name for the `Kind::Allocating` variant.
+static std::string
+HandleCtorAndAllocatorVariants(StringRef ctor_kind_mangled_name, Module &module,
+                               Node &top_level_node, Node &ctor_node) {
+  if (SymbolExists(ctor_kind_mangled_name, module))
+    return ctor_kind_mangled_name.str();
+
+  using Kind = Node::Kind;
+  NodeFactory factory;
+
+  // Create a kind::Allocator node with all the children of the
+  // kind::Constructor node.
+  Node *allocating_ctor = factory.createNode(Kind::Allocator);
+  if (!allocating_ctor)
+    return "";
+  for (auto *child : ctor_node)
+    allocating_ctor->addChild(child, factory);
+  swift_demangle::ReplaceChildWith(top_level_node, ctor_node, *allocating_ctor);
+
+  if (auto mangled = swift::Demangle::mangleNode(&top_level_node);
+      mangled.isSuccess())
+    return std::move(mangled.result());
+  return "";
+}
+
+std::string SwiftLanguageRuntime::GetParentNameIfClosure(Function &func) {
   using Kind = Node::Kind;
   swift::Demangle::Context ctx;
+  ConstString name = func.GetMangled().GetMangledName();
   auto *node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
   if (!node || node->getKind() != Node::Kind::Global)
     return "";
@@ -1521,9 +1564,14 @@ std::string SwiftLanguageRuntime::GetParentNameIfClosure(StringRef name) {
     return "";
   swift_demangle::ReplaceChildWith(*node, *closure_node, *parent_func_node);
 
-  if (ManglingErrorOr<std::string> mangled = swift::Demangle::mangleNode(node);
-      mangled.isSuccess())
-    return mangled.result();
-  return "";
+  ManglingErrorOr<std::string> mangled = swift::Demangle::mangleNode(node);
+  if (!mangled.isSuccess())
+    return "";
+
+  if (parent_func_node->getKind() == Kind::Constructor)
+    if (Module *module = func.CalculateSymbolContextModule().get())
+      return HandleCtorAndAllocatorVariants(mangled.result(), *module, *node,
+                                            *parent_func_node);
+  return mangled.result();
 }
 } // namespace lldb_private

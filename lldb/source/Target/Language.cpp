@@ -601,8 +601,7 @@ GetParentFunctionsWhileClosure(const SymbolContext &sc,
 
   parents.push_back(root);
   for (int idx = 0; idx < upper_limit; idx++) {
-    ConstString mangled = root->GetMangled().GetMangledName();
-    std::string parent = language.GetParentNameIfClosure(mangled);
+    std::string parent = language.GetParentNameIfClosure(*root);
     if (parent.empty())
       break;
 

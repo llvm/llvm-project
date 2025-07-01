@@ -116,8 +116,7 @@ public:
   std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
 
-  std::string
-  GetParentNameIfClosure(llvm::StringRef mangled_name) const override;
+  std::string GetParentNameIfClosure(Function &func) const override;
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------

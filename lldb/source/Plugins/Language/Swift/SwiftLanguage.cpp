@@ -2193,9 +2193,8 @@ SwiftLanguage::GetFunctionNameInfo(ConstString name) const {
   return {func_name_type, ConstString(basename)};
 }
 
-std::string
-SwiftLanguage::GetParentNameIfClosure(llvm::StringRef mangled_name) const {
-  return SwiftLanguageRuntime::GetParentNameIfClosure(mangled_name);
+std::string SwiftLanguage::GetParentNameIfClosure(Function &func) const {
+  return SwiftLanguageRuntime::GetParentNameIfClosure(func);
 }
 //------------------------------------------------------------------
 // Static Functions

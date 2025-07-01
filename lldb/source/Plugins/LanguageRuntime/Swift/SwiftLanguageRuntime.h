@@ -204,7 +204,7 @@ public:
                          const SymbolContext *sc = nullptr,
                          const ExecutionContext *exe_ctx = nullptr);
 
-  static std::string GetParentNameIfClosure(llvm::StringRef mangled_name);
+  static std::string GetParentNameIfClosure(Function &func);
 
   /// Demangle a symbol to a swift::Demangle node tree.
   ///

@@ -111,6 +111,35 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         self.build()
         (target, process, thread) = self.get_to_bkpt("break_ctor_class")
         check_not_captured_error(
+            self, thread.frames[0], "input", "MY_CLASS.init(input:)"
+        )
+        check_not_captured_error(
+            self, thread.frames[0], "find_me", "MY_CLASS.init(input:)"
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "break_static_member_class", lldb.SBFileSpec("main.swift")
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "input_static",
+            "static MY_CLASS.static_func(input_static:)",
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "find_me_static",
+            "static MY_CLASS.static_func(input_static:)",
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me_static")
+
+    @swiftTest
+    def test_ctor_struct_closure(self):
+        self.build()
+        (target, process, thread) = self.get_to_bkpt("break_ctor_struct")
+        check_not_captured_error(
             self, thread.frames[0], "input", "MY_STRUCT.init(input:)"
         )
         check_not_captured_error(
@@ -119,7 +148,7 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
         lldbutil.continue_to_source_breakpoint(
-            self, process, "break_static_member", lldb.SBFileSpec("main.swift")
+            self, process, "break_static_member_struct", lldb.SBFileSpec("main.swift")
         )
         check_not_captured_error(
             self,
@@ -132,5 +161,34 @@ class TestSwiftClosureVarNotCaptured(TestBase):
             thread.frames[0],
             "find_me_static",
             "static MY_STRUCT.static_func(input_static:)",
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me_static")
+
+    @swiftTest
+    def test_ctor_enum_closure(self):
+        self.build()
+        (target, process, thread) = self.get_to_bkpt("break_ctor_enum")
+        check_not_captured_error(
+            self, thread.frames[0], "input", "MY_ENUM.init(input:)"
+        )
+        check_not_captured_error(
+            self, thread.frames[0], "find_me", "MY_ENUM.init(input:)"
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+
+        lldbutil.continue_to_source_breakpoint(
+            self, process, "break_static_member_enum", lldb.SBFileSpec("main.swift")
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "input_static",
+            "static MY_ENUM.static_func(input_static:)",
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "find_me_static",
+            "static MY_ENUM.static_func(input_static:)",
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me_static")

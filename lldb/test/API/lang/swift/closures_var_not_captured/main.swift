@@ -87,7 +87,7 @@ func func_3(arg: Int) async {
   print(dont_find_me)
 }
 
-class MY_STRUCT {
+class MY_CLASS {
   init(input: [Int]) {
     let find_me = "hello"
     let _ = input.map {
@@ -99,7 +99,52 @@ class MY_STRUCT {
   static func static_func(input_static: [Int]) {
     let find_me_static = "hello"
     let _ = input_static.map {
-      return $0  // break_static_member
+      return $0  // break_static_member_class
+    }
+    let dont_find_me_static = "hello"
+  }
+}
+
+struct MY_STRUCT {
+  init(input: [Int]) {
+    let find_me = "hello"
+    let _ = input.map {
+      print("break_ctor_struct")
+      return $0
+    }
+    let dont_find_me = "hello"
+  }
+
+  static func static_func(input_static: [Int]) {
+    let find_me_static = "hello"
+    let _ = input_static.map {
+      print("break_static_member_struct")
+      return $0
+    }
+    let dont_find_me_static = "hello"
+  }
+}
+
+enum MY_ENUM {
+  case case1(Double)
+  case case2(Double)
+
+  init(input: [Int]) {
+    let find_me = "hello"
+    let _ = input.map {
+      print("break_ctor_enum")
+      return $0
+    }
+
+    let dont_find_me = "hello"
+    self = .case1(42.0)
+  }
+
+  static func static_func(input_static: [Int]) {
+    let find_me_static = "hello"
+    let _ = input_static.map {
+      print("break_static_member_enum")
+      return $0
     }
     let dont_find_me_static = "hello"
   }
@@ -108,5 +153,9 @@ class MY_STRUCT {
 func_1(arg: 42)
 func_2(arg: 42)
 await func_3(arg: 42)
+let _ = MY_CLASS(input: [1, 2])
+MY_CLASS.static_func(input_static: [42])
 let _ = MY_STRUCT(input: [1, 2])
 MY_STRUCT.static_func(input_static: [42])
+let _ = MY_ENUM(input: [1,2])
+MY_ENUM.static_func(input_static: [42])
