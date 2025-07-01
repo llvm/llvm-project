@@ -911,18 +911,43 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
         Diag << FixItHint::CreateInsertion(FDecl->getInnerLocStart(),
                                            FunctionReplacement);
   }
-  const std::string VariableReplacement = ConstexprString + " ";
+
+  const std::string VariableReplacementWithStatic = StaticConstexprString + " ";
+  const auto VariableReplacement =
+      [&FunctionReplacement, this, &VariableReplacementWithStatic](
+          const VarDecl *Var, const FunctionDecl *FuncCtx,
+          const bool IsAddingConstexprToFuncCtx) -> const std::string & {
+    if (!FuncCtx)
+      return FunctionReplacement;
+
+    if (!getLangOpts().CPlusPlus23)
+      return FunctionReplacement;
+
+    // We'll prefer the function to be constexpr over the function not being
+    // constexpr just for the var to be static constexpr instead of just
+    // constexpr.
+    if (IsAddingConstexprToFuncCtx)
+      return FunctionReplacement;
+
+    if (Var->isStaticLocal())
+      return FunctionReplacement;
+
+    return VariableReplacementWithStatic;
+  };
+
   for (const auto &[Var, FuncCtx] : VariableMapping) {
+    const auto IsAddingConstexprToFuncCtx = Functions.contains(FuncCtx);
     if (FuncCtx && getLangOpts().CPlusPlus23 && Var->isStaticLocal() &&
-        Functions.contains(FuncCtx))
+        IsAddingConstexprToFuncCtx)
       continue;
     const SourceRange R =
         SourceRange(Var->getInnerLocStart(), Var->getLocation());
     auto Diag =
         diag(Var->getLocation(), "variable %0 can be declared 'constexpr'")
         << Var << R
-        << FixItHint::CreateInsertion(Var->getInnerLocStart(),
-                                      VariableReplacement);
+        << FixItHint::CreateInsertion(
+               Var->getInnerLocStart(),
+               VariableReplacement(Var, FuncCtx, IsAddingConstexprToFuncCtx));
     // Since either of the locs can be in a macro, use `makeFileCharRange` to be
     // sure that we have a consistent `CharSourceRange`, located entirely in the
     // source file.
@@ -947,11 +972,14 @@ UseConstexprCheck::UseConstexprCheck(StringRef Name, ClangTidyContext *Context)
       ConservativeLiteralType(Options.get("ConservativeLiteralType", true)),
       AddConstexprToMethodOfClassWithoutConstexprConstructor(Options.get(
           "AddConstexprToMethodOfClassWithoutConstexprConstructor", false)),
-      ConstexprString(Options.get("ConstexprString", "constexpr")) {}
+      ConstexprString(Options.get("ConstexprString", "constexpr")),
+      StaticConstexprString(
+          Options.get("StaticConstexprString", "static " + ConstexprString)) {}
 void UseConstexprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ConservativeLiteralType", ConservativeLiteralType);
   Options.store(Opts, "AddConstexprToMethodOfClassWithoutConstexprConstructor",
                 AddConstexprToMethodOfClassWithoutConstexprConstructor);
   Options.store(Opts, "ConstexprString", ConstexprString);
+  Options.store(Opts, "StaticConstexprString", StaticConstexprString);
 }
 } // namespace clang::tidy::modernize
