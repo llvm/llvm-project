@@ -208,21 +208,26 @@ class GlobalSaddrTable <bit is_saddr, string Name = ""> {
 // TODO: Is exec allowed for saddr? The disabled value 0x7f is the
 // same encoding value as exec_hi, so it isn't possible to use that if
 // saddr is 32-bit (which isn't handled here yet).
-class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
-  bit HasTiedOutput = 0,
-  bit HasSaddr = 0, bit EnableSaddr = 0,
-  RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret> : FLAT_Pseudo<
-  opName,
-  (outs vdata_op:$vdst),
-  !con(
+class FLAT_Load_Pseudo<
+    string opName, RegisterClass regClass, bit HasTiedOutput = 0,
+    bit HasSaddr = 0, bit EnableSaddr = 0>
+    : FLAT_Pseudo<opName, (outs), (ins), ""> {
+
+  defvar vdata_op = getLdStRegisterOperand<regClass>.ret;
+  let OutOperandList = (outs vdata_op:$vdst);
+  let InOperandList = !con(
     !if(EnableSaddr,
-      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-      (ins VReg_64:$vaddr)),
-      (ins flat_offset:$offset),
-      // FIXME: Operands with default values do not work with following non-optional operands.
-      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                         (ins CPol_0:$cpol))),
-  " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
+        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
+        (ins VReg_64:$vaddr)),
+    (ins flat_offset:$offset),
+    // FIXME: Operands with default values do not work with following
+    // non-optional operands.
+    !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                       (ins CPol_0:$cpol)));
+  let AsmOperands = " $vdst, $vaddr"
+    # !if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")
+    # "$offset$cpol";
+
   let has_data = 0;
   let mayLoad = 1;
   let has_saddr = HasSaddr;
