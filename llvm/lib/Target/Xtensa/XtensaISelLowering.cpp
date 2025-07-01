@@ -1616,7 +1616,7 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     unsigned BrKind = 0;
     unsigned CmpKind = 0;
     ISD::CondCode CondCode = (ISD::CondCode)Cond.getImm();
-    unsigned BReg = Xtensa::B0;
+    MCPhysReg BReg = Xtensa::B0;
 
     std::tie(BrKind, CmpKind) = getFPBranchKind(CondCode);
     BuildMI(*MBB, MI, DL, TII.get(CmpKind), BReg)
