@@ -1959,8 +1959,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                                  bool FlushVmCnt) {
   setForceEmitWaitcnt();
 
-  if (MI.isMetaInstruction())
-    return false;
+  assert(!MI.isMetaInstruction());
 
   AMDGPU::Waitcnt Wait;
 
@@ -2721,6 +2720,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E;) {
     MachineInstr &Inst = *Iter;
+    if (Inst.isMetaInstruction()) {
+      ++Iter;
+      continue;
+    }
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.

@@ -1337,6 +1337,12 @@ def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "The platform has memory to lds instructions (global_load w/lds bit set, buffer_load w/lds bit set or global_load_lds. This does not include scratch_load_lds."
 >;
 
+def FeatureLdsBarrierArriveAtomic : SubtargetFeature< "lds-barrier-arrive-atomic",
+  "HasLdsBarrierArriveAtomic",
+  "true",
+  "Has LDS barrier-arrive atomic instructions"
+>;
+
 // Dummy feature used to disable assembler instructions.
 def FeatureDisable : SubtargetFeature<"",
   "FeatureDisable","true",
@@ -1991,6 +1997,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureMemoryAtomicFAddF32DenormalSupport,
    FeatureKernargPreload,
    FeatureLshlAddU64Inst,
+   FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
 
@@ -2752,6 +2759,9 @@ def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
+
+def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
+  AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
 
 def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
  AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;

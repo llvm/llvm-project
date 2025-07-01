@@ -266,6 +266,7 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasPointSampleAccel = false;
+  bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
 
   bool RequiresCOV6 = false;
@@ -1397,6 +1398,8 @@ public:
   bool hasWaitXCnt() const { return HasWaitXcnt; }
 
   bool hasPointSampleAccel() const { return HasPointSampleAccel; }
+
+  bool hasLdsBarrierArriveAtomic() const { return HasLdsBarrierArriveAtomic; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
