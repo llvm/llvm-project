@@ -5543,6 +5543,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FSHL:
   case ISD::FSHR:
   case ISD::BSWAP:
+  case ISD::CTTZ:
+  case ISD::CTLZ:
   case ISD::CTPOP:
   case ISD::BITREVERSE:
   case ISD::PARITY:
@@ -5555,6 +5557,23 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
+    return false;
+
+  case ISD::ADDC:
+  case ISD::SUBC:
+  case ISD::ADDE:
+  case ISD::SUBE:
+  case ISD::SADDO:
+  case ISD::SSUBO:
+  case ISD::SMULO:
+  case ISD::SADDO_CARRY:
+  case ISD::SSUBO_CARRY:
+  case ISD::UADDO:
+  case ISD::USUBO:
+  case ISD::UMULO:
+  case ISD::UADDO_CARRY:
+  case ISD::USUBO_CARRY:
+    // No poison on result or overflow flags.
     return false;
 
   case ISD::SELECT_CC:
