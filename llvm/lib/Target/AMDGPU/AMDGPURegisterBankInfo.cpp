@@ -1492,88 +1492,73 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
   Register WidthReg = MI.getOperand(FirstOpnd + 2).getReg();
 
   const RegisterBank *DstBank =
-    OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
-  if (DstBank == &AMDGPU::VGPRRegBank) {
-    if (Ty == S32)
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+
+  if (DstBank != &AMDGPU::VGPRRegBank) {
+    // SGPR: Canonicalize to a G_S/UBFX
+    if (!isa<GIntrinsic>(MI))
       return true;
 
-    // There is no 64-bit vgpr bitfield extract instructions so the operation
-    // is expanded to a sequence of instructions that implement the operation.
-    ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::VGPRRegBank);
-
-    const LLT S64 = LLT::scalar(64);
-    // Shift the source operand so that extracted bits start at bit 0.
-    auto ShiftOffset = Signed ? B.buildAShr(S64, SrcReg, OffsetReg)
-                              : B.buildLShr(S64, SrcReg, OffsetReg);
-    auto UnmergeSOffset = B.buildUnmerge({S32, S32}, ShiftOffset);
-
-    // A 64-bit bitfield extract uses the 32-bit bitfield extract instructions
-    // if the width is a constant.
-    if (auto ConstWidth = getIConstantVRegValWithLookThrough(WidthReg, MRI)) {
-      // Use the 32-bit bitfield extract instruction if the width is a constant.
-      // Depending on the width size, use either the low or high 32-bits.
-      auto Zero = B.buildConstant(S32, 0);
-      auto WidthImm = ConstWidth->Value.getZExtValue();
-      if (WidthImm <= 32) {
-        // Use bitfield extract on the lower 32-bit source, and then sign-extend
-        // or clear the upper 32-bits.
-        auto Extract =
-            Signed ? B.buildSbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg)
-                   : B.buildUbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg);
-        auto Extend =
-            Signed ? B.buildAShr(S32, Extract, B.buildConstant(S32, 31)) : Zero;
-        B.buildMergeLikeInstr(DstReg, {Extract, Extend});
-      } else {
-        // Use bitfield extract on upper 32-bit source, and combine with lower
-        // 32-bit source.
-        auto UpperWidth = B.buildConstant(S32, WidthImm - 32);
-        auto Extract =
-            Signed
-                ? B.buildSbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth)
-                : B.buildUbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth);
-        B.buildMergeLikeInstr(DstReg, {UnmergeSOffset.getReg(0), Extract});
-      }
-      MI.eraseFromParent();
-      return true;
-    }
-
-    // Expand to Src >> Offset << (64 - Width) >> (64 - Width) using 64-bit
-    // operations.
-    auto ExtShift = B.buildSub(S32, B.buildConstant(S32, 64), WidthReg);
-    auto SignBit = B.buildShl(S64, ShiftOffset, ExtShift);
+    ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::SGPRRegBank);
     if (Signed)
-      B.buildAShr(S64, SignBit, ExtShift);
+      B.buildSbfx(DstReg, SrcReg, OffsetReg, WidthReg);
     else
-      B.buildLShr(S64, SignBit, ExtShift);
+      B.buildUbfx(DstReg, SrcReg, OffsetReg, WidthReg);
     MI.eraseFromParent();
     return true;
   }
 
-  // The scalar form packs the offset and width in a single operand.
+  // VGPR
+  if (Ty == S32)
+    return true;
 
-  ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::SGPRRegBank);
+  // There is no 64-bit vgpr bitfield extract instructions so the operation
+  // is expanded to a sequence of instructions that implement the operation.
+  ApplyRegBankMapping ApplyBank(B, *this, MRI, &AMDGPU::VGPRRegBank);
 
-  // Ensure the high bits are clear to insert the offset.
-  auto OffsetMask = B.buildConstant(S32, maskTrailingOnes<unsigned>(6));
-  auto ClampOffset = B.buildAnd(S32, OffsetReg, OffsetMask);
+  const LLT S64 = LLT::scalar(64);
+  // Shift the source operand so that extracted bits start at bit 0.
+  auto ShiftOffset = Signed ? B.buildAShr(S64, SrcReg, OffsetReg)
+                            : B.buildLShr(S64, SrcReg, OffsetReg);
+  auto UnmergeSOffset = B.buildUnmerge({S32, S32}, ShiftOffset);
 
-  // Zeros out the low bits, so don't bother clamping the input value.
-  auto ShiftWidth = B.buildShl(S32, WidthReg, B.buildConstant(S32, 16));
+  // A 64-bit bitfield extract uses the 32-bit bitfield extract instructions
+  // if the width is a constant.
+  if (auto ConstWidth = getIConstantVRegValWithLookThrough(WidthReg, MRI)) {
+    // Use the 32-bit bitfield extract instruction if the width is a constant.
+    // Depending on the width size, use either the low or high 32-bits.
+    auto Zero = B.buildConstant(S32, 0);
+    auto WidthImm = ConstWidth->Value.getZExtValue();
+    if (WidthImm <= 32) {
+      // Use bitfield extract on the lower 32-bit source, and then sign-extend
+      // or clear the upper 32-bits.
+      auto Extract =
+          Signed ? B.buildSbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg)
+                 : B.buildUbfx(S32, UnmergeSOffset.getReg(0), Zero, WidthReg);
+      auto Extend =
+          Signed ? B.buildAShr(S32, Extract, B.buildConstant(S32, 31)) : Zero;
+      B.buildMergeLikeInstr(DstReg, {Extract, Extend});
+    } else {
+      // Use bitfield extract on upper 32-bit source, and combine with lower
+      // 32-bit source.
+      auto UpperWidth = B.buildConstant(S32, WidthImm - 32);
+      auto Extract =
+          Signed ? B.buildSbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth)
+                 : B.buildUbfx(S32, UnmergeSOffset.getReg(1), Zero, UpperWidth);
+      B.buildMergeLikeInstr(DstReg, {UnmergeSOffset.getReg(0), Extract});
+    }
+    MI.eraseFromParent();
+    return true;
+  }
 
-  // Transformation function, pack the offset and width of a BFE into
-  // the format expected by the S_BFE_I32 / S_BFE_U32. In the second
-  // source, bits [5:0] contain the offset and bits [22:16] the width.
-  auto MergedInputs = B.buildOr(S32, ClampOffset, ShiftWidth);
-
-  // TODO: It might be worth using a pseudo here to avoid scc clobber and
-  // register class constraints.
-  unsigned Opc = Ty == S32 ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32) :
-                             (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
-
-  auto MIB = B.buildInstr(Opc, {DstReg}, {SrcReg, MergedInputs});
-  if (!constrainSelectedInstRegOperands(*MIB, *TII, *TRI, *this))
-    llvm_unreachable("failed to constrain BFE");
-
+  // Expand to Src >> Offset << (64 - Width) >> (64 - Width) using 64-bit
+  // operations.
+  auto ExtShift = B.buildSub(S32, B.buildConstant(S32, 64), WidthReg);
+  auto SignBit = B.buildShl(S64, ShiftOffset, ExtShift);
+  if (Signed)
+    B.buildAShr(S64, SignBit, ExtShift);
+  else
+    B.buildLShr(S64, SignBit, ExtShift);
   MI.eraseFromParent();
   return true;
 }
