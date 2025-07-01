@@ -5,7 +5,7 @@
 
 // RUN: rm -rf %t && mkdir %t && cd %t
 
-// RUN: %clang --target=x86_64-linux-gnu -c -flto=thin %s
+// RUN: %clang --target=x86_64-linux-gnu -c -flto=thin %s -o dtlto.o
 
 // RUN: ld.lld dtlto.o \
 // RUN:   --thinlto-distributor=%python \
