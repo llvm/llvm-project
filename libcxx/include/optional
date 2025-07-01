@@ -654,7 +654,6 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI bool operator==(const __optional_iterator& __other) const { return __ptr_ == __other.__ptr_; }
-  _LIBCPP_HIDE_FROM_ABI bool operator!=(const __optional_iterator& __other) const { return __ptr_ != __other.__ptr_; }
 
   template <typename _Ut = _Tp>
   _LIBCPP_HIDE_FROM_ABI operator __optional_iterator<const _Tp>() const
