@@ -2199,7 +2199,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe>) &&
+                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                        VPWidenIntOrFpInductionRecipe>) &&
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceAllUsesWith(&EVL);
 
@@ -2300,12 +2301,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
-  // of the VF directly. At the moment, widened inductions cannot be updated, so
-  // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(
-      Header->phis(),
-      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
-  if (ContainsWidenInductions)
+  // of the VF directly. At the moment, widened pointer inductions cannot be
+  // updated, so bail out if the plan contains any.
+  bool ContainsWidenPointerInductions =
+      any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
+  if (ContainsWidenPointerInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -2627,6 +2627,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     Inc = SplatVF;
     Prev = WidenIVR->getLastUnrolledPartOperand();
   } else {
+    if (VPRecipeBase *R = VF->getDefiningRecipe())
+      Builder.setInsertPoint(R->getParent(), std::next(R->getIterator()));
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
     if (StepTy->isFloatingPointTy())
@@ -3328,8 +3330,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
 
 /// Add branch weight metadata, if the \p Plan's middle block is terminated by a
 /// BranchOnCond recipe.
-void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
-                                                        ElementCount VF) {
+void VPlanTransforms::addBranchWeightToMiddleTerminator(
+    VPlan &Plan, ElementCount VF, std::optional<unsigned> VScaleForTuning) {
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   auto *MiddleTerm =
       dyn_cast_or_null<VPInstruction>(MiddleVPBB->getTerminator());
@@ -3341,6 +3343,8 @@ void VPlanTransforms::addBranchWeightToMiddleTerminator(VPlan &Plan,
          "must have a BranchOnCond");
   // Assume that `TripCount % VectorStep ` is equally distributed.
   unsigned VectorStep = Plan.getUF() * VF.getKnownMinValue();
+  if (VF.isScalable() && VScaleForTuning.has_value())
+    VectorStep *= *VScaleForTuning;
   assert(VectorStep > 0 && "trip count should not be zero");
   MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
   MDNode *BranchWeights =
