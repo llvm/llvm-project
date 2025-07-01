@@ -398,6 +398,18 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
   return {};
 }
 
+/// Converts an IntegerAttr to have the specified type if needed.
+/// This handles cases where constant attributes have a different type than the
+/// target element type. If the input attribute is not an IntegerAttr or already
+/// has the correct type, returns it unchanged.
+static Attribute convertIntegerAttr(Attribute attr, Type expectedType) {
+  if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
+    if (intAttr.getType() != expectedType)
+      return IntegerAttr::get(expectedType, intAttr.getInt());
+  }
+  return attr;
+}
+
 //===----------------------------------------------------------------------===//
 // CombiningKindAttr
 //===----------------------------------------------------------------------===//
@@ -2464,8 +2476,37 @@ static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
   return {};
 }
 
+/// Fold vector.from_elements to a constant when all operands are constants.
+/// Example:
+///   %c1 = arith.constant 1 : i32
+///   %c2 = arith.constant 2 : i32
+///   %v = vector.from_elements %c1, %c2 : vector<2xi32>
+/// =>
+///   %v = arith.constant dense<[1, 2]> : vector<2xi32>
+///
+static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
+                                               ArrayRef<Attribute> elements) {
+  if (llvm::any_of(elements, [](Attribute attr) { return !attr; }))
+    return {};
+
+  auto destVecType = fromElementsOp.getDest().getType();
+  auto destEltType = destVecType.getElementType();
+  // Constant attributes might have a different type than the return type.
+  // Convert them before creating the dense elements attribute.
+  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
+    return convertIntegerAttr(attr, destEltType);
+  });
+
+  return DenseElementsAttr::get(destVecType, convertedElements);
+}
+
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
-  return foldFromElementsToElements(*this);
+  if (auto res = foldFromElementsToElements(*this))
+    return res;
+  if (auto res = foldFromElementsToConstant(*this, adaptor.getElements()))
+    return res;
+
+  return {};
 }
 
 /// Rewrite a vector.from_elements into a vector.splat if all elements are the
@@ -3332,17 +3373,6 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
 
   /// Converts the expected type to an IntegerAttr if there's
   /// a mismatch.
-  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
-    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
-      if (intAttr.getType() != expectedType)
-        return IntegerAttr::get(expectedType, intAttr.getInt());
-    }
-    return attr;
-  };
-
-  // The `convertIntegerAttr` method specifically handles the case
-  // for `llvm.mlir.constant` which can hold an attribute with a
-  // different type than the return type.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
     for (auto value : denseSource.getValues<Attribute>())
       insertedValues.push_back(convertIntegerAttr(value, destEltType));

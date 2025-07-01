@@ -216,10 +216,7 @@ TEST(IR2VecTest, CreateSymbolicEmbedder) {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx), false);
   Function *F = Function::Create(FTy, Function::ExternalLinkage, "f", M);
 
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
-  EXPECT_TRUE(static_cast<bool>(Result));
-
-  auto *Emb = Result->get();
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
   EXPECT_NE(Emb, nullptr);
 }
 
@@ -234,12 +231,6 @@ TEST(IR2VecTest, CreateInvalidMode) {
   // static_cast an invalid int to IR2VecKind
   auto Result = Embedder::create(static_cast<IR2VecKind>(-1), *F, V);
   EXPECT_FALSE(static_cast<bool>(Result));
-
-  std::string ErrMsg;
-  llvm::handleAllErrors(
-      Result.takeError(),
-      [&](const llvm::ErrorInfoBase &EIB) { ErrMsg = EIB.message(); });
-  EXPECT_NE(ErrMsg.find("Unknown IR2VecKind"), std::string::npos);
 }
 
 TEST(IR2VecTest, LookupVocab) {
@@ -298,10 +289,6 @@ protected:
   Instruction *AddInst = nullptr;
   Instruction *RetInst = nullptr;
 
-  float OriginalOpcWeight = ::OpcWeight;
-  float OriginalTypeWeight = ::TypeWeight;
-  float OriginalArgWeight = ::ArgWeight;
-
   void SetUp() override {
     V = {{"add", {1.0, 2.0}},
          {"integerTy", {0.25, 0.25}},
@@ -325,9 +312,8 @@ protected:
 };
 
 TEST_F(IR2VecTestFixture, GetInstVecMap) {
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
-  ASSERT_TRUE(static_cast<bool>(Result));
-  auto Emb = std::move(*Result);
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
 
   const auto &InstMap = Emb->getInstVecMap();
 
@@ -348,9 +334,8 @@ TEST_F(IR2VecTestFixture, GetInstVecMap) {
 }
 
 TEST_F(IR2VecTestFixture, GetBBVecMap) {
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
-  ASSERT_TRUE(static_cast<bool>(Result));
-  auto Emb = std::move(*Result);
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
 
   const auto &BBMap = Emb->getBBVecMap();
 
@@ -365,9 +350,8 @@ TEST_F(IR2VecTestFixture, GetBBVecMap) {
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector) {
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
-  ASSERT_TRUE(static_cast<bool>(Result));
-  auto Emb = std::move(*Result);
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
 
   const auto &BBVec = Emb->getBBVector(*BB);
 
@@ -377,9 +361,8 @@ TEST_F(IR2VecTestFixture, GetBBVector) {
 }
 
 TEST_F(IR2VecTestFixture, GetFunctionVector) {
-  auto Result = Embedder::create(IR2VecKind::Symbolic, *F, V);
-  ASSERT_TRUE(static_cast<bool>(Result));
-  auto Emb = std::move(*Result);
+  auto Emb = Embedder::create(IR2VecKind::Symbolic, *F, V);
+  ASSERT_TRUE(static_cast<bool>(Emb));
 
   const auto &FuncVec = Emb->getFunctionVector();
 
