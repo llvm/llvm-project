@@ -142,6 +142,10 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`modernize-use-constexpr
+  <clang-tidy/checks/modernize/use-constexpr>` check that finds functions and
+  variables that can be declared `constexpr`.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 
@@ -269,10 +273,6 @@ Changes in existing checks
   for function or variable in header file which contains macro expansion and
   excluding variables with ``thread_local`` storage class specifier from being
   matched.
-
-- Added :doc:`modernize-use-constexpr
-  <clang-tidy/checks/modernize/use-constexpr>` check that finds functions and
-  variables that can be declared `constexpr`.
 
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by matching
