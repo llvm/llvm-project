@@ -633,19 +633,75 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const { return *__ptr_; }
   _LIBCPP_HIDE_FROM_ABI constexpr pointer operator->() const { return *__ptr_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator++() {
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator++() noexcept {
     __ptr_ = nullptr;
     return *this;
   }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator operator++(int) {
-    __optional_iterator __tmp = *this;
-    __ptr_                    = nullptr;
-    return __tmp;
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator operator++(int) noexcept {
+    auto __t = *this;
+    __ptr_   = nullptr;
+    return __t;
   }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator--() noexcept {
+    __ptr_ = nullptr;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator operator--(int) noexcept {
+    auto __t = *this;
+    __ptr_   = nullptr;
+    return __t;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator+=(difference_type __n) noexcept {
+    if (__n != 0)
+      __ptr_ = nullptr;
+    return *this;
+  }
+  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator-=(difference_type __n) noexcept {
+    if (__n != 0)
+      __ptr_ = nullptr;
+    return *this;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr __optional_iterator
+  operator+(__optional_iterator __i, difference_type __n) noexcept {
+    return (__n == 0 ? __i : __optional_iterator{});
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr __optional_iterator
+  operator+(difference_type __n, __optional_iterator __i) noexcept {
+    return __i + __n;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr __optional_iterator
+  operator-(__optional_iterator __i, difference_type __n) noexcept {
+    return (__n == 0 ? __i : __optional_iterator{});
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(__optional_iterator __a, __optional_iterator __b) noexcept {
+    return (__a.__ptr_ == __b.__ptr_ ? 0 : (__a.__ptr_ ? 1 : -1));
+  }
+
+  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const noexcept { return *(*this + __n); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const __optional_iterator& __other) const {
     return __ptr_ == __other.__ptr_;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator<(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
+    return __a.__ptr_ < __b.__ptr_;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator>(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
+    return __a.__ptr_ > __b.__ptr_;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator<=(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
+    return __a.__ptr_ <= __b.__ptr_;
+  }
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
+  operator>=(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
+    return __a.__ptr_ >= __b.__ptr_;
   }
 
   template <typename _Ut = _Tp>
