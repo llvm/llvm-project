@@ -42,7 +42,7 @@ if (isPrBranch) {
 properties(propsList)
 
 String linuxBasePath = '/usr/sbin:/usr/bin:/bin'
-String gitHubAppCredsId = 'Jenkins-AOCC'
+String gitHubAppCredsId = 'Jenkins-AOCC-nonER'
 Boolean hasSourceChanges = true
 Integer successStat = 0
 
@@ -106,7 +106,7 @@ try {
                     }
                 }
                 dir ('llvm-project') {
-                    String theUrl = 'https://er.github.amd.com/AOCC/llvm-project'
+                    String theUrl = 'https://github.amd.com/AOCC/llvm-project'
                     def gitVars = checkout( // groovylint-disable-line NoDef,VariableTypeRequired
                         changelog: true,
                         scm: scmGit(
