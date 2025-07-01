@@ -33,6 +33,8 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+static std::atomic<pid_t> LaunchedExecutorPID{-1};
+
 Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   SizeString = SizeString.trim();
 
@@ -91,7 +93,7 @@ createSharedMemoryManager(SimpleRemoteEPC &SREPC,
 
 Expected<std::unique_ptr<SimpleRemoteEPC>>
 launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
-               llvm::StringRef SlabAllocateSizeString) {
+               llvm::StringRef SlabAllocateSizeString, int stdin_fd, int stdout_fd, int stderr_fd) {
 #ifndef LLVM_ON_UNIX
   // FIXME: Add support for Windows.
   return make_error<StringError>("-" + ExecutablePath +
@@ -134,6 +136,28 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
 
+    if (stdin_fd != 0) {
+      dup2(stdin_fd, STDIN_FILENO);
+      if (stdin_fd != STDIN_FILENO)
+        close(stdin_fd);
+    }
+
+    if (stdout_fd != 1) {
+      dup2(stdout_fd, STDOUT_FILENO);
+      if (stdout_fd != STDOUT_FILENO)
+        close(stdout_fd);
+
+      setvbuf(stdout, NULL, _IONBF, 0);
+    }
+
+    if (stderr_fd != 2) {
+      dup2(stderr_fd, STDERR_FILENO);
+      if (stderr_fd != STDERR_FILENO)
+        close(stderr_fd);
+
+      setvbuf(stderr, NULL, _IONBF, 0);
+    }
+
     // Execute the child process.
     std::unique_ptr<char[]> ExecutorPath, FDSpecifier;
     {
@@ -155,6 +179,8 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
              << ExecutorPath.get() << "\"\n";
       exit(1);
     }
+  } else {
+     LaunchedExecutorPID = ChildPID;
   }
   // else we're the parent...
 
@@ -264,4 +290,8 @@ connectTCPSocket(StringRef NetworkAddress, bool UseSharedMemory,
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
       std::move(S), *SockFD, *SockFD);
 #endif
+}
+
+pid_t getLastLaunchedExecutorPID() {
+  return LaunchedExecutorPID;
 }
