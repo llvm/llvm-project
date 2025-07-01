@@ -461,9 +461,9 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   Type inType = getElementTypeOrSelf(in);
   Type scaleType = getElementTypeOrSelf(scale);
   Type outType = getElementTypeOrSelf(out);
-  VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
-  VectorType inVecType = dyn_cast<VectorType>(in.getType());
+
   VectorType outVecType = dyn_cast<VectorType>(out.getType());
+  VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
 
   if (outVecType && outVecType.isScalable())
     return failure();
@@ -487,14 +487,14 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
     return success();
   }
 
+  VectorType inVecType = cast<VectorType>(in.getType());
   Value origScale = getOriginalVectorValue(scale);
-  Type origScaleType = origScale.getType();
-  VectorType origScaleVecType = isa<VectorType>(origScaleType)
-                                    ? cast<VectorType>(origScaleType)
-                                    : VectorType::get(1, origScaleType);
 
-  ArrayRef<int64_t> originalScaleShape = origScaleVecType.getShape();
+  int64_t scalarShape[1] = {1};
   ArrayRef<int64_t> inShape = inVecType.getShape();
+  ArrayRef<int64_t> originalScaleShape = {scalarShape};
+  if (auto origScaleVecType = dyn_cast<VectorType>(origScale.getType()))
+    originalScaleShape = origScaleVecType.getShape();
 
   SmallVector<int64_t> paddedScaleShape(originalScaleShape);
   paddedScaleShape.insert(paddedScaleShape.end(),
@@ -565,9 +565,9 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
   Type inType = getElementTypeOrSelf(in);
   Type scaleType = getElementTypeOrSelf(scale);
   Type outType = getElementTypeOrSelf(out);
-  VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
-  VectorType inVecType = dyn_cast<VectorType>(in.getType());
+
   VectorType outVecType = dyn_cast<VectorType>(out.getType());
+  VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
 
   if (outVecType && outVecType.isScalable())
     return failure();
@@ -595,14 +595,14 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
     return success();
   }
 
+  VectorType inVecType = cast<VectorType>(in.getType());
   Value origScale = getOriginalVectorValue(scale);
-  Type origScaleType = origScale.getType();
-  VectorType origScaleVecType = isa<VectorType>(origScaleType)
-                                    ? cast<VectorType>(origScaleType)
-                                    : VectorType::get(1, origScaleType);
 
-  ArrayRef<int64_t> originalScaleShape = origScaleVecType.getShape();
+  int64_t scalarShape[1] = {1};
   ArrayRef<int64_t> inShape = inVecType.getShape();
+  ArrayRef<int64_t> originalScaleShape = {scalarShape};
+  if (auto origScaleVecType = dyn_cast<VectorType>(origScale.getType()))
+    originalScaleShape = origScaleVecType.getShape();
 
   SmallVector<int64_t> paddedScaleShape(originalScaleShape);
   paddedScaleShape.insert(paddedScaleShape.end(),
