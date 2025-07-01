@@ -1291,6 +1291,8 @@ VPlan *VPlan::duplicate() {
       NewPlan->ExitBlocks.push_back(cast<VPIRBasicBlock>(VPB));
   }
 
+  NewPlan->setEarlyExitContinuesInScalarLoop(EarlyExitContinuesInScalarLoop);
+
   return NewPlan;
 }
 
