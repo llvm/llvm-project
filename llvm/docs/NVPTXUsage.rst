@@ -989,7 +989,7 @@ specified address in global or local memory address space into the
 specified cache level (L1 or L2). If the '``.tensormap``' qualifier is specified then the 
 prefetch instruction brings the cache line containing the specified address in the 
 '``.const``' or '``.param memory``' state space for subsequent use by the '``cp.async.bulk.tensor``' 
-instruction.The '`prefetchu.*``' instruction brings the cache line 
+instruction. The '`prefetchu.*``' instruction brings the cache line 
 containing the specified generic address into the specified uniform cache level.
 If no address space is specified, it is assumed to be generic address. The intrinsic 
 uses and eviction priority which can be accessed by the '``.level::eviction_priority``' modifier.
