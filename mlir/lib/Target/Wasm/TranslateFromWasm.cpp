@@ -13,6 +13,7 @@
 #include "mlir/Target/Wasm/WasmImporter.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 
 #include <variant>
@@ -709,6 +710,9 @@ public:
     if (failed(parsingMems))
       return;
 
+    auto parsingExports = parseSection<WasmSectionType::EXPORT>();
+    if (failed(parsingExports))
+      return;
 
     // Copy over sizes of containers into statistics.
     numFunctionSectionItems = symbols.funcSymbols.size();
@@ -750,6 +754,76 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::IMPORT>(ParserHead &ph, size
         return visitImport(importLoc, *moduleName, *importName, import);
       },
       *import);
+}
+
+template <>
+LogicalResult
+WasmBinaryParser::parseSectionItem<WasmSectionType::EXPORT>(ParserHead &ph,
+                                                            size_t) {
+  auto exportLoc = ph.getLocation();
+
+  auto exportName = ph.parseName();
+  if (failed(exportName))
+    return failure();
+
+  auto opcode = ph.consumeByte();
+  if (failed(opcode))
+    return failure();
+
+  auto idx = ph.parseLiteral<uint32_t>();
+  if (failed(idx))
+    return failure();
+
+  using SymbolRefDesc =
+      std::variant<llvm::SmallVector<SymbolRefContainer>,
+                   llvm::SmallVector<GlobalSymbolRefContainer>,
+                   llvm::SmallVector<FunctionSymbolRefContainer>>;
+
+  SymbolRefDesc currentSymbolList;
+  std::string symbolType = "";
+  switch (*opcode) {
+  case WasmBinaryEncoding::Export::function:
+    symbolType = "function";
+    currentSymbolList = symbols.funcSymbols;
+    break;
+  case WasmBinaryEncoding::Export::table:
+    symbolType = "table";
+    currentSymbolList = symbols.tableSymbols;
+    break;
+  case WasmBinaryEncoding::Export::memory:
+    symbolType = "memory";
+    currentSymbolList = symbols.memSymbols;
+    break;
+  case WasmBinaryEncoding::Export::global:
+    symbolType = "global";
+    currentSymbolList = symbols.globalSymbols;
+    break;
+  default:
+    return emitError(exportLoc, "Invalid value for export type: ")
+           << std::to_integer<unsigned>(*opcode);
+  }
+
+  auto currentSymbol = std::visit(
+      [&](const auto &list) -> FailureOr<FlatSymbolRefAttr> {
+        if (*idx > list.size()) {
+          emitError(
+              exportLoc,
+              llvm::formatv(
+                  "Trying to export {0} {1} which is undefined in this scope",
+                  symbolType, *idx));
+          return failure();
+        }
+        return list[*idx].symbol;
+      },
+      currentSymbolList);
+
+  if (failed(currentSymbol))
+    return failure();
+
+  Operation *op = SymbolTable::lookupSymbolIn(mOp, *currentSymbol);
+  SymbolTable::setSymbolVisibility(op, SymbolTable::Visibility::Public);
+  auto symName = SymbolTable::getSymbolName(op);
+  return SymbolTable{mOp}.rename(symName, *exportName);
 }
 
 template <>

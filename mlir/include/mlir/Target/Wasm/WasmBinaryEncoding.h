@@ -49,6 +49,15 @@ struct WasmBinaryEncoding {
     static constexpr std::byte isMutable{0x01};
   };
 
+  /// Byte encodings describing WASM exports.
+  struct Export {
+    static constexpr std::byte function{0x00};
+    static constexpr std::byte table{0x01};
+    static constexpr std::byte memory{0x02};
+    static constexpr std::byte global{0x03};
+  };
+
+  static constexpr std::byte endByte{0x0B};
 };
 } // namespace mlir
 
