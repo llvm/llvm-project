@@ -677,6 +677,7 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 
     defvar ArithLat = SMX60GetArithmeticLatency<mx>.c;
     let Latency = ArithLat in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUF",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxV", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMinMaxF", [SMX60_VFP], mx, sew, IsWorstCase>;
@@ -684,7 +685,6 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
 
     defvar FlatLat = SMX60GetFlatLatency<mx>.c;
     let Latency = !if(!eq(sew, 64), FlatLat, ArithLat) in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VFP], mx, sew, IsWorstCase>;
     }
@@ -799,12 +799,8 @@ foreach mx = ["MF4", "MF2"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
 
-    // Pattern for vfdiv.vf: 10/10
-    let Latency = 10 in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VFP], mx, sew, IsWorstCase>;
-    }
-    // Pattern for vfdiv.vv: 7/7
     let Latency = 7 in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VFP], mx, sew, IsWorstCase>;
     }
   }
@@ -814,6 +810,15 @@ foreach mx = ["MF4", "MF2"] in {
 foreach mx = ["M1", "M2", "M4", "M8"] in {
   foreach sew = SchedSEWSet<mx, 1>.val in {
     defvar IsWorstCase = SMX60IsWorstCaseMXSEW<mx, sew, SchedMxListF, 1>.c;
+    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
+
+    // Pattern for vfdiv.vf: e16 = 12/24/48/96; e32 = 12/24/48/96; e64 = 18/36/72/144
+    // Pattern for vfrdiv.vf: e16 = 12/24/48/96; e32 = 12/24/48/96; e64 = 40/80/160/320
+    // We use the worst-case, vfdiv.vf is penalized in e64
+    // TODO: split vfdiv.vf and vfrdiv.vf into separate scheduling classes
+    let Latency = !if(!eq(sew, 64), !mul(LMulLat, 40), !mul(LMulLat, 12)) in {
+      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VFP], mx, sew, IsWorstCase>;
+    }
 
     // Compute latency based on SEW and LMUL combination
     defvar SEWLatencyFactor = !cond(
@@ -822,13 +827,8 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
       !eq(sew, 64) : 40   // e64: 40*LMUL
     );
 
-    defvar LMulLat = SMX60GetLMulCycles<mx>.c;
     let Latency = !mul(LMulLat, SEWLatencyFactor) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFDivV",  [SMX60_VFP], mx, sew, IsWorstCase>;
-    }
-
-    let Latency = !mul(LMulLat, 18) in {
-      defm "" : LMULSEWWriteResMXSEW<"WriteVFDivF",  [SMX60_VFP], mx, sew, IsWorstCase>;
     }
   }
 }
