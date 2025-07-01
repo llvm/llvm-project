@@ -1163,14 +1163,13 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
           I.getOpcode() == TargetOpcode::G_USUBO) &&
          "unexpected instruction");
 
-  const Register DstReg = I.getOperand(0).getReg();
-  const Register CarryOutReg = I.getOperand(1).getReg();
-  const Register Op0Reg = I.getOperand(2).getReg();
-  const Register Op1Reg = I.getOperand(3).getReg();
-  bool IsSub = I.getOpcode() == TargetOpcode::G_USUBE ||
-               I.getOpcode() == TargetOpcode::G_USUBO;
-  bool HasCarryIn = I.getOpcode() == TargetOpcode::G_UADDE ||
-                    I.getOpcode() == TargetOpcode::G_USUBE;
+  auto &CarryMI = cast<GAddSubCarryOut>(I);
+
+  const Register DstReg = CarryMI.getDstReg();
+  const Register CarryOutReg = CarryMI.getCarryOutReg();
+  const Register Op0Reg = CarryMI.getLHSReg();
+  const Register Op1Reg = CarryMI.getRHSReg();
+  bool IsSub = CarryMI.isSub();
 
   const LLT DstTy = MRI.getType(DstReg);
   assert(DstTy.isScalar() && "selectUAddSub only supported for scalar types");
@@ -1206,14 +1205,15 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
     llvm_unreachable("selectUAddSub unsupported type.");
   }
 
-  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-  const TargetRegisterClass *DstRC = getRegClass(DstTy, DstRB);
+  const RegisterBank &CarryRB = *RBI.getRegBank(CarryOutReg, MRI, TRI);
+  const TargetRegisterClass *CarryRC =
+      getRegClass(MRI.getType(CarryOutReg), CarryRB);
 
   unsigned Opcode = IsSub ? OpSUB : OpADD;
 
   // G_UADDE/G_USUBE - find CarryIn def instruction.
-  if (HasCarryIn) {
-    Register CarryInReg = I.getOperand(4).getReg();
+  if (auto CarryInMI = dyn_cast<GAddSubCarryInOut>(&I)) {
+    Register CarryInReg = CarryInMI->getCarryInReg();
     MachineInstr *Def = MRI.getVRegDef(CarryInReg);
     while (Def->getOpcode() == TargetOpcode::G_TRUNC) {
       CarryInReg = Def->getOperand(1).getReg();
@@ -1230,7 +1230,7 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
               X86::EFLAGS)
           .addReg(CarryInReg);
 
-      if (!RBI.constrainGenericRegister(CarryInReg, *DstRC, MRI))
+      if (!RBI.constrainGenericRegister(CarryInReg, *CarryRC, MRI))
         return false;
 
       Opcode = IsSub ? OpSBB : OpADC;
@@ -1253,8 +1253,27 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
       .addReg(X86::EFLAGS);
 
   if (!constrainSelectedInstRegOperands(Inst, TII, TRI, RBI) ||
-      !RBI.constrainGenericRegister(CarryOutReg, *DstRC, MRI))
+      !RBI.constrainGenericRegister(CarryOutReg, *CarryRC, MRI))
     return false;
+
+  // If there are instructions that use carry as value, we need to lower it
+  // differently than setting EFLAGS
+  Register SetCarryCC;
+  for (auto &Use :
+       llvm::make_early_inc_range(MRI.use_nodbg_operands(CarryOutReg))) {
+    MachineInstr *MI = Use.getParent();
+    if (MI->isCopy() && MI->getOperand(0).getReg() == X86::EFLAGS)
+      continue;
+    if (!SetCarryCC) {
+      SetCarryCC = MRI.createGenericVirtualRegister(MRI.getType(CarryOutReg));
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::SETCCr),
+              SetCarryCC)
+          .addImm(X86::COND_B);
+      if (!RBI.constrainGenericRegister(SetCarryCC, *CarryRC, MRI))
+        return false;
+    }
+    Use.setReg(SetCarryCC);
+  }
 
   I.eraseFromParent();
   return true;
