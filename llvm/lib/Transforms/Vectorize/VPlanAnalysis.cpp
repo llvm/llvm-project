@@ -303,8 +303,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPReductionRecipe>([this](const auto *R) {
             return inferScalarType(R->getChainOp());
           })
-          .Case<VPSingleDefBundleRecipe>([this](const auto *R) {
-            return inferScalarType(R->getTypeVPValue());
+          .Case<VPExpressionRecipe>([this](const auto *R) {
+            return inferScalarType(R->getOperandOfResultType());
           });
 
   assert(ResultTy && "could not infer type for the given VPValue");

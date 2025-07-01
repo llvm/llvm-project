@@ -49,8 +49,8 @@ using VectorParts = SmallVector<Value *, 2>;
 
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPDefID()) {
-  case VPBundleSC:
-    return cast<VPSingleDefBundleRecipe>(this)->mayReadOrWriteMemory();
+  case VPExpressionSC:
+    return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPInterleaveSC:
@@ -99,8 +99,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
 
 bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPDefID()) {
-  case VPBundleSC:
-    return cast<VPSingleDefBundleRecipe>(this)->mayReadOrWriteMemory();
+  case VPExpressionSC:
+    return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
     return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
   case VPWidenLoadEVLSC:
@@ -147,8 +147,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
-  case VPBundleSC:
-    return cast<VPSingleDefBundleRecipe>(this)->mayHaveSideEffects();
+  case VPExpressionSC:
+    return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPPredInstPHISC:
@@ -2563,126 +2563,134 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                             Ctx.CostKind);
 }
 
-VPSingleDefBundleRecipe::VPSingleDefBundleRecipe(
-    BundleTypes BundleType, ArrayRef<VPSingleDefRecipe *> ToBundle)
-    : VPSingleDefRecipe(VPDef::VPBundleSC, {}, {}),
-      BundledRecipes(
-          SetVector<VPSingleDefRecipe *>(ToBundle.begin(), ToBundle.end())
-              .takeVector()),
-      BundleType(BundleType) {
-  assert(!BundledRecipes.empty() && "Nothing to bundle?");
+VPExpressionRecipe::VPExpressionRecipe(
+    ExpressionTypes ExpressionType,
+    ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
+    : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
+      ExpressionRecipes(SetVector<VPSingleDefRecipe *>(
+                            ExpressionRecipes.begin(), ExpressionRecipes.end())
+                            .takeVector()),
+      ExpressionType(ExpressionType) {
+  assert(!ExpressionRecipes.empty() && "Nothing to combine?");
+  assert(
+      none_of(ExpressionRecipes,
+              [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); }) &&
+      "expression cannot contain recipes with side-effects");
 
-  // Maintain a copy of the bundled recipes as a set of users.
-  SmallPtrSet<VPUser *, 4> BundledRecipesAsSetOfUsers;
-  for (auto *R : BundledRecipes)
-    BundledRecipesAsSetOfUsers.insert(R);
+  // Maintain a copy of the expression recipes as a set of users.
+  SmallPtrSet<VPUser *, 4> ExpressionRecipesAsSetOfUsers;
+  for (auto *R : ExpressionRecipes)
+    ExpressionRecipesAsSetOfUsers.insert(R);
 
-  // Recipes in the bundle, except the last one, must only be used by (other)
-  // recipes inside the bundle. If there are other users, external to the
-  // bundle, use a clone of the recipe for external users.
-  for (VPSingleDefRecipe *R : BundledRecipes) {
-    if (R != BundledRecipes.back() &&
-        any_of(R->users(), [&BundledRecipesAsSetOfUsers](VPUser *U) {
-          return !BundledRecipesAsSetOfUsers.contains(U);
+  // Recipes in the expression, except the last one, must only be used by
+  // (other) recipes inside the expression. If there are other users, external
+  // to the expression, use a clone of the recipe for external users.
+  for (VPSingleDefRecipe *R : ExpressionRecipes) {
+    if (R != ExpressionRecipes.back() &&
+        any_of(R->users(), [&ExpressionRecipesAsSetOfUsers](VPUser *U) {
+          return !ExpressionRecipesAsSetOfUsers.contains(U);
         })) {
-      // There are users outside of the bundle. Clone the recipe and use the
+      // There are users outside of the expression. Clone the recipe and use the
       // clone those external users.
       VPSingleDefRecipe *CopyForExtUsers = R->clone();
-      R->replaceUsesWithIf(CopyForExtUsers,
-                           [&BundledRecipesAsSetOfUsers](VPUser &U, unsigned) {
-                             return !BundledRecipesAsSetOfUsers.contains(&U);
-                           });
+      R->replaceUsesWithIf(CopyForExtUsers, [&ExpressionRecipesAsSetOfUsers](
+                                                VPUser &U, unsigned) {
+        return !ExpressionRecipesAsSetOfUsers.contains(&U);
+      });
       CopyForExtUsers->insertBefore(R);
     }
     if (R->getParent())
       R->removeFromParent();
   }
 
-  // Internalize all external operands to the bundled recipes. To do so,
+  // Internalize all external operands to the expression recipes. To do so,
   // create new temporary VPValues for all operands defined by a recipe outside
-  // the bundle. The original operands are added as operands of the
-  // VPSingleDefBundleRecipe itself.
-  for (auto *R : BundledRecipes) {
+  // the expression. The original operands are added as operands of the
+  // VPExpressionRecipe itself.
+  for (auto *R : ExpressionRecipes) {
     for (const auto &[Idx, Op] : enumerate(R->operands())) {
       auto *Def = Op->getDefiningRecipe();
-      if (Def && BundledRecipesAsSetOfUsers.contains(Def))
+      if (Def && ExpressionRecipesAsSetOfUsers.contains(Def))
         continue;
       addOperand(Op);
-      BundleLiveInPlaceholders.push_back(new VPValue());
-      R->setOperand(Idx, BundleLiveInPlaceholders.back());
+      LiveInPlaceholders.push_back(new VPValue());
+      R->setOperand(Idx, LiveInPlaceholders.back());
     }
   }
 }
 
-void VPSingleDefBundleRecipe::unbundle() {
-  for (auto *R : BundledRecipes)
+void VPExpressionRecipe::unbundle() {
+  for (auto *R : ExpressionRecipes)
     R->insertBefore(this);
 
   for (const auto &[Idx, Op] : enumerate(operands()))
-    BundleLiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
+    LiveInPlaceholders[Idx]->replaceAllUsesWith(Op);
 
-  replaceAllUsesWith(BundledRecipes.back());
-  BundledRecipes.clear();
+  replaceAllUsesWith(ExpressionRecipes.back());
+  ExpressionRecipes.clear();
 }
 
-InstructionCost VPSingleDefBundleRecipe::computeCost(ElementCount VF,
-                                                     VPCostContext &Ctx) const {
+InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
+                                                VPCostContext &Ctx) const {
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy = cast<VectorType>(
       toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
   assert(RedTy->isIntegerTy() &&
-         "VPSingleDefBundleRecipe only supports integer types currently.");
-  switch (BundleType) {
-  case BundleTypes::ExtendedReduction: {
+         "VPExpressionRecipe only supports integer types currently.");
+  switch (ExpressionType) {
+  case ExpressionTypes::ExtendedReduction: {
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
-        cast<VPReductionRecipe>(BundledRecipes[1])->getRecurrenceKind());
+        cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
     return Ctx.TTI.getExtendedReductionCost(
         Opcode,
-        cast<VPWidenCastRecipe>(BundledRecipes.front())->getOpcode() ==
+        cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
         RedTy, SrcVecTy, std::nullopt, Ctx.CostKind);
   }
-  case BundleTypes::MulAccumulateReduction:
+  case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, RedTy, SrcVecTy, Ctx.CostKind);
 
-  case BundleTypes::ExtMulAccumulateReduction:
+  case ExpressionTypes::ExtMulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(
-        cast<VPWidenCastRecipe>(BundledRecipes.front())->getOpcode() ==
+        cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
             Instruction::ZExt,
         RedTy, SrcVecTy, Ctx.CostKind);
   }
 }
 
-bool VPSingleDefBundleRecipe::mayReadOrWriteMemory() const {
-  return any_of(BundledRecipes, [](VPSingleDefRecipe *R) {
+bool VPExpressionRecipe::mayReadOrWriteMemory() const {
+  return any_of(ExpressionRecipes, [](VPSingleDefRecipe *R) {
     return R->mayReadFromMemory() || R->mayWriteToMemory();
   });
 }
 
-bool VPSingleDefBundleRecipe::mayHaveSideEffects() const {
-  return any_of(BundledRecipes,
-                [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); });
+bool VPExpressionRecipe::mayHaveSideEffects() const {
+  assert(
+      none_of(ExpressionRecipes,
+              [](VPSingleDefRecipe *R) { return R->mayHaveSideEffects(); }) &&
+      "expression cannot contain recipes with side-effects");
+  return false;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
-void VPSingleDefBundleRecipe::print(raw_ostream &O, const Twine &Indent,
-                                    VPSlotTracker &SlotTracker) const {
-  O << Indent << "BUNDLE ";
+void VPExpressionRecipe::print(raw_ostream &O, const Twine &Indent,
+                               VPSlotTracker &SlotTracker) const {
+  O << Indent << "EXPRESSION ";
   printAsOperand(O, SlotTracker);
   O << " = ";
-  auto *Red = cast<VPReductionRecipe>(BundledRecipes.back());
+  auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
 
-  switch (BundleType) {
-  case BundleTypes::ExtendedReduction: {
+  switch (ExpressionType) {
+  case ExpressionTypes::ExtendedReduction: {
     getOperand(1)->printAsOperand(O, SlotTracker);
     O << " +";
     O << " reduce." << Instruction::getOpcodeName(Opcode) << " (";
     getOperand(0)->printAsOperand(O, SlotTracker);
     Red->printFlags(O);
 
-    auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
+    auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
     O << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
       << *Ext0->getResultType();
     if (Red->isConditional()) {
@@ -2692,8 +2700,8 @@ void VPSingleDefBundleRecipe::print(raw_ostream &O, const Twine &Indent,
     O << ")";
     break;
   }
-  case BundleTypes::MulAccumulateReduction:
-  case BundleTypes::ExtMulAccumulateReduction: {
+  case ExpressionTypes::MulAccReduction:
+  case ExpressionTypes::ExtMulAccReduction: {
     getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     O << " + ";
     O << "reduce."
@@ -2701,15 +2709,15 @@ void VPSingleDefBundleRecipe::print(raw_ostream &O, const Twine &Indent,
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
       << " (";
     O << "mul";
-    bool IsExtended = BundleType == BundleTypes::ExtMulAccumulateReduction;
-    auto *Mul =
-        cast<VPWidenRecipe>(IsExtended ? BundledRecipes[2] : BundledRecipes[0]);
+    bool IsExtended = ExpressionType == ExpressionTypes::ExtMulAccReduction;
+    auto *Mul = cast<VPWidenRecipe>(IsExtended ? ExpressionRecipes[2]
+                                               : ExpressionRecipes[0]);
     Mul->printFlags(O);
     if (IsExtended)
       O << "(";
     getOperand(0)->printAsOperand(O, SlotTracker);
     if (IsExtended) {
-      auto *Ext0 = cast<VPWidenCastRecipe>(BundledRecipes[0]);
+      auto *Ext0 = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
       O << " " << Instruction::getOpcodeName(Ext0->getOpcode()) << " to "
         << *Ext0->getResultType() << "), (";
     } else {
@@ -2717,7 +2725,7 @@ void VPSingleDefBundleRecipe::print(raw_ostream &O, const Twine &Indent,
     }
     getOperand(1)->printAsOperand(O, SlotTracker);
     if (IsExtended) {
-      auto *Ext1 = cast<VPWidenCastRecipe>(BundledRecipes[1]);
+      auto *Ext1 = cast<VPWidenCastRecipe>(ExpressionRecipes[1]);
       O << " " << Instruction::getOpcodeName(Ext1->getOpcode()) << " to "
         << *Ext1->getResultType() << ")";
     }

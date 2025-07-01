@@ -525,7 +525,7 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
-    case VPRecipeBase::VPBundleSC:
+    case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPDerivedIVSC:
     case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
@@ -2719,23 +2719,24 @@ public:
   }
 };
 
-/// A recipe to combine multiple recipes into a 'bundle' recipe, which should be
-/// considered a single entity for cost-modeling and transforms. The recipe
-/// needs to be 'unbundled', i.e. replaced by its bundled recipes before
-/// execute. The bundled recipes are completely disconnected from the def-use
-/// graph of other, non-bundled recipes. Def-use edges between pairs of bundled
-/// recipes remain intact, whereas every edge between a bundled and a
-/// non-bundled recipe is elevated to connect the non-bundled recipe with the
-/// VPSingleDefBundleRecipe itself.
-class VPSingleDefBundleRecipe : public VPSingleDefRecipe {
-  /// Recipes bundled together in this VPSingleDefBundleRecipe.
-  SmallVector<VPSingleDefRecipe *> BundledRecipes;
+/// A recipe to combine multiple recipes into a  single 'expression' recipe,
+/// which should be considered a single entity for cost-modeling and transforms.
+/// The recipe needs to be 'unbundled', i.e. replaced by its individual
+/// expression recipes before execute. The individual expression recipes are
+/// completely disconnected from the def-use graph of other recipes not part of
+/// the expression. Def-use edges between pairs of expression recipes remain
+/// intact, whereas every edge between an expression recipe and a recipe outside
+/// the expression is elevated to connect the non-expression recipe with the
+/// VPExpressionRecipe itself.
+class VPExpressionRecipe : public VPSingleDefRecipe {
+  /// Recipes included in this VPExpressionRecipe.
+  SmallVector<VPSingleDefRecipe *> ExpressionRecipes;
 
-  /// Temporary VPValues used for external operands of the bundle, i.e. operands
-  /// not defined by recipes in the bundle.
-  SmallVector<VPValue *> BundleLiveInPlaceholders;
+  /// Temporary VPValues used for external operands of the expression, i.e.
+  /// operands not defined by recipes in the expression.
+  SmallVector<VPValue *> LiveInPlaceholders;
 
-  enum class BundleTypes {
+  enum class ExpressionTypes {
     /// Represents an inloop extended reduction operation, performing a
     /// reduction on a extended vector operand into a scalar value, and adding
     /// the result to a chain.
@@ -2743,74 +2744,72 @@ class VPSingleDefBundleRecipe : public VPSingleDefRecipe {
     /// Represent an inloop multiply-accumulate reduction, multiplying the
     /// extended vector operands, performing a reduction.add on the result, and
     /// adding the scalar result to a chain.
-    ExtMulAccumulateReduction,
+    ExtMulAccReduction,
     /// Represent an inloop multiply-accumulate reduction, multiplying the
     /// vector operands, performing a reduction.add on the result, and adding
     /// the scalar result to a chain.
-    MulAccumulateReduction,
+    MulAccReduction,
   };
 
-  /// Type of the bundle.
-  BundleTypes BundleType;
+  /// Type of the expression.
+  ExpressionTypes ExpressionType;
 
-  /// Construct a new VPSingleDefBundleRecipe by internalizing recipes in \p
-  /// BundledRecipes. External operands (i.e. not defined by another recipe in
-  /// the bundle) are replaced by temporary VPValues and the original operands
-  /// are transferred to the VPSingleDefBundleRecipe itself. Clone recipes as
-  /// needed (excluding last) to ensure they are only used by other recipes in
-  /// the bundle.
-  VPSingleDefBundleRecipe(BundleTypes BundleType,
-                          ArrayRef<VPSingleDefRecipe *> ToBundle);
+  /// Construct a new VPExpressionRecipe by internalizing recipes in \p
+  /// ExpressionRecipes. External operands (i.e. not defined by another recipe
+  /// in the expression) are replaced by temporary VPValues and the original
+  /// operands are transferred to the VPExpressionRecipe itself. Clone recipes
+  /// as needed (excluding last) to ensure they are only used by other recipes
+  /// in the expression.
+  VPExpressionRecipe(ExpressionTypes ExpressionType,
+                     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes);
 
 public:
-  VPSingleDefBundleRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
-      : VPSingleDefBundleRecipe(BundleTypes::ExtendedReduction, {Ext, Red}) {}
-  VPSingleDefBundleRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPSingleDefBundleRecipe(BundleTypes::MulAccumulateReduction,
-                                {Mul, Red}) {}
-  VPSingleDefBundleRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
-                          VPWidenRecipe *Mul, VPReductionRecipe *Red)
-      : VPSingleDefBundleRecipe(BundleTypes::ExtMulAccumulateReduction,
-                                {Ext0, Ext1, Mul, Red}) {}
+  VPExpressionRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::ExtendedReduction, {Ext, Red}) {}
+  VPExpressionRecipe(VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::MulAccReduction, {Mul, Red}) {}
+  VPExpressionRecipe(VPWidenCastRecipe *Ext0, VPWidenCastRecipe *Ext1,
+                     VPWidenRecipe *Mul, VPReductionRecipe *Red)
+      : VPExpressionRecipe(ExpressionTypes::ExtMulAccReduction,
+                           {Ext0, Ext1, Mul, Red}) {}
 
-  ~VPSingleDefBundleRecipe() override {
-    SmallPtrSet<VPRecipeBase *, 4> Seen;
-    for (auto *R : reverse(BundledRecipes))
-      if (Seen.insert(R).second)
-        delete R;
-    for (VPValue *T : BundleLiveInPlaceholders)
+  ~VPExpressionRecipe() override {
+    for (auto *R : reverse(ExpressionRecipes))
+      delete R;
+    for (VPValue *T : LiveInPlaceholders)
       delete T;
   }
 
-  VP_CLASSOF_IMPL(VPDef::VPBundleSC)
+  VP_CLASSOF_IMPL(VPDef::VPExpressionSC)
 
-  VPSingleDefBundleRecipe *clone() override {
-    assert(!BundledRecipes.empty() && "empty bundles should be removed");
-    SmallVector<VPSingleDefRecipe *> NewBundledRecipes;
-    for (auto *R : BundledRecipes)
-      NewBundledRecipes.push_back(R->clone());
-    for (auto *New : NewBundledRecipes) {
-      for (const auto &[Idx, Old] : enumerate(BundledRecipes))
-        New->replaceUsesOfWith(Old, NewBundledRecipes[Idx]);
+  VPExpressionRecipe *clone() override {
+    assert(!ExpressionRecipes.empty() && "empty expressions should be removed");
+    SmallVector<VPSingleDefRecipe *> NewExpressiondRecipes;
+    for (auto *R : ExpressionRecipes)
+      NewExpressiondRecipes.push_back(R->clone());
+    for (auto *New : NewExpressiondRecipes) {
+      for (const auto &[Idx, Old] : enumerate(ExpressionRecipes))
+        New->replaceUsesOfWith(Old, NewExpressiondRecipes[Idx]);
       // Update placeholder operands in the cloned recipe to use the external
-      // operands, to be internalized when the cloned bundle is constructed.
+      // operands, to be internalized when the cloned expression is constructed.
       for (const auto &[Placeholder, OutsideOp] :
-           zip(BundleLiveInPlaceholders, operands()))
+           zip(LiveInPlaceholders, operands()))
         New->replaceUsesOfWith(Placeholder, OutsideOp);
     }
-    return new VPSingleDefBundleRecipe(BundleType, NewBundledRecipes);
+    return new VPExpressionRecipe(ExpressionType, NewExpressiondRecipes);
   }
 
   /// Return the VPValue to use to infer the result type of the recipe.
-  VPValue *getTypeVPValue() const {
+  VPValue *getOperandOfResultType() const {
     unsigned OpIdx =
-        cast<VPReductionRecipe>(BundledRecipes.back())->isConditional() ? 2 : 1;
+        cast<VPReductionRecipe>(ExpressionRecipes.back())->isConditional() ? 2
+                                                                           : 1;
     return getOperand(getNumOperands() - OpIdx);
   }
 
-  /// Insert the bundled recipes back into the VPlan, directly before the
-  /// current recipe. Leaves the bundle recipe empty, which must be removed
-  /// before codegen.
+  /// Insert the recipes of the expression back into the VPlan, directly before
+  /// the current recipe. Leaves the expression recipe empty, which must be
+  /// removed before codegen.
   void unbundle();
 
   /// Method for generating code, must not be called as this recipe is abstract.
@@ -2827,11 +2826,12 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
-  /// Returns true if this bundle contains recipes that may read from or write
-  /// to memory.
+  /// Returns true if this expression contains recipes that may read from or
+  /// write to memory.
   bool mayReadOrWriteMemory() const;
 
-  /// Returns true if this bundle contains recipes that may have side effects.
+  /// Returns true if this expression contains recipes that may have side
+  /// effects.
   bool mayHaveSideEffects() const;
 };
 
