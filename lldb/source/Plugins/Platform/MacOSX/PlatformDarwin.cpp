@@ -1163,7 +1163,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   FileSpec sysroot_spec;
 
   if (target) {
-    auto sysroot_spec_or_err = ResolveSDKPathFromDebugInfo(target);
+    auto sysroot_spec_or_err = ::ResolveSDKPathFromDebugInfo(target);
     if (!sysroot_spec_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
                      sysroot_spec_or_err.takeError(),
