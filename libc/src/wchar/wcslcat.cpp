@@ -29,7 +29,7 @@ LLVM_LIBC_FUNCTION(size_t, wcslcat,
   for (; i < limit && src[i] != L'\0'; ++i) {
     dst[dstlen + i] = src[i];
   }
-  
+
   // appending null terminator if there is room
   if (dstlen + i < dstlen + dstsize)
     dst[dstlen + i] = L'\0';
