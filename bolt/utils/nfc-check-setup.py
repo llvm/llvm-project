@@ -104,7 +104,7 @@ def main():
         sys.exit(e)
 
     # build the current commit
-    print ("NFC-Setup: Building current revision..")
+    print("NFC-Setup: Building current revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
@@ -144,7 +144,7 @@ def main():
     new_ref = get_git_ref_or_rev(source_dir)
 
     # build the previous commit
-    print ("NFC-Setup: Building previous revision..")
+    print("NFC-Setup: Building previous revision..")
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
