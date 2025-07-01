@@ -492,6 +492,9 @@ bb3:
   ret i1 %_0.sroa.0.0
 }
 
+; Out of range scenarios. Check if the cases, that have a value out of range
+; are eliminated and the optimization is performed.
+
 define i1 @range0to15_out_of_range_non_prime(i8 range(i8 0, 16) %f) {
 ; CHECK-LABEL: @range0to15_out_of_range_non_prime(
 ; CHECK-NEXT:  bb3:
@@ -587,6 +590,26 @@ define i1 @negative_range0to15_out_of_range(i8 range(i8 0, 16) %f) {
   i8 7, label %bb2
   i8 14, label %bb2
   i8 150, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @negative_range0to15_all_out_of_range(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @negative_range0to15_all_out_of_range(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    ret i1 false
+;
+  switch i8 %f, label %bb1 [
+  i8 22, label %bb2
+  i8 23, label %bb2
+  i8 30, label %bb2
+  i8 31, label %bb2
   ]
 bb1:
   br label %bb3

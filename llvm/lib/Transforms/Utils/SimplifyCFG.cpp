@@ -6245,9 +6245,9 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
           MinCaseVal = Case;
         AndMask &= Case->getValue();
       }
+      KnownBits Known = computeKnownBits(Condition, DL);
 
-      if (!AndMask.isZero()) {
-        KnownBits Known = computeKnownBits(Condition, DL);
+      if (!AndMask.isZero() && Known.getMaxValue().uge(AndMask)) {
         // Compute the number of bits that are free to vary.
         unsigned FreeBits = Known.countMaxActiveBits() - AndMask.popcount();
         // Compute 2^FreeBits in order to check whether all the possible
