@@ -11,7 +11,7 @@ protected:
 public:
   SummaryContext *getSummaryCtx() const { return SummaryCtx; }
 
-  SummarySerializer(SummaryContext &SummaryCtx) : SummaryCtx(&SummaryCtx){};
+  SummarySerializer(SummaryContext &SummaryCtx) : SummaryCtx(&SummaryCtx) {};
   virtual ~SummarySerializer() = default;
 
   virtual void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
@@ -22,7 +22,7 @@ public:
 class JSONSummarySerializer : public SummarySerializer {
 public:
   JSONSummarySerializer(SummaryContext &SummaryCtx)
-      : SummarySerializer(SummaryCtx){};
+      : SummarySerializer(SummaryCtx) {};
 
   void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
                  raw_ostream &OS) override;
@@ -32,7 +32,7 @@ public:
 class YAMLSummarySerializer : public SummarySerializer {
 public:
   YAMLSummarySerializer(SummaryContext &SummaryCtx)
-      : SummarySerializer(SummaryCtx){};
+      : SummarySerializer(SummaryCtx) {};
 
   void serialize(const std::vector<std::unique_ptr<FunctionSummary>> &,
                  raw_ostream &OS) override;
