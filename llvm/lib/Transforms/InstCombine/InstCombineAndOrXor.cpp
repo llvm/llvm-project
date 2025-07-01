@@ -2367,7 +2367,6 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
                                                  Instruction &I, bool IsAnd,
                                                  bool RHSIsLogical) {
   Instruction::BinaryOps Opcode = IsAnd ? Instruction::And : Instruction::Or;
-
   // LHS bop (X lop Y) --> (LHS bop X) lop Y
   // LHS bop (X bop Y) --> (LHS bop X) bop Y
   if (Value *Res = foldBooleanAndOr(LHS, X, I, IsAnd, /*IsLogical=*/false))
@@ -3666,9 +3665,9 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
   return std::nullopt;
 }
 
-// (A & N) * C + (A & M) * C -> (A & (N + M)) & C
-// This also accepts the equivalent select form of (A & N) * C
-// expressions i.e. !(A & N) ? 0 : N * C)
+/// (A & N) * C + (A & M) * C -> (A & (N + M)) & C
+/// This also accepts the equivalent select form of (A & N) * C
+/// expressions i.e. !(A & N) ? 0 : N * C)
 static Value *foldBitmaskMul(Value *Op0, Value *Op1,
                              InstCombiner::BuilderTy &Builder) {
   auto Decomp1 = matchBitmaskMul(Op1);
@@ -3696,8 +3695,7 @@ static Value *foldBitmaskMul(Value *Op0, Value *Op1,
   return nullptr;
 }
 
-Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS,
-                                        Instruction &I) {
+Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
   if (Value *Res = foldBitmaskMul(LHS, RHS, Builder)) {
     return Res;
   }
@@ -3705,48 +3703,31 @@ Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS,
   return nullptr;
 }
 
-Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS,
-                                               Instruction &I) {
+Value *InstCombinerImpl::reassociateDisjointOr(Value *LHS, Value *RHS) {
 
   Value *X, *Y;
   if (match(RHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
-    if (Value *Res = foldDisjointOr(LHS, X, I)) {
-      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, Y));
-      Disjoint->setIsDisjoint(true);
-      return cast<Value>(Disjoint);
-    }
-    if (Value *Res = foldDisjointOr(LHS, Y, I)) {
-      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, X));
-      Disjoint->setIsDisjoint(true);
-      return cast<Value>(Disjoint);
-    }
+    if (Value *Res = foldDisjointOr(LHS, X))
+      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+    if (Value *Res = foldDisjointOr(LHS, Y))
+      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
   }
 
   if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y))))) {
-    if (Value *Res = foldDisjointOr(X, RHS, I)) {
-      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, Y));
-      Disjoint->setIsDisjoint(true);
-      return cast<Value>(Disjoint);
-    }
-    if (Value *Res = foldDisjointOr(Y, RHS, I)) {
-      auto Disjoint = cast<PossiblyDisjointInst>(Builder.CreateOr(Res, X));
-      Disjoint->setIsDisjoint(true);
-      return cast<Value>(Disjoint);
-    }
+    if (Value *Res = foldDisjointOr(X, RHS))
+      return Builder.CreateOr(Res, Y, "", /*IsDisjoint=*/true);
+    if (Value *Res = foldDisjointOr(Y, RHS))
+      return Builder.CreateOr(Res, X, "", /*IsDisjoint=*/true);
   }
 
   Value *X1, *Y1;
   if (match(LHS, m_OneUse(m_DisjointOr(m_Value(X), m_Value(Y)))) &&
       (match(RHS, m_OneUse(m_DisjointOr(m_Value(X1), m_Value(Y1)))))) {
-    auto TryFold = [this, &I](Value *Op0, Value *Op1, Value *Rem0,
-                              Value *Rem1) -> Value * {
-      if (Value *Res = foldDisjointOr(Op0, Op1, I)) {
-        auto Disjoint =
-            cast<PossiblyDisjointInst>(Builder.CreateOr(Rem0, Rem1));
-        Disjoint->setIsDisjoint(true);
-        auto Disjoint2 =
-            cast<PossiblyDisjointInst>(Builder.CreateOr(Disjoint, Res));
-        return cast<Value>(Disjoint2);
+    auto TryFold = [this](Value *Op0, Value *Op1, Value *Rem0,
+                          Value *Rem1) -> Value * {
+      if (Value *Res = foldDisjointOr(Op0, Op1)) {
+        auto Disjoint = Builder.CreateOr(Rem0, Rem1, "", /*IsDisjoint=*/true);
+        return Builder.CreateOr(Disjoint, Res, "", /*IsDisjoint=*/true);
       }
       return nullptr;
     };
@@ -3851,7 +3832,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (Value *Res = foldBitmaskMul(I.getOperand(0), I.getOperand(1), Builder))
       return replaceInstUsesWith(I, Res);
 
-    if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1), I))
+    if (Value *Res = reassociateDisjointOr(I.getOperand(0), I.getOperand(1)))
       return replaceInstUsesWith(I, Res);
   }
 

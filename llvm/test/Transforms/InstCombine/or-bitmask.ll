@@ -458,10 +458,10 @@ define i32 @unrelated_ops(i32 %in, i32 %in2) {
 ; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp3 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp, %temp3
   ret i32 %out
@@ -474,10 +474,10 @@ define i32 @unrelated_ops1(i32 %in, i32 %in2) {
 ; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp3 = or disjoint i32 %in2, %temp
   %out = or disjoint i32 %temp3, %temp2
   ret i32 %out
@@ -488,14 +488,14 @@ define i32 @unrelated_ops2(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %temp, %in3
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp4 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -506,15 +506,15 @@ define i32 @unrelated_ops3(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN:%.*]], 14
 ; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[TMP2]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TEMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP3]], [[TEMP2]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 2
-  %cmp = icmp eq i32 %1, 0
+  %and0 = and i32 %in, 2
+  %cmp = icmp eq i32 %and0, 0
   %temp = select i1 %cmp, i32 0, i32 144
   %temp3 = or disjoint i32 %temp, %in3
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp4 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -525,14 +525,14 @@ define i32 @unrelated_ops4(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN:%.*]], 14
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i32 [[TMP2]], 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 12
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 12
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %in2, %temp
-  %2 = and i32 %in, 2
-  %cmp = icmp eq i32 %2, 0
+  %and1 = and i32 %in, 2
+  %cmp = icmp eq i32 %and1, 0
   %temp2 = select i1 %cmp, i32 0, i32 144
   %temp4 = or disjoint i32 %temp2, %in3
   %out = or disjoint i32 %temp3, %temp4
@@ -544,15 +544,15 @@ define i32 @unrelated_ops5(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[IN:%.*]], 6
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw nsw i32 [[TMP2]], 72
 ; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 2
-  %cmp = icmp eq i32 %1, 0
+  %and0 = and i32 %in, 2
+  %cmp = icmp eq i32 %and0, 0
   %temp = select i1 %cmp, i32 0, i32 144
   %temp3 = or disjoint i32 %temp, %in3
-  %2 = and i32 %in, 4
-  %cmp2 = icmp eq i32 %2, 0
+  %and1 = and i32 %in, 4
+  %cmp2 = icmp eq i32 %and1, 0
   %temp2 = select i1 %cmp2, i32 0, i32 288
   %temp4 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp3, %temp4
@@ -564,14 +564,14 @@ define i32 @unrelated_ops6(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %in3, %temp
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp4 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -582,14 +582,14 @@ define i32 @unrelated_ops7(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %in3, %temp
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp4 = or disjoint i32 %temp2, %in2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -600,14 +600,14 @@ define i32 @unrelated_ops8(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i32 [[IN3:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %temp, %in3
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp4 = or disjoint i32 %temp2, %in2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -624,11 +624,11 @@ define i32 @unrelated_ops_nocombine(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %temp, %in3
-  %2 = and i32 %in, 7
-  %temp2 = mul nuw nsw i32 %2, 72
+  %and1 = and i32 %in, 7
+  %temp2 = mul nuw nsw i32 %and1, 72
   %temp4 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -645,11 +645,11 @@ define i32 @unrelated_ops_nocombine1(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %temp, %in3
-  %2 = and i32 %in, 12
-  %temp2 = mul nuw nsw i32 %2, 36
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 36
   %temp4 = or disjoint i32 %in2, %temp2
   %out = or disjoint i32 %temp3, %temp4
   ret i32 %out
@@ -663,8 +663,8 @@ define i32 @no_chain(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[IN2:%.*]]
 ; CHECK-NEXT:    ret i32 [[OUT]]
 ;
-  %1 = and i32 %in, 3
-  %temp = mul nuw nsw i32 %1, 72
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
   %temp3 = or disjoint i32 %temp, %in3
   %out = or disjoint i32 %temp3, %in2
   ret i32 %out
