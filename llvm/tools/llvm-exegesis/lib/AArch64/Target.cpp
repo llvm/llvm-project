@@ -127,42 +127,40 @@ static void generateRegisterStackPush(unsigned int RegToPush,
                                       int imm = -16) {
   // STR [X|W]t, [SP, #simm]!: SP is decremented by default 16 bytes
   //                           before the store to maintain 16-bytes alignment.
-  if (AArch64::GPR64RegClass.contains(RegToPush)) {
+  if (AArch64::GPR64RegClass.contains(RegToPush))
     GeneratedCode.push_back(MCInstBuilder(AArch64::STRXpre)
                                 .addReg(AArch64::SP)
                                 .addReg(RegToPush)
                                 .addReg(AArch64::SP)
                                 .addImm(imm));
-  } else if (AArch64::GPR32RegClass.contains(RegToPush)) {
+  else if (AArch64::GPR32RegClass.contains(RegToPush))
     GeneratedCode.push_back(MCInstBuilder(AArch64::STRWpre)
                                 .addReg(AArch64::SP)
                                 .addReg(RegToPush)
                                 .addReg(AArch64::SP)
                                 .addImm(imm));
-  } else {
+  else
     llvm_unreachable("Unsupported register class for stack push");
-  }
 }
 
 static void generateRegisterStackPop(unsigned int RegToPopTo,
                                      std::vector<MCInst> &GeneratedCode,
                                      int imm = 16) {
   // LDR Xt, [SP], #simm: SP is incremented by default 16 bytes after the load.
-  if (AArch64::GPR64RegClass.contains(RegToPopTo)) {
+  if (AArch64::GPR64RegClass.contains(RegToPopTo))
     GeneratedCode.push_back(MCInstBuilder(AArch64::LDRXpost)
                                 .addReg(AArch64::SP)
                                 .addReg(RegToPopTo)
                                 .addReg(AArch64::SP)
                                 .addImm(imm));
-  } else if (AArch64::GPR32RegClass.contains(RegToPopTo)) {
+  else if (AArch64::GPR32RegClass.contains(RegToPopTo))
     GeneratedCode.push_back(MCInstBuilder(AArch64::LDRWpost)
                                 .addReg(AArch64::SP)
                                 .addReg(RegToPopTo)
                                 .addReg(AArch64::SP)
                                 .addImm(imm));
-  } else {
+  else
     llvm_unreachable("Unsupported register class for stack pop");
-  }
 }
 
 void generateSysCall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
@@ -340,12 +338,6 @@ ExegesisAArch64Target::generateMmap(uintptr_t Address, size_t Length,
   // Copy file descriptor location from aux memory into X4
   MmapCode.push_back(
       loadImmediate(AArch64::X4, 64, APInt(64, FileDescriptorAddress))); // fd
-  // Dereference file descriptor into FD argument register
-  // MmapCode.push_back(MCInstBuilder(AArch64::LDRWui)
-  //                        .addReg(AArch64::W4)   // Destination register
-  //                        .addReg(AArch64::X4)   // Base register (address)
-  //                        .addImm(0));           // Offset (-byte words)
-  // FIXME: This is not correct.
   MmapCode.push_back(loadImmediate(AArch64::X5, 64, APInt(64, 0))); // offset
   generateSysCall(SYS_mmap, MmapCode); // SYS_mmap is 222
   return MmapCode;
