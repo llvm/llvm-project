@@ -61,6 +61,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(DefinitionGenerator,
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(InProgressLookupState, LLVMOrcLookupStateRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext,
                                    LLVMOrcThreadSafeContextRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeContext::Lock,
+                                   LLVMOrcThreadSafeContextLockRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ThreadSafeModule, LLVMOrcThreadSafeModuleRef)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(JITTargetMachineBuilder,
                                    LLVMOrcJITTargetMachineBuilderRef)
@@ -736,6 +738,16 @@ LLVMOrcThreadSafeContextGetContext(LLVMOrcThreadSafeContextRef TSCtx) {
 
 void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
   delete unwrap(TSCtx);
+}
+
+LLVMOrcThreadSafeContextLockRef
+LLVMOrcThreadSafeContextGetLock(LLVMOrcThreadSafeContextRef TSCtx) {
+  return wrap(new ThreadSafeContext::Lock(std::move(unwrap(TSCtx)->getLock())));
+}
+
+void LLVMOrcThreadSafeContextReleaseLock(
+    LLVMOrcThreadSafeContextLockRef TSCtxLock) {
+  delete unwrap(TSCtxLock);
 }
 
 LLVMErrorRef

@@ -256,6 +256,9 @@ Changes to the C API
 * Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
   flag on `icmp` instructions.
 
+* Added `LLVMOrcThreadSafeContextGetLock` and `LLVMOrcThreadSafeContextReleaseLock`
+  for acquiring and releasing locks associated with `ThreadSafeContext` instances.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
