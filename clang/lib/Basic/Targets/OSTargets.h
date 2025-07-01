@@ -497,6 +497,7 @@ public:
       this->MCountName = "_mcount";
       break;
     case llvm::Triple::riscv64:
+    case llvm::Triple::loongarch64:
       break;
     }
   }
