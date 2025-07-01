@@ -789,12 +789,12 @@ let WaveSizePredicate = isWave32, mayStore = 0 in {
 let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VReg_64>;
 defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
-} // let OtherPredicates = [HasTransposeLoadF4F6Insts]
+} // End OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
-} // let WaveSizePredicate = isWave32, mayStore = 0
+} // End WaveSizePredicate = isWave32, mayStore = 0
 
-} // let SubtargetPredicate = isGFX1250Plus
+} // End SubtargetPredicate = isGFX1250Plus
 
 let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
@@ -1275,6 +1275,17 @@ class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPa
   (vt (node (DS1Addr1Offset i32:$ptr, i32:$offset))),
   (inst $ptr, Offset:$offset, (i1 0))
 >;
+
+let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus in {
+let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+  def : DSLoadTrPat <DS_LOAD_TR4_B64, v2i32, int_amdgcn_ds_load_tr4_b64>;
+  def : DSLoadTrPat <DS_LOAD_TR6_B96, v3i32, int_amdgcn_ds_load_tr6_b96>;
+} // End OtherPredicates = [HasTransposeLoadF4F6Insts]
+
+  def : DSLoadTrPat <DS_LOAD_TR8_B64, v2i32, int_amdgcn_ds_load_tr8_b64>;
+  foreach vt = [v8i16, v8f16, v8bf16] in
+    def : DSLoadTrPat <DS_LOAD_TR16_B128, vt, int_amdgcn_ds_load_tr16_b128>;
+} // End WaveSizePredicate = isWave32, SubtargetPredicate = isGFX1250Plus
 
 let SubtargetPredicate = HasGFX950Insts in {
   def : DSLoadTrPat <DS_READ_B64_TR_B4,  v2i32, int_amdgcn_ds_read_tr4_b64>;

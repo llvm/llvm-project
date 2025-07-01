@@ -487,7 +487,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     assert(!ResAttrs.IsROV &&
            "Rasterizer order views not implemented for SPIR-V yet");
 
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     if (!ResAttrs.RawBuffer) {
       // convert element type
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);

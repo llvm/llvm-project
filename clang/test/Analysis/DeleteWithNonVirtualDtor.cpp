@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.cplusplus.DeleteWithNonVirtualDtor -std=c++11 -verify -analyzer-output=text %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.DeleteWithNonVirtualDtor -std=c++11 -verify -analyzer-output=text %s
 
 struct Virtual {
   virtual ~Virtual() {}

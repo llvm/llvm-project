@@ -169,8 +169,10 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
 
-static cl::opt<bool> KeyInstructionsAreStmts("dwarf-use-key-instructions",
-                                             cl::Hidden, cl::init(false));
+/// Set to false to ignore Key Instructions metadata.
+static cl::opt<bool> KeyInstructionsAreStmts(
+    "dwarf-use-key-instructions", cl::Hidden, cl::init(true),
+    cl::desc("Set to false to ignore Key Instructions metadata"));
 
 static constexpr unsigned ULEB128PadSize = 4;
 
@@ -2077,8 +2079,17 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  // There may be a mixture of scopes using and not using Key Instructions.
+  // Not-Key-Instructions functions inlined into Key Instructions functions
+  // should use not-key is_stmt handling. Key Instructions functions inlined
+  // into Not-Key-Instructions functions should use Key Instructions is_stmt
+  // handling.
+  bool ScopeUsesKeyInstructions =
+      KeyInstructionsAreStmts && DL &&
+      DL->getScope()->getSubprogram()->getKeyInstructionsEnabled();
+
   bool IsKey = false;
-  if (KeyInstructionsAreStmts && DL && DL.getLine())
+  if (ScopeUsesKeyInstructions && DL && DL.getLine())
     IsKey = KeyInstructions.contains(MI);
 
   if (!DL && MI == PrologEndLoc) {
@@ -2158,7 +2169,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrologEndLoc = nullptr;
   }
 
-  if (KeyInstructionsAreStmts) {
+  if (ScopeUsesKeyInstructions) {
     if (IsKey)
       Flags |= DWARF2_FLAG_IS_STMT;
   } else {
@@ -2651,10 +2662,12 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
+  // Run both `findForceIsStmtInstrs` and `computeKeyInstructions` because
+  // Not-Key-Instructions functions may be inlined into Key Instructions
+  // functions and vice versa.
   if (KeyInstructionsAreStmts)
     computeKeyInstructions(MF);
-  else
-    findForceIsStmtInstrs(MF);
+  findForceIsStmtInstrs(MF);
 }
 
 unsigned

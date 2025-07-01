@@ -180,7 +180,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
     }
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Token:
       OS << "Tok:" << Tok.Tok;
