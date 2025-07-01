@@ -445,9 +445,9 @@ struct AssociateOpConversion
              !mlir::isa<fir::BaseBoxType>(assocType)) ||
             ((mlir::isa<fir::BoxCharType>(sourceVar.getType()) &&
               !mlir::isa<fir::BoxCharType>(assocType)))) {
-          sourceVar =
-              fir::BoxAddrOp::create(builder, loc, assocType, sourceVar);
-        } else {
+          sourceVar = builder.create<fir::BoxAddrOp>(loc, assocType, sourceVar);
+        } else if (!mlir::isa<fir::ReferenceType>(sourceVar.getType()) ||
+                   !mlir::isa<fir::BoxCharType>(assocType)) {
           sourceVar = builder.createConvert(loc, assocType, sourceVar);
         }
         return sourceVar;
