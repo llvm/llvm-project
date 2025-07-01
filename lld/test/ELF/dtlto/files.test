@@ -1,7 +1,7 @@
 # REQUIRES: x86
 
-## Check that the LLD options --save-temps, --thinlto-emit-index-files,
-## and --thinlto-emit-imports-files for DTLTO.
+## Test that the LLD options --save-temps, --thinlto-emit-index-files,
+## and --thinlto-emit-imports-files function correctly with DTLTO.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
