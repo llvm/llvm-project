@@ -8,12 +8,22 @@
 using namespace omptest;
 using OAE = omptest::OmptAssertEvent;
 using OS = omptest::ObserveState;
-using OSA = omptest::OmptSequencedAsserter;
 
-TEST(DefaultSequencedAsserter, DefaultState) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
+/// SequencedAsserter test-fixture class to avoid code duplication among tests.
+class OmptSequencedAsserterTest : public testing::Test {
+protected:
+  OmptSequencedAsserterTest() {
+    // Construct default sequenced asserter
+    SeqAsserter = std::make_unique<omptest::OmptSequencedAsserter>();
 
+    // Silence all potential log prints
+    SeqAsserter->getLog()->setLoggingLevel(logging::Level::SILENT);
+  }
+
+  std::unique_ptr<omptest::OmptSequencedAsserter> SeqAsserter;
+};
+
+TEST_F(OmptSequencedAsserterTest, DefaultState) {
   // Assertion should neither start as 'deactivated' nor 'suspended'
   ASSERT_EQ(SeqAsserter->isActive(), true);
   ASSERT_EQ(SeqAsserter->AssertionSuspended, false);
@@ -40,10 +50,7 @@ TEST(DefaultSequencedAsserter, DefaultState) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::pass);
 }
 
-TEST(DefaultSequencedAsserter, IgnoreNotificationsWhenEmpty) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
-
+TEST_F(OmptSequencedAsserterTest, IgnoreNotificationsWhenEmpty) {
   // ParallelBegin events are suppressed by default
   auto SuppressedEvent = OAE::ParallelBegin(
       /*Name=*/"ParBegin", /*Group=*/"", /*Expected=*/OS::always,
@@ -68,10 +75,7 @@ TEST(DefaultSequencedAsserter, IgnoreNotificationsWhenEmpty) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::pass);
 }
 
-TEST(SequencedAsserter, IgnoreNotificationsWhileDeactivated) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
-
+TEST_F(OmptSequencedAsserterTest, IgnoreNotificationsWhileDeactivated) {
   auto ExpectedEvent = OAE::DeviceUnload(
       /*Name=*/"DevUnload", /*Group=*/"", /*Expected=*/OS::always);
   SeqAsserter->insert(std::move(ExpectedEvent));
@@ -105,9 +109,7 @@ TEST(SequencedAsserter, IgnoreNotificationsWhileDeactivated) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::pass);
 }
 
-TEST(SequencedAsserter, AddEvent) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
+TEST_F(OmptSequencedAsserterTest, AddEvent) {
   ASSERT_EQ(SeqAsserter->getRemainingEventCount(), 0);
   auto ExpectedEvent = OAE::DeviceFinalize(
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::always,
@@ -121,9 +123,7 @@ TEST(SequencedAsserter, AddEvent) {
   ASSERT_EQ(SeqAsserter->getState(), AssertState::pass);
 }
 
-TEST(SequencedAsserter, AddEventIgnoreSuppressed) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
+TEST_F(OmptSequencedAsserterTest, AddEventIgnoreSuppressed) {
   auto ExpectedEvent = OAE::DeviceFinalize(
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::always,
       /*DeviceNum=*/7);
@@ -141,9 +141,7 @@ TEST(SequencedAsserter, AddEventIgnoreSuppressed) {
   ASSERT_EQ(SeqAsserter->getState(), AssertState::pass);
 }
 
-TEST(SequencedAsserter, AddEventObservePass) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
+TEST_F(OmptSequencedAsserterTest, AddEventObservePass) {
   auto ExpectedEvent = OAE::DeviceFinalize(
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::always,
       /*DeviceNum=*/7);
@@ -158,9 +156,7 @@ TEST(SequencedAsserter, AddEventObservePass) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::pass);
 }
 
-TEST(SequencedAsserter, AddEventObserveFail) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
+TEST_F(OmptSequencedAsserterTest, AddEventObserveFail) {
   auto ExpectedEvent = OAE::DeviceFinalize(
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::always,
       /*DeviceNum=*/7);
@@ -171,9 +167,6 @@ TEST(SequencedAsserter, AddEventObserveFail) {
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::always,
       /*DeviceNum=*/23);
 
-  // Avoid expected log prints
-  SeqAsserter->getLog()->setLoggingLevel(logging::Level::SILENT);
-
   SeqAsserter->notify(std::move(ObservedEvent));
   ASSERT_EQ(SeqAsserter->getNotificationCount(), 1);
   // Observed and expected event do not match: Fail
@@ -181,9 +174,7 @@ TEST(SequencedAsserter, AddEventObserveFail) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::fail);
 }
 
-TEST(SequencedAsserter, AddEventObserveDifferentType) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
+TEST_F(OmptSequencedAsserterTest, AddEventObserveDifferentType) {
   auto ExpectedEvent = OAE::DeviceUnload(
       /*Name=*/"DevUnload", /*Group=*/"", /*Expected=*/OS::always);
   SeqAsserter->insert(std::move(ExpectedEvent));
@@ -192,9 +183,6 @@ TEST(SequencedAsserter, AddEventObserveDifferentType) {
       /*Name=*/"DevFini", /*Group=*/"", /*Expected=*/OS::always,
       /*DeviceNum=*/7);
 
-  // Avoid expected log prints
-  SeqAsserter->getLog()->setLoggingLevel(logging::Level::SILENT);
-
   SeqAsserter->notify(std::move(ObservedEvent));
   ASSERT_EQ(SeqAsserter->getNotificationCount(), 1);
   // Observed and expected event do not match: Fail
@@ -202,13 +190,10 @@ TEST(SequencedAsserter, AddEventObserveDifferentType) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::fail);
 }
 
-TEST(SequencedAsserter, CheckTargetGroupNoEffect) {
+TEST_F(OmptSequencedAsserterTest, CheckTargetGroupNoEffect) {
   // Situation: Groups are designed to be used as an indicator -WITHIN- target
   // regions. Hence, comparing two target regions w.r.t. their groups has no
   // effect on pass or fail.
-
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
 
   auto ExpectedEvent = OAE::Target(
       /*Name=*/"Target", /*Group=*/"MyTargetGroup", /*Expected=*/OS::always,
@@ -255,10 +240,7 @@ TEST(SequencedAsserter, CheckTargetGroupNoEffect) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::pass);
 }
 
-TEST(SequencedAsserter, CheckSyncPoint) {
-  // Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
-
+TEST_F(OmptSequencedAsserterTest, CheckSyncPoint) {
   auto ExpectedEvent = OAE::Target(
       /*Name=*/"Target", /*Group=*/"MyTargetGroup", /*Expected=*/OS::always,
       /*Kind=*/TARGET, /*Endpoint=*/BEGIN,
@@ -295,9 +277,6 @@ TEST(SequencedAsserter, CheckSyncPoint) {
   SeqAsserter->insert(std::move(AnotherExpectedEvent));
   ASSERT_EQ(SeqAsserter->getRemainingEventCount(), 1);
 
-  // Avoid expected log prints
-  SeqAsserter->getLog()->setLoggingLevel(logging::Level::SILENT);
-
   // Remaining events present: SyncPoint "fails"
   SeqAsserter->notify(OAE::AssertionSyncPoint(
       /*Name=*/"", /*Group=*/"", /*Expected=*/OS::always,
@@ -305,10 +284,7 @@ TEST(SequencedAsserter, CheckSyncPoint) {
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::fail);
 }
 
-TEST(SequencedAsserter, CheckExcessNotify) {
-  //  Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
-
+TEST_F(OmptSequencedAsserterTest, CheckExcessNotify) {
   auto ExpectedEvent = OAE::Target(
       /*Name=*/"Target", /*Group=*/"MyTargetGroup", /*Expected=*/OS::always,
       /*Kind=*/TARGET, /*Endpoint=*/BEGIN,
@@ -335,19 +311,13 @@ TEST(SequencedAsserter, CheckExcessNotify) {
       /*Kind=*/TARGET, /*Endpoint=*/BEGIN, /*DeviceNum=*/7,
       /*TaskData=*/nullptr, /*TargetId=*/23, /*CodeptrRA=*/nullptr);
 
-  // Avoid expected log prints
-  SeqAsserter->getLog()->setLoggingLevel(logging::Level::SILENT);
-
   // No more events expected: notify "fails"
   SeqAsserter->notify(std::move(AnotherObservedEvent));
   ASSERT_EQ(SeqAsserter->getNotificationCount(), 2);
   ASSERT_EQ(SeqAsserter->checkState(), AssertState::fail);
 }
 
-TEST(SequencedAsserter, CheckSuspend) {
-  //  Construct default sequenced asserter
-  auto SeqAsserter = std::make_unique<OmptSequencedAsserter>();
-
+TEST_F(OmptSequencedAsserterTest, CheckSuspend) {
   SeqAsserter->insert(OAE::AssertionSuspend(
       /*Name=*/"", /*Group=*/"", /*Expected=*/OS::never));
   ASSERT_EQ(SeqAsserter->Events.empty(), false);
