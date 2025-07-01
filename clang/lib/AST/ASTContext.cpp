@@ -3204,8 +3204,8 @@ CXXOperatorSourceInfo *
 ASTContext::getCXXOperatorSourceInfo(SourceRange R) const {
   auto *TInfo = (CXXOperatorSourceInfo *)BumpAlloc.Allocate(
       sizeof(CXXOperatorSourceInfo), 8);
-  TInfo->BeginOpNameLoc = R.getBegin().getRawEncoding();
-  TInfo->EndOpNameLoc = R.getEnd().getRawEncoding();
+  TInfo->BeginOpNameLoc = R.getBegin();
+  TInfo->EndOpNameLoc = R.getEnd();
   return TInfo;
 }
 

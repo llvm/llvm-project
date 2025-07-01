@@ -703,8 +703,7 @@ class DeclarationNameLoc {
 
   // The location (if any) of the operator keyword is stored elsewhere.
   struct CXXOpName {
-    SourceLocation BeginOpNameLoc;
-    SourceLocation EndOpNameLoc;
+    CXXOperatorSourceInfo* OInfo;
   };
 
   // The location (if any) of the operator keyword is stored elsewhere.
@@ -723,12 +722,6 @@ class DeclarationNameLoc {
   };
 
   void setNamedTypeLoc(TypeSourceInfo *TInfo) { NamedType.TInfo = TInfo; }
-
-  void setCXXOperatorNameRange(SourceRange Range) {
-    CXXOperatorName.BeginOpNameLoc = Range.getBegin();
-    CXXOperatorName.EndOpNameLoc = Range.getEnd();
-  }
-
 
   void setCXXLiteralOperatorNameLoc(SourceLocation Loc) {
     CXXLiteralOperatorName.OpNameLoc = Loc;
@@ -755,7 +748,7 @@ public:
   SourceLocation getCXXOperatorNameEndLoc() const {
     if (!CXXOperatorName.OInfo)
       return {};
-    return CXXOperatorName.OInfo->EndOpNameLoc);
+    return CXXOperatorName.OInfo->EndOpNameLoc;
   }
 
   /// Return the range of the operator name (without the operator keyword).
