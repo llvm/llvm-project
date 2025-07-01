@@ -458,7 +458,7 @@ def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
 //===----------------------------------------------------------------------===//
 
 def BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
-  let summary = "Represents a bit field info";
+  let summary = "Represents info for a bit-field member";
   let description = [{
     Holds the following information about bitfields: name, storage type, size
     and position in the storage, and signedness.

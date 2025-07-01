@@ -1674,7 +1674,7 @@ def GetGlobalOp : CIR_Op<"get_global",
 //===----------------------------------------------------------------------===//
 
 def GetBitfieldOp : CIR_Op<"get_bitfield"> {
-  let summary = "Get a bitfield";
+  let summary = "Get the information for a bitfield member";
   let description = [{
     The `cir.get_bitfield` operation provides a load-like access to
     a bit field of a record.
@@ -1688,8 +1688,8 @@ def GetBitfieldOp : CIR_Op<"get_bitfield"> {
 
     Example:
     Suppose we have a struct with multiple bitfields stored in
-    different storages. The `cir.get_bitfield` operation gets the value
-    of the bitfield
+    different members. The `cir.get_bitfield` operation gets the value
+    of the bitfield.
     ```C++
     typedef struct {
       int a : 4;

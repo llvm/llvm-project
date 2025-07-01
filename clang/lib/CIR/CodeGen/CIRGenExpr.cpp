@@ -335,9 +335,9 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
 
   assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 
-  mlir::Value field = builder.createGetBitfield(getLoc(loc), resLTy, ptr.getPointer(),
-                                         ptr.getElementType(), info,
-                                         lv.isVolatile(), false);
+  mlir::Value field = builder.createGetBitfield(
+      getLoc(loc), resLTy, ptr.getPointer(), ptr.getElementType(), info,
+      lv.isVolatile(), false);
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
