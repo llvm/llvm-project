@@ -1133,7 +1133,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadata(bool ModuleLevel) {
     ++NumMDRecordLoaded;
     if (Expected<unsigned> MaybeCode =
             Stream.readRecord(Entry.ID, Record, &Blob)) {
-      // Crashes called from here!
       if (Error Err = parseOneMetadata(Record, MaybeCode.get(), Placeholders,
                                        Blob, NextMetadataNo))
         return Err;
@@ -1320,7 +1319,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     unsigned Size = Record.size();
     NamedMDNode *NMD = TheModule.getOrInsertNamedMetadata(Name);
     for (unsigned i = 0; i != Size; ++i) {
-      // Crashes here!
       MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[i]);
       if (!MD)
         return error("Invalid named metadata: expect fwd ref to MDNode");
@@ -2251,8 +2249,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool IsArtificial = Record[0] & 2;
     std::optional<unsigned> CoroSuspendIdx;
     if (Record.size() > 6) {
-      unsigned RawSuspendIdx = Record[6];
-      if (RawSuspendIdx != std::numeric_limits<unsigned>::max()) {
+      uint64_t RawSuspendIdx = Record[6];
+      if (RawSuspendIdx != std::numeric_limits<uint64_t>::max()) {
         if (RawSuspendIdx > (uint64_t)std::numeric_limits<unsigned>::max())
           return error("CoroSuspendIdx value is too large");
         CoroSuspendIdx = RawSuspendIdx;

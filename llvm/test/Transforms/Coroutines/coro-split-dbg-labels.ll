@@ -85,7 +85,7 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 ; CHECK: ![[DESTROY_1]] = !DILabel(scope: !{{[0-9]+}}, name: "__coro_resume_1", file: !{{[0-9]*}}, line: 14, column: 6, isArtificial: true, coroSuspendIdx: 1)
 
 ; DWARF:        {{.*}}DW_TAG_label
-; DWARF-LABEL:   DW_AT_name ("__coro_resume_0")
+; DWARF-NEXT:    DW_AT_name ("__coro_resume_0")
 ; DWARF-NEXT:    DW_AT_decl_file
 ; DWARF-NEXT:    DW_AT_decl_line    (12)
 ; DWARF-NEXT:    DW_AT_decl_column  (6)

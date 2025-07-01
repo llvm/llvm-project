@@ -6983,9 +6983,12 @@ present in. The ``line:`` and ``column:`` field are the source line and column
 within the file where the label is declared.
 
 Furthermore, a label can be marked as artificial, i.e. compiler-generated,
-using ``isArtificial:``. Such artitificial labels are generated, e.g., by
+using ``isArtificial:``. Such artificial labels are generated, e.g., by
 the ``CoroSplit`` pass. In addition, the ``CoroSplit`` pass also uses the
 ``coroSuspendIdx:`` field to identify the coroutine suspend points.
+
+``scope:``, ``name:``, ``file:`` and ``line:`` are mandatory. The remaining
+fields are optional.
 
 .. code-block:: text
 

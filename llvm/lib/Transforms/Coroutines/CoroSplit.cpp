@@ -1483,7 +1483,7 @@ private:
     DISubprogram *DIS = F.getSubprogram();
     // If there is no DISubprogram for F, it implies the function is compiled
     // without debug info. So we also don't generate debug info for the
-    // suspension points, either.
+    // suspension points.
     bool AddDebugLabels =
         (DIS && DIS->getUnit() &&
          (DIS->getUnit()->getEmissionKind() ==
@@ -1552,7 +1552,7 @@ private:
       //     br label %resume.0.landing
       //
       //  resume.0: ; <--- jump from the switch in the resume.entry
-      //     XXX: label
+      //        #dbg_label(...)  ; <--- artificial label for debuggers
       //     %0 = tail call i8 @llvm.coro.suspend(token none, i1 false)
       //     br label %resume.0.landing
       //
