@@ -507,10 +507,10 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 /// In other words, it checks for the following pattern:
 ///
 /// loop:
-///   %L = phi [_, %entry], [%L.next, %loop]
-///   %R = phi [_, %entry], [%R.next, %loop]
+///   %P1 = phi [_, %entry], [%P1.next, %loop]
+///   %P2 = phi [_, %entry], [%P2.next, %loop]
 ///   ...
-///   %xor = xor (CastOrSelf %L), (CastOrSelf %R)
+///   %xor = xor (CastOrSelf %P1), (CastOrSelf %P2)
 ///
 /// where %xor is in the use-def chain of \p SI's condition.
 static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
