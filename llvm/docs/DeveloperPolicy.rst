@@ -57,20 +57,19 @@ one of the `pr-subscribers-* <https://github.com/orgs/llvm/teams?query=pr-subscr
 GitHub teams. This `mapping <https://github.com/llvm/llvm-project/blob/main/.github/new-prs-labeler.yml>`_
 documents the paths that trigger notifications for each of the listed teams.
 
-Missing features and bugs are tracked through our `GitHub issue tracker <https://github.com/llvm/llvm-project/issues>`_
-and assigned labels. You can subscribe for notification for specific components
-by joining
-one of the `issue-subscribers-*
+Missing features and bugs are tracked through our `GitHub issue tracker
+<https://github.com/llvm/llvm-project/issues>`_. You can subscribe for
+notification for specific components by joining one of the `issue-subscribers-*
 <https://github.com/orgs/llvm/teams?query=issue-subscribers>`_ teams. You may
 also subscribe to the `llvm-bugs
 <http://lists.llvm.org/mailman/listinfo/llvm-bugs>`_ email list to subscribe to
 the firehose of all issue notifications, which some community members use to
 perform custom filtering.
 
-Beyond the main formal communication channels, LLVM has a Discord server for
-real-time chat communication, as well as a community calendar with many regular
-workgroup video calls and office hours. See :doc:`GettingInvolved` for more
-information on other ways to engage with the community.
+Beyond the asynchronous written communication channels, LLVM has a Discord
+server for real-time chat communication, as well as a community calendar with
+many regular workgroup video calls and office hours. See :doc:`GettingInvolved`
+for more information on other ways to engage with the community.
 
 .. _patch:
 
@@ -93,8 +92,10 @@ Here are some tips to enable a successful code review:
   code you want to modify, and add ``@username`` to a PR comment to notify them
   of your PR if you are unable to add reviewers yourself due to GitHub permissions.
 
-* To avoid precommit CI failures due to merge conflicts, base your patches on a recent commit from ``main``. If you want to make changes to a release branch, land
-  a change in ``main`` first and ask a release manager to backport it.
+* To avoid precommit CI failures due to merge conflicts, base your patches on a
+  recent commit from ``main``. If you want to make changes to a release branch,
+  land a change in ``main`` first and then follow the
+  :ref:`backporting instructions <backporting>`.
 
 See :doc:`CodeReview` for more info on what to expect.
 
@@ -173,7 +174,7 @@ maintainer. However, we are looking for people who can commit to:
 
 * engaging in their responsibilities the majority of the days in a month,
 * ensuring that they, and the community members they interact with, abide by the
-  LLVM Community Code of Conduct, and
+  :ref:`LLVM Community Code of Conduct`, and
 * performing these duties for at least three months.
 
 We recognize that priorities shift, job changes happen, burnout is real,
@@ -231,6 +232,12 @@ features added.  Some tips for getting your testcase approved:
   `mlir/utils/generate-test-checks.py <https://github.com/llvm/llvm-project/blob/main/mlir/utils/generate-test-checks.py>`_
   and `llvm/utils/update_llc_test_checks.py <https://github.com/llvm/llvm-project/blob/main/llvm/utils/update_llc_test_checks.py>`_
 
+* Some subprojects such as ``clang`` and ``clangd`` have project specific
+  testing tools, like the ``clang -verify`` flag (`docs
+  <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_)
+  and the ``clangd -lit-test``
+  flag, which are preferred over FileCheck.
+
 * Changes to libraries, such as Support, which are not directly observable
   through tool invocations, are often best tested with unit tests. Unit tests
   are located under the ``unittests`` subdirectory of each subproject.
@@ -245,10 +252,10 @@ features added.  Some tips for getting your testcase approved:
   documentation, etc. Instead, add sufficient comments to the test to provide
   the context behind such links.
 
-Note that ``llvm/test`` and ``clang/test`` are designed for regression and
-small feature tests only. More extensive test cases (e.g., entire applications,
-benchmarks, etc) should be added to the
-`llvm-test-suite <https://github.com/llvm/llvm-test-suite>`_ repository.  The
+As a project, we prefer to separate tests into small in-tree tests, and large
+out-of-tree integration tests. More extensive integration test cases (e.g.,
+entire applications, benchmarks, etc) should be added to the `llvm-test-suite
+<https://github.com/llvm/llvm-test-suite>`_ repository.  The
 ``llvm-test-suite`` repository is for integration and application testing
 (correctness, performance, etc) testing, not feature or regression testing. It
 also serves to separate out third party code that falls under a different
