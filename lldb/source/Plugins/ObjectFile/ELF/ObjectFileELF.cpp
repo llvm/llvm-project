@@ -2932,6 +2932,7 @@ unsigned ObjectFileELF::ApplyRelocations(
       case llvm::ELF::EM_AARCH64:
         switch (reloc_type(rel)) {
         case R_AARCH64_ABS64:
+        case R_AARCH64_TLS_DTPREL64:
           ApplyELF64ABS64Relocation(symtab, rel, debug_data, rel_section);
           break;
         case R_AARCH64_ABS32:

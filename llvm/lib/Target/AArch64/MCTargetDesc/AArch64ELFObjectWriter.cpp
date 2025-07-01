@@ -232,8 +232,11 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       }
       if (RefKind == AArch64::S_AUTH || RefKind == AArch64::S_AUTHADDR)
         return ELF::R_AARCH64_AUTH_ABS64;
+      if (RefKind == AArch64::S_DTPREL) {
+        return ELF::R_AARCH64_TLS_DTPREL64;
       if (RefKind == AArch64::S_FUNCINIT)
         return ELF::R_AARCH64_FUNCINIT64;
+      }
       return ELF::R_AARCH64_ABS64;
     }
     case AArch64::fixup_aarch64_add_imm12:
@@ -448,6 +451,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
         return R_CLS(MOVW_PREL_G0);
       if (RefKind == AArch64::S_PREL_G0_NC)
         return R_CLS(MOVW_PREL_G0_NC);
+      if (RefKind == AArch64::S_DTPREL)
+        return ELF::R_AARCH64_TLS_DTPREL64;
       if (RefKind == AArch64::S_DTPREL_G2)
         return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G2;
       if (RefKind == AArch64::S_DTPREL_G1)

@@ -40,6 +40,7 @@ const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64::S_GOT, "GOT"},
     {AArch64::S_GOTPCREL, "GOTPCREL"},
     {AArch64::S_PLT, "PLT"},
+    {AArch64::S_DTPREL, "DTPREL"},
     {AArch64::S_FUNCINIT, "FUNCINIT"},
 };
 
@@ -76,6 +77,7 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   case AArch64::S_PREL_G1_NC:          return ":prel_g1_nc:";
   case AArch64::S_PREL_G0:             return ":prel_g0:";
   case AArch64::S_PREL_G0_NC:          return ":prel_g0_nc:";
+  case AArch64::S_DTPREL:              return ":dtprel:";
   case AArch64::S_DTPREL_G2:           return ":dtprel_g2:";
   case AArch64::S_DTPREL_G1:           return ":dtprel_g1:";
   case AArch64::S_DTPREL_G1_NC:        return ":dtprel_g1_nc:";
