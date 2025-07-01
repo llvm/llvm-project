@@ -2212,9 +2212,9 @@ public:
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
-    auto *R = new VPReductionPHIRecipe(cast<PHINode>(getUnderlyingInstr()),
-                                       RdxDesc, *getOperand(0), IsInLoop,
-                                       IsOrdered, VFScaleFactor);
+    auto *R = new VPReductionPHIRecipe(
+        dyn_cast_or_null<PHINode>(getUnderlyingValue()), RdxDesc,
+        *getOperand(0), IsInLoop, IsOrdered, VFScaleFactor);
     R->addOperand(getBackedgeValue());
     return R;
   }
