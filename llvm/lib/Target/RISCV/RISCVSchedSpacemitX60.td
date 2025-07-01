@@ -683,22 +683,14 @@ foreach mx = ["M1", "M2", "M4", "M8"] in {
     }
 
     defvar FlatLat = SMX60GetFlatLatency<mx>.c;
-    defvar VFALUMulLat = !cond(
-      !eq(sew, 64) : FlatLat,
-      true : ArithLat
-    );
-    let Latency = VFALUMulLat in {
+    let Latency = !if(!eq(sew, 64), FlatLat, ArithLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFALUV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulV",  [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulF",  [SMX60_VFP], mx, sew, IsWorstCase>;
     }
 
     // TODO: for some reason, the following cond is not working, and always use FlatLat
-    defvar VFMulAddLat = !cond(
-      !eq(sew, 64) : SMX60GetComplexFPLatency<mx>.c,
-      true : FlatLat
-    );
-    let Latency = VFMulAddLat in {
+    let Latency = !if(!eq(sew, 64), SMX60GetComplexFPLatency<mx>.c, FlatLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddV", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFMulAddF", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
@@ -764,12 +756,7 @@ foreach mx = SchedMxListFW in {
 
     // Pattern for vfwmul.vv, vfwmul.vf: e16 = 4/4/4/6/8. We use 4/4/5/8 as approximation
     // TODO: e32m4 = 8, but it's set to 5 here
-    defvar VFWMulLat = !cond(
-      !eq(sew, 32) : SMX60GetFlatLatency<mx>.c,
-      true : SMX60GetWideningLatency<mx>.c
-    );
-
-    let Latency = VFWMulLat in {
+    let Latency = !if(!eq(sew, 32), SMX60GetFlatLatency<mx>.c, SMX60GetWideningLatency<mx>.c) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulV", [SMX60_VFP], mx, sew, IsWorstCase>;
       defm "" : LMULSEWWriteResMXSEW<"WriteVFWMulF", [SMX60_VFP], mx, sew, IsWorstCase>;
     }
@@ -1050,11 +1037,7 @@ foreach mx = ["M2", "M4", "M8"] in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherVV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
-    defvar GatherEI16Lat = !cond(
-      !eq(sew, 8) : !mul(ExpLat, 2),
-      true : ExpLat
-    );
-    let Latency = GatherEI16Lat in {
+    let Latency = !if(!eq(sew, 8), !mul(ExpLat, 2), ExpLat) in {
       defm "" : LMULSEWWriteResMXSEW<"WriteVRGatherEI16VV", [SMX60_VIEU], mx, sew, IsWorstCaseSEW>;
     }
 
