@@ -52,7 +52,7 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
       "Number of continuous blocks to load">: $array_length,
     DefaultValuedParameter<
       "BoolAttr",
-      "BoolAttr::get($_ctxt, 1)",
+      "BoolAttr::get($_ctxt, true)",
       "Checking the out of boundary access">: $boundary_check
   );
 
