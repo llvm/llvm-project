@@ -561,6 +561,9 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
                                    cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
         HandledUncountableEarlyExit = true;
+        if (Plan.shouldEarlyExitContinueInScalarLoop())
+          for (VPRecipeBase &R : EB->phis())
+            cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
       } else {
         for (VPRecipeBase &R : EB->phis())
           cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
