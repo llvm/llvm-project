@@ -37,6 +37,7 @@ class BufferizationState;
 namespace linalg {
 
 class LinalgOp;
+enum class WinogradConv2DFmr : uint32_t;
 
 //===----------------------------------------------------------------------===//
 // Utils.
@@ -854,17 +855,23 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 /// to work (these are checked by the vectorizer itself).
 bool hasVectorizationImpl(Operation *);
 
-/// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
-/// must match the rank of the iteration space of the operation and the sizes
-/// must be smaller or equal than their counterpart interation space sizes, if
-/// static. `inputVectorShapes` also allows the vectorization of operations with
-/// dynamic shapes.
-LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
-                        ArrayRef<int64_t> inputVectorSizes = {},
-                        ArrayRef<bool> inputScalableVecDims = {},
-                        bool vectorizeNDExtract = false,
-                        bool flatten1DDepthwiseConv = false);
+/// Transformation information returned after vectorizing.
+struct VectorizationResult {
+  /// Results of the vectorization transform to replace the original operation.
+  SmallVector<Value> replacements;
+};
+/// Returns a `VectorizationResult` containing the results of the vectorized op,
+/// or failure if the transformation fails. If provided, `inputVectorSizes` are
+/// used to vectorize this operation. `inputVectorSizes` must match the rank of
+/// the iteration space of the operation and the input vector sizes must be
+/// greater than or equal to their counterpart iteration space sizes, if static.
+/// `inputVectorShapes` also allows the vectorization of operations with dynamic
+/// shapes.
+FailureOr<VectorizationResult>
+vectorize(RewriterBase &rewriter, Operation *op,
+          ArrayRef<int64_t> inputVectorSizes = {},
+          ArrayRef<bool> inputScalableVecDims = {},
+          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -1420,8 +1427,8 @@ FailureOr<Operation *> transposeBatchMatmul(RewriterBase &rewriter,
 /// F(m x m, r x r). m is the dimension size of output and r is the dimension
 /// size of filter.
 FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
-                                      linalg::Conv2DNhwcFhwcOp op, int64_t m,
-                                      int64_t r);
+                                      linalg::Conv2DNhwcFhwcOp op,
+                                      WinogradConv2DFmr fmr);
 
 /// Rewrite linalg.winograd_filter_transform. The data layout of the filter is
 /// FHWC. The transformation matrix is 2-dimension. We need to extract H x W
@@ -1962,8 +1969,8 @@ void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
                                      const ControlBlockPackMatmulFn &controlFn);
 
 /// Patterns to apply Winograd Conv2D algorithm F(m x m, r x r).
-void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
-                                    int64_t r);
+void populateWinogradConv2DPatterns(RewritePatternSet &patterns,
+                                    WinogradConv2DFmr fmr);
 
 /// Patterns to decompose Winograd operators.
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
@@ -1977,10 +1984,15 @@ void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);
 /// convert to a `linalg.dot`.
 void populateContractionOpRankReducingPatterns(RewritePatternSet &patterns);
 
+/// Function type which is used to control folding operations like `tensor.pad`
+/// and `tensor.extract_slice` into linalg.pack/unpack ops.
+using ControlFoldIntoPackUnpackFn = std::function<bool(OpOperand *opOperand)>;
 /// Populates `patterns` with patterns that fold operations like `tensor.pad`
 /// and `tensor.extract_slice` into `tensor.pack` and `tensor.unpack` operations
 /// respectively.
-void populateFoldIntoPackAndUnpackPatterns(RewritePatternSet &patterns);
+void populateFoldIntoPackAndUnpackPatterns(
+    RewritePatternSet &patterns,
+    const ControlFoldIntoPackUnpackFn &controlFn = nullptr);
 
 /// Populates `patterns` with patterns that fold operations like `linalg.pack`
 /// and `linalg.unpack` into `tensor.empty`.

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -enable-early-exit-vectorization -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
+; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
 
 define i64 @loop_contains_store(ptr %dest) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'
@@ -159,35 +159,6 @@ for.body:
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
   %counted.cond = icmp eq i64 %iv.next, 20
-  br i1 %counted.cond, label %exit, label %for.body
-
-exit:
-  ret void
-}
-
-define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
-; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
-; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
-entry:
-  %n_bytes = mul nuw nsw i32 %n, 2
-  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
-  %tc = sext i32 %n to i64
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
-  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
-  %data = load i16, ptr %st.addr, align 2
-  %inc = add nsw i16 %data, 1
-  store i16 %inc, ptr %st.addr, align 2
-  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
-  %ee.val = load i16, ptr %ee.addr, align 2
-  %ee.cond = icmp sgt i16 %ee.val, 500
-  br i1 %ee.cond, label %exit, label %for.inc
-
-for.inc:
-  %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, %tc
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:
