@@ -102,7 +102,7 @@ public:
              TypeSize::getFixed(APFloat::getSizeInBits(FloatSemantics)), Align),
         Semantics(&FloatSemantics) {}
 
-  const fltSemantics *getSemantics() { return Semantics; }
+  const fltSemantics *getSemantics() const { return Semantics; }
   static bool classof(const Type *T) { return T->getKind() == TypeKind::Float; }
 };
 
