@@ -1,8 +1,6 @@
 #include <unistd.h>
 
-int
-main()
-{
+int main() {
   while (1) {
     sleep(1);
   }

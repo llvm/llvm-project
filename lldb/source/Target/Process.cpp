@@ -3144,13 +3144,13 @@ void Process::CompleteAttach() {
     }
   }
 
-  if (!m_os_up) 
-  LoadOperatingSystemPlugin(false);
+  if (!m_os_up)
+    LoadOperatingSystemPlugin(false);
 
   if (m_os_up) {
     // Somebody might have gotten threads before now, but we need to force the
     // update after we've loaded the OperatingSystem plugin or it won't get a
-    // chance to process the threads.  
+    // chance to process the threads.
     m_thread_list.Clear();
     UpdateThreadListIfNeeded();
   }
@@ -5857,8 +5857,7 @@ bool Process::CurrentThreadIsPrivateStateThread()
   return m_private_state_thread.EqualsThread(Host::GetCurrentThread());
 }
 
-bool Process::CurrentThreadPosesAsPrivateStateThread()
-{
+bool Process::CurrentThreadPosesAsPrivateStateThread() {
   // If we haven't started up the private state thread yet, then whatever thread
   // is fetching this event should be temporarily the private state thread.
   if (!m_private_state_thread.HasThread())

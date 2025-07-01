@@ -8,21 +8,24 @@ import struct
 #   1 called - state is stopped
 #   2 not called
 
-stop_state = {"in_init" : 2,
-              "in_get_thread_info" : 2,
-              "in_create_thread" : 2,
-              "in_get_register_info" : 2,
-              "in_get_register_data" : 2}
+stop_state = {
+    "in_init": 2,
+    "in_get_thread_info": 2,
+    "in_create_thread": 2,
+    "in_get_register_info": 2,
+    "in_get_register_data": 2,
+}
+
 
 def ReportCommand(debugger, command, exe_ctx, result, unused):
     global stop_state
     for state in stop_state:
         result.AppendMessage(f"{state}={stop_state[state]}\n")
     result.SetStatus(lldb.eReturnStatusSuccessFinishResult)
-    
-class OperatingSystemPlugIn():
-    """This class checks that all the 
-    """
+
+
+class OperatingSystemPlugIn:
+    """This class checks that all the"""
 
     def __init__(self, process):
         """Initialization needs a valid.SBProcess object.
@@ -34,7 +37,9 @@ class OperatingSystemPlugIn():
         stop_state["in_init"] = self.state_is_stopped()
         interp = process.target.debugger.GetCommandInterpreter()
         result = lldb.SBCommandReturnObject()
-        cmd_str = f"command script add test_report_command -o -f {__name__}.ReportCommand"
+        cmd_str = (
+            f"command script add test_report_command -o -f {__name__}.ReportCommand"
+        )
         interp.HandleCommand(cmd_str, result)
 
     def state_is_stopped(self):
@@ -49,7 +54,7 @@ class OperatingSystemPlugIn():
     def create_thread(self, tid, context):
         global stop_state
         stop_state["in_create_thread"] = self.state_is_stopped()
-        
+
         return None
 
     def get_thread_info(self):

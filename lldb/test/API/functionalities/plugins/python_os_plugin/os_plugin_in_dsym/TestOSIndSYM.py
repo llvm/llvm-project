@@ -14,6 +14,7 @@ import time
 import socket
 import shutil
 
+
 class TestOSPluginIndSYM(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -54,9 +55,9 @@ class TestOSPluginIndSYM(TestBase):
 
         # Make sure we're set up to load the symbol file's python
         self.runCmd("settings set target.load-script-from-symbol-file true")
-        
+
         target = self.dbg.CreateTarget(None)
-        
+
         error = lldb.SBError()
 
         # Now run the process, and then attach.  When the attach
@@ -76,7 +77,10 @@ class TestOSPluginIndSYM(TestBase):
         self.assertTrue(target.IsValid, "Got a valid target")
 
         # Make sure that we got the right plugin:
-        self.expect("settings show target.process.python-os-plugin-path", substrs=["operating_system.py"])
+        self.expect(
+            "settings show target.process.python-os-plugin-path",
+            substrs=["operating_system.py"],
+        )
 
         for thread in process.threads:
             stack_depth = thread.num_frames
@@ -86,15 +90,17 @@ class TestOSPluginIndSYM(TestBase):
         # state was correct.  The way we use the OS plugin, it doesn't need
         # to create a thread, and doesn't have to call get_register_info,
         # so we don't expect those to get called.
-        self.expect("test_report_command", substrs = ["in_init=1",
-                                                 "in_get_thread_info=1",
-                                                 "in_create_thread=2",
-                                                 "in_get_register_info=2",
-                                                 "in_get_register_data=1"])
-        
-        
-        
-        
+        self.expect(
+            "test_report_command",
+            substrs=[
+                "in_init=1",
+                "in_get_thread_info=1",
+                "in_create_thread=2",
+                "in_get_register_info=2",
+                "in_get_register_data=1",
+            ],
+        )
+
     def build_dsym(self, name):
         self.build(debug_info="dsym", dictionary={"EXE": name})
         executable = self.getBuildArtifact(name)
@@ -105,7 +111,7 @@ class TestOSPluginIndSYM(TestBase):
             os.mkdir(python_dir_path)
         python_file_name = name + ".py"
 
-        os_plugin_dir = os.path.join(python_dir_path, "OS_Plugin") 
+        os_plugin_dir = os.path.join(python_dir_path, "OS_Plugin")
         if not os.path.exists(os_plugin_dir):
             os.mkdir(os_plugin_dir)
 
@@ -115,12 +121,14 @@ class TestOSPluginIndSYM(TestBase):
 
         module_dest_path = os.path.join(python_dir_path, python_file_name)
         with open(module_dest_path, "w") as f:
-            f.write( "def __lldb_init_module(debugger, unused):\n")
-            f.write(f"    debugger.HandleCommand(\"settings set target.process.python-os-plugin-path '{plugin_dest_path}'\")\n")
+            f.write("def __lldb_init_module(debugger, unused):\n")
+            f.write(
+                f"    debugger.HandleCommand(\"settings set target.process.python-os-plugin-path '{plugin_dest_path}'\")\n"
+            )
             f.close()
 
         return executable
-        
+
     def setup_remote_platform(self, exe):
         # Get debugserver to start up our process for us, and then we
         # can use `process connect` to attach to it.
