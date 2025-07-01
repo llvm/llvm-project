@@ -127,6 +127,10 @@ public:
 
   mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
 
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
+    return Visit(ge->getResultExpr());
+  }
+
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
     LValue lv = cgf.emitLValue(e);
