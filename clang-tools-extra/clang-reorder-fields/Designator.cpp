@@ -60,49 +60,6 @@ bool DesignatorIter::isFinished() {
   return false;
 }
 
-RecordDecl::field_iterator &DesignatorIter::getStructIter() {
-  assert(Tag == STRUCT && "Must be a field designator");
-  return StructIt.Field;
-}
-
-RecordDecl::field_iterator DesignatorIter::getStructIter() const {
-  assert(Tag == STRUCT && "Must be a field designator");
-  return StructIt.Field;
-}
-
-const RecordDecl *DesignatorIter::getStructDecl() const {
-  assert(Tag == STRUCT && "Must be a field designator");
-  return StructIt.Record;
-}
-
-uint64_t &DesignatorIter::getArrayIndex() {
-  assert(Tag == ARRAY && "Must be an array designator");
-  return ArrayIt.Index;
-}
-
-uint64_t DesignatorIter::getArrayIndex() const {
-  assert(Tag == ARRAY && "Must be an array designator");
-  return ArrayIt.Index;
-}
-
-uint64_t DesignatorIter::getArrayRangeStart() const {
-  assert(Tag == ARRAY_RANGE && "Must be an array range designator");
-  return ArrayRangeIt.Start;
-}
-
-uint64_t DesignatorIter::getArrayRangeEnd() const {
-  assert(Tag == ARRAY_RANGE && "Must be an array range designator");
-  return ArrayRangeIt.End;
-}
-
-uint64_t DesignatorIter::getArraySize() const {
-  assert((Tag == ARRAY || Tag == ARRAY_RANGE) &&
-         "Must be an array or range designator");
-  if (Tag == ARRAY)
-    return ArrayIt.Size;
-  return ArrayRangeIt.Size;
-}
-
 Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
                          const ASTContext &Context) {
   for (const auto &D : DIE->designators()) {

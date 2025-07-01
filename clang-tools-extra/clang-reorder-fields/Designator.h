@@ -46,14 +46,38 @@ public:
   Kind getTag() const { return Tag; }
   QualType getType() const { return Type; }
 
-  RecordDecl::field_iterator &getStructIter();
-  RecordDecl::field_iterator getStructIter() const;
-  const RecordDecl *getStructDecl() const;
-  uint64_t &getArrayIndex();
-  uint64_t getArrayIndex() const;
-  uint64_t getArrayRangeStart() const;
-  uint64_t getArrayRangeEnd() const;
-  uint64_t getArraySize() const;
+  const RecordDecl::field_iterator getStructIter() const {
+    assert(Tag == STRUCT && "Must be a field designator");
+    return StructIt.Field;
+  }
+
+  const RecordDecl *getStructDecl() const {
+    assert(Tag == STRUCT && "Must be a field designator");
+    return StructIt.Record;
+  }
+
+  uint64_t getArrayIndex() const {
+    assert(Tag == ARRAY && "Must be an array designator");
+    return ArrayIt.Index;
+  }
+
+  uint64_t getArrayRangeStart() const {
+    assert(Tag == ARRAY_RANGE && "Must be an array range designator");
+    return ArrayRangeIt.Start;
+  }
+
+  uint64_t getArrayRangeEnd() const {
+    assert(Tag == ARRAY_RANGE && "Must be an array range designator");
+    return ArrayRangeIt.End;
+  }
+
+  uint64_t getArraySize() const {
+    assert((Tag == ARRAY || Tag == ARRAY_RANGE) &&
+           "Must be an array or range designator");
+    if (Tag == ARRAY)
+      return ArrayIt.Size;
+    return ArrayRangeIt.Size;
+  }
 
 private:
   /// Type of the designator.
