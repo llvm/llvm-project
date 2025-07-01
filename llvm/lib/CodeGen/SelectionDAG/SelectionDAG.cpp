@@ -5640,12 +5640,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // Ensure that the element index is in bounds.
     EVT VecVT = Op.getOperand(0).getValueType();
     SDValue Idx = Op.getOperand(Opcode == ISD::INSERT_VECTOR_ELT ? 2 : 1);
-    if (isGuaranteedNotToBeUndefOrPoison(Idx, DemandedElts, PoisonOnly,
-                                         Depth + 1)) {
-      KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
-      return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
-    }
-    return true;
+    KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
+    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
   }
 
   case ISD::VECTOR_SHUFFLE: {
