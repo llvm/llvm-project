@@ -3613,18 +3613,18 @@ Sema::MemberPointerConversionResult Sema::CheckMemberPointerConversion(
     QualType FromType, const MemberPointerType *ToPtrType, CastKind &Kind,
     CXXCastPath &BasePath, SourceLocation CheckLoc, SourceRange OpRange,
     bool IgnoreBaseAccess, MemberPointerConversionDirection Direction) {
-  const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
-  if (!FromPtrType) {
-    // This must be a null pointer to member pointer conversion
-    Kind = CK_NullToMemberPointer;
-    return MemberPointerConversionResult::Success;
-  }
-
   // Lock down the inheritance model right now in MS ABI, whether or not the
   // pointee types are the same.
   if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
     (void)isCompleteType(CheckLoc, FromType);
     (void)isCompleteType(CheckLoc, QualType(ToPtrType, 0));
+  }
+
+  const MemberPointerType *FromPtrType = FromType->getAs<MemberPointerType>();
+  if (!FromPtrType) {
+    // This must be a null pointer to member pointer conversion
+    Kind = CK_NullToMemberPointer;
+    return MemberPointerConversionResult::Success;
   }
 
   // T == T, modulo cv

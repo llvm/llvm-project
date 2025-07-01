@@ -683,8 +683,8 @@ public:
 };
 
 struct CXXOperatorSourceInfo {
-  SourceLocation::UIntTy BeginOpNameLoc;
-  SourceLocation::UIntTy EndOpNameLoc;
+  SourceLocation BeginOpNameLoc;
+  SourceLocation EndOpNameLoc;
 };
 
 /// DeclarationNameLoc - Additional source/type location info
@@ -703,12 +703,13 @@ class DeclarationNameLoc {
 
   // The location (if any) of the operator keyword is stored elsewhere.
   struct CXXOpName {
-    CXXOperatorSourceInfo* OInfo;
+    SourceLocation BeginOpNameLoc;
+    SourceLocation EndOpNameLoc;
   };
 
   // The location (if any) of the operator keyword is stored elsewhere.
   struct CXXLitOpName {
-    SourceLocation::UIntTy OpNameLoc;
+    SourceLocation OpNameLoc;
   };
 
   // struct {} CXXUsingDirective;
@@ -723,8 +724,14 @@ class DeclarationNameLoc {
 
   void setNamedTypeLoc(TypeSourceInfo *TInfo) { NamedType.TInfo = TInfo; }
 
+  void setCXXOperatorNameRange(SourceRange Range) {
+    CXXOperatorName.BeginOpNameLoc = Range.getBegin();
+    CXXOperatorName.EndOpNameLoc = Range.getEnd();
+  }
+
+
   void setCXXLiteralOperatorNameLoc(SourceLocation Loc) {
-    CXXLiteralOperatorName.OpNameLoc = Loc.getRawEncoding();
+    CXXLiteralOperatorName.OpNameLoc = Loc;
   }
 
 public:
@@ -740,16 +747,15 @@ public:
   SourceLocation getCXXOperatorNameBeginLoc() const {
     if (!CXXOperatorName.OInfo)
       return {};
-    return SourceLocation::getFromRawEncoding(
-        CXXOperatorName.OInfo->BeginOpNameLoc);
+    return 
+        CXXOperatorName.OInfo->BeginOpNameLoc;
   }
 
   /// Return the end location of the getCXXOperatorNameRange() range.
   SourceLocation getCXXOperatorNameEndLoc() const {
     if (!CXXOperatorName.OInfo)
       return {};
-    return SourceLocation::getFromRawEncoding(
-        CXXOperatorName.OInfo->EndOpNameLoc);
+    return CXXOperatorName.OInfo->EndOpNameLoc);
   }
 
   /// Return the range of the operator name (without the operator keyword).
@@ -764,7 +770,7 @@ public:
   /// keyword). Assumes that the object stores location information of a literal
   /// operator.
   SourceLocation getCXXLiteralOperatorNameLoc() const {
-    return SourceLocation::getFromRawEncoding(CXXLiteralOperatorName.OpNameLoc);
+    return CXXLiteralOperatorName.OpNameLoc;
   }
 
   /// Construct location information for a constructor, destructor or conversion

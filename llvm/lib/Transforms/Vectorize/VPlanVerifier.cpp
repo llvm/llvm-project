@@ -158,6 +158,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
+        .Case<VPScalarIVStepsRecipe>([&](auto *R) {
+          if (R->getNumOperands() != 3) {
+            errs() << "Unrolling with EVL tail folding not yet supported\n";
+            return false;
+          }
+          return VerifyEVLUse(*R, 2);
+        })
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPInstructionWithType>(

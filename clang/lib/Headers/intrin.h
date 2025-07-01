@@ -370,6 +370,18 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 \*----------------------------------------------------------------------------*/
 #if defined(__aarch64__) || defined(__arm64ec__)
 unsigned __int64 __getReg(int);
+unsigned char _interlockedbittestandreset_acq(long volatile *, long);
+unsigned char _interlockedbittestandreset_nf(long volatile *, long);
+unsigned char _interlockedbittestandreset_rel(long volatile *, long);
+unsigned char _interlockedbittestandreset64_acq(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandreset64_nf(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandreset64_rel(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandset_acq(long volatile *, long);
+unsigned char _interlockedbittestandset_nf(long volatile *, long);
+unsigned char _interlockedbittestandset_rel(long volatile *, long);
+unsigned char _interlockedbittestandset64_acq(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandset64_nf(__int64 volatile *, __int64);
+unsigned char _interlockedbittestandset64_rel(__int64 volatile *, __int64);
 long _InterlockedAdd(long volatile *, long);
 long _InterlockedAdd_acq(long volatile *, long);
 long _InterlockedAdd_nf(long volatile *, long);

@@ -14,6 +14,7 @@
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/OpenMP-features.h"
@@ -1138,8 +1139,9 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   unsigned numErrorsBefore = diags.getNumErrors();
   llvm::Triple t(res.getTargetOpts().triple);
 
-  // By default OpenMP is set to 3.1 version
-  res.getLangOpts().OpenMPVersion = 31;
+  constexpr unsigned newestFullySupported = 31;
+  // By default OpenMP is set to the most recent fully supported version
+  res.getLangOpts().OpenMPVersion = newestFullySupported;
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg =
@@ -1164,6 +1166,9 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (!value.getAsInteger(/*radix=*/10, version)) {
       if (llvm::is_contained(ompVersions, version)) {
         res.getLangOpts().OpenMPVersion = version;
+
+        if (version > newestFullySupported)
+          diags.Report(clang::diag::warn_openmp_incomplete) << version;
       } else if (llvm::is_contained(oldVersions, version)) {
         const unsigned diagID =
             diags.getCustomDiagID(clang::DiagnosticsEngine::Warning,
@@ -1788,6 +1793,7 @@ void CompilerInvocation::setLoweringOptions() {
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
   loweringOpts.setUnderscoring(codegenOpts.Underscoring);
+  loweringOpts.setSkipExternalRttiDefinition(skipExternalRttiDefinition);
 
   const Fortran::common::LangOptions &langOptions = getLangOpts();
   loweringOpts.setIntegerWrapAround(langOptions.getSignedOverflowBehavior() ==
