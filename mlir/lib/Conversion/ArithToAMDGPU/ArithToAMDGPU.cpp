@@ -421,6 +421,7 @@ LogicalResult TruncfToFloat16RewritePattern::matchAndRewrite(
   return success();
 }
 
+/// Get the broadcasted / splatted value for a chain of ops.
 static Value getOriginalVectorValue(Value value) {
   Value current = value;
   while (Operation *definingOp = current.getDefiningOp()) {
