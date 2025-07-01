@@ -1135,7 +1135,7 @@ public:
     return const_iterator(__wrap_iter(static_cast<const _Tp*>(nullptr)));
   }
 
-#    endif
+#    endif // _LIBCPP_STD_VER >= 26
 
   using __base::reset;
 };
