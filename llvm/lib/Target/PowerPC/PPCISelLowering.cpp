@@ -1411,6 +1411,11 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
+  // Custom handling for PowerPC ucmp instruction
+  setOperationAction(ISD::UCMP, MVT::i32, Custom);
+  if (Subtarget.isPPC64())
+    setOperationAction(ISD::UCMP, MVT::i64, Custom);
+
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL,
                        ISD::MUL, ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
@@ -12521,6 +12526,38 @@ SDValue PPCTargetLowering::LowerSSUBO(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Sub, OverflowTrunc}, dl);
 }
 
+// Lower unsigned 3-way compare producing -1/0/1.
+SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  EVT OpVT = A.getValueType();   // operand type
+  EVT ResVT = Op.getValueType(); // result type
+
+  // First compute diff = A - B (will become subf).
+  SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, A, B);
+
+  // Generate B - A using SUBC to capture carry.
+  SDVTList VTs = DAG.getVTList(OpVT, MVT::i32);
+  SDValue SubC = DAG.getNode(PPCISD::SUBC, DL, VTs, B, A);
+  SDValue CA0 = SubC.getValue(1);
+
+  // t2 = A - B + CA0 using SUBE.
+  SDValue SubE1 = DAG.getNode(PPCISD::SUBE, DL, VTs, A, B, CA0);
+  SDValue CA1 = SubE1.getValue(1);
+
+  // res = diff - t2 + CA1 using SUBE (produces desired -1/0/1).
+  SDValue ResPair = DAG.getNode(PPCISD::SUBE, DL, VTs, Diff, SubE1, CA1);
+
+  // Extract the first result and truncate to result type if needed
+  SDValue Result = ResPair.getValue(0);
+  if (OpVT != ResVT) {
+    Result = DAG.getSExtOrTrunc(Result, DL, ResVT);
+  }
+
+  return Result;
+}
+
 /// LowerOperation - Provide custom lowering hooks for some operations.
 ///
 SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
@@ -12625,6 +12662,8 @@ SDValue PPCTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
     return LowerADDSUBO_CARRY(Op, DAG);
+  case ISD::UCMP:
+    return LowerUCMP(Op, DAG);
   }
 }
 
