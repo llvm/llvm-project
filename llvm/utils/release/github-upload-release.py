@@ -65,7 +65,7 @@ In addition, source archives are available:
 
 ## Verifying Packages
 
-All packages are signed by the release managers using GPG. To verify a package, first [download](https://releases.llvm.org/release-keys.asc) the keys from the LLVM website, then import them into your keyring:
+All packages are signed by the release managers using GPG and should be verified before use. To verify a package, first [download](https://releases.llvm.org/release-keys.asc) the keys from the LLVM website, then import them into your keyring:
 ```
 $ gpg --import release-keys.asc
 ```
