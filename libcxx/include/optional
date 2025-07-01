@@ -616,6 +616,10 @@ public:
 
 private:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_iterator(_Base __it) noexcept : __it_(__it) {}
+
+  _LIBCPP_HIDE_FROM_ABI friend class __wrap_iter<_Tp*>;
+  _LIBCPP_HIDE_FROM_ABI friend class __wrap_iter<const _Tp*>;
+
   _LIBCPP_HIDE_FROM_ABI friend class optional<std::remove_const_t<_Tp>>;
   _LIBCPP_HIDE_FROM_ABI friend class optional<const _Tp>;
 
