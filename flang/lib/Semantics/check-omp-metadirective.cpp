@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Semantic checks for METADIRECTIVE and related constructs/clauses.
+//
+//===----------------------------------------------------------------------===//
 
 #include "check-omp-structure.h"
 

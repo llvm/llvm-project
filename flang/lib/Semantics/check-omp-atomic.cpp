@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Semantic checks related to the ATOMIC construct.
+//
+//===----------------------------------------------------------------------===//
+
 
 #include "check-omp-structure.h"
 #include "openmp-utils.h"

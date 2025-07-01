@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Semantic checks for constructs and clauses related to loops.
+//
+//===----------------------------------------------------------------------===//
+
 
 #include "check-omp-structure.h"
 

@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Common utilities used in OpenMP semantic checks.
+//
+//===----------------------------------------------------------------------===//
 
 #include "openmp-utils.h"
 

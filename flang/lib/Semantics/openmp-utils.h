@@ -5,6 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Common utilities used in OpenMP semantic checks.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef FORTRAN_SEMANTICS_OPENMP_UTILS_H
 #define FORTRAN_SEMANTICS_OPENMP_UTILS_H
