@@ -28,13 +28,6 @@ LogicalResult verifyMatrixInput(Op op) {
   static_assert(llvm::is_one_of<Op, BlockLoad2dOp, BlockStore2dOp,
                                 BlockPrefetch2dOp>::value,
                 "Unexpected template parameter");
-
-  std::optional<int64_t> width = getConstantIntValue(op.getBaseWidth());
-  std::optional<int64_t> pitch = getConstantIntValue(op.getBasePitch());
-  if (pitch && width && *pitch < *width)
-    return op->emitOpError(
-        "4th operand (base pitch) should be >= 2nd operand (base width)");
-
   uint32_t elemSize = op.getElemSizeInBits();
   if (elemSize < 8 || !llvm::isPowerOf2_32(elemSize) || elemSize > 32)
     return op->emitOpError("expecting 'elem_size_in_bits' to be 8, 16, or 32");
