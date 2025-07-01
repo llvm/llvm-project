@@ -770,6 +770,15 @@ public:
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
                   mlir::Location loc);
+  RValue emitCall(const CIRGenFunctionInfo &funcInfo,
+                  const CIRGenCallee &callee, ReturnValueSlot returnValue,
+                  const CallArgList &args,
+                  cir::CIRCallOpInterface *callOrTryCall = nullptr) {
+    assert(currSrcLoc && "source location must have been set");
+    return emitCall(funcInfo, callee, returnValue, args, callOrTryCall,
+                    *currSrcLoc);
+  }
+
   RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
   void emitCallArg(CallArgList &args, const clang::Expr *e,
@@ -836,6 +845,8 @@ public:
       clang::NestedNameSpecifier *qualifier, bool isArrow,
       const clang::Expr *base);
 
+  mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
+
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
@@ -867,6 +878,8 @@ public:
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
+
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 
@@ -883,9 +896,8 @@ public:
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult
-  emitStmt(const clang::Stmt *s, bool useCurrentScope,
-           llvm::ArrayRef<const Attr *> attrs = std::nullopt);
+  mlir::LogicalResult emitStmt(const clang::Stmt *s, bool useCurrentScope,
+                               llvm::ArrayRef<const Attr *> attrs = {});
 
   mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
                                      bool useCurrentScope);

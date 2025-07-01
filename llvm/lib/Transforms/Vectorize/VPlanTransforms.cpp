@@ -1220,9 +1220,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
-      if (!RepR && !isa<VPWidenRecipe>(&R))
+      if (!isa<VPWidenRecipe, VPWidenSelectRecipe, VPReplicateRecipe>(&R))
         continue;
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
 
@@ -2198,6 +2198,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
+  assert(all_of(Plan.getVF().users(),
+                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                        VPWidenIntOrFpInductionRecipe>) &&
+         "User of VF that we can't transform to EVL.");
+  Plan.getVF().replaceAllUsesWith(&EVL);
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
   VPInstruction *PrevEVL = nullptr;
@@ -2214,11 +2220,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
-  }
-
-  for (VPUser *U : to_vector(Plan.getVF().users())) {
-    if (auto *R = dyn_cast<VPVectorEndPointerRecipe>(U))
-      R->setOperand(1, &EVL);
   }
 
   SmallVector<VPRecipeBase *> ToErase;
@@ -2300,12 +2301,11 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
-  // of the VF directly. At the moment, widened inductions cannot be updated, so
-  // bail out if the plan contains any.
-  bool ContainsWidenInductions = any_of(
-      Header->phis(),
-      IsaPred<VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>);
-  if (ContainsWidenInductions)
+  // of the VF directly. At the moment, widened pointer inductions cannot be
+  // updated, so bail out if the plan contains any.
+  bool ContainsWidenPointerInductions =
+      any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
+  if (ContainsWidenPointerInductions)
     return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -2627,6 +2627,8 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     Inc = SplatVF;
     Prev = WidenIVR->getLastUnrolledPartOperand();
   } else {
+    if (VPRecipeBase *R = VF->getDefiningRecipe())
+      Builder.setInsertPoint(R->getParent(), std::next(R->getIterator()));
     // Multiply the vectorization factor by the step using integer or
     // floating-point arithmetic as appropriate.
     if (StepTy->isFloatingPointTy())
@@ -3251,7 +3253,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;

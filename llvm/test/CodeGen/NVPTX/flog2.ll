@@ -122,8 +122,7 @@ define bfloat @log2_bf16_test(bfloat %in) {
 ; CHECK-LABEL: log2_bf16_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %r1, [log2_bf16_test_param_0];
@@ -135,8 +134,8 @@ define bfloat @log2_bf16_test(bfloat %in) {
 ; CHECK-NEXT:    setp.nan.f32 %p1, %r3, %r3;
 ; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
 ; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r8; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    shr.u32 %r9, %r8, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call bfloat @llvm.log2.bf16(bfloat %in)
@@ -148,8 +147,7 @@ define bfloat @log2_bf16_ftz_test(bfloat %in) #0 {
 ; CHECK-LABEL: log2_bf16_ftz_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %r1, [log2_bf16_ftz_test_param_0];
@@ -161,8 +159,8 @@ define bfloat @log2_bf16_ftz_test(bfloat %in) #0 {
 ; CHECK-NEXT:    setp.nan.ftz.f32 %p1, %r3, %r3;
 ; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
 ; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r8; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    shr.u32 %r9, %r8, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
 entry:
   %log2 = call bfloat @llvm.log2.bf16(bfloat %in)

@@ -808,6 +808,7 @@ public:
 
   bool isSImm5() const { return isSImm<5>(); }
   bool isSImm6() const { return isSImm<6>(); }
+  bool isSImm10() const { return isSImm<10>(); }
   bool isSImm11() const { return isSImm<11>(); }
   bool isSImm16() const { return isSImm<16>(); }
   bool isSImm26() const { return isSImm<26>(); }
@@ -901,6 +902,8 @@ public:
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            VK == RISCV::S_QC_ABS20;
   }
+
+  bool isSImm10Unsigned() const { return isSImm<10>() || isUImm<10>(); }
 
   bool isUImm20LUI() const {
     if (!isImm())
@@ -1017,7 +1020,7 @@ public:
     return Fence.Val;
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
         return RISCVInstPrinter::getRegisterName(Reg);
@@ -1027,8 +1030,9 @@ public:
 
     switch (Kind) {
     case KindTy::Immediate:
-      OS << "<imm: " << *Imm.Val << " " << (Imm.IsRV64 ? "rv64" : "rv32")
-         << ">";
+      OS << "<imm: ";
+      MAI.printExpr(OS, *Imm.Val);
+      OS << ' ' << (Imm.IsRV64 ? "rv64" : "rv32") << '>';
       break;
     case KindTy::FPImmediate:
       OS << "<fpimm: " << FPImm.Val << ">";
@@ -1535,6 +1539,12 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 9) - 8,
         "immediate must be a multiple of 8 bytes in the range");
+  case Match_InvalidSImm10:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
+                                      (1 << 9) - 1);
+  case Match_InvalidSImm10Unsigned:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 9),
+                                      (1 << 10) - 1);
   case Match_InvalidUImm10Lsb00NonZero:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 4, (1 << 10) - 4,
