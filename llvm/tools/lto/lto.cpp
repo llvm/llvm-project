@@ -322,6 +322,15 @@ lto_symbol_attributes lto_module_get_symbol_attribute(lto_module_t mod,
   return unwrap(mod)->getSymbolAttributes(index);
 }
 
+unsigned int lto_module_get_num_asm_undef_symbols(lto_module_t mod) {
+  return unwrap(mod)->getAsmUndefSymbolCount();
+}
+
+const char *lto_module_get_asm_undef_symbol_name(lto_module_t mod,
+                                                 unsigned int index) {
+  return unwrap(mod)->getAsmUndefSymbolName(index).data();
+}
+
 const char* lto_module_get_linkeropts(lto_module_t mod) {
   return unwrap(mod)->getLinkerOpts().data();
 }
@@ -496,8 +505,7 @@ void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                      const char *const *options, int number) {
   assert(optionParsingState != OptParsingState::Early &&
          "early option processing already happened");
-  SmallVector<StringRef, 4> Options;
-  llvm::append_range(Options, ArrayRef(options, number));
+  SmallVector<StringRef, 4> Options(ArrayRef(options, number));
   unwrap(cg)->setCodeGenDebugOptions(ArrayRef(Options));
 }
 

@@ -801,12 +801,13 @@ define amdgpu_kernel void @v_permlane16_b32_vvv_i32(ptr addrspace(1) %out, i32 %
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_permlane16_b32 v1, v1, s3, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -833,13 +834,14 @@ define amdgpu_kernel void @v_permlane16_b32_vvv_i32(ptr addrspace(1) %out, i32 %
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v1, v1, s3, s2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -856,6 +858,7 @@ define amdgpu_kernel void @v_permlane16_b32_vvv_i32(ptr addrspace(1) %out, i32 %
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v0, v0, s3, s4
 ; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -976,12 +979,13 @@ define amdgpu_kernel void @v_permlane16_b32_vvv_f32(ptr addrspace(1) %out, float
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_permlane16_b32 v1, v1, s3, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -1008,13 +1012,14 @@ define amdgpu_kernel void @v_permlane16_b32_vvv_f32(ptr addrspace(1) %out, float
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v1, v1, s3, s2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -1031,6 +1036,7 @@ define amdgpu_kernel void @v_permlane16_b32_vvv_f32(ptr addrspace(1) %out, float
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v0, v0, s3, s4
 ; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -1167,7 +1173,7 @@ define amdgpu_kernel void @v_permlane16_b32_vvs_i32(ptr addrspace(1) %out, i32 %
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -1317,7 +1323,7 @@ define amdgpu_kernel void @v_permlane16_b32_vvs_f32(ptr addrspace(1) %out, float
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -1470,7 +1476,7 @@ define amdgpu_kernel void @v_permlane16_b32_vsv_i32(ptr addrspace(1) %out, i32 %
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -1658,7 +1664,7 @@ define amdgpu_kernel void @v_permlane16_b32_vsv_f32(ptr addrspace(1) %out, float
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -3360,12 +3366,13 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv_i32(ptr addrspace(1) %out, i32 
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_permlanex16_b32 v1, v1, s3, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -3392,13 +3399,14 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv_i32(ptr addrspace(1) %out, i32 
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v1, v1, s3, s2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -3415,6 +3423,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv_i32(ptr addrspace(1) %out, i32 
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v0, v0, s3, s4
 ; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -3462,12 +3471,13 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv_f32(ptr addrspace(1) %out, floa
 ; GFX11-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX11-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_2)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_permlanex16_b32 v1, v1, s3, s2
 ; GFX11-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -3494,13 +3504,14 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv_f32(ptr addrspace(1) %out, floa
 ; GFX12-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    v_and_b32_e32 v1, 0x3ff, v0
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v1, v1, s3, s2
 ; GFX12-SDAG-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -3517,6 +3528,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vvv_f32(ptr addrspace(1) %out, floa
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v0, v0, s3, s4
 ; GFX12-GISEL-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -3726,7 +3738,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vvs_i32(ptr addrspace(1) %out, i32 
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -3804,7 +3816,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vvs_f32(ptr addrspace(1) %out, floa
 ; GFX12-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_dual_mov_b32 v1, s2 :: v_dual_and_b32 v0, 0x3ff, v0
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -4029,7 +4041,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vsv_i32(ptr addrspace(1) %out, i32 
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -4111,7 +4123,7 @@ define amdgpu_kernel void @v_permlanex16_b32_vsv_f32(ptr addrspace(1) %out, floa
 ; GFX12-SDAG-NEXT:    v_bfe_u32 v0, v0, 10, 10
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
@@ -8559,6 +8571,7 @@ define void @v_permlane16_half(ptr addrspace(1) %out, half %src0, i32 %src1, i32
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8597,6 +8610,7 @@ define void @v_permlanex16_half(ptr addrspace(1) %out, half %src0, i32 %src1, i3
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8635,6 +8649,7 @@ define void @v_permlane16_bfloat(ptr addrspace(1) %out, bfloat %src0, i32 %src1,
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8673,6 +8688,7 @@ define void @v_permlanex16_bfloat(ptr addrspace(1) %out, bfloat %src0, i32 %src1
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8711,6 +8727,7 @@ define void @v_permlane16_i16(ptr addrspace(1) %out, i16 %src0, i32 %src1, i32 %
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8749,6 +8766,7 @@ define void @v_permlanex16_i16(ptr addrspace(1) %out, i16 %src0, i32 %src1, i32 
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b16 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8787,6 +8805,7 @@ define void @v_permlane16_v2f16(ptr addrspace(1) %out, <2 x half> %src0, i32 %sr
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8825,6 +8844,7 @@ define void @v_permlanex16_v2f16(ptr addrspace(1) %out, <2 x half> %src0, i32 %s
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v3
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v4
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -8886,6 +8906,7 @@ define void @v_permlane16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %s
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -8901,6 +8922,7 @@ define void @v_permlane16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %s
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -8963,6 +8985,7 @@ define void @v_permlanex16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -8978,6 +9001,7 @@ define void @v_permlanex16_v2f32(ptr addrspace(1) %out, <2 x float> %src0, i32 %
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -9066,6 +9090,7 @@ define void @v_permlane16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %src
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v10
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v8, v8, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
@@ -9088,6 +9113,7 @@ define void @v_permlane16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %src
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v10
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
@@ -9183,6 +9209,7 @@ define void @v_permlanex16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %sr
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v10
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
@@ -9205,6 +9232,7 @@ define void @v_permlanex16_v7i32(ptr addrspace(1) %out, <7 x i32> %src0, i32 %sr
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v9
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v10
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
@@ -9282,6 +9310,7 @@ define void @v_permlane16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %src
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
@@ -9299,6 +9328,7 @@ define void @v_permlane16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %src
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
@@ -9371,6 +9401,7 @@ define void @v_permlanex16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %sr
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
 ; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
@@ -9388,6 +9419,7 @@ define void @v_permlanex16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %sr
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
 ; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
@@ -9396,5 +9428,1101 @@ define void @v_permlanex16_v8i16(ptr addrspace(1) %out, <8 x i16> %src0, i32 %sr
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %v = call <8 x i16> @llvm.amdgcn.permlanex16.v8i16(<8 x i16> %src0, <8 x i16> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
   store <8 x i16> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlane16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlane16_v2i64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlane16_v2i64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlane16_v2i64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlane16_v2i64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlane16_v2i64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlane16_v2i64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <2 x i64> @llvm.amdgcn.permlane16.v2i64(<2 x i64> %src0, <2 x i64> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <2 x i64> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlane16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlane16_v3i64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v7, v7, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v6, v6, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlane16_v3i64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v6, v6, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v7, v7, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlane16_v3i64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlane16_v3i64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlane16_v3i64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    s_clause 0x1
+; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlane16_v3i64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX12-GISEL-NEXT:    s_clause 0x1
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <3 x i64> @llvm.amdgcn.permlane16.v3i64(<3 x i64> %src0, <3 x i64> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <3 x i64> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlane16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlane16_v4f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v10
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v11
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v9, v9, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v8, v8, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v7, v7, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v6, v6, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlane16_v4f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v10
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v11
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v6, v6, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v7, v7, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v8, v8, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v9, v9, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlane16_v4f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlane16_v4f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlane16_v4f64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    s_clause 0x1
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlane16_v4f64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX12-GISEL-NEXT:    s_clause 0x1
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <4 x double> @llvm.amdgcn.permlane16.v4f64(<4 x double> %src0, <4 x double> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <4 x double> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlane16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlane16_v8f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v18
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v19
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v17, v17, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v16, v16, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v15, v15, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v14, v14, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v13, v13, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v12, v12, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v11, v11, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v10, v10, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v9, v9, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v8, v8, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v7, v7, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v6, v6, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off offset:48
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off offset:32
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlane16_v8f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v18
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v19
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v6, v6, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v7, v7, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v8, v8, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v9, v9, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v10, v10, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v11, v11, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v12, v12, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v13, v13, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v14, v14, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v15, v15, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v16, v16, s4, s5
+; GFX10-GISEL-NEXT:    v_permlane16_b32 v17, v17, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off offset:32
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off offset:48
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlane16_v8f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v17, v17, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v16, v16, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v15, v15, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v14, v14, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v13, v13, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v12, v12, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v11, v11, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v10, v10, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    s_clause 0x3
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlane16_v8f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v10, v10, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v11, v11, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v12, v12, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v13, v13, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v14, v14, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v15, v15, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v16, v16, s0, s1
+; GFX11-GISEL-NEXT:    v_permlane16_b32 v17, v17, s0, s1
+; GFX11-GISEL-NEXT:    s_clause 0x3
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlane16_v8f64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v17, v17, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v16, v16, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v15, v15, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v14, v14, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v13, v13, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v12, v12, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v11, v11, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v10, v10, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    s_clause 0x3
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlane16_v8f64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v6, v6, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v7, v7, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v8, v8, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v9, v9, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v10, v10, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v11, v11, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v12, v12, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v13, v13, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v14, v14, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v15, v15, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v16, v16, s0, s1
+; GFX12-GISEL-NEXT:    v_permlane16_b32 v17, v17, s0, s1
+; GFX12-GISEL-NEXT:    s_clause 0x3
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <8 x double> @llvm.amdgcn.permlane16.v8f64(<8 x double> %src0, <8 x double> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <8 x double> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlanex16_v2i64(ptr addrspace(1) %out, <2 x i64> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlanex16_v2i64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlanex16_v2i64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v6
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v7
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlanex16_v2i64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlanex16_v2i64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlanex16_v2i64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlanex16_v2i64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v7
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <2 x i64> @llvm.amdgcn.permlanex16.v2i64(<2 x i64> %src0, <2 x i64> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <2 x i64> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlanex16_v3i64(ptr addrspace(1) %out, <3 x i64> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlanex16_v3i64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlanex16_v3i64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    global_store_dwordx2 v[0:1], v[6:7], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlanex16_v3i64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlanex16_v3i64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlanex16_v3i64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    s_clause 0x1
+; GFX12-SDAG-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlanex16_v3i64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX12-GISEL-NEXT:    s_clause 0x1
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    global_store_b64 v[0:1], v[6:7], off offset:16
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <3 x i64> @llvm.amdgcn.permlanex16.v3i64(<3 x i64> %src0, <3 x i64> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <3 x i64> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlanex16_v4f64(ptr addrspace(1) %out, <4 x double> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlanex16_v4f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v10
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v11
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlanex16_v4f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v10
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v11
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v8, v8, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v9, v9, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlanex16_v4f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    s_clause 0x1
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlanex16_v4f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX11-GISEL-NEXT:    s_clause 0x1
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlanex16_v4f64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    s_clause 0x1
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlanex16_v4f64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v10
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v11
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX12-GISEL-NEXT:    s_clause 0x1
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <4 x double> @llvm.amdgcn.permlanex16.v4f64(<4 x double> %src0, <4 x double> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <4 x double> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define void @v_permlanex16_v8f64(ptr addrspace(1) %out, <8 x double> %src0, i32 %src1, i32 %src2) {
+; GFX10-SDAG-LABEL: v_permlanex16_v8f64:
+; GFX10-SDAG:       ; %bb.0:
+; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s4, v18
+; GFX10-SDAG-NEXT:    v_readfirstlane_b32 s5, v19
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v17, v17, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v16, v16, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v15, v15, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v14, v14, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v13, v13, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v12, v12, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v11, v11, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v10, v10, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off offset:48
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off offset:32
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-SDAG-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-GISEL-LABEL: v_permlanex16_v8f64:
+; GFX10-GISEL:       ; %bb.0:
+; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s4, v18
+; GFX10-GISEL-NEXT:    v_readfirstlane_b32 s5, v19
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v8, v8, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v9, v9, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v10, v10, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v11, v11, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v12, v12, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v13, v13, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v14, v14, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v15, v15, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v16, v16, s4, s5
+; GFX10-GISEL-NEXT:    v_permlanex16_b32 v17, v17, s4, s5
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off offset:16
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off offset:32
+; GFX10-GISEL-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off offset:48
+; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-SDAG-LABEL: v_permlanex16_v8f64:
+; GFX11-SDAG:       ; %bb.0:
+; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX11-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v17, v17, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v16, v16, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v15, v15, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v14, v14, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v13, v13, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v12, v12, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v11, v11, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v10, v10, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-SDAG-NEXT:    s_clause 0x3
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GISEL-LABEL: v_permlanex16_v8f64:
+; GFX11-GISEL:       ; %bb.0:
+; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v10, v10, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v11, v11, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v12, v12, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v13, v13, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v14, v14, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v15, v15, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v16, v16, s0, s1
+; GFX11-GISEL-NEXT:    v_permlanex16_b32 v17, v17, s0, s1
+; GFX11-GISEL-NEXT:    s_clause 0x3
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX11-GISEL-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-SDAG-LABEL: v_permlanex16_v8f64:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX12-SDAG-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v17, v17, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v16, v16, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v15, v15, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v14, v14, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v13, v13, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v12, v12, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v11, v11, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v10, v10, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-SDAG-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-SDAG-NEXT:    s_clause 0x3
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-SDAG-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: v_permlanex16_v8f64:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v18
+; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v19
+; GFX12-GISEL-NEXT:    s_wait_alu 0xf1ff
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v2, v2, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v3, v3, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v4, v4, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v5, v5, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v6, v6, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v7, v7, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v8, v8, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v9, v9, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v10, v10, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v11, v11, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v12, v12, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v13, v13, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v14, v14, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v15, v15, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v16, v16, s0, s1
+; GFX12-GISEL-NEXT:    v_permlanex16_b32 v17, v17, s0, s1
+; GFX12-GISEL-NEXT:    s_clause 0x3
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[2:5], off
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[6:9], off offset:16
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[10:13], off offset:32
+; GFX12-GISEL-NEXT:    global_store_b128 v[0:1], v[14:17], off offset:48
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+  %v = call <8 x double> @llvm.amdgcn.permlanex16.v8f64(<8 x double> %src0, <8 x double> %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store <8 x double> %v, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @v_permlanex16_convergent(ptr addrspace(1) %out, i32 %src0, i32 %pattern_lo, i32 %pattern_hi) {
+; GFX10-LABEL: v_permlanex16_convergent:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dword s2, s[4:5], 0x34
+; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
+; GFX10-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; GFX10-NEXT:    s_cbranch_execz .LBB142_2
+; GFX10-NEXT:  ; %bb.1: ; %t
+; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:  .LBB142_2: ; %f
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: v_permlanex16_convergent:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x34
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-NEXT:    s_mov_b32 s0, exec_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
+; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX11-NEXT:    s_cbranch_execz .LBB142_2
+; GFX11-NEXT:  ; %bb.1: ; %t
+; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:  .LBB142_2: ; %f
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_permlanex16_convergent:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x2c
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_dual_mov_b32 v1, s0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX12-NEXT:    s_mov_b32 s0, exec_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_permlanex16_b32 v1, v1, s1, s2
+; GFX12-NEXT:    v_cmpx_eq_u32_e32 0, v0
+; GFX12-NEXT:    s_cbranch_execz .LBB142_2
+; GFX12-NEXT:  ; %bb.1: ; %t
+; GFX12-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX12-NEXT:  .LBB142_2: ; %f
+; GFX12-NEXT:    s_endpgm
+  %tidx = call i32 @llvm.amdgcn.workitem.id.x()
+  %v = call i32 @llvm.amdgcn.permlanex16.i32(i32 %src0, i32 %src0, i32 %pattern_lo, i32 %pattern_hi, i1 false, i1 false)
+  %select = icmp eq i32 %tidx, 0
+  br i1 %select, label %t, label %f
+t:
+  store i32 %v, ptr addrspace(1) %out
+  br label %f
+f:
   ret void
 }

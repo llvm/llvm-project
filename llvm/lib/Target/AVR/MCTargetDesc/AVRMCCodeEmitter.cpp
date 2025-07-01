@@ -12,7 +12,7 @@
 
 #include "AVRMCCodeEmitter.h"
 
-#include "MCTargetDesc/AVRMCExpr.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
 #include "llvm/ADT/APFloat.h"
@@ -230,7 +230,7 @@ unsigned AVRMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     Kind = Expr->getKind();
   }
 
-  if (Kind == MCExpr::Target) {
+  if (Kind == MCExpr::Specifier) {
     AVRMCExpr const *AVRExpr = cast<AVRMCExpr>(Expr);
     int64_t Result;
     if (AVRExpr->evaluateAsConstant(Result)) {

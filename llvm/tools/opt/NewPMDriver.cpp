@@ -519,7 +519,8 @@ bool llvm::runPassPipeline(
     break;
   case OK_OutputThinLTOBitcode:
     MPM.addPass(ThinLTOBitcodeWriterPass(
-        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr));
+        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr,
+        ShouldPreserveBitcodeUseListOrder));
     break;
   }
 

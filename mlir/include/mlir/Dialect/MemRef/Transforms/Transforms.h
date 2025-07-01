@@ -144,6 +144,8 @@ FailureOr<memref::AllocOp> multiBuffer(memref::AllocOp allocOp,
 /// ```
 void populateExtractAddressComputationsPatterns(RewritePatternSet &patterns);
 
+void populateFlattenMemrefsPatterns(RewritePatternSet &patterns);
+
 /// Build a new memref::AllocaOp whose dynamic sizes are independent of all
 /// given independencies. If the op is already independent of all
 /// independencies, the same AllocaOp result is returned.

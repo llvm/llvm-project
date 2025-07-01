@@ -34,6 +34,9 @@ define amdgpu_kernel void @local_volatile_load_0(
 ;
 ; GFX7-LABEL: local_volatile_load_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_mov_b32 m0, -1
@@ -172,6 +175,9 @@ define amdgpu_kernel void @local_volatile_load_1(
 ;
 ; GFX7-LABEL: local_volatile_load_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_mov_b32 s7, 2

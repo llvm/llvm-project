@@ -30,6 +30,22 @@ template <class _Tp, class _Up>
 struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))>
     : true_type {};
 
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Tp, class _Up>
+concept __core_convertible_to = __is_core_convertible<_Tp, _Up>::value;
+
+#endif // _LIBCPP_STD_VER >= 20
+
+template <class _Tp, class _Up, bool = __is_core_convertible<_Tp, _Up>::value>
+inline const bool __is_nothrow_core_convertible_v = false;
+
+#ifndef _LIBCPP_CXX03_LANG
+template <class _Tp, class _Up>
+inline const bool __is_nothrow_core_convertible_v<_Tp, _Up, true> =
+    noexcept(static_cast<void (*)(_Up) noexcept>(0)(static_cast<_Tp (*)() noexcept>(0)()));
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H

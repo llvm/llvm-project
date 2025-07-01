@@ -26,6 +26,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -3427,6 +3428,25 @@ AddFunctionTypeQualsToCompletionString(CodeCompletionBuilder &Result,
   Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
 }
 
+static void
+AddFunctionExceptSpecToCompletionString(std::string &NameAndSignature,
+                                        const FunctionDecl *Function) {
+  const auto *Proto = Function->getType()->getAs<FunctionProtoType>();
+  if (!Proto)
+    return;
+
+  auto ExceptInfo = Proto->getExceptionSpecInfo();
+  switch (ExceptInfo.Type) {
+  case EST_BasicNoexcept:
+  case EST_NoexceptTrue:
+    NameAndSignature += " noexcept";
+    break;
+
+  default:
+    break;
+  }
+}
+
 /// Add the name of the given declaration
 static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
                               const NamedDecl *ND,
@@ -3642,6 +3662,13 @@ CodeCompletionResult::createCodeCompletionStringForOverride(
   std::string NameAndSignature;
   // For overrides all chunks go into the result, none are informative.
   printOverrideString(*CCS, BeforeName, NameAndSignature);
+
+  // If the virtual function is declared with "noexcept", add it in the result
+  // code completion string.
+  const auto *VirtualFunc = dyn_cast<FunctionDecl>(Declaration);
+  assert(VirtualFunc && "overridden decl must be a function");
+  AddFunctionExceptSpecToCompletionString(NameAndSignature, VirtualFunc);
+
   NameAndSignature += " override";
 
   Result.AddTextChunk(Result.getAllocator().CopyString(BeforeName));
@@ -4837,7 +4864,6 @@ void SemaCodeCompletion::CodeCompleteAttribute(
       // We skip this if the scope was already spelled and not guarded, or
       // we must spell it and can't guard it.
       if (!(InScope && !InScopeUnderscore) && SyntaxSupportsGuards) {
-        llvm::SmallString<32> Guarded;
         if (Scope.empty()) {
           Add(Scope, Name, /*Underscores=*/true);
         } else {
@@ -5726,7 +5752,10 @@ private:
 QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
   if (E->getType().isNull())
     return QualType();
-  E = E->IgnoreParenImpCasts();
+  // Don't drop implicit cast if it's an array decay.
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+      !ICE || ICE->getCastKind() != CK_ArrayToPointerDecay)
+    E = E->IgnoreParenImpCasts();
   QualType Unresolved = E->getType();
   // Resolve DependentNameType
   if (const auto *DNT = Unresolved->getAs<DependentNameType>()) {
@@ -6351,7 +6380,8 @@ SemaCodeCompletion::ProduceCallSignatureHelp(Expr *Fn, ArrayRef<Expr *> Args,
   Expr *NakedFn = Fn->IgnoreParenCasts();
   // Build an overload candidate set based on the functions we find.
   SourceLocation Loc = Fn->getExprLoc();
-  OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+  OverloadCandidateSet CandidateSet(Loc,
+                                    OverloadCandidateSet::CSK_CodeCompletion);
 
   if (auto ULE = dyn_cast<UnresolvedLookupExpr>(NakedFn)) {
     SemaRef.AddOverloadedCallCandidates(ULE, ArgsWithoutDependentTypes,
@@ -6554,7 +6584,8 @@ QualType SemaCodeCompletion::ProduceConstructorSignatureHelp(
   // FIXME: Provide support for variadic template constructors.
 
   if (CRD) {
-    OverloadCandidateSet CandidateSet(Loc, OverloadCandidateSet::CSK_Normal);
+    OverloadCandidateSet CandidateSet(Loc,
+                                      OverloadCandidateSet::CSK_CodeCompletion);
     for (NamedDecl *C : SemaRef.LookupConstructors(CRD)) {
       if (auto *FD = dyn_cast<FunctionDecl>(C)) {
         // FIXME: we can't yet provide correct signature help for initializer
@@ -8715,7 +8746,7 @@ static void AddProtocolResults(DeclContext *Ctx, DeclContext *CurContext,
 }
 
 void SemaCodeCompletion::CodeCompleteObjCProtocolReferences(
-    ArrayRef<IdentifierLocPair> Protocols) {
+    ArrayRef<IdentifierLoc> Protocols) {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_ObjCProtocolName);
@@ -8726,9 +8757,9 @@ void SemaCodeCompletion::CodeCompleteObjCProtocolReferences(
     // Tell the result set to ignore all of the protocols we have
     // already seen.
     // FIXME: This doesn't work when caching code-completion results.
-    for (const IdentifierLocPair &Pair : Protocols)
-      if (ObjCProtocolDecl *Protocol =
-              SemaRef.ObjC().LookupProtocol(Pair.first, Pair.second))
+    for (const IdentifierLoc &Pair : Protocols)
+      if (ObjCProtocolDecl *Protocol = SemaRef.ObjC().LookupProtocol(
+              Pair.getIdentifierInfo(), Pair.getLoc()))
         Results.Ignore(Protocol);
 
     // Add all protocols.

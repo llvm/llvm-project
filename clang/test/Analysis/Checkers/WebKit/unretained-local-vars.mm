@@ -387,6 +387,27 @@ unsigned ccf(CFTypeRef obj) {
 
 } // ptr_conversion
 
+namespace const_global {
+
+extern NSString * const SomeConstant;
+extern CFDictionaryRef const SomeDictionary;
+void doWork(NSString *, CFDictionaryRef);
+void use_const_global() {
+  doWork(SomeConstant, SomeDictionary);
+}
+
+NSString *provide_str();
+CFDictionaryRef provide_dict();
+void use_const_local() {
+  NSString * const str = provide_str();
+  // expected-warning@-1{{Local variable 'str' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  CFDictionaryRef dict = provide_dict();
+  // expected-warning@-1{{Local variable 'dict' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  doWork(str, dict);
+}
+
+} // namespace const_global
+
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
 

@@ -808,9 +808,9 @@ static std::optional<SymbolTable::UseRange> getSymbolUsesImpl(SymbolT symbol,
 }
 
 /// Get all of the uses of the given symbol that are nested within the given
-/// operation 'from', invoking the provided callback for each. This does not
-/// traverse into any nested symbol tables. This function returns std::nullopt
-/// if there are any unknown operations that may potentially be symbol tables.
+/// operation 'from'. This does not traverse into any nested symbol tables.
+/// This function returns std::nullopt if there are any unknown operations that
+/// may potentially be symbol tables.
 auto SymbolTable::getSymbolUses(StringAttr symbol, Operation *from)
     -> std::optional<UseRange> {
   return getSymbolUsesImpl(symbol, from);
@@ -998,6 +998,10 @@ SymbolTable &SymbolTableCollection::getSymbolTable(Operation *op) {
   return *it.first->second;
 }
 
+void SymbolTableCollection::invalidateSymbolTable(Operation *op) {
+  symbolTables.erase(op);
+}
+
 //===----------------------------------------------------------------------===//
 // LockedSymbolTableCollection
 //===----------------------------------------------------------------------===//
@@ -1096,7 +1100,7 @@ void SymbolUserMap::replaceAllUsesWith(Operation *symbol,
   if (newSymbol != symbol) {
     // Transfer over the users to the new symbol.  The reference to the old one
     // is fetched again as the iterator is invalidated during the insertion.
-    auto newIt = symbolToUsers.try_emplace(newSymbol, SetVector<Operation *>{});
+    auto newIt = symbolToUsers.try_emplace(newSymbol);
     auto oldIt = symbolToUsers.find(symbol);
     assert(oldIt != symbolToUsers.end() && "missing old users list");
     if (newIt.second)

@@ -55,7 +55,7 @@ TEST(WholeProgramDevirt, findLowestOffset) {
   VT1.After.BytesUsed = {0xff, 0, 0, 0, 0xff};
   VT2.After.BytesUsed = {0xff, 1, 0, 0, 0};
   EXPECT_EQ(16ull, findLowestOffset(Targets, /*IsAfter=*/true, 16));
-  EXPECT_EQ(40ull, findLowestOffset(Targets, /*IsAfter=*/true, 32));
+  EXPECT_EQ(64ull, findLowestOffset(Targets, /*IsAfter=*/true, 32));
 }
 
 TEST(WholeProgramDevirt, setReturnValues) {

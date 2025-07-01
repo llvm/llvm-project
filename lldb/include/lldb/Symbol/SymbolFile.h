@@ -144,7 +144,7 @@ public:
   virtual uint32_t GetNumCompileUnits() = 0;
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx) = 0;
 
-  virtual Symtab *GetSymtab() = 0;
+  virtual Symtab *GetSymtab(bool can_create = true) = 0;
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
@@ -296,7 +296,7 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        SymbolContextList &sc_list);
 
-  virtual void DumpClangAST(Stream &s) {}
+  virtual void DumpClangAST(Stream &s, llvm::StringRef filter) {}
   virtual void FindGlobalVariables(ConstString name,
                                    const CompilerDeclContext &parent_decl_ctx,
                                    uint32_t max_matches,
@@ -472,6 +472,14 @@ public:
     return false;
   };
 
+  /// Get number of loaded/parsed DWO files. This is emitted in "statistics
+  /// dump"
+  ///
+  /// \returns
+  ///     A pair containing (loaded_dwo_count, total_dwo_count). If this
+  ///     symbol file doesn't support DWO files, both counts will be 0.
+  virtual std::pair<uint32_t, uint32_t> GetDwoFileCounts() { return {0, 0}; }
+
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,
            std::optional<uint64_t> byte_size, SymbolContextScope *context,
@@ -533,7 +541,7 @@ public:
     return m_abilities;
   }
 
-  Symtab *GetSymtab() override;
+  Symtab *GetSymtab(bool can_create = true) override;
 
   ObjectFile *GetObjectFile() override { return m_objfile_sp.get(); }
   const ObjectFile *GetObjectFile() const override {

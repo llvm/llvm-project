@@ -802,6 +802,126 @@ define i32 @freeze_fshr(i32 %a0, i32 %a1, i32 %a2) nounwind {
   ret i32 %z
 }
 
+define i32 @freeze_saddo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
+; X86-LABEL: freeze_saddo:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_saddo:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    addb %cl, %dl
+; X64-NEXT:    adcl %esi, %eax
+; X64-NEXT:    retq
+  %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
+  %b.o = extractvalue {i8, i1} %b, 1
+  %x = zext i1 %b.o to i32
+
+  %f0 = freeze i32 %a0
+  %o = call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %f0, i32 %x)
+  %f = freeze {i32, i1} %o
+  %v = extractvalue {i32, i1} %f, 0
+  %r = add i32 %v, %a1
+  ret i32 %r
+}
+
+define i32 @freeze_uaddo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
+; X86-LABEL: freeze_uaddo:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_uaddo:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    addb %cl, %dl
+; X64-NEXT:    adcl %esi, %eax
+; X64-NEXT:    retq
+  %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
+  %b.o = extractvalue {i8, i1} %b, 1
+  %x = zext i1 %b.o to i32
+
+  %f0 = freeze i32 %a0
+  %o = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %f0, i32 %x)
+  %f = freeze {i32, i1} %o
+  %v = extractvalue {i32, i1} %f, 0
+  %r = add i32 %v, %a1
+  ret i32 %r
+}
+
+define i32 @freeze_ssubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
+; X86-LABEL: freeze_ssubo:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    setb %cl
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ssubo:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    addb %cl, %dl
+; X64-NEXT:    sbbl $0, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    retq
+  %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
+  %b.o = extractvalue {i8, i1} %b, 1
+  %x = zext i1 %b.o to i32
+
+  %f0 = freeze i32 %a0
+  %o = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %f0, i32 %x)
+  %f = freeze {i32, i1} %o
+  %v = extractvalue {i32, i1} %f, 0
+  %r = sub i32 %v, %a1
+  ret i32 %r
+}
+
+define i32 @freeze_usubo(i32 %a0, i32 %a1, i8 %a2, i8 %a3) nounwind {
+; X86-LABEL: freeze_usubo:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl %ecx, %ecx
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    setb %cl
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_usubo:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    addb %cl, %dl
+; X64-NEXT:    sbbl $0, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    retq
+  %b = call {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a2, i8 %a3)
+  %b.o = extractvalue {i8, i1} %b, 1
+  %x = zext i1 %b.o to i32
+
+  %f0 = freeze i32 %a0
+  %o = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %f0, i32 %x)
+  %f = freeze {i32, i1} %o
+  %v = extractvalue {i32, i1} %f, 0
+  %r = sub i32 %v, %a1
+  ret i32 %r
+}
+
 define void @pr59676_frozen(ptr %dst, i32 %x.orig) {
 ; X86-LABEL: pr59676_frozen:
 ; X86:       # %bb.0:

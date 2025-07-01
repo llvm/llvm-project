@@ -449,12 +449,6 @@ TEST_F(RtsanFileTest, FcntlSetFdDiesWhenRealtime) {
   close(fd);
 }
 
-TEST(TestRtsanInterceptors, CloseDiesWhenRealtime) {
-  auto Func = []() { close(0); };
-  ExpectRealtimeDeath(Func, "close");
-  ExpectNonRealtimeSurvival(Func);
-}
-
 TEST(TestRtsanInterceptors, ChdirDiesWhenRealtime) {
   auto Func = []() { chdir("."); };
   ExpectRealtimeDeath(Func, "chdir");
@@ -606,8 +600,10 @@ protected:
   }
 
   void TearDown() override {
-    if (file != nullptr)
+    const bool is_open = fcntl(fd, F_GETFD) != -1;
+    if (is_open && file != nullptr)
       fclose(file);
+
     RtsanFileTest::TearDown();
   }
 
@@ -619,6 +615,16 @@ private:
   FILE *file = nullptr;
   int fd = -1;
 };
+
+TEST_F(RtsanOpenedFileTest, CloseDiesWhenRealtime) {
+  auto Func = [this]() { close(GetOpenFd()); };
+  ExpectRealtimeDeath(Func, "close");
+}
+
+TEST_F(RtsanOpenedFileTest, CloseSurvivesWhenNotRealtime) {
+  auto Func = [this]() { close(GetOpenFd()); };
+  ExpectNonRealtimeSurvival(Func);
+}
 
 #if SANITIZER_INTERCEPT_FSEEK
 TEST_F(RtsanOpenedFileTest, FgetposDieWhenRealtime) {
@@ -1126,10 +1132,18 @@ TEST(TestRtsanInterceptors, PthreadJoinDiesWhenRealtime) {
 }
 
 #if SANITIZER_APPLE
-
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#undef OSSpinLockLock
+extern "C" {
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+void _os_nospin_lock_lock(_os_nospin_lock_t lock);
+}
+
 TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   auto Func = []() {
     OSSpinLock spin_lock{};
@@ -1138,7 +1152,14 @@ TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "OSSpinLockLock");
   ExpectNonRealtimeSurvival(Func);
 }
-#pragma clang diagnostic pop
+
+TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
+  OSSpinLock lock{};
+  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
+  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
+  ExpectNonRealtimeSurvival(Func);
+}
+#pragma clang diagnostic pop //"-Wdeprecated-declarations"
 
 TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   auto Func = []() {
@@ -1148,26 +1169,7 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
-
-// We intercept _os_nospin_lock_lock because it's the internal
-// locking mechanism for MacOS's atomic implementation for data
-// types that are larger than the hardware's maximum lock-free size.
-// However, it's a private implementation detail and not visible in any headers,
-// so we must duplicate the required type definitions to forward declaration
-// what we need here.
-extern "C" {
-struct _os_nospin_lock_s {
-  unsigned int oul_value;
-};
-void _os_nospin_lock_lock(_os_nospin_lock_s *);
-}
-TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
-  _os_nospin_lock_s lock{};
-  auto Func = [&]() { _os_nospin_lock_lock(&lock); };
-  ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
-  ExpectNonRealtimeSurvival(Func);
-}
-#endif
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {

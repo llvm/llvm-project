@@ -11,6 +11,22 @@
 
 using namespace lldb_private;
 
+std::optional<bool> ClangASTMetadata::GetIsDynamicCXXType() const {
+  switch (m_is_dynamic_cxx) {
+  case 0:
+    return std::nullopt;
+  case 1:
+    return false;
+  case 2:
+    return true;
+  }
+  llvm_unreachable("Invalid m_is_dynamic_cxx value");
+}
+
+void ClangASTMetadata::SetIsDynamicCXXType(std::optional<bool> b) {
+  m_is_dynamic_cxx = b ? *b + 1 : 0;
+}
+
 void ClangASTMetadata::Dump(Stream *s) {
   lldb::user_id_t uid = GetUserID();
 

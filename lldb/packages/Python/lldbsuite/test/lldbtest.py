@@ -757,7 +757,7 @@ class Base(unittest.TestCase):
     def setUpCommands(cls):
         commands = [
             # First of all, clear all settings to have clean state of global properties.
-            "settings clear -all",
+            "settings clear --all",
             # Disable Spotlight lookup. The testsuite creates
             # different binaries with the same UUID, because they only
             # differ in the debug info, which is not being hashed.
@@ -2257,12 +2257,12 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
                 substrs=[p],
             )
 
-    def completions_match(self, command, completions):
+    def completions_match(self, command, completions, max_completions=-1):
         """Checks that the completions for the given command are equal to the
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, -1, match_strings)
+        interp.HandleCompletion(command, len(command), 0, max_completions, match_strings)
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"

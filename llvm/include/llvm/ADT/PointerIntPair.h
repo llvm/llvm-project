@@ -206,11 +206,10 @@ struct PointerIntPairInfo {
   }
 
   static intptr_t updateInt(intptr_t OrigValue, intptr_t Int) {
-    intptr_t IntWord = static_cast<intptr_t>(Int);
-    assert((IntWord & ~IntMask) == 0 && "Integer too large for field");
+    assert((Int & ~IntMask) == 0 && "Integer too large for field");
 
     // Preserve all bits other than the ones we are updating.
-    return (OrigValue & ~ShiftedIntMask) | IntWord << IntShift;
+    return (OrigValue & ~ShiftedIntMask) | Int << IntShift;
   }
 };
 

@@ -63,6 +63,11 @@ static void insertCall(Function &CurFn, StringRef Func,
                                   false));
       CallInst *Call = CallInst::Create(Fn, RetAddr, "", InsertionPt);
       Call->setDebugLoc(DL);
+    } else if (TargetTriple.isSystemZ()) {
+      // skip insertion for `mcount` on SystemZ. This will be handled later in
+      // `emitPrologue`. Add custom attribute to denote this.
+      CurFn.addFnAttr(
+          llvm::Attribute::get(C, "systemz-instrument-function-entry", Func));
     } else {
       FunctionCallee Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
       CallInst *Call = CallInst::Create(Fn, "", InsertionPt);

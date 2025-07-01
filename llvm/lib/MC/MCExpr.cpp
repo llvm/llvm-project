@@ -7,14 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCExpr.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
@@ -90,7 +91,7 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
     Sym.print(OS, MAI);
 
     const MCSymbolRefExpr::VariantKind Kind = SRE.getKind();
-    if (Kind != MCSymbolRefExpr::VK_None) {
+    if (Kind) {
       if (!MAI) // should only be used by dump()
         OS << "@<variant " << Kind << '>';
       else if (MAI->useParensForSpecifier()) // ARM
@@ -171,6 +172,18 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
       OS << ')';
     return;
   }
+
+  case MCExpr::Specifier: {
+    auto &SE = cast<MCSpecifierExpr>(*this);
+    if (MAI)
+      return MAI->printSpecifierExpr(OS, SE);
+    // Used by dump features like -show-inst. Regular MCAsmStreamer output must
+    // set MAI.
+    OS << "specifier(" << SE.getSpecifier() << ',';
+    SE.getSubExpr()->print(OS, nullptr);
+    OS << ')';
+    return;
+  }
   }
 
   llvm_unreachable("Invalid expression kind!");
@@ -178,39 +191,10 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCExpr::dump() const {
-  dbgs() << *this;
+  print(dbgs(), nullptr);
   dbgs() << '\n';
 }
 #endif
-
-bool MCExpr::isSymbolUsedInExpression(const MCSymbol *Sym) const {
-  switch (getKind()) {
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(this);
-    return BE->getLHS()->isSymbolUsedInExpression(Sym) ||
-           BE->getRHS()->isSymbolUsedInExpression(Sym);
-  }
-  case MCExpr::Target: {
-    const MCTargetExpr *TE = static_cast<const MCTargetExpr *>(this);
-    return TE->isSymbolUsedInExpression(Sym);
-  }
-  case MCExpr::Constant:
-    return false;
-  case MCExpr::SymbolRef: {
-    const MCSymbol &S = static_cast<const MCSymbolRefExpr *>(this)->getSymbol();
-    if (S.isVariable() && !S.isWeakExternal())
-      return S.getVariableValue()->isSymbolUsedInExpression(Sym);
-    return &S == Sym;
-  }
-  case MCExpr::Unary: {
-    const MCExpr *SubExpr =
-        static_cast<const MCUnaryExpr *>(this)->getSubExpr();
-    return SubExpr->isSymbolUsedInExpression(Sym);
-  }
-  }
-
-  llvm_unreachable("Unknown expr kind!");
-}
 
 /* *** */
 
@@ -233,16 +217,16 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 /* *** */
 
-MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
+MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, Spec specifier,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc, Kind), Symbol(Symbol) {
+    : MCExpr(MCExpr::SymbolRef, Loc, specifier), Symbol(Symbol) {
   assert(Symbol);
 }
 
 const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
-                                               VariantKind Kind,
+                                               uint16_t specifier,
                                                MCContext &Ctx, SMLoc Loc) {
-  return new (Ctx) MCSymbolRefExpr(Sym, Kind, Ctx.getAsmInfo(), Loc);
+  return new (Ctx) MCSymbolRefExpr(Sym, specifier, Ctx.getAsmInfo(), Loc);
 }
 
 /* *** */
@@ -296,7 +280,7 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   const MCSymbol &SA = *A, &SB = *B;
   if (SA.isUndefined() || SB.isUndefined())
     return;
-  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(*Asm, SA, SB, InSet))
+  if (!Asm->getWriter().isSymbolRefDifferenceFullyResolved(SA, SB, InSet))
     return;
 
   auto FinalizeFolding = [&]() {
@@ -320,12 +304,11 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
   // When layout is available, we can generally compute the difference using the
   // getSymbolOffset path, which also avoids the possible slow fragment walk.
   // However, linker relaxation may cause incorrect fold of A-B if A and B are
-  // separated by a linker-relaxable instruction. If the section contains
-  // instructions and InSet is false (not expressions in directive like
-  // .size/.fill), disable the fast path.
+  // separated by a linker-relaxable fragment. If the section contains
+  // linker-relaxable instruction and InSet is false (not expressions in
+  // directive like .size/.fill), disable the fast path.
   bool Layout = Asm->hasLayout();
-  if (Layout && (InSet || !SecA.hasInstructions() ||
-                 !Asm->getBackend().allowLinkerRelaxation())) {
+  if (Layout && (InSet || !SecA.isLinkerRelaxable())) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
@@ -390,6 +373,12 @@ static void attemptToFoldSymbolOffsetDifference(const MCAssembler *Asm,
       unsigned Count;
       if (DF) {
         Displacement += DF->getContents().size();
+      } else if (auto *RF = dyn_cast<MCRelaxableFragment>(FI);
+                 RF && Asm->hasFinalLayout()) {
+        // Before finishLayout, a relaxable fragment's size is indeterminate.
+        // After layout, during relocation generation, it can be treated as a
+        // data fragment.
+        Displacement += RF->getContents().size();
       } else if (auto *AF = dyn_cast<MCAlignFragment>(FI);
                  AF && Layout && AF->hasEmitNops() &&
                  !Asm->getBackend().shouldInsertExtraNopBytesForCodeAlign(
@@ -470,21 +459,6 @@ bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const {
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
   return evaluateAsRelocatableImpl(Res, &Asm, true);
 }
-static bool canExpand(const MCSymbol &Sym, bool InSet) {
-  if (Sym.isWeakExternal())
-    return false;
-
-  const MCExpr *Expr = Sym.getVariableValue();
-  const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
-  if (Inner) {
-    if (Inner->getKind() == MCSymbolRefExpr::VK_WEAKREF)
-      return false;
-  }
-
-  if (InSet)
-    return true;
-  return !Sym.isInSection();
-}
 
 bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                        bool InSet) const {
@@ -498,18 +472,38 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
   case SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
+    MCSymbol &Sym = const_cast<MCSymbol &>(SRE->getSymbol());
     const auto Kind = SRE->getKind();
     bool Layout = Asm && Asm->hasLayout();
 
-    // Evaluate recursively if this is a variable.
-    if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
-        canExpand(Sym, InSet)) {
+    // If the symbol is equated, resolve the inner expression.
+    // However, when two IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY symbols reference
+    // each other, we retain the equated symbol to avoid a cyclic definition
+    // error.
+    if (Sym.isResolving()) {
+      if (Asm && Asm->hasFinalLayout()) {
+        Asm->getContext().reportError(
+            Sym.getVariableValue()->getLoc(),
+            "cyclic dependency detected for symbol '" + Sym.getName() + "'");
+        Sym.setVariableValue(MCConstantExpr::create(0, Asm->getContext()));
+      }
+      return false;
+    }
+    if (Sym.isVariable() && (Kind == 0 || Layout) && !Sym.isWeakExternal()) {
+      Sym.setIsResolving(true);
+      auto _ = make_scope_exit([&] { Sym.setIsResolving(false); });
       bool IsMachO =
           Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
-      if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
-                                                            InSet || IsMachO)) {
-        if (Kind != MCSymbolRefExpr::VK_None) {
+      if (!Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
+                                                             InSet || IsMachO))
+        return false;
+      // When generating relocations, if Sym resolves to a symbol relative to a
+      // section, relocations are generated against Sym. Treat label differences
+      // as constants.
+      auto *A = Res.getAddSym();
+      auto *B = Res.getSubSym();
+      if (InSet || !(A && !B && A->isInSection())) {
+        if (Kind) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(&Sym, nullptr, 0, Kind);
             return true;
@@ -517,16 +511,14 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
           // If the reference has a variant kind, we can only handle expressions
           // which evaluate exactly to a single unadorned symbol. Attach the
           // original VariantKind to SymA of the result.
-          if (Res.getSpecifier() != MCSymbolRefExpr::VK_None ||
-              !Res.getAddSym() || Res.getSubSym() || Res.getConstant())
+          if (Res.getSpecifier() || !Res.getAddSym() || Res.getSubSym() ||
+              Res.getConstant())
             return false;
           Res.Specifier = Kind;
         }
         if (!IsMachO)
           return true;
 
-        auto *A = Res.getAddSym();
-        auto *B = Res.getSubSym();
         // FIXME: This is small hack. Given
         // a = b + 4
         // .long a
@@ -693,6 +685,11 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
     return true;
   }
+  case Specifier:
+    // Fold the expression during relocation generation. As parse time Asm might
+    // be null, and targets should not rely on the folding.
+    return Asm && Asm->getContext().getAsmInfo()->evaluateAsRelocatableImpl(
+                      cast<MCSpecifierExpr>(*this), Res, Asm);
   }
 
   llvm_unreachable("Invalid assembly expression kind!");
@@ -708,9 +705,16 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     return MCSymbol::AbsolutePseudoFragment;
 
   case SymbolRef: {
-    const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(this);
-    const MCSymbol &Sym = SRE->getSymbol();
-    return Sym.getFragment();
+    auto &Sym =
+        const_cast<MCSymbol &>(cast<MCSymbolRefExpr>(this)->getSymbol());
+    if (Sym.Fragment)
+      return Sym.Fragment;
+    if (Sym.isResolving())
+      return MCSymbol::AbsolutePseudoFragment;
+    Sym.setIsResolving(true);
+    auto *F = Sym.getFragment();
+    Sym.setIsResolving(false);
+    return F;
   }
 
   case Unary:
@@ -734,7 +738,20 @@ MCFragment *MCExpr::findAssociatedFragment() const {
     // Otherwise, return the first non-null fragment.
     return LHS_F ? LHS_F : RHS_F;
   }
+
+  case Specifier:
+    return cast<MCSpecifierExpr>(this)->getSubExpr()->findAssociatedFragment();
   }
 
   llvm_unreachable("Invalid assembly expression kind!");
+}
+
+const MCSpecifierExpr *MCSpecifierExpr::create(const MCExpr *Expr, Spec S,
+                                               MCContext &Ctx, SMLoc Loc) {
+  return new (Ctx) MCSpecifierExpr(Expr, S, Loc);
+}
+
+const MCSpecifierExpr *MCSpecifierExpr::create(const MCSymbol *Sym, Spec S,
+                                               MCContext &Ctx, SMLoc Loc) {
+  return new (Ctx) MCSpecifierExpr(MCSymbolRefExpr::create(Sym, Ctx), S, Loc);
 }

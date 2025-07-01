@@ -26,6 +26,8 @@
 // PCH_DEP: "is-in-stable-directories": true
 // PCH_DEP: "name": "A"
 
+// PCH_DEP-NOT: "is-in-stable-directories": true
+
 // Verify is-in-stable-directories is only assigned to the module that only depends on A.
 // CLIENT-NOT: "is-in-stable-directories": true
 

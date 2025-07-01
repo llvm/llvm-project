@@ -22,10 +22,10 @@ define void @cp_async_bulk_tensor_prefetch_tile_1d(ptr %tmap, i32 %d0, i64 %ch) 
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_prefetch_tile_1d_param_0];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_prefetch_tile_1d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_prefetch_tile_1d_param_0];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_prefetch_tile_1d_param_1];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.1d.L2.global.tile [%rd1, {%r1}];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_prefetch_tile_1d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_tile_1d_param_2];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.1d.L2.global.tile.L2::cache_hint [%rd1, {%r1}], %rd2;
 ; CHECK-PTX-NEXT:    ret;
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.1d(ptr %tmap, i32 %d0, i64 undef, i1 0)
@@ -41,11 +41,11 @@ define void @cp_async_bulk_tensor_prefetch_tile_2d(i32 %flag, ptr %tmap, i32 %d0
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_prefetch_tile_2d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_prefetch_tile_2d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_prefetch_tile_2d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_prefetch_tile_2d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_prefetch_tile_2d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_prefetch_tile_2d_param_3];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile [%rd1, {%r1, %r2}];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_prefetch_tile_2d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_tile_2d_param_4];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.2d.L2.global.tile.L2::cache_hint [%rd1, {%r1, %r2}], %rd2;
 ; CHECK-PTX-NEXT:    ret;
   tail call void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.2d(ptr %tmap, i32 %d0, i32 %d1, i64 undef, i1 0)
@@ -62,14 +62,14 @@ define void @cp_async_bulk_tensor_prefetch_3d(i32 %flag, ptr %tmap, i32 %d0, i32
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_prefetch_3d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_prefetch_3d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_prefetch_3d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_prefetch_3d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_prefetch_3d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_prefetch_3d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_prefetch_3d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_prefetch_3d_param_4];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.tile [%rd1, {%r1, %r2, %r3}];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_prefetch_3d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_3d_param_6];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.tile.L2::cache_hint [%rd1, {%r1, %r2, %r3}], %rd2;
-; CHECK-PTX-NEXT:    ld.param.u16 %rs1, [cp_async_bulk_tensor_prefetch_3d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b16 %rs1, [cp_async_bulk_tensor_prefetch_3d_param_5];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col [%rd1, {%r1, %r2, %r3}], {%rs1};
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.3d.L2.global.im2col.L2::cache_hint [%rd1, {%r1, %r2, %r3}], {%rs1}, %rd2;
 ; CHECK-PTX-NEXT:    ret;
@@ -90,16 +90,16 @@ define void @cp_async_bulk_tensor_prefetch_4d(i32 %flag, ptr %tmap, i32 %d0, i32
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_prefetch_4d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_prefetch_4d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_prefetch_4d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_prefetch_4d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u32 %r4, [cp_async_bulk_tensor_prefetch_4d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_prefetch_4d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_prefetch_4d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_prefetch_4d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_prefetch_4d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b32 %r4, [cp_async_bulk_tensor_prefetch_4d_param_5];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.tile [%rd1, {%r1, %r2, %r3, %r4}];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_prefetch_4d_param_8];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_4d_param_8];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.tile.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4}], %rd2;
-; CHECK-PTX-NEXT:    ld.param.u16 %rs1, [cp_async_bulk_tensor_prefetch_4d_param_6];
-; CHECK-PTX-NEXT:    ld.param.u16 %rs2, [cp_async_bulk_tensor_prefetch_4d_param_7];
+; CHECK-PTX-NEXT:    ld.param.b16 %rs1, [cp_async_bulk_tensor_prefetch_4d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b16 %rs2, [cp_async_bulk_tensor_prefetch_4d_param_7];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2};
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.4d.L2.global.im2col.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4}], {%rs1, %rs2}, %rd2;
 ; CHECK-PTX-NEXT:    ret;
@@ -120,18 +120,18 @@ define void @cp_async_bulk_tensor_prefetch_5d(i32 %flag, ptr %tmap, i32 %d0, i32
 ; CHECK-PTX-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-PTX-EMPTY:
 ; CHECK-PTX-NEXT:  // %bb.0:
-; CHECK-PTX-NEXT:    ld.param.u64 %rd1, [cp_async_bulk_tensor_prefetch_5d_param_1];
-; CHECK-PTX-NEXT:    ld.param.u32 %r1, [cp_async_bulk_tensor_prefetch_5d_param_2];
-; CHECK-PTX-NEXT:    ld.param.u32 %r2, [cp_async_bulk_tensor_prefetch_5d_param_3];
-; CHECK-PTX-NEXT:    ld.param.u32 %r3, [cp_async_bulk_tensor_prefetch_5d_param_4];
-; CHECK-PTX-NEXT:    ld.param.u32 %r4, [cp_async_bulk_tensor_prefetch_5d_param_5];
-; CHECK-PTX-NEXT:    ld.param.u32 %r5, [cp_async_bulk_tensor_prefetch_5d_param_6];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd1, [cp_async_bulk_tensor_prefetch_5d_param_1];
+; CHECK-PTX-NEXT:    ld.param.b32 %r1, [cp_async_bulk_tensor_prefetch_5d_param_2];
+; CHECK-PTX-NEXT:    ld.param.b32 %r2, [cp_async_bulk_tensor_prefetch_5d_param_3];
+; CHECK-PTX-NEXT:    ld.param.b32 %r3, [cp_async_bulk_tensor_prefetch_5d_param_4];
+; CHECK-PTX-NEXT:    ld.param.b32 %r4, [cp_async_bulk_tensor_prefetch_5d_param_5];
+; CHECK-PTX-NEXT:    ld.param.b32 %r5, [cp_async_bulk_tensor_prefetch_5d_param_6];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.tile [%rd1, {%r1, %r2, %r3, %r4, %r5}];
-; CHECK-PTX-NEXT:    ld.param.u64 %rd2, [cp_async_bulk_tensor_prefetch_5d_param_10];
+; CHECK-PTX-NEXT:    ld.param.b64 %rd2, [cp_async_bulk_tensor_prefetch_5d_param_10];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.tile.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], %rd2;
-; CHECK-PTX-NEXT:    ld.param.u16 %rs1, [cp_async_bulk_tensor_prefetch_5d_param_7];
-; CHECK-PTX-NEXT:    ld.param.u16 %rs2, [cp_async_bulk_tensor_prefetch_5d_param_8];
-; CHECK-PTX-NEXT:    ld.param.u16 %rs3, [cp_async_bulk_tensor_prefetch_5d_param_9];
+; CHECK-PTX-NEXT:    ld.param.b16 %rs1, [cp_async_bulk_tensor_prefetch_5d_param_7];
+; CHECK-PTX-NEXT:    ld.param.b16 %rs2, [cp_async_bulk_tensor_prefetch_5d_param_8];
+; CHECK-PTX-NEXT:    ld.param.b16 %rs3, [cp_async_bulk_tensor_prefetch_5d_param_9];
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2, %rs3};
 ; CHECK-PTX-NEXT:    cp.async.bulk.prefetch.tensor.5d.L2.global.im2col.L2::cache_hint [%rd1, {%r1, %r2, %r3, %r4, %r5}], {%rs1, %rs2, %rs3}, %rd2;
 ; CHECK-PTX-NEXT:    ret;

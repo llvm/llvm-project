@@ -17,18 +17,18 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:  .LBB0_3: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-NEXT:    add x12, x0, #4
+; CHECK-NEXT:    add x13, x0, #4
 ; CHECK-NEXT:    and x10, x11, #0x1fffffff8
 ; CHECK-NEXT:    dup v0.4s, w8
-; CHECK-NEXT:    add x13, x1, #16
+; CHECK-NEXT:    add x14, x1, #16
 ; CHECK-NEXT:    add x8, x1, x10, lsl #2
+; CHECK-NEXT:    mov x12, x10
 ; CHECK-NEXT:    add x9, x0, x10
-; CHECK-NEXT:    mov x14, x10
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q1, q2, [x13, #-16]
-; CHECK-NEXT:    subs x14, x14, #8
-; CHECK-NEXT:    add x13, x13, #32
+; CHECK-NEXT:    ldp q1, q2, [x14, #-16]
+; CHECK-NEXT:    subs x12, x12, #8
+; CHECK-NEXT:    add x14, x14, #32
 ; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
@@ -44,8 +44,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-NEXT:    stur d1, [x12, #-4]
-; CHECK-NEXT:    add x12, x12, #8
+; CHECK-NEXT:    stur d1, [x13, #-4]
+; CHECK-NEXT:    add x13, x13, #8
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
@@ -346,7 +346,6 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:  .LBB2_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
-; CHECK-NEXT:    add x13, x0, #8
 ; CHECK-NEXT:    subs x12, x12, #4
 ; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
@@ -367,8 +366,10 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    xtn v6.4h, v4.4s
 ; CHECK-NEXT:    xtn v7.4h, v2.4s
 ; CHECK-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
-; CHECK-NEXT:    st1 { v2.s }[2], [x13]
-; CHECK-NEXT:    str d2, [x0], #12
+; CHECK-NEXT:    mov s3, v2.s[2]
+; CHECK-NEXT:    str d2, [x0]
+; CHECK-NEXT:    str s3, [x0, #8]
+; CHECK-NEXT:    add x0, x0, #12
 ; CHECK-NEXT:    b.ne .LBB2_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10

@@ -242,6 +242,7 @@ cc_test(
         "//clang:sema",
         "//clang:serialization",
         "//clang:tooling",
+        "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//third-party/unittest:gmock",

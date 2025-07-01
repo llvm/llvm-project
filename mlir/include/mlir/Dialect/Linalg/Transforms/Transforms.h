@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -30,11 +31,13 @@ namespace mlir {
 namespace bufferization {
 class AllocTensorOp;
 class OneShotAnalysisState;
+class BufferizationState;
 } // namespace bufferization
 
 namespace linalg {
 
 class LinalgOp;
+enum class WinogradConv2DFmr : uint32_t;
 
 //===----------------------------------------------------------------------===//
 // Utils.
@@ -294,6 +297,23 @@ struct LinalgPaddingOptions {
     padToMultipleOf.emplace(m.begin(), m.end());
     return *this;
   }
+  /// A mapping between an operand and shape dim, and a size for a padding
+  /// dimension. Each size is expected to be greater or equal than the
+  /// corresponding shape dim. If no value is provided then the constant upper
+  /// bound will be used.
+  DenseMap<std::pair<unsigned, unsigned>, OpFoldResult> sizeToPadTo;
+  LinalgPaddingOptions &setSizeToPadTo(unsigned operandIndex, unsigned dimIndex,
+                                       OpFoldResult size) {
+    assert(size && "expected non-null size");
+    sizeToPadTo[{operandIndex, dimIndex}] = size;
+    return *this;
+  }
+  /// Given the operand index and shape dim it returns the size to pad to.
+  OpFoldResult getSizeToPadTo(unsigned operandIndex, unsigned dimIndex) const {
+    return sizeToPadTo.lookup_or(
+        std::pair<unsigned, unsigned>(operandIndex, dimIndex), nullptr);
+  }
+
   /// A flag for every operand to mark the PadOp as nofold which enables
   /// packing for statically shaped operands.
   SmallVector<bool> nofoldFlags;
@@ -325,6 +345,28 @@ struct LinalgPaddingOptions {
   CopyBackOp copyBackOp = CopyBackOp::BufferizationMaterializeInDestination;
   LinalgPaddingOptions &setCopyBackOp(CopyBackOp op) {
     copyBackOp = op;
+    return *this;
+  }
+};
+
+struct PadTilingInterfaceOptions {
+  /// A padding value for every operand.
+  SmallVector<Attribute> paddingValues;
+  PadTilingInterfaceOptions &setPaddingValues(ArrayRef<Attribute> pv) {
+    paddingValues.assign(pv.begin(), pv.end());
+    return *this;
+  }
+  /// A list of iterator dimensions sizes to pad to.
+  SmallVector<OpFoldResult> paddingSizes;
+  PadTilingInterfaceOptions &setPaddingSizes(ArrayRef<OpFoldResult> m) {
+    paddingSizes.assign(m.begin(), m.end());
+    return *this;
+  }
+  /// Pad iterator `paddingDimension[i]` to next multiple of `paddingSizes[i]`
+  /// if true. Otherwise pad to `paddingSizes[i]`.
+  bool padToMultipleOf;
+  PadTilingInterfaceOptions &setPadToMultipleOf(bool b) {
+    padToMultipleOf = b;
     return *this;
   }
 };
@@ -524,9 +566,9 @@ SmallVector<Value> peelLoop(RewriterBase &rewriter, Operation *op);
 /// where relevant.
 void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 
-/// Pad the iterator dimensions `paddingDimensions` of all `opToPad` operands
-/// to a static bounding box. The original `opToPad` is cloned and operates on
-/// the padded tensors.
+/// Pad the iterator dimensions `options.paddingDimensions` of all `opToPad`
+/// operands to a static bounding box. The original `opToPad` is cloned and
+/// operates on the padded tensors.
 ///
 /// * "options.padToMultipleOf" indicates that each padding dimension should be
 ///   padded to the specified multiple.
@@ -542,6 +584,49 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                                 LinalgOp &paddedOp,
                                 SmallVector<Value> &replacements,
                                 SmallVector<tensor::PadOp> &padOps);
+
+/// Helper function to compute the padded shape of the given value `v` of
+/// `RankedTensorType` given:
+///   - the `indexingSizes` as a list of OpFoldResult.
+///   - an `indexingMap` that encodes how the padded shape varies with
+///     increases in `indexingSizes`.
+/// The implementation iteratively combines increases from contributing using
+/// affine.apply operations.
+/// The `indexingMap` + `indexingSizes` encoding suits StructuredOps and
+/// provides a gentle portability path for Linalg-like ops with affine maps.
+/// In the future, more general interfaces can be devised to encode similar
+/// shape evolutions and map between an op and its operands.
+SmallVector<OpFoldResult>
+computePaddedShape(RewriterBase &rewriter, TypedValue<RankedTensorType> v,
+                   AffineMap indexingMap, ArrayRef<OpFoldResult> indexingSizes,
+                   const PadTilingInterfaceOptions &options);
+
+using PadSizeComputationFunction =
+    std::function<FailureOr<SmallVector<OpFoldResult>>(
+        RewriterBase &, OpOperand &, ArrayRef<Range>,
+        const PadTilingInterfaceOptions &)>;
+
+/// Specific helper for Linalg ops.
+FailureOr<SmallVector<OpFoldResult>> computeIndexingMapOpInterfacePaddedShape(
+    RewriterBase &rewriter, OpOperand &operandToPad,
+    ArrayRef<Range> iterationDomain, const PadTilingInterfaceOptions &options);
+
+/// Pad the iterator dimensions `options.paddingDimensions` of `opToPad`.
+///
+/// * "options.paddingSizes" indicates that each padding dimension should be
+///   padded to the specified padding size.
+/// * "options.padToMultipleOf" indicates that the paddingSizes should be
+//    interpreted as the bounding box (dynamic) value to pad to.
+/// * Use "options.paddingValues" to set the padding value of the created
+//    tensor::PadOp.
+/// * The tensor::PadOp is returned on success.
+
+FailureOr<TilingInterface>
+rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
+                  const PadTilingInterfaceOptions &constOptions,
+                  SmallVector<tensor::PadOp> &padOps,
+                  PadSizeComputationFunction computePaddingSizeFun =
+                      &computeIndexingMapOpInterfacePaddedShape);
 
 namespace detail {
 
@@ -770,17 +855,23 @@ LogicalResult deallocateGPUPrivateMemory(OpBuilder &, Value /*buffer*/);
 /// to work (these are checked by the vectorizer itself).
 bool hasVectorizationImpl(Operation *);
 
-/// Emit a suitable vector form for an operation. If provided,
-/// `inputVectorSizes` are used to vectorize this operation. `inputVectorSizes`
-/// must match the rank of the iteration space of the operation and the sizes
-/// must be smaller or equal than their counterpart interation space sizes, if
-/// static. `inputVectorShapes` also allows the vectorization of operations with
-/// dynamic shapes.
-LogicalResult vectorize(RewriterBase &rewriter, Operation *op,
-                        ArrayRef<int64_t> inputVectorSizes = {},
-                        ArrayRef<bool> inputScalableVecDims = {},
-                        bool vectorizeNDExtract = false,
-                        bool flatten1DDepthwiseConv = false);
+/// Transformation information returned after vectorizing.
+struct VectorizationResult {
+  /// Results of the vectorization transform to replace the original operation.
+  SmallVector<Value> replacements;
+};
+/// Returns a `VectorizationResult` containing the results of the vectorized op,
+/// or failure if the transformation fails. If provided, `inputVectorSizes` are
+/// used to vectorize this operation. `inputVectorSizes` must match the rank of
+/// the iteration space of the operation and the input vector sizes must be
+/// greater than or equal to their counterpart iteration space sizes, if static.
+/// `inputVectorShapes` also allows the vectorization of operations with dynamic
+/// shapes.
+FailureOr<VectorizationResult>
+vectorize(RewriterBase &rewriter, Operation *op,
+          ArrayRef<int64_t> inputVectorSizes = {},
+          ArrayRef<bool> inputScalableVecDims = {},
+          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);
@@ -1336,8 +1427,8 @@ FailureOr<Operation *> transposeBatchMatmul(RewriterBase &rewriter,
 /// F(m x m, r x r). m is the dimension size of output and r is the dimension
 /// size of filter.
 FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
-                                      linalg::Conv2DNhwcFhwcOp op, int64_t m,
-                                      int64_t r);
+                                      linalg::Conv2DNhwcFhwcOp op,
+                                      WinogradConv2DFmr fmr);
 
 /// Rewrite linalg.winograd_filter_transform. The data layout of the filter is
 /// FHWC. The transformation matrix is 2-dimension. We need to extract H x W
@@ -1878,8 +1969,8 @@ void populateBlockPackMatmulPatterns(RewritePatternSet &patterns,
                                      const ControlBlockPackMatmulFn &controlFn);
 
 /// Patterns to apply Winograd Conv2D algorithm F(m x m, r x r).
-void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
-                                    int64_t r);
+void populateWinogradConv2DPatterns(RewritePatternSet &patterns,
+                                    WinogradConv2DFmr fmr);
 
 /// Patterns to decompose Winograd operators.
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns);

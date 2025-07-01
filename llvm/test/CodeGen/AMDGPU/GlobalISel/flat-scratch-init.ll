@@ -35,7 +35,7 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; RO-FLAT:     scratch_store_dword
 ; RW-FLAT:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; RO-FLAT-NOT: .amdhsa_user_sgpr_private_segment_buffer
-; RW-FLAT:     .amdhsa_user_sgpr_flat_scratch_init 1
+; RW-FLAT:     .amdhsa_user_sgpr_flat_scratch_init 0
 ; RO-FLAT-NOT: .amdhsa_user_sgpr_flat_scratch_init
 ; RW-FLAT:     .amdhsa_system_sgpr_private_segment_wavefront_offset 1
 ; RW-FLAT-NOT: .amdhsa_enable_private_segment
@@ -43,7 +43,7 @@ define amdgpu_kernel void @stack_object_addrspacecast_in_kernel_no_calls() {
 ; RO-FLAT:     .amdhsa_enable_private_segment 1
 ; RW-FLAT:     .amdhsa_reserve_flat_scratch 0
 ; GCN:         COMPUTE_PGM_RSRC2:SCRATCH_EN: 1
-; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 6
+; RW-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 4
 ; RO-FLAT:     COMPUTE_PGM_RSRC2:USER_SGPR: 0
 define amdgpu_kernel void @stack_object_in_kernel_no_calls() {
   %alloca = alloca i32, addrspace(5)

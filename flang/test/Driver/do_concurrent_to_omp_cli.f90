@@ -10,7 +10,7 @@
 ! BBC:      -fdo-concurrent-to-openmp=<string>
 ! BBC-SAME:   Try to map `do concurrent` loops to OpenMP [none|host|device] 
 
-! RUN: %flang -fdo-concurrent-to-openmp=host %s 2>&1 \
+! RUN: %flang -c -fdo-concurrent-to-openmp=host %s 2>&1 \
 ! RUN: | FileCheck %s --check-prefix=OPT
 
 ! OPT: warning: OpenMP is required for lowering `do concurrent` loops to OpenMP.

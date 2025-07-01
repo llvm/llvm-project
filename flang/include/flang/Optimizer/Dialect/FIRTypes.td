@@ -330,7 +330,8 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
 
   let extraClassDeclaration = [{
     using TypePair = std::pair<std::string, mlir::Type>;
-    using TypeList = std::vector<TypePair>;
+    using TypeList = llvm::ArrayRef<TypePair>;
+    using TypeVector = llvm::SmallVector<TypePair>;
     TypeList getTypeList() const;
     TypeList getLenParamList() const;
 
@@ -365,6 +366,11 @@ def fir_ReferenceType : FIR_Type<"Reference", "ref"> {
 
   let description = [{
     The type of a reference to an entity in memory.
+
+    References can be volatile. Any ops taking an operand of a volatile
+    reference must set their memory effects appropriately. Accesses of
+    volatile references are currently modeled as read and write effects
+    to a specific memory resource.
   }];
 
   let parameters = (ins "mlir::Type":$eleTy, "bool":$isVolatile);

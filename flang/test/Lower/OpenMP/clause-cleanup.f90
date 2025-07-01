@@ -11,7 +11,7 @@ end subroutine
 ! CHECK:     %[[EXPR:.*]] = hlfir.elemental {{.*}} -> !hlfir.expr<?x!fir.logical<4>>
 ! CHECK:     %[[COUNT:.*]] = hlfir.count %[[EXPR]]
 ! CHECK:     omp.parallel num_threads(%[[COUNT]] : i32) {
-! CHECK-NOT:   hlfir.destory %[[EXPR]]
+! CHECK-NOT:   hlfir.destroy %[[EXPR]]
 ! CHECK:     omp.terminator
 ! CHECK:    }
 ! CHECK:    hlfir.destroy %[[EXPR]]

@@ -328,9 +328,9 @@ define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; SSE:       # %bb.0: # %start
 ; SSE-NEXT:    movd %esi, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
+; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB7_1: # %loop
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -396,9 +396,8 @@ define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX2-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
 ; AVX2-NEXT:    vpmuludq %ymm2, %ymm1, %ymm2
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm3[2,3],ymm2[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[1,3],ymm4[1,3],ymm2[5,7],ymm4[5,7]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[1,3],ymm3[1,3],ymm2[5,7],ymm3[5,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    subq $-128, %rax
 ; AVX2-NEXT:    jne .LBB7_1
@@ -470,11 +469,11 @@ define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; SSE-NEXT:    movslq %esi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
-; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
 ; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psrlq $32, %xmm3
-; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    .p2align 4
 ; SSE-NEXT:  .LBB8_1: # %loop
 ; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -568,13 +567,12 @@ define <8 x i32> @PR49658_sext(ptr %ptr, i32 %mul) {
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB8_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
-; AVX2-NEXT:    vpmovsxdq 2097168(%rdi,%rax), %ymm2
-; AVX2-NEXT:    vpmovsxdq 2097152(%rdi,%rax), %ymm3
+; AVX2-NEXT:    vpmovsxdq 2097152(%rdi,%rax), %ymm2
+; AVX2-NEXT:    vpmovsxdq 2097168(%rdi,%rax), %ymm3
 ; AVX2-NEXT:    vpmuldq %ymm3, %ymm1, %ymm3
 ; AVX2-NEXT:    vpmuldq %ymm2, %ymm1, %ymm2
-; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm4 = ymm3[2,3],ymm2[2,3]
-; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[1,3],ymm4[1,3],ymm2[5,7],ymm4[5,7]
+; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[1,3],ymm3[1,3],ymm2[5,7],ymm3[5,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    subq $-128, %rax
 ; AVX2-NEXT:    jne .LBB8_1

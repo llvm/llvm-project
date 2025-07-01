@@ -16,7 +16,7 @@ define void @runcont(ptr %source) nounwind  {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_1: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vcvtsi2ssl (%eax,%edx,4), %xmm2, %xmm1
+; CHECK-NEXT:    vcvtsi2ssl (%eax,%edx,4), %xmm7, %xmm1
 ; CHECK-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    incl %edx
 ; CHECK-NEXT:    cmpl %edx, %ecx

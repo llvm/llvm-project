@@ -52,9 +52,8 @@ public:
                               .CasesLower("m68020", "m68030", "m68040", true)
                               .Default(false)) {}
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup, const MCValue &,
-                  MutableArrayRef<char> Data, uint64_t Value, bool,
-                  const MCSubtargetInfo *STI) const override {
+  void applyFixup(const MCFragment &, const MCFixup &Fixup, const MCValue &,
+                  MutableArrayRef<char> Data, uint64_t Value, bool) override {
     unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
 
     assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");

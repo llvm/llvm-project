@@ -22,7 +22,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -136,23 +135,6 @@ WinCOFFObjectWriter &MCWinCOFFStreamer::getWriter() {
   return static_cast<WinCOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCWinCOFFStreamer::emitInstToData(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  for (unsigned i = 0, e = Fixups.size(); i != e; ++i) {
-    Fixups[i].setOffset(Fixups[i].getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixups[i]);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
-}
-
 void MCWinCOFFStreamer::initSections(bool NoExecStack,
                                      const MCSubtargetInfo &STI) {
   // FIXME: this is identical to the ELF one.
@@ -182,22 +164,6 @@ void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
-}
-
-void MCWinCOFFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-
-  switch (Flag) {
-  // None of these require COFF specific handling.
-  case MCAF_SyntaxUnified:
-  case MCAF_Code16:
-  case MCAF_Code32:
-  case MCAF_Code64:
-    break;
-  case MCAF_SubsectionsViaSymbols:
-    llvm_unreachable("COFF doesn't support .subsections_via_symbols");
-  }
 }
 
 bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
@@ -315,7 +281,7 @@ void MCWinCOFFStreamer::emitCOFFSectionIndex(const MCSymbol *Symbol) {
   MCDataFragment *DF = getOrCreateDataFragment();
   const MCSymbolRefExpr *SRE = MCSymbolRefExpr::create(Symbol, getContext());
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, FK_SecRel_2);
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
   DF->appendContents(2, 0);
 }
 
@@ -332,7 +298,7 @@ void MCWinCOFFStreamer::emitCOFFSecRel32(const MCSymbol *Symbol,
   // Build the secrel32 relocation.
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_SecRel_4);
   // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
   // Emit 4 bytes (zeros) to the object file.
   DF->appendContents(4, 0);
 }
@@ -351,7 +317,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
   // Build the imgrel relocation.
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_4);
   // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
   // Emit 4 bytes (zeros) to the object file.
   DF->appendContents(4, 0);
 }
@@ -365,7 +331,7 @@ void MCWinCOFFStreamer::emitCOFFSecNumber(MCSymbol const *Symbol) {
   // Build the relocation.
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_4);
   // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
   // Emit 4 bytes (zeros) to the object file.
   DF->appendContents(4, 0);
 }
@@ -379,7 +345,7 @@ void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
   // Build the relocation.
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), MCE, FK_Data_4);
   // Record the relocation.
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
   // Emit 4 bytes (zeros) to the object file.
   DF->appendContents(4, 0);
 }
@@ -430,14 +396,15 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
   popSection();
 }
 
+// Hack: Used by llvm-ml to implement the alias directive.
 void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
                                           const MCSymbol *Symbol) {
   auto *Alias = cast<MCSymbolCOFF>(AliasS);
   emitSymbolAttribute(Alias, MCSA_Weak);
+  Alias->setIsWeakExternal(true);
 
   getAssembler().registerSymbol(*Symbol);
-  Alias->setVariableValue(MCSymbolRefExpr::create(
-      Symbol, MCSymbolRefExpr::VK_WEAKREF, getContext()));
+  Alias->setVariableValue(MCSymbolRefExpr::create(Symbol, getContext()));
 }
 
 // TODO: Implement this if you want to emit .comment section in COFF obj files.

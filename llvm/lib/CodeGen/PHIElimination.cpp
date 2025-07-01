@@ -152,8 +152,7 @@ public:
   }
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -285,7 +284,7 @@ bool PHIEliminationImpl::run(MachineFunction &MF) {
   ImpDefs.clear();
   VRegPHIUseCount.clear();
 
-  MF.getProperties().set(MachineFunctionProperties::Property::NoPHIs);
+  MF.getProperties().setNoPHIs();
 
   return Changed;
 }
@@ -580,6 +579,16 @@ void PHIEliminationImpl::LowerPHINode(MachineBasicBlock &MBB,
       }
 
       continue;
+    }
+
+    // Reuse an existing copy in the block if possible.
+    if (IncomingReg.isVirtual()) {
+      MachineInstr *DefMI = MRI->getUniqueVRegDef(SrcReg);
+      if (DefMI && DefMI->isCopy() && DefMI->getParent() == &opBlock &&
+          MRI->use_empty(SrcReg)) {
+        DefMI->getOperand(0).setReg(IncomingReg);
+        continue;
+      }
     }
 
     // Find a safe location to insert the copy, this may be the first terminator

@@ -1019,7 +1019,7 @@ define i16 @test_ignored_rightbits(i32 %dst, i32 %in) {
 define void @sameOperandBFI(i64 %src, i64 %src2, ptr %ptr) {
 ; LLC-LABEL: sameOperandBFI:
 ; LLC:       // %bb.0: // %entry
-; LLC-NEXT:    cbnz wzr, .LBB30_2
+; LLC-NEXT:    cbnz w8, .LBB30_2
 ; LLC-NEXT:  // %bb.1: // %if.else
 ; LLC-NEXT:    lsr x8, x0, #47
 ; LLC-NEXT:    and w9, w1, #0x3

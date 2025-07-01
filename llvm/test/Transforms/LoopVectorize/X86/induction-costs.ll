@@ -407,14 +407,13 @@ define i16 @iv_and_step_trunc() {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <2 x i16> [ <i16 poison, i16 0>, [[VECTOR_PH]] ], [ [[TMP2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <2 x i16> [ <i16 0, i16 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i64> [[TMP0]] to <2 x i16>
-; CHECK-NEXT:    [[TMP2]] = mul <2 x i16> [[VEC_IND1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <2 x i16> [[VEC_IND1]], [[TMP1]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <2 x i16> [[VEC_IND1]], splat (i16 2)
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    br i1 true, label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
@@ -473,14 +472,10 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
 ; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <8 x i64> [[STEP_ADD]], splat (i64 8)
 ; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i64> [[STEP_ADD1]], splat (i64 8)
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ule <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ule <8 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <8 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <8 x i1> [[TMP5]], splat (i1 true)
-; CHECK-NEXT:    [[TMP10:%.*]] = xor <8 x i1> [[TMP6]], splat (i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = xor <8 x i1> [[TMP7]], splat (i1 true)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt <8 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt <8 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp ugt <8 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ugt <8 x i64> [[STEP_ADD2]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[STEP_ADD]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or <8 x i64> [[BROADCAST_SPLAT5]], [[STEP_ADD1]]
@@ -519,8 +514,7 @@ define i32 @test_scalar_predicated_cost(i64 %x, i64 %y, ptr %A) #0 {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT11:%.*]], [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[VEC_IND5:%.*]] = phi <4 x i64> [ [[INDUCTION]], [[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT6:%.*]], [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = icmp ule <4 x i64> [[VEC_IND5]], [[BROADCAST_SPLAT8]]
-; CHECK-NEXT:    [[TMP33:%.*]] = xor <4 x i1> [[TMP32]], splat (i1 true)
+; CHECK-NEXT:    [[TMP33:%.*]] = icmp ugt <4 x i64> [[VEC_IND5]], [[BROADCAST_SPLAT8]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = or <4 x i64> [[BROADCAST_SPLAT10]], [[VEC_IND5]]
 ; CHECK-NEXT:    [[TMP35:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX4]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = trunc <4 x i64> [[TMP34]] to <4 x i32>

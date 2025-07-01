@@ -1034,6 +1034,21 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16x2:
     return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs_f16x2, BuiltinID, E,
                         *this);
+  case NVPTX::BI__nvvm_fabs_f:
+  case NVPTX::BI__nvvm_abs_bf16:
+  case NVPTX::BI__nvvm_abs_bf16x2:
+  case NVPTX::BI__nvvm_fabs_f16:
+  case NVPTX::BI__nvvm_fabs_f16x2:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_fabs_ftz_f:
+  case NVPTX::BI__nvvm_fabs_ftz_f16:
+  case NVPTX::BI__nvvm_fabs_ftz_f16x2:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs_ftz,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_fabs_d:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
+                                        EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     return MakeHalfType(Intrinsic::not_intrinsic, BuiltinID, E, *this);
@@ -1145,6 +1160,22 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_fence_sc_cluster:
     return Builder.CreateCall(
         CGM.getIntrinsic(Intrinsic::nvvm_fence_sc_cluster));
+  case NVPTX::BI__nvvm_bar_sync:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all),
+        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__syncthreads:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_aligned_all),
+        Builder.getInt32(0));
+  case NVPTX::BI__nvvm_barrier_sync:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_all),
+        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_barrier_sync_cnt:
+    return Builder.CreateCall(
+        CGM.getIntrinsic(Intrinsic::nvvm_barrier_cta_sync_count),
+        {EmitScalarExpr(E->getArg(0)), EmitScalarExpr(E->getArg(1))});
   default:
     return nullptr;
   }

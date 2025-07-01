@@ -311,7 +311,7 @@ def int_arm_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
 // VFP
 
 def int_arm_get_fpscr : ClangBuiltin<"__builtin_arm_get_fpscr">,
-                       DefaultAttrsIntrinsic<[llvm_i32_ty], [], []>;
+                       DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrReadMem]>;
 def int_arm_set_fpscr : ClangBuiltin<"__builtin_arm_set_fpscr">,
                        DefaultAttrsIntrinsic<[], [llvm_i32_ty], []>;
 def int_arm_vcvtr : DefaultAttrsIntrinsic<[llvm_float_ty],
@@ -680,9 +680,7 @@ def int_arm_neon_vtbx4 : Neon_Tbl6Arg_Intrinsic;
 // Vector and Scalar Rounding.
 def int_arm_neon_vrintn : Neon_1FloatArg_Intrinsic;
 def int_arm_neon_vrintx : Neon_1Arg_Intrinsic;
-def int_arm_neon_vrinta : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrintz : Neon_1Arg_Intrinsic;
-def int_arm_neon_vrintm : Neon_1Arg_Intrinsic;
 def int_arm_neon_vrintp : Neon_1Arg_Intrinsic;
 
 // De-interleaving vector loads from N-element structures.
@@ -1306,8 +1304,6 @@ foreach suffix = ["a","n","p","m"] in {
     [llvm_anyvector_ty /* input */], LLVMMatchType<0>, llvm_anyvector_ty>;
 }
 
-def int_arm_mve_vrintn: DefaultAttrsIntrinsic<
-  [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 def int_arm_mve_vcls: DefaultAttrsIntrinsic<
   [llvm_anyvector_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 

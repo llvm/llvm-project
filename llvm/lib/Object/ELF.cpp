@@ -9,6 +9,7 @@
 #include "llvm/Object/ELF.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 
@@ -782,6 +783,27 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
   ArrayRef<uint8_t> Content = *ContentsOrErr;
+
+  // Decompress the section if needed.
+  std::unique_ptr<uint8_t[]> DecompressedContent;
+  if (Sec.sh_flags & llvm::ELF::SHF_COMPRESSED) {
+    Expected<StringRef> SectionNameOrErr = EF.getSectionName(Sec);
+    if (!SectionNameOrErr)
+      return SectionNameOrErr.takeError();
+    auto DecompressorOrErr =
+        Decompressor::create(*SectionNameOrErr, toStringRef(*ContentsOrErr),
+                             EF.isLE(), ELFT::Is64Bits);
+    if (!DecompressorOrErr)
+      return DecompressorOrErr.takeError();
+    size_t DecompressedSize = DecompressorOrErr->getDecompressedSize();
+    DecompressedContent = std::make_unique<uint8_t[]>(DecompressedSize);
+    MutableArrayRef<uint8_t> DecompressedContentRef(DecompressedContent.get(),
+                                                    DecompressedSize);
+    if (Error Err = DecompressorOrErr->decompress(DecompressedContentRef))
+      return std::move(Err);
+    Content = DecompressedContentRef;
+  }
+
   DataExtractor Data(Content, EF.isLE(), ELFT::Is64Bits ? 8 : 4);
   std::vector<BBAddrMap> FunctionEntries;
 
@@ -815,7 +837,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       Version = Data.getU8(Cur);
       if (!Cur)
         break;
-      if (Version > 2)
+      if (Version > 3)
         return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
                            Twine(static_cast<int>(Version)));
       Feature = Data.getU8(Cur); // Feature byte
@@ -825,10 +847,16 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
       if (!FeatEnableOrErr)
         return FeatEnableOrErr.takeError();
       FeatEnable = *FeatEnableOrErr;
-      if (Feature != 0 && Version < 2 && Cur)
+      if (FeatEnable.hasPGOAnalysis() && Version < 2)
         return createError(
             "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
             "PGO features are enabled: version = " +
+            Twine(static_cast<int>(Version)) +
+            " feature = " + Twine(static_cast<int>(Feature)));
+      if (FeatEnable.CallsiteOffsets && Version < 3)
+        return createError(
+            "version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
+            "callsite offsets feature is enabled: version = " +
             Twine(static_cast<int>(Version)) +
             " feature = " + Twine(static_cast<int>(Feature)));
     }
@@ -871,7 +899,23 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
                             ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
                             : BlockIndex;
           uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+          // Read the callsite offsets.
+          uint32_t LastCallsiteOffset = 0;
+          SmallVector<uint32_t, 1> CallsiteOffsets;
+          if (FeatEnable.CallsiteOffsets) {
+            uint32_t NumCallsites =
+                readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+            CallsiteOffsets.reserve(NumCallsites);
+            for (uint32_t CallsiteIndex = 0;
+                 !ULEBSizeErr && Cur && (CallsiteIndex < NumCallsites);
+                 ++CallsiteIndex) {
+              LastCallsiteOffset +=
+                  readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
+              CallsiteOffsets.push_back(LastCallsiteOffset);
+            }
+          }
+          uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
+                          LastCallsiteOffset;
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           if (Version >= 1) {
             // Offset is calculated relative to the end of the previous BB.
@@ -884,7 +928,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             MetadataDecodeErr = MetadataOrErr.takeError();
             break;
           }
-          BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
+          BBEntries.push_back(
+              {ID, Offset, Size, *MetadataOrErr, CallsiteOffsets});
         }
         TotalNumBlocks += BBEntries.size();
       }
@@ -965,8 +1010,7 @@ ELFFile<ELFT>::getSectionAndRelocations(
       continue;
     }
     if (*DoesSectionMatch) {
-      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
-              .second)
+      if (SecToRelocMap.try_emplace(&Sec).second)
         continue;
     }
 
