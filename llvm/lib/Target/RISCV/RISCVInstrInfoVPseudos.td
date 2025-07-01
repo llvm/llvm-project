@@ -401,7 +401,6 @@ defset list<VTypeInfo> AllVectors = {
   }
 }
 
-defvar AllFloatVectorsExceptFP16 = !filter(vti, AllFloatVectors, !ne(vti.Scalar, f16));
 defvar AllFP16Vectors = !filter(vti, AllFloatVectors, !eq(vti.Scalar, f16));
 
 // This functor is used to obtain the int vector type that has the same SEW and
