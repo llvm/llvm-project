@@ -61,7 +61,20 @@ If you rely on a platform or configuration that is not one of the defaults, we s
 
 In addition, source archives are available:
 * `<sub-project>*.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
-* To get all the `llvm-project` source code for this release, choose the one of the `Source Code` archives."""
+* To get all the `llvm-project` source code for this release, choose the one of the `Source Code` archives.
+
+## Verifying Packages
+
+All packages are signed by the release managers using GPG. To verify a package,
+first [download](https://releases.llvm.org/release-keys.asc) the keys from
+the LLVM website, then import them into your keyring:
+```
+$ gpg --import release-keys.asc
+```
+Then verify the package using the matching `.sig` file:
+```
+$ gpg --verify <package file name>.sig <package file name>
+```"""
         ).format(release=release)
 
     prerelease = True if "rc" in release else False
