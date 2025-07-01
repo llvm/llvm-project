@@ -2852,8 +2852,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto simdOp = cast<omp::SimdOp>(opInst);
 
-  // TODO: Replace this once simd + reduction is properly supported
-  if (simdOp.isComposite() && simdOp.getReductionByref().has_value()) {
+  // Ignore simd in composite constructs with unsupported clauses
+  // TODO: Replace this once simd + clause combinations are properly supported
+  if (simdOp.isComposite() &&
+      (simdOp.getReductionByref().has_value() || simdOp.getIfExpr())) {
     if (failed(convertIgnoredWrapper(simdOp, moduleTranslation)))
       return failure();
 
