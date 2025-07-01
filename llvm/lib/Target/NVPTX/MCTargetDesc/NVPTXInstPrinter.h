@@ -41,7 +41,7 @@ public:
   void printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
   void printAtomicCode(const MCInst *MI, int OpNum, raw_ostream &O,
-                     StringRef Modifier = {});
+                       StringRef Modifier = {});
   void printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, raw_ostream &O,

@@ -232,12 +232,10 @@ public:
   // than this hook due to limitations in the interface here.
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
 
-  Instruction *
-  emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
-                   AtomicOrdering Ord) const override;
-  Instruction *
-  emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
-                    AtomicOrdering Ord) const override;
+  Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                AtomicOrdering Ord) const override;
+  Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
+                                 AtomicOrdering Ord) const override;
 
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
