@@ -2790,6 +2790,7 @@ class PredefinedSugarTypeLoc final
                              PredefinedSugarType, PredefinedSugarTypeLocInfo> {
 public:
   void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+  SourceRange getLocalSourceRange() const { return {}; }
 };
 
 } // namespace clang
