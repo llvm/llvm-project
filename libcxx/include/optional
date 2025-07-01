@@ -726,7 +726,7 @@ public:
 #    if _LIBCPP_STD_VER >= 26
 
   using iterator       = __optional_iterator<_Tp>;
-  using const_iterator = __optional_iterator<_Tp>;
+  using const_iterator = __optional_iterator<const _Tp&>;
 
 #    endif // _LIBCPP_STD_VER >= 26
 
