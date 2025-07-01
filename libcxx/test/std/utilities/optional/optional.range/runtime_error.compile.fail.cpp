@@ -8,13 +8,12 @@
 
 // UNSUPPORTED: std-at-least-c++26
 
-#include <iostream>
+#include "../../../../support/assert_macros.h"
 #include <optional>
 
 int main() {
   std::optional<int> val = 2;
   auto end               = val.end();
-  auto s                 = *end;
-  (void)s;
+  TEST_DOES_NOT_THROW(*end);
   return 0;
 }
