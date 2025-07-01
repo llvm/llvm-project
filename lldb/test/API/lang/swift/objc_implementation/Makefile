@@ -1,0 +1,4 @@
+SWIFT_SOURCES = main.swift
+SWIFT_BRIDGING_HEADER = Gadget.h
+SWIFT_PRECOMPILE_BRIDGING_HEADER = NO
+include Makefile.rules
