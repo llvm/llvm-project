@@ -5,7 +5,9 @@ set(LLVM_TARGET_DEFINITIONS XCore.td)
 tablegen(LLVM XCoreGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM XCoreGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM XCoreGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM XCoreGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM XCoreGenDisassemblerTables.inc -gen-disassembler
+          -non-templated-decode-to-mcinst-type-spec=uint16_t:=16
+          -non-templated-decode-to-mcinst-type-spec=uint32_t:=32)
 tablegen(LLVM XCoreGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM XCoreGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM XCoreGenSDNodeInfo.inc -gen-sd-node-info)
