@@ -68,7 +68,7 @@ bool MCOperand::isBareSymbolRef() const {
 }
 
 bool MCOperand::isSimpleSymbolRef(MCExpr::Spec &Specifier) const {
-  assert(isExpr() && "isBareSymbolRef expects only expressions");
+  assert(isExpr() && "isSimpleSymbolRef expects only expressions");
   const MCExpr *Expr = getExpr();
   MCExpr::ExprKind Kind = getExpr()->getKind();
 
@@ -76,7 +76,9 @@ bool MCOperand::isSimpleSymbolRef(MCExpr::Spec &Specifier) const {
   case MCExpr::Binary:
   case MCExpr::Unary:
   case MCExpr::Constant:
+    break;
   case MCExpr::Target:
+    // It's not clear this is right, does MCTargetExpr need another virtual method?
     break;
   case MCExpr::SymbolRef:
     Specifier = cast<MCSymbolRefExpr>(Expr)->getSpecifier();
