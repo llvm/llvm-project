@@ -112,7 +112,7 @@ MSP430ToolChain::MSP430ToolChain(const Driver &D, const llvm::Triple &Triple,
 
   StringRef MultilibSuf = "";
 
-  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
+  GCCInstallation.init(Triple, Args);
   if (GCCInstallation.isValid()) {
     MultilibSuf = GCCInstallation.getMultilib().gccSuffix();
 

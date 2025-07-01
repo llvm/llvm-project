@@ -50,7 +50,7 @@ bool RISCVToolChain::hasGCCToolchain(const Driver &D,
 RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
+  GCCInstallation.init(Triple, Args);
   if (GCCInstallation.isValid()) {
     Multilibs = GCCInstallation.getMultilibs();
     SelectedMultilibs.assign({GCCInstallation.getMultilib()});

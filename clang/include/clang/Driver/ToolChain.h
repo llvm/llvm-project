@@ -236,12 +236,6 @@ protected:
   static std::string concat(StringRef Path, const Twine &A, const Twine &B = "",
                             const Twine &C = "", const Twine &D = "");
 
-  /// Return the CXXStdlibType which has been selected based on the
-  /// type of ToolChain driver args, triple etc. if it is in use,
-  /// i.e. we are compiling for C++ and the stdlib has not been
-  /// disabled.
-  std::optional<CXXStdlibType> getCXXStdlibTypeInUse();
-
   ///@}
 
 public:

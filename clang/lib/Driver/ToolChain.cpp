@@ -104,15 +104,6 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     addIfExists(getFilePaths(), Path);
 }
 
-std::optional<ToolChain::CXXStdlibType> ToolChain::getCXXStdlibTypeInUse() {
-  if (!(D.CCCIsCXX() &&
-        !Args.hasArg(options::OPT_nostdinc, options::OPT_nostdincxx,
-                     options::OPT_nostdlibinc)))
-    return std::nullopt;
-
-  return GetCXXStdlibType(Args);
-}
-
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
 ToolChain::executeToolChainProgram(StringRef Executable) const {
   llvm::SmallString<64> OutputFile;

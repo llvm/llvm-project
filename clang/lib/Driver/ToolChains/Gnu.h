@@ -244,13 +244,23 @@ public:
     const std::string GentooConfigDir = "/etc/env.d/gcc";
 
   public:
-    bool RequireLibStdCxx;
+    /// Function for converting a Triple to a Debian multiarch.  The
+    /// toolchains use this to adjust the target specific component of
+    /// include paths for Debian.
+    std::function<StringRef(const llvm::Triple &)> TripleToDebianMultiarch =
+        [](const llvm::Triple &T) {
+          StringRef S = T.str();
+          return S;
+        };
 
-    explicit GCCInstallationDetector(const Driver &D)
-        : IsValid(false), D(D), RequireLibStdCxx(false) {}
+    explicit GCCInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
 
-    void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args,
-              std::optional<ToolChain::CXXStdlibType> CxxLibType);
+    void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args);
+
+    // TODO Replace isValid by changing SelectedInstallation into
+    // std::optional<SelectedInstallation>
+    // and move all accessors for fields of GCCInstallCandidate into
+    // that struct.
 
     /// Check whether we detected a valid GCC install.
     bool isValid() const { return IsValid; }
@@ -307,11 +317,18 @@ public:
                                SmallVectorImpl<std::string> &Prefixes,
                                StringRef SysRoot);
 
-    /// Checks if the \p GCCInstallation has the libs required
-    /// by the \p DriverArgs.
-    bool
-    GCCInstallationHasRequiredLibs(const GCCInstallCandidate &GCCInstallation,
-                                   const llvm::opt::ArgList &DriverArgs) const;
+    /// Checks if the \p GCCInstallation has libstdc++ include
+    /// directories.
+    bool GCCInstallationHasLibStdcxxIncludePaths(
+        const GCCInstallCandidate &GCCInstallation,
+        const llvm::opt::ArgList &DriverArgs) const;
+
+    /// Select a GCC installation directory from \p Installations.
+    /// Set \p SelectedInstallation
+    bool SelectGCCInstallationDirectory(
+        const SmallVector<GCCInstallCandidate, 3> &Installations,
+        const llvm::opt::ArgList &Args,
+        GCCInstallCandidate &SelectedInstallation) const;
 
     bool ScanGCCForMultilibs(const llvm::Triple &TargetTriple,
                              const llvm::opt::ArgList &Args, StringRef Path,
@@ -399,8 +416,7 @@ protected:
                            llvm::opt::ArgStringList &CC1Args) const;
 
   bool addGCCLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                                   llvm::opt::ArgStringList &CC1Args,
-                                   StringRef DebianMultiarch) const;
+                                   llvm::opt::ArgStringList &CC) const;
 
   bool addLibStdCXXIncludePaths(Twine IncludeDir, StringRef Triple,
                                 Twine IncludeSuffix,

@@ -310,7 +310,7 @@ Solaris::Solaris(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
 
-  GCCInstallation.init(Triple, Args, getCXXStdlibTypeInUse());
+  GCCInstallation.init(Triple, Args);
 
   StringRef LibSuffix = getSolarisLibSuffix(Triple);
   path_list &Paths = getFilePaths();
