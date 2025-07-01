@@ -283,7 +283,15 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
                                llvm::StringRef Blob, TypeInfo *I) {
-  return llvm::Error::success();
+  switch (ID) {
+  case TYPE_IS_BUILTIN:
+    return decodeRecord(R, I->IsBuiltIn, Blob);
+  case TYPE_IS_TEMPLATE:
+    return decodeRecord(R, I->IsTemplate, Blob);
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "invalid field for TypeInfo");
+  }
 }
 
 static llvm::Error parseRecord(const Record &R, unsigned ID,
@@ -293,6 +301,10 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Name, Blob);
   case FIELD_DEFAULT_VALUE:
     return decodeRecord(R, I->DefaultValue, Blob);
+  case FIELD_TYPE_IS_BUILTIN:
+    return decodeRecord(R, I->IsBuiltIn, Blob);
+  case FIELD_TYPE_IS_TEMPLATE:
+    return decodeRecord(R, I->IsTemplate, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for TypeInfo");
@@ -308,6 +320,10 @@ static llvm::Error parseRecord(const Record &R, unsigned ID,
     return decodeRecord(R, I->Access, Blob);
   case MEMBER_TYPE_IS_STATIC:
     return decodeRecord(R, I->IsStatic, Blob);
+  case MEMBER_TYPE_IS_BUILTIN:
+    return decodeRecord(R, I->IsBuiltIn, Blob);
+  case MEMBER_TYPE_IS_TEMPLATE:
+    return decodeRecord(R, I->IsTemplate, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for MemberTypeInfo");

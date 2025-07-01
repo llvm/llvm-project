@@ -6356,7 +6356,7 @@ public:
 
   /// Build instructions with Builder to retrieve the value at
   /// the position given by Index in the lookup table.
-  Value *buildLookup(Value *Index, IRBuilder<> &Builder);
+  Value *buildLookup(Value *Index, IRBuilder<> &Builder, const DataLayout &DL);
 
   /// Return true if a table with TableSize elements of
   /// type ElementType would fit in a target-legal register.
@@ -6542,7 +6542,8 @@ SwitchLookupTable::SwitchLookupTable(
   Kind = ArrayKind;
 }
 
-Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder) {
+Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
+                                      const DataLayout &DL) {
   switch (Kind) {
   case SingleValueKind:
     return SingleValue;
@@ -6584,16 +6585,12 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder) {
     return Builder.CreateTrunc(DownShifted, BitMapElementTy, "switch.masked");
   }
   case ArrayKind: {
-    // Make sure the table index will not overflow when treated as signed.
-    IntegerType *IT = cast<IntegerType>(Index->getType());
-    uint64_t TableSize =
-        Array->getInitializer()->getType()->getArrayNumElements();
-    if (TableSize > (1ULL << std::min(IT->getBitWidth() - 1, 63u)))
-      Index = Builder.CreateZExt(
-          Index, IntegerType::get(IT->getContext(), IT->getBitWidth() + 1),
-          "switch.tableidx.zext");
+    Type *IndexTy = DL.getIndexType(Array->getType());
 
-    Value *GEPIndices[] = {Builder.getInt32(0), Index};
+    if (Index->getType() != IndexTy)
+      Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+
+    Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
     Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
                                            GEPIndices, "switch.gep");
     return Builder.CreateLoad(
@@ -7073,7 +7070,7 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     SwitchLookupTable Table(Mod, TableSize, TableIndexOffset, ResultList, DV,
                             DL, FuncName);
 
-    Value *Result = Table.buildLookup(TableIndex, Builder);
+    Value *Result = Table.buildLookup(TableIndex, Builder, DL);
 
     // Do a small peephole optimization: re-use the switch table compare if
     // possible.

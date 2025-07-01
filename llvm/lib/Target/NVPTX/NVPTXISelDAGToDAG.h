@@ -79,7 +79,6 @@ private:
   bool tryStore(SDNode *N);
   bool tryStoreVector(SDNode *N);
   bool tryLoadParam(SDNode *N);
-  bool tryStoreRetval(SDNode *N);
   bool tryStoreParam(SDNode *N);
   bool tryFence(SDNode *N);
   void SelectAddrSpaceCast(SDNode *N);

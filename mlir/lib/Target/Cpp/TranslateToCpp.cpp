@@ -1000,8 +1000,10 @@ static LogicalResult printOperation(CppEmitter &emitter, ModuleOp moduleOp) {
 static LogicalResult printOperation(CppEmitter &emitter, ClassOp classOp) {
   CppEmitter::Scope classScope(emitter);
   raw_indented_ostream &os = emitter.ostream();
-  os << "class " << classOp.getSymName() << " {\n";
-  os << "public:\n";
+  os << "class " << classOp.getSymName();
+  if (classOp.getFinalSpecifier())
+    os << " final";
+  os << " {\n public:\n";
   os.indent();
 
   for (Operation &op : classOp) {
