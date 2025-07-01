@@ -1593,7 +1593,10 @@ def : Pat<(vector_insert v8i32:$xd, GRLenVT:$rj, uimm3:$imm),
           (XVINSGR2VR_W v8i32:$xd, GRLenVT:$rj, uimm3:$imm)>;
 def : Pat<(vector_insert v4i64:$xd, GRLenVT:$rj, uimm2:$imm),
           (XVINSGR2VR_D v4i64:$xd, GRLenVT:$rj, uimm2:$imm)>;
-
+def : Pat<(vector_insert v8f32:$vd, (loongarch_movgr2fr_w_la64 GPR:$rj), uimm3:$imm),
+          (XVINSGR2VR_W $vd, $rj, uimm3:$imm)>;
+def : Pat<(vector_insert v4f64:$vd, (f64 (bitconvert i64:$rj)), uimm2:$imm),
+          (XVINSGR2VR_D $vd, $rj, uimm2:$imm)>;
 def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
           (XVINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm3:$imm)>;
 def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
