@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
 )
 
 add_clang_library(clangReorderFields STATIC
-  utils/Designator.cpp
+  Designator.cpp
   ReorderFieldsAction.cpp
 
   DEPENDS

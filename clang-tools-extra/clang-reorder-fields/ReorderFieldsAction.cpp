@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReorderFieldsAction.h"
-#include "utils/Designator.h"
+#include "Designator.h"
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -322,7 +322,7 @@ static void reorderFieldsInConstructor(
 }
 
 /// Replacement for broken InitListExpr::isExplicit function.
-/// TODO: Remove when InitListExpr::isExplicit is fixed.
+/// FIXME: Remove when InitListExpr::isExplicit is fixed.
 static bool isImplicitILE(const InitListExpr *ILE, const ASTContext &Context) {
   // The ILE is implicit if either:
   // - The left brace loc of the ILE matches the start of first init expression
@@ -345,7 +345,8 @@ static bool isImplicitILE(const InitListExpr *ILE, const ASTContext &Context) {
 /// they are equal.
 static int cmpDesignators(const DesignatorIter &Lhs, const DesignatorIter &Rhs,
                           const ReorderedStruct &Struct) {
-  if (Lhs.getTag() == DesignatorIter::STRUCT) {
+  switch (Lhs.getTag()) {
+  case DesignatorIter::STRUCT:
     assert(Rhs.getTag() == DesignatorIter::STRUCT &&
            "Incompatible designators");
     assert(Lhs.getStructDecl() == Rhs.getStructDecl() &&
@@ -357,7 +358,8 @@ static int cmpDesignators(const DesignatorIter &Lhs, const DesignatorIter &Rhs,
     }
     return Lhs.getStructIter()->getFieldIndex() -
            Rhs.getStructIter()->getFieldIndex();
-  } else {
+  case DesignatorIter::ARRAY:
+  case DesignatorIter::ARRAY_RANGE:
     // Array designators can be compared to array range designators.
     assert((Rhs.getTag() == DesignatorIter::ARRAY ||
             Rhs.getTag() == DesignatorIter::ARRAY_RANGE) &&

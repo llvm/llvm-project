@@ -27,12 +27,15 @@ public:
   enum Kind { STRUCT, ARRAY, ARRAY_RANGE };
 
   DesignatorIter(const QualType Type, RecordDecl::field_iterator Field,
-                 const RecordDecl *RD);
+                 const RecordDecl *RD)
+      : Tag(STRUCT), Type(Type), StructIt({Field, RD}) {}
 
-  DesignatorIter(const QualType Type, uint64_t Idx, uint64_t Size);
+  DesignatorIter(const QualType Type, uint64_t Idx, uint64_t Size)
+      : Tag(ARRAY), Type(Type), ArrayIt({Idx, Size}) {}
 
   DesignatorIter(const QualType Type, uint64_t Start, uint64_t End,
-                 uint64_t Size);
+                 uint64_t Size)
+      : Tag(ARRAY_RANGE), Type(Type), ArrayRangeIt({Start, End, Size}) {}
 
   /// Moves the iterator to the next element.
   DesignatorIter &operator++();
@@ -40,8 +43,8 @@ public:
   /// Checks if the iterator has iterated through all elements.
   bool isFinished();
 
-  Kind getTag() const;
-  QualType getType() const;
+  Kind getTag() const { return Tag; }
+  QualType getType() const { return Type; }
 
   RecordDecl::field_iterator &getStructIter();
   RecordDecl::field_iterator getStructIter() const;

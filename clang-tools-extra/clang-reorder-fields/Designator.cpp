@@ -19,18 +19,6 @@
 namespace clang {
 namespace reorder_fields {
 
-DesignatorIter::DesignatorIter(const QualType Type,
-                               RecordDecl::field_iterator Field,
-                               const RecordDecl *RD)
-    : Tag(STRUCT), Type(Type), StructIt({Field, RD}) {}
-
-DesignatorIter::DesignatorIter(const QualType Type, uint64_t Idx, uint64_t Size)
-    : Tag(ARRAY), Type(Type), ArrayIt({Idx, Size}) {}
-
-DesignatorIter::DesignatorIter(const QualType Type, uint64_t Start,
-                               uint64_t End, uint64_t Size)
-    : Tag(ARRAY_RANGE), Type(Type), ArrayRangeIt({Start, End, Size}) {}
-
 DesignatorIter &DesignatorIter::operator++() {
   assert(!isFinished() && "Iterator is already finished");
   switch (Tag) {
@@ -72,10 +60,6 @@ bool DesignatorIter::isFinished() {
   return false;
 }
 
-DesignatorIter::Kind DesignatorIter::getTag() const { return Tag; }
-
-QualType DesignatorIter::getType() const { return Type; }
-
 RecordDecl::field_iterator &DesignatorIter::getStructIter() {
   assert(Tag == STRUCT && "Must be a field designator");
   return StructIt.Field;
@@ -114,7 +98,9 @@ uint64_t DesignatorIter::getArrayRangeEnd() const {
 uint64_t DesignatorIter::getArraySize() const {
   assert((Tag == ARRAY || Tag == ARRAY_RANGE) &&
          "Must be an array or range designator");
-  return ArrayIt.Size;
+  if (Tag == ARRAY)
+    return ArrayIt.Size;
+  return ArrayRangeIt.Size;
 }
 
 Designators::Designators(const DesignatedInitExpr *DIE, const InitListExpr *ILE,
