@@ -1,7 +1,8 @@
-// REQUIRES: x86-registered-target,ld.lld
+// REQUIRES: ld.lld
 
 /// Simple test that DTLTO works with a single input bitcode file and that
 /// --save-temps can be applied to the remote compilation.
+
 // RUN: rm -rf %t && mkdir %t && cd %t
 
 // RUN: %clang --target=x86_64-linux-gnu -c -flto=thin %s
