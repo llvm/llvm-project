@@ -948,6 +948,15 @@ disallows overlap.
 .It Cm shstk
 x86 only, use shadow stack.
 .Pp
+.It Cm gcs Ns = Ns Ar [implicit|never|always]
+Specify how the GCS bit is set.
+.Cm implicit
+is the default, where the GCS bit is inferred from the input objects.
+.Cm never
+disables the GCS bit regardless of input markings.
+.Cm always
+enables the GCS bit regardless of input markings.
+.Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to
 .Ar size .
