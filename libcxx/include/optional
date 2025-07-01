@@ -615,7 +615,8 @@ public:
   using difference_type   = std::ptrdiff_t;
   using pointer           = _Tp*;
   using reference         = _Tp&;
-  using iterator_category = std::forward_iterator_tag;
+  using iterator_category = random_access_iterator_tag;
+  using iterator_concept  = contiguous_iterator_tag;
 
 private:
   pointer __ptr_;
