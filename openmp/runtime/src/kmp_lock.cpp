@@ -3242,6 +3242,8 @@ static void __kmp_destroy_indirect_lock(kmp_dyna_lock_t *lock) {
   kmp_uint32 gtid = __kmp_entry_gtid();
   kmp_indirect_lock_t *l =
       __kmp_lookup_indirect_lock((void **)lock, "omp_destroy_lock");
+  if (l == nullptr)
+    return; // avoid segv if lock already destroyed
   KMP_I_LOCK_FUNC(l, destroy)(l->lock);
   kmp_indirect_locktag_t tag = l->type;
 

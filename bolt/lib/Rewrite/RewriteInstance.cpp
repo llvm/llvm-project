@@ -626,6 +626,9 @@ Error RewriteInstance::discoverStorage() {
     NextAvailableAddress += BC->PageAlign;
   }
 
+  NewTextSegmentAddress = NextAvailableAddress;
+  NewTextSegmentOffset = NextAvailableOffset;
+
   if (!opts::UseGnuStack && !BC->IsLinuxKernel) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
@@ -652,6 +655,8 @@ Error RewriteInstance::discoverStorage() {
 
     PHDRTableAddress = NextAvailableAddress;
     PHDRTableOffset = NextAvailableOffset;
+    NewTextSegmentAddress = NextAvailableAddress;
+    NewTextSegmentOffset = NextAvailableOffset;
 
     // Reserve space for 3 extra pheaders.
     unsigned Phnum = Obj.getHeader().e_phnum;
@@ -664,14 +669,12 @@ Error RewriteInstance::discoverStorage() {
 
     NextAvailableAddress += Phnum * sizeof(ELF64LEPhdrTy);
     NextAvailableOffset += Phnum * sizeof(ELF64LEPhdrTy);
+
+    // Align at cache line.
+    NextAvailableAddress = alignTo(NextAvailableAddress, 64);
+    NextAvailableOffset = alignTo(NextAvailableOffset, 64);
   }
 
-  // Align at cache line.
-  NextAvailableAddress = alignTo(NextAvailableAddress, 64);
-  NextAvailableOffset = alignTo(NextAvailableOffset, 64);
-
-  NewTextSegmentAddress = NextAvailableAddress;
-  NewTextSegmentOffset = NextAvailableOffset;
   BC->LayoutStartAddress = NextAvailableAddress;
 
   // Tools such as objcopy can strip section contents but leave header
@@ -3853,111 +3856,138 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 }
 
 void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
-  if (BC->HasRelocations) {
-    // Map sections for functions with pre-assigned addresses.
-    for (BinaryFunction *InjectedFunction : BC->getInjectedBinaryFunctions()) {
-      const uint64_t OutputAddress = InjectedFunction->getOutputAddress();
-      if (!OutputAddress)
-        continue;
-
-      ErrorOr<BinarySection &> FunctionSection =
-          InjectedFunction->getCodeSection();
-      assert(FunctionSection && "function should have section");
-      FunctionSection->setOutputAddress(OutputAddress);
-      MapSection(*FunctionSection, OutputAddress);
-      InjectedFunction->setImageAddress(FunctionSection->getAllocAddress());
-      InjectedFunction->setImageSize(FunctionSection->getOutputSize());
-    }
-
-    // Populate the list of sections to be allocated.
-    std::vector<BinarySection *> CodeSections = getCodeSections();
-
-    // Remove sections that were pre-allocated (patch sections).
-    llvm::erase_if(CodeSections, [](BinarySection *Section) {
-      return Section->getOutputAddress();
-    });
-    LLVM_DEBUG(dbgs() << "Code sections in the order of output:\n";
-      for (const BinarySection *Section : CodeSections)
-        dbgs() << Section->getName() << '\n';
-    );
-
-    uint64_t PaddingSize = 0; // size of padding required at the end
-
-    // Allocate sections starting at a given Address.
-    auto allocateAt = [&](uint64_t Address) {
-      const char *LastNonColdSectionName = BC->HasWarmSection
-                                               ? BC->getWarmCodeSectionName()
-                                               : BC->getMainCodeSectionName();
-      for (BinarySection *Section : CodeSections) {
-        Address = alignTo(Address, Section->getAlignment());
-        Section->setOutputAddress(Address);
-        Address += Section->getOutputSize();
-
-        // Hugify: Additional huge page from right side due to
-        // weird ASLR mapping addresses (4KB aligned)
-        if (opts::Hugify && !BC->HasFixedLoadAddress &&
-            Section->getName() == LastNonColdSectionName)
-          Address = alignTo(Address, Section->getAlignment());
-      }
-
-      // Make sure we allocate enough space for huge pages.
-      ErrorOr<BinarySection &> TextSection =
-          BC->getUniqueSectionByName(LastNonColdSectionName);
-      if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
-        uint64_t HotTextEnd =
-            TextSection->getOutputAddress() + TextSection->getOutputSize();
-        HotTextEnd = alignTo(HotTextEnd, BC->PageAlign);
-        if (HotTextEnd > Address) {
-          PaddingSize = HotTextEnd - Address;
-          Address = HotTextEnd;
-        }
-      }
-      return Address;
-    };
-
-    // Check if we can fit code in the original .text
-    bool AllocationDone = false;
-    if (opts::UseOldText) {
-      const uint64_t CodeSize =
-          allocateAt(BC->OldTextSectionAddress) - BC->OldTextSectionAddress;
-
-      if (CodeSize <= BC->OldTextSectionSize) {
-        BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
-                   << Twine::utohexstr(opts::AlignText) << " alignment\n";
-        AllocationDone = true;
-      } else {
-        BC->errs()
-            << "BOLT-WARNING: original .text too small to fit the new code"
-            << " using 0x" << Twine::utohexstr(opts::AlignText)
-            << " alignment. " << CodeSize << " bytes needed, have "
-            << BC->OldTextSectionSize << " bytes available.\n";
-        opts::UseOldText = false;
-      }
-    }
-
-    if (!AllocationDone)
-      NextAvailableAddress = allocateAt(NextAvailableAddress);
-
-    // Do the mapping for ORC layer based on the allocation.
-    for (BinarySection *Section : CodeSections) {
-      LLVM_DEBUG(
-          dbgs() << "BOLT: mapping " << Section->getName() << " at 0x"
-                 << Twine::utohexstr(Section->getAllocAddress()) << " to 0x"
-                 << Twine::utohexstr(Section->getOutputAddress()) << '\n');
-      MapSection(*Section, Section->getOutputAddress());
-      Section->setOutputFileOffset(
-          getFileOffsetForAddress(Section->getOutputAddress()));
-    }
-
-    // Check if we need to insert a padding section for hot text.
-    if (PaddingSize && !opts::UseOldText)
-      BC->outs() << "BOLT-INFO: padding code to 0x"
-                 << Twine::utohexstr(NextAvailableAddress)
-                 << " to accommodate hot text\n";
-
+  if (!BC->HasRelocations) {
+    mapCodeSectionsInPlace(MapSection);
     return;
   }
 
+  // Map sections for functions with pre-assigned addresses.
+  for (BinaryFunction *InjectedFunction : BC->getInjectedBinaryFunctions()) {
+    const uint64_t OutputAddress = InjectedFunction->getOutputAddress();
+    if (!OutputAddress)
+      continue;
+
+    ErrorOr<BinarySection &> FunctionSection =
+        InjectedFunction->getCodeSection();
+    assert(FunctionSection && "function should have section");
+    FunctionSection->setOutputAddress(OutputAddress);
+    MapSection(*FunctionSection, OutputAddress);
+    InjectedFunction->setImageAddress(FunctionSection->getAllocAddress());
+    InjectedFunction->setImageSize(FunctionSection->getOutputSize());
+  }
+
+  // Populate the list of sections to be allocated.
+  std::vector<BinarySection *> CodeSections = getCodeSections();
+
+  // Remove sections that were pre-allocated (patch sections).
+  llvm::erase_if(CodeSections, [](BinarySection *Section) {
+    return Section->getOutputAddress();
+  });
+  LLVM_DEBUG(dbgs() << "Code sections in the order of output:\n";
+             for (const BinarySection *Section : CodeSections) dbgs()
+             << Section->getName() << '\n';);
+
+  uint64_t PaddingSize = 0; // size of padding required at the end
+
+  // Allocate sections starting at a given Address.
+  auto allocateAt = [&](uint64_t Address) {
+    const char *LastNonColdSectionName = BC->HasWarmSection
+                                             ? BC->getWarmCodeSectionName()
+                                             : BC->getMainCodeSectionName();
+    for (BinarySection *Section : CodeSections) {
+      Address = alignTo(Address, Section->getAlignment());
+      Section->setOutputAddress(Address);
+      Address += Section->getOutputSize();
+
+      // Hugify: Additional huge page from right side due to
+      // weird ASLR mapping addresses (4KB aligned)
+      if (opts::Hugify && !BC->HasFixedLoadAddress &&
+          Section->getName() == LastNonColdSectionName)
+        Address = alignTo(Address, Section->getAlignment());
+    }
+
+    // Make sure we allocate enough space for huge pages.
+    ErrorOr<BinarySection &> TextSection =
+        BC->getUniqueSectionByName(LastNonColdSectionName);
+    if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
+      uint64_t HotTextEnd =
+          TextSection->getOutputAddress() + TextSection->getOutputSize();
+      HotTextEnd = alignTo(HotTextEnd, BC->PageAlign);
+      if (HotTextEnd > Address) {
+        PaddingSize = HotTextEnd - Address;
+        Address = HotTextEnd;
+      }
+    }
+    return Address;
+  };
+
+  // Try to allocate sections before the \p Address and return an address for
+  // the allocation of the first section, or 0 if [0, Address) range is not
+  // big enough to fit all sections.
+  auto allocateBefore = [&](uint64_t Address) -> uint64_t {
+    for (BinarySection *Section : llvm::reverse(CodeSections)) {
+      if (Section->getOutputSize() > Address)
+        return 0;
+      Address -= Section->getOutputSize();
+      Address = alignDown(Address, Section->getAlignment());
+      Section->setOutputAddress(Address);
+    }
+    return Address;
+  };
+
+  // Check if we can fit code in the original .text
+  bool AllocationDone = false;
+  if (opts::UseOldText) {
+    uint64_t StartAddress;
+    uint64_t EndAddress;
+    if (opts::HotFunctionsAtEnd) {
+      EndAddress = BC->OldTextSectionAddress + BC->OldTextSectionSize;
+      StartAddress = allocateBefore(EndAddress);
+    } else {
+      StartAddress = BC->OldTextSectionAddress;
+      EndAddress = allocateAt(BC->OldTextSectionAddress);
+    }
+
+    const uint64_t CodeSize = EndAddress - StartAddress;
+    if (CodeSize <= BC->OldTextSectionSize) {
+      BC->outs() << "BOLT-INFO: using original .text for new code with 0x"
+                 << Twine::utohexstr(opts::AlignText) << " alignment";
+      if (StartAddress != BC->OldTextSectionAddress)
+        BC->outs() << " at 0x" << Twine::utohexstr(StartAddress);
+      BC->outs() << '\n';
+      AllocationDone = true;
+    } else {
+      BC->errs() << "BOLT-WARNING: original .text too small to fit the new code"
+                 << " using 0x" << Twine::utohexstr(opts::AlignText)
+                 << " alignment. " << CodeSize << " bytes needed, have "
+                 << BC->OldTextSectionSize << " bytes available.\n";
+      opts::UseOldText = false;
+    }
+  }
+
+  if (!AllocationDone)
+    NextAvailableAddress = allocateAt(NextAvailableAddress);
+
+  // Do the mapping for ORC layer based on the allocation.
+  for (BinarySection *Section : CodeSections) {
+    LLVM_DEBUG(dbgs() << "BOLT: mapping " << Section->getName() << " at 0x"
+                      << Twine::utohexstr(Section->getAllocAddress())
+                      << " to 0x"
+                      << Twine::utohexstr(Section->getOutputAddress()) << '\n');
+    MapSection(*Section, Section->getOutputAddress());
+    Section->setOutputFileOffset(
+        getFileOffsetForAddress(Section->getOutputAddress()));
+  }
+
+  // Check if we need to insert a padding section for hot text.
+  if (PaddingSize && !opts::UseOldText)
+    BC->outs() << "BOLT-INFO: padding code to 0x"
+               << Twine::utohexstr(NextAvailableAddress)
+               << " to accommodate hot text\n";
+}
+
+void RewriteInstance::mapCodeSectionsInPlace(
+    BOLTLinker::SectionMapper MapSection) {
   // Processing in non-relocation mode.
   uint64_t NewTextSectionStartAddress = NextAvailableAddress;
 
@@ -4133,13 +4163,8 @@ void RewriteInstance::mapAllocatableSections(
     }
 
     if (SType == ST_READONLY) {
-      if (PHDRTableAddress) {
-        // Segment size includes the size of the PHDR area.
-        NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-      } else if (NewTextSegmentAddress) {
-        // Existing PHDR table would be updated.
+      if (NewTextSegmentAddress)
         NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
-      }
     } else if (SType == ST_READWRITE) {
       NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
       // Restore NextAvailableAddress if no new writable sections
@@ -4186,12 +4211,15 @@ void RewriteInstance::patchELFPHDRTable() {
   // NOTE Currently .eh_frame_hdr appends to the last segment, recalculate
   // last segments size based on the NextAvailableAddress variable.
   if (!NewWritableSegmentSize) {
-    if (PHDRTableAddress)
-      NewTextSegmentSize = NextAvailableAddress - PHDRTableAddress;
-    else if (NewTextSegmentAddress)
+    if (NewTextSegmentAddress)
       NewTextSegmentSize = NextAvailableAddress - NewTextSegmentAddress;
   } else {
     NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
+  }
+
+  if (!NewTextSegmentSize && !NewWritableSegmentSize) {
+    BC->outs() << "BOLT-INFO: not adding new segments\n";
+    return;
   }
 
   const uint64_t SavedPos = OS.tell();
@@ -4201,15 +4229,9 @@ void RewriteInstance::patchELFPHDRTable() {
     SmallVector<ELF64LEPhdrTy, 3> NewPhdrs;
     ELF64LEPhdrTy NewPhdr;
     NewPhdr.p_type = ELF::PT_LOAD;
-    if (PHDRTableAddress) {
-      NewPhdr.p_offset = PHDRTableOffset;
-      NewPhdr.p_vaddr = PHDRTableAddress;
-      NewPhdr.p_paddr = PHDRTableAddress;
-    } else {
-      NewPhdr.p_offset = NewTextSegmentOffset;
-      NewPhdr.p_vaddr = NewTextSegmentAddress;
-      NewPhdr.p_paddr = NewTextSegmentAddress;
-    }
+    NewPhdr.p_offset = NewTextSegmentOffset;
+    NewPhdr.p_vaddr = NewTextSegmentAddress;
+    NewPhdr.p_paddr = NewTextSegmentAddress;
     NewPhdr.p_filesz = NewTextSegmentSize;
     NewPhdr.p_memsz = NewTextSegmentSize;
     NewPhdr.p_flags = ELF::PF_X | ELF::PF_R;
@@ -4270,7 +4292,7 @@ void RewriteInstance::patchELFPHDRTable() {
   };
 
   auto writeNewSegmentPhdrs = [&]() {
-    if (PHDRTableAddress || NewTextSegmentSize) {
+    if (NewTextSegmentSize) {
       SmallVector<ELF64LE::Phdr, 3> NewPhdrs = createNewPhdrs();
       OS.write(reinterpret_cast<const char *>(NewPhdrs.data()),
                sizeof(ELF64LE::Phdr) * NewPhdrs.size());
