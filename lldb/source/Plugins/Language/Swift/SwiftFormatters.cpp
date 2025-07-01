@@ -734,6 +734,13 @@ namespace lldb_private {
 namespace formatters {
 namespace swift {
 
+namespace {
+/// The size of Swift Tasks. Fragments are tail allocated.
+static constexpr size_t AsyncTaskSize = sizeof(::swift::AsyncTask);
+/// The offset of ChildFragment, which is the first fragment of an AsyncTask.
+static constexpr offset_t ChildFragmentOffset = AsyncTaskSize;
+} // namespace
+
 class EnumSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
   EnumSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp);
@@ -806,6 +813,7 @@ public:
       "address",
       "id",
       "enqueuePriority",
+      "parent",
       "children",
 
       // Children below this point are hidden.
@@ -873,6 +881,33 @@ public:
       RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, priority_type);
     }
     case 3: {
+      if (!m_parent_task_sp) {
+        // TypeMangling for "Swift.UnsafeRawPointer"
+        CompilerType raw_pointer_type =
+            m_ts->GetTypeFromMangledTypename(ConstString("$sSVD"));
+
+        addr_t parent_addr = 0;
+        if (m_task_info.isChildTask) {
+          if (auto process_sp = m_backend.GetProcessSP()) {
+            Status status;
+            // Read ChildFragment::Parent, the first field of the ChildFragment.
+            parent_addr = process_sp->ReadPointerFromMemory(
+                m_task_ptr + ChildFragmentOffset, status);
+            if (status.Fail() || parent_addr == LLDB_INVALID_ADDRESS)
+              parent_addr = 0;
+          }
+        }
+        addr_t value = parent_addr;
+        DataExtractor data{reinterpret_cast<const void *>(&value),
+                           sizeof(value), endian::InlHostByteOrder(),
+                           sizeof(void *)};
+        m_parent_task_sp = ValueObject::CreateValueObjectFromData(
+            "parent", data, m_backend.GetExecutionContextRef(),
+            raw_pointer_type);
+      }
+      return m_parent_task_sp;
+    }
+    case 4: {
       if (!m_child_tasks_sp) {
         using task_type = decltype(m_task_info.childTasks)::value_type;
         std::vector<task_type> tasks = m_task_info.childTasks;
@@ -901,26 +936,26 @@ public:
       }
       return m_child_tasks_sp;
     }
-    case 4:
-      RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
     case 5:
-      RETURN_CHILD(m_is_future_sp, isFuture, bool_type);
+      RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
     case 6:
-      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask, bool_type);
+      RETURN_CHILD(m_is_future_sp, isFuture, bool_type);
     case 7:
-      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask, bool_type);
+      RETURN_CHILD(m_is_group_child_task_sp, isGroupChildTask, bool_type);
     case 8:
-      RETURN_CHILD(m_is_cancelled_sp, isCancelled, bool_type);
+      RETURN_CHILD(m_is_async_let_task_sp, isAsyncLetTask, bool_type);
     case 9:
+      RETURN_CHILD(m_is_cancelled_sp, isCancelled, bool_type);
+    case 10:
       RETURN_CHILD(m_is_status_record_locked_sp, isStatusRecordLocked,
                    bool_type);
-    case 10:
-      RETURN_CHILD(m_is_escalated_sp, isEscalated, bool_type);
     case 11:
-      RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
+      RETURN_CHILD(m_is_escalated_sp, isEscalated, bool_type);
     case 12:
+      RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
+    case 13:
       RETURN_CHILD(m_is_complete_sp, isComplete, bool_type);
-    case 13: {
+    case 14: {
       if (m_task_info.hasIsRunning)
         RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
       return {};
@@ -953,8 +988,8 @@ public:
                 m_is_child_task_sp, m_is_future_sp, m_is_group_child_task_sp,
                 m_is_async_let_task_sp, m_is_cancelled_sp,
                 m_is_status_record_locked_sp, m_is_escalated_sp,
-                m_is_enqueued_sp, m_is_complete_sp, m_child_tasks_sp,
-                m_is_running_sp})
+                m_is_enqueued_sp, m_is_complete_sp, m_parent_task_sp,
+                m_child_tasks_sp, m_is_running_sp})
             child.reset();
         }
       }
@@ -991,6 +1026,7 @@ private:
   ValueObjectSP m_is_escalated_sp;
   ValueObjectSP m_is_enqueued_sp;
   ValueObjectSP m_is_complete_sp;
+  ValueObjectSP m_parent_task_sp;
   ValueObjectSP m_child_tasks_sp;
   ValueObjectSP m_is_running_sp;
 };
@@ -1284,8 +1320,6 @@ private:
     bool operator==(const Task &other) const { return addr == other.addr; }
     bool operator!=(const Task &other) const { return !(*this == other); }
 
-    static constexpr offset_t AsyncTaskSize = sizeof(::swift::AsyncTask);
-    static constexpr offset_t ChildFragmentOffset = AsyncTaskSize;
     static constexpr offset_t NextChildOffset = ChildFragmentOffset + 0x8;
 
     Task getNextChild(Status &status) {
