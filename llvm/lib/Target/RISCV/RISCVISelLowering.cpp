@@ -1149,6 +1149,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::STRICT_FP_ROUND, ISD::STRICT_FP_EXTEND}, VT,
                          Custom);
       setOperationAction({ISD::VP_FP_ROUND, ISD::VP_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
       setOperationAction({ISD::VP_MERGE, ISD::VP_SELECT, ISD::SELECT}, VT,
                          Custom);
       setOperationAction(ISD::SELECT_CC, VT, Expand);
@@ -1457,6 +1458,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             // available.
             setOperationAction(ISD::BUILD_VECTOR, MVT::f16, Custom);
           }
+          if (Subtarget.hasVInstructionsF16Minimal())
+            setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           setOperationAction(ISD::FNEG, VT, Expand);
           setOperationAction(ISD::FABS, VT, Expand);
           setOperationAction(ISD::FCOPYSIGN, VT, Expand);
@@ -1481,6 +1484,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
             // available.
             setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
           }
+          if (Subtarget.hasVInstructionsBF16Minimal())
+            setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
           setOperationAction(
               {ISD::VP_MERGE, ISD::VP_SELECT, ISD::VSELECT, ISD::SELECT}, VT,
               Custom);
@@ -3488,6 +3493,14 @@ static SDValue lowerVectorXRINT(SDValue Op, SelectionDAG &DAG,
   }
 
   auto [Mask, VL] = getDefaultVLOps(SrcVT, SrcContainerVT, DL, DAG, Subtarget);
+
+  // [b]f16 -> f32
+  MVT SrcElemType = SrcVT.getVectorElementType();
+  if (SrcElemType == MVT::f16 || SrcElemType == MVT::bf16) {
+    MVT F32VT = SrcContainerVT.changeVectorElementType(MVT::f32);
+    Src = DAG.getNode(RISCVISD::FP_EXTEND_VL, DL, F32VT, Src, Mask, VL);
+  }
+
   SDValue Res =
       DAG.getNode(RISCVISD::VFCVT_RM_X_F_VL, DL, DstContainerVT, Src, Mask,
                   DAG.getTargetConstant(matchRoundingOp(Op.getOpcode()), DL,
