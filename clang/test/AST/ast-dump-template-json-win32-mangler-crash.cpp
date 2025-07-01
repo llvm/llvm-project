@@ -670,9 +670,18 @@ int main()
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
-// CHECK-NEXT:          "offset": 404,
-// CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "tokLen": 9
+// CHECK-NEXT:          "spellingLoc": {
+// CHECK-NEXT:           "offset": 123,
+// CHECK-NEXT:           "line": 4,
+// CHECK-NEXT:           "col": 20,
+// CHECK-NEXT:           "tokLen": 1
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "expansionLoc": {
+// CHECK-NEXT:           "offset": 393,
+// CHECK-NEXT:           "line": 17,
+// CHECK-NEXT:           "col": 5,
+// CHECK-NEXT:           "tokLen": 10
+// CHECK-NEXT:          }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "offset": 481,
@@ -3225,4 +3234,3 @@ int main()
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-

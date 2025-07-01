@@ -84,11 +84,11 @@ end subroutine
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX_PROC]] : (!fir.boxproc<() -> ()>) -> ((!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>)
 ! CHECK: %[[A_NONE:.*]] = fir.convert %[[A]]#1 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
 ! CHECK: %[[MASK_NONE:.*]] = fir.convert %[[MASK]] : (!fir.box<i1>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAReduceInteger1Ref(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[ID]]#1, %false{{.*}}) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
-! CHECK: fir.call @_FortranAReduceInteger1Ref(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}#1, %true)
+! CHECK: %{{.*}} = fir.call @_FortranAReduceInteger1Ref(%[[A_NONE]], %[[BOX_ADDR]], %{{.*}}, %{{.*}}, %c1{{.*}}, %[[MASK_NONE]], %[[ID]]#0, %false{{.*}}) fastmath<contract> : (!fir.box<none>, (!fir.ref<i8>, !fir.ref<i8>) -> !fir.ref<i8>, !fir.ref<i8>, i32, i32, !fir.box<none>, !fir.ref<i8>, i1) -> i8
+! CHECK: fir.call @_FortranAReduceInteger1Ref(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}#0, %true)
 ! CHECK: %[[MASK:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.3xl4.0"} : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.ref<!fir.array<3x!fir.logical<4>>>)
 ! CHECK: %[[SHAPE_C3:.*]] = fir.shape %c3{{.*}} : (index) -> !fir.shape<1>
-! CHECK: %[[BOXED_MASK:.*]] = fir.embox %[[MASK]]#1(%[[SHAPE_C3]]) : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.logical<4>>>
+! CHECK: %[[BOXED_MASK:.*]] = fir.embox %[[MASK]]#0(%[[SHAPE_C3]]) : (!fir.ref<!fir.array<3x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<3x!fir.logical<4>>>
 ! CHECK: %[[CONV_MASK:.*]] = fir.convert %[[BOXED_MASK]] : (!fir.box<!fir.array<3x!fir.logical<4>>>) -> !fir.box<none>
 ! CHECK: fir.call @_FortranAReduceInteger1Ref(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[CONV_MASK]], %{{.*}}, %false{{.*}})
 ! CHECK: fir.call @_FortranAReduceInteger1Value

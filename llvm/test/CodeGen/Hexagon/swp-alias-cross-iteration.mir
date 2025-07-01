@@ -1,0 +1,72 @@
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test that pipeliner correctly detects the loop-carried dependency between the
+# load and the store, which is indicated by `Ord` dependency from SU(2) to
+# SU(4). Note that there is no dependency within a single iteration.
+
+# CHECK:      SU(2):   %7:intregs = L2_loadri_io %5:intregs, 0 :: (load (s32) from %ir.ptr.load)
+# CHECK-NEXT:   # preds left
+# CHECK-NEXT:   # succs left
+# CHECK-NEXT:   # rdefs left
+# CHECK-NEXT:   Latency
+# CHECK-NEXT:   Depth
+# CHECK-NEXT:   Height
+# CHECK-NEXT:   Predecessors:
+# CHECK-NEXT:     SU(0): Data Latency=0 Reg=%5
+# CHECK-NEXT:   Successors:
+# CHECK-DAG:      SU(3): Data Latency=2 Reg=%7
+# CHECK-DAG:      SU(4): Ord  Latency=1 Barrier
+# CHECK-NEXT: SU(3):   %8:intregs = F2_sfadd %7:intregs, %3:intregs, implicit $usr
+# CHECK:      SU(4):   S2_storeri_io %6:intregs, 0, %8:intregs :: (store (s32) into %ir.ptr.store)
+
+
+--- |
+  define void @foo(ptr noalias %p0, ptr noalias %p1, i32 %n) {
+  entry:
+    br label %body
+  
+  body:                                             ; preds = %body, %entry
+    %i = phi i32 [ 0, %entry ], [ %i.next, %body ]
+    %ptr.load = phi ptr [ %p0, %entry ], [ %p1, %body ]
+    %ptr.store = phi ptr [ %p1, %entry ], [ %p0, %body ]
+    %v = load float, ptr %ptr.load, align 4
+    %add = fadd float %v, 1.000000e+00
+    store float %add, ptr %ptr.store, align 4
+    %i.next = add i32 %i, 1
+    %cond = icmp slt i32 %i.next, %n
+    br i1 %cond, label %body, label %exit
+  
+  exit:                                             ; preds = %body
+    ret void
+  }
+...
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $r0, $r1, $r2
+  
+    %6:intregs = COPY $r2
+    %5:intregs = COPY $r1
+    %4:intregs = COPY $r0
+    %9:intregs = A2_tfrsi 1065353216
+    %12:intregs = COPY %6
+    J2_loop0r %bb.1, %12, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
+  
+  bb.1.body (machine-block-address-taken):
+    successors: %bb.1(0x7c000000), %bb.2(0x04000000)
+  
+    %1:intregs = PHI %4, %bb.0, %5, %bb.1
+    %2:intregs = PHI %5, %bb.0, %4, %bb.1
+    %8:intregs = L2_loadri_io %1, 0 :: (load (s32) from %ir.ptr.load)
+    %10:intregs = F2_sfadd killed %8, %9, implicit $usr
+    S2_storeri_io %2, 0, killed %10 :: (store (s32) into %ir.ptr.store)
+    ENDLOOP0 %bb.1, implicit-def $pc, implicit-def $lc0, implicit $sa0, implicit $lc0
+    J2_jump %bb.2, implicit-def dead $pc
+  
+  bb.2.exit:
+    PS_jmpret $r31, implicit-def dead $pc
+...

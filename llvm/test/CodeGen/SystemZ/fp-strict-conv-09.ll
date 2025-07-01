@@ -2,9 +2,21 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare i32 @llvm.experimental.constrained.fptosi.i32.f16(half, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128, metadata)
+
+; Test f16->i32.
+define i32 @f0(half %f) #0 {
+; CHECK-LABEL: f0:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK-NEXT: cfebr %r2, 5, %f0
+; CHECK: br %r14
+  %conv = call i32 @llvm.experimental.constrained.fptosi.i32.f16(half %f,
+                                               metadata !"fpexcept.strict") #0
+  ret i32 %conv
+}
 
 ; Test f32->i32.
 define i32 @f1(float %f) #0 {

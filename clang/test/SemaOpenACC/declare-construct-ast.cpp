@@ -11,12 +11,23 @@ int *Global;
 // CHECK: VarDecl{{.*}}Global 'int *'
 int GlobalArray[5];
 // CHECK-NEXT: VarDecl{{.*}}GlobalArray 'int[5]'
-#pragma acc declare deviceptr(Global), copyin(GlobalArray)
+#pragma acc declare deviceptr(Global), copyin(readonly, always: GlobalArray)
 // CHECK-NEXT: OpenACCDeclareDecl
 // CHECK-NEXT: deviceptr clause
 // CHECK-NEXT: DeclRefExpr{{.*}}'Global' 'int *'
-// CHECK-NEXT: copyin clause
+// CHECK-NEXT: copyin clause modifiers: always, readonly
 // CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray' 'int[5]'
+
+int *Global1;
+// CHECK-NEXT: VarDecl{{.*}}Global1 'int *'
+int GlobalArray1[5];
+// CHECK-NEXT: VarDecl{{.*}}GlobalArray1 'int[5]'
+_Pragma("acc declare deviceptr(Global1), copyin(GlobalArray1)")
+// CHECK-NEXT: OpenACCDeclareDecl
+// CHECK-NEXT: deviceptr clause
+// CHECK-NEXT: DeclRefExpr{{.*}}'Global1' 'int *'
+// CHECK-NEXT: copyin clause
+// CHECK-NEXT: DeclRefExpr{{.*}}'GlobalArray1' 'int[5]'
 
 int *Global2;
 // CHECK: VarDecl{{.*}}Global2 'int *'
@@ -151,12 +162,12 @@ struct DependentStruct {
   static constexpr T StaticMemArray2[5] = {};
   // CHECK-NEXT: VarDecl{{.*}} StaticMemArray2 'const T[5]'
   // CHECK-NEXT: InitListExpr{{.*}}'void'
-#pragma acc declare copyin(StaticMem, StaticMemArray) create(StaticMem2, StaticMemArray2)
+#pragma acc declare copyin(StaticMem, StaticMemArray) create(zero: StaticMem2, StaticMemArray2)
   // CHECK-NEXT: OpenACCDeclareDecl
   // CHECK-NEXT: copyin clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMem' 'const T'
   // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMemArray' 'const T[5]'
-  // CHECK-NEXT: create clause
+  // CHECK-NEXT: create clause modifiers: zero
   // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMem2' 'const T'
   // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMemArray2' 'const T[5]'
 
@@ -178,14 +189,14 @@ struct DependentStruct {
     U LocalArray2[5];
     // CHECK-NEXT: DeclStmt
     // CHECK-NEXT: VarDecl{{.*}} LocalArray2 'U[5]'
-#pragma acc declare copy(Arg, Local, LocalArray) copyout(Arg2, Local2, LocalArray2)
+#pragma acc declare copy(always, alwaysin: Arg, Local, LocalArray) copyout(zero: Arg2, Local2, LocalArray2)
     // CHECK-NEXT: DeclStmt
     // CHECK-NEXT: OpenACCDeclareDecl
-    // CHECK-NEXT: copy clause
+    // CHECK-NEXT: copy clause modifiers: always, alwaysin
     // CHECK-NEXT: DeclRefExpr{{.*}}'Arg' 'U'
     // CHECK-NEXT: DeclRefExpr{{.*}}'Local' 'T'
     // CHECK-NEXT: DeclRefExpr{{.*}}'LocalArray' 'U[5]'
-    // CHECK-NEXT: copyout clause
+    // CHECK-NEXT: copyout clause modifiers: zero
     // CHECK-NEXT: DeclRefExpr{{.*}}'Arg2' 'U'
     // CHECK-NEXT: DeclRefExpr{{.*}}'Local2' 'T'
     // CHECK-NEXT: DeclRefExpr{{.*}}'LocalArray2' 'U[5]'
@@ -240,7 +251,7 @@ struct DependentStruct {
 // CHECK-NEXT: copyin clause
 // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMem' 'const int'
 // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMemArray' 'const int[5]'
-// CHECK-NEXT: create clause
+// CHECK-NEXT: create clause modifiers: zero
 // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMem2' 'const int'
 // CHECK-NEXT: DeclRefExpr{{.*}}'StaticMemArray2' 'const int[5]'
 
@@ -268,11 +279,11 @@ struct DependentStruct {
 
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCDeclareDecl
-// CHECK-NEXT: copy clause
+// CHECK-NEXT: copy clause modifiers: always, alwaysin
 // CHECK-NEXT: DeclRefExpr{{.*}}'Arg' 'float'
 // CHECK-NEXT: DeclRefExpr{{.*}}'Local' 'int'
 // CHECK-NEXT: DeclRefExpr{{.*}}'LocalArray' 'float[5]'
-// CHECK-NEXT: copyout clause
+// CHECK-NEXT: copyout clause modifiers: zero
 // CHECK-NEXT: DeclRefExpr{{.*}}'Arg2' 'float'
 // CHECK-NEXT: DeclRefExpr{{.*}}'Local2' 'int'
 // CHECK-NEXT: DeclRefExpr{{.*}}'LocalArray2' 'float[5]'

@@ -1,3 +1,5 @@
+// XFAIL: msvc
+// Fails on windows due to issue #129023
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
 #include <stdlib.h>

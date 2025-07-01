@@ -653,28 +653,31 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; ZVE32F-LABEL: gather_of_pointers:
 ; ZVE32F:       # %bb.0: # %bb
 ; ZVE32F-NEXT:    li a2, 0
-; ZVE32F-NEXT:    lui a4, 2
-; ZVE32F-NEXT:    li a3, 1
-; ZVE32F-NEXT:    add a4, a0, a4
-; ZVE32F-NEXT:    li a5, 40
+; ZVE32F-NEXT:    lui a3, 2
+; ZVE32F-NEXT:    add a3, a0, a3
+; ZVE32F-NEXT:    li a4, 1
 ; ZVE32F-NEXT:  .LBB12_1: # %bb2
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; ZVE32F-NEXT:    mul a6, a3, a5
-; ZVE32F-NEXT:    mul a7, a2, a5
+; ZVE32F-NEXT:    slli a5, a4, 3
+; ZVE32F-NEXT:    slli a6, a4, 5
+; ZVE32F-NEXT:    slli a7, a2, 3
+; ZVE32F-NEXT:    slli t0, a2, 5
 ; ZVE32F-NEXT:    addi a2, a2, 4
-; ZVE32F-NEXT:    add a6, a1, a6
+; ZVE32F-NEXT:    add a5, a6, a5
+; ZVE32F-NEXT:    add a7, t0, a7
+; ZVE32F-NEXT:    add a5, a1, a5
 ; ZVE32F-NEXT:    add a7, a1, a7
-; ZVE32F-NEXT:    ld t0, 0(a7)
-; ZVE32F-NEXT:    ld t1, 0(a6)
+; ZVE32F-NEXT:    ld a6, 0(a7)
+; ZVE32F-NEXT:    ld t0, 0(a5)
 ; ZVE32F-NEXT:    ld a7, 80(a7)
-; ZVE32F-NEXT:    ld a6, 80(a6)
-; ZVE32F-NEXT:    sd t0, 0(a0)
-; ZVE32F-NEXT:    sd t1, 8(a0)
+; ZVE32F-NEXT:    ld a5, 80(a5)
+; ZVE32F-NEXT:    sd a6, 0(a0)
+; ZVE32F-NEXT:    sd t0, 8(a0)
 ; ZVE32F-NEXT:    sd a7, 16(a0)
-; ZVE32F-NEXT:    sd a6, 24(a0)
+; ZVE32F-NEXT:    sd a5, 24(a0)
 ; ZVE32F-NEXT:    addi a0, a0, 32
-; ZVE32F-NEXT:    addi a3, a3, 4
-; ZVE32F-NEXT:    bne a0, a4, .LBB12_1
+; ZVE32F-NEXT:    addi a4, a4, 4
+; ZVE32F-NEXT:    bne a0, a3, .LBB12_1
 ; ZVE32F-NEXT:  # %bb.2: # %bb18
 ; ZVE32F-NEXT:    ret
 ;
@@ -701,28 +704,31 @@ define void @gather_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptur
 ; OPTV-LABEL: gather_of_pointers:
 ; OPTV:       # %bb.0: # %bb
 ; OPTV-NEXT:    li a2, 0
-; OPTV-NEXT:    lui a4, 2
-; OPTV-NEXT:    li a3, 1
-; OPTV-NEXT:    add a4, a0, a4
-; OPTV-NEXT:    li a5, 40
+; OPTV-NEXT:    lui a3, 2
+; OPTV-NEXT:    add a3, a0, a3
+; OPTV-NEXT:    li a4, 1
 ; OPTV-NEXT:  .LBB12_1: # %bb2
 ; OPTV-NEXT:    # =>This Inner Loop Header: Depth=1
-; OPTV-NEXT:    mul a6, a3, a5
-; OPTV-NEXT:    mul a7, a2, a5
+; OPTV-NEXT:    slli a5, a4, 3
+; OPTV-NEXT:    slli a6, a4, 5
+; OPTV-NEXT:    slli a7, a2, 3
+; OPTV-NEXT:    slli t0, a2, 5
 ; OPTV-NEXT:    addi a2, a2, 4
-; OPTV-NEXT:    add a6, a1, a6
+; OPTV-NEXT:    add a5, a6, a5
+; OPTV-NEXT:    add a7, t0, a7
+; OPTV-NEXT:    add a5, a1, a5
 ; OPTV-NEXT:    add a7, a1, a7
-; OPTV-NEXT:    ld t0, 0(a7)
-; OPTV-NEXT:    ld t1, 0(a6)
+; OPTV-NEXT:    ld a6, 0(a7)
+; OPTV-NEXT:    ld t0, 0(a5)
 ; OPTV-NEXT:    ld a7, 80(a7)
-; OPTV-NEXT:    ld a6, 80(a6)
-; OPTV-NEXT:    sd t0, 0(a0)
-; OPTV-NEXT:    sd t1, 8(a0)
+; OPTV-NEXT:    ld a5, 80(a5)
+; OPTV-NEXT:    sd a6, 0(a0)
+; OPTV-NEXT:    sd t0, 8(a0)
 ; OPTV-NEXT:    sd a7, 16(a0)
-; OPTV-NEXT:    sd a6, 24(a0)
+; OPTV-NEXT:    sd a5, 24(a0)
 ; OPTV-NEXT:    addi a0, a0, 32
-; OPTV-NEXT:    addi a3, a3, 4
-; OPTV-NEXT:    bne a0, a4, .LBB12_1
+; OPTV-NEXT:    addi a4, a4, 4
+; OPTV-NEXT:    bne a0, a3, .LBB12_1
 ; OPTV-NEXT:  # %bb.2: # %bb18
 ; OPTV-NEXT:    ret
 bb:
@@ -778,28 +784,31 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; ZVE32F-LABEL: scatter_of_pointers:
 ; ZVE32F:       # %bb.0: # %bb
 ; ZVE32F-NEXT:    li a2, 0
-; ZVE32F-NEXT:    lui a4, 2
-; ZVE32F-NEXT:    li a3, 1
-; ZVE32F-NEXT:    add a4, a1, a4
-; ZVE32F-NEXT:    li a5, 40
+; ZVE32F-NEXT:    lui a3, 2
+; ZVE32F-NEXT:    add a3, a1, a3
+; ZVE32F-NEXT:    li a4, 1
 ; ZVE32F-NEXT:  .LBB13_1: # %bb2
 ; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
-; ZVE32F-NEXT:    ld a6, 0(a1)
-; ZVE32F-NEXT:    ld a7, 8(a1)
-; ZVE32F-NEXT:    ld t0, 16(a1)
-; ZVE32F-NEXT:    ld t1, 24(a1)
-; ZVE32F-NEXT:    mul t2, a3, a5
-; ZVE32F-NEXT:    mul t3, a2, a5
+; ZVE32F-NEXT:    ld a5, 0(a1)
+; ZVE32F-NEXT:    ld a6, 8(a1)
+; ZVE32F-NEXT:    ld a7, 16(a1)
+; ZVE32F-NEXT:    ld t0, 24(a1)
+; ZVE32F-NEXT:    slli t1, a4, 3
+; ZVE32F-NEXT:    slli t2, a4, 5
+; ZVE32F-NEXT:    slli t3, a2, 3
+; ZVE32F-NEXT:    add t1, t2, t1
+; ZVE32F-NEXT:    slli t2, a2, 5
 ; ZVE32F-NEXT:    addi a2, a2, 4
 ; ZVE32F-NEXT:    addi a1, a1, 32
+; ZVE32F-NEXT:    add t2, t2, t3
+; ZVE32F-NEXT:    add t1, a0, t1
 ; ZVE32F-NEXT:    add t2, a0, t2
-; ZVE32F-NEXT:    add t3, a0, t3
-; ZVE32F-NEXT:    sd a6, 0(t3)
-; ZVE32F-NEXT:    sd a7, 0(t2)
-; ZVE32F-NEXT:    sd t0, 80(t3)
-; ZVE32F-NEXT:    sd t1, 80(t2)
-; ZVE32F-NEXT:    addi a3, a3, 4
-; ZVE32F-NEXT:    bne a1, a4, .LBB13_1
+; ZVE32F-NEXT:    sd a5, 0(t2)
+; ZVE32F-NEXT:    sd a6, 0(t1)
+; ZVE32F-NEXT:    sd a7, 80(t2)
+; ZVE32F-NEXT:    sd t0, 80(t1)
+; ZVE32F-NEXT:    addi a4, a4, 4
+; ZVE32F-NEXT:    bne a1, a3, .LBB13_1
 ; ZVE32F-NEXT:  # %bb.2: # %bb18
 ; ZVE32F-NEXT:    ret
 ;
@@ -826,28 +835,31 @@ define void @scatter_of_pointers(ptr noalias nocapture %arg, ptr noalias nocaptu
 ; OPTV-LABEL: scatter_of_pointers:
 ; OPTV:       # %bb.0: # %bb
 ; OPTV-NEXT:    li a2, 0
-; OPTV-NEXT:    lui a4, 2
-; OPTV-NEXT:    li a3, 1
-; OPTV-NEXT:    add a4, a1, a4
-; OPTV-NEXT:    li a5, 40
+; OPTV-NEXT:    lui a3, 2
+; OPTV-NEXT:    add a3, a1, a3
+; OPTV-NEXT:    li a4, 1
 ; OPTV-NEXT:  .LBB13_1: # %bb2
 ; OPTV-NEXT:    # =>This Inner Loop Header: Depth=1
-; OPTV-NEXT:    ld a6, 0(a1)
-; OPTV-NEXT:    ld a7, 8(a1)
-; OPTV-NEXT:    ld t0, 16(a1)
-; OPTV-NEXT:    ld t1, 24(a1)
-; OPTV-NEXT:    mul t2, a3, a5
-; OPTV-NEXT:    mul t3, a2, a5
+; OPTV-NEXT:    ld a5, 0(a1)
+; OPTV-NEXT:    ld a6, 8(a1)
+; OPTV-NEXT:    ld a7, 16(a1)
+; OPTV-NEXT:    ld t0, 24(a1)
+; OPTV-NEXT:    slli t1, a4, 3
+; OPTV-NEXT:    slli t2, a4, 5
+; OPTV-NEXT:    slli t3, a2, 3
+; OPTV-NEXT:    add t1, t2, t1
+; OPTV-NEXT:    slli t2, a2, 5
 ; OPTV-NEXT:    addi a2, a2, 4
 ; OPTV-NEXT:    addi a1, a1, 32
+; OPTV-NEXT:    add t2, t2, t3
+; OPTV-NEXT:    add t1, a0, t1
 ; OPTV-NEXT:    add t2, a0, t2
-; OPTV-NEXT:    add t3, a0, t3
-; OPTV-NEXT:    sd a6, 0(t3)
-; OPTV-NEXT:    sd a7, 0(t2)
-; OPTV-NEXT:    sd t0, 80(t3)
-; OPTV-NEXT:    sd t1, 80(t2)
-; OPTV-NEXT:    addi a3, a3, 4
-; OPTV-NEXT:    bne a1, a4, .LBB13_1
+; OPTV-NEXT:    sd a5, 0(t2)
+; OPTV-NEXT:    sd a6, 0(t1)
+; OPTV-NEXT:    sd a7, 80(t2)
+; OPTV-NEXT:    sd t0, 80(t1)
+; OPTV-NEXT:    addi a4, a4, 4
+; OPTV-NEXT:    bne a1, a3, .LBB13_1
 ; OPTV-NEXT:  # %bb.2: # %bb18
 ; OPTV-NEXT:    ret
 bb:
@@ -885,55 +897,54 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    beq a2, a3, .LBB14_7
 ; CHECK-NEXT:  # %bb.1: # %bb3
 ; CHECK-NEXT:    li a3, 1023
-; CHECK-NEXT:    subw a5, a3, a2
-; CHECK-NEXT:    li a6, 31
-; CHECK-NEXT:    mv a4, a2
-; CHECK-NEXT:    bltu a5, a6, .LBB14_5
+; CHECK-NEXT:    subw a4, a3, a2
+; CHECK-NEXT:    li a5, 31
+; CHECK-NEXT:    bltu a4, a5, .LBB14_5
 ; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    slli a4, a5, 32
-; CHECK-NEXT:    slli t0, a2, 2
-; CHECK-NEXT:    add a5, a0, a2
+; CHECK-NEXT:    slli a5, a4, 32
+; CHECK-NEXT:    slli a7, a2, 2
+; CHECK-NEXT:    add a4, a0, a2
 ; CHECK-NEXT:    add a6, a1, a2
 ; CHECK-NEXT:    li t2, 32
-; CHECK-NEXT:    srli a4, a4, 32
-; CHECK-NEXT:    add t0, a6, t0
-; CHECK-NEXT:    addi a6, a4, 1
-; CHECK-NEXT:    andi a7, a6, -32
-; CHECK-NEXT:    add a4, a7, a2
-; CHECK-NEXT:    add a2, a4, a0
+; CHECK-NEXT:    srli a5, a5, 32
+; CHECK-NEXT:    add a7, a6, a7
+; CHECK-NEXT:    addi a5, a5, 1
+; CHECK-NEXT:    andi a6, a5, -32
+; CHECK-NEXT:    add a2, a6, a2
+; CHECK-NEXT:    add t0, a2, a0
 ; CHECK-NEXT:    li t1, 5
 ; CHECK-NEXT:    vsetvli zero, t2, e8, m1, ta, ma
 ; CHECK-NEXT:  .LBB14_3: # %bb15
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vlse8.v v8, (t0), t1
-; CHECK-NEXT:    vle8.v v9, (a5)
+; CHECK-NEXT:    vlse8.v v8, (a7), t1
+; CHECK-NEXT:    vle8.v v9, (a4)
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
-; CHECK-NEXT:    vse8.v v8, (a5)
-; CHECK-NEXT:    addi a5, a5, 32
-; CHECK-NEXT:    addi t0, t0, 160
-; CHECK-NEXT:    bne a5, a2, .LBB14_3
+; CHECK-NEXT:    vse8.v v8, (a4)
+; CHECK-NEXT:    addi a4, a4, 32
+; CHECK-NEXT:    addi a7, a7, 160
+; CHECK-NEXT:    bne a4, t0, .LBB14_3
 ; CHECK-NEXT:  # %bb.4: # %bb30
-; CHECK-NEXT:    beq a6, a7, .LBB14_7
+; CHECK-NEXT:    beq a5, a6, .LBB14_7
 ; CHECK-NEXT:  .LBB14_5: # %bb32
-; CHECK-NEXT:    add a2, a0, a4
-; CHECK-NEXT:    slli a5, a4, 2
-; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    subw a3, a3, a4
+; CHECK-NEXT:    add a4, a0, a2
+; CHECK-NEXT:    slli a5, a2, 2
+; CHECK-NEXT:    add a1, a1, a2
+; CHECK-NEXT:    subw a3, a3, a2
 ; CHECK-NEXT:    add a1, a1, a5
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    srli a3, a3, 32
-; CHECK-NEXT:    add a0, a4, a0
+; CHECK-NEXT:    add a0, a2, a0
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:  .LBB14_6: # %bb35
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lbu a3, 0(a1)
-; CHECK-NEXT:    lbu a4, 0(a2)
-; CHECK-NEXT:    add a3, a4, a3
-; CHECK-NEXT:    sb a3, 0(a2)
-; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    lbu a2, 0(a1)
+; CHECK-NEXT:    lbu a3, 0(a4)
+; CHECK-NEXT:    add a2, a3, a2
+; CHECK-NEXT:    sb a2, 0(a4)
+; CHECK-NEXT:    addi a4, a4, 1
 ; CHECK-NEXT:    addi a1, a1, 5
-; CHECK-NEXT:    bne a2, a0, .LBB14_6
+; CHECK-NEXT:    bne a4, a0, .LBB14_6
 ; CHECK-NEXT:  .LBB14_7: # %bb34
 ; CHECK-NEXT:    ret
 bb:

@@ -243,8 +243,8 @@ public:
     }
 
     llvm::SmallVector<int64_t> newShape;
-    if (!tosa::getConstShapeValue(reshape.getShape().getDefiningOp(),
-                                  newShape)) {
+    if (!tosa::getConstShapeValues(reshape.getShape().getDefiningOp(),
+                                   newShape)) {
       return failure();
     }
 
@@ -362,7 +362,8 @@ public:
     // Setup the default constantAttr.
 
     Value padConstant = rewriter.createOrFold<tensor::ExtractOp>(
-        loc, padOp.getPadConst(), ValueRange({}));
+        loc, padOp.getPadConst(),
+        ValueRange({rewriter.create<arith::ConstantIndexOp>(loc, 0)}));
 
     if (!padConstant) {
       return rewriter.notifyMatchFailure(

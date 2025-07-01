@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck -check-prefixes=RV32I %s
 ; RUN: llc -mtriple=riscv64 -disable-block-placement -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64I %s
-; RUN: llc -mtriple=riscv64 -mattr=+xmipscmove -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+xmipscmov -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-CCMOV %s
 
 define signext i32 @foo(i32 signext %a, ptr %b) nounwind {
@@ -358,7 +358,7 @@ define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) 
 ; RV64I-LABEL: select_sge_int16min:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a3, 1048560
-; RV64I-NEXT:    addiw a3, a3, -1
+; RV64I-NEXT:    addi a3, a3, -1
 ; RV64I-NEXT:    blt a3, a0, .LBB2_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    mv a1, a2
@@ -369,7 +369,7 @@ define i32 @select_sge_int16min(i32 signext %x, i32 signext %y, i32 signext %z) 
 ; RV64I-CCMOV-LABEL: select_sge_int16min:
 ; RV64I-CCMOV:       # %bb.0:
 ; RV64I-CCMOV-NEXT:    lui a3, 1048560
-; RV64I-CCMOV-NEXT:    addiw a3, a3, -1
+; RV64I-CCMOV-NEXT:    addi a3, a3, -1
 ; RV64I-CCMOV-NEXT:    slt a0, a3, a0
 ; RV64I-CCMOV-NEXT:    mips.ccmov a0, a0, a1, a2
 ; RV64I-CCMOV-NEXT:    ret

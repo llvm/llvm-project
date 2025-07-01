@@ -601,7 +601,8 @@ public:
 
 Defined *Thunk::addSymbol(StringRef name, uint8_t type, uint64_t value,
                           InputSectionBase &section) {
-  Defined *d = addSyntheticLocal(ctx, name, type, value, /*size=*/0, section);
+  Defined *d =
+      addSyntheticLocal(ctx, name, type, value + offset, /*size=*/0, section);
   syms.push_back(d);
   return d;
 }
@@ -674,6 +675,9 @@ void AArch64ABSLongThunk::addSymbols(ThunkSection &isec) {
 
 void AArch64ABSLongThunk::addLongMapSyms() {
   addSymbol("$d", STT_NOTYPE, 8, *tsec);
+  // The ldr in the long Thunk requires 8-byte alignment when
+  // unaligned accesses are disabled.
+  alignment = 8;
 }
 
 void AArch64ABSXOLongThunk::writeLong(uint8_t *buf) {

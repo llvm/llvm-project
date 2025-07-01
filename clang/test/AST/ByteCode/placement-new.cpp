@@ -15,14 +15,18 @@ namespace std {
   constexpr void construct_at(void *p, Args &&...args) {
     new (p) T((Args&&)args...); // both-note {{in call to}} \
                                 // both-note {{placement new would change type of storage from 'int' to 'float'}} \
-                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}}
-
+                                // both-note {{construction of subobject of member 'x' of union with active member 'a' is not allowed in a constant expression}} \
+                                // both-note {{construction of temporary is not allowed}} \
+                                // both-note {{construction of heap allocated object that has been deleted}} \
+                                // both-note {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}
   }
 }
 
 void *operator new(std::size_t, void *p) { return p; }
 void* operator new[] (std::size_t, void* p) {return p;}
 
+constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // both-error {{constant expression}} \
+                                                                            // both-note {{assignment to object outside its lifetime}}
 
 consteval auto ok1() {
   bool b;
@@ -339,6 +343,30 @@ namespace PR48606 {
   static_assert(f());
 }
 
+/// This used to crash because of an assertion in the implementation
+/// of the This instruction.
+namespace ExplicitThisOnArrayElement {
+  struct S {
+    int a = 12;
+    constexpr S(int a) {
+      this->a = a;
+    }
+  };
+
+  template <class _Tp, class... _Args>
+  constexpr void construct_at(_Tp *__location, _Args &&...__args) {
+    new (__location) _Tp(__args...);
+  }
+
+  constexpr bool foo() {
+    auto *M = std::allocator<S>().allocate(13); // both-note {{allocation performed here was not deallocated}}
+    construct_at(M, 12);
+    return true;
+  }
+
+  static_assert(foo()); // both-error {{not an integral constant expression}}
+}
+
 #ifdef BYTECODE
 constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
                      // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
@@ -352,3 +380,88 @@ constexpr int N = [] // expected-error {{must be initialized by a constant expre
     return s.a[0];
 }();
 #endif
+
+namespace MemMove {
+  constexpr int foo() {
+    int *a = std::allocator<int>{}.allocate(1);
+    new(a) int{123};
+
+    int b;
+    __builtin_memmove(&b, a, sizeof(int));
+
+    std::allocator<int>{}.deallocate(a);
+    return b;
+  }
+
+  static_assert(foo() == 123);
+}
+
+namespace Temp {
+  constexpr int &&temporary = 0; // both-note {{created here}}
+  static_assert((std::construct_at<int>(&temporary, 1), true)); // both-error{{not an integral constant expression}} \
+                                                                // both-note {{in call}}
+}
+
+namespace PlacementNewAfterDelete {
+  constexpr bool construct_after_lifetime() {
+    int *p = new int;
+    delete p;
+    std::construct_at<int>(p); // both-note {{in call}}
+    return true;
+  }
+  static_assert(construct_after_lifetime()); // both-error {{}} \
+                                             // both-note {{in call}}
+}
+
+namespace SubObj {
+  constexpr bool construct_after_lifetime_2() {
+    struct A { struct B {} b; };
+    A a;
+    a.~A();
+    std::construct_at<A::B>(&a.b); // both-note {{in call}}
+    return true;
+  }
+  static_assert(construct_after_lifetime_2()); // both-error {{}} both-note {{in call}}
+}
+
+namespace RecursiveLifetimeStart {
+  struct B {
+    int b;
+  };
+
+  struct A {
+    B b;
+    int a;
+  };
+
+  constexpr int foo() {
+    A a;
+    a.~A();
+
+    new (&a) A();
+    a.a = 10;
+    a.b.b = 12;
+    return a.a;
+  }
+  static_assert(foo() == 10);
+}
+
+namespace ArrayRoot {
+  struct S {
+    int a;
+  };
+  constexpr int foo() {
+    S* ss = std::allocator<S>().allocate(2);
+    new (ss) S{};
+    new (ss + 1) S{};
+
+    S* ps = &ss[2];
+    ps = ss;
+    ps->~S();
+
+    std::allocator<S>().deallocate(ss);
+    return 0;
+  }
+
+  static_assert(foo() == 0);
+}

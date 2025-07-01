@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #ifdef __EMSCRIPTEN__
 #include "Wasm.h"
+#include <dlfcn.h>
 #endif // __EMSCRIPTEN__
 
 #include "clang/AST/ASTConsumer.h"
@@ -45,6 +46,7 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
@@ -94,9 +96,9 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
 
   // Buffer diagnostics from argument parsing so that we can output them using
   // a well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
       Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
@@ -124,7 +126,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   Clang->getPreprocessorOpts().addRemappedFile("<<< inputs >>>", MB);
 
   Clang->setTarget(TargetInfo::CreateTargetInfo(
-      Clang->getDiagnostics(), Clang->getInvocation().TargetOpts));
+      Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
   if (!Clang->hasTarget())
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Initialization failed. "
@@ -172,10 +174,10 @@ IncrementalCompilerBuilder::create(std::string TT,
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+  std::unique_ptr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(ClangArgv);
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagsBuffer);
 
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0], TT, Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
@@ -202,7 +204,7 @@ IncrementalCompilerBuilder::CreateCpp() {
   Argv.push_back("wasm32-unknown-emscripten");
   Argv.push_back("-fvisibility=default");
 #endif
-  Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
+  llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
@@ -231,7 +233,7 @@ IncrementalCompilerBuilder::createCuda(bool device) {
     Argv.push_back(ArchArg.c_str());
   }
 
-  Argv.insert(Argv.end(), UserArgs.begin(), UserArgs.end());
+  llvm::append_range(Argv, UserArgs);
 
   std::string TT = TargetTriple ? *TargetTriple : llvm::sys::getProcessTriple();
   return IncrementalCompilerBuilder::create(TT, Argv);
@@ -415,6 +417,10 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
 Interpreter::~Interpreter() {
   IncrParser.reset();
   Act->FinalizeAction();
+  if (DeviceParser)
+    DeviceParser.reset();
+  if (DeviceAct)
+    DeviceAct->FinalizeAction();
   if (IncrExecutor) {
     if (llvm::Error Err = IncrExecutor->cleanUp())
       llvm::report_fatal_error(
@@ -450,10 +456,11 @@ const char *const Runtimes = R"(
 )";
 
 llvm::Expected<std::unique_ptr<Interpreter>>
-Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
+Interpreter::create(std::unique_ptr<CompilerInstance> CI,
+                    std::unique_ptr<llvm::orc::LLJITBuilder> JB) {
   llvm::Error Err = llvm::Error::success();
-  auto Interp =
-      std::unique_ptr<Interpreter>(new Interpreter(std::move(CI), Err));
+  auto Interp = std::unique_ptr<Interpreter>(
+      new Interpreter(std::move(CI), Err, JB ? std::move(JB) : nullptr));
   if (Err)
     return std::move(Err);
 
@@ -480,20 +487,37 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   OverlayVFS->pushOverlay(IMVFS);
   CI->createFileManager(OverlayVFS);
 
-  auto Interp = Interpreter::create(std::move(CI));
-  if (auto E = Interp.takeError())
-    return std::move(E);
+  llvm::Expected<std::unique_ptr<Interpreter>> InterpOrErr =
+      Interpreter::create(std::move(CI));
+  if (!InterpOrErr)
+    return InterpOrErr;
+
+  std::unique_ptr<Interpreter> Interp = std::move(*InterpOrErr);
 
   llvm::Error Err = llvm::Error::success();
-  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
-      std::move(DCI), *(*Interp)->getCompilerInstance(), IMVFS, Err,
-      (*Interp)->PTUs);
+  llvm::LLVMContext &LLVMCtx = *Interp->TSCtx->getContext();
+
+  auto DeviceAct =
+      std::make_unique<IncrementalAction>(*DCI, LLVMCtx, Err, *Interp);
+
   if (Err)
     return std::move(Err);
 
-  (*Interp)->DeviceParser = std::move(DeviceParser);
+  Interp->DeviceAct = std::move(DeviceAct);
 
-  return Interp;
+  DCI->ExecuteAction(*Interp->DeviceAct);
+
+  Interp->DeviceCI = std::move(DCI);
+
+  auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
+      *Interp->DeviceCI, *Interp->getCompilerInstance(), IMVFS, Err,
+      Interp->PTUs);
+
+  if (Err)
+    return std::move(Err);
+
+  Interp->DeviceParser = std::move(DeviceParser);
+  return std::move(Interp);
 }
 
 const CompilerInstance *Interpreter::getCompilerInstance() const {
@@ -531,15 +555,17 @@ size_t Interpreter::getEffectivePTUSize() const {
 
 PartialTranslationUnit &
 Interpreter::RegisterPTU(TranslationUnitDecl *TU,
-                         std::unique_ptr<llvm::Module> M /*={}*/) {
+                         std::unique_ptr<llvm::Module> M /*={}*/,
+                         IncrementalAction *Action) {
   PTUs.emplace_back(PartialTranslationUnit());
   PartialTranslationUnit &LastPTU = PTUs.back();
   LastPTU.TUPart = TU;
 
   if (!M)
-    M = GenModule();
+    M = GenModule(Action);
 
-  assert((!getCodeGen() || M) && "Must have a llvm::Module at this point");
+  assert((!getCodeGen(Action) || M) &&
+         "Must have a llvm::Module at this point");
 
   LastPTU.TheModule = std::move(M);
   LLVM_DEBUG(llvm::dbgs() << "compile-ptu " << PTUs.size() - 1
@@ -559,6 +585,16 @@ Interpreter::Parse(llvm::StringRef Code) {
     llvm::Expected<TranslationUnitDecl *> DeviceTU = DeviceParser->Parse(Code);
     if (auto E = DeviceTU.takeError())
       return std::move(E);
+
+    RegisterPTU(*DeviceTU, nullptr, DeviceAct.get());
+
+    llvm::Expected<llvm::StringRef> PTX = DeviceParser->GeneratePTX();
+    if (!PTX)
+      return PTX.takeError();
+
+    llvm::Error Err = DeviceParser->GenerateFatbinary();
+    if (Err)
+      return std::move(Err);
   }
 
   // Tell the interpreter sliently ignore unused expressions since value
@@ -581,6 +617,25 @@ createJITTargetMachineBuilder(const std::string &TT) {
 
   // If the target backend is not registered, LLJITBuilder::create() will fail
   return llvm::orc::JITTargetMachineBuilder(llvm::Triple(TT));
+}
+
+llvm::Expected<std::unique_ptr<llvm::orc::LLJITBuilder>>
+Interpreter::createLLJITBuilder(
+    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC,
+    llvm::StringRef OrcRuntimePath) {
+  const std::string &TT = EPC->getTargetTriple().getTriple();
+  auto JTMB = createJITTargetMachineBuilder(TT);
+  if (!JTMB)
+    return JTMB.takeError();
+  auto JB = IncrementalExecutor::createDefaultJITBuilder(std::move(*JTMB));
+  if (!JB)
+    return JB.takeError();
+
+  (*JB)->setExecutorProcessControl(std::move(EPC));
+  (*JB)->setPlatformSetUp(
+      llvm::orc::ExecutorNativePlatform(OrcRuntimePath.str()));
+
+  return std::move(*JB);
 }
 
 llvm::Error Interpreter::CreateExecutor() {
@@ -620,14 +675,13 @@ void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
-  LLVM_DEBUG(llvm::dbgs()
-             << "execute-ptu "
-             << ((std::find(PTUs.begin(), PTUs.end(), T) != PTUs.end())
-                     ? std::distance(PTUs.begin(),
-                                     std::find(PTUs.begin(), PTUs.end(), T))
-                     : -1)
-             << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get() << " ("
-             << T.TheModule->getName() << ")]\n");
+  LLVM_DEBUG(
+      llvm::dbgs() << "execute-ptu "
+                   << (llvm::is_contained(PTUs, T)
+                           ? std::distance(PTUs.begin(), llvm::find(PTUs, T))
+                           : -1)
+                   << ": [TU=" << T.TUPart << ", M=" << T.TheModule.get()
+                   << " (" << T.TheModule->getName() << ")]\n");
   if (!IncrExecutor) {
     auto Err = CreateExecutor();
     if (Err)
@@ -711,24 +765,36 @@ llvm::Error Interpreter::Undo(unsigned N) {
 }
 
 llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
+#ifdef __EMSCRIPTEN__
+  void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+  if (!handle) {
+    llvm::errs() << dlerror() << '\n';
+    return llvm::make_error<llvm::StringError>("Failed to load dynamic library",
+                                               llvm::inconvertibleErrorCode());
+  }
+#else
   auto EE = getExecutionEngine();
   if (!EE)
     return EE.takeError();
 
-  auto &DL = EE->getDataLayout();
-
-  if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
-          name, DL.getGlobalPrefix()))
-    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
+  if (llvm::Expected<
+          std::unique_ptr<llvm::orc::EPCDynamicLibrarySearchGenerator>>
+          DLSG = llvm::orc::EPCDynamicLibrarySearchGenerator::Load(
+              EE->getExecutionSession(), name))
+    // FIXME: Eventually we should put each library in its own JITDylib and
+    //        turn off process symbols by default.
+    EE->getProcessSymbolsJITDylib()->addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
+#endif
 
   return llvm::Error::success();
 }
 
-std::unique_ptr<llvm::Module> Interpreter::GenModule() {
+std::unique_ptr<llvm::Module>
+Interpreter::GenModule(IncrementalAction *Action) {
   static unsigned ID = 0;
-  if (CodeGenerator *CG = getCodeGen()) {
+  if (CodeGenerator *CG = getCodeGen(Action)) {
     // Clang's CodeGen is designed to work with a single llvm::Module. In many
     // cases for convenience various CodeGen parts have a reference to the
     // llvm::Module (TheModule or Module) which does not change when a new
@@ -750,8 +816,10 @@ std::unique_ptr<llvm::Module> Interpreter::GenModule() {
   return nullptr;
 }
 
-CodeGenerator *Interpreter::getCodeGen() const {
-  FrontendAction *WrappedAct = Act->getWrapped();
+CodeGenerator *Interpreter::getCodeGen(IncrementalAction *Action) const {
+  if (!Action)
+    Action = Act.get();
+  FrontendAction *WrappedAct = Action->getWrapped();
   if (!WrappedAct->hasIRSupport())
     return nullptr;
   return static_cast<CodeGenAction *>(WrappedAct)->getCodeGenerator();

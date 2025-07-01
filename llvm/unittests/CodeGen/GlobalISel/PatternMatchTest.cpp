@@ -950,6 +950,29 @@ TEST_F(AArch64GISelMITest, DeferredMatching) {
                        m_GAdd(m_Reg(X), m_GSub(m_Reg(), m_DeferredReg(X)))));
 }
 
+TEST_F(AArch64GISelMITest, AddLike) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+  auto s64 = LLT::scalar(64);
+
+  auto Cst1 = B.buildConstant(s64, 42);
+  auto Cst2 = B.buildConstant(s64, 314);
+
+  auto Or1 = B.buildOr(s64, Cst1, Cst2, MachineInstr::Disjoint);
+  auto Or2 = B.buildOr(s64, Cst1, Cst2);
+  auto Add = B.buildAdd(s64, Cst1, Cst2);
+  auto Sub = B.buildSub(s64, Cst1, Cst2);
+
+  EXPECT_TRUE(mi_match(Or1.getReg(0), *MRI, m_GDisjointOr(m_Reg(), m_Reg())));
+  EXPECT_FALSE(mi_match(Or2.getReg(0), *MRI, m_GDisjointOr(m_Reg(), m_Reg())));
+
+  EXPECT_TRUE(mi_match(Add.getReg(0), *MRI, m_GAddLike(m_Reg(), m_Reg())));
+  EXPECT_FALSE(mi_match(Sub.getReg(0), *MRI, m_GAddLike(m_Reg(), m_Reg())));
+  EXPECT_TRUE(mi_match(Or1.getReg(0), *MRI, m_GAddLike(m_Reg(), m_Reg())));
+  EXPECT_FALSE(mi_match(Or2.getReg(0), *MRI, m_GAddLike(m_Reg(), m_Reg())));
+}
+
 } // namespace
 
 int main(int argc, char **argv) {

@@ -35,6 +35,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -285,8 +286,8 @@ namespace {
 }
 
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }

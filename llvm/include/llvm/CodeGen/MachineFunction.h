@@ -75,12 +75,12 @@ struct WasmEHFuncInfo;
 struct WinEHFuncInfo;
 
 template <> struct ilist_alloc_traits<MachineBasicBlock> {
-  void deleteNode(MachineBasicBlock *MBB);
+  LLVM_ABI void deleteNode(MachineBasicBlock *MBB);
 };
 
 template <> struct ilist_callback_traits<MachineBasicBlock> {
-  void addNodeToList(MachineBasicBlock* N);
-  void removeNodeFromList(MachineBasicBlock* N);
+  LLVM_ABI void addNodeToList(MachineBasicBlock *N);
+  LLVM_ABI void removeNodeFromList(MachineBasicBlock *N);
 
   template <class Iterator>
   void transferNodesFromList(ilist_callback_traits &OldList, Iterator, Iterator) {
@@ -101,7 +101,7 @@ enum class MachineFunctionDataHotness {
 /// hold private target-specific information for each MachineFunction.  Objects
 /// of type are accessed/created with MF::getInfo and destroyed when the
 /// MachineFunction is destroyed.
-struct MachineFunctionInfo {
+struct LLVM_ABI MachineFunctionInfo {
   virtual ~MachineFunctionInfo();
 
   /// Factory function: default behavior is to call new using the
@@ -214,6 +214,25 @@ public:
     return *this;
   }
 
+  // Per property has/set/reset accessors.
+#define PPACCESSORS(X)                                                         \
+  bool has##X() const { return hasProperty(Property::X); }                     \
+  MachineFunctionProperties &set##X(void) { return set(Property::X); }         \
+  MachineFunctionProperties &reset##X(void) { return reset(Property::X); }
+
+  PPACCESSORS(IsSSA)
+  PPACCESSORS(NoPHIs)
+  PPACCESSORS(TracksLiveness)
+  PPACCESSORS(NoVRegs)
+  PPACCESSORS(FailedISel)
+  PPACCESSORS(Legalized)
+  PPACCESSORS(RegBankSelected)
+  PPACCESSORS(Selected)
+  PPACCESSORS(TiedOpsRewritten)
+  PPACCESSORS(FailsVerification)
+  PPACCESSORS(FailedRegAlloc)
+  PPACCESSORS(TracksDebugUserValues)
+
   /// Reset all the properties.
   MachineFunctionProperties &reset() {
     Properties.reset();
@@ -237,7 +256,7 @@ public:
   }
 
   /// Print the MachineFunctionProperties in human-readable form.
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 private:
   std::bitset<static_cast<unsigned>(Property::LastProperty) + 1> Properties;
@@ -466,7 +485,7 @@ public:
     }
   };
 
-  class Delegate {
+  class LLVM_ABI Delegate {
     virtual void anchor();
 
   public:
@@ -1082,6 +1101,16 @@ public:
                                 BaseAlignment, AAInfo, Ranges, SSID, Ordering,
                                 FailureOrdering);
   }
+  MachineMemOperand *getMachineMemOperand(
+      MachinePointerInfo PtrInfo, MachineMemOperand::Flags F, TypeSize Size,
+      Align BaseAlignment, const AAMDNodes &AAInfo = AAMDNodes(),
+      const MDNode *Ranges = nullptr, SyncScope::ID SSID = SyncScope::System,
+      AtomicOrdering Ordering = AtomicOrdering::NotAtomic,
+      AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic) {
+    return getMachineMemOperand(PtrInfo, F, LocationSize::precise(Size),
+                                BaseAlignment, AAInfo, Ranges, SSID, Ordering,
+                                FailureOrdering);
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, adjusting by an offset and using the given size.
@@ -1102,6 +1131,10 @@ public:
                                           int64_t Offset, uint64_t Size) {
     return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
   }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          int64_t Offset, TypeSize Size) {
+    return getMachineMemOperand(MMO, Offset, LocationSize::precise(Size));
+  }
 
   /// getMachineMemOperand - Allocate a new MachineMemOperand by copying
   /// an existing one, replacing only the MachinePointerInfo and size.
@@ -1116,6 +1149,11 @@ public:
   MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
                                           const MachinePointerInfo &PtrInfo,
                                           uint64_t Size) {
+    return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
+  }
+  MachineMemOperand *getMachineMemOperand(const MachineMemOperand *MMO,
+                                          const MachinePointerInfo &PtrInfo,
+                                          TypeSize Size) {
     return getMachineMemOperand(MMO, PtrInfo, LocationSize::precise(Size));
   }
 
@@ -1525,8 +1563,8 @@ template <> struct GraphTraits<Inverse<const MachineFunction*>> :
   }
 };
 
-void verifyMachineFunction(const std::string &Banner,
-                           const MachineFunction &MF);
+LLVM_ABI void verifyMachineFunction(const std::string &Banner,
+                                    const MachineFunction &MF);
 
 } // end namespace llvm
 

@@ -229,11 +229,10 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'S *'
 
-  // FIXME: there is no mention that this used the template keyword.
   r->template U<int>::~U();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:26> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:24> '<bound member function type>' ->~U 0x{{[^ ]*}}
-  // CHECK-NEXT: NestedNameSpecifier TypeSpecWithTemplate 'template U<int>':'U<int>'
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'template U<int>':'U<int>'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'U<int> *' lvalue ParmVar 0x{{[^ ]*}} 'r' 'U<int> *'
 
@@ -590,3 +589,13 @@ void leakNewFn() { new struct Sock; }
 // CHECK: CXXNewExpr {{.*}} <col:20, col:31> 'struct Sock *'
 }
 
+namespace GH143711 {
+struct S {
+  S(int, int);
+};
+
+void f() {
+  S(S(0, 1));
+}
+// CHECK: CXXTemporaryObjectExpr {{.*}} <col:5, col:11> 'S':'GH143711::S' 'void (int, int)'
+}

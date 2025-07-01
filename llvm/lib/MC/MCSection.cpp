@@ -10,7 +10,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -22,9 +21,8 @@ using namespace llvm;
 MCSection::MCSection(SectionVariant V, StringRef Name, bool IsText,
                      bool IsVirtual, MCSymbol *Begin)
     : Begin(Begin), BundleGroupBeforeFirstInst(false), HasInstructions(false),
-      HasLayout(false), IsRegistered(false), IsText(IsText),
-      IsVirtual(IsVirtual), Name(Name), Variant(V) {
-  DummyFragment.setParent(this);
+      IsRegistered(false), IsText(IsText), IsVirtual(IsVirtual),
+      LinkerRelaxable(false), Name(Name), Variant(V) {
   // The initial subsection number is 0. Create a fragment list.
   CurFragList = &Subsections.emplace_back(0u, FragList{}).second;
 }
@@ -68,19 +66,25 @@ void MCSection::setBundleLockState(BundleLockStateType NewState) {
 StringRef MCSection::getVirtualSectionKind() const { return "virtual"; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MCSection::dump() const {
+LLVM_DUMP_METHOD void MCSection::dump(
+    DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
+    const {
   raw_ostream &OS = errs();
 
-  OS << "<MCSection Name:" << getName();
-  OS << " Fragments:[\n      ";
-  bool First = true;
+  OS << "MCSection Name:" << getName();
   for (auto &F : *this) {
-    if (First)
-      First = false;
-    else
-      OS << ",\n      ";
+    OS << '\n';
     F.dump();
+    if (!FragToSyms)
+      continue;
+    auto It = FragToSyms->find(&F);
+    if (It == FragToSyms->end())
+      continue;
+    for (auto *Sym : It->second) {
+      OS << "\n  Symbol @" << Sym->getOffset() << ' ' << Sym->getName();
+      if (Sym->isTemporary())
+        OS << " Temporary";
+    }
   }
-  OS << "]>";
 }
 #endif

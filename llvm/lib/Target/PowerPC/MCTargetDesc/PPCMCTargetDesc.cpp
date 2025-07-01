@@ -14,6 +14,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
+#include "PPCMCAsmInfo.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -208,8 +210,7 @@ public:
   PPCTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : PPCTargetStreamer(S), OS(OS) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
       MCSymbolXCOFF *TCSym =
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
@@ -221,14 +222,11 @@ public:
       // variables. Finally for local-exec and initial-exec, we have a thread
       // pointer, in r13 for 64-bit mode and returned by .__get_tpointer for
       // 32-bit mode.
-      if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
+      if (Kind == PPC::S_AIX_TLSGD || Kind == PPC::S_AIX_TLSGDM ||
+          Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
+          Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << getContext().getAsmInfo()->getVariantKindName(Kind) << '\n';
+           << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
 
@@ -258,7 +256,7 @@ public:
     OS << "\t.localentry\t";
     S->print(OS, MAI);
     OS << ", ";
-    LocalOffset->print(OS, MAI);
+    MAI->printExpr(OS, *LocalOffset);
     OS << '\n';
   }
 };
@@ -271,8 +269,7 @@ public:
     return static_cast<MCELFStreamer &>(Streamer);
   }
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     // Creates a R_PPC64_TOC relocation
     Streamer.emitValueToAlignment(Align(8));
     Streamer.emitSymbolValue(&S, 8);
@@ -376,8 +373,7 @@ class PPCTargetMachOStreamer : public PPCTargetStreamer {
 public:
   PPCTargetMachOStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     llvm_unreachable("Unknown pseudo-op: .tc");
   }
 
@@ -399,8 +395,7 @@ class PPCTargetXCOFFStreamer : public PPCTargetStreamer {
 public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
@@ -477,7 +472,8 @@ static MCInstrAnalysis *createPPCMCInstrAnalysis(const MCInstrInfo *Info) {
   return new PPCMCInstrAnalysis(Info);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializePowerPCTargetMC() {
   for (Target *T : {&getThePPC32Target(), &getThePPC32LETarget(),
                     &getThePPC64Target(), &getThePPC64LETarget()}) {
     // Register the MC asm info.

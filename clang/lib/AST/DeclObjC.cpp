@@ -27,7 +27,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -929,8 +928,8 @@ void ObjCMethodDecl::setParamsAndSelLocs(ASTContext &C,
   unsigned Size = sizeof(ParmVarDecl *) * NumParams +
                   sizeof(SourceLocation) * SelLocs.size();
   ParamsAndSelLocs = C.Allocate(Size);
-  std::uninitialized_copy(Params.begin(), Params.end(), getParams());
-  std::uninitialized_copy(SelLocs.begin(), SelLocs.end(), getStoredSelLocs());
+  llvm::uninitialized_copy(Params, getParams());
+  llvm::uninitialized_copy(SelLocs, getStoredSelLocs());
 }
 
 void ObjCMethodDecl::getSelectorLocs(
@@ -1512,7 +1511,7 @@ ObjCTypeParamList::ObjCTypeParamList(SourceLocation lAngleLoc,
                                      ArrayRef<ObjCTypeParamDecl *> typeParams,
                                      SourceLocation rAngleLoc)
     : Brackets(lAngleLoc, rAngleLoc), NumParams(typeParams.size()) {
-  std::copy(typeParams.begin(), typeParams.end(), begin());
+  llvm::copy(typeParams, begin());
 }
 
 ObjCTypeParamList *ObjCTypeParamList::create(

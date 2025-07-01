@@ -6,12 +6,11 @@ define <2 x i16> @extract_2xi16(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr5
 ; GCN-NEXT:    ; implicit-def: $vgpr4
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -90,7 +89,7 @@ F:
 
 exit:
   %m = phi <8 x i16> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x i16> %m, <8 x i16> undef, <2 x i32> <i32 0, i32 1>
+  %v2 = shufflevector <8 x i16> %m, <8 x i16> poison, <2 x i32> <i32 0, i32 1>
   %b2 = icmp sgt <2 x i16> %v2, <i16 -1, i16 -1>
   %r2 = select <2 x i1> %b2, <2 x i16> <i16 -32768, i16 -32768>, <2 x i16> <i16 -1, i16 -1>
   ret <2 x i16> %r2
@@ -101,11 +100,10 @@ define <2 x i64> @extract_2xi64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -161,7 +159,7 @@ F:
 
 exit:
   %m = phi <8 x i64> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x i64> %m, <8 x i64> undef, <2 x i32> <i32 0, i32 1>
+  %v2 = shufflevector <8 x i64> %m, <8 x i64> poison, <2 x i32> <i32 0, i32 1>
   %b2 = icmp sgt <2 x i64> %v2, <i64 -1, i64 -1>
   %r2 = select <2 x i1> %b2, <2 x i64> <i64 -32768, i64 -32768>, <2 x i64> <i64 -1, i64 -1>
   ret <2 x i64> %r2
@@ -172,11 +170,10 @@ define <4 x i64> @extract_4xi64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB2_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -238,7 +235,7 @@ F:
 
 exit:
   %m = phi <8 x i64> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x i64> %m, <8 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v2 = shufflevector <8 x i64> %m, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %b2 = icmp sgt <4 x i64> %v2, <i64 -1, i64 -1, i64 -1, i64 -1>
   %r2 = select <4 x i1> %b2, <4 x i64> <i64 -32768, i64 -32768, i64 -32768, i64 -32768>, <4 x i64> <i64 -1, i64 -1, i64 -1, i64 -1>
   ret <4 x i64> %r2
@@ -249,11 +246,10 @@ define <8 x i64> @extract_8xi64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i1 %
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -342,7 +338,7 @@ F:
 
 exit:
   %m = phi <16 x i64> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x i64> %m, <16 x i64> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <16 x i64> %m, <16 x i64> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %b2 = icmp sgt <8 x i64> %v2, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
   %r2 = select <8 x i1> %b2, <8 x i64> <i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768, i64 -32768>, <8 x i64> <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
   ret <8 x i64> %r2
@@ -353,11 +349,10 @@ define <2 x double> @extract_2xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB4_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -413,7 +408,7 @@ F:
 
 exit:
   %m = phi <8 x double> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x double> %m, <8 x double> undef, <2 x i32> <i32 0, i32 1>
+  %v2 = shufflevector <8 x double> %m, <8 x double> poison, <2 x i32> <i32 0, i32 1>
   %b2 = fcmp ogt <2 x double> %v2, <double -1.0, double -1.0>
   %r2 = select <2 x i1> %b2, <2 x double> <double -2.0, double -2.0>, <2 x double> <double -1.0, double -1.0>
   ret <2 x double> %r2
@@ -424,11 +419,10 @@ define <4 x double> @extract_4xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB5_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -490,7 +484,7 @@ F:
 
 exit:
   %m = phi <8 x double> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x double> %m, <8 x double> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %v2 = shufflevector <8 x double> %m, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %b2 = fcmp ogt <4 x double> %v2, <double -1.0, double -1.0, double -1.0, double -1.0>
   %r2 = select <4 x i1> %b2, <4 x double> <double -2.0, double -2.0, double -2.0, double -2.0>, <4 x double> <double -1.0, double -1.0, double -1.0, double -1.0>
   ret <4 x double> %r2
@@ -501,11 +495,10 @@ define <8 x double> @extract_8xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v4, 1, v4
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v4
-; GCN-NEXT:    s_xor_b64 s[4:5], vcc, -1
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v4
 ; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35
-; GCN-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
-; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[6:7]
+; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB6_2
 ; GCN-NEXT:  ; %bb.1: ; %F
 ; GCN-NEXT:    s_mov_b32 s10, 0
@@ -594,7 +587,7 @@ F:
 
 exit:
   %m = phi <16 x double> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x double> %m, <16 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <16 x double> %m, <16 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %b2 = fcmp ogt <8 x double> %v2, <double -1.0, double -1.0, double -1.0, double -1.0, double -1.0, double -1.0, double -1.0, double -1.0>
   %r2 = select <8 x i1> %b2, <8 x double> <double -2.0, double -2.0, double -2.0, double -2.0, double -2.0, double -2.0, double -2.0, double -2.0>, <8 x double> <double -1.0, double -1.0, double -1.0, double -1.0, double -1.0, double -1.0, double -1.0, double -1.0>
   ret <8 x double> %r2

@@ -12,7 +12,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -60,7 +59,7 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
-  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo&) = 0;
+  virtual void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitInstructionImpl(const MCInst &Inst, const MCSubtargetInfo &STI);
@@ -119,7 +118,7 @@ public:
                      SMLoc Loc = SMLoc()) override;
   void emitULEB128Value(const MCExpr *Value) override;
   void emitSLEB128Value(const MCExpr *Value) override;
-  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
+  void emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void switchSectionNoPrint(MCSection *Section) override;
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
@@ -141,8 +140,8 @@ public:
                          SMLoc Loc) override;
   void emitDwarfLocDirective(unsigned FileNo, unsigned Line, unsigned Column,
                              unsigned Flags, unsigned Isa,
-                             unsigned Discriminator,
-                             StringRef FileName) override;
+                             unsigned Discriminator, StringRef FileName,
+                             StringRef Comment = {}) override;
   void emitDwarfAdvanceLineAddr(int64_t LineDelta, const MCSymbol *LastLabel,
                                 const MCSymbol *Label,
                                 unsigned PointerSize) override;

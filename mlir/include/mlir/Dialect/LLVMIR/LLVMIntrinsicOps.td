@@ -86,7 +86,7 @@ class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
 
 class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure], traits),
+           !listconcat([Pure, SameOperandsAndResultType], traits),
             /*requiresFastmath=*/0,
             /*immArgPositions=*/[1], /*immArgAttrNames=*/["is_zero_poison"]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
@@ -106,9 +106,30 @@ def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
 }
 
+class LLVM_PowFI<string func> :
+    LLVM_OneResultIntrOp<func, [], [0,1],
+        [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+            AnySignlessInteger:$power,
+            DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+            "functional-type(operands, results)";
+}
+
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
 def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
 def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
+def LLVM_Exp10Op : LLVM_UnaryIntrOpF<"exp10">;
+def LLVM_LoadExpOp : LLVM_PowFI<"ldexp">;
+def LLVM_FractionExpOp : LLVM_TwoResultIntrOp<"frexp", [0, 1], [],
+    [Pure], /*requiresFastmath=*/1> {
+    let arguments =
+        (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+        DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    let assemblyFormat = "`(` operands `)` attr-dict `:` "
+        "functional-type(operands, results)";
+}
 def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
 def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
@@ -129,27 +150,21 @@ def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
 def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
 def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
 def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
-def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi", [], [0,1],
-                                       [Pure], /*requiresFastmath=*/1> {
-  let arguments =
-      (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
-           AnySignlessInteger:$power,
-           DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let assemblyFormat = "`(` operands `)` attr-dict `:` "
-      "functional-type(operands, results)";
-}
+def LLVM_PowIOp : LLVM_PowFI<"powi">;
 def LLVM_RintOp : LLVM_UnaryIntrOpF<"rint">;
 def LLVM_NearbyintOp : LLVM_UnaryIntrOpF<"nearbyint">;
-class LLVM_IntRoundIntrOpBase<string func> :
+class LLVM_IntRoundIntrOpBase<string func, Type element = LLVM_AnyFloat> :
         LLVM_OneResultIntrOp<func, [0], [0], [Pure]> {
-  let arguments = (ins LLVM_AnyFloat:$val);
+  let arguments = (ins element:$val);
   let assemblyFormat = "`(` operands `)` attr-dict `:` "
       "functional-type(operands, results)";
 }
-def LLVM_LroundOp : LLVM_IntRoundIntrOpBase<"lround">;
+class LLVM_ScalarOrVectorIntRoundIntrOpBase<string func> :
+  LLVM_IntRoundIntrOpBase<func, LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
+def LLVM_LroundOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"lround">;
 def LLVM_LlroundOp : LLVM_IntRoundIntrOpBase<"llround">;
-def LLVM_LrintOp : LLVM_IntRoundIntrOpBase<"lrint">;
-def LLVM_LlrintOp : LLVM_IntRoundIntrOpBase<"llrint">;
+def LLVM_LrintOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"lrint">;
+def LLVM_LlrintOp : LLVM_ScalarOrVectorIntRoundIntrOpBase<"llrint">;
 def LLVM_BitReverseOp : LLVM_UnaryIntrOpI<"bitreverse">;
 def LLVM_ByteSwapOp : LLVM_UnaryIntrOpI<"bswap">;
 def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrOp<"ctlz">;
@@ -458,12 +473,39 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
   }];
 }
 
+def LLVM_ConstrainedUIToFP
+    : LLVM_ConstrainedIntr<"uitofp", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+    let assemblyFormat = [{
+        $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+    }];
+}
+
+def LLVM_ConstrainedSIToFP
+    : LLVM_ConstrainedIntr<"sitofp", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/1> {
+    let assemblyFormat = [{
+        $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+    }];
+}
+
 def LLVM_ConstrainedFPTruncIntr
     : LLVM_ConstrainedIntr<"fptrunc", /*numArgs=*/1,
         /*overloadedResult=*/1, /*overloadedOperands=*/[0],
         /*hasRoundingMode=*/1> {
   let assemblyFormat = [{
     $arg_0 $roundingmode $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
+  }];
+}
+
+def LLVM_ConstrainedFPExtIntr
+    : LLVM_ConstrainedIntr<"fpext", /*numArgs=*/1,
+        /*overloadedResult=*/1, /*overloadedOperands=*/[0],
+        /*hasRoundingMode=*/0> {
+  let assemblyFormat = [{
+    $arg_0 $fpExceptionBehavior attr-dict `:` type($arg_0) `to` type(results)
   }];
 }
 
@@ -834,7 +876,7 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
     llvm::Type *ElemTy = moduleTranslation.convertType(
-        getVectorElementType(op.getType()));
+        op.getType().getElementType());
     llvm::Align align = dl.getABITypeAlign(ElemTy);
     $res = mb.CreateColumnMajorLoad(
       ElemTy, $data, align, $stride, $isVolatile, $rows,
@@ -867,7 +909,7 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
       builder.GetInsertBlock()->getModule()->getDataLayout();
-    Type elementType = getVectorElementType(op.getMatrix().getType());
+    Type elementType = op.getMatrix().getType().getElementType();
     llvm::Align align = dl.getABITypeAlign(
       moduleTranslation.convertType(elementType));
     mb.CreateColumnMajorStore(
@@ -1124,7 +1166,8 @@ def LLVM_vector_insert
   let extraClassDeclaration = [{
     uint64_t getVectorBitWidth(Type vector) {
       return getVectorNumElements(vector).getKnownMinValue() *
-             getVectorElementType(vector).getIntOrFloatBitWidth();
+             ::llvm::cast<VectorType>(vector).getElementType()
+                .getIntOrFloatBitWidth();
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1156,7 +1199,8 @@ def LLVM_vector_extract
   let extraClassDeclaration = [{
     uint64_t getVectorBitWidth(Type vector) {
       return getVectorNumElements(vector).getKnownMinValue() *
-             getVectorElementType(vector).getIntOrFloatBitWidth();
+             ::llvm::cast<VectorType>(vector).getElementType()
+                .getIntOrFloatBitWidth();
     }
     uint64_t getSrcVectorBitWidth() {
       return getVectorBitWidth(getSrcvec().getType());
@@ -1176,8 +1220,8 @@ def LLVM_vector_interleave2
             "result has twice as many elements as 'vec1'",
             And<[CPred<"getVectorNumElements($res.getType()) == "
                        "getVectorNumElements($vec1.getType()) * 2">,
-                 CPred<"getVectorElementType($vec1.getType()) == "
-                       "getVectorElementType($res.getType())">]>>,
+                 CPred<"::llvm::cast<VectorType>($vec1.getType()).getElementType() == "
+                       "::llvm::cast<VectorType>($res.getType()).getElementType()">]>>,
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 

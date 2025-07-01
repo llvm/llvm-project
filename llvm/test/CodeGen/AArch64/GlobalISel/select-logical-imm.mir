@@ -11,10 +11,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: logical_imm_64_and
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 4096
-    ; CHECK: $x0 = COPY [[ANDXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 4096
+    ; CHECK-NEXT: $x0 = COPY [[ANDXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 1
     %2:gpr(s64) = G_AND %0, %1:gpr(s64)
@@ -31,10 +32,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: logical_imm_64_or
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[ORRXri:%[0-9]+]]:gpr64sp = ORRXri [[COPY]], 4096
-    ; CHECK: $x0 = COPY [[ORRXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[ORRXri:%[0-9]+]]:gpr64sp = ORRXri [[COPY]], 4096
+    ; CHECK-NEXT: $x0 = COPY [[ORRXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 1
     %2:gpr(s64) = G_OR %0, %1:gpr(s64)
@@ -51,10 +53,11 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: logical_imm_64_xor
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-    ; CHECK: [[EORXri:%[0-9]+]]:gpr64sp = EORXri [[COPY]], 4096
-    ; CHECK: $x0 = COPY [[EORXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
+    ; CHECK-NEXT: [[EORXri:%[0-9]+]]:gpr64sp = EORXri [[COPY]], 4096
+    ; CHECK-NEXT: $x0 = COPY [[EORXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s64) = COPY $x0
     %1:gpr(s64) = G_CONSTANT i64 1
     %2:gpr(s64) = G_XOR %0, %1:gpr(s64)
@@ -71,10 +74,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: logical_imm_32_and
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri [[COPY]], 0
-    ; CHECK: $w0 = COPY [[ANDWri]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[ANDWri:%[0-9]+]]:gpr32sp = ANDWri [[COPY]], 0
+    ; CHECK-NEXT: $w0 = COPY [[ANDWri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_AND %0, %1:gpr(s32)
@@ -91,10 +95,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: logical_imm_32_or
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[ORRWri:%[0-9]+]]:gpr32sp = ORRWri [[COPY]], 0
-    ; CHECK: $w0 = COPY [[ORRWri]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[ORRWri:%[0-9]+]]:gpr32sp = ORRWri [[COPY]], 0
+    ; CHECK-NEXT: $w0 = COPY [[ORRWri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_OR %0, %1:gpr(s32)
@@ -111,10 +116,11 @@ body:             |
     liveins: $w0
     ; CHECK-LABEL: name: logical_imm_32_xor
     ; CHECK: liveins: $w0
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[EORWri:%[0-9]+]]:gpr32sp = EORWri [[COPY]], 0
-    ; CHECK: $w0 = COPY [[EORWri]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[EORWri:%[0-9]+]]:gpr32sp = EORWri [[COPY]], 0
+    ; CHECK-NEXT: $w0 = COPY [[EORWri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = G_CONSTANT i32 1
     %2:gpr(s32) = G_XOR %0, %1:gpr(s32)

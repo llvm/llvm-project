@@ -23,16 +23,17 @@ add_flang_library(FortranLower
   LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
+  OpenMP/Atomic.cpp
   OpenMP/ClauseProcessor.cpp
   OpenMP/Clauses.cpp
   OpenMP/DataSharingProcessor.cpp
   OpenMP/Decomposer.cpp
   OpenMP/OpenMP.cpp
-  OpenMP/PrivateReductionUtils.cpp
   OpenMP/ReductionProcessor.cpp
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  Support/PrivateReductionUtils.cpp
   Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
@@ -72,4 +73,15 @@ add_flang_library(FortranLower
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRSCFToControlFlow
+)
+
+target_precompile_headers(FortranLower PRIVATE
+  [["flang/Lower/ConvertExpr.h"]]
+  [["flang/Lower/SymbolMap.h"]]
+  [["flang/Lower/AbstractConverter.h"]]
+  [["flang/Lower/IterationSpace.h"]]
+  [["flang/Lower/CallInterface.h"]]
+  [["flang/Lower/BoxAnalyzer.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/DirectivesCommon.h"]]
 )

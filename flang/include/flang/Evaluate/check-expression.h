@@ -113,21 +113,29 @@ extern template void CheckSpecificationExpr(
 // read-only data.
 template <typename A>
 std::optional<bool> IsContiguous(const A &, FoldingContext &,
-    bool namedConstantSectionsAreContiguous = true);
+    bool namedConstantSectionsAreContiguous = true,
+    bool firstDimensionStride1 = false);
 extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ArrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const Substring &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const Component &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ComplexPart &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const CoarrayRef &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous);
-extern template std::optional<bool> IsContiguous(
-    const Symbol &, FoldingContext &, bool namedConstantSectionsAreContiguous);
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+extern template std::optional<bool> IsContiguous(const Symbol &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
 static inline std::optional<bool> IsContiguous(const SymbolRef &s,
     FoldingContext &c, bool namedConstantSectionsAreContiguous = true) {
   return IsContiguous(s.get(), c, namedConstantSectionsAreContiguous);

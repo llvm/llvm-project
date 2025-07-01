@@ -1243,7 +1243,7 @@ int main() {
 
   TargetOptions opt;
   auto TheTargetMachine = Target->createTargetMachine(
-      TargetTriple, CPU, Features, opt, Reloc::PIC_);
+      Triple(TargetTriple), CPU, Features, opt, Reloc::PIC_);
 
   TheModule->setDataLayout(TheTargetMachine->createDataLayout());
 

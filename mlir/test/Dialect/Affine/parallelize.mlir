@@ -341,3 +341,23 @@ func.func @test_add_inv_or_terminal_symbol(%arg0: memref<9x9xi32>, %arg1: i1) {
   }
   return
 }
+
+// Ensure that outer parallel loops are taken into account when computing the
+// loop depth in dependency analysis during parallelization. With correct
+// depth, the analysis should see the inner loop as sequential due to reads and
+// writes to the same address indexed by the outer (parallel) loop.
+//
+// CHECK-LABEL: @explicit_parallel
+func.func @explicit_parallel(%arg0: memref<1x123x194xf64>, %arg5: memref<34x99x194xf64>) {
+  // CHECK: affine.parallel
+  affine.parallel (%arg7, %arg8) = (0, 0) to (85, 180) {
+    // CHECK: affine.for
+    affine.for %arg9 = 0 to 18 {
+      %0 = affine.load %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+      %1 = affine.load %arg5[%arg9 + 8, %arg7 + 7, %arg8 + 7] : memref<34x99x194xf64>
+      %2 = arith.addf %0, %1 {fastmathFlags = #llvm.fastmath<none>} : f64
+      affine.store %1, %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+    }
+  }
+  return
+}

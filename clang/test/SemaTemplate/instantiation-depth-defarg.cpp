@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -ftemplate-depth=128 -ftemplate-backtrace-limit=4 %s
 
-template<int N> struct S { // \
-// expected-error{{recursive template instantiation exceeded maximum depth of 128}} \
-// expected-note {{use -ftemplate-depth=N to increase recursive template instantiation depth}}
+template<int N> struct S {
   typedef typename S<N-1>::type type;
   static int f(int n = S<N-1>::f()); // \
+// expected-error{{recursive template instantiation exceeded maximum depth of 128}} \
 // expected-note 3 {{instantiation of default function argument}} \
-// expected-note {{skipping 125 contexts in backtrace}}
+// expected-note {{skipping 125 contexts in backtrace}} \
+// expected-note {{use -ftemplate-depth=N to increase recursive template instantiation depth}}
 
 };
 template<> struct S<0> {

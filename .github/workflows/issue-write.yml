@@ -49,7 +49,7 @@ jobs:
               return;
             }
 
-            let runInfo = await github.actions.getWorkflowRun({
+            let runInfo = await github.rest.actions.getWorkflowRun({
               owner: context.repo.owner,
               repo: context.repo.repo,
               run_id: context.payload.workflow_run.id
@@ -122,7 +122,7 @@ jobs:
                 // Security check: Ensure that this comment was created by
                 // the github-actions bot, so a malicious input won't overwrite
                 // a user's comment.
-                github.issues.getComment({
+                github.rest.issues.getComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   comment_id: comment.id
@@ -132,7 +132,7 @@ jobs:
                     console.log("Invalid comment id: " + comment.id);
                     return;
                   }
-                  github.issues.updateComment({
+                  github.rest.issues.updateComment({
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     issue_number: pr_number,
@@ -141,7 +141,7 @@ jobs:
                   });
                 });
               } else {
-                github.issues.createComment({
+                github.rest.issues.createComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   issue_number: pr_number,

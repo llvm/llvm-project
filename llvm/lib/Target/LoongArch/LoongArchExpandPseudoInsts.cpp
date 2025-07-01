@@ -41,9 +41,7 @@ public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {
-    initializeLoongArchPreRAExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -638,7 +636,8 @@ void LoongArchPreRAExpandPseudo::annotateTableJump(
         if (MO.isJTI()) {
           MBBI->setPreInstrSymbol(
               *MF, MF->getContext().createNamedTempSymbol("jrtb_"));
-          MF->getInfo<LoongArchMachineFunctionInfo>()->setJumpInfo(&*MBBI, &MO);
+          MF->getInfo<LoongArchMachineFunctionInfo>()->setJumpInfo(
+              &*MBBI, MO.getIndex());
           IsFound = true;
           return;
         }
@@ -656,9 +655,7 @@ public:
   const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandPseudo() : MachineFunctionPass(ID) {
-    initializeLoongArchExpandPseudoPass(*PassRegistry::getPassRegistry());
-  }
+  LoongArchExpandPseudo() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

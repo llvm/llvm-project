@@ -50,8 +50,8 @@ define i32 @test_icmp_eq_i8(i8 %a, i8 %b) {
 ;
 ; GISEL-X86-LABEL: test_icmp_eq_i8:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    xorl %eax, %eax
 ; GISEL-X86-NEXT:    cmpb %dl, %cl
 ; GISEL-X86-NEXT:    sete %al
@@ -105,8 +105,8 @@ define i32 @test_icmp_eq_i16(i16 %a, i16 %b) {
 ;
 ; GISEL-X86-LABEL: test_icmp_eq_i16:
 ; GISEL-X86:       ## %bb.0:
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    xorl %eax, %eax
 ; GISEL-X86-NEXT:    cmpw %dx, %cx
 ; GISEL-X86-NEXT:    sete %al

@@ -23,16 +23,19 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
+#include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
-#include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
+#include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -42,10 +45,13 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
+#include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -57,7 +63,9 @@
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
+#include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/PHIElimination.h"
+#include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
@@ -68,22 +76,28 @@
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
+#include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
@@ -659,7 +673,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPasses(
 
   addPass(PreISelIntrinsicLoweringPass(&TM));
   addPass(ExpandLargeDivRemPass(&TM));
-  addPass(ExpandLargeFpConvertPass(&TM));
+  addPass(ExpandFpPass(&TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -996,9 +1010,11 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   addPass(FuncletLayoutPass());
 
+  addPass(RemoveLoadsIntoFakeUsesPass());
   addPass(StackMapLivenessPass());
-  addPass(LiveDebugValuesPass());
-  addPass(MachineSanitizerBinaryMetadata());
+  addPass(LiveDebugValuesPass(
+      getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
+  addPass(MachineSanitizerBinaryMetadataPass());
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
@@ -1009,6 +1025,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     if (AddOutliner)
       addPass(MachineOutlinerPass(RunOnAllFunctions));
   }
+
+  addPass(StackFrameLayoutAnalysisPass());
 
   // Add passes that directly emit MI after all other MI passes.
   derived().addPreEmitPass2(addPass);
@@ -1099,7 +1117,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addRegAllocPass(
       addPass(RAGreedyPass());
       break;
     default:
-      report_fatal_error("register allocator not supported yet", false);
+      reportFatalUsageError("register allocator not supported yet");
     }
     return;
   }
@@ -1158,7 +1176,21 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 
   addPass(ProcessImplicitDefsPass());
 
+  // LiveVariables currently requires pure SSA form.
+  //
+  // FIXME: Once TwoAddressInstruction pass no longer uses kill flags,
+  // LiveVariables can be removed completely, and LiveIntervals can be directly
+  // computed. (We still either need to regenerate kill flags after regalloc, or
+  // preferably fix the scavenger to not depend on them).
+  // FIXME: UnreachableMachineBlockElim is a dependant pass of LiveVariables.
+  // When LiveVariables is removed this has to be removed/moved either.
+  // Explicit addition of UnreachableMachineBlockElim allows stopping before or
+  // after it with -stop-before/-stop-after.
+  addPass(UnreachableMachineBlockElimPass());
+  addPass(RequireAnalysisPass<LiveVariablesAnalysis, MachineFunction>());
+
   // Edge splitting is smarter with machine loop info.
+  addPass(RequireAnalysisPass<MachineLoopAnalysis, MachineFunction>());
   addPass(PHIEliminationPass());
 
   // Eventually, we want to run LiveIntervals before PHI elimination.
@@ -1203,7 +1235,7 @@ template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
     AddMachinePass &addPass) const {
   // Branch folding must be run after regalloc and prolog/epilog insertion.
-  addPass(BranchFolderPass());
+  addPass(BranchFolderPass(Opt.EnableTailMerge));
 
   // Tail duplication.
   // Note that duplicating tail just increases code size and degrades
@@ -1223,7 +1255,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addBlockPlacement(
     AddMachinePass &addPass) const {
-  addPass(MachineBlockPlacementPass());
+  addPass(MachineBlockPlacementPass(Opt.EnableTailMerge));
   // Run a separate pass to collect block placement statistics.
   if (Opt.EnableBlockPlacementStats)
     addPass(MachineBlockPlacementStatsPass());

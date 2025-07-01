@@ -250,7 +250,7 @@ define <4 x double> @vslide1up_4xf64(<4 x double> %v, double %b) {
 ; CHECK-LABEL: vslide1up_4xf64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vfmv.v.f v10, fa0
+; CHECK-NEXT:    vfmv.s.f v10, fa0
 ; CHECK-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret

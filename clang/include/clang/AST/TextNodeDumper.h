@@ -408,6 +408,7 @@ public:
   void
   VisitLifetimeExtendedTemporaryDecl(const LifetimeExtendedTemporaryDecl *D);
   void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
+  void VisitHLSLRootSignatureDecl(const HLSLRootSignatureDecl *D);
   void VisitHLSLOutArgExpr(const HLSLOutArgExpr *E);
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *S);
   void VisitOpenACCLoopConstruct(const OpenACCLoopConstruct *S);
@@ -426,6 +427,7 @@ public:
   void VisitOpenACCAsteriskSizeExpr(const OpenACCAsteriskSizeExpr *S);
   void VisitOpenACCDeclareDecl(const OpenACCDeclareDecl *D);
   void VisitOpenACCRoutineDecl(const OpenACCRoutineDecl *D);
+  void VisitOpenACCRoutineDeclAttr(const OpenACCRoutineDeclAttr *A);
   void VisitEmbedExpr(const EmbedExpr *S);
   void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitConvertVectorExpr(const ConvertVectorExpr *S);

@@ -537,7 +537,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
           GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
               GEP->getSourceElementType(), NewPtr, NewOps);
-          NewGEP->setIsInBounds(GEP->isInBounds());
+          NewGEP->setNoWrapFlags(GEP->getNoWrapFlags());
           return NewGEP;
         }
       }
@@ -1111,11 +1111,11 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
   // For each predecessor, what is the source aggregate,
   // from which all the elements were originally extracted from?
   // Note that we want for the map to have stable iteration order!
-  SmallDenseMap<BasicBlock *, Value *, 4> SourceAggregates;
+  SmallMapVector<BasicBlock *, Value *, 4> SourceAggregates;
   bool FoundSrcAgg = false;
   for (BasicBlock *Pred : Preds) {
     std::pair<decltype(SourceAggregates)::iterator, bool> IV =
-        SourceAggregates.insert({Pred, nullptr});
+        SourceAggregates.try_emplace(Pred);
     // Did we already evaluate this predecessor?
     if (!IV.second)
       continue;
@@ -1982,7 +1982,7 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
       ArrayRef<Value*> Idx = NewOps.slice(1);
       return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
                                Ptr, Idx, "",
-                               cast<GEPOperator>(I)->isInBounds());
+                               cast<GEPOperator>(I)->getNoWrapFlags());
     }
   }
   llvm_unreachable("failed to rebuild vector instructions");
@@ -2244,7 +2244,7 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf,
   // have preserved the exact NaN bit-pattern.
   // Avoid the folding if X can have NaN elements.
   if (Shuf.getType()->getElementType()->isFloatingPointTy() &&
-      !isKnownNeverNaN(X, 0, SQ))
+      !isKnownNeverNaN(X, SQ))
     return nullptr;
 
   // Shuffle identity constants into the lanes that return the original value.
@@ -2532,20 +2532,6 @@ static Instruction *foldShuffleOfUnaryOps(ShuffleVectorInst &Shuf,
     return nullptr;
 
   bool IsFNeg = S0->getOpcode() == Instruction::FNeg;
-
-  // Match 1-input (unary) shuffle.
-  // shuffle (fneg/fabs X), Mask --> fneg/fabs (shuffle X, Mask)
-  if (S0->hasOneUse() && match(Shuf.getOperand(1), m_Poison())) {
-    Value *NewShuf = Builder.CreateShuffleVector(X, Shuf.getShuffleMask());
-    if (IsFNeg)
-      return UnaryOperator::CreateFNegFMF(NewShuf, S0);
-
-    Function *FAbs = Intrinsic::getOrInsertDeclaration(
-        Shuf.getModule(), Intrinsic::fabs, Shuf.getType());
-    CallInst *NewF = CallInst::Create(FAbs, {NewShuf});
-    NewF->setFastMathFlags(S0->getFastMathFlags());
-    return NewF;
-  }
 
   // Match 2-input (binary) shuffle.
   auto *S1 = dyn_cast<Instruction>(Shuf.getOperand(1));
@@ -3029,10 +3015,18 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SmallVector<BitCastInst *, 8> BCs;
     DenseMap<Type *, Value *> NewBCs;
     for (User *U : SVI.users())
-      if (BitCastInst *BC = dyn_cast<BitCastInst>(U))
-        if (!BC->use_empty())
-          // Only visit bitcasts that weren't previously handled.
-          BCs.push_back(BC);
+      if (BitCastInst *BC = dyn_cast<BitCastInst>(U)) {
+        // Only visit bitcasts that weren't previously handled.
+        if (BC->use_empty())
+          continue;
+        // Prefer to combine bitcasts of bitcasts before attempting this fold.
+        if (BC->hasOneUse()) {
+          auto *BC2 = dyn_cast<BitCastInst>(BC->user_back());
+          if (BC2 && isEliminableCastPair(BC, BC2))
+            continue;
+        }
+        BCs.push_back(BC);
+      }
     for (BitCastInst *BC : BCs) {
       unsigned BegIdx = Mask.front();
       Type *TgtTy = BC->getDestTy();

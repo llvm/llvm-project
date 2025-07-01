@@ -16,44 +16,44 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::objc {
 
 // Mapping from `XCTAssert*Equal` to `XCTAssert*EqualObjects` name.
-static const std::map<std::string, std::string> &NameMap() {
-  static std::map<std::string, std::string> map{
+static const std::map<std::string, std::string> &nameMap() {
+  static std::map<std::string, std::string> Map{
       {"XCTAssertEqual", "XCTAssertEqualObjects"},
       {"XCTAssertNotEqual", "XCTAssertNotEqualObjects"},
 
   };
-  return map;
+  return Map;
 }
 
-void AssertEquals::registerMatchers(MatchFinder *finder) {
-  for (const auto &pair : NameMap()) {
-    finder->addMatcher(
+void AssertEquals::registerMatchers(MatchFinder *Finder) {
+  for (const auto &Pair : nameMap()) {
+    Finder->addMatcher(
         binaryOperator(anyOf(hasOperatorName("!="), hasOperatorName("==")),
-                       isExpandedFromMacro(pair.first),
+                       isExpandedFromMacro(Pair.first),
                        anyOf(hasLHS(hasType(qualType(
                                  hasCanonicalType(asString("NSString *"))))),
                              hasRHS(hasType(qualType(
                                  hasCanonicalType(asString("NSString *"))))))
 
                            )
-            .bind(pair.first),
+            .bind(Pair.first),
         this);
   }
 }
 
-void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &result) {
-  for (const auto &pair : NameMap()) {
-    if (const auto *root = result.Nodes.getNodeAs<BinaryOperator>(pair.first)) {
-      SourceManager *sm = result.SourceManager;
+void AssertEquals::check(const ast_matchers::MatchFinder::MatchResult &Result) {
+  for (const auto &Pair : nameMap()) {
+    if (const auto *Root = Result.Nodes.getNodeAs<BinaryOperator>(Pair.first)) {
+      SourceManager *Sm = Result.SourceManager;
       // The macros are nested two levels, so going up twice.
-      auto macro_callsite = sm->getImmediateMacroCallerLoc(
-          sm->getImmediateMacroCallerLoc(root->getBeginLoc()));
-      diag(macro_callsite, "use " + pair.second + " for comparing objects")
+      auto MacroCallsite = Sm->getImmediateMacroCallerLoc(
+          Sm->getImmediateMacroCallerLoc(Root->getBeginLoc()));
+      diag(MacroCallsite, "use " + Pair.second + " for comparing objects")
           << FixItHint::CreateReplacement(
                  clang::CharSourceRange::getCharRange(
-                     macro_callsite,
-                     macro_callsite.getLocWithOffset(pair.first.length())),
-                 pair.second);
+                     MacroCallsite,
+                     MacroCallsite.getLocWithOffset(Pair.first.length())),
+                 Pair.second);
     }
   }
 }
