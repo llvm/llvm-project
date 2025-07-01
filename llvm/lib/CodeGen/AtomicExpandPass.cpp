@@ -65,8 +65,7 @@ class AtomicExpandImpl {
   const DataLayout *DL = nullptr;
 
 private:
-  bool bracketInstWithFences(Instruction *I, AtomicOrdering Order,
-                             SyncScope::ID SSID = SyncScope::System);
+  bool bracketInstWithFences(Instruction *I, AtomicOrdering Order);
   IntegerType *getCorrespondingIntegerType(Type *T, const DataLayout &DL);
   LoadInst *convertAtomicLoadToIntegerType(LoadInst *LI);
   bool tryExpandAtomicLoad(LoadInst *LI);
@@ -304,7 +303,6 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
 
   if (TLI->shouldInsertFencesForAtomic(I)) {
     auto FenceOrdering = AtomicOrdering::Monotonic;
-    SyncScope::ID SSID = SyncScope::System;
     if (LI && isAcquireOrStronger(LI->getOrdering())) {
       FenceOrdering = LI->getOrdering();
       LI->setOrdering(AtomicOrdering::Monotonic);
@@ -327,18 +325,13 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       // expandAtomicCmpXchg in that case.
       FenceOrdering = CASI->getMergedOrdering();
       auto CASOrdering = TLI->atomicOperationOrderAfterFenceSplit(CASI);
-      SSID = CASI->getSyncScopeID();
 
       CASI->setSuccessOrdering(CASOrdering);
       CASI->setFailureOrdering(CASOrdering);
-      // If CAS ordering is monotonic, then the operation will
-      // take default scope. Otherwise, it will retain its scope
-      if (CASOrdering != AtomicOrdering::Monotonic)
-        CASI->setSyncScopeID(SSID);
     }
 
     if (FenceOrdering != AtomicOrdering::Monotonic) {
-      MadeChange |= bracketInstWithFences(I, FenceOrdering, SSID);
+      MadeChange |= bracketInstWithFences(I, FenceOrdering);
     }
   } else if (I->hasAtomicStore() &&
              TLI->shouldInsertTrailingFenceForAtomicStore(I)) {
@@ -439,8 +432,7 @@ PreservedAnalyses AtomicExpandPass::run(Function &F,
 }
 
 bool AtomicExpandImpl::bracketInstWithFences(Instruction *I,
-                                             AtomicOrdering Order,
-                                             SyncScope::ID SSID) {
+                                             AtomicOrdering Order) {
   ReplacementIRBuilder Builder(I, *DL);
 
   auto LeadingFence = TLI->emitLeadingFence(Builder, I, Order);
