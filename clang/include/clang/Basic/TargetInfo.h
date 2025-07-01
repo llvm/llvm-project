@@ -1861,7 +1861,7 @@ public:
 
   /// Returns the version of the darwin target variant SDK which was used during
   /// the compilation if one was specified, or an empty version otherwise.
-  const std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
+  std::optional<VersionTuple> getDarwinTargetVariantSDKVersion() const {
     return !getTargetOpts().DarwinTargetVariantSDKVersion.empty()
                ? getTargetOpts().DarwinTargetVariantSDKVersion
                : std::optional<VersionTuple>();
