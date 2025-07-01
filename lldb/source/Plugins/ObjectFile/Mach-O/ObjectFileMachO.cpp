@@ -193,7 +193,7 @@ public:
       switch (flavor) {
       case GPRRegSet: {
         uint32_t *gpr_data = reinterpret_cast<uint32_t *>(&gpr.rax);
-        for (uint32_t i = 0; i < count; ++i)
+        for (uint32_t i = 0; i < count && offset < data.GetByteSize(); ++i)
           gpr_data[i] = data.GetU32(&offset);
         SetError(GPRRegSet, Read, 0);
       } break;
