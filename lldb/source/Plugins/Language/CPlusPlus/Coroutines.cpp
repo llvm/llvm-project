@@ -32,8 +32,7 @@ static lldb::addr_t GetCoroFramePtrFromHandle(ValueObjectSP valobj_sp) {
   if (!ptr_sp->GetCompilerType().IsPointerType())
     return LLDB_INVALID_ADDRESS;
 
-  AddressType addr_type;
-  lldb::addr_t frame_ptr_addr = ptr_sp->GetPointerValue(&addr_type);
+  auto [frame_ptr_addr, addr_type] = ptr_sp->GetPointerValue();
   if (!frame_ptr_addr || frame_ptr_addr == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_ADDRESS;
   lldbassert(addr_type == AddressType::eAddressTypeLoad);
@@ -151,8 +150,9 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   lldb::ProcessSP process_sp = target_sp->GetProcessSP();
   auto ptr_size = process_sp->GetAddressByteSize();
   CompilerType void_type = ast_ctx->GetBasicType(lldb::eBasicTypeVoid);
+  std::array<CompilerType, 1> args{void_type};
   CompilerType coro_func_type = ast_ctx->CreateFunctionType(
-      /*result_type=*/void_type, /*args=*/&void_type, /*num_args=*/1,
+      /*result_type=*/void_type, args,
       /*is_variadic=*/false, /*qualifiers=*/0);
   CompilerType coro_func_ptr_type = coro_func_type.GetPointerType();
   m_resume_ptr_sp = CreateValueObjectFromAddress(

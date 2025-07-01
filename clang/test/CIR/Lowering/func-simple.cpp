@@ -41,7 +41,7 @@ int scopes() {
 
 long longfunc() { return 42l; }
 // CHECK: define{{.*}} i64 @_Z8longfuncv() {
-// CHECK:   %[[RV]] = alloca i64, i64 1, align 8
+// CHECK:   %[[RV:.*]] = alloca i64, i64 1, align 8
 // CHECK:   store i64 42, ptr %[[RV]], align 4
 // CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 4
 // CHECK:   ret i64 %[[R]]

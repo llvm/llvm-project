@@ -74,6 +74,7 @@ static_library("lib") {
     "Protocol/ProtocolBase.cpp",
     "Protocol/ProtocolRequests.cpp",
     "Protocol/ProtocolTypes.cpp",
+    "ProtocolUtils.cpp",
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
     "Transport.cpp",

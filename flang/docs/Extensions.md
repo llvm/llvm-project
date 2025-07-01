@@ -521,6 +521,8 @@ end
 * We respect Fortran comments in macro actual arguments (like GNU, Intel, NAG;
   unlike PGI and XLF) on the principle that macro calls should be treated
   like function references.  Fortran's line continuation methods also work.
+* We implement the `__COUNTER__` preprocessing extension,
+  see [Non-standard Extensions](Preprocessing.md#non-standard-extensions)
 
 ## Standard features not silently accepted
 

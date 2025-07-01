@@ -1447,10 +1447,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 #include "clang/Basic/HLSLIntangibleTypes.def"
   }
 
-  if (Target.hasAArch64SVETypes() ||
-      (AuxTarget && AuxTarget->hasAArch64SVETypes())) {
-#define SVE_TYPE(Name, Id, SingletonId) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
+  if (Target.hasAArch64ACLETypes() ||
+      (AuxTarget && AuxTarget->hasAArch64ACLETypes())) {
+#define SVE_TYPE(Name, Id, SingletonId)                                        \
+  InitBuiltinType(SingletonId, BuiltinType::Id);
 #include "clang/Basic/AArch64ACLETypes.def"
   }
 
@@ -4529,7 +4529,7 @@ QualType ASTContext::getWebAssemblyExternrefType() const {
 /// type.
 QualType ASTContext::getScalableVectorType(QualType EltTy, unsigned NumElts,
                                            unsigned NumFields) const {
-  if (Target->hasAArch64SVETypes()) {
+  if (Target->hasAArch64ACLETypes()) {
     uint64_t EltTySize = getTypeSize(EltTy);
 
 #define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \

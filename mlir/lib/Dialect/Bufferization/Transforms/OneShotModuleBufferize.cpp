@@ -310,21 +310,19 @@ static bool hasTensorSignature(func::FuncOp funcOp) {
 /// any func::CallOp.
 static LogicalResult getFuncOpsOrderedByCalls(
     ModuleOp moduleOp, SmallVectorImpl<func::FuncOp> &orderedFuncOps,
-    SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap) {
+    SmallVectorImpl<func::FuncOp> &remainingFuncOps, FuncCallerMap &callerMap,
+    SymbolTableCollection &symbolTables) {
   // For each FuncOp, the set of functions called by it (i.e. the union of
   // symbols of all nested func::CallOp).
   DenseMap<func::FuncOp, DenseSet<func::FuncOp>> calledBy;
   // For each FuncOp, the number of func::CallOp it contains.
   DenseMap<func::FuncOp, unsigned> numberCallOpsContainedInFuncOp;
 
-  // TODO Avoid recomputing the symbol tables every time.
-  mlir::SymbolTableCollection symbolTable;
-
   for (func::FuncOp funcOp : moduleOp.getOps<func::FuncOp>()) {
     // Collect function calls and populate the caller map.
     numberCallOpsContainedInFuncOp[funcOp] = 0;
     WalkResult res = funcOp.walk([&](func::CallOp callOp) -> WalkResult {
-      func::FuncOp calledFunction = getCalledFunction(callOp, symbolTable);
+      func::FuncOp calledFunction = getCalledFunction(callOp, symbolTables);
       assert(calledFunction && "could not retrieved called func::FuncOp");
       // If the called function does not have any tensors in its signature, then
       // it is not necessary to bufferize the callee before the caller.
@@ -458,7 +456,8 @@ mlir::bufferization::analyzeModuleOp(ModuleOp moduleOp,
   FuncCallerMap callerMap;
 
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap)))
+                                      remainingFuncOps, callerMap,
+                                      funcState.symbolTables)))
     return failure();
 
   // Analyze functions in order. Starting with functions that are not calling
@@ -534,7 +533,8 @@ LogicalResult mlir::bufferization::bufferizeModuleOp(
   // each other recursively are bufferized in an unspecified order at the end.
   // We may use unnecessarily "complex" (in terms of layout map) buffer types.
   if (failed(getFuncOpsOrderedByCalls(moduleOp, orderedFuncOps,
-                                      remainingFuncOps, callerMap)))
+                                      remainingFuncOps, callerMap,
+                                      state.getSymbolTables())))
     return failure();
   llvm::append_range(orderedFuncOps, remainingFuncOps);
 

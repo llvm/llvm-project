@@ -5,7 +5,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+typedef unsigned short vus2 __attribute__((vector_size(4)));
 typedef int vi4 __attribute__((vector_size(16)));
+typedef int vi6 __attribute__((vector_size(24)));
 typedef unsigned int uvi4 __attribute__((vector_size(16)));
 typedef float vf4 __attribute__((vector_size(16)));
 typedef double vd2 __attribute__((vector_size(16)));
@@ -14,21 +16,21 @@ typedef long long vll2 __attribute__((vector_size(16)));
 vi4 vec_a;
 // CIR: cir.global external @[[VEC_A:.*]] = #cir.zero : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_A:.*]] = dso_local global <4 x i32> zeroinitializer
+// LLVM: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 // OGCG: @[[VEC_A:.*]] = global <4 x i32> zeroinitializer
 
 vd2 b;
 // CIR: cir.global external @[[VEC_B:.*]] = #cir.zero : !cir.vector<2 x !cir.double>
 
-// LLVM: @[[VEC_B:.*]] = dso_local global <2 x double> zeroinitialize
+// LLVM: @[[VEC_B:.*]] = global <2 x double> zeroinitialize
 
 // OGCG: @[[VEC_B:.*]] = global <2 x double> zeroinitializer
 
 vll2 c;
 // CIR: cir.global external @[[VEC_C:.*]] = #cir.zero : !cir.vector<2 x !s64i>
 
-// LLVM: @[[VEC_C:.*]] = dso_local global <2 x i64> zeroinitialize
+// LLVM: @[[VEC_C:.*]] = global <2 x i64> zeroinitialize
 
 // OGCG: @[[VEC_C:.*]] = global <2 x i64> zeroinitializer
 
@@ -37,7 +39,7 @@ vi4 d = { 1, 2, 3, 4 };
 // CIR: cir.global external @[[VEC_D:.*]] = #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> :
 // CIR-SAME: !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
 
-// LLVM: @[[VEC_D:.*]] = dso_local global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
+// LLVM: @[[VEC_D:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
 // OGCG: @[[VEC_D:.*]] = global <4 x i32> <i32 1, i32 2, i32 3, i32 4>
 
@@ -967,3 +969,104 @@ void foo14() {
 // OGCG: %[[GE:.*]] = fcmp oge <4 x float> %[[TMP_A]], %[[TMP_B]]
 // OGCG: %[[RES:.*]] = sext <4 x i1> %[[GE]] to <4 x i32>
 // OGCG: store <4 x i32> %[[RES]], ptr {{.*}}, align 16
+
+void foo15() {
+  vi4 a;
+  vi4 b;
+  vi4 r = __builtin_shufflevector(a, b);
+}
+
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{>*}} {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %[[TMP_A]] : !cir.vector<4 x !s32i>, %[[TMP_B]] : !cir.vector<4 x !s32i>
+
+// LLVM: %[[TMP_A:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// LLVM: %[[MASK:.*]] = and <4 x i32> %[[TMP_B]], splat (i32 3)
+// LLVM: %[[SHUF_IDX_0:.*]] = extractelement <4 x i32> %[[MASK]], i64 0
+// LLVM: %[[SHUF_ELE_0:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// LLVM: %[[SHUF_INS_0:.*]] = insertelement <4 x i32> undef, i32 %[[SHUF_ELE_0]], i64 0
+// LLVM: %[[SHUF_IDX_1:.*]] = extractelement <4 x i32> %[[MASK]], i64 1
+// LLVM: %[[SHUF_ELE_1:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// LLVM: %[[SHUF_INS_1:.*]] = insertelement <4 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// LLVM: %[[SHUF_IDX_2:.*]] = extractelement <4 x i32> %[[MASK]], i64 2
+// LLVM: %[[SHUF_ELE_2:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// LLVM: %[[SHUF_INS_2:.*]] = insertelement <4 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// LLVM: %[[SHUF_IDX_3:.*]] = extractelement <4 x i32> %[[MASK]], i64 3
+// LLVM: %[[SHUF_ELE_3:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// LLVM: %[[SHUF_INS_3:.*]] = insertelement <4 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+// OGCG: %[[TMP_A:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// OGCG: %[[TMP_B:.*]] = load <4 x i32>, ptr {{.*}}, align 16
+// OGCG: %[[MASK:.*]] = and <4 x i32> %[[TMP_B]], splat (i32 3)
+// OGCG: %[[SHUF_IDX_0:.*]] = extractelement <4 x i32> %[[MASK]], i64 0
+// OGCG: %[[SHUF_ELE_0:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// OGCG: %[[SHUF_INS_0:.*]] = insertelement <4 x i32> poison, i32 %[[SHUF_ELE_0]], i64 0
+// OGCG: %[[SHUF_IDX_1:.*]] = extractelement <4 x i32> %[[MASK]], i64 1
+// OGCG: %[[SHUF_ELE_1:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// OGCG: %[[SHUF_INS_1:.*]] = insertelement <4 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// OGCG: %[[SHUF_IDX_2:.*]] = extractelement <4 x i32> %[[MASK]], i64 2
+// OGCG: %[[SHUF_ELE_2:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// OGCG: %[[SHUF_INS_2:.*]] = insertelement <4 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// OGCG: %[[SHUF_IDX_3:.*]] = extractelement <4 x i32> %[[MASK]], i64 3
+// OGCG: %[[SHUF_ELE_3:.*]] = extractelement <4 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// OGCG: %[[SHUF_INS_3:.*]] = insertelement <4 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+void foo16() {
+  vi6 a;
+  vi6 b;
+  vi6 r = __builtin_shufflevector(a, b);
+}
+
+// CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.vector<6 x !s32i>>, !cir.vector<6 x !s32i>
+// CIR: %[[TMP_B:.*]] = cir.load{{>*}} {{.*}} : !cir.ptr<!cir.vector<6 x !s32i>>, !cir.vector<6 x !s32i>
+// CIR: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %[[TMP_A]] : !cir.vector<6 x !s32i>, %[[TMP_B]] : !cir.vector<6 x !s32i>
+
+// LLVM: %[[TMP_A:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// LLVM: %[[TMP_B:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// LLVM: %[[MASK:.*]] = and <6 x i32> %[[TMP_B]], splat (i32 7)
+// LLVM: %[[SHUF_IDX_0:.*]] = extractelement <6 x i32> %[[MASK]], i64 0
+// LLVM: %[[SHUF_ELE_0:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// LLVM: %[[SHUF_INS_0:.*]] = insertelement <6 x i32> undef, i32 %[[SHUF_ELE_0]], i64 0
+// LLVM: %[[SHUF_IDX_1:.*]] = extractelement <6 x i32> %[[MASK]], i64 1
+// LLVM: %[[SHUF_ELE_1:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// LLVM: %[[SHUF_INS_1:.*]] = insertelement <6 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// LLVM: %[[SHUF_IDX_2:.*]] = extractelement <6 x i32> %[[MASK]], i64 2
+// LLVM: %[[SHUF_ELE_2:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// LLVM: %[[SHUF_INS_2:.*]] = insertelement <6 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// LLVM: %[[SHUF_IDX_3:.*]] = extractelement <6 x i32> %[[MASK]], i64 3
+// LLVM: %[[SHUF_ELE_3:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// LLVM: %[[SHUF_INS_3:.*]] = insertelement <6 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+// OGCG: %[[TMP_A:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// OGCG: %[[TMP_B:.*]] = load <6 x i32>, ptr {{.*}}, align 32
+// OGCG: %[[MASK:.*]] = and <6 x i32> %[[TMP_B]], splat (i32 7)
+// OGCG: %[[SHUF_IDX_0:.*]] = extractelement <6 x i32> %[[MASK]], i64 0
+// OGCG: %[[SHUF_ELE_0:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_0]]
+// OGCG: %[[SHUF_INS_0:.*]] = insertelement <6 x i32> poison, i32 %[[SHUF_ELE_0]], i64 0
+// OGCG: %[[SHUF_IDX_1:.*]] = extractelement <6 x i32> %[[MASK]], i64 1
+// OGCG: %[[SHUF_ELE_1:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_1]]
+// OGCG: %[[SHUF_INS_1:.*]] = insertelement <6 x i32> %[[SHUF_INS_0]], i32 %[[SHUF_ELE_1]], i64 1
+// OGCG: %[[SHUF_IDX_2:.*]] = extractelement <6 x i32> %[[MASK]], i64 2
+// OGCG: %[[SHUF_ELE_2:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_2]]
+// OGCG: %[[SHUF_INS_2:.*]] = insertelement <6 x i32> %[[SHUF_INS_1]], i32 %[[SHUF_ELE_2]], i64 2
+// OGCG: %[[SHUF_IDX_3:.*]] = extractelement <6 x i32> %[[MASK]], i64 3
+// OGCG: %[[SHUF_ELE_3:.*]] = extractelement <6 x i32> %[[TMP_A]], i32 %[[SHUF_IDX_3]]
+// OGCG: %[[SHUF_INS_3:.*]] = insertelement <6 x i32> %[[SHUF_INS_2]], i32 %[[SHUF_ELE_3]], i64 3
+
+void foo17() {
+  vd2 a;
+  vus2 W = __builtin_convertvector(a, vus2);
+}
+
+// CIR: %[[VEC_A:.*]] = cir.alloca !cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, ["a"]
+// CIR: %[[TMP:.*]] = cir.load{{.*}} %[[VEC_A]] : !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.double>
+// CIR: %[[RES:.*]] = cir.cast(float_to_int, %[[TMP]] : !cir.vector<2 x !cir.double>), !cir.vector<2 x !u16i>
+
+// LLVM: %[[VEC_A:.*]] = alloca <2 x double>, i64 1, align 16
+// LLVM: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
+// LLVM: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>
+
+// OGCG: %[[VEC_A:.*]] = alloca <2 x double>, align 16
+// OGCG: %[[TMP:.*]] = load <2 x double>, ptr %[[VEC_A]], align 16
+// OGCG: %[[RES:.*]]= fptoui <2 x double> %[[TMP]] to <2 x i16>

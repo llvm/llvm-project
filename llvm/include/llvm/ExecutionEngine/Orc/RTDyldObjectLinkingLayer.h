@@ -21,6 +21,7 @@
 #include "llvm/ExecutionEngine/Orc/Layer.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -33,7 +34,7 @@
 namespace llvm {
 namespace orc {
 
-class RTDyldObjectLinkingLayer
+class LLVM_ABI RTDyldObjectLinkingLayer
     : public RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>,
       private ResourceManager {
 public:

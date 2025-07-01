@@ -73,7 +73,7 @@ const int ret_array()[4]; // expected-error {{cannot return array}}
 
 namespace PR9328 {
   typedef char *PCHAR;
-  class Test 
+  class Test
   {
     const PCHAR GetName() { return 0; } // expected-warning{{'const' type qualifier on return type has no effect}}
   };
@@ -109,7 +109,7 @@ namespace return_has_expr {
 // pr17759
 namespace ctor_returns_void {
   void f() {}
-  struct S { 
+  struct S {
     S() { return f(); } // expected-error {{constructor 'S' must not return void expression}}
     ~S() { return f(); } // expected-error {{destructor '~S' must not return void expression}}
   };

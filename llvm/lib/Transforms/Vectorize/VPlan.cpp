@@ -883,6 +883,16 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 
 void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
+  if (auto *CanIV = dyn_cast<VPCanonicalIVPHIRecipe>(&Header->front())) {
+    assert(this == getPlan()->getVectorLoopRegion() &&
+           "Canonical IV must be in the entry of the top-level loop region");
+    auto *ScalarR = VPBuilder(CanIV).createScalarPhi(
+        {CanIV->getStartValue(), CanIV->getBackedgeValue()},
+        CanIV->getDebugLoc(), "index");
+    CanIV->replaceAllUsesWith(ScalarR);
+    CanIV->eraseFromParent();
+  }
+
   VPBlockBase *Preheader = getSinglePredecessor();
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   VPBlockBase *Middle = getSingleSuccessor();

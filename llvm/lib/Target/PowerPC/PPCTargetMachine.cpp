@@ -310,12 +310,10 @@ getEffectivePPCCodeModel(const Triple &TT, std::optional<CodeModel::Model> CM,
 
 static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMILive *DAG =
-    new ScheduleDAGMILive(C, ST.usePPCPreRASchedStrategy() ?
-                          std::make_unique<PPCPreRASchedStrategy>(C) :
-                          std::make_unique<GenericScheduler>(C));
+  ScheduleDAGMILive *DAG = ST.usePPCPreRASchedStrategy()
+                               ? createSchedLive<PPCPreRASchedStrategy>(C)
+                               : createSchedLive<GenericScheduler>(C);
   // add DAG Mutations here.
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasStoreFusion())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   if (ST.hasFusion())
@@ -324,13 +322,12 @@ static ScheduleDAGInstrs *createPPCMachineScheduler(MachineSchedContext *C) {
   return DAG;
 }
 
-static ScheduleDAGInstrs *createPPCPostMachineScheduler(
-  MachineSchedContext *C) {
+static ScheduleDAGInstrs *
+createPPCPostMachineScheduler(MachineSchedContext *C) {
   const PPCSubtarget &ST = C->MF->getSubtarget<PPCSubtarget>();
-  ScheduleDAGMI *DAG =
-    new ScheduleDAGMI(C, ST.usePPCPostRASchedStrategy() ?
-                      std::make_unique<PPCPostRASchedStrategy>(C) :
-                      std::make_unique<PostGenericScheduler>(C), true);
+  ScheduleDAGMI *DAG = ST.usePPCPostRASchedStrategy()
+                           ? createSchedPostRA<PPCPostRASchedStrategy>(C)
+                           : createSchedPostRA<PostGenericScheduler>(C);
   // add DAG Mutations here.
   if (ST.hasStoreFusion())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));

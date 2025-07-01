@@ -906,6 +906,10 @@ def FeatureStdExtShvsatpa
     : RISCVExtension<1, 0,
                      "vsatp supports all modes supported by satp">;
 
+def FeatureStdExtShlcofideleg
+    : RISCVExtension<1, 0,
+                     "Delegating LCOFI Interrupts to VS-mode">;
+
 def FeatureStdExtSmaia
     : RISCVExtension<1, 0,
                      "Advanced Interrupt Architecture Machine Level">;

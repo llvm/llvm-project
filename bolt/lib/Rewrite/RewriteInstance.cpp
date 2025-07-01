@@ -3446,6 +3446,7 @@ void RewriteInstance::disassembleFunctions() {
         BC->outs() << "BOLT-INFO: could not disassemble function " << Function
                    << ". Will ignore.\n";
       // Forcefully ignore the function.
+      Function.scanExternalRefs();
       Function.setIgnored();
     });
 

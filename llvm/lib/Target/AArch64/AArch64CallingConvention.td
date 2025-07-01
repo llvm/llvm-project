@@ -606,6 +606,9 @@ def CSR_Win_AArch64_Arm64EC_Thunk : CalleeSavedRegs<(add (sequence "Q%u", 6, 15)
 def CSR_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                           X25, X26, X27, X28, LR, FP,
                                           (sequence "Q%u", 8, 23))>;
+def CSR_Win_AArch64_AAVPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
+                                              X25, X26, X27, X28, FP, LR,
+                                              (sequence "Q%u", 8, 23))>;
 
 // Functions taking SVE arguments or returning an SVE type
 // must (additionally) preserve full Z8-Z23 and predicate registers P4-P15
@@ -618,6 +621,11 @@ def CSR_Darwin_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                         (sequence "P%u", 4, 15),
                                                         LR, FP, X19, X20, X21, X22,
                                                         X23, X24, X25, X26, X27, X28)>;
+
+def CSR_Win_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "P%u", 4, 15),
+                                                     (sequence "Z%u", 8, 23),
+                                                     X19, X20, X21, X22, X23, X24,
+                                                     X25, X26, X27, X28, FP, LR)>;
 
 // SME ABI support routines such as __arm_tpidr2_save/restore preserve most registers.
 def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0

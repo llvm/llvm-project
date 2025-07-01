@@ -218,6 +218,19 @@ EXECUTION OPTIONS
 
  Stop execution after the given number of failures.
 
+.. option:: --max-retries-per-test N
+
+ Retry running failed tests at most ``N`` times.
+ Out of the following options to rerun failed tests the
+ :option:`--max-retries-per-test` is the only one that doesn't
+ require a change in the test scripts or the test config:
+
+  * :option:`--max-retries-per-test` lit option
+  * ``config.test_retry_attempts`` test suite option
+  * ``ALLOW_RETRIES:`` annotation in test script
+
+ Any option in the list above overrules its predecessor.
+
 .. option:: --allow-empty-runs
 
  Do not fail the run if all tests are filtered out.

@@ -697,7 +697,7 @@ public:
     return true;
   }
 
-  void finishLayout(MCAssembler const &Asm) const override {
+  bool finishLayout(const MCAssembler &Asm) const override {
     SmallVector<MCFragment *> Frags;
     for (MCSection &Sec : Asm) {
       Frags.clear();
@@ -760,7 +760,6 @@ public:
               //assert(!Error);
               (void)Error;
               ReplaceInstruction(Asm.getEmitter(), RF, Inst);
-              Sec.setHasLayout(false);
               Size = 0; // Only look back one instruction
               break;
             }
@@ -770,6 +769,7 @@ public:
         }
       }
     }
+    return true;
   }
 }; // class HexagonAsmBackend
 

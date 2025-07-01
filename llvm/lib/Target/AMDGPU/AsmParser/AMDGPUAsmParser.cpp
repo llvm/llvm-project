@@ -8826,6 +8826,7 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   OptionalImmIndexMap OptionalIdx;
   unsigned Opc = Inst.getOpcode();
   unsigned I = 1;
+  int CbszOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
 
   const MCInstrDesc &Desc = MII.get(Opc);
 
@@ -8834,8 +8835,15 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
 
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands[I]);
-
-    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+    int NumOperands = Inst.getNumOperands();
+    // The order of operands in MCInst and parsed operands are different.
+    // Adding dummy cbsz and blgp operands at corresponding MCInst operand
+    // indices for parsing scale values correctly.
+    if (NumOperands == CbszOpIdx) {
+      Inst.addOperand(MCOperand::createImm(0));
+      Inst.addOperand(MCOperand::createImm(0));
+    }
+    if (isRegOrImmWithInputMods(Desc, NumOperands)) {
       Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
     } else if (Op.isImmModifier()) {
       OptionalIdx[Op.getImmTy()] = I;
@@ -8845,12 +8853,18 @@ void AMDGPUAsmParser::cvtScaledMFMA(MCInst &Inst,
   }
 
   // Insert CBSZ and BLGP operands for F8F6F4 variants
-  int InsertPos = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::cbsz);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCBSZ,
-                        0, InsertPos);
-  InsertPos = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyBLGP,
-                        0, InsertPos);
+  auto CbszIdx = OptionalIdx.find(AMDGPUOperand::ImmTyCBSZ);
+  if (CbszIdx != OptionalIdx.end()) {
+    int CbszVal = ((AMDGPUOperand &)*Operands[CbszIdx->second]).getImm();
+    Inst.getOperand(CbszOpIdx).setImm(CbszVal);
+  }
+
+  int BlgpOpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  auto BlgpIdx = OptionalIdx.find(AMDGPUOperand::ImmTyBLGP);
+  if (BlgpIdx != OptionalIdx.end()) {
+    int BlgpVal = ((AMDGPUOperand &)*Operands[BlgpIdx->second]).getImm();
+    Inst.getOperand(BlgpOpIdx).setImm(BlgpVal);
+  }
 
   // Add dummy src_modifiers
   Inst.addOperand(MCOperand::createImm(0));

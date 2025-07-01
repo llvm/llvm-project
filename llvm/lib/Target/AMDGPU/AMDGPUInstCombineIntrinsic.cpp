@@ -365,8 +365,7 @@ bool GCNTTIImpl::canSimplifyLegacyMulToMul(const Instruction &I,
   }
 
   SimplifyQuery SQ = IC.getSimplifyQuery().getWithInstruction(&I);
-  if (isKnownNeverInfOrNaN(Op0, /*Depth=*/0, SQ) &&
-      isKnownNeverInfOrNaN(Op1, /*Depth=*/0, SQ)) {
+  if (isKnownNeverInfOrNaN(Op0, SQ) && isKnownNeverInfOrNaN(Op1, SQ)) {
     // Neither operand is infinity or NaN.
     return true;
   }

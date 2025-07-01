@@ -209,8 +209,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
 
 ScheduleDAGInstrs *
 SystemZTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
-  return new ScheduleDAGMI(C, std::make_unique<SystemZPostRASchedStrategy>(C),
-                           /*RemoveKillFlags=*/true);
+  return createSchedPostRA<SystemZPostRASchedStrategy>(C);
 }
 
 namespace {

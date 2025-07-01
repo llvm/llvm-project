@@ -246,8 +246,7 @@ define void @foo(ptr addrspace(3) %val) {
 define void @kernel_argument_promotion_pattern_intra_procedure(ptr %p, i32 %val) {
 ; CHECK-LABEL: define void @kernel_argument_promotion_pattern_intra_procedure(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P_CAST_0:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[P_CAST_0]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %p.cast.0 = addrspacecast ptr %p to ptr addrspace(1)
@@ -259,8 +258,7 @@ define void @kernel_argument_promotion_pattern_intra_procedure(ptr %p, i32 %val)
 define internal void @use_argument_after_promotion(ptr %p, i32 %val) {
 ; CHECK-LABEL: define internal void @use_argument_after_promotion(
 ; CHECK-SAME: ptr [[P:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
-; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[TMP1]], align 4
+; CHECK-NEXT:    store i32 [[VAL]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   store i32 %val, ptr %p
