@@ -1189,6 +1189,39 @@ TEST_F(IRBuilderTest, DebugLoc) {
   DIB.finalize();
 }
 
+TEST_F(IRBuilderTest, RestoreDebugLocation) {
+  DIBuilder DIB(*M);
+  auto File = DIB.createFile("tmp.cpp", "/");
+  auto CU =
+      DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus_11,
+                            DIB.createFile("tmp.cpp", "/"), "", true, "", 0);
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  auto SP =
+      DIB.createFunction(CU, "foo", "foo", File, 1, SPType, 1, DINode::FlagZero,
+                         DISubprogram::SPFlagDefinition);
+  DebugLoc DL1 = DILocation::get(Ctx, 2, 0, SP);
+  DebugLoc DL2 = DILocation::get(Ctx, 3, 0, SP);
+
+  IRBuilder<> Builder(Ctx);
+  auto BB1 = BasicBlock::Create(Ctx, "bb1", F);
+  Builder.SetInsertPoint(BB1);
+  Builder.SetCurrentDebugLocation(DL1);
+  Builder.CreateAlloca(Builder.getInt8Ty());
+  Builder.CreateAlloca(Builder.getInt32Ty());
+  EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
+  auto IP = Builder.saveIP();
+
+  auto BB2 = BasicBlock::Create(Ctx, "bb2", F);
+  Builder.SetInsertPoint(BB2);
+  Builder.SetCurrentDebugLocation(DL2);
+  Builder.CreateAlloca(Builder.getInt32Ty());
+  EXPECT_EQ(DL2, Builder.getCurrentDebugLocation());
+
+  Builder.restoreIP(IP);
+  EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
+  DIB.finalize();
+}
+
 TEST_F(IRBuilderTest, DIImportedEntity) {
   IRBuilder<> Builder(BB);
   DIBuilder DIB(*M);

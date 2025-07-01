@@ -225,6 +225,8 @@ public:
     InsertPt = IP;
     if (IP != TheBB->end())
       SetCurrentDebugLocation(IP->getStableDebugLoc());
+    else if (!BB->empty() && BB->back().getStableDebugLoc())
+      SetCurrentDebugLocation(BB->back().getStableDebugLoc());
   }
 
   /// This specifies that created instructions should be inserted at

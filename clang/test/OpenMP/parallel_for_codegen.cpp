@@ -3530,9 +3530,9 @@ void range_for_collapsed() {
 // CHECK5-NEXT:    [[ADD:%.*]] = add i32 131071, [[MUL]], !dbg [[DBG110]]
 // CHECK5-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !dbg [[DBG110]]
 // CHECK5-NEXT:    [[CALL:%.*]] = invoke noundef i32 @_Z3foov()
-// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG111:![0-9]+]]
+// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG110]]
 // CHECK5:       invoke.cont:
-// CHECK5-NEXT:    [[CONV:%.*]] = sitofp i32 [[CALL]] to float, !dbg [[DBG111]]
+// CHECK5-NEXT:    [[CONV:%.*]] = sitofp i32 [[CALL]] to float, !dbg [[DBG111:![0-9]+]]
 // CHECK5-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP13]] to i64, !dbg [[DBG111]]
 // CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[VLA1]], i64 [[IDXPROM]], !dbg [[DBG111]]
