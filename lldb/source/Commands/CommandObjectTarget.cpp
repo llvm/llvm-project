@@ -3946,8 +3946,8 @@ public:
 
   Options *GetOptions() override { return &m_options; }
 
-  bool LookupHere(CommandInterpreter &interpreter, CommandReturnObject &result,
-                  bool &syntax_error) {
+  ModuleSP LookupHere(CommandInterpreter &interpreter,
+                      CommandReturnObject &result, bool &syntax_error) {
     switch (m_options.m_type) {
     case eLookupTypeAddress:
     case eLookupTypeFileLine:
@@ -3955,7 +3955,7 @@ public:
     case eLookupTypeFunctionOrSymbol:
     case eLookupTypeSymbol:
     default:
-      return false;
+      return nullptr;
     case eLookupTypeType:
       break;
     }
@@ -3963,29 +3963,29 @@ public:
     StackFrameSP frame = m_exe_ctx.GetFrameSP();
 
     if (!frame)
-      return false;
+      return nullptr;
 
     const SymbolContext &sym_ctx(frame->GetSymbolContext(eSymbolContextModule));
 
     if (!sym_ctx.module_sp)
-      return false;
+      return nullptr;
 
     switch (m_options.m_type) {
     default:
-      return false;
+      return nullptr;
     case eLookupTypeType:
       if (!m_options.m_str.empty()) {
         if (LookupTypeHere(&GetTarget(), m_interpreter,
                            result.GetOutputStream(), *sym_ctx.module_sp,
                            m_options.m_str.c_str(), m_options.m_use_regex)) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
-          return true;
+          return sym_ctx.module_sp;
         }
       }
       break;
     }
 
-    return false;
+    return nullptr;
   }
 
   bool LookupInModule(CommandInterpreter &interpreter, Module *module,
@@ -4086,12 +4086,12 @@ protected:
     // Dump all sections for all modules images
 
     if (command.GetArgumentCount() == 0) {
-      ModuleSP current_module;
-
       // Where it is possible to look in the current symbol context first,
       // try that.  If this search was successful and --all was not passed,
       // don't print anything else.
-      if (LookupHere(m_interpreter, result, syntax_error)) {
+      ModuleSP current_module_sp =
+          LookupHere(m_interpreter, result, syntax_error);
+      if (current_module_sp) {
         result.GetOutputStream().EOL();
         num_successful_lookups++;
         if (!m_options.m_print_all) {
@@ -4110,7 +4110,7 @@ protected:
       }
 
       for (ModuleSP module_sp : target_modules.ModulesNoLocking()) {
-        if (module_sp != current_module &&
+        if (module_sp != current_module_sp &&
             LookupInModule(m_interpreter, module_sp.get(), result,
                            syntax_error)) {
           result.GetOutputStream().EOL();

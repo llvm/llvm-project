@@ -1,0 +1,43 @@
+# REQUIRES: system-darwin
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g -gdwarf %t/lib1.cpp -shared -o %t-lib1.dylib
+# RUN: %clang_host -g -gdwarf %t/lib2.cpp -shared -o %t-lib2.dylib
+# RUN: %clang_host -g -gdwarf %t/main.cpp %t-lib1.dylib %t-lib2.dylib -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+
+#--- main.cpp
+
+struct Foo {} f;
+
+int main() { __builtin_debugtrap(); }
+
+#--- lib1.cpp
+
+struct Foo {} f1;
+
+#--- lib2.cpp
+
+struct Foo {} f2;
+
+#--- commands.input
+
+run
+target modules lookup --type Foo
+
+# CHECK:      (lldb) target modules lookup --type Foo
+# CHECK-NEXT: Best match found in
+# CHECK-NEXT: name = "Foo"
+
+# Confirm we only dumped the match once.
+# CHECK-NOT:  name = "Foo"
+
+target modules lookup --type Foo --all
+
+# CHECK: (lldb) target modules lookup --type Foo --all
+# CHECK-NEXT: Best match found in
+# CHECK-NEXT: name = "Foo"
+
+# CHECK: 1 match found in {{.*}}lib1.dylib
+# CHECK: 1 match found in {{.*}}lib2.dylib
