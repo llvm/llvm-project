@@ -1022,6 +1022,44 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
   }
 };
 
+struct VectorToElementOpConvert final
+    : public OpConversionPattern<vector::ToElementsOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    Type srcType =
+        getTypeConverter()->convertType(toElementsOp.getSource().getType());
+    if (!srcType)
+      return failure();
+
+    // If the input vector was size 1, then it would have been converted to a
+    // scalar. Replace with it directly
+    if (isa<spirv::ScalarType>(adaptor.getSource().getType())) {
+      rewriter.replaceOp(toElementsOp, adaptor.getSource());
+      return success();
+    }
+
+    Location loc = toElementsOp.getLoc();
+    SmallVector<Value> results(toElementsOp->getNumResults());
+
+    for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
+      if (element.use_empty())
+        continue;
+
+      Value result = rewriter.create<spirv::CompositeExtractOp>(
+          loc, toElementsOp->getResult(idx).getType(), adaptor.getSource(),
+          rewriter.getI32ArrayAttr({static_cast<int>(idx)}));
+      results[idx] = result;
+    }
+
+    rewriter.replaceOp(toElementsOp, results);
+    return success();
+  }
+};
+
 } // namespace
 #define CL_INT_MAX_MIN_OPS                                                     \
   spirv::CLUMaxOp, spirv::CLUMinOp, spirv::CLSMaxOp, spirv::CLSMinOp
