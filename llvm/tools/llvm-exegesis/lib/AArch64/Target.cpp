@@ -214,7 +214,7 @@ public:
   ExegesisAArch64Target()
       : ExegesisTarget(AArch64CpuPfmCounters, AArch64_MC::isOpcodeAvailable) {}
 
-  enum ArgumentRegisters {
+  enum ReservedRegisters {
     CodeSize = AArch64::X12,
     AuxiliaryMemoryFD = AArch64::X13,
     TempRegister = AArch64::X16,
@@ -428,9 +428,9 @@ std::vector<MCRegister> ExegesisAArch64Target::getRegistersNeedSaving() const {
       AArch64::X4,
       AArch64::X5,
       AArch64::X8,
-      ArgumentRegisters::TempRegister,
-      ArgumentRegisters::CodeSize,
-      ArgumentRegisters::AuxiliaryMemoryFD,
+      ReservedRegisters::TempRegister,
+      ReservedRegisters::CodeSize,
+      ReservedRegisters::AuxiliaryMemoryFD,
   };
 }
 
