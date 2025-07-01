@@ -49,6 +49,19 @@ def DirectiveCustomValidD : TestFormat_Op<[{
 def DirectiveCustomValidE : TestFormat_Op<[{
   custom<MyDirective>(prop-dict) attr-dict
 }]>, Arguments<(ins UnitAttr:$flag)>;
+def DirectiveCustomValidF : TestFormat_Op<[{
+  $operand custom<MyDirective>(ref($operand)) attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
+def DirectiveCustomValidG : TestFormat_Op<[{
+  $body custom<MyDirective>(ref($body)) attr-dict
+}]> {
+  let regions = (region AnyRegion:$body);
+}
+def DirectiveCustomValidH : TestFormat_Op<[{
+  $successor custom<MyDirective>(ref($successor)) attr-dict
+}]> {
+  let successors = (successor AnySuccessor:$successor);
+}
 
 //===----------------------------------------------------------------------===//
 // functional-type
