@@ -91,18 +91,26 @@ def main():
 
     source_dir = None
     # find the repo directory
-    with open(f"{args.build_dir}/CMakeCache.txt") as f:
-        for line in f:
-            m = re.match(r"LLVM_SOURCE_DIR:STATIC=(.*)", line)
-            if m:
-                source_dir = m.groups()[0]
-    if not source_dir:
-        sys.exit("Source directory is not found")
+    try:
+        CMCacheFilename=f"{args.build_dir}/CMakeCache.txt"
+        with open(CMCacheFilename) as f:
+            for line in f:
+                m = re.match(r"LLVM_SOURCE_DIR:STATIC=(.*)", line)
+                if m:
+                    source_dir = m.groups()[0]
+        if not source_dir:
+            raise Exception(f"Source directory not found: '{CMCacheFilename}'")
+    except Exception as e:
+        sys.exit(e)
 
     # build the current commit
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
+
+    if not os.path.exists(bolt_path):
+        sys.exit(f"Failed to build the current revision: '{bolt_path}'")
+
     # rename llvm-bolt
     os.replace(bolt_path, f"{bolt_path}.new")
     # memorize the old hash for logging
@@ -133,11 +141,15 @@ def main():
     subprocess.run(shlex.split(f"git checkout -f {args.cmp_rev}"), cwd=source_dir)
     # get the parent commit hash for logging
     new_ref = get_git_ref_or_rev(source_dir)
+
     # build the previous commit
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
     )
+
     # rename llvm-bolt
+    if not os.path.exists(bolt_path):
+        sys.exit(f"Failed to build the previous revision: '{bolt_path}'")
     os.replace(bolt_path, f"{bolt_path}.old")
 
     # symlink llvm-bolt-wrapper
