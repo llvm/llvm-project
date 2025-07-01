@@ -1036,6 +1036,9 @@ public:
     if (failed(parsingMems))
       return;
 
+    auto parsingGlobals = parseSection<WasmSectionType::GLOBAL>();
+    if (failed(parsingGlobals))
+      return;
     LogicalResult parsingExports = parseSection<WasmSectionType::EXPORT>();
     if (failed(parsingExports))
       return;
@@ -1227,6 +1230,38 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::MEMORY>(ParserHead &ph,
   std::string symbol = symbols.getNewMemorySymbolName();
   auto memOp = builder.create<MemOp>(opLocation, symbol, *memory);
   symbols.memSymbols.push_back({SymbolRefAttr::get(memOp)});
+  return success();
+}
+
+template <>
+LogicalResult
+WasmBinaryParser::parseSectionItem<WasmSectionType::GLOBAL>(ParserHead &ph,
+                                                            size_t) {
+  auto globalLocation = ph.getLocation();
+  auto globalTypeParsed = ph.parseGlobalType(ctx);
+  if (failed(globalTypeParsed))
+    return failure();
+
+  auto globalType = *globalTypeParsed;
+  auto symbol = builder.getStringAttr(symbols.getNewGlobalSymbolName());
+  auto globalOp = builder.create<wasmssa::GlobalOp>(
+      globalLocation, symbol, globalType.type, globalType.isMutable);
+  symbols.globalSymbols.push_back(
+      {{FlatSymbolRefAttr::get(globalOp)}, globalOp.getType()});
+  auto ip = builder.saveInsertionPoint();
+  auto *block = builder.createBlock(&globalOp.getInitializer());
+  builder.setInsertionPointToStart(block);
+  auto expr = ph.parseExpression(builder, symbols);
+  if (failed(expr))
+    return failure();
+  if (block->empty())
+    return emitError(globalLocation, "global with empty initializer");
+  if (expr->size() != 1 && (*expr)[0].getType() != globalType.type)
+    return emitError(
+        globalLocation,
+        "initializer result type does not match global declaration type");
+  builder.create<ReturnOp>(globalLocation, *expr);
+  builder.restoreInsertionPoint(ip);
   return success();
 }
 } // namespace
