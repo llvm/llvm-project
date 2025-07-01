@@ -54,6 +54,7 @@ extern Swim& trident; // interpreter-note {{declared here}}
 
 constexpr auto& sandeno   = typeid(dc);         // ok: can only be typeid(Swim)
 constexpr auto& gallagher = typeid(trident);    // expected-error {{constexpr variable 'gallagher' must be initialized by a constant expression}} \
+                                                // nointerpreter-note {{typeid applied to object 'trident' whose dynamic type is not constant}} \
                                                 // interpreter-note {{initializer of 'trident' is unknown}}
 
 namespace explicitThis {
@@ -295,6 +296,26 @@ namespace unsized_array {
                               // nointerpreter-note {{arithmetic involving unrelated objects '&a[0]' and '&c[2]' has unspecified value}} \
                               // interpreter-note {{arithmetic involving unrelated objects 'a' and '*((char*)&c + 8)' has unspecified value}}
   }
+}
+
+namespace casting {
+  struct A {};
+  struct B : A {};
+  struct C : A {};
+  extern A &a; // interpreter-note {{declared here}}
+  extern B &b; // expected-note {{declared here}} interpreter-note 2 {{declared here}}
+  constexpr B &t1 = (B&)a; // expected-error {{must be initialized by a constant expression}} \
+                           // nointerpreter-note {{cannot cast object of dynamic type 'A' to type 'B'}} \
+                           // interpreter-note {{initializer of 'a' is unknown}}
+  constexpr B &t2 = (B&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
+                               // nointerpreter-note {{initializer of 'b' is not a constant expression}} \
+                               // interpreter-note {{initializer of 'b' is unknown}}
+  // FIXME: interpreter incorrectly rejects.
+  constexpr bool t3 = &b + 1 == &(B&)(A&)b; // interpreter-error {{must be initialized by a constant expression}} \
+                                            // interpreter-note {{initializer of 'b' is unknown}}
+  constexpr C &t4 = (C&)(A&)b; // expected-error {{must be initialized by a constant expression}} \
+                               // nointerpreter-note {{cannot cast object of dynamic type 'B' to type 'C'}} \
+                               // interpreter-note {{initializer of 'b' is unknown}}
 }
 
 namespace pointer_comparisons {

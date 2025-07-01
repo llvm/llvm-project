@@ -291,7 +291,7 @@ namespace {
         : Invalid(false), IsOnePastTheEnd(false),
           FirstEntryIsAnUnsizedArray(false), MostDerivedIsArrayElement(false),
           MostDerivedPathLength(0), MostDerivedArraySize(0),
-          MostDerivedType(T) {}
+          MostDerivedType(T.isNull() ? QualType() : T.getNonReferenceType()) {}
 
     SubobjectDesignator(ASTContext &Ctx, const APValue &V)
         : Invalid(!V.isLValue() || !V.hasLValuePath()), IsOnePastTheEnd(false),
@@ -6120,9 +6120,7 @@ static std::optional<DynamicType> ComputeDynamicType(EvalInfo &Info,
   // meaningful dynamic type. (We consider objects of non-class type to have no
   // dynamic type.)
   if (!checkDynamicType(Info, E, This, AK,
-                        (AK == AK_TypeId
-                             ? (E->getType()->isReferenceType() ? true : false)
-                             : true)))
+                        AK != AK_TypeId || This.AllowConstexprUnknown))
     return std::nullopt;
 
   if (This.Designator.Invalid)
