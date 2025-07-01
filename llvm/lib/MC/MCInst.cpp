@@ -78,7 +78,8 @@ bool MCOperand::isSimpleSymbolRef(MCExpr::Spec &Specifier) const {
   case MCExpr::Constant:
     break;
   case MCExpr::Target:
-    // It's not clear this is right, does MCTargetExpr need another virtual method?
+    // It's not clear this is right, does MCTargetExpr need another virtual
+    // method?
     break;
   case MCExpr::SymbolRef:
     Specifier = cast<MCSymbolRefExpr>(Expr)->getSpecifier();
