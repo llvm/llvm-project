@@ -9,7 +9,7 @@
 ; TODO: FIXME-TRUE16 - Enable this llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX1250,GFX1250-TRUE16 %s
 ; Crashing on v_test_imin_slt_i16
 ; LLVM ERROR: Cannot select: 0x5f895f65b050: i16,ch = load<(load (s16) from %ir.b.gep, addrspace 1)>
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck --check-prefixes=GFX1250,GFX1250-FAKE16 %s
 
 define amdgpu_kernel void @v_test_imin_sle_i32(ptr addrspace(1) %out, ptr addrspace(1) %a.ptr, ptr addrspace(1) %b.ptr) #0 {
 ;

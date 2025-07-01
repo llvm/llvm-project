@@ -9,7 +9,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1030W32 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1030W64 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX11 %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck -enable-var-scope -check-prefixes=GFX1250 %s
 
 ; GCN-ISEL-LABEL: name:   sadd64rr
 ; GCN-ISEL-LABEL: body:

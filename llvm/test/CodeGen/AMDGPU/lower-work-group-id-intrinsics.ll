@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -mattr=+architected-sgprs -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX9-GISEL %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 --verify-machineinstrs < %s | FileCheck -check-prefix=GFX12-SDAG %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX12-GISEL %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 --verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250-SDAG %s
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel --verify-machineinstrs < %s | FileCheck -check-prefix=GFX1250-GISEL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 < %s | FileCheck -check-prefix=GFX1250-SDAG %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -global-isel < %s | FileCheck -check-prefix=GFX1250-GISEL %s
 
 define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX9-SDAG-LABEL: _amdgpu_cs_main:

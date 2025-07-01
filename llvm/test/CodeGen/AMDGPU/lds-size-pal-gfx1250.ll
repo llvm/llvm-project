@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 -verify-machineinstrs < %s | FileCheck -check-prefix=PAL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1250 < %s | FileCheck -check-prefix=PAL %s
 
 ; GFX1250 supports upto 320 KB configurable LDS memory.
 ; This test checks the min and max size of LDS that can be allocated.

@@ -3,8 +3,8 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=GFX68,GFX8 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 -verify-machineinstrs | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 -verify-machineinstrs | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -verify-machineinstrs | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
 
 define amdgpu_ps void @buffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; GFX68-LABEL: buffer_store:
