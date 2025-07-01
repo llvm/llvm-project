@@ -659,8 +659,7 @@ public:
           fpr.fcsr = data.GetU32(&offset);
           SetError(FPURegSet, Read, 0);
         }
-      }
-        break;
+      } break;
       case EXCRegSet:
         if (count == 3) {
           exc.exception = data.GetU32(&offset);
