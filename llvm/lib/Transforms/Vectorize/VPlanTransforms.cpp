@@ -2644,10 +2644,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  assert(all_of(Plan.getVF().users(),
-                IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                        VPWidenIntOrFpInductionRecipe>) &&
-         "User of VF that we can't transform to EVL.");
+  assert(
+      all_of(
+          Plan.getVF().users(),
+          IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                  VPWidenIntOrFpInductionRecipe, VPWidenStridedLoadRecipe>) &&
+      "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
     return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
   });
@@ -2743,8 +2745,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
            "New recipe must define the same number of values as the "
            "original.");
     EVLRecipe->insertBefore(CurRecipe);
-    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPInterleaveEVLRecipe>(
-            EVLRecipe)) {
+    if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe, VPWidenStridedLoadRecipe,
+            VPInterleaveEVLRecipe>(EVLRecipe)) {
       for (unsigned I = 0; I < NumDefVal; ++I) {
         VPValue *CurVPV = CurRecipe->getVPValue(I);
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(I));
