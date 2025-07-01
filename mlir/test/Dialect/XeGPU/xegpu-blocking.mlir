@@ -461,10 +461,10 @@ gpu.module @test_kernel {
     %c32 = arith.constant 32 : index
     %c1024 = arith.constant 1024 : index
 
-    //CHECK: [[block_id_x:%.*]] = gpu.block_id  x
-    //CHECK: [[m:%.*]] = arith.muli [[block_id_x]], [[c32]] : index
-    %block_id_x = gpu.block_id x
-    %m = arith.muli %block_id_x, %c32 : index
+    //CHECK: [[sgId:%.*]] = gpu.subgroup_id : index
+    //CHECK: [[m:%.*]] = arith.muli [[sgId]], [[c32]] : index
+    %sgId = gpu.subgroup_id: index
+    %m = arith.muli %sgId, %c32 : index
 
     //CHECK: xegpu.create_nd_tdesc [[arg0]][[[m]], [[m]], [[c0]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
     //CHECK: xegpu.create_nd_tdesc [[arg0]][[[m]], [[m]], [[c16]]] : memref<1024x1024x1024xf16> -> !xegpu.tensor_desc<8x32x16xf16>
