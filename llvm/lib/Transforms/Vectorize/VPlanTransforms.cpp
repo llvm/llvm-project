@@ -2941,6 +2941,32 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   return nullptr;
 }
 
+static void convertToEVLReverse(VPlan &Plan, VPTypeAnalysis &TypeInfo,
+                                VPValue &EVL) {
+  SmallVector<VPRecipeBase *> ToRemove;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != VPInstruction::Reverse)
+        continue;
+
+      SmallVector<VPValue *> Ops(VPI->operands());
+      Ops.append({Plan.getTrue(), &EVL});
+      auto *NewReverse = new VPWidenIntrinsicRecipe(
+          Intrinsic::experimental_vp_reverse, Ops,
+          TypeInfo.inferScalarType(VPI), {}, {}, VPI->getDebugLoc());
+      NewReverse->insertBefore(VPI);
+      VPI->replaceAllUsesWith(NewReverse);
+      ToRemove.push_back(VPI);
+    }
+  }
+
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
+}
+
 /// Replace recipes with their EVL variants.
 static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
@@ -3056,6 +3082,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     }
     ToErase.push_back(CurRecipe);
   }
+  convertToEVLReverse(Plan, TypeInfo, EVL);
   // Remove dead EVL mask.
   if (EVLMask->getNumUsers() == 0)
     ToErase.push_back(EVLMask->getDefiningRecipe());

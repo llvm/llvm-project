@@ -1111,6 +1111,8 @@ public:
     // Unrolling will add all copies of its original operand as additional
     // operands.
     LastActiveLane,
+    // Returns a reversed vector for the operand.
+    Reverse,
 
     // The opcodes below are used for VPInstructionWithType.
     //
