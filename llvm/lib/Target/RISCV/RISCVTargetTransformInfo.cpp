@@ -1259,10 +1259,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   switch (ICA.getID()) {
   case Intrinsic::lrint:
   case Intrinsic::llrint: {
-    // We can't currently lower half or bfloat vector lrint/llrint.
-    if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
-        VecTy && VecTy->getElementType()->is16bitFPTy())
-      return InstructionCost::getInvalid();
     auto LT = getTypeLegalizationCost(RetTy);
     if (ST->hasVInstructions() && LT.second.isVector())
       return LT.first *
