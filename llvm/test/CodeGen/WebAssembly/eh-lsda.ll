@@ -73,10 +73,11 @@ try.cont:                                         ; preds = %entry, %catch.start
 ; In case of PIC, we make GCC_except_table symbols a relative on based on
 ; __memory_base.
 ; PIC:        global.get  $push[[CONTEXT:.*]]=, __wasm_lpad_context@GOT
+; PIC-NEXT: local.tee $push{{.*}}=, $[[CONTEXT_LOCAL:.*]]=, $pop[[CONTEXT]]
 ; PIC:        global.get  $push[[MEMORY_BASE:.*]]=, __memory_base
 ; PIC-NEXT:   i[[PTR]].const  $push[[EXCEPT_TABLE_REL:.*]]=, GCC_except_table1@MBREL
 ; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $pop[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
-; PIC-NEXT:   i[[PTR]].store  __wasm_lpad_context@GOT(${{.*}}), $pop[[EXCEPT_TABLE]]
+; PIC-NEXT: i[[PTR]].store {{[48]}}($[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
 
 ; CHECK: .section  .rodata.gcc_except_table,"",@
 ; CHECK-NEXT:   .p2align  2

@@ -12,8 +12,8 @@ define i32 @load_test0() {
 ; CHECK-LABEL: load_test0:
 ; CHECK:         .functype load_test0 () -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 40
-; CHECK-NEXT:    i32.load $push1=, g@GOT($pop0)
+; CHECK-NEXT:    global.get $push0=, g@GOT
+; CHECK-NEXT:    i32.load $push1=, 40($pop0)
 ; CHECK-NEXT:    return $pop1
   %t = load i32, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret i32 %t
@@ -395,8 +395,8 @@ define void @store_test0(i32 %i) {
 ; CHECK-LABEL: store_test0:
 ; CHECK:         .functype store_test0 (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const $push0=, 40
-; CHECK-NEXT:    i32.store g@GOT($pop0), $0
+; CHECK-NEXT:    global.get $push0=, g@GOT
+; CHECK-NEXT:    i32.store 40($pop0), $0
 ; CHECK-NEXT:    return
   store i32 %i, ptr getelementptr inbounds ([0 x i32], ptr @g, i32 0, i32 10), align 4
   ret void
