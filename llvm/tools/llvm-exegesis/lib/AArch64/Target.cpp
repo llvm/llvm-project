@@ -166,6 +166,11 @@ static void generateRegisterStackPop(unsigned int RegToPopTo,
 }
 
 void generateSysCall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
+  // AArch64 Linux follows the AAPCS (ARM Architecture Procedure Call Standard):
+  // - X8 register contains the system call number
+  // - X0-X5 registers contain the first 6 arguments (if any)
+  // - SVC #0 instruction triggers the system call
+  // - Return value is placed in X0 register
   GeneratedCode.push_back(
       loadImmediate(AArch64::X8, 64, APInt(64, SyscallNumber)));
   GeneratedCode.push_back(MCInstBuilder(AArch64::SVC).addImm(0));
@@ -173,18 +178,17 @@ void generateSysCall(long SyscallNumber, std::vector<MCInst> &GeneratedCode) {
 
 /// Functions to save/restore system call registers
 #ifdef __linux__
-constexpr std::array<unsigned, 6> SyscallArgumentRegisters{
-    AArch64::X0, AArch64::X1, AArch64::X2,
-    AArch64::X3, AArch64::X4, AArch64::X5,
+constexpr std::array<unsigned, 8> SyscallArgumentRegisters{
+    AArch64::X0, AArch64::X1, AArch64::X2, AArch64::X3,
+    AArch64::X4, AArch64::X5, AArch64::X6, AArch64::X7,
 };
 
 static void saveSysCallRegisters(std::vector<MCInst> &GeneratedCode,
                                  unsigned ArgumentCount) {
-  // AArch64 Linux typically uses X0-X5 for the first 6 arguments.
-  // Some syscalls can take up to 8 arguments in X0-X7.
-  assert(ArgumentCount <= 6 &&
-         "This implementation saves up to 6 argument registers (X0-X5)");
-  // generateRegisterStackPush(ArgumentRegisters::TempRegister, GeneratedCode);
+  // AArch64 follows the AAPCS (ARM Architecture Procedure Call Standard):
+  // X0-X7 registers contain the first 8 arguments.
+  assert(ArgumentCount <= 8 &&
+         "This implementation saves up to 8 argument registers (X0-X7)");
   // Preserve X8 (used for the syscall number/return value).
   generateRegisterStackPush(AArch64::X8, GeneratedCode);
   // Preserve the registers used to pass arguments to the system call.
@@ -195,14 +199,13 @@ static void saveSysCallRegisters(std::vector<MCInst> &GeneratedCode,
 
 static void restoreSysCallRegisters(std::vector<MCInst> &GeneratedCode,
                                     unsigned ArgumentCount) {
-  assert(ArgumentCount <= 6 &&
-         "This implementation restores up to 6 argument registers (X0-X5)");
-  // Restore argument registers, in opposite order of the way they are saved.
+  assert(ArgumentCount <= 8 &&
+         "This implementation restores up to 8 argument registers (X0-X7)");
+  // Restore registers in reverse order
   for (int I = ArgumentCount - 1; I >= 0; --I) {
     generateRegisterStackPop(SyscallArgumentRegisters[I], GeneratedCode);
   }
   generateRegisterStackPop(AArch64::X8, GeneratedCode);
-  // generateRegisterStackPop(ArgumentRegisters::TempRegister, GeneratedCode);
 }
 #endif // __linux__
 #include "AArch64GenExegesis.inc"
