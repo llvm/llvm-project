@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: std-at-least-c++26
 
-#include "../../../../support/assert_macros.h"
+#include "assert_macros.h"
 #include <optional>
 
 int main() {
