@@ -10379,8 +10379,12 @@ unsigned SIInstrInfo::getDSShaderTypeValue(const MachineFunction &MF) {
     return 3;
   case CallingConv::AMDGPU_HS:
   case CallingConv::AMDGPU_LS:
-  case CallingConv::AMDGPU_ES:
-    report_fatal_error("ds_ordered_count unsupported for this calling conv");
+  case CallingConv::AMDGPU_ES: {
+    const Function &F = MF.getFunction();
+    F.getContext().diagnose(DiagnosticInfoUnsupported(
+        F, "ds_ordered_count unsupported for this calling conv"));
+    [[fallthrough]];
+  }
   case CallingConv::AMDGPU_CS:
   case CallingConv::AMDGPU_KERNEL:
   case CallingConv::C:

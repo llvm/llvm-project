@@ -35,6 +35,8 @@ constexpr unsigned packedSizeInBitsForDefault =
     16; // Minimum packing size per register for DPAS A.
 constexpr unsigned packedSizeInBitsForDpasB =
     32; // Minimum packing size per register for DPAS B.
+constexpr unsigned packedSizeInBitsForGatherScatter =
+    32; // Minimum packing size per register for Gather and Scatter ops.
 } // namespace targetinfo
 } // namespace xegpu
 
