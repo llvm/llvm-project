@@ -1625,7 +1625,7 @@ Expected<MCCVInlineLineTableFragmentRef> MCCVInlineLineTableFragmentRef::create(
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
-  B->Data.append(F.getContents());
+  llvm::append_range(B->Data, F.getContents());
   return get(B->build());
 }
 
@@ -1693,7 +1693,7 @@ MCLEBFragmentRef::create(MCCASBuilder &MB, const MCLEBFragment &F,
   Expected<Builder> B = Builder::startNode(MB.Schema, KindString);
   if (!B)
     return B.takeError();
-  B->Data.append(F.getContents());
+  llvm::append_range(B->Data, F.getContents());
   return get(B->build());
 }
 
