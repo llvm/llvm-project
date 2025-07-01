@@ -330,6 +330,14 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_gis) {
+      // Translate -Gis into -ffp_model_EQ=strict
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_ffp_model_EQ),
+                          "strict");
+      A->claim();
+      continue;
+    }
+
     DAL->append(A);
   }
 
