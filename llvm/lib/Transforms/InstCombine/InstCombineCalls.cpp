@@ -1967,6 +1967,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return BinaryOperator::CreateOr(I0, I1);
     }
 
+    // smin(smax(X, -1), 1) -> scmp(X, 0)
+    // smax(smin(X, 1), -1) -> scmp(X, 0)
+    // At this point, smax(smin(X, 1), -1) is changed to smin(smax(X, -1)
+    // And i1's have been changed to and/ors
+    // So we only need to check for smin
+    if (IID == Intrinsic::smin) {
+      if (match(I0, m_OneUse(m_SMax(m_Value(X), m_AllOnes()))) &&
+          match(I1, m_One())) {
+        Value *Zero = ConstantInt::get(X->getType(), 0);
+        return replaceInstUsesWith(
+            CI,
+            Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {X, Zero}));
+      }
+    }
+
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
       // smax (neg nsw X), (neg nsw Y) --> neg nsw (smin X, Y)
       // smin (neg nsw X), (neg nsw Y) --> neg nsw (smax X, Y)
@@ -3549,23 +3564,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::vector_reverse: {
-    Value *Vec = II->getArgOperand(0);
-    // Note: We canonicalize reverse after binops, so we don't need a
-    // corresponding binop case here. TODO: Consider canonicalizing
-    // reverse after fneg?
-
-    // rev(unop rev(X)) --> unop X
-    Value *X;
-    if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
-      auto *OldUnOp = cast<UnaryOperator>(Vec);
-      auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
-          OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
-          II->getIterator());
-      return replaceInstUsesWith(CI, NewUnOp);
-    }
-    break;
-  }
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
     Value *Vec = II->getArgOperand(0);
@@ -3573,6 +3571,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (!match(Mask, m_AllOnes()))
       break;
     Value *EVL = II->getArgOperand(2);
+    // TODO: Canonicalize experimental.vp.reverse after unop/binops?
     // rev(unop rev(X)) --> unop X
     if (match(Vec,
               m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
