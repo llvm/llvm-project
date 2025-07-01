@@ -835,7 +835,8 @@ bool VectorCombine::foldVectorInsertToShuffle(Instruction &I) {
   unsigned SubVecIdx = SubVecPtr->getZExtValue();
 
   // Ensure insertion of SubVec doesn't exceed Dst bounds.
-  if (SubVecIdx % SubVecNumElts != 0 || SubVecIdx + SubVecNumElts > DstNumElts)
+  if ((SubVecIdx % SubVecNumElts != 0) ||
+      (SubVecIdx + SubVecNumElts > DstNumElts))
     return false;
 
   // An insert that entirely overwrites Vec with SubVec is a nop.
@@ -850,18 +851,17 @@ bool VectorCombine::foldVectorInsertToShuffle(Instruction &I) {
   // undefined.
   SmallVector<int, 8> WidenMask(VecNumElts, PoisonMaskElem);
   std::iota(WidenMask.begin(), WidenMask.begin() + SubVecNumElts, 0);
-  std::fill(WidenMask.begin() + SubVecNumElts, WidenMask.end(), PoisonMaskElem);
 
   auto *WidenShuffle = Builder.CreateShuffleVector(SubVec, WidenMask);
   Worklist.pushValue(WidenShuffle);
 
   SmallVector<int, 8> Mask(DstNumElts);
-  std::iota(Mask.begin(), Mask.begin() + SubVecIdx, 0);
-  std::iota(Mask.begin() + SubVecIdx, Mask.begin() + SubVecIdx + SubVecNumElts, DstNumElts);
-  std::iota(Mask.begin() + SubVecIdx + SubVecNumElts, Mask.end(), SubVecIdx + SubVecNumElts);
+  std::iota(Mask.begin(), Mask.end(), 0);
+  std::iota(Mask.begin() + SubVecIdx, Mask.begin() + SubVecIdx + SubVecNumElts,
+            DstNumElts);
 
-  auto *Shuffle = Builder.CreateShuffleVector(Vec, WidenShuffle, Mask);
-  replaceValue(I, *Shuffle);
+  auto *InsertShuffle = Builder.CreateShuffleVector(Vec, WidenShuffle, Mask);
+  replaceValue(I, *InsertShuffle);
   return true;
 }
 
