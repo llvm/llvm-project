@@ -202,9 +202,10 @@ def XeVM_BlockLoad2dOp
     The `xevm.blockload2d` operation loads a two dimensional matrix tile
     from a base matrix residing in global memory. The parameters are:
       $ptr - the base address of the base matrix containing the tile to load
-      $base_width, $base_height, $base_pitch - the shape of the base matrix.
-      pitch is the physical stride between the first columns of the current row
-      and the subsequent row. All units are in bytes.
+      $base_width - the width of the base matrix in number of bytes.
+      $base_height - the number of rows in the base matrix
+      $base_pitch - the physical stride between the first columns of the current
+         row and the subsequent row in number of bytes.
       $x, $y, $tile_width, $tile_height - the starting offsets and shape of
       the tile to load in number of elements.
       $elem_size_in_bits - the size in bits of the matrix element type
@@ -262,9 +263,10 @@ def XeVM_BlockStore2dOp
     The `xevm.blockstore2d` operation stores a two dimensional tile into a
     larger matrix residing in global memory. The parameters are:
       $ptr - the base address of the target matrix where to store the tile
-      $base_width, $base_height, $base_pitch - the shape of the target matrix. pitch is the
-      physical stride between the first columns of the current row and the subsequent row.
-      All units are in bytes.
+      $base_width - the width of the base matrix in number of bytes.
+      $base_height - the number of rows in the base matrix
+      $base_pitch - the physical stride between the first columns of the current
+         row and the subsequent row in number of bytes.
       $x, $y, $tile_width, $tile_height - the starting offsets and shape of the tile to store
       in number of elements.
       $elem_size_in_bits - the size in bits of the matrix element
@@ -394,9 +396,10 @@ def XeVM_BlockPrefetch2dOp
     The `xevm.blockprefetch2d` operation prefetches a two dimensional tile
     from a larger base matrix residing in global memory. The parameters are:
       $ptr - the base address of the base matrix containing the tile to prefetch
-      $base_width, $base_height, $base_pitch - the shape of the base matrix.
-      pitch is the physical stride between the first columns of the current row
-      and the subsequent row. All units are in bytes.
+      $base_width - the width of the base matrix in number of bytes.
+      $base_height - the number of rows in the base matrix
+      $base_pitch - the physical stride between the first columns of the current
+         row and the subsequent row in number of bytes.
       $x, $y, $tile_width, $tile_height - the starting offsets and shape of tile
       to prefetch in number of elements.
       $elem_size_in_bits - the size in bits of the matrix element
