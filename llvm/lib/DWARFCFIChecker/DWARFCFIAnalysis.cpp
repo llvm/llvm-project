@@ -9,6 +9,7 @@
 #include "llvm/DWARFCFIChecker/DWARFCFIAnalysis.h"
 #include "Registers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/DWARFCFIChecker/DWARFCFIState.h"
@@ -36,6 +37,10 @@ struct CFARegOffsetInfo {
 
   CFARegOffsetInfo(DWARFRegNum Reg, int64_t Offset)
       : Reg(Reg), Offset(Offset) {}
+
+  bool operator==(const CFARegOffsetInfo &RHS) const {
+    return Reg == RHS.Reg && Offset == RHS.Offset;
+  }
 };
 
 static std::optional<CFARegOffsetInfo>
@@ -49,29 +54,29 @@ getCFARegOffsetInfo(const dwarf::UnwindRow *UnwindRow) {
   return CFARegOffsetInfo(CFALocation.getRegister(), CFALocation.getOffset());
 }
 
-static std::optional<DWARFRegNum>
-getUnwindRuleRefReg(const dwarf::UnwindRow *UnwindRow, DWARFRegNum Reg) {
+static SmallSet<DWARFRegNum, 4>
+getUnwindRuleRegSet(const dwarf::UnwindRow *UnwindRow, DWARFRegNum Reg) {
   auto MaybeLoc = UnwindRow->getRegisterLocations().getRegisterLocation(Reg);
-  assert(MaybeLoc &&
-         "The register should be tracked inside the register states");
+  assert(MaybeLoc && "The register should be included in the unwinding row");
   auto Loc = *MaybeLoc;
 
   switch (Loc.getLocation()) {
+  case dwarf::UnwindLocation::Location::Unspecified:
   case dwarf::UnwindLocation::Location::Undefined:
   case dwarf::UnwindLocation::Location::Constant:
-  case dwarf::UnwindLocation::Location::Unspecified:
-  case dwarf::UnwindLocation::Location::DWARFExpr:
-    // TODO: here should look into expr and find the registers.
-    return std::nullopt;
-  case dwarf::UnwindLocation::Location::Same:
-    return Reg;
-  case dwarf::UnwindLocation::Location::RegPlusOffset:
-    return Loc.getRegister();
   case dwarf::UnwindLocation::Location::CFAPlusOffset:
-    auto MaybeCFA = getCFARegOffsetInfo(UnwindRow);
-    if (MaybeCFA)
-      return MaybeCFA->Reg;
-    return std::nullopt;
+    // [CFA + offset] does not depend on any register because the CFA value is
+    // constant throughout the entire frame; only the way to calculate it might
+    // change.
+  case dwarf::UnwindLocation::Location::DWARFExpr:
+    // TODO: Expressions are not supported yet, but if wanted to be supported,
+    // all the registers used in an expression should extracted and returned
+    // here.
+    return {};
+  case dwarf::UnwindLocation::Location::Same:
+    return {Reg};
+  case dwarf::UnwindLocation::Location::RegPlusOffset:
+    return {Loc.getRegister()};
   }
 }
 
@@ -195,53 +200,59 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
   }
   const char *RegName = MCRI->getName(*MaybeLLVMReg);
 
-  auto &&MaybePrevRefReg = getUnwindRuleRefReg(PrevRow, Reg);
-  std::optional<MCPhysReg> PrevRefLLVMReg =
-      (MaybePrevRefReg ? MCRI->getLLVMRegNum(MaybePrevRefReg.value(), IsEH)
-                       : std::nullopt);
+  // Each case is annotated with its corresponding number as described in the
+  // `DWARFCFIAnalysis`.
 
-  if (!(PrevLoc == NextLoc)) {
-    if (PrevLoc.getLocation() == NextLoc.getLocation()) {
-      Context->reportWarning(
-          Inst.getLoc(),
-          formatv(
-              "unknown change happened to register {0} unwinding rule values",
-              RegName));
-      //! FIXME: Check if the register is changed or not
-      return;
-    }
+  // TODO: Expressions are not supported yet, but if wanted to be supported,
+  // structure equality for expressions is more than just checking if they are
+  // both expressions. The operations should also be the same.
 
-    Context->reportWarning(
-        Inst.getLoc(),
-        formatv(
-            "unknown change happened to register {0} unwinding rule structure",
-            RegName));
+  if (PrevLoc == NextLoc) { // Case 1
+    for (DWARFRegNum UsedReg : getUnwindRuleRegSet(PrevRow, Reg))
+      if (Writes.count(UsedReg)) { // Case 1.b
+        auto MaybeLLVMUsedReg = MCRI->getLLVMRegNum(UsedReg, IsEH);
+        assert(MaybeLLVMUsedReg && "Instructions will always write to a "
+                                   "register that has an LLVM register number");
+        Context->reportError(
+            Inst.getLoc(),
+            formatv("changed register {1}, that register {0}'s unwinding rule "
+                    "uses, but there is no CFI directives about it",
+                    RegName, MCRI->getName(*MaybeLLVMUsedReg)));
+        return;
+      }
+    return; // Case 1.a
+  }
+  // Case 2
+  if (PrevLoc.getLocation() != NextLoc.getLocation()) { // Case 2.a
+    Context->reportWarning(Inst.getLoc(),
+                           formatv("uncheckable change happened to register "
+                                   "{0} unwinding rule structure",
+                                   RegName));
     return;
   }
-
-  switch (PrevLoc.getLocation()) {
-  case dwarf::UnwindLocation::Same:
-  case dwarf::UnwindLocation::RegPlusOffset:
-    assert(MaybePrevRefReg &&
-           "when the unwinding rule is the same value, or reg plus offset, "
-           "there should always exist a reference register");
-    if (Writes.count(MaybePrevRefReg.value())) {
-      Context->reportError(
+  auto &&PrevRegSet = getUnwindRuleRegSet(PrevRow, Reg);
+  if (PrevRegSet != getUnwindRuleRegSet(NextRow, Reg)) { // Case 2.b
+    Context->reportWarning(
+        Inst.getLoc(), formatv("uncheckable change happened to register {0} "
+                               "unwinding rule register set",
+                               RegName));
+    return;
+  }
+  // Case 2.c
+  for (DWARFRegNum UsedReg : PrevRegSet)
+    if (Writes.count(UsedReg)) { // Case 2.c.i
+      Context->reportWarning(
           Inst.getLoc(),
-          formatv("changed register {1}, that register {0}'s unwinding rule "
-                  "uses, but there is no CFI directives about it",
-                  RegName, MCRI->getName(*PrevRefLLVMReg)));
+          formatv("register {0} unwinding rule's offset is changed, and one of "
+                  "the rule's registers is modified by an unknown amount",
+                  RegName));
       return;
     }
-    break;
-  case dwarf::UnwindLocation::DWARFExpr:
-    // TODO: Expressions are not supported yet, but if wanted to be supported,
-    // all the registers used in an expression should extracted and checked if
-    // the instruction modifies them or not.
-  default:
-    // Everything may be ok
-    break;
-  }
+  // Case 2.c.ii
+  Context->reportError(
+      Inst.getLoc(), formatv("register {0} unwinding rule's offset is changed, "
+                             "but not any of the rule's registers are modified",
+                             RegName));
 }
 
 void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
@@ -276,27 +287,39 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
   auto PrevCFA = *MaybePrevCFA;
   auto NextCFA = *MaybeNextCFA;
 
-  auto MaybeLLVMReg = MCRI->getLLVMRegNum(PrevCFA.Reg, IsEH);
-  const char *PrevCFARegName = MaybeLLVMReg ? MCRI->getName(*MaybeLLVMReg) : "";
+  auto MaybeLLVMPrevReg = MCRI->getLLVMRegNum(PrevCFA.Reg, IsEH);
+  const char *PrevCFARegName =
+      MaybeLLVMPrevReg ? MCRI->getName(*MaybeLLVMPrevReg) : "";
+  auto MaybeLLVMNextReg = MCRI->getLLVMRegNum(NextCFA.Reg, IsEH);
+  const char *NextCFARegName =
+      MaybeLLVMNextReg ? MCRI->getName(*MaybeLLVMNextReg) : "";
 
-  if (PrevCFA.Reg != NextCFA.Reg) {
-    //! FIXME: warn here
-    return;
-  }
-
-  if (PrevCFA.Offset == NextCFA.Offset) {
-    if (!Writes.count(PrevCFA.Reg))
+  if (PrevCFA == NextCFA) {         // Case 1
+    if (!Writes.count(PrevCFA.Reg)) // Case 1.a
       return;
+    // Case 1.b
     Context->reportError(
         Inst.getLoc(),
         formatv("modified CFA register ({0}) but not changed CFA rule",
                 PrevCFARegName));
   }
 
-  // The offset is changed.
-  if (Writes.count(PrevCFA.Reg))
+  if (PrevCFA.Reg != NextCFA.Reg) { // Case 2.b
+    Context->reportWarning(
+        Inst.getLoc(),
+        formatv("CFA register changed from register {0} to register {1}",
+                PrevCFARegName, NextCFARegName));
     return;
-
+  }
+  // Case 2.c
+  if (Writes.count(PrevCFA.Reg)) { // Case 2.c.i
+    Context->reportWarning(
+        Inst.getLoc(), formatv("CFA offset is changed from {0} to {1}, CFA "
+                               "register {2} is changed by an unknown amount",
+                               PrevCFA.Offset, NextCFA.Offset, PrevCFARegName));
+    return;
+  }
+  // Case 2.c.ii
   Context->reportError(
       Inst.getLoc(),
       formatv("did not modify CFA register ({0}) but changed CFA rule",

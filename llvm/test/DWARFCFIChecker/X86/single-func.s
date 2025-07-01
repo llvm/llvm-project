@@ -6,24 +6,28 @@
 f:
         .cfi_startproc
         
+        # TODO: Remove these lines when the initial frame directives set the callee saved registers
         .cfi_undefined %rax
+        .cfi_undefined %flags
         
         pushq   %rbp
-        # CHECK: warning: unknown change happened to register RBP unwinding rule structure
+        # CHECK: warning: CFA offset is changed from 8 to 16, CFA register RSP is changed by an unknown amount
+        # CHECK: warning: uncheckable change happened to register RBP unwinding rule structure
         .cfi_def_cfa_offset 16
         .cfi_offset %rbp, -16
         
         movq    %rsp, %rbp
+        # CHECK: warning: CFA register changed from register RSP to register RBP
         .cfi_def_cfa_register %rbp
         
         movl    %edi, -4(%rbp)
         
         movl    -4(%rbp), %eax
         
-        # TODO: this is due to not ignoring flags
-        # addl    $10, %eax
+        addl    $10, %eax
         
         popq    %rbp
+        # CHECK: warning: CFA register changed from register RBP to register RSP
         .cfi_def_cfa %rsp, 8
         
         retq

@@ -53,7 +53,7 @@ namespace llvm {
 /// 2. The unwinding rule is changed:
 ///   a. The rule is structurally modified (i.e., the location is changed): It
 ///   emits a warning.
-///   b. The rule is structurally the same, but the registers are modified: it
+///   b. The rule is structurally the same, but the register set is changed: it
 ///   emits a warning.
 ///   c. The rule is structurally the same, using the same set of registers, but
 ///   the offset is changed:
@@ -63,8 +63,8 @@ namespace llvm {
 ///     error.
 ///
 /// The analysis only checks the CFA unwinding rule when the rule is a register
-/// plus some offset. Therefore, for CFA, only cases 1 and 2.c are checked, and
-/// in all other cases, a warning is emitted.
+/// plus some offset. Therefore, for CFA, only cases 1, 2.b, and 2.c are
+/// checked, and in all other case(s), a warning is emitted.
 class DWARFCFIAnalysis {
 public:
   DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII, bool IsEH,
