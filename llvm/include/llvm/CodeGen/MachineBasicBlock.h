@@ -242,6 +242,10 @@ private:
   /// calculate the size of the basic block, or the BB section ending with it.
   mutable MCSymbol *CachedEndMCSymbol = nullptr;
 
+  /// Vector of symbols marking the position of callsites in the basic
+  /// block, stored in the order they appear in the basic block.
+  mutable SmallVector<MCSymbol *, 1> CallsiteSymbols;
+
   // Intrusive list support
   MachineBasicBlock() = default;
 
@@ -324,6 +328,12 @@ public:
   /// Set this block to reflect that, regardless how we flow to it, we need
   /// its label be emitted.
   void setLabelMustBeEmitted() { LabelMustBeEmitted = true; }
+
+  /// Returns the symbols marking callsites in the order they appear in the
+  /// basic block.
+  const SmallVectorImpl<MCSymbol *> &getCallsiteSymbols() const {
+    return CallsiteSymbols;
+  }
 
   /// Return the MachineFunction containing this basic block.
   const MachineFunction *getParent() const { return xParent; }
@@ -724,6 +734,9 @@ public:
 
   /// Returns the MCSymbol marking the end of this basic block.
   LLVM_ABI MCSymbol *getEndSymbol() const;
+
+  /// Returns a temporary MCSymbol marking the beginning of a callsite.
+  LLVM_ABI MCSymbol *createCallsiteSymbol() const;
 
   /// Returns true if this block may have an INLINEASM_BR (overestimate, by
   /// checking if any of the successors are indirect targets of any inlineasm_br
