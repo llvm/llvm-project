@@ -217,10 +217,8 @@ public:
   /// Positions are relative to the kind of variable. Return the absolute
   /// column position (i.e., not relative to the kind of variable) of the
   /// first added variable.
-  ///
-  /// If identifiers are being used, the newly added variables have no
-  /// identifiers.
-  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
+  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1,
+                     Identifier id = Identifier());
 
   /// Removes variables of the specified kind in the column range [varStart,
   /// varLimit). The range is relative to the kind of variable.

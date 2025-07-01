@@ -39,10 +39,10 @@ void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
 }
 
 void PresburgerRelation::insertVarInPlace(VarKind kind, unsigned pos,
-                                          unsigned num) {
+                                          unsigned num, Identifier id) {
   for (IntegerRelation &cs : disjuncts)
-    cs.insertVar(kind, pos, num);
-  space.insertVar(kind, pos, num);
+    cs.insertVar(kind, pos, num, id);
+  space.insertVar(kind, pos, num, id);
 }
 
 void PresburgerRelation::convertVarKind(VarKind srcKind, unsigned srcPos,
