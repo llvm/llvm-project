@@ -3020,8 +3020,8 @@ def IsGenericAddressSpace : CPred<"llvm::cast<LLVM::LLVMPointerType>($_self).get
 def IsSharedAddressSpace : CPred<"llvm::cast<LLVM::LLVMPointerType>($_self).getAddressSpace() == 3">;
 def IsSharedClusterAddressSpace : CPred<"llvm::cast<LLVM::LLVMPointerType>($_self).getAddressSpace() == 7">;
 
-class NVVM_AddressSpaceMapping<string inputArg, string resultArg> : 
-    PredOpTrait<"valid address space mapping for NVVM mapa operation",
+class NVVM_MapaASCheck<string inputArg, string resultArg> : 
+    PredOpTrait<"Valid address-space check(or mapping) for mapa Op",
                 Or<[
                   // Generic -> Generic
                   And<[
@@ -3036,7 +3036,7 @@ class NVVM_AddressSpaceMapping<string inputArg, string resultArg> :
                 ]>>;
 
 def NVVM_MapaOp: NVVM_Op<"mapa",
-    [NVVM_AddressSpaceMapping<"a", "res">, NVVMRequiresSM<90>]> {
+    [NVVM_MapaASCheck<"a", "res">, NVVMRequiresSM<90>]> {
   let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerSharedCluster]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
 

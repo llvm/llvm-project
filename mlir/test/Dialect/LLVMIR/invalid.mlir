@@ -1201,7 +1201,7 @@ func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 // -----
 
 func.func @mapa(%a: !llvm.ptr, %b : i32) {
-  // expected-error @below {{'nvvm.mapa' op failed to verify that valid address space mapping for NVVM mapa operation}}
+  // expected-error @below {{'nvvm.mapa' op failed to verify that Valid address-space check(or mapping) for mapa Op}}
   %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<7>
   return
 }
