@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // This test ensures that we can catch an Objective-C++ exception by type when
-// throwing via `std::rethrow_exception`. See http://llvm.org/PR135089.
+// throwing an exception created via `std::make_exception_ptr`.
+// See http://llvm.org/PR135089.
 
 // UNSUPPORTED: c++03
 
