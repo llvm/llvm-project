@@ -300,7 +300,7 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
     // Case 1.b
     Context->reportError(
         Inst.getLoc(),
-        formatv("modified CFA register ({0}) but not changed CFA rule",
+        formatv("modified CFA register {0} but not changed CFA rule",
                 PrevCFARegName));
   }
 
@@ -322,6 +322,6 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
   // Case 2.c.ii
   Context->reportError(
       Inst.getLoc(),
-      formatv("did not modify CFA register ({0}) but changed CFA rule",
+      formatv("did not modify CFA register {0} but changed CFA rule",
               PrevCFARegName));
 }
