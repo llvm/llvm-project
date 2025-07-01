@@ -171,7 +171,7 @@ public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
-  LLVM_ABI static Expected<std::unique_ptr<Embedder>>
+  LLVM_ABI static std::unique_ptr<Embedder>
   create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
 
   /// Returns a map containing instructions and the corresponding embeddings for
