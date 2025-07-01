@@ -4297,9 +4297,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     [[maybe_unused]] auto ArgVectorSize =
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
     assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-              ->getNumElements() == ArgVectorSize);
+               ->getNumElements() == ArgVectorSize);
     assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
-              ->getNumElements() == ArgVectorSize);
+               ->getNumElements() == ArgVectorSize);
     assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
     assert(I.getType() == I.getArgOperand(0)->getType());
     assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
@@ -4313,7 +4313,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
     BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
     CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                      {AShadow, Idx, BShadow});
+                                       {AShadow, Idx, BShadow});
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
   }
