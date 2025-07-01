@@ -442,6 +442,34 @@ bool foo19(double _Complex a, double _Complex b) {
 // OGCG: %[[CMP_IMAG:.*]] = fcmp oeq double %[[A_IMAG]], %[[B_IMAG]]
 // OGCG: %[[RESULT:.*]] = and i1 %[[CMP_REAL]], %[[CMP_IMAG]]
 
+void foo22(int _Complex a, int _Complex b) {
+  int _Complex c = (a, b);
+}
+
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[COMPLEX_B]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: cir.store{{.*}} %[[TMP_B]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[RESULT:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[COMPLEX_B]], align 4
+// LLVM: store { i32, i32 } %[[TMP_B]], ptr %[[RESULT]], align 4
+
+// OGCG: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[RESULT:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 0
+// OGCG: %[[B_REAL:.*]] = load i32, ptr %[[B_REAL_PTR]], align 4
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
+// OGCG: %[[B_IMAG:.*]] = load i32, ptr %[[B_IMAG_PTR]], align 4
+// OGCG: %[[RESULT_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 0
+// OGCG: %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 1
+// OGCG: store i32 %[[B_REAL]], ptr %[[RESULT_REAL_PTR]], align 4
+// OGCG: store i32 %[[B_IMAG]], ptr %[[RESULT_IMAG_PTR]], align 4
+
 void foo23(int _Complex a, int _Complex b) {
   float _Complex f;
   int _Complex c = _Generic(a, int _Complex: b, default: f);
