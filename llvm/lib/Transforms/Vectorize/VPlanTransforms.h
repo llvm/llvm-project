@@ -262,6 +262,16 @@ struct VPlanTransforms {
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                          VPBasicBlock *LatchVPBB);
 
+  /// Update \p Plan to check whether the next iteration of the vector loop
+  /// would exit (using any exit type) and if so branch to the scalar loop
+  /// instead. This requires identifying the recipes that form the conditions
+  /// for exiting, cloning them to the preheader, then adjusting both the
+  /// preheader recipes (to check the first vector iteration) and those in
+  /// the vector loop (to check the next vector iteration instead of the
+  /// current one). This can be used to avoid complex masking for state-changing
+  /// recipes (like stores).
+  static bool handleUncountableExitsInScalarLoop(VPlan &Plan);
+
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
