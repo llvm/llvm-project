@@ -6234,12 +6234,12 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     // case 0,2,8,10 -> Cond & 0b1..0101 == 0 ? result : default
     if (isPowerOf2_32(CaseCount)) {
       ConstantInt *MinCaseVal = CaseValues[0];
-      // In case, there are bits, that can only be present in the CaseValues we
+      // If there are bits that are set exclusively by CaseValues, we
       // can transform the switch into a select if the conjunction of
-      // all the values uniquely identify the CaseValues.
+      // all the values uniquely identify CaseValues.
       APInt AndMask = APInt::getAllOnes(MinCaseVal->getBitWidth());
 
-      // Find mininal value and compute the conjuction of the values.
+      // Find the minimum value and compute the and of all the case values.
       for (auto *Case : CaseValues) {
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
@@ -6251,7 +6251,7 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
         // Compute the number of bits that are free to vary.
         unsigned FreeBits = Known.countMaxActiveBits() - AndMask.popcount();
         // Compute 2^FreeBits in order to check whether all the possible
-        // combination of the free bits matches the number of cases.
+        // combinations of the free bits matches the number of cases.
         APInt TopBit = APInt::getOneBitSet(
             Condition->getType()->getIntegerBitWidth(), FreeBits);
 

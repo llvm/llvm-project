@@ -341,8 +341,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_no_range(i8 %f) {
@@ -394,8 +394,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 ; Using ranges.
@@ -417,8 +417,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @range1to4odd(i8 range(i8 1, 4) %f) {
@@ -438,8 +438,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @range0to8odd(i8 range(i8 0, 8) %f) {
@@ -461,8 +461,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @range0to8most_significant_bit(i8 range(i8 0, 8) %f) {
@@ -484,8 +484,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @range0to15_middle_two_bits(i8 range(i8 0, 16) %f) {
@@ -507,8 +507,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to15(i8 range(i8 0, 16) %f) {
@@ -534,8 +534,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to15_pow_2(i8 range(i8 0, 16) %f) {
@@ -556,8 +556,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to5even(i8 range(i8 0, 5) %f) {
@@ -578,8 +578,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @range0to15_corner_case(i8 range(i8 0, 16) %f) {
@@ -597,8 +597,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to15_corner_case(i8 range(i8 0, 16) %f) {
@@ -619,8 +619,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 ; Out of range scenarios. Check if the cases, that have a value out of range
@@ -646,8 +646,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @range0to15_out_of_range_non_prime_more(i8 range(i8 0, 16) %f) {
@@ -671,8 +671,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to15_out_of_range_non_prime(i8 range(i8 0, 16) %f) {
@@ -699,8 +699,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to15_out_of_range(i8 range(i8 0, 16) %f) {
@@ -727,8 +727,8 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
 
 define i1 @negative_range0to15_all_out_of_range(i8 range(i8 0, 16) %f) {
@@ -747,7 +747,6 @@ bb1:
 bb2:
   br label %bb3
 bb3:
-  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
-  ret i1 %_0.sroa.0.0
+  %phi = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %phi
 }
-
