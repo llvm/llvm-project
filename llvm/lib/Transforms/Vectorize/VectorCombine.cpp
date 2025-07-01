@@ -848,24 +848,17 @@ bool VectorCombine::foldVectorInsertToShuffle(Instruction &I) {
   // shufflevector requires the two input vectors to be the same width.
   // Elements beyond the bounds of SubVec within the widened vector are
   // undefined.
-  SmallVector<int, 8> WidenMask;
-  unsigned int i = 0;
-  for (i = 0; i != SubVecNumElts; ++i)
-    WidenMask.push_back(i);
-  for (; i != VecNumElts; ++i)
-    WidenMask.push_back(PoisonMaskElem);
+  SmallVector<int, 8> WidenMask(VecNumElts, PoisonMaskElem);
+  std::iota(WidenMask.begin(), WidenMask.begin() + SubVecNumElts, 0);
+  std::fill(WidenMask.begin() + SubVecNumElts, WidenMask.end(), PoisonMaskElem);
 
   auto *WidenShuffle = Builder.CreateShuffleVector(SubVec, WidenMask);
   Worklist.pushValue(WidenShuffle);
 
-  SmallVector<int, 8> Mask;
-  unsigned int j;
-  for (i = 0; i != SubVecIdx; ++i)
-    Mask.push_back(i);
-  for (j = 0; j != SubVecNumElts; ++j)
-    Mask.push_back(DstNumElts + j);
-  for (i = SubVecIdx + SubVecNumElts; i != DstNumElts; ++i)
-    Mask.push_back(i);
+  SmallVector<int, 8> Mask(DstNumElts);
+  std::iota(Mask.begin(), Mask.begin() + SubVecIdx, 0);
+  std::iota(Mask.begin() + SubVecIdx, Mask.begin() + SubVecIdx + SubVecNumElts, DstNumElts);
+  std::iota(Mask.begin() + SubVecIdx + SubVecNumElts, Mask.end(), SubVecIdx + SubVecNumElts);
 
   auto *Shuffle = Builder.CreateShuffleVector(Vec, WidenShuffle, Mask);
   replaceValue(I, *Shuffle);
