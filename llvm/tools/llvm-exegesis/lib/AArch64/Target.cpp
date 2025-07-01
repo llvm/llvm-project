@@ -410,7 +410,7 @@ ExegesisAArch64Target::configurePerfCounter(long Request,
   std::vector<MCInst> ConfigurePerfCounterCode; // NOP
   // FIXME: SYSCALL exits with EBADF error - file descriptor is invalid
   // No file is opened previosly to add as file descriptor
-  errs() << "Warning: configurePerfCounter not implemented, measurements will "
+  dbgs() << "Warning: configurePerfCounter not implemented, measurements will "
             "be unreliable\n";
   return ConfigurePerfCounterCode;
 }
