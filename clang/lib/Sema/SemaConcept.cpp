@@ -1558,6 +1558,7 @@ const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
     return NormalizedConstraint::fromAssociatedConstraints(
         *this, nullptr, AssociatedConstraints);
 
+  // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
   const NamedDecl *ND =
       ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
   auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
@@ -1640,6 +1641,31 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
       {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
+
+  unsigned Hash;
+  llvm::FoldingSetNodeID ID;
+  auto &Context = S.getASTContext();
+  if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId) {
+    ID.AddPointer(static_cast<ConceptIdConstraint &>(N)
+                      .getConceptId()
+                      ->getNamedConcept()
+                      ->getCanonicalDecl());
+    for (auto &ArgLoc : static_cast<ConceptIdConstraint &>(N)
+                            .getConceptId()
+                            ->getTemplateArgsAsWritten()
+                            ->arguments())
+      ArgLoc.getArgument().Profile(ID, Context);
+
+    Hash = ID.ComputeHash();
+    if (auto Iter = S.ParameterMappingCache.find(Hash);
+        Iter != S.ParameterMappingCache.end()) {
+      N.updateParameterMapping(N.mappingOccurenceList(), Iter->second,
+                              N.getUsedTemplateParamList());
+      return false;
+    }
+  }
+  // FIXME: Cache for atomic constraints.
+
   // TransformTemplateArguments is unable to preserve the source location of a
   // pack. The SourceLocation is necessary for the instantiation location.
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
@@ -1669,10 +1695,12 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
   // N.updateParameterMapping(
   //     N.mappingOccurenceList(),
   //     MutableArrayRef<TemplateArgumentLoc>(TempArgs, SubstArgs.size()));
-  N.updateParameterMapping(N.mappingOccurenceList(),
-                           MutableArrayRef<TemplateArgumentLoc>(
-                               TempArgs, CTAI.SugaredConverted.size()),
+  MutableArrayRef<TemplateArgumentLoc> Mapping(TempArgs,
+                                               CTAI.SugaredConverted.size());
+  N.updateParameterMapping(N.mappingOccurenceList(), Mapping,
                            N.getUsedTemplateParamList());
+  if (N.getKind() == NormalizedConstraint::ConstraintKind::ConceptId)
+    S.ParameterMappingCache.insert({Hash, Mapping});
   return false;
 }
 
