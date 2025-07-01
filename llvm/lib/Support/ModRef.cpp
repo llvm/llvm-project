@@ -49,6 +49,15 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
     case IRMemLocation::Other:
       OS << "Other: ";
       break;
+    default: {
+      InaccessibleTargetMemLocation TargetLoc =
+          static_cast<InaccessibleTargetMemLocation>(Loc);
+      if (TargetLoc == InaccessibleTargetMemLocation::AARCH64_FPMR)
+        OS << "FPMR: ";
+      if (TargetLoc == InaccessibleTargetMemLocation::AARCH64_ZA)
+        OS << "ZA: ";
+      break;
+    }
     }
     OS << ME.getModRef(Loc);
   });

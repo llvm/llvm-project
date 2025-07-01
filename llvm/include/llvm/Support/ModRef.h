@@ -56,6 +56,11 @@ enum class ModRefInfo : uint8_t {
 /// Debug print ModRefInfo.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
+enum class InaccessibleTargetMemLocation {
+  AARCH64_FPMR = 3,
+  AARCH64_ZA = 4,
+};
+
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
   /// Access to memory via argument pointers.
@@ -65,7 +70,7 @@ enum class IRMemLocation {
   /// Errno memory.
   ErrnoMem = 2,
   /// Any other memory.
-  Other = 3,
+  Other = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -142,6 +147,18 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only read inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleReadMemOnly(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::Ref);
+  }
+
+  /// Create MemoryEffectsBase that can only write inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleWriteMemOnly(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::Mod);
+  }
+
   /// Create MemoryEffectsBase that can only access errno memory.
   static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     return MemoryEffectsBase(Location::ErrnoMem, MR);
@@ -176,6 +193,11 @@ public:
   /// attribute).
   static MemoryEffectsBase createFromIntValue(uint32_t Data) {
     return MemoryEffectsBase(Data);
+  }
+
+  bool isTargetMemLoc(IRMemLocation Loc) {
+    return static_cast<unsigned>(Loc) >
+           static_cast<unsigned>(Location::ErrnoMem);
   }
 
   /// Convert MemoryEffectsBase into an encoded integer value (used by memory
