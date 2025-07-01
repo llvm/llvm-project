@@ -492,3 +492,108 @@ bb3:
   ret i1 %_0.sroa.0.0
 }
 
+define i1 @range0to15_out_of_range_non_prime(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @range0to15_out_of_range_non_prime(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
+  i8 7, label %bb2
+  i8 14, label %bb2
+  i8 15, label %bb2
+  i8 22, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @range0to15_out_of_range_non_prime_more(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @range0to15_out_of_range_non_prime_more(
+; CHECK-NEXT:  bb3:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[F:%.*]], 6
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[TMP0]], 6
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 true, i1 false
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
+  i8 7, label %bb2
+  i8 14, label %bb2
+  i8 15, label %bb2
+  i8 22, label %bb2
+  i8 23, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @negative_range0to15_out_of_range_non_prime(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @negative_range0to15_out_of_range_non_prime(
+; CHECK-NEXT:    switch i8 [[F:%.*]], label [[BB3:%.*]] [
+; CHECK-NEXT:      i8 6, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 14, label [[BB2]]
+; CHECK-NEXT:      i8 15, label [[BB2]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
+  i8 14, label %bb2
+  i8 15, label %bb2
+  i8 23, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
+define i1 @negative_range0to15_out_of_range(i8 range(i8 0, 16) %f) {
+; CHECK-LABEL: @negative_range0to15_out_of_range(
+; CHECK-NEXT:    switch i8 [[F:%.*]], label [[BB3:%.*]] [
+; CHECK-NEXT:      i8 6, label [[BB2:%.*]]
+; CHECK-NEXT:      i8 7, label [[BB2]]
+; CHECK-NEXT:      i8 14, label [[BB2]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB3]]
+; CHECK:       bb3:
+; CHECK-NEXT:    [[_0_SROA_0_0:%.*]] = phi i1 [ true, [[BB2]] ], [ false, [[TMP0:%.*]] ]
+; CHECK-NEXT:    ret i1 [[_0_SROA_0_0]]
+;
+  switch i8 %f, label %bb1 [
+  i8 6, label %bb2
+  i8 7, label %bb2
+  i8 14, label %bb2
+  i8 150, label %bb2
+  ]
+bb1:
+  br label %bb3
+bb2:
+  br label %bb3
+bb3:
+  %_0.sroa.0.0 = phi i1 [ false, %bb1 ], [ true, %bb2 ]
+  ret i1 %_0.sroa.0.0
+}
+
