@@ -114,6 +114,10 @@ public:
     case 1013: // sm_101a
       HasTcgen05 = true;
       break;
+    case 1103: // sm_110a
+      HasTcgen05 = true;
+      MinPTXVersion = 90;
+      break;
     case 1033: // sm_103a
       HasTcgen05 = true;
       MinPTXVersion = 88;
@@ -121,6 +125,10 @@ public:
     }
 
     return HasTcgen05 && PTXVersion >= MinPTXVersion;
+  }
+
+  bool hasTcgen05MMAScaleInputDImm() const {
+    return FullSmVersion == 1003 && PTXVersion >= 86;
   }
   // f32x2 instructions in Blackwell family
   bool hasF32x2Instructions() const;
