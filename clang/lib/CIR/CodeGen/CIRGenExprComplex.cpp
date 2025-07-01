@@ -39,6 +39,7 @@ public:
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
 
+  mlir::Value VisitArraySubscriptExpr(Expr *e);
   mlir::Value VisitBinAssign(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
@@ -117,6 +118,10 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 
   const Address destAddr = lv.getAddress();
   builder.createStore(loc, val, destAddr);
+}
+
+mlir::Value ComplexExprEmitter::VisitArraySubscriptExpr(Expr *e) {
+  return emitLoadOfLValue(e);
 }
 
 mlir::Value ComplexExprEmitter::VisitBinAssign(const BinaryOperator *e) {
