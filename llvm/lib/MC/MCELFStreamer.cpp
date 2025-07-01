@@ -21,7 +21,6 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -453,7 +452,8 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   Assembler.getEmitter().encodeInstruction(Inst, DF->getContentsForAppending(),
                                            Fixups, STI);
   DF->doneAppending();
-  DF->appendFixups(Fixups);
+  if (!Fixups.empty())
+    DF->appendFixups(Fixups);
 
   for (auto &Fixup : MutableArrayRef(DF->getFixups()).slice(FixupStartIndex)) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);

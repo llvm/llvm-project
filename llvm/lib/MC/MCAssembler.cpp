@@ -22,7 +22,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
@@ -1029,18 +1028,18 @@ bool MCAssembler::relaxLEB(MCLEBFragment &LF) {
     if (UseZeroPad)
       Value = 0;
   }
-  SmallVector<char, 16> Data;
-  raw_svector_ostream OSE(Data);
+  uint8_t Data[16];
+  size_t Size = 0;
   // The compiler can generate EH table assembly that is impossible to assemble
   // without either adding padding to an LEB fragment or adding extra padding
   // to a later alignment fragment. To accommodate such tables, relaxation can
   // only increase an LEB fragment size here, not decrease it. See PR35809.
   if (LF.isSigned())
-    encodeSLEB128(Value, OSE, PadTo);
+    Size = encodeSLEB128(Value, Data, PadTo);
   else
-    encodeULEB128(Value, OSE, PadTo);
-  LF.setContents(Data);
-  return OldSize != Data.size();
+    Size = encodeULEB128(Value, Data, PadTo);
+  LF.setContents({reinterpret_cast<char *>(Data), Size});
+  return OldSize != Size;
 }
 
 /// Check if the branch crosses the boundary.

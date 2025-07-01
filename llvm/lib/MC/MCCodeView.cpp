@@ -442,15 +442,13 @@ MCFragment *CodeViewContext::emitDefRange(
     MCObjectStreamer &OS,
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {
+  // Store `Ranges` and `FixedSizePortion` in the context, returning references,
+  // as MCCVDefRangeFragment does not own these objects.
+  FixedSizePortion = MCCtx->allocateString(FixedSizePortion);
+  auto &Saved = DefRangeStorage.emplace_back(Ranges.begin(), Ranges.end());
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  FixedSizePortion = MCCtx->allocateString(FixedSizePortion);
-  auto Pos = DefRangeStorage.size();
-  llvm::append_range(DefRangeStorage, Ranges);
-  if (!Ranges.empty())
-    Ranges = {&DefRangeStorage[Pos], Ranges.size()};
-  auto *F =
-      MCCtx->allocFragment<MCCVDefRangeFragment>(Ranges, FixedSizePortion);
+  auto *F = MCCtx->allocFragment<MCCVDefRangeFragment>(Saved, FixedSizePortion);
   OS.insert(F);
   return F;
 }
@@ -513,7 +511,6 @@ void CodeViewContext::encodeInlineLineTable(const MCAssembler &Asm,
   MCCVFunctionInfo *SiteInfo = getCVFunctionInfo(Frag.SiteFuncId);
 
   SmallVector<char, 0> Buffer;
-  Buffer.clear(); // Clear old contents if we went through relaxation.
   for (const MCCVLoc &Loc : Locs) {
     // Exit early if our line table would produce an oversized InlineSiteSym
     // record. Account for the ChangeCodeLength annotation emitted after the

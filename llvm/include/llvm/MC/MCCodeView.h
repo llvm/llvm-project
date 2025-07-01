@@ -270,8 +270,9 @@ private:
   /// not.
   bool ChecksumOffsetsAssigned = false;
 
-  /// Storage of MCCVDefRangeFragment::Ranges.
-  std::deque<std::pair<const MCSymbol *, const MCSymbol *>> DefRangeStorage;
+  /// Append-only storage of MCCVDefRangeFragment::Ranges.
+  std::deque<SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 0>>
+      DefRangeStorage;
 };
 
 } // end namespace llvm

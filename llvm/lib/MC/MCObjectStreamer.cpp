@@ -67,18 +67,10 @@ void MCObjectStreamer::resolvePendingFixups() {
     // put the Fixup into location symbol's fragment. Otherwise
     // put into PendingFixup.DF
     MCFragment *SymFragment = PendingFixup.Sym->getFragment();
-    switch (SymFragment->getKind()) {
-    case MCFragment::FT_Relaxable:
-    case MCFragment::FT_Dwarf:
-    case MCFragment::FT_PseudoProbe:
-    case MCFragment::FT_Data:
-    case MCFragment::FT_CVDefRange:
-      cast<MCEncodedFragment>(SymFragment)->addFixup(PendingFixup.Fixup);
-      break;
-    default:
+    if (auto *F = dyn_cast<MCEncodedFragment>(SymFragment))
+      F->addFixup(PendingFixup.Fixup);
+    else
       PendingFixup.DF->addFixup(PendingFixup.Fixup);
-      break;
-    }
   }
   PendingFixups.clear();
 }
@@ -394,7 +386,8 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   auto CodeOffset = DF->getContents().size();
   for (MCFixup &Fixup : Fixups)
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-  DF->appendFixups(Fixups);
+  if (!Fixups.empty())
+    DF->appendFixups(Fixups);
   DF->setHasInstructions(STI);
   DF->appendContents(Code);
 }

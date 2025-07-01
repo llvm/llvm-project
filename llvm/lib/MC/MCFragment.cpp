@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCFragment.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -34,87 +33,6 @@ MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
 
 const MCSymbol *MCFragment::getAtom() const {
   return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
-}
-
-SmallVectorImpl<char> &MCEncodedFragment::getContentsForAppending() {
-  SmallVectorImpl<char> &S = getParent()->ContentStorage;
-  if (ContentSize == 0) {
-    ContentStart = S.size();
-  } else if (ContentStart + ContentSize != S.size()) {
-    // If not empty and not at the storage end, move to the storage end.
-    auto I = std::exchange(ContentStart, S.size());
-    S.reserve(S.size() + ContentSize);
-    S.append(S.begin() + I, S.begin() + I + ContentSize);
-  }
-  return S;
-}
-
-void MCEncodedFragment::doneAppending() {
-  ContentSize = getParent()->ContentStorage.size() - ContentStart;
-}
-
-void MCEncodedFragment::appendContents(ArrayRef<char> Contents) {
-  getContentsForAppending().append(Contents.begin(), Contents.end());
-  doneAppending();
-}
-
-void MCEncodedFragment::appendContents(size_t Num, char Elt) {
-  getContentsForAppending().append(Num, Elt);
-  doneAppending();
-}
-
-void MCEncodedFragment::setContents(ArrayRef<char> Contents) {
-  auto &S = getParent()->ContentStorage;
-  if (Contents.size() > ContentSize) {
-    ContentStart = S.size();
-    S.resize_for_overwrite(S.size() + Contents.size());
-  }
-  ContentSize = Contents.size();
-  llvm::copy(Contents, S.begin() + ContentStart);
-}
-
-MutableArrayRef<char> MCEncodedFragment::getContents() {
-  return MutableArrayRef(getParent()->ContentStorage)
-      .slice(ContentStart, ContentSize);
-}
-
-ArrayRef<char> MCEncodedFragment::getContents() const {
-  return ArrayRef(getParent()->ContentStorage).slice(ContentStart, ContentSize);
-}
-
-void MCEncodedFragment::addFixup(MCFixup Fixup) { appendFixups({Fixup}); }
-
-void MCEncodedFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
-  auto &S = getParent()->FixupStorage;
-  if (FixupSize == 0) {
-    FixupStart = S.size();
-  } else if (FixupStart + FixupSize != S.size()) {
-    // If not empty and not at the storage end, move to the storage end.
-    auto I = std::exchange(FixupStart, S.size());
-    S.reserve(S.size() + ContentSize);
-    S.append(S.begin() + I, S.begin() + I + FixupSize);
-  }
-  FixupSize += Fixups.size();
-  S.append(Fixups.begin(), Fixups.end());
-}
-
-void MCEncodedFragment::setFixups(ArrayRef<MCFixup> Fixups) {
-  auto &S = getParent()->FixupStorage;
-  if (Fixups.size() > FixupSize) {
-    FixupStart = S.size();
-    S.resize_for_overwrite(S.size() + Fixups.size());
-  }
-  FixupSize = Fixups.size();
-  llvm::copy(Fixups, S.begin() + FixupStart);
-}
-
-MutableArrayRef<MCFixup> MCEncodedFragment::getFixups() {
-  return MutableArrayRef(getParent()->FixupStorage)
-      .slice(FixupStart, FixupSize);
-}
-
-ArrayRef<MCFixup> MCEncodedFragment::getFixups() const {
-  return ArrayRef(getParent()->FixupStorage).slice(FixupStart, FixupSize);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

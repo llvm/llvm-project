@@ -375,6 +375,28 @@ BareMetal::OrderedMultilibs BareMetal::getOrderedMultilibs() const {
   return llvm::reverse(Default);
 }
 
+ToolChain::CXXStdlibType BareMetal::GetDefaultCXXStdlibType() const {
+  if (getTriple().isRISCV() && IsGCCInstallationValid)
+    return ToolChain::CST_Libstdcxx;
+  return ToolChain::CST_Libcxx;
+}
+
+ToolChain::RuntimeLibType BareMetal::GetDefaultRuntimeLibType() const {
+  if (getTriple().isRISCV() && IsGCCInstallationValid)
+    return ToolChain::RLT_Libgcc;
+  return ToolChain::RLT_CompilerRT;
+}
+
+// TODO: Add a validity check for GCCInstallation.
+//       If valid, use `UNW_Libgcc`; otherwise, use `UNW_None`.
+ToolChain::UnwindLibType
+BareMetal::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
+  if (getTriple().isRISCV())
+    return ToolChain::UNW_None;
+
+  return ToolChain::GetUnwindLibType(Args);
+}
+
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                           ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc))
@@ -568,10 +590,24 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const llvm::Triple::ArchType Arch = TC.getArch();
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
 
+  if (!D.SysRoot.empty())
+    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
+
   CmdArgs.push_back("-Bstatic");
 
-  if (TC.getTriple().isRISCV() && Args.hasArg(options::OPT_mno_relax))
-    CmdArgs.push_back("--no-relax");
+  if (const char *LDMOption = getLDMOption(TC.getTriple(), Args)) {
+    CmdArgs.push_back("-m");
+    CmdArgs.push_back(LDMOption);
+  } else {
+    D.Diag(diag::err_target_unknown_triple) << Triple.str();
+    return;
+  }
+
+  if (Triple.isRISCV()) {
+    CmdArgs.push_back("-X");
+    if (Args.hasArg(options::OPT_mno_relax))
+      CmdArgs.push_back("--no-relax");
+  }
 
   if (Triple.isARM() || Triple.isThumb()) {
     bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
@@ -609,8 +645,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_s, options::OPT_t, options::OPT_r});
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_u, options::OPT_T_Group,
+                   options::OPT_s, options::OPT_t, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
