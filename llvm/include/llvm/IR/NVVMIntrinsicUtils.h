@@ -112,7 +112,6 @@ inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid f2i/d2i intrinsic");
-  return false;
 }
 
 inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
@@ -179,7 +178,6 @@ inline bool FPToIntegerIntrinsicResultIsSigned(Intrinsic::ID IntrinsicID) {
   }
   llvm_unreachable(
       "Checking invalid f2i/d2i intrinsic for signed int conversion");
-  return false;
 }
 
 inline APFloat::roundingMode
@@ -250,7 +248,6 @@ GetFPToIntegerRoundingMode(Intrinsic::ID IntrinsicID) {
     return APFloat::rmTowardZero;
   }
   llvm_unreachable("Checking rounding mode for invalid f2i/d2i intrinsic");
-  return APFloat::roundingMode::Invalid;
 }
 
 inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
@@ -280,7 +277,6 @@ inline bool FMinFMaxShouldFTZ(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid fmin/fmax intrinsic");
-  return false;
 }
 
 inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
@@ -310,7 +306,6 @@ inline bool FMinFMaxPropagatesNaNs(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking NaN flag for invalid fmin/fmax intrinsic");
-  return false;
 }
 
 inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
@@ -340,7 +335,6 @@ inline bool FMinFMaxIsXorSignAbs(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking XorSignAbs flag for invalid fmin/fmax intrinsic");
-  return false;
 }
 
 inline bool UnaryMathIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
@@ -383,7 +377,6 @@ inline bool UnaryMathIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid unary intrinsic");
-  return false;
 }
 
 inline bool RCPShouldFTZ(Intrinsic::ID IntrinsicID) {
@@ -406,7 +399,6 @@ inline bool RCPShouldFTZ(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking FTZ flag for invalid rcp intrinsic");
-  return false;
 }
 
 inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
@@ -434,7 +426,6 @@ inline APFloat::roundingMode GetRCPRoundingMode(Intrinsic::ID IntrinsicID) {
     return APFloat::rmTowardZero;
   }
   llvm_unreachable("Checking rounding mode for invalid rcp intrinsic");
-  return APFloat::roundingMode::Invalid;
 }
 
 inline bool RCPIsApprox(Intrinsic::ID IntrinsicID) {
@@ -461,7 +452,6 @@ inline bool RCPIsApprox(Intrinsic::ID IntrinsicID) {
     return false;
   }
   llvm_unreachable("Checking approx flag for invalid rcp intrinsic");
-  return false;
 }
 
 } // namespace nvvm
