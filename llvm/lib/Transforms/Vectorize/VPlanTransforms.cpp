@@ -2517,8 +2517,6 @@ void VPlanTransforms::createInterleaveGroups(
     // lane, rather than directly getting the pointer for lane VF - 1, because
     // the pointer operand of the interleaved access is supposed to be uniform.
     if (IG->isReverse()) {
-      auto *GEP = dyn_cast<GetElementPtrInst>(
-          getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts());
       auto *ReversePtr = new VPVectorEndPointerRecipe(
           Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos),
           -(int64_t)IG->getFactor(),
