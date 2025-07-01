@@ -16,7 +16,7 @@
 
 namespace clang::tidy::modernize {
 
-/// Find functions and variables that can be declared 'constexpr'.
+/// Finds functions and variables that can be declared 'constexpr'.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-constexpr.html

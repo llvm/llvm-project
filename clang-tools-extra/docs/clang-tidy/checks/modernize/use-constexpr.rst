@@ -3,7 +3,7 @@
 modernize-use-constexpr
 =======================
 
-Find functions and variables that can be declared 'constexpr'.
+Finds functions and variables that can be declared 'constexpr'.
 
 The check analyses any function and variable according to the rules defined
 for the language version that the code is compiled with.
