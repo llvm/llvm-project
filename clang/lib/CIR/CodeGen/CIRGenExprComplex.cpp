@@ -43,6 +43,7 @@ public:
   mlir::Value VisitCallExpr(const CallExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
@@ -151,6 +152,11 @@ mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
   return emitLoadOfLValue(e);
 }
 
+mlir::Value
+ComplexExprEmitter::VisitGenericSelectionExpr(GenericSelectionExpr *e) {
+  return Visit(e->getResultExpr());
+}
+
 mlir::Value ComplexExprEmitter::VisitImplicitCastExpr(ImplicitCastExpr *e) {
   // Unlike for scalars, we don't have to worry about function->ptr demotion
   // here.
@@ -195,7 +201,7 @@ ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
     realValueAttr = cir::IntAttr::get(elementTy, 0);
     imagValueAttr = cir::IntAttr::get(elementTy, imagValue);
   } else {
-    assert(mlir::isa<cir::CIRFPTypeInterface>(elementTy) &&
+    assert(mlir::isa<cir::FPTypeInterface>(elementTy) &&
            "Expected complex element type to be floating-point");
 
     llvm::APFloat imagValue =

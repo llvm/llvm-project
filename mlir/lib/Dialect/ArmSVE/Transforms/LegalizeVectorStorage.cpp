@@ -426,6 +426,7 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
     // Create the new `transfer_read`.
     auto newReadOp = rewriter.create<vector::TransferReadOp>(
         readOp.getLoc(), collapsedVT, collapsedMem, indices,
+        readOp.getPadding(),
         ArrayRef<bool>(origInBounds).drop_back(numCollapseDims - 1));
 
     // Cast back to the original vector type.

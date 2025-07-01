@@ -71,6 +71,11 @@ C++ Specific Potentially Breaking Changes
   if it's out of range. The Boost numeric_conversion library is impacted by
   this; it was fixed in Boost 1.81. (#GH143034)
 
+- Fully implemented `CWG400 Using-declarations and the `
+  `"struct hack" <https://wg21.link/CWG400>`_. Invalid member using-declaration
+  whose nested-name-specifier doesn't refer to a base class such as
+  ``using CurrentClass::Foo;`` is now rejected in C++98 mode.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -223,6 +228,7 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
+    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
@@ -326,6 +332,7 @@ Non-comprehensive list of changes in this release
   different than before.
 - Fixed a crash when a VLA with an invalid size expression was used within a
   ``sizeof`` or ``typeof`` expression. (#GH138444)
+- ``__builtin_invoke`` has been added to improve the compile time of ``std::invoke``.
 - Deprecation warning is emitted for the deprecated ``__reference_binds_to_temporary`` intrinsic.
   ``__reference_constructs_from_temporary`` should be used instead. (#GH44056)
 - Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
@@ -648,7 +655,18 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-  
+- Fixed false positives in ``-Wformat-truncation`` and ``-Wformat-overflow``
+  diagnostics when floating-point numbers had both width field and plus or space
+  prefix specified. (#GH143951)
+
+- Clang now avoids issuing `-Wreturn-type` warnings in some cases where
+  the final statement of a non-void function is a `throw` expression, or
+  a call to a function that is trivially known to always throw (i.e., its
+  body consists solely of a `throw` statement). This avoids certain
+  false positives in exception-heavy code, though only simple patterns
+  are currently recognized.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -726,7 +744,7 @@ Bug Fixes in This Version
 - Fixed incorrect token location when emitting diagnostics for tokens expanded from macros. (#GH143216)
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
-- Fixed a bug when use unicode character name in macro concatenation. (#GH145240) 
+- Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -884,7 +902,9 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- The ODR checker now correctly hashes the names of conversion operators. (#GH143152)
 - Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
+- Fixed a crash when performing an ``IgnoreUnlessSpelledInSource`` traversal of ASTs containing ``catch(...)`` statements. (#GH146103)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^

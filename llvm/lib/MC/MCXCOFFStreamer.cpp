@@ -98,7 +98,7 @@ void MCXCOFFStreamer::emitXCOFFRefDirective(const MCSymbol *Symbol) {
 
   MCFixupKind Kind = *MaybeKind;
   MCFixup Fixup = MCFixup::create(DF->getContents().size(), SRE, Kind);
-  DF->getFixups().push_back(Fixup);
+  DF->addFixup(Fixup);
 }
 
 void MCXCOFFStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
@@ -136,26 +136,6 @@ void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);
   emitZeros(Size);
-}
-
-void MCXCOFFStreamer::emitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
-  MCAssembler &Assembler = getAssembler();
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  MCDataFragment *DF = getOrCreateDataFragment(&STI);
-  const size_t ContentsSize = DF->getContents().size();
-  auto &DataFragmentFixups = DF->getFixups();
-  for (auto &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + ContentsSize);
-    DataFragmentFixups.push_back(Fixup);
-  }
-
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
 }
 
 void MCXCOFFStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
