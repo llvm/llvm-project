@@ -179,21 +179,15 @@ define i32 @freeze_ctlz_undef_nonzero(i32 %a0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl $1, %eax
-; X86-NEXT:    bsrl %eax, %ecx
-; X86-NEXT:    xorl $31, %ecx
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    bsrl %eax, %eax
+; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ctlz_undef_nonzero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orl $1, %edi
-; X64-NEXT:    bsrl %edi, %ecx
-; X64-NEXT:    xorl $31, %ecx
-; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    bsrl %edi, %eax
+; X64-NEXT:    xorl $31, %eax
 ; X64-NEXT:    retq
   %y = or i32 %a0, 1
   %x = call i32 @llvm.ctlz.i32(i32 %y, i1 -1)
@@ -250,17 +244,13 @@ define i32 @freeze_cttz_undef_nonzero(i32 %a0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl $1, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_cttz_undef_nonzero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orl $1, %edi
-; X64-NEXT:    bsfl %edi, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    rep bsfl %edi, %eax
 ; X64-NEXT:    retq
   %y = or i32 %a0, 1
   %x = call i32 @llvm.cttz.i32(i32 %y, i1 -1)

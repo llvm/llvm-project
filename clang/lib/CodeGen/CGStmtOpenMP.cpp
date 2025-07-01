@@ -1065,7 +1065,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
       CapturedStmtInfo->EmitBody(*this, CD->getBody());
   }
 
-  (void)LocalScope.ForceCleanup();
+  LocalScope.ForceCleanup();
   FinishFunction(CD->getBodyRBrace());
   if (!NeedWrapperFunction)
     return F;
