@@ -44,8 +44,8 @@ struct CFARegOffsetInfo {
 };
 
 static std::optional<CFARegOffsetInfo>
-getCFARegOffsetInfo(const dwarf::UnwindRow *UnwindRow) {
-  auto CFALocation = UnwindRow->getCFAValue();
+getCFARegOffsetInfo(const dwarf::UnwindRow &UnwindRow) {
+  auto CFALocation = UnwindRow.getCFAValue();
   if (CFALocation.getLocation() !=
       dwarf::UnwindLocation::Location::RegPlusOffset) {
     return std::nullopt;
@@ -55,8 +55,8 @@ getCFARegOffsetInfo(const dwarf::UnwindRow *UnwindRow) {
 }
 
 static SmallSet<DWARFRegNum, 4>
-getUnwindRuleRegSet(const dwarf::UnwindRow *UnwindRow, DWARFRegNum Reg) {
-  auto MaybeLoc = UnwindRow->getRegisterLocations().getRegisterLocation(Reg);
+getUnwindRuleRegSet(const dwarf::UnwindRow &UnwindRow, DWARFRegNum Reg) {
+  auto MaybeLoc = UnwindRow.getRegisterLocations().getRegisterLocation(Reg);
   assert(MaybeLoc && "The register should be included in the unwinding row");
   auto Loc = *MaybeLoc;
 
@@ -131,7 +131,7 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
   auto MaybePrevRow = State.getCurrentUnwindRow();
   assert(MaybePrevRow && "The analysis should have initialized the "
                          "history with at least one row by now");
-  const dwarf::UnwindRow *PrevRow = MaybePrevRow.value();
+  auto PrevRow = *MaybePrevRow;
 
   for (auto &&Directive : Directives)
     State.update(Directive);
@@ -158,7 +158,7 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
 
   auto MaybeNextRow = State.getCurrentUnwindRow();
   assert(MaybeNextRow && "Prev row existed, so should the current row.");
-  const dwarf::UnwindRow *NextRow = *MaybeNextRow;
+  auto NextRow = *MaybeNextRow;
 
   checkCFADiff(Inst, PrevRow, NextRow, Reads, Writes);
 
@@ -170,12 +170,12 @@ void DWARFCFIAnalysis::update(const MCInst &Inst,
 }
 
 void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
-                                    const dwarf::UnwindRow *PrevRow,
-                                    const dwarf::UnwindRow *NextRow,
+                                    const dwarf::UnwindRow &PrevRow,
+                                    const dwarf::UnwindRow &NextRow,
                                     const SmallSet<DWARFRegNum, 4> &Reads,
                                     const SmallSet<DWARFRegNum, 4> &Writes) {
-  auto MaybePrevLoc = PrevRow->getRegisterLocations().getRegisterLocation(Reg);
-  auto MaybeNextLoc = NextRow->getRegisterLocations().getRegisterLocation(Reg);
+  auto MaybePrevLoc = PrevRow.getRegisterLocations().getRegisterLocation(Reg);
+  auto MaybeNextLoc = NextRow.getRegisterLocations().getRegisterLocation(Reg);
 
   // All the tracked registers are added during initiation. So if a register is
   // not added, should stay the same during execution and vice versa.
@@ -256,8 +256,8 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
 }
 
 void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
-                                    const dwarf::UnwindRow *PrevRow,
-                                    const dwarf::UnwindRow *NextRow,
+                                    const dwarf::UnwindRow &PrevRow,
+                                    const dwarf::UnwindRow &NextRow,
                                     const SmallSet<DWARFRegNum, 4> &Reads,
                                     const SmallSet<DWARFRegNum, 4> &Writes) {
 

@@ -23,23 +23,24 @@ namespace llvm {
 
 using DWARFRegNum = uint32_t;
 
-/// This class is used to maintain a CFI state and history, referred to as an
-/// unwinding table, during CFI analysis. The table is private, meaning the only
-/// way to modify it is to append a new row by updating it with a CFI directive,
-/// and the only way to read from it is to read the last row (i.e., current CFI
-/// state) from the table. The fetched row is constant and should not be
-/// modified or deleted.
+/// This class is used to maintain a CFI state, referred to as an unwinding row,
+/// during CFI analysis. The only way to modify the state is by updating it with
+/// a CFI directive.
 class DWARFCFIState {
 public:
-  DWARFCFIState(MCContext *Context) : Context(Context) {};
-  ~DWARFCFIState();
+  DWARFCFIState(MCContext *Context) : Context(Context), IsInitiated(false) {};
 
-  std::optional<const dwarf::UnwindRow *> getCurrentUnwindRow() const;
+  std::optional<dwarf::UnwindRow> getCurrentUnwindRow() const;
+  /// This method updates the state by applying \p Directive to the current
+  /// state. If the directive is not supported by the checker or any error
+  /// happens while applying the CFI directive, a warning or error is reported
+  /// to the user, and the directive is ignored, leaving the state unchanged.
   void update(const MCCFIInstruction &Directive);
 
 private:
+  dwarf::UnwindRow Row;
   MCContext *Context;
-  std::vector<dwarf::UnwindRow *> Table;
+  bool IsInitiated;
 
   dwarf::CFIProgram convert(MCCFIInstruction Directive);
 };

@@ -18,38 +18,26 @@
 
 using namespace llvm;
 
-DWARFCFIState::~DWARFCFIState() {
-  for (auto &&Row : Table)
-    delete Row;
-}
-
-std::optional<const dwarf::UnwindRow *>
-DWARFCFIState::getCurrentUnwindRow() const {
-  if (!Table.size())
+std::optional<dwarf::UnwindRow> DWARFCFIState::getCurrentUnwindRow() const {
+  if (!IsInitiated)
     return std::nullopt;
-
-  return *(--Table.end());
+  return Row;
 }
 
 void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   auto CFIP = convert(Directive);
 
-  auto MaybeCurrentRow = getCurrentUnwindRow();
-
-  // This is a copy of the last row of the table (or a new empty row), its value
-  // will be updated by `parseRows`.
-  dwarf::UnwindRow *NewRow = nullptr;
-  if (MaybeCurrentRow)
-    NewRow = new dwarf::UnwindRow(*(MaybeCurrentRow.value()));
-  else
-    NewRow = new dwarf::UnwindRow();
+  // This is a copy of the current row, its value will be updated by
+  // `parseRows`.
+  dwarf::UnwindRow NewRow = Row;
 
   // `parseRows` updates the current row by applying the `CFIProgram` to it.
-  // During this process, it may create multiple rows that should be placed in
-  // the unwinding table, preceding the newly updated row and following the
-  // previous rows. These middle rows are stored in `PrecedingRows`.
+  // During this process, it may create multiple rows preceding the newly
+  // updated row and following the previous rows. These middle rows are stored
+  // in `PrecedingRows`. For now, there is no need to store these rows in the
+  // state, so they are ignored in the end.
   dwarf::UnwindTable::RowContainer PrecedingRows;
-  if (Error Err = parseRows(CFIP, *NewRow, nullptr).moveInto(PrecedingRows)) {
+  if (Error Err = parseRows(CFIP, NewRow, nullptr).takeError()) {
     Context->reportError(
         Directive.getLoc(),
         formatv("could not parse this CFI directive due to: {0}",
@@ -59,9 +47,8 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
     return;
   }
 
-  for (auto &&PrecedingRow : PrecedingRows)
-    Table.push_back(new dwarf::UnwindRow(PrecedingRow));
-  Table.push_back(NewRow);
+  Row = NewRow;
+  IsInitiated = true;
 }
 
 dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
@@ -101,20 +88,18 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     break;
   case MCCFIInstruction::OpRelOffset:
     assert(
-        MaybeCurrentRow &&
+        IsInitiated &&
         "Cannot define relative offset to a non-existing CFA unwinding rule");
 
     CFIP.addInstruction(dwarf::DW_CFA_offset, Directive.getRegister(),
-                        Directive.getOffset() -
-                            (*MaybeCurrentRow)->getCFAValue().getOffset());
+                        Directive.getOffset() - Row.getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpAdjustCfaOffset:
-    assert(MaybeCurrentRow &&
+    assert(IsInitiated &&
            "Cannot adjust CFA offset of a non-existing CFA unwinding rule");
 
     CFIP.addInstruction(dwarf::DW_CFA_def_cfa_offset,
-                        Directive.getOffset() +
-                            (*MaybeCurrentRow)->getCFAValue().getOffset());
+                        Directive.getOffset() + Row.getCFAValue().getOffset());
     break;
   case MCCFIInstruction::OpEscape:
     // TODO: DWARFExpressions are not supported yet, ignoring expression here.
