@@ -1718,7 +1718,7 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPVectorEndPointerSC,
                             ArrayRef<VPValue *>({Ptr, VF}), GEPFlags, DL),
         IndexedTy(IndexedTy), Stride(Stride) {
-    assert(Stride != 0 && "Stride cannot be zero");
+    assert(Stride < 0 && "Stride must be negative");
   }
 
   VP_CLASSOF_IMPL(VPDef::VPVectorEndPointerSC)
