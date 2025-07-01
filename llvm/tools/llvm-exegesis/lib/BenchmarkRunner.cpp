@@ -649,7 +649,6 @@ BenchmarkRunner::getRunnableConfiguration(
                                              BenchmarkResult.AssembledSnippet))
       return std::move(Err);
   }
-
   // Assemble enough repetitions of the snippet so we have at least
   // MinInstructions instructions.
   if (BenchmarkPhaseSelector >
@@ -751,6 +750,7 @@ BenchmarkRunner::getRunnableConfiguration(
       }
     }
   }
+
   return std::move(RC);
 }
 
