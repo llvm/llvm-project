@@ -903,6 +903,7 @@ Bug Fixes to AST Handling
 - Fixed dependency calculation for TypedefTypes (#GH89774)
 - The ODR checker now correctly hashes the names of conversion operators. (#GH143152)
 - Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
+- Fixed a crash when performing an ``IgnoreUnlessSpelledInSource`` traversal of ASTs containing ``catch(...)`` statements. (#GH146103)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
