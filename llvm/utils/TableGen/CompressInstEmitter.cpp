@@ -290,23 +290,25 @@ void CompressInstEmitter::addDagOperandMapping(
       // its index in the list of Dag operands and check that operands with the
       // same name have the same type. For example in 'C_ADD $rs1, $rs2' we
       // generate the mapping $rs1 --> 0, $rs2 ---> 1. If the operand appears
-      // twice in the (tied) same Dag we use the last occurrence for indexing.
-      if (Dag->getArgNameStr(DAGOpNo).empty())
+      // twice in the same Dag (tied in the compressed instruction), we note
+      // the previous index in the TiedOpIdx field.
+      StringRef ArgName = Dag->getArgNameStr(DAGOpNo);
+      if (ArgName.empty())
         continue;
 
       if (IsSourceInst) {
-        auto It = Operands.find(Dag->getArgNameStr(DAGOpNo));
+        auto It = Operands.find(ArgName);
         if (It != Operands.end()) {
           OperandMap[OpNo].TiedOpIdx = It->getValue().second;
           if (!validateArgsTypes(Dag->getArg(It->getValue().first),
                                  Dag->getArg(DAGOpNo)))
             PrintFatalError(Rec->getLoc(),
-                            "Input Operand '" + Dag->getArgNameStr(DAGOpNo) +
-                                "' has a mismatched tied operand!\n");
+                            "Input Operand '" + ArgName +
+                                "' has a mismatched tied operand!");
         }
       }
 
-      Operands[Dag->getArgNameStr(DAGOpNo)] = {DAGOpNo, OpNo};
+      Operands[ArgName] = {DAGOpNo, OpNo};
     }
   }
 }
@@ -357,20 +359,21 @@ void CompressInstEmitter::checkDagOperandMapping(
   for (unsigned I = 0; I < SourceDag->getNumArgs(); ++I) {
     // Skip fixed immediates and registers, they were handled in
     // addDagOperandMapping.
-    if (SourceDag->getArgNameStr(I).empty())
+    StringRef SourceDag->getArgNameStr(I);
+    if (ArgName.empty())
       continue;
 
-    auto It = DestOperands.find(SourceDag->getArgNameStr(I));
+    auto It = DestOperands.find(ArgName);
     if (It == DestOperands.end())
-      PrintFatalError(Rec->getLoc(), "Operand " + SourceDag->getArgNameStr(I) +
+      PrintFatalError(Rec->getLoc(), "Operand " + ArgName +
                                          " defined in Input Dag but not used in"
-                                         " Output Dag!\n");
+                                         " Output Dag!");
     // Input Dag operand types must match output Dag operand type.
     if (!validateArgsTypes(DestDag->getArg(It->getValue().first),
                            SourceDag->getArg(I)))
       PrintFatalError(Rec->getLoc(), "Type mismatch between Input and "
                                      "Output Dag operand '" +
-                                         SourceDag->getArgNameStr(I) + "'!");
+                                         ArgName + "'!");
   }
 }
 
@@ -411,15 +414,14 @@ void CompressInstEmitter::createInstOperandMapping(
         continue;
 
       unsigned DagArgIdx = OpNo - TiedCount;
-      auto SourceOp = SourceOperands.find(DestDag->getArgNameStr(DagArgIdx));
+      StringRef ArgName = DestDag->getArgNameStr(DagArgIdx);
+      auto SourceOp = SourceOperands.find(ArgName);
       if (SourceOp == SourceOperands.end())
         PrintFatalError(Rec->getLoc(),
-                        "Output Dag operand '" +
-                            DestDag->getArgNameStr(DagArgIdx) +
+                        "Output Dag operand '" + ArgName +
                             "' has no matching input Dag operand.");
 
-      assert(DestDag->getArgNameStr(DagArgIdx) ==
-                 SourceDag->getArgNameStr(SourceOp->getValue().first) &&
+      assert(ArgName == SourceDag->getArgNameStr(SourceOp->getValue().first) &&
              "Incorrect operand mapping detected!\n");
 
       // Following four lines ensure the correct handling of a single tied
@@ -604,7 +606,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   if (!AsmWriter->getValueAsInt("PassSubtarget"))
     PrintFatalError(AsmWriter->getLoc(),
                     "'PassSubtarget' is false. SubTargetInfo object is needed "
-                    "for target features.\n");
+                    "for target features.");
 
   StringRef TargetName = Target.getName();
 
@@ -760,7 +762,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
               << ").getReg() ==  MI.getOperand("
               << SourceOperandMap[OpNo].TiedOpIdx << ").getReg()) &&\n";
         else
-          PrintFatalError("Unexpected tied operand types!\n");
+          PrintFatalError("Unexpected tied operand types!");
       }
       for (unsigned SubOp = 0; SubOp != SourceOperand.MINumOperands; ++SubOp) {
         // Check for fixed immediates\registers in the source instruction.
