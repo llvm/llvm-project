@@ -1462,9 +1462,9 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
                     << "\n");
   Value *VectorBO;
-  if (BinOpOpc == Instruction::Or)
-    VectorBO = Builder.CreateOr(V0, V1, "",
-                                cast<PossiblyDisjointInst>(I).isDisjoint());
+  if (auto *PDInst = dyn_cast<PossiblyDisjointInst>(&I))
+    VectorBO =
+        Builder.CreateBinOpDisjoint(BinOpOpc, V0, V1, PDInst->isDisjoint(), "");
   else
     VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
 

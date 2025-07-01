@@ -1575,14 +1575,10 @@ public:
     return Accum;
   }
 
-  Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "",
-                  bool IsDisjoint = false) {
+  Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
     if (auto *V = Folder.FoldBinOp(Instruction::Or, LHS, RHS))
       return V;
-    return Insert(
-        IsDisjoint ? BinaryOperator::CreateDisjoint(Instruction::Or, LHS, RHS)
-                   : BinaryOperator::CreateOr(LHS, RHS),
-        Name);
+    return Insert(BinaryOperator::CreateOr(LHS, RHS), Name);
   }
 
   Value *CreateOr(Value *LHS, const APInt &RHS, const Twine &Name = "") {
@@ -1725,6 +1721,18 @@ public:
     if (isa<FPMathOperator>(BinOp))
       setFPAttrs(BinOp, FPMathTag, FMFSource.get(FMF));
     return Insert(BinOp, Name);
+  }
+
+  Value *CreateBinOpDisjoint(BinaryOperator::BinaryOps Opc, Value *LHS,
+                             Value *RHS, bool IsDisjoint,
+                             const Twine &Name = "") {
+    if (Value *V = Folder.FoldBinOp(Opc, LHS, RHS))
+      return V;
+
+    BinaryOperator *BO =
+        Insert(BinaryOperator::CreateDisjoint(Opc, LHS, RHS), Name);
+    cast<PossiblyDisjointInst>(BO)->setIsDisjoint(IsDisjoint);
+    return BO;
   }
 
   Value *CreateLogicalAnd(Value *Cond1, Value *Cond2, const Twine &Name = "") {
