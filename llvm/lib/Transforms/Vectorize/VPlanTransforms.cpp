@@ -2690,7 +2690,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       }
 
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
-        Expr->unbundle();
+        Expr->decompose();
         ToRemove.push_back(Expr);
       }
 
@@ -2833,7 +2833,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
 
 /// This function tries convert extended in-loop reductions to
 /// VPExpressionRecipe and clamp the \p Range if it is beneficial and
-/// valid. The created recipe must be unbundled to its constituent
+/// valid. The created recipe must be decomposed to its constituent
 /// recipes before execution.
 static VPExpressionRecipe *
 tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
@@ -2876,7 +2876,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
 /// This function tries convert extended in-loop reductions to
 /// VPExpressionRecipe and clamp the \p Range if it is beneficial
-/// and valid. The created VPExpressionRecipe must be unbundled to its
+/// and valid. The created VPExpressionRecipe must be decomposed to its
 /// constituent recipes before execution. Patterns of the
 /// VPExpressionRecipe:
 ///   reduce.add(mul(...)),

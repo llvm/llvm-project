@@ -2619,7 +2619,7 @@ VPExpressionRecipe::VPExpressionRecipe(
   }
 }
 
-void VPExpressionRecipe::unbundle() {
+void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
     R->insertBefore(this);
 

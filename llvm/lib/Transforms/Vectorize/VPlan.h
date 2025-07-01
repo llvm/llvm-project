@@ -525,10 +525,10 @@ public:
 
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
-    case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPDerivedIVSC:
     case VPRecipeBase::VPEVLBasedIVPHISC:
     case VPRecipeBase::VPExpandSCEVSC:
+    case VPRecipeBase::VPExpressionSC:
     case VPRecipeBase::VPInstructionSC:
     case VPRecipeBase::VPReductionEVLSC:
     case VPRecipeBase::VPReductionSC:
@@ -2719,10 +2719,10 @@ public:
   }
 };
 
-/// A recipe to combine multiple recipes into a  single 'expression' recipe,
+/// A recipe to combine multiple recipes into a single 'expression' recipe,
 /// which should be considered a single entity for cost-modeling and transforms.
-/// The recipe needs to be 'unbundled', i.e. replaced by its individual
-/// expression recipes before execute. The individual expression recipes are
+/// The recipe needs to be 'decomposed', i.e. replaced by its individual
+/// expression recipes, before execute. The individual expression recipes are
 /// completely disconnected from the def-use graph of other recipes not part of
 /// the expression. Def-use edges between pairs of expression recipes remain
 /// intact, whereas every edge between an expression recipe and a recipe outside
@@ -2738,7 +2738,7 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
 
   enum class ExpressionTypes {
     /// Represents an inloop extended reduction operation, performing a
-    /// reduction on a extended vector operand into a scalar value, and adding
+    /// reduction on an extended vector operand into a scalar value, and adding
     /// the result to a chain.
     ExtendedReduction,
     /// Represent an inloop multiply-accumulate reduction, multiplying the
@@ -2810,7 +2810,7 @@ public:
   /// Insert the recipes of the expression back into the VPlan, directly before
   /// the current recipe. Leaves the expression recipe empty, which must be
   /// removed before codegen.
-  void unbundle();
+  void decompose();
 
   /// Method for generating code, must not be called as this recipe is abstract.
   void execute(VPTransformState &State) override {
