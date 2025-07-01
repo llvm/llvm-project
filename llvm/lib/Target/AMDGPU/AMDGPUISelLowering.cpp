@@ -4221,9 +4221,9 @@ SDValue AMDGPUTargetLowering::performSraCombine(SDNode *N,
 
   KnownBits KnownLHS = DAG.computeKnownBits(LHS);
   SDValue HiShift;
-  if (KnownLHS.isNegative())
+  if (KnownLHS.isNegative()) {
     HiShift = DAG.getAllOnesConstant(SL, TargetType);
-  else {
+  } else {
     Hi = DAG.getFreeze(Hi);
     HiShift = DAG.getNode(ISD::SRA, SL, TargetType, Hi, ShiftFullAmt);
   }
