@@ -953,6 +953,16 @@ disallows overlap.
 .It Cm shstk
 x86 only, use shadow stack.
 .Pp
+.It Cm gcs Ns = Ns Ar [implicit|never|always]
+Specify how the GCS bit is set. Set GCS bit indicates object file that supports Guarded Control Stack.
+Specify how the GCS bit is set. A set GCS bit indicates that the object file supports the Guarded Control Stack security feature.
+.Cm implicit
+is the default, where the GCS bit is inferred from the input objects.
+.Cm never
+disables the GCS bit regardless of input markings.
+.Cm always
+enables the GCS bit regardless of input markings.
+.Pp
 .It Cm stack-size Ns = Ns Ar size
 Set the main thread's stack size to
 .Ar size .
