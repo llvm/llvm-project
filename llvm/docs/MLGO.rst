@@ -454,9 +454,9 @@ The core components are:
     entities.
 
     .. note::
-
-    It is mandatory to have these three sections present in the vocabulary file 
-    for it to be valid; order in which they appear does not matter.
+      
+      It is mandatory to have these three sections present in the vocabulary file 
+      for it to be valid; order in which they appear does not matter.
 
   - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
     compute embeddings for instructions, basic blocks, and functions.
