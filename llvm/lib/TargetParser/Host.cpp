@@ -176,7 +176,8 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   SmallVector<StringRef, 32> Lines;
   ProcCpuinfoContent.split(Lines, '\n');
 
-  // Look for the CPU implementer line.
+  // Look for the CPU implementer and hardware lines, and store the CPU part
+  // numbers found.
   StringRef Implementer;
   StringRef Hardware;
   SmallVector<StringRef, 32> Parts;
@@ -196,7 +197,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   llvm::sort(Parts);
   Parts.erase(llvm::unique(Parts), Parts.end());
 
-  auto MatchBL = [](auto const &Parts, StringRef Big, StringRef Little) {
+  auto MatchBigLittle = [](auto const &Parts, StringRef Big, StringRef Little) {
     if (Parts.size() == 2)
       return (Parts[0] == Big && Parts[1] == Little) ||
              (Parts[1] == Big && Parts[0] == Little);
@@ -210,7 +211,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
       return "cortex-a53";
 
     // Detect big.LITTLE systems.
-    if (MatchBL(Parts, "0xd85", "0xd87"))
+    if (MatchBigLittle(Parts, "0xd85", "0xd87"))
       return "gb10";
 
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
