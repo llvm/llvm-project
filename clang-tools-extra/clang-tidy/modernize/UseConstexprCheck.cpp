@@ -898,6 +898,7 @@ void UseConstexprCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void UseConstexprCheck::onEndOfTranslationUnit() {
+  const std::string FunctionReplacement = ConstexprString + " ";
   for (const FunctionDecl *Func : Functions) {
     const SourceRange R =
         SourceRange(Func->getInnerLocStart(), Func->getLocation());
@@ -908,8 +909,9 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
     for (const Decl *D : Func->redecls())
       if (const auto *FDecl = llvm::dyn_cast<FunctionDecl>(D))
         Diag << FixItHint::CreateInsertion(FDecl->getInnerLocStart(),
-                                           ConstexprString + " ");
+                                           FunctionReplacement);
   }
+  const std::string VariableReplacement = ConstexprString + " ";
   for (const auto &[Var, FuncCtx] : VariableMapping) {
     if (FuncCtx && getLangOpts().CPlusPlus23 && Var->isStaticLocal() &&
         Functions.contains(FuncCtx))
@@ -920,11 +922,11 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
         diag(Var->getLocation(), "variable %0 can be declared 'constexpr'")
         << Var << R
         << FixItHint::CreateInsertion(Var->getInnerLocStart(),
-                                      ConstexprString + " ");
+                                      VariableReplacement);
     // Since either of the locs can be in a macro, use `makeFileCharRange` to be
     // sure that we have a consistent `CharSourceRange`, located entirely in the
     // source file.
-    CharSourceRange FileRange = Lexer::makeFileCharRange(
+    const CharSourceRange FileRange = Lexer::makeFileCharRange(
         CharSourceRange::getCharRange(Var->getInnerLocStart(),
                                       Var->getLocation()),
         Var->getASTContext().getSourceManager(), getLangOpts());
