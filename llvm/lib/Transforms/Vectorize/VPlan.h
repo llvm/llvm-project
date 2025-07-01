@@ -1780,10 +1780,6 @@ struct LLVM_ABI_FOR_TEST VPWidenSelectRecipe : public VPRecipeWithIRFlags,
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
   bool isIndexLoopInvariant(unsigned I) const {
     return getOperand(I + 1)->isDefinedOutsideLoopRegions();
   }
@@ -1815,6 +1811,29 @@ public:
 
   /// This recipe generates a GEP instruction.
   unsigned getOpcode() const { return Instruction::GetElementPtr; }
+
+  bool isPointerLoopInvariant() const {
+    return getOperand(0)->isDefinedOutsideLoopRegions();
+  }
+
+  std::optional<unsigned> getUniqueVariantIndex() const {
+    std::optional<unsigned> VarIdx;
+    for (unsigned I = 0, E = getNumOperands() - 1; I < E; ++I) {
+      if (isIndexLoopInvariant(I))
+        continue;
+
+      if (VarIdx)
+        return std::nullopt;
+      VarIdx = I;
+    }
+    return VarIdx;
+  }
+
+  Type *getIndexedType(unsigned I) const {
+    auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
+    SmallVector<Value *, 4> Ops(GEP->idx_begin(), GEP->idx_begin() + I);
+    return GetElementPtrInst::getIndexedType(SourceElementTy, Ops);
+  }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;
@@ -3395,7 +3414,7 @@ struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
 #endif
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+  bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
     return Op == getAddr() || Op == getStride() || Op == getVF();
