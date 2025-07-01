@@ -13,6 +13,7 @@
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
@@ -1049,9 +1050,10 @@ struct VectorToElementOpConvert final
       if (element.use_empty())
         continue;
 
+      auto spirvType = getTypeConverter()->convertType(element.getType());
       Value result = rewriter.create<spirv::CompositeExtractOp>(
-          loc, toElementsOp->getResult(idx).getType(), adaptor.getSource(),
-          rewriter.getI32ArrayAttr({static_cast<int>(idx)}));
+          loc, spirvType, adaptor.getSource(),
+          rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
       results[idx] = result;
     }
 
@@ -1076,7 +1078,7 @@ void mlir::populateVectorToSPIRVPatterns(
       VectorBitcastConvert, VectorBroadcastConvert,
       VectorExtractElementOpConvert, VectorExtractOpConvert,
       VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
-      VectorFmaOpConvert<spirv::CLFmaOp>, VectorFromElementsOpConvert,
+      VectorFmaOpConvert<spirv::CLFmaOp>, VectorFromElementsOpConvert, VectorToElementOpConvert,
       VectorInsertElementOpConvert, VectorInsertOpConvert,
       VectorReductionPattern<GL_INT_MAX_MIN_OPS>,
       VectorReductionPattern<CL_INT_MAX_MIN_OPS>,
