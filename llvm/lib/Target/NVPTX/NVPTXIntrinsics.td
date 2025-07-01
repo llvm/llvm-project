@@ -765,7 +765,7 @@ def PREFETCH_GENERIC_TENSORMAP : PREFETCH_INTRS<"prefetch.tensormap",
                                  "int_nvvm_prefetch_generic_tensormap">;
 def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal", 
                                       "int_nvvm_prefetch_global_L2_evict_normal">;
-def PREFETCH_GLOBAL_L2_EVICT_LAST   : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
+def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
                                       "int_nvvm_prefetch_global_L2_evict_last">;
 
 def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", "int_nvvm_prefetchu_L1">;
