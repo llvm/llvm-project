@@ -3260,6 +3260,13 @@ static void AddFunctionParameterChunks(Preprocessor &PP,
       break;
     }
 
+    // C++23 introduces an explicit object parameter, a.k.a. "deducing this"
+    // Skip it for autocomplete and treat the next parameter as the first
+    // parameter
+    if (FirstParameter && Param->isExplicitObjectParameter()) {
+      continue;
+    }
+
     if (FirstParameter)
       FirstParameter = false;
     else
