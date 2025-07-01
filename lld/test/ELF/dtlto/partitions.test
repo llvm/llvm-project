@@ -4,14 +4,17 @@
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-## Compile bitcode.
-RUN: llvm-as -o full.bc full.ll
-RUN: opt -thinlto-bc thin1.ll -o thin1.bc
-RUN: opt -thinlto-bc thin2.ll -o thin2.bc
+RUN: sed 's/@f/@t1/g' f.ll > t1.ll
+RUN: sed 's/@f/@t2/g' f.ll > t2.ll
+
+## Generate bitcode.
+RUN: opt f.ll -o full.bc
+RUN: opt -thinlto-bc t1.ll -o thin1.bc
+RUN: opt -thinlto-bc t2.ll -o thin2.bc
 
 ## Generate object files for mock.py to return.
-RUN: llc thin1.ll --filetype=obj -o thin1.o
-RUN: llc thin2.ll --filetype=obj -o thin2.o
+RUN: llc t1.ll --filetype=obj -o thin1.o
+RUN: llc t2.ll --filetype=obj -o thin2.o
 
 ## Link with 3 LTO partitions.
 RUN: ld.lld full.bc thin1.bc thin2.bc \
@@ -28,32 +31,10 @@ RUN: ls | sort | FileCheck %s
 CHECK: {{^}}thin1.3.[[PID:[a-zA-Z0-9_]+]].native.o{{$}}
 CHECK: {{^}}thin2.4.[[PID]].native.o{{$}}
 
-#--- full.ll
+#--- f.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo() {
-  call void @bar()
-  ret void
-}
-
-define void @bar() {
-  call void @foo()
-  ret void
-}
-
-#--- thin1.ll
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
-define void @baz() {
-  ret void
-}
-
-#--- thin2.ll
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
-
-define void @_start() {
+define void @f() {
   ret void
 }
