@@ -24,7 +24,7 @@ TEST(LlvmLibcIntegerSequencetTest, Basic) {
 }
 
 template <typename T, T... Ts>
-bool checkArray(integer_sequence<T, Ts...> /*seq*/) {
+bool checkArray([[maybe_unused]] integer_sequence<T, Ts...> seq) {
   T arr[sizeof...(Ts)]{Ts...};
 
   for (T i = 0; i < static_cast<T>(sizeof...(Ts)); i++)
