@@ -256,7 +256,7 @@ void LLDBServerPluginAMDGPU::AcceptAndMainLoopThread(
 
   LLDB_LOGF(log, "%s initializing connection", __PRETTY_FUNCTION__);
   std::unique_ptr<Connection> connection_up(
-      new ConnectionFileDescriptor(socket));
+      new ConnectionFileDescriptor(std::unique_ptr<Socket>(socket)));
   m_gdb_server->InitializeConnection(std::move(connection_up));
   LLDB_LOGF(log, "%s running main loop", __PRETTY_FUNCTION__);
   m_main_loop_status = m_main_loop.Run();
@@ -310,7 +310,7 @@ LLDBServerPluginAMDGPU::CreateConnection() {
                         "LLDBServerPluginAMDGPU::AcceptAndMainLoopThread() "
                         "initializing connection");
               std::unique_ptr<Connection> connection_up(
-                  new ConnectionFileDescriptor(socket.release()));
+                  new ConnectionFileDescriptor(std::move(socket)));
               this->m_gdb_server->InitializeConnection(
                   std::move(connection_up));
               m_is_connected = true;
