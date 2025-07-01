@@ -497,7 +497,7 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-/// Checks that \p L and \p R are used together in an XOR in the use-def chain
+/// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
 /// of \p SI's condition, ignoring any casts. The purpose of this function is to
 /// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
 /// computation. We cannot check the correctness of casts at this point, and
@@ -513,16 +513,16 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 ///   %xor = xor (CastOrSelf %L), (CastOrSelf %R)
 ///
 /// where %xor is in the use-def chain of \p SI's condition.
-static bool isConditionalOnXorOfPHIs(SelectInst *SI, const PHINode *P1,
+static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
                                      const PHINode *P2, const Loop &L) {
-  SmallVector<Instruction *> Worklist;
+  SmallVector<const Instruction *> Worklist;
 
   // matchConditionalRecurrence has already ensured that the SelectInst's
   // condition is an Instruction.
   Worklist.push_back(cast<Instruction>(SI->getCondition()));
 
   while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
+    const Instruction *I = Worklist.pop_back_val();
 
     // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))
@@ -534,7 +534,7 @@ static bool isConditionalOnXorOfPHIs(SelectInst *SI, const PHINode *P1,
       return true;
 
     // Continue along the use-def chain.
-    for (Use &U : I->operands())
+    for (const Use &U : I->operands())
       if (auto *UI = dyn_cast<Instruction>(U))
         if (L.contains(UI))
           Worklist.push_back(UI);
