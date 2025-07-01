@@ -126,8 +126,7 @@ static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
 }
 
 static void addToEnclosingContexts(DeclsWithinContextMap &DeclsWithinContext,
-                                   const Decl *Parent,
-                                   const NamedDecl *ND) {
+                                   const Decl *Parent, const NamedDecl *ND) {
   const Decl *Outer = Parent;
   while (Outer) {
     if (const auto *NS = dyn_cast<NamespaceDecl>(Outer))
@@ -159,8 +158,8 @@ void ConfusableIdentifierCheck::check(
   if (!ND)
     return;
 
-  addDeclToCheck(ND, cast<Decl>(ND->getDeclContext()
-                                    ->getNonTransparentContext()));
+  addDeclToCheck(ND,
+                 cast<Decl>(ND->getDeclContext()->getNonTransparentContext()));
 
   // Associate template parameters with this declaration of this template.
   if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
@@ -257,10 +256,9 @@ void ConfusableIdentifierCheck::registerMatchers(
       ast_matchers::parmVarDecl(), ast_matchers::templateTypeParmDecl(),
       ast_matchers::nonTypeTemplateParmDecl(),
       ast_matchers::templateTemplateParmDecl());
-  Finder->addMatcher(
-      ast_matchers::namedDecl(ast_matchers::unless(AnyParamDecl))
-          .bind("nameddecl"),
-      this);
+  Finder->addMatcher(ast_matchers::namedDecl(ast_matchers::unless(AnyParamDecl))
+                         .bind("nameddecl"),
+                     this);
 }
 
 } // namespace clang::tidy::misc
