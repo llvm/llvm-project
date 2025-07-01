@@ -45,7 +45,7 @@ probably the most vital and active communication channel to our highly
 distributed open source project. It enables long-form asyncronous text
 communication, and this is where people tend to propose major changes or
 propose new designs in the form of RFCs (Request For Comment), which are
-described later. Please be aware that the discourse forums are public and
+described later. Please be aware that the Discourse forums are public and
 archived, and that notices of confidentiality or non-disclosure cannot be
 respected.
 
@@ -91,7 +91,7 @@ Here are some tips to enable a successful code review:
 * Identify 2-3 individuals to review the patch. Look through the relevant
   :ref:`Maintainers` file or browse git blame for likely stakeholders for the
   code you want to modify, and add ``@username`` to a PR comment to notify them
-  of your PR.
+  of your PR if you are unable to add reviewers yourself due to GitHub permissions.
 
 * To avoid precommit CI failures due to merge conflicts, base your patches on a recent commit from ``main``. If you want to make changes to a release branch, land
   a change in ``main`` first and ask a release manager to backport it.
@@ -587,7 +587,7 @@ what is possible.
 
 These are some suggestions for how to get a major change accepted:
 
-* Make it targeted, and avoid touching components irrelevant to the task
+* Make it targeted, and avoid touching components irrelevant to the task.
 
 * Explain how the change improves LLVM for other stakeholders rather than
   focusing on your specific use case.
