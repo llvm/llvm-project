@@ -556,7 +556,7 @@ foreach mx = SchedMxListW in {
 }
 
 // Simple division and remainder operations
-// Pattern of vdiu: 11/11/11
+// Pattern of vdivu: 11/11/11
 // Pattern of vdiv: 12/12/12
 // Pattern of vremu: 12/12/12
 // Pattern of vrem: 13/13/13
@@ -572,7 +572,7 @@ foreach mx = ["MF8", "MF4", "MF2"] in {
 }
 
 // Complex division and remainder operations
-// Pattern of vdiu: 20/40/80/160
+// Pattern of vdivu: 20/40/80/160
 // Pattern of vdiv: 22/44/88/176
 // Pattern of vremu: 22/44/88/176
 // Pattern of vrem: 24/48/96/192
