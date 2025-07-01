@@ -489,7 +489,7 @@ bool ELFWriter::isInSymtab(const MCSymbolELF &Symbol) {
   if (Symbol.isTemporary())
     return false;
 
-  return Symbol.getType() != ELF::STT_SECTION;
+  return Symbol.getType() != ELF::STT_SECTION || Symbol.isSignature();
 }
 
 void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
