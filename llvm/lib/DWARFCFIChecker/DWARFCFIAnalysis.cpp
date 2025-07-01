@@ -83,8 +83,8 @@ getUnwindRuleRegSet(const dwarf::UnwindRow &UnwindRow, DWARFRegNum Reg) {
 DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
                                    bool IsEH,
                                    ArrayRef<MCCFIInstruction> Prologue)
-    : Context(Context), MCII(MCII), MCRI(Context->getRegisterInfo()),
-      State(Context), IsEH(IsEH) {
+    : State(Context), Context(Context), MCII(MCII),
+      MCRI(Context->getRegisterInfo()), IsEH(IsEH) {
 
   for (auto LLVMReg : getTrackingRegs(MCRI)) {
     if (MCRI->get(LLVMReg).IsArtificial || MCRI->get(LLVMReg).IsConstant)

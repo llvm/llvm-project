@@ -30,10 +30,6 @@ namespace llvm {
 /// instructions and CFI directives that are between `.cfi_startproc` and
 /// `.cfi_endproc` directives.
 class CFIFunctionFrameStreamer : public MCStreamer {
-private:
-  std::pair<unsigned, unsigned> updateDirectivesRange();
-  void updateReceiver();
-
 public:
   CFIFunctionFrameStreamer(MCContext &Context,
                            std::unique_ptr<CFIFunctionFrameReceiver> Receiver)
@@ -63,6 +59,10 @@ public:
   void emitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) override;
+
+private:
+  std::pair<unsigned, unsigned> updateDirectivesRange();
+  void updateReceiver();
 
 private:
   std::vector<unsigned> FrameIndices;

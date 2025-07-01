@@ -85,10 +85,10 @@ private:
                     const SmallSet<DWARFRegNum, 4> &Writes);
 
 private:
+  DWARFCFIState State;
   MCContext *Context;
   MCInstrInfo const &MCII;
   MCRegisterInfo const *MCRI;
-  DWARFCFIState State;
   bool IsEH;
 };
 

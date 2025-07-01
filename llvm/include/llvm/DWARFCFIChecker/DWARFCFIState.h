@@ -38,11 +38,12 @@ public:
   void update(const MCCFIInstruction &Directive);
 
 private:
+  dwarf::CFIProgram convert(MCCFIInstruction Directive);
+
+private:
   dwarf::UnwindRow Row;
   MCContext *Context;
   bool IsInitiated;
-
-  dwarf::CFIProgram convert(MCCFIInstruction Directive);
 };
 
 } // namespace llvm

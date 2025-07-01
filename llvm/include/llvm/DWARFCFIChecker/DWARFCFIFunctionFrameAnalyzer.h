@@ -27,10 +27,6 @@ namespace llvm {
 /// finishes without being started or if all the frames are not finished before
 /// this classes is destructured, the program fails through an assertion.
 class CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
-private:
-  std::vector<DWARFCFIAnalysis> UIAs;
-  MCInstrInfo const &MCII;
-
 public:
   CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
       : CFIFunctionFrameReceiver(Context), MCII(MCII) {}
@@ -42,6 +38,10 @@ public:
   emitInstructionAndDirectives(const MCInst &Inst,
                                ArrayRef<MCCFIInstruction> Directives) override;
   void finishFunctionFrame() override;
+
+private:
+  MCInstrInfo const &MCII;
+  std::vector<DWARFCFIAnalysis> UIAs;
 };
 
 } // namespace llvm

@@ -27,9 +27,6 @@ class MCInst;
 /// function frames information gathered from an `MCStreamer` using a pointer to
 /// an instance of this class for the whole program.
 class CFIFunctionFrameReceiver {
-private:
-  MCContext &Context;
-
 public:
   CFIFunctionFrameReceiver(const CFIFunctionFrameReceiver &) = delete;
   CFIFunctionFrameReceiver &
@@ -47,6 +44,9 @@ public:
   emitInstructionAndDirectives(const MCInst &Inst,
                                ArrayRef<MCCFIInstruction> Directives) {}
   virtual void finishFunctionFrame() {}
+
+private:
+  MCContext &Context;
 };
 
 } // namespace llvm
