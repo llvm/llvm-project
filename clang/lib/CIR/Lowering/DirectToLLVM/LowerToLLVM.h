@@ -29,6 +29,11 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
+void convertSideEffectForCall(mlir::Operation *callOp,
+                              cir::SideEffect sideEffect,
+                              mlir::LLVM::MemoryEffectsAttr &memoryEffect,
+                              bool &noUnwind, bool &willReturn);
+
 class CIRToLLVMAssumeOpLowering
     : public mlir::OpConversionPattern<cir::AssumeOp> {
 public:
@@ -62,6 +67,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::CastOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMExpectOpLowering
+    : public mlir::OpConversionPattern<cir::ExpectOp> {
+public:
+  using mlir::OpConversionPattern<cir::ExpectOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ExpectOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -425,6 +440,36 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::ComplexCreateOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexRealOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexRealOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexRealOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexRealOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexImagOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexImagOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexImagOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexImagOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMComplexEqualOpLowering
+    : public mlir::OpConversionPattern<cir::ComplexEqualOp> {
+public:
+  using mlir::OpConversionPattern<cir::ComplexEqualOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::ComplexEqualOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

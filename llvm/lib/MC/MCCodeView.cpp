@@ -442,10 +442,13 @@ MCFragment *CodeViewContext::emitDefRange(
     MCObjectStreamer &OS,
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {
+  // Store `Ranges` and `FixedSizePortion` in the context, returning references,
+  // as MCCVDefRangeFragment does not own these objects.
+  FixedSizePortion = MCCtx->allocateString(FixedSizePortion);
+  auto &Saved = DefRangeStorage.emplace_back(Ranges.begin(), Ranges.end());
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  auto *F =
-      MCCtx->allocFragment<MCCVDefRangeFragment>(Ranges, FixedSizePortion);
+  auto *F = MCCtx->allocFragment<MCCVDefRangeFragment>(Saved, FixedSizePortion);
   OS.insert(F);
   return F;
 }
@@ -453,9 +456,8 @@ MCFragment *CodeViewContext::emitDefRange(
 static unsigned computeLabelDiff(const MCAssembler &Asm, const MCSymbol *Begin,
                                  const MCSymbol *End) {
   MCContext &Ctx = Asm.getContext();
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Variant, Ctx),
-               *EndRef = MCSymbolRefExpr::create(End, Variant, Ctx);
+  const MCExpr *BeginRef = MCSymbolRefExpr::create(Begin, Ctx),
+               *EndRef = MCSymbolRefExpr::create(End, Ctx);
   const MCExpr *AddrDelta =
       MCBinaryExpr::create(MCBinaryExpr::Sub, EndRef, BeginRef, Ctx);
   int64_t Result;

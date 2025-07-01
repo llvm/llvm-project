@@ -294,10 +294,12 @@ def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
            "Either the comparison is useless or there is division by zero.">,
   Documentation<HasDocumentation>;
 
-def DynamicTypeChecker : Checker<"DynamicTypeChecker">,
-  HelpText<"Check for cases where the dynamic and the static type of an object "
-           "are unrelated.">,
-  Documentation<HasDocumentation>;
+def DynamicTypeChecker
+    : Checker<"DynamicTypeChecker">,
+      HelpText<"Check for cases where the dynamic and the static type of an "
+               "object are unrelated.">,
+      Dependencies<[DynamicTypePropagation]>,
+      Documentation<HasDocumentation>;
 
 def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
   HelpText<"Check that addresses to stack memory do not escape the function">,

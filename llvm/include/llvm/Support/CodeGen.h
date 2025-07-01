@@ -50,6 +50,18 @@ namespace llvm {
     };
   }
 
+  enum class ExceptionHandling {
+    None,     ///< No exception support
+    DwarfCFI, ///< DWARF-like instruction based exceptions
+    SjLj,     ///< setjmp/longjmp based exceptions
+    ARM,      ///< ARM EHABI
+    WinEH,    ///< Windows Exception Handling
+    Wasm,     ///< WebAssembly Exception Handling
+    AIX,      ///< AIX Exception Handling
+    ZOS, ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the
+         ///< PPA1 is used instead of an .eh_frame section.
+  };
+
   namespace FloatABI {
   enum ABIType {
     Default, // Target-specific (either soft or hard depending on triple, etc).
