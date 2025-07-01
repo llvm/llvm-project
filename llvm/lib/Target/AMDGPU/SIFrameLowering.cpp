@@ -1006,10 +1006,10 @@ void SIFrameLowering::emitCSRSpillStores(
         }
       };
 
-  for (const auto &Reg : WWMScratchRegs) {
-    if (!MRI.isReserved(Reg.first)) {
-      MRI.addLiveIn(Reg.first);
-      MBB.addLiveIn(Reg.first);
+  for (const auto &Reg : make_first_range(WWMScratchRegs)) {
+    if (!MRI.isReserved(Reg)) {
+      MRI.addLiveIn(Reg);
+      MBB.addLiveIn(Reg);
     }
   }
   StoreWWMRegisters(WWMScratchRegs);
