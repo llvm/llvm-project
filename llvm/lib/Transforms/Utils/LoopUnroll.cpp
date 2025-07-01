@@ -58,6 +58,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
@@ -484,8 +485,27 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   assert(ULO.Count > 0);
 
-  // All these values should be taken only after peeling because they might have
-  // changed.
+  if (ULO.Runtime && SE) {
+    BasicBlock *OrigHeader = L->getHeader();
+    BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
+    // Rotate loop if it makes it countable (for later unrolling)
+    if (BI && !BI->isUnconditional() &&
+        isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
+        !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
+      LLVM_DEBUG(dbgs() << "  Rotating loop to make the loop countable.\n");
+      SimplifyQuery SQ{OrigHeader->getDataLayout()};
+      SQ.TLI = nullptr;
+      SQ.DT = DT;
+      SQ.AC = AC;
+      llvm::LoopRotation(L, LI, TTI, AC, DT, SE, nullptr /*MemorySSAUpdater*/,
+                         SQ, false /*RotationOnly*/, 16 /*Threshold*/,
+                         false /*IsUtilMode*/, false /*PrepareForLTO*/,
+                         [](Loop *, ScalarEvolution *) { return true; });
+    }
+  }
+
+  // All these values should be taken only after peeling or loop rotation
+  // because they might have changed.
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   BasicBlock *LatchBlock = L->getLoopLatch();
