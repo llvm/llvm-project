@@ -8,6 +8,7 @@
 
 #include "BenchmarkRunner.h"
 #include "Assembler.h"
+#include "DisassemblerHelper.h"
 #include "Error.h"
 #include "MCInstrDescView.h"
 #include "MmapUtils.h"
@@ -18,19 +19,21 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include <cmath>
 #include <memory>
 #include <string>
-#define DEBUG_TYPE "exegesis-benchmark-runner"
 
 #ifdef __linux__
 #ifdef HAVE_LIBPFM
@@ -657,8 +660,97 @@ BenchmarkRunner::getRunnableConfiguration(
     if (Error E = Snippet.takeError())
       return std::move(E);
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
-  }
 
+    // Print the assembled snippet by disassembling the binary data
+    // Extract the actual function bytes from the object file
+    std::vector<uint8_t> FunctionBytes;
+    if (auto Err = getBenchmarkFunctionBytes(*Snippet, FunctionBytes)) {
+      dbgs() << "Failed to extract function bytes: " << toString(std::move(Err))
+             << "\n";
+    } else {
+      DisassemblerHelper DisHelper(State);
+      ArrayRef<uint8_t> Bytes(FunctionBytes);
+
+      // Decode all instructions first
+      struct InstructionInfo {
+        std::string Text;
+        uint64_t Address;
+        std::string HexBytes;
+      };
+      std::vector<InstructionInfo> Instructions;
+      uint64_t Address = 0;
+
+      while (!Bytes.empty()) {
+        MCInst Inst;
+        uint64_t Size;
+        if (DisHelper.decodeInst(Inst, Size, Bytes)) {
+          // Format instruction text
+          std::string InstStr;
+          raw_string_ostream OS(InstStr);
+          DisHelper.printInst(&Inst, OS);
+
+          // Create hex string for this instruction (big-endian order)
+          std::string HexStr;
+          raw_string_ostream HexOS(HexStr);
+          for (int i = Size - 1; i >= 0; --i) {
+            HexOS << format_hex_no_prefix(Bytes[i], 2);
+          }
+
+          Instructions.push_back({OS.str(), Address, HexOS.str()});
+          Bytes = Bytes.slice(Size);
+          Address += Size;
+        } else {
+          Instructions.push_back({"<decode error>", Address, ""});
+          break;
+        }
+      }
+
+      auto printSnippet = [&](bool Preview, size_t PreviewFirst = 10,
+                              size_t PreviewLast = 3) {
+        dbgs() << "```\n";
+        size_t N = Instructions.size();
+        // Print first "PreviewFirst" lines or all if less
+        for (size_t i = 0; i < std::min(size_t(PreviewFirst), N); ++i) {
+          dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
+                 << Instructions[i].HexBytes << Instructions[i].Text << '\n';
+        }
+        if (N > (PreviewFirst + PreviewLast)) {
+          if (Preview) {
+            dbgs() << "...\t(" << (N - PreviewFirst - PreviewLast)
+                   << " more instructions)\n";
+          } else {
+            // Print all middle lines
+            for (size_t i = PreviewFirst; i < N - PreviewLast; ++i) {
+              dbgs() << format_hex_no_prefix(Instructions[i].Address, 0)
+                     << ":\t" << Instructions[i].HexBytes
+                     << Instructions[i].Text << '\n';
+            }
+          }
+          // Print last "PreviewLast" lines
+          for (size_t i = N - PreviewLast; i < N; ++i) {
+            dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
+                   << Instructions[i].HexBytes << Instructions[i].Text << '\n';
+          }
+        }
+        dbgs() << "```\n";
+      };
+
+      // Preview generated assembly snippet
+      {
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "preview-gen-assembly"
+        LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
+        LLVM_DEBUG(printSnippet(true));
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "print-gen-assembly"
+      }
+      // Print generated assembly snippet
+      {
+        LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
+        LLVM_DEBUG(printSnippet(false));
+      }
+    }
+  }
   return std::move(RC);
 }
 
@@ -711,38 +803,6 @@ std::pair<Error, Benchmark> BenchmarkRunner::runConfiguration(
     }
     outs() << "Check generated assembly with: /usr/bin/objdump -d "
            << *ObjectFilePath << "\n";
-
-#ifdef __linux__
-    int StdOutFD, StdErrFD;
-    SmallString<128> StdOutFile, StdErrFile;
-    sys::fs::createTemporaryFile("temp-objdump-out", "txt", StdOutFD,
-                                 StdOutFile);
-    sys::fs::createTemporaryFile("temp-objdump-err", "txt", StdErrFD,
-                                 StdErrFile);
-    std::vector<std::optional<StringRef>> Redirects = {
-        std::nullopt,          // stdin
-        StringRef(StdOutFile), // stdout
-        StringRef(StdErrFile)  // stderr
-    };
-
-    std::string ErrMsg;
-    int Result = sys::ExecuteAndWait(
-        "/usr/bin/objdump", {"/usr/bin/objdump", "-d", *ObjectFilePath},
-        std::nullopt, Redirects, 0, 0, &ErrMsg);
-    auto StdOutBuf = MemoryBuffer::getFile(StdOutFile);
-    if (StdOutBuf && !(*StdOutBuf)->getBuffer().empty())
-      LLVM_DEBUG(dbgs() << "[llvm-exegesis][objdump] Generated assembly:\n"
-                        << (*StdOutBuf)->getBuffer() << '\n');
-    auto StdErrBuf = MemoryBuffer::getFile(StdErrFile);
-    if (StdErrBuf && !(*StdErrBuf)->getBuffer().empty())
-      LLVM_DEBUG(dbgs() << "[llvm-exegesis][objdump] stderr:\n"
-                        << (*StdErrBuf)->getBuffer() << '\n');
-    if (!ErrMsg.empty())
-      LLVM_DEBUG(dbgs() << "[llvm-exegesis][objdump] process error: " << ErrMsg
-                        << '\n');
-    sys::fs::remove(StdOutFile);
-    sys::fs::remove(StdErrFile);
-#endif
   }
 
   if (BenchmarkPhaseSelector < BenchmarkPhaseSelectorE::Measure) {
