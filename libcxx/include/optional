@@ -137,7 +137,7 @@ namespace std {
     // [optional.swap], swap
     void swap(optional &) noexcept(see below ); // constexpr in C++20
 
-        // [optional.iterators], iterator support
+    // [optional.iterators], iterator support
     constexpr iterator begin() noexcept; // since C++26
     constexpr const_iterator begin() const noexcept; // since C++26
     constexpr iterator end() noexcept; // since C++26
@@ -200,6 +200,7 @@ namespace std {
 #  include <__concepts/invocable.h>
 #  include <__config>
 #  include <__exception/exception.h>
+#  include <__format/format_context.h>
 #  include <__format/range_default_formatter.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
