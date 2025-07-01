@@ -4287,6 +4287,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  // Instrument AVX permutation intrinsic.
+  // We apply the same permutation (argument index 1) to the shadows.
+  void handleAVXVpermil2var(IntrinsicInst &I) {
+    assert(I.arg_size() == 3);
+    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
+    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
+    [[maybe_unused]] auto ArgVectorSize =
+        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
+    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
+              ->getNumElements() == ArgVectorSize);
+    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
+              ->getNumElements() == ArgVectorSize);
+    assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
+    assert(I.getType() == I.getArgOperand(0)->getType());
+    assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
+    IRBuilder<> IRB(&I);
+    Value *AShadow = getShadow(&I, 0);
+    Value *Idx = I.getArgOperand(1);
+    Value *BShadow = getShadow(&I, 2);
+    insertShadowCheck(Idx, &I);
+    // Shadows are integer-ish types but some intrinsics require a
+    // different (e.g., floating-point) type.
+    AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
+    BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
+    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                      {AShadow, Idx, BShadow});
+    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
+    setOriginForNaryOp(I);
+  }
+
   // Instrument BMI / BMI2 intrinsics.
   // All of these intrinsics are Z = I(X, Y)
   // where the types of all operands and the result match, and are either i32 or
@@ -5241,6 +5272,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleAVXVpermilvar(I);
       break;
     }
+
+    case Intrinsic::x86_avx512_vpermi2var_d_128:
+    case Intrinsic::x86_avx512_vpermi2var_d_256:
+    case Intrinsic::x86_avx512_vpermi2var_d_512:
+    case Intrinsic::x86_avx512_vpermi2var_hi_128:
+    case Intrinsic::x86_avx512_vpermi2var_hi_256:
+    case Intrinsic::x86_avx512_vpermi2var_hi_512:
+    case Intrinsic::x86_avx512_vpermi2var_pd_128:
+    case Intrinsic::x86_avx512_vpermi2var_pd_256:
+    case Intrinsic::x86_avx512_vpermi2var_pd_512:
+    case Intrinsic::x86_avx512_vpermi2var_ps_128:
+    case Intrinsic::x86_avx512_vpermi2var_ps_256:
+    case Intrinsic::x86_avx512_vpermi2var_ps_512:
+    case Intrinsic::x86_avx512_vpermi2var_q_128:
+    case Intrinsic::x86_avx512_vpermi2var_q_256:
+    case Intrinsic::x86_avx512_vpermi2var_q_512:
+    case Intrinsic::x86_avx512_vpermi2var_qi_128:
+    case Intrinsic::x86_avx512_vpermi2var_qi_256:
+    case Intrinsic::x86_avx512_vpermi2var_qi_512:
+      handleAVXVpermil2var(I);
+      break;
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
