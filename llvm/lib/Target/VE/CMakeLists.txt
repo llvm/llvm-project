@@ -4,7 +4,8 @@ set(LLVM_TARGET_DEFINITIONS VE.td)
 
 tablegen(LLVM VEGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM VEGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM VEGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM VEGenDisassemblerTables.inc -gen-disassembler
+               -non-templated-decode-to-mcinst-type-spec=uint64_t:=64)
 tablegen(LLVM VEGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM VEGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM VEGenAsmMatcher.inc -gen-asm-matcher)

@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -91,6 +92,22 @@ static cl::opt<bool> UseFnTableInDecodeToMCInst(
         "generated `decodeToMCInst` function. Helps improve compile time\n"
         "of the generated code."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
+
+// Option to generate a non-templated version of `decodeToMCInst`. The
+// templated `decodeToMCInst` is templated on `InsnType` and a given `InsnType`
+// can target instructions with one or more Bitwidths. So the option to
+// generate a non-templated `decodeToMCInst` is a typespec of the form
+// type::=list-of-sizes.
+
+// For example, for the AMDGPU target, the type `DecoderUInt128` is used for
+// both 96 and 128 bit instructions. So the generated non-templated
+// `decodeToMCInst` will support decoding both these instruction Bitwidths and
+// the option will be DecoderUInt128::=96,128
+static cl::list<std::string> DecodeToMCInstTypeSpecs(
+    "non-templated-decode-to-mcinst-type-spec",
+    cl::desc("list of C++ types and associated bitwidths to used to generate "
+             "non-templated `decodeToMCInst`."),
+    cl::cat(DisassemblerEmitterCat));
 
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
@@ -234,7 +251,7 @@ public:
   void emitPredicateFunction(formatted_raw_ostream &OS,
                              PredicateSet &Predicates, indent Indent) const;
   void emitDecoderFunction(formatted_raw_ostream &OS, DecoderSet &Decoders,
-                           indent Indent) const;
+                           StringRef SpecializedInsnType, indent Indent) const;
 
   // run - Output the code emitter
   void run(raw_ostream &o);
@@ -1068,24 +1085,35 @@ void DecoderEmitter::emitPredicateFunction(formatted_raw_ostream &OS,
 
 void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
                                          DecoderSet &Decoders,
+                                         StringRef SpecializedInsnType,
                                          indent Indent) const {
+  auto emitTemplate = [&OS, SpecializedInsnType, &Indent] {
+    if (SpecializedInsnType.empty())
+      OS << Indent << "template <typename InsnType>\n";
+  };
+
+  StringRef InsnType =
+      SpecializedInsnType.empty() ? "InsnType" : SpecializedInsnType;
+
   // The decoder function is just a big switch statement or a table of function
   // pointers based on the input decoder index.
 
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
   // It would be better for emitBinaryParser to use a 64-bit tmp whenever
   // possible but fall back to an InsnType-sized tmp for truly large fields.
-  StringRef TmpTypeDecl =
-      "using TmpType = std::conditional_t<std::is_integral<InsnType>::value, "
-      "InsnType, uint64_t>;\n";
-  StringRef DecodeParams =
-      "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
-      "MCDisassembler *Decoder, bool &DecodeComplete";
+  auto TmpTypeDecl = formatv(
+      "using TmpType = std::conditional_t<std::is_integral<{0}>::value, {0}, "
+      "uint64_t>;\n",
+      InsnType);
+  auto DecodeParams =
+      formatv("DecodeStatus S, {} insn, MCInst &MI, uint64_t Address, const "
+              "MCDisassembler *Decoder, bool &DecodeComplete",
+              InsnType);
 
   if (UseFnTableInDecodeToMCInst) {
     // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
-      OS << Indent << "template <typename InsnType>\n";
+      emitTemplate();
       OS << Indent << "DecodeStatus decodeFn" << Index << "(" << DecodeParams
          << ") {\n";
       Indent += 2;
@@ -1099,7 +1127,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   }
 
   OS << Indent << "// Handling " << Decoders.size() << " cases.\n";
-  OS << Indent << "template <typename InsnType>\n";
+  emitTemplate();
   OS << Indent << "static DecodeStatus decodeToMCInst(unsigned Idx, "
      << DecodeParams << ") {\n";
   Indent += 2;
@@ -2538,6 +2566,70 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
   }
 }
 
+// Result of parsing a single `non-templated-decode-to-mcinst-type-spec` option.
+using BitwidthSet = SmallSet<unsigned, 4>;
+struct NonTemplatedTypeSpec {
+  StringRef Type;
+  BitwidthSet Bitwidths;
+};
+
+static SmallVector<NonTemplatedTypeSpec>
+parseNonTemplatedTypeSpec(BitwidthSet &InstrBitwidths) {
+  SmallVector<NonTemplatedTypeSpec> Parsed;
+  if (DecodeToMCInstTypeSpecs.empty()) {
+    // If no `non-templated-decode-to-mcinst-type-spec` option is specified,
+    // create a type-spec with empty values, which will trigger generation of
+    // a templated `decodeToMCInst`.
+    Parsed.emplace_back();
+    return Parsed;
+  }
+
+  Parsed.reserve(DecodeToMCInstTypeSpecs.size());
+  BitwidthSet OptionBitwidths;
+
+  for (StringRef TypeSpec : DecodeToMCInstTypeSpecs) {
+    BitwidthSet Bitwidths;
+    // Each `non-templated-decode-to-mcinst-type-spec` is of the form
+    // <type>:=<list of bitwidths>. Note, <type> can in general be a templated
+    // type, so using the token ":=" as a separator to allow many general C++
+    // types here.
+    auto [Type, ListOfBitWidths] = TypeSpec.split(":=");
+    if (Type.empty())
+      PrintFatalError("Invalid typespec: " + TypeSpec);
+
+    for (StringRef BwStr : split(ListOfBitWidths, ',')) {
+      unsigned Bitwidth;
+      if (BwStr.getAsInteger(10, Bitwidth))
+        PrintFatalError("Invalid bitwidth: " + BwStr + " in typespec " +
+                        TypeSpec);
+
+      if (!OptionBitwidths.insert(Bitwidth).second)
+        PrintFatalError("Bitwidth " + Twine(Bitwidth) + " already specified.");
+
+      if (!InstrBitwidths.contains(Bitwidth))
+        PrintFatalError(Twine("No instruction of Bitwidth ") + Twine(Bitwidth) +
+                        " supported.");
+
+      InstrBitwidths.erase(Bitwidth);
+      Bitwidths.insert(Bitwidth);
+    }
+
+    if (Bitwidths.empty())
+      PrintFatalError("No bitwidth specified in typespec " + TypeSpec);
+
+    Parsed.emplace_back(NonTemplatedTypeSpec{Type, Bitwidths});
+  }
+
+  if (!InstrBitwidths.empty()) {
+    PrintFatalError([&InstrBitwidths](raw_ostream &OS) {
+      OS << "Bitwidth(s) ";
+      llvm::interleaveComma(InstrBitwidths, OS);
+      OS << " missing in `non-templated-decode-to-mcinst-type-spec` options.";
+    });
+  }
+  return Parsed;
+}
+
 // Emits disassembler code for instruction decoding.
 void DecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
@@ -2649,35 +2741,59 @@ namespace {
     }
   }
 
+  // Collect all allowed Bitwidths for instructions.
+  BitwidthSet InstrBitwidths;
+  for (const auto &[NSAndByteSize, _] : OpcMap) {
+    const unsigned Bitwidth = 8 * NSAndByteSize.second;
+    InstrBitwidths.insert(Bitwidth);
+  }
+  SmallVector<NonTemplatedTypeSpec> NonTemplatedTypeSpecs =
+      parseNonTemplatedTypeSpec(InstrBitwidths);
+
   DecoderTableInfo TableInfo;
   unsigned OpcodeMask = 0;
-  for (const auto &[NSAndByteSize, EncodingIDs] : OpcMap) {
-    const std::string &DecoderNamespace = NSAndByteSize.first;
-    const unsigned BitWidth = 8 * NSAndByteSize.second;
-    // Emit the decoder for this namespace+width combination.
-    FilterChooser FC(NumberedEncodings, EncodingIDs, Operands,
-                     IsVarLenInst ? MaxInstLen : BitWidth, this);
+  for (const auto &[NTType, NTBitwidths] : NonTemplatedTypeSpecs) {
+    // Reset the Decoders for each non-templated type.
+    TableInfo.Decoders.clear();
 
-    // The decode table is cleared for each top level decoder function. The
-    // predicates and decoders themselves, however, are shared across all
-    // decoders to give more opportunities for uniqueing.
-    TableInfo.Table.clear();
-    TableInfo.FixupStack.clear();
-    TableInfo.FixupStack.emplace_back();
-    FC.emitTableEntries(TableInfo);
-    // Any NumToSkip fixups in the top level scope can resolve to the
-    // OPC_Fail at the end of the table.
-    assert(TableInfo.FixupStack.size() == 1 && "fixup stack phasing error!");
-    // Resolve any NumToSkip fixups in the current scope.
-    resolveTableFixups(TableInfo.Table, TableInfo.FixupStack.back(),
-                       TableInfo.Table.size());
-    TableInfo.FixupStack.clear();
+    for (const auto &[NSAndByteSize, EncodingIDs] : OpcMap) {
+      const std::string &DecoderNamespace = NSAndByteSize.first;
+      const unsigned InstrBitwidth =
+          IsVarLenInst ? MaxInstLen : 8 * NSAndByteSize.second;
 
-    TableInfo.Table.push_back(MCD::OPC_Fail);
+      // Only handle instruction of the non-templated bitwidth size when
+      // non-templated bitwidth option is enabled.
+      if (!NTBitwidths.empty() && !NTBitwidths.contains(InstrBitwidth))
+        continue;
 
-    // Print the table to the output stream.
-    OpcodeMask |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
-                            DecoderNamespace, EncodingIDs);
+      // Emit the decoder for this namespace+width combination.
+      FilterChooser FC(NumberedEncodings, EncodingIDs, Operands,
+                       IsVarLenInst ? MaxInstLen : InstrBitwidth, this);
+
+      // The decode table is cleared for each top level decoder function. The
+      // predicates and decoders themselves, however, are shared across all
+      // decoders to give more opportunities for uniqueing.
+      TableInfo.Table.clear();
+      TableInfo.FixupStack.clear();
+      TableInfo.FixupStack.emplace_back();
+      FC.emitTableEntries(TableInfo);
+      // Any NumToSkip fixups in the top level scope can resolve to the
+      // OPC_Fail at the end of the table.
+      assert(TableInfo.FixupStack.size() == 1 && "fixup stack phasing error!");
+      // Resolve any NumToSkip fixups in the current scope.
+      resolveTableFixups(TableInfo.Table, TableInfo.FixupStack.back(),
+                         TableInfo.Table.size());
+      TableInfo.FixupStack.clear();
+
+      TableInfo.Table.push_back(MCD::OPC_Fail);
+
+      // Print the table to the output stream.
+      OpcodeMask |= emitTable(OS, TableInfo.Table, indent(0), FC.getBitWidth(),
+                              DecoderNamespace, EncodingIDs);
+    }
+
+    // Emit the decoder function for this BitWidth.
+    emitDecoderFunction(OS, TableInfo.Decoders, NTType, indent(0));
   }
 
   // For variable instruction, we emit a instruction length table
@@ -2693,9 +2809,6 @@ namespace {
   // Emit the predicate function.
   if (HasCheckPredicate)
     emitPredicateFunction(OS, TableInfo.Predicates, indent(0));
-
-  // Emit the decoder function.
-  emitDecoderFunction(OS, TableInfo.Decoders, indent(0));
 
   // Emit the main entry point for the decoder, decodeInstruction().
   emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask);
