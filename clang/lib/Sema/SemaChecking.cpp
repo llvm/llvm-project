@@ -1012,7 +1012,10 @@ public:
       break;
     }
 
-    Size += FS.hasPlusPrefix() || FS.hasSpacePrefix();
+    // If field width is specified, the sign/space is already accounted for
+    // within the field width, so no additional size is needed.
+    if ((FS.hasPlusPrefix() || FS.hasSpacePrefix()) && FieldWidth == 0)
+      Size += 1;
 
     if (FS.hasAlternativeForm()) {
       switch (FS.getConversionSpecifier().getKind()) {

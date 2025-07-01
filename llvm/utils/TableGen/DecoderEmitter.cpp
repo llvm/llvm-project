@@ -83,7 +83,7 @@ static cl::opt<bool> LargeTable(
              "in the table instead of the default 16 bits."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
-static cl::opt<bool> UseFnTableInDecodetoMCInst(
+static cl::opt<bool> UseFnTableInDecodeToMCInst(
     "use-fn-table-in-decode-to-mcinst",
     cl::desc(
         "Use a table of function pointers instead of a switch case in the\n"
@@ -1087,7 +1087,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
       "DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const "
       "MCDisassembler *Decoder, bool &DecodeComplete";
 
-  if (UseFnTableInDecodetoMCInst) {
+  if (UseFnTableInDecodeToMCInst) {
     // Emit a function for each case first.
     for (const auto &[Index, Decoder] : enumerate(Decoders)) {
       OS << Indent << "template <typename InsnType>\n";
@@ -1110,7 +1110,7 @@ void DecoderEmitter::emitDecoderFunction(formatted_raw_ostream &OS,
   Indent += 2;
   OS << Indent << "DecodeComplete = true;\n";
 
-  if (UseFnTableInDecodetoMCInst) {
+  if (UseFnTableInDecodeToMCInst) {
     // Build a table of function pointers.
     OS << Indent << "using DecodeFnTy = DecodeStatus (*)(" << DecodeParams
        << ");\n";
@@ -1311,7 +1311,7 @@ std::pair<unsigned, bool> FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   // FIXME: emitDecoder() function can take a buffer directly rather than
   // a stream.
   raw_svector_ostream S(Decoder);
-  indent Indent(UseFnTableInDecodetoMCInst ? 2 : 4);
+  indent Indent(UseFnTableInDecodeToMCInst ? 2 : 4);
   bool HasCompleteDecoder = emitDecoder(S, Indent, Opc);
 
   // Using the full decoder string as the key value here is a bit

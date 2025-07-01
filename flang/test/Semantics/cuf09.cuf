@@ -15,7 +15,7 @@ module m
     print*,'from device'
     print '(f10.5)', (x(ivar), ivar = 1, 10)
     write(*,*), "Hello world from device!"
-    !WARNING: I/O statement might not be supported on device
+    !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     write(12,'(10F4.1)'), x
   end
   attributes(global) subroutine devsub3(n)

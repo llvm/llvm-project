@@ -20,4 +20,4 @@ wchar_t *wcpncpy(wchar_t *__restrict ws1, const wchar_t *__restrict ws2,
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_WCHAR_WCPNsCPY_H
+#endif // LLVM_LIBC_SRC_WCHAR_WCPNCPY_H

@@ -267,6 +267,8 @@ public:
 
   size_t GetTerminalHeight() { return m_terminal_height; }
 
+  void Refresh();
+
 private:
   /// Sets the lowest line number for multi-line editing sessions.  A value of
   /// zero suppresses line number printing in the prompt.

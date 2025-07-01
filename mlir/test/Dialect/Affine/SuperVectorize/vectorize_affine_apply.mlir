@@ -11,7 +11,7 @@ func.func @vec_affine_apply(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24x48xf3
 // CHECK-NEXT:      affine.for %[[ARG4:.*]] = 0 to 48 step 8 {
 // CHECK-NEXT:        %[[S0:.*]] = affine.apply #[[$MAP_ID0]](%[[ARG3]])
 // CHECK-NEXT:        %[[S1:.*]] = affine.apply #[[$MAP_ID1]](%[[ARG4]])
-// CHECK-NEXT:        %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT:        %[[CST:.*]] = ub.poison : f32
 // CHECK-NEXT:        %[[S2:.*]] = vector.transfer_read %[[ARG0]][%[[ARG2]], %[[S0]], %[[S1]]], %[[CST]] : memref<8x12x16xf32>, vector<8xf32>
 // CHECK-NEXT:        vector.transfer_write %[[S2]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] : vector<8xf32>, memref<8x24x48xf32>
 // CHECK-NEXT:      }
@@ -42,7 +42,7 @@ func.func @vec_affine_apply_2(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24x48x
 // CHECK-NEXT:   affine.for %[[ARG3:.*]] = 0 to 12 {
 // CHECK-NEXT:     affine.for %[[ARG4:.*]] = 0 to 48 step 8 {
 // CHECK-NEXT:       %[[S0:.*]] = affine.apply #[[$MAP_ID2]](%[[ARG4]])
-// CHECK-NEXT:       %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT:       %[[CST:.*]] = ub.poison : f32
 // CHECK-NEXT:       %[[S1:.*]] = vector.transfer_read %[[ARG0]][%[[ARG2]], %[[ARG3]], %[[S0]]], %[[CST]] : memref<8x12x16xf32>, vector<8xf32>
 // CHECK-NEXT:       vector.transfer_write %[[S1]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] : vector<8xf32>, memref<8x24x48xf32>
 // CHECK-NEXT:     }
@@ -140,7 +140,7 @@ func.func @affine_map_with_expr_2(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24
 // CHECK-NEXT:       %[[S0:.*]] = affine.apply #[[$MAP_ID3]](%[[ARG3]], %[[ARG4]], %[[I0]])
 // CHECK-NEXT:       %[[S1:.*]] = affine.apply #[[$MAP_ID4]](%[[ARG3]], %[[ARG4]], %[[I0]])
 // CHECK-NEXT:       %[[S2:.*]] = affine.apply #[[$MAP_ID5]](%[[ARG3]], %[[ARG4]], %[[I0]])
-// CHECK-NEXT:       %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT:       %[[CST:.*]] = ub.poison : f32
 // CHECK-NEXT:       %[[S3:.*]] = vector.transfer_read %[[ARG0]][%[[S0]], %[[S1]], %[[S2]]], %[[CST]] {permutation_map = #[[$MAP_ID6]]} : memref<8x12x16xf32>, vector<8xf32>
 // CHECK-NEXT:       vector.transfer_write %[[S3]], %[[ARG1]][%[[ARG3]], %[[ARG4]], %[[ARG5]]] : vector<8xf32>, memref<8x24x48xf32>
 // CHECK-NEXT:     }

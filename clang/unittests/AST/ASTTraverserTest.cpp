@@ -28,6 +28,10 @@ public:
       : TextTreeStructure(OS, /* showColors */ false), OS(OS) {}
 
   void Visit(const Decl *D) {
+    if (!D) {
+      OS << "<<<NULL>>>";
+      return;
+    }
     OS << D->getDeclKindName() << "Decl";
     if (auto *ND = dyn_cast<NamedDecl>(D)) {
       OS << " '" << ND->getDeclName() << "'";
@@ -1930,6 +1934,77 @@ CXXRewrittenBinaryOperator
 `-DeclRefExpr 'hs2'
 )cpp");
   }
+}
+
+TEST(Traverse, CatchStatements) {
+
+  auto AST = buildASTFromCode(R"cpp(
+void test()
+{
+  try
+  {
+    int a;
+  }
+  catch (...)
+  {
+    int b;
+  }
+
+  try
+  {
+    int a;
+  }
+  catch (const int&)
+  {
+    int b;
+  }
+}
+)cpp");
+
+  auto BN =
+      ast_matchers::match(cxxCatchStmt().bind("catch"), AST->getASTContext());
+  EXPECT_EQ(BN.size(), 2u);
+  const auto *catchWithoutDecl = BN[0].getNodeAs<Stmt>("catch");
+
+  llvm::StringRef Expected = R"cpp(
+CXXCatchStmt
+|-<<<NULL>>>
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_AsIs, catchWithoutDecl), Expected);
+
+  Expected = R"cpp(
+CXXCatchStmt
+|-<<<NULL>>>
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, catchWithoutDecl),
+            Expected);
+
+  const auto *catchWithDecl = BN[1].getNodeAs<Stmt>("catch");
+
+  Expected = R"cpp(
+CXXCatchStmt
+|-VarDecl ''
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_AsIs, catchWithDecl), Expected);
+
+  Expected = R"cpp(
+CXXCatchStmt
+|-VarDecl ''
+`-CompoundStmt
+  `-DeclStmt
+    `-VarDecl 'b'
+)cpp";
+  EXPECT_EQ(dumpASTString(TK_IgnoreUnlessSpelledInSource, catchWithDecl),
+            Expected);
 }
 
 } // namespace clang

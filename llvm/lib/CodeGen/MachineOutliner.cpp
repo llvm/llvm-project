@@ -67,6 +67,7 @@
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IRBuilder.h"
@@ -77,6 +78,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SuffixTree.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <tuple>
 #include <vector>
@@ -104,6 +106,7 @@ STATISTIC(StableHashAttempts,
           "Count of hashing attempts made for outlined functions");
 STATISTIC(StableHashDropped,
           "Count of unsuccessful hashing attempts for outlined functions");
+STATISTIC(NumRemovedLOHs, "Total number of Linker Optimization Hints removed");
 
 // Set to true if the user wants the outliner to run on linkonceodr linkage
 // functions. This is false by default because the linker can dedupe linkonceodr
@@ -426,6 +429,7 @@ struct MachineOutliner : public ModulePass {
   static char ID;
 
   MachineModuleInfo *MMI = nullptr;
+  const TargetMachine *TM = nullptr;
 
   /// Set to true if the outliner should consider functions with
   /// linkonceodr linkage.
@@ -461,6 +465,7 @@ struct MachineOutliner : public ModulePass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineModuleInfoWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
     AU.addPreserved<MachineModuleInfoWrapperPass>();
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
     AU.setPreservesAll();
@@ -1075,6 +1080,17 @@ bool MachineOutliner::outline(
                       << " B) > threshold (" << OutlinerBenefitThreshold
                       << " B)\n");
 
+    // Remove all Linker Optimization Hints from the candidates.
+    // TODO: The intersection of the LOHs from all candidates should be legal in
+    // the outlined function.
+    SmallPtrSet<MachineInstr *, 2> MIs;
+    for (Candidate &C : OF->Candidates) {
+      for (MachineInstr &MI : C)
+        MIs.insert(&MI);
+      NumRemovedLOHs += TM->clearLinkerOptimizationHints(MIs);
+      MIs.clear();
+    }
+
     // It's beneficial. Create the function and outline its sequence's
     // occurrences.
     OF->MF = createOutlinedFunction(M, *OF, Mapper, OutlinedFunctionNum);
@@ -1386,6 +1402,7 @@ bool MachineOutliner::runOnModule(Module &M) {
   initializeOutlinerMode(M);
 
   MMI = &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+  TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
 
   // Number to append to the current outlined function.
   unsigned OutlinedFunctionNum = 0;

@@ -30,6 +30,11 @@ exports_files([
     "utils/textmate/mlir.json",
 ])
 
+filegroup(
+    name = "gdb-scripts",
+    srcs = glob(["utils/gdb-scripts/*"]),
+)
+
 bool_flag(
     name = "enable_cuda",
     build_setting_default = False,

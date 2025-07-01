@@ -292,7 +292,8 @@ public:
   std::optional<ProvenanceRange> GetProvenanceRange(
       const AllCookedSources &) const;
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLine = true) const;
+      bool echoSourceLine = true,
+      const common::LanguageFeatureControl *hintFlags = nullptr) const;
 
   // If this Message or any of its attachments locates itself via a CharBlock,
   // replace its location with the corresponding ProvenanceRange.
@@ -352,7 +353,8 @@ public:
   void Copy(const Messages &);
   void ResolveProvenances(const AllCookedSources &);
   void Emit(llvm::raw_ostream &, const AllCookedSources &,
-      bool echoSourceLines = true) const;
+      bool echoSourceLines = true,
+      const common::LanguageFeatureControl *hintFlags = nullptr) const;
   void AttachTo(Message &, std::optional<Severity> = std::nullopt);
   bool AnyFatalError() const;
 

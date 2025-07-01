@@ -915,12 +915,21 @@ bool Prescanner::HandleExponent(TokenSequence &tokens) {
     int startColumn{column_};
     TokenSequence possible;
     EmitCharAndAdvance(possible, *at_);
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     if (*at_ == '+' || *at_ == '-') {
       EmitCharAndAdvance(possible, *at_);
+      if (InFixedFormSource()) {
+        SkipSpaces();
+      }
     }
     if (IsDecimalDigit(*at_)) { // it's an exponent; scan it
       while (IsDecimalDigit(*at_)) {
         EmitCharAndAdvance(possible, *at_);
+        if (InFixedFormSource()) {
+          SkipSpaces();
+        }
       }
       possible.CloseToken();
       tokens.AppendRange(possible, 0); // appends to current token
@@ -940,13 +949,22 @@ bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
   TokenSequence withUnderscore, separate;
   EmitChar(withUnderscore, '_');
   EmitCharAndAdvance(separate, '_');
+  if (InFixedFormSource()) {
+    SkipSpaces();
+  }
   if (IsLegalInIdentifier(*at_)) {
     separate.CloseToken();
     EmitChar(withUnderscore, *at_);
     EmitCharAndAdvance(separate, *at_);
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     while (IsLegalInIdentifier(*at_)) {
       EmitChar(withUnderscore, *at_);
       EmitCharAndAdvance(separate, *at_);
+      if (InFixedFormSource()) {
+        SkipSpaces();
+      }
     }
   }
   withUnderscore.CloseToken();

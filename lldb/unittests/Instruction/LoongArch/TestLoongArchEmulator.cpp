@@ -166,7 +166,6 @@ using EncoderBZcond = uint32_t (*)(uint32_t rj, int32_t offs21);
 using EncoderBCZcond = uint32_t (*)(uint8_t cj, int32_t offs21);
 
 TEST_F(LoongArch64EmulatorTester, testJIRL) {
-  bool success = false;
   addr_t old_pc = 0x12000600;
   WritePC(old_pc);
   // JIRL r1, r12, 0x10
@@ -184,7 +183,6 @@ TEST_F(LoongArch64EmulatorTester, testJIRL) {
 }
 
 TEST_F(LoongArch64EmulatorTester, testB) {
-  bool success = false;
   addr_t old_pc = 0x12000600;
   WritePC(old_pc);
   // B  0x10010
@@ -199,7 +197,6 @@ TEST_F(LoongArch64EmulatorTester, testB) {
 }
 
 TEST_F(LoongArch64EmulatorTester, testBL) {
-  bool success = false;
   addr_t old_pc = 0x12000600;
   WritePC(old_pc);
   // BL  0x10010
@@ -218,7 +215,6 @@ TEST_F(LoongArch64EmulatorTester, testBL) {
 static void testBcondBranch(LoongArch64EmulatorTester *tester,
                             EncoderBcond encoder, bool branched,
                             uint64_t rj_val, uint64_t rd_val) {
-  bool success = false;
   addr_t old_pc = 0x12000600;
   tester->WritePC(old_pc);
   tester->gpr.gpr[12] = rj_val;
@@ -234,7 +230,6 @@ static void testBcondBranch(LoongArch64EmulatorTester *tester,
 static void testBZcondBranch(LoongArch64EmulatorTester *tester,
                              EncoderBZcond encoder, bool branched,
                              uint64_t rj_val) {
-  bool success = false;
   addr_t old_pc = 0x12000600;
   tester->WritePC(old_pc);
   tester->gpr.gpr[4] = rj_val;
@@ -249,7 +244,6 @@ static void testBZcondBranch(LoongArch64EmulatorTester *tester,
 static void testBCZcondBranch(LoongArch64EmulatorTester *tester,
                               EncoderBCZcond encoder, bool branched,
                               uint32_t cj_val) {
-  bool success = false;
   addr_t old_pc = 0x12000600;
   tester->WritePC(old_pc);
   tester->fpr.fcc = cj_val;

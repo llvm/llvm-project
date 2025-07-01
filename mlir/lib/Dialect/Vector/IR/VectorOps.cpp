@@ -4261,33 +4261,39 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, AffineMapAttr permutationMapAttr,
+                           ValueRange indices, std::optional<Value> padding,
+                           AffineMapAttr permutationMapAttr,
                            /*optional*/ ArrayAttr inBoundsAttr) {
+
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  Value padding = builder.create<arith::ConstantOp>(
-      result.location, elemType, builder.getZeroAttr(elemType));
+  if (!padding)
+    padding = builder.create<ub::PoisonOp>(result.location, elemType);
   build(builder, result, vectorType, source, indices, permutationMapAttr,
-        padding, /*mask=*/Value(), inBoundsAttr);
+        *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
 /// 2. Builder that sets padding to zero an empty mask (variant without attrs).
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, AffineMap permutationMap,
+                           ValueRange indices, std::optional<Value> padding,
+                           AffineMap permutationMap,
                            std::optional<ArrayRef<bool>> inBounds) {
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        inBoundsAttr);
+  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
+  if (!padding)
+    padding = builder.create<ub::PoisonOp>(result.location, elemType);
+  build(builder, result, vectorType, source, indices, *padding,
+        permutationMapAttr, inBoundsAttr);
 }
 
 /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, Value padding,
+                           ValueRange indices, std::optional<Value> padding,
                            std::optional<ArrayRef<bool>> inBounds) {
   AffineMap permutationMap = getTransferMinorIdentityMap(
       llvm::cast<ShapedType>(source.getType()), vectorType);
@@ -4296,21 +4302,12 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        padding,
-        /*mask=*/Value(), inBoundsAttr);
-}
-
-/// 4. Builder that sets padding to zero and permutation map to
-/// 'getMinorIdentityMap'.
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           VectorType vectorType, Value source,
-                           ValueRange indices,
-                           std::optional<ArrayRef<bool>> inBounds) {
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  Value padding = builder.create<arith::ConstantOp>(
-      result.location, elemType, builder.getZeroAttr(elemType));
-  build(builder, result, vectorType, source, indices, padding, inBounds);
+  if (!padding)
+    padding = builder.create<ub::PoisonOp>(result.location, elemType);
+  build(builder, result, vectorType, source, indices, permutationMapAttr,
+        *padding,
+        /*mask=*/Value(), inBoundsAttr);
 }
 
 template <typename EmitFun>

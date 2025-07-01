@@ -1302,8 +1302,8 @@ if (!dict) {
 }
 // keep track of used keys in the input dictionary to be able to error out
 // if there are some unknown ones.
-DenseSet<StringAttr> usedKeys;
-MLIRContext *ctx = dict.getContext();
+::mlir::DenseSet<::mlir::StringAttr> usedKeys;
+::mlir::MLIRContext *ctx = dict.getContext();
 (void)ctx;
 )decl";
 
@@ -1315,7 +1315,7 @@ auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
          ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
   {0};
 };
-auto {1}AttrName = StringAttr::get(ctx, "{1}");
+auto {1}AttrName = ::mlir::StringAttr::get(ctx, "{1}");
 usedKeys.insert({1}AttrName);
 auto attr = dict.get({1}AttrName);
 if (!attr && {2}) {{
@@ -1363,7 +1363,7 @@ if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, emitError)))
     bool isRequired = !attr.isOptional() && !attr.hasDefaultValue();
     body << formatv(R"decl(
 auto &propStorage = prop.{0};
-auto {0}AttrName = StringAttr::get(ctx, "{0}");
+auto {0}AttrName = ::mlir::StringAttr::get(ctx, "{0}");
 auto attr = dict.get({0}AttrName);
 usedKeys.insert({0}AttrName);
 if (attr || /*isRequired=*/{1}) {{
@@ -1384,7 +1384,7 @@ if (attr || /*isRequired=*/{1}) {{
                     namedAttr.name, isRequired);
   }
   body << R"decl(
-for (NamedAttribute attr : dict) {
+for (::mlir::NamedAttribute attr : dict) {
   if (!usedKeys.contains(attr.getName()))
     return emitError() << "unknown key '" << attr.getName() <<
         "' when parsing properties dictionary";
@@ -3848,8 +3848,14 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass,
   // TODO: Operator doesn't expose all necessary functionality via
   // the const interface.
   Operator &op = const_cast<Operator &>(constOp);
-  if (!op.hasAssemblyFormat())
+  if (!op.hasAssemblyFormat()) {
+    // We still need to generate the parsed attribute properties setter for
+    // allowing it to be reused in custom assembly implementations.
+    OperationFormat format(op, hasProperties);
+    format.hasPropDict = true;
+    genParsedAttrPropertiesSetter(format, op, opClass);
     return;
+  }
 
   // Parse the format description.
   llvm::SourceMgr mgr;

@@ -46,6 +46,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcstok
+  SRCS
+    wcstok.cpp
+  HDRS
+    wcstok.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+)
+
+add_entrypoint_object(
   wcrtomb
   SRCS
     wcrtomb.cpp

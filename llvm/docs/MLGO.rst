@@ -15,11 +15,13 @@ Currently the following heuristics feature such integration:
 
 This document is an outline of the tooling and APIs facilitating MLGO.
 
-Note that tools for orchestrating ML training are not part of LLVM, as they are
-dependency-heavy - both on the ML infrastructure choice, as well as choices of
-distributed computing. For the training scenario, LLVM only contains facilities
-enabling it, such as corpus extraction, training data extraction, and evaluation
-of models during training.
+.. note::
+    
+  The tools for orchestrating ML training are not part of LLVM, as they are
+  dependency-heavy - both on the ML infrastructure choice, as well as choices of
+  distributed computing. For the training scenario, LLVM only contains facilities
+  enabling it, such as corpus extraction, training data extraction, and evaluation
+  of models during training.
 
 
 .. contents::
@@ -329,8 +331,10 @@ We currently feature 4 implementations:
   the neural network, together with its weights (essentially, loops performing
   matrix multiplications)
 
-NOTE: we are actively working on replacing this with an EmitC implementation
-requiring no out of tree build-time dependencies.
+.. note::
+    
+  we are actively working on replacing this with an EmitC implementation
+  requiring no out of tree build-time dependencies.
 
 - ``InteractiveModelRunner``. This is intended for training scenarios where the
   training algorithm drives compilation. This model runner has no special
@@ -448,7 +452,16 @@ downstream tasks, including ML-guided compiler optimizations.
 
 The core components are:
   - **Vocabulary**: A mapping from IR entities (opcodes, types, etc.) to their
-    vector representations. This is managed by ``IR2VecVocabAnalysis``.
+    vector representations. This is managed by ``IR2VecVocabAnalysis``. The 
+    vocabulary (.json file) contains three sections -- Opcodes, Types, and 
+    Arguments, each containing the representations of the corresponding 
+    entities.
+
+    .. note::
+      
+      It is mandatory to have these three sections present in the vocabulary file 
+      for it to be valid; order in which they appear does not matter.
+
   - **Embedder**: A class (``ir2vec::Embedder``) that uses the vocabulary to
     compute embeddings for instructions, basic blocks, and functions.
 
@@ -479,14 +492,9 @@ embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
 
       // Assuming F is an llvm::Function&
       // For example, using IR2VecKind::Symbolic:
-      Expected<std::unique_ptr<ir2vec::Embedder>> EmbOrErr =
+      std::unique_ptr<ir2vec::Embedder> Emb =
           ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
 
-      if (auto Err = EmbOrErr.takeError()) {
-        // Handle error in embedder creation
-        return;
-      }
-      std::unique_ptr<ir2vec::Embedder> Emb = std::move(*EmbOrErr);
 
 3. **Compute and Access Embeddings**:
    Call ``getFunctionVector()`` to get the embedding for the function. 
@@ -522,9 +530,11 @@ implementation details.
 Building with ML support
 ========================
 
-**NOTE** For up to date information on custom builds, see the ``ml-*``
-`build bots <http://lab.llvm.org>`_. They are set up using 
-`like this <https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh>`_.
+.. note::
+  
+  For up to date information on custom builds, see the ``ml-*``
+  `build bots <http://lab.llvm.org>`_. They are set up using 
+  `like this <https://github.com/google/ml-compiler-opt/blob/main/buildbot/buildbot_init.sh>`_.
 
 Embed pre-trained models (aka "release" mode)
 ---------------------------------------------
@@ -558,9 +568,11 @@ You can also specify a URL for the path, and it is also possible to pre-compile
 the header and object and then just point to the precompiled artifacts. See for
 example ``LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL``.
 
-**Note** that we are transitioning away from the AOT compiler shipping with the
-tensorflow package, and to a EmitC, in-tree solution, so these details will
-change soon.
+.. note::
+
+  We are transitioning away from the AOT compiler shipping with the
+  tensorflow package, and to a EmitC, in-tree solution, so these details will
+  change soon.
 
 Using TFLite (aka "development" mode)
 -------------------------------------

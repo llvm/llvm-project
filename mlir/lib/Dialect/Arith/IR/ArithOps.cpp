@@ -292,6 +292,16 @@ bool arith::ConstantIndexOp::classof(Operation *op) {
   return false;
 }
 
+Value mlir::arith::getZeroConstant(OpBuilder &builder, Location loc,
+                                   Type type) {
+  // TODO: Incorporate this check to `FloatAttr::get*`.
+  assert(!isa<Float8E8M0FNUType>(getElementTypeOrSelf(type)) &&
+         "type doesn't have a zero representation");
+  TypedAttr zeroAttr = builder.getZeroAttr(type);
+  assert(zeroAttr && "unsupported type for zero attribute");
+  return builder.create<arith::ConstantOp>(loc, zeroAttr);
+}
+
 //===----------------------------------------------------------------------===//
 // AddIOp
 //===----------------------------------------------------------------------===//

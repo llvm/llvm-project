@@ -268,6 +268,19 @@ libc_support_library(
     hdrs = ["hdr/unistd_overlay.h"],
 )
 
+libc_support_library(
+    name = "hdr_wchar_macros",
+    hdrs = ["hdr/wchar_macros.h"],
+    deps = [
+        ":hdr_wchar_overlay",
+    ],
+)
+
+libc_support_library(
+    name = "hdr_wchar_overlay",
+    hdrs = ["hdr/wchar_overlay.h"],
+)
+
 ############################ Type Proxy Header Files ###########################
 
 libc_support_library(
@@ -430,6 +443,22 @@ libc_support_library(
 libc_support_library(
     name = "types_struct_msghdr",
     hdrs = ["hdr/types/struct_msghdr.h"],
+)
+
+libc_support_library(
+    name = "types_wchar_t",
+    hdrs = ["hdr/types/wchar_t.h"],
+    deps = [
+        ":hdr_wchar_overlay",
+    ],
+)
+
+libc_support_library(
+    name = "types_wint_t",
+    hdrs = ["hdr/types/wint_t.h"],
+    deps = [
+        ":hdr_wchar_overlay",
+    ],
 )
 
 ############################### Support libraries ##############################
@@ -1642,6 +1671,16 @@ libc_support_library(
         ":__support_time_linux_abs_timeout",
         ":__support_time_linux_clock_conversion",
         ":hdr_time_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_wctype_utils",
+    hdrs = ["src/__support/wctype_utils.h"],
+    deps = [
+        ":__support_cpp_optional",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
     ],
 )
 
@@ -5683,5 +5722,278 @@ libc_function(
         ":types_sigset_t",
         ":types_struct_epoll_event",
         ":types_struct_timespec",
+    ],
+)
+
+############################## wchar targets ###############################
+
+libc_function(
+    name = "btowc",
+    srcs = ["src/wchar/btowc.cpp"],
+    hdrs = ["src/wchar/btowc.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_wctype_utils",
+        ":hdr_wchar_macros",
+        ":types_wint_t",
+    ],
+)
+
+libc_function(
+    name = "wcpcpy",
+    srcs = ["src/wchar/wcpcpy.cpp"],
+    hdrs = ["src/wchar/wcpcpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcpncpy",
+    srcs = ["src/wchar/wcpncpy.cpp"],
+    hdrs = ["src/wchar/wcpncpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcscat",
+    srcs = ["src/wchar/wcscat.cpp"],
+    hdrs = ["src/wchar/wcscat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcschr",
+    srcs = ["src/wchar/wcschr.cpp"],
+    hdrs = ["src/wchar/wcschr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcscmp",
+    srcs = ["src/wchar/wcscmp.cpp"],
+    hdrs = ["src/wchar/wcscmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcscpy",
+    srcs = ["src/wchar/wcscpy.cpp"],
+    hdrs = ["src/wchar/wcscpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcslen",
+    srcs = ["src/wchar/wcslen.cpp"],
+    hdrs = ["src/wchar/wcslen.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcsncat",
+    srcs = ["src/wchar/wcsncat.cpp"],
+    hdrs = ["src/wchar/wcsncat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcsncmp",
+    srcs = ["src/wchar/wcsncmp.cpp"],
+    hdrs = ["src/wchar/wcsncmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcsncpy",
+    srcs = ["src/wchar/wcsncpy.cpp"],
+    hdrs = ["src/wchar/wcsncpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcspbrk",
+    srcs = ["src/wchar/wcspbrk.cpp"],
+    hdrs = ["src/wchar/wcspbrk.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcsrchr",
+    srcs = ["src/wchar/wcsrchr.cpp"],
+    hdrs = ["src/wchar/wcsrchr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcsspn",
+    srcs = ["src/wchar/wcsspn.cpp"],
+    hdrs = ["src/wchar/wcsspn.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wcsstr",
+    srcs = ["src/wchar/wcsstr.cpp"],
+    hdrs = ["src/wchar/wcsstr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":string_utils",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wctob",
+    srcs = ["src/wchar/wctob.cpp"],
+    hdrs = ["src/wchar/wctob.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":__support_wctype_utils",
+        ":hdr_stdio_macros",
+        ":types_wint_t",
+    ],
+)
+
+libc_function(
+    name = "wmemchr",
+    srcs = ["src/wchar/wmemchr.cpp"],
+    hdrs = ["src/wchar/wmemchr.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wmemcmp",
+    srcs = ["src/wchar/wmemcmp.cpp"],
+    hdrs = ["src/wchar/wmemcmp.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":__support_macros_null_check",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wmemcpy",
+    srcs = ["src/wchar/wmemcpy.cpp"],
+    hdrs = ["src/wchar/wmemcpy.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wmemmove",
+    srcs = ["src/wchar/wmemmove.cpp"],
+    hdrs = ["src/wchar/wmemmove.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_null_check",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wmempcpy",
+    srcs = ["src/wchar/wmempcpy.cpp"],
+    hdrs = ["src/wchar/wmempcpy.h"],
+    deps = [
+        ":__support_common",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
+libc_function(
+    name = "wmemset",
+    srcs = ["src/wchar/wmemset.cpp"],
+    hdrs = ["src/wchar/wmemset.h"],
+    deps = [
+        ":__support_common",
+        ":types_size_t",
+        ":types_wchar_t",
     ],
 )

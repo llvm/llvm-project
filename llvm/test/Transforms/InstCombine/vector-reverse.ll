@@ -161,9 +161,9 @@ define <vscale x 4 x i32> @binop_reverse_splat_LHS_1(<vscale x 4 x i32> %a, i32 
 
 define <vscale x 4 x float> @unop_reverse(<vscale x 4 x float> %a) {
 ; CHECK-LABEL: @unop_reverse(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[A:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg fast <vscale x 4 x float> [[A_REV]]
-; CHECK-NEXT:    ret <vscale x 4 x float> [[NEG]]
+; CHECK-NEXT:    [[NEG:%.*]] = fneg fast <vscale x 4 x float> [[A_REV:%.*]]
+; CHECK-NEXT:    [[NEG1:%.*]] = call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> [[NEG]])
+; CHECK-NEXT:    ret <vscale x 4 x float> [[NEG1]]
 ;
   %a.rev = tail call <vscale x 4 x float> @llvm.vector.reverse.nxv4f32(<vscale x 4 x float> %a)
   %neg = fneg fast <vscale x 4 x float> %a.rev

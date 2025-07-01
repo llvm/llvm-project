@@ -60,13 +60,13 @@ end subroutine
 block data
   common /blk2/ n
   data n/100/
-  !PORTABILITY: specification expression refers to local object 'n' (initialized and saved)
+  !PORTABILITY: specification expression refers to local object 'n' (initialized and saved) [-Wsaved-local-in-spec-expr]
   !ERROR: Automatic data object 'a' may not appear in a BLOCK DATA subprogram
   real a(n)
 end
 
 program main
   common /blk2/ n
-  !PORTABILITY: Automatic data object 'a' should not appear in the specification part of a main program
+  !PORTABILITY: Automatic data object 'a' should not appear in the specification part of a main program [-Wautomatic-in-main-program]
   real a(n)
 end

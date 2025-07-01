@@ -3564,23 +3564,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::vector_reverse: {
-    Value *Vec = II->getArgOperand(0);
-    // Note: We canonicalize reverse after binops, so we don't need a
-    // corresponding binop case here. TODO: Consider canonicalizing
-    // reverse after fneg?
-
-    // rev(unop rev(X)) --> unop X
-    Value *X;
-    if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
-      auto *OldUnOp = cast<UnaryOperator>(Vec);
-      auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
-          OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
-          II->getIterator());
-      return replaceInstUsesWith(CI, NewUnOp);
-    }
-    break;
-  }
   case Intrinsic::experimental_vp_reverse: {
     Value *X;
     Value *Vec = II->getArgOperand(0);
@@ -3588,6 +3571,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (!match(Mask, m_AllOnes()))
       break;
     Value *EVL = II->getArgOperand(2);
+    // TODO: Canonicalize experimental.vp.reverse after unop/binops?
     // rev(unop rev(X)) --> unop X
     if (match(Vec,
               m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(

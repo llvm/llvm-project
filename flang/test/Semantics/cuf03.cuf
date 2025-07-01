@@ -38,14 +38,14 @@ module m
   !ERROR: Object 'mmp' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument
   real, managed, pointer :: mmp(:)
   real, managed, target :: mmt
-  !WARNING: Object 'mp' with ATTRIBUTES(PINNED) should also be allocatable
+  !WARNING: Object 'mp' with ATTRIBUTES(PINNED) should also be allocatable [-Wcuda-usage]
   real, pinned :: mp
-  !WARNING: Object 'mpi' with ATTRIBUTES(PINNED) should also be allocatable
+  !WARNING: Object 'mpi' with ATTRIBUTES(PINNED) should also be allocatable [-Wcuda-usage]
   real, pinned :: mpi = 1.
   real, pinned, allocatable :: mpl ! ok
-  !ERROR: Object 'mpp' with ATTRIBUTES(PINNED) may not be a pointer
+  !ERROR: Object 'mpp' with ATTRIBUTES(PINNED) may not be a pointer [-Wcuda-usage]
   real, pinned, pointer :: mpp
-  !WARNING: Object 'mpt' with ATTRIBUTES(PINNED) should also be allocatable
+  !WARNING: Object 'mpt' with ATTRIBUTES(PINNED) should also be allocatable [-Wcuda-usage]
   real, pinned, target :: mpt ! ok
   !ERROR: ATTRIBUTES(TEXTURE) is obsolete and no longer supported
   real, texture, pointer :: mt
@@ -67,7 +67,7 @@ module m
     integer, intent(in) :: n
     real, device :: da(*) ! ok
     real, managed :: ma(n) ! ok
-    !WARNING: Pointer 'dp' may not be associated in a device subprogram
+    !WARNING: Pointer 'dp' may not be associated in a device subprogram [-Wcuda-usage]
     real, device, pointer :: dp
     real, constant :: rc ! ok
     real, shared :: rs ! ok

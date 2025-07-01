@@ -19,9 +19,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCDwarf.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCPseudoProbe.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCWinEH.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
@@ -45,11 +45,9 @@ class MCAsmBackend;
 class MCAssembler;
 class MCContext;
 class MCExpr;
-class MCFragment;
 class MCInst;
 class MCInstPrinter;
 class MCRegister;
-class MCSection;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;

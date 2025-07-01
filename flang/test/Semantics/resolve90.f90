@@ -12,7 +12,7 @@ subroutine s()
     !ERROR: 'pointerallocatablefield' may not have both the POINTER and ALLOCATABLE attributes
     real, pointer, allocatable :: pointerAllocatableField
     real, dimension(:), contiguous, pointer :: goodContigField
-    !PORTABILITY: CONTIGUOUS component 'badcontigfield' should be an array with the POINTER attribute
+    !PORTABILITY: CONTIGUOUS component 'badcontigfield' should be an array with the POINTER attribute [-Wredundant-contiguous]
     real, dimension(:), contiguous, allocatable :: badContigField
     character :: charField * 3
     !ERROR: A length specifier cannot be used to declare the non-character entity 'realfield'
