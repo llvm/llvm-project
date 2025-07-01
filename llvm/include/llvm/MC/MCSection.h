@@ -302,6 +302,12 @@ public:
 /// Interface implemented by fragments that contain encoded instructions and/or
 /// data.
 class MCEncodedFragment : public MCFragment {
+  uint8_t BundlePadding = 0;
+  uint32_t ContentStart = 0;
+  uint32_t ContentEnd = 0;
+  uint32_t FixupStart = 0;
+  uint32_t FixupEnd = 0;
+
 protected:
   MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
       : MCFragment(FType, HasInstructions) {}
@@ -309,13 +315,6 @@ protected:
   /// The MCSubtargetInfo in effect when the instruction was encoded.
   /// It must be non-null for instructions.
   const MCSubtargetInfo *STI = nullptr;
-
-private:
-  uint32_t ContentStart = 0;
-  uint32_t ContentEnd = 0;
-  uint32_t FixupStart = 0;
-  uint32_t FixupEnd = 0;
-  uint8_t BundlePadding = 0;
 
 public:
   static bool classof(const MCFragment *F) {
@@ -773,6 +772,7 @@ public:
     return F->getKind() == MCFragment::FT_PseudoProbe;
   }
 };
+
 } // end namespace llvm
 
 #endif // LLVM_MC_MCSECTION_H
