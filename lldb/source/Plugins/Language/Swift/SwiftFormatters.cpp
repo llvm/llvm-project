@@ -734,12 +734,10 @@ namespace lldb_private {
 namespace formatters {
 namespace swift {
 
-namespace {
 /// The size of Swift Tasks. Fragments are tail allocated.
 static constexpr size_t AsyncTaskSize = sizeof(::swift::AsyncTask);
 /// The offset of ChildFragment, which is the first fragment of an AsyncTask.
 static constexpr offset_t ChildFragmentOffset = AsyncTaskSize;
-} // namespace
 
 class EnumSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
@@ -831,8 +829,9 @@ public:
   };
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
-    // Show only the first four children address/id/enqueuePriority/children.
-    return 4;
+    // Show only the first five children
+    // address/id/enqueuePriority/parent/children.
+    return 5;
   }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
@@ -882,21 +881,24 @@ public:
     }
     case 3: {
       if (!m_parent_task_sp) {
-        // TypeMangling for "Swift.UnsafeRawPointer"
+        auto process_sp = m_backend.GetProcessSP();
+        if (!process_sp)
+          return {};
+
+        // TypeMangling for "Swift.Optional<Swift.UnsafeRawPointer>"
         CompilerType raw_pointer_type =
-            m_ts->GetTypeFromMangledTypename(ConstString("$sSVD"));
+            m_ts->GetTypeFromMangledTypename(ConstString("$sSVSgD"));
 
         addr_t parent_addr = 0;
         if (m_task_info.isChildTask) {
-          if (auto process_sp = m_backend.GetProcessSP()) {
-            Status status;
-            // Read ChildFragment::Parent, the first field of the ChildFragment.
-            parent_addr = process_sp->ReadPointerFromMemory(
-                m_task_ptr + ChildFragmentOffset, status);
-            if (status.Fail() || parent_addr == LLDB_INVALID_ADDRESS)
-              parent_addr = 0;
-          }
+          // Read ChildFragment::Parent, the first field of the ChildFragment.
+          Status status;
+          parent_addr = process_sp->ReadPointerFromMemory(
+              m_task_ptr + ChildFragmentOffset, status);
+          if (status.Fail() || parent_addr == LLDB_INVALID_ADDRESS)
+            parent_addr = 0;
         }
+
         addr_t value = parent_addr;
         DataExtractor data{reinterpret_cast<const void *>(&value),
                            sizeof(value), endian::InlHostByteOrder(),
