@@ -161,6 +161,7 @@ void Sema::checkContainerDeclVerbatimLine(const BlockCommandComment *Comment) {
         DiagSelect = diag::DeclContainerKind::Union;
       break;
     default:
+      DiagSelect = std::nullopt;
       break;
   }
   if (DiagSelect)
