@@ -11,9 +11,15 @@
 #include <cassert>
 #include <optional>
 
-int main() {
-  std::optional<int> val = 2;
+constexpr bool test() {
+  constexpr std::optional<int> val = 2;
   for (const auto& elem : val)
-    assert(elem == 2);
+    if (elem != 2)
+      return false;
+  return true;
+}
+
+int main() {
+  static_assert(test());
   return 0;
 }

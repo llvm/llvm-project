@@ -200,7 +200,6 @@ namespace std {
 #  include <__concepts/invocable.h>
 #  include <__config>
 #  include <__exception/exception.h>
-#  include <__format/format_context.h>
 #  include <__format/range_default_formatter.h>
 #  include <__functional/hash.h>
 #  include <__functional/invoke.h>
@@ -580,13 +579,6 @@ using __optional_sfinae_assign_base_t _LIBCPP_NODEBUG =
 
 template <class _Tp>
 class optional;
-
-#    if _LIBCPP_STD_VER >= 26
-
-template <typename _Tp>
-class __optional_iterator;
-
-#    endif // _LIBCPP_STD_VER >= 26
 
 #    if _LIBCPP_STD_VER >= 20
 
