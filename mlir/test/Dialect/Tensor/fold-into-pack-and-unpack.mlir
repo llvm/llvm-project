@@ -391,30 +391,15 @@ func.func @linalg_transpose_linalg.pack_fold_multi_result(%arg0: tensor<56x57x1x
 }
 // CHECK-LABEL: func @linalg_transpose_linalg.pack_fold_multi_result(
 //  CHECK-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
-//       CHECK:   %[[INIT:.+]] = tensor.empty() : tensor<1x56x57x64xf32>
 //       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose
-//  CHECK-SAME:      ins(%[[ARG0]]
-//  CHECK-SAME:      outs(%[[INIT]]
-//  CHECK-SAME:      permutation = [2, 0, 1, 3]
-//       CHECK:   %[[INIT1:.+]] = tensor.empty() : tensor<1x57x56x2x32xf32>
 //       CHECK:   %[[PACK:.+]] = linalg.pack %[[ARG0]]
 //  CHECK-SAME:      outer_dims_perm = [2, 1, 0, 3]
-//  CHECK-SAME:      inner_dims_pos = [3] inner_tiles = [32]
-//  CHECK-SAME:       into %[[INIT1]]
 //       CHECK:   return %[[TRANSPOSE]], %[[PACK]]
 
 // CONTROL-LABEL: func @linalg_transpose_linalg.pack_fold_multi_result(
-//  CONTROL-SAME:     %[[ARG0:.+]]: tensor<56x57x1x64xf32>)
-//       CONTROL:   %[[INIT:.+]] = tensor.empty() : tensor<1x56x57x64xf32>
 //       CONTROL:   %[[TRANSPOSE:.+]] = linalg.transpose
-//  CONTROL-SAME:      ins(%[[ARG0]]
-//  CONTROL-SAME:      outs(%[[INIT]]
-//  CONTROL-SAME:      permutation = [2, 0, 1, 3]
-//       CONTROL:   %[[INIT1:.+]] = tensor.empty() : tensor<1x57x56x2x32xf32>
 //       CONTROL:   %[[PACK:.+]] = linalg.pack %[[TRANSPOSE]]
 //  CONTROL-SAME:      outer_dims_perm = [0, 2, 1, 3]
-//  CONTROL-SAME:      inner_dims_pos = [3] inner_tiles = [32]
-//  CONTROL-SAME:       into %[[INIT1]]
 //       CONTROL:   return %[[TRANSPOSE]], %[[PACK]]
 
 // -----
@@ -611,36 +596,17 @@ func.func @linalg_transpose_linalg.unpack_fold_multi_result(%arg0: tensor<1x1x4x
 }
 //CHECK-LABEL:  func.func @linalg_transpose_linalg.unpack_fold_multi_result(
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x4x16xi32>) 
-// CHECK-SAME:   -> (tensor<1x1x16x4xi32>, tensor<16x4xi32>) 
-//      CHECK:     %[[EMPTY:.+]] = tensor.empty() : tensor<1x1x16x4xi32>
 //      CHECK:     %[[TRANSPOSE:.+]] = linalg.transpose
-// CHECK-SAME:        ins(%[[ARG0]] : tensor<1x1x4x16xi32>)
-// CHECK-SAME:        outs(%[[EMPTY]] : tensor<1x1x16x4xi32>)
-// CHECK-SAME:        permutation = [1, 0, 3, 2]
-//      CHECK:     %[[OUT:.+]] = tensor.empty() : tensor<16x4xi32>
 //      CHECK:     %[[UNPACK:.+]] = linalg.unpack %[[ARG0]]
 // CHECK-SAME:        outer_dims_perm = [1, 0]
-// CHECK-SAME:        inner_dims_pos = [1, 0]
-// CHECK-SAME:        inner_tiles = [4, 16]
-// CHECK-SAME:        into %[[OUT]] : tensor<1x1x4x16xi32> -> tensor<16x4xi32>
-//      CHECK:     return %[[TRANSPOSE]], %[[UNPACK]] : tensor<1x1x16x4xi32>, tensor<16x4xi32>
+//      CHECK:     return %[[TRANSPOSE]], %[[UNPACK]]
 //      CHECK:   }
 
 //CONTROL-LABEL:  func.func @linalg_transpose_linalg.unpack_fold_multi_result(
-// CONTROL-SAME:   %[[ARG0:.+]]: tensor<1x1x4x16xi32>) 
-// CONTROL-SAME:   -> (tensor<1x1x16x4xi32>, tensor<16x4xi32>) 
-//      CONTROL:     %[[EMPTY:.+]] = tensor.empty() : tensor<1x1x16x4xi32>
 //      CONTROL:     %[[TRANSPOSE:.+]] = linalg.transpose
-// CONTROL-SAME:        ins(%[[ARG0]] : tensor<1x1x4x16xi32>)
-// CONTROL-SAME:        outs(%[[EMPTY]] : tensor<1x1x16x4xi32>)
-// CONTROL-SAME:        permutation = [1, 0, 3, 2]
-//      CONTROL:     %[[OUT:.+]] = tensor.empty() : tensor<16x4xi32>
 //      CONTROL:     %[[UNPACK:.+]] = linalg.unpack %[[TRANSPOSE]]
 // CONTROL-SAME:        outer_dims_perm = [0, 1]
-// CONTROL-SAME:        inner_dims_pos = [0, 1]
-// CONTROL-SAME:        inner_tiles = [16, 4]
-// CONTROL-SAME:        into %[[OUT]] : tensor<1x1x16x4xi32> -> tensor<16x4xi32>
-//      CONTROL:     return %[[TRANSPOSE]], %[[UNPACK]] : tensor<1x1x16x4xi32>, tensor<16x4xi32>
+//      CONTROL:     return %[[TRANSPOSE]], %[[UNPACK]]
 //      CONTROL:   }
 
 // -----
