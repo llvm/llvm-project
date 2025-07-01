@@ -269,7 +269,7 @@ void NVPTXInstPrinter::printCmpMode(const MCInst *MI, int OpNum, raw_ostream &O,
 }
 
 void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
-                                     raw_ostream &O, StringRef Modifier) {
+                                       raw_ostream &O, StringRef Modifier) {
   const MCOperand &MO = MI->getOperand(OpNum);
   int Imm = (int)MO.getImm();
   if (Modifier == "sem") {
@@ -321,9 +321,9 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
       O << ".gpu";
       return;
     }
-    report_fatal_error(
-        formatv("NVPTX AtomicCode Printer does not support \"{}\" scope modifier.",
-                ScopeToString(S)));
+    report_fatal_error(formatv(
+        "NVPTX AtomicCode Printer does not support \"{}\" scope modifier.",
+        ScopeToString(S)));
   } else if (Modifier == "addsp") {
     auto A = NVPTX::AddressSpace(Imm);
     switch (A) {

@@ -304,7 +304,6 @@ void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
   }
 }
 
-
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   switch (IID) {
@@ -525,19 +524,19 @@ unsigned int NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
     return NVPTX::Ordering::NotAtomic;
   auto Ordering = N->getMergedOrdering();
   switch (Ordering) {
-    case AtomicOrdering::NotAtomic:
-    case AtomicOrdering::Unordered:
-      return NVPTX::Ordering::NotAtomic;
-    case AtomicOrdering::Monotonic:
-      return NVPTX::Ordering::Relaxed;
-    case AtomicOrdering::Acquire:
-      return NVPTX::Ordering::Acquire;
-    case AtomicOrdering::Release:
-      return NVPTX::Ordering::Release;
-    case AtomicOrdering::AcquireRelease:
-      return NVPTX::Ordering::AcquireRelease;
-    case AtomicOrdering::SequentiallyConsistent:
-      return NVPTX::Ordering::SequentiallyConsistent;
+  case AtomicOrdering::NotAtomic:
+  case AtomicOrdering::Unordered:
+    return NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Monotonic:
+    return NVPTX::Ordering::Relaxed;
+  case AtomicOrdering::Acquire:
+    return NVPTX::Ordering::Acquire;
+  case AtomicOrdering::Release:
+    return NVPTX::Ordering::Release;
+  case AtomicOrdering::AcquireRelease:
+    return NVPTX::Ordering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return NVPTX::Ordering::SequentiallyConsistent;
   }
 }
 
