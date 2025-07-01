@@ -847,8 +847,10 @@ static unsigned getBranchOpcode(ISD::CondCode Cond) {
   }
 }
 
-static void GetFPBranchKind(ISD::CondCode Cond, unsigned &BrKind,
-                            unsigned &CmpKind) {
+static std::pair<unsigned, unsigned> getFPBranchKind(ISD::CondCode Cond) {
+  unsigned BrKind;
+  unsigned CmpKind;
+
   switch (Cond) {
   case ISD::SETUNE:
     BrKind = Xtensa::BF;
@@ -904,6 +906,8 @@ static void GetFPBranchKind(ISD::CondCode Cond, unsigned &BrKind,
   default:
     llvm_unreachable("Invalid condition!");
   }
+
+  return std::make_pair(BrKind, CmpKind);
 }
 
 SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
@@ -928,7 +932,7 @@ SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
          "We expect MVT::f32 type of the LHS Operand in SELECT_CC");
   unsigned BrOpcode;
   unsigned CmpOpCode;
-  GetFPBranchKind(CC, BrOpcode, CmpOpCode);
+  std::tie(BrOpcode, CmpOpCode) = getFPBranchKind(CC);
   SDValue TargetCC = DAG.getConstant(CmpOpCode, DL, MVT::i32);
   SDValue TargetBC = DAG.getConstant(BrOpcode, DL, MVT::i32);
   return DAG.getNode(XtensaISD::SELECT_CC_FP, DL, Ty,
@@ -1614,7 +1618,7 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
     ISD::CondCode CondCode = (ISD::CondCode)Cond.getImm();
     unsigned BReg = Xtensa::B0;
 
-    GetFPBranchKind(CondCode, BrKind, CmpKind);
+    std::tie(BrKind, CmpKind) = getFPBranchKind(CondCode);
     BuildMI(*MBB, MI, DL, TII.get(CmpKind), BReg)
         .addReg(LHS.getReg())
         .addReg(RHS.getReg());
