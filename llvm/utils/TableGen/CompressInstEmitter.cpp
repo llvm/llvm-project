@@ -359,7 +359,7 @@ void CompressInstEmitter::checkDagOperandMapping(
   for (unsigned I = 0; I < SourceDag->getNumArgs(); ++I) {
     // Skip fixed immediates and registers, they were handled in
     // addDagOperandMapping.
-    StringRef SourceDag->getArgNameStr(I);
+    StringRef ArgName = SourceDag->getArgNameStr(I);
     if (ArgName.empty())
       continue;
 
