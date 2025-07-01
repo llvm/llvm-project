@@ -6,7 +6,7 @@
 f:
         .cfi_startproc
         pushq %rax
-        # CHECK: error: modified CFA register (RSP) but not changed CFA rule
+        # CHECK: error: modified CFA register RSP but not changed CFA rule
         pushq %rax
         .cfi_def_cfa %rbp, -24
         pushq %rax
@@ -14,7 +14,7 @@ f:
 
         .cfi_startproc
         pushq %rax
-        # CHECK: error: modified CFA register (RSP) but not changed CFA rule
+        # CHECK: error: modified CFA register RSP but not changed CFA rule
         pushq %rax
         .cfi_def_cfa %rbp, -24
         pushq %rax

@@ -302,6 +302,7 @@ void DWARFCFIAnalysis::checkCFADiff(const MCInst &Inst,
         Inst.getLoc(),
         formatv("modified CFA register {0} but not changed CFA rule",
                 PrevCFARegName));
+    return;
   }
 
   if (PrevCFA.Reg != NextCFA.Reg) { // Case 2.b
