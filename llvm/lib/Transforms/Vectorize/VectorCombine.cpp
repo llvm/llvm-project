@@ -112,6 +112,7 @@ private:
   bool foldExtractExtract(Instruction &I);
   bool foldInsExtFNeg(Instruction &I);
   bool foldInsExtBinop(Instruction &I);
+  bool foldVectorInsertToShuffle(Instruction &I);
   bool foldInsExtVectorToShuffle(Instruction &I);
   bool foldBitOpOfBitcasts(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
@@ -801,6 +802,73 @@ bool VectorCombine::foldInsExtBinop(Instruction &I) {
   Worklist.pushValue(NewIns0);
   Worklist.pushValue(NewIns1);
   replaceValue(I, *NewBO);
+  return true;
+}
+
+/// Try to fold vector_insert intrinsics into shufflevector instructions.
+bool VectorCombine::foldVectorInsertToShuffle(Instruction &I) {
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  // This optimization only applies to vector_insert intrinsics.
+  if (!II || II->getIntrinsicID() != Intrinsic::vector_insert)
+    return false;
+
+  Value *Vec = II->getArgOperand(0);
+  Value *SubVec = II->getArgOperand(1);
+  Value *Idx = II->getArgOperand(2);
+
+  // Caller guarantees DstTy is a fixed vector.
+  auto *DstTy = cast<FixedVectorType>(II->getType());
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  auto *SubVecTy = dyn_cast<FixedVectorType>(SubVec->getType());
+
+  // Only canonicalize if Vec and SubVec are both fixed vectors.
+  if (!VecTy || !SubVecTy)
+    return false;
+
+  unsigned DstNumElts = DstTy->getNumElements();
+  unsigned VecNumElts = VecTy->getNumElements();
+  unsigned SubVecNumElts = SubVecTy->getNumElements();
+  auto *SubVecPtr = dyn_cast<ConstantInt>(Idx);
+  if (!SubVecPtr)
+    return false;
+
+  unsigned SubVecIdx = SubVecPtr->getZExtValue();
+
+  // Ensure insertion of SubVec doesn't exceed Dst bounds.
+  if (SubVecIdx % SubVecNumElts != 0 || SubVecIdx + SubVecNumElts > DstNumElts)
+    return false;
+
+  // An insert that entirely overwrites Vec with SubVec is a nop.
+  if (VecNumElts == SubVecNumElts) {
+    replaceValue(I, *SubVec);
+    return true;
+  }
+
+  // Widen SubVec into a vector of the same width as Vec, since
+  // shufflevector requires the two input vectors to be the same width.
+  // Elements beyond the bounds of SubVec within the widened vector are
+  // undefined.
+  SmallVector<int, 8> WidenMask;
+  unsigned int i = 0;
+  for (i = 0; i != SubVecNumElts; ++i)
+    WidenMask.push_back(i);
+  for (; i != VecNumElts; ++i)
+    WidenMask.push_back(PoisonMaskElem);
+
+  auto *WidenShuffle = Builder.CreateShuffleVector(SubVec, WidenMask);
+  Worklist.pushValue(WidenShuffle);
+
+  SmallVector<int, 8> Mask;
+  unsigned int j;
+  for (i = 0; i != SubVecIdx; ++i)
+    Mask.push_back(i);
+  for (j = 0; j != SubVecNumElts; ++j)
+    Mask.push_back(DstNumElts + j);
+  for (i = SubVecIdx + SubVecNumElts; i != DstNumElts; ++i)
+    Mask.push_back(i);
+
+  auto *Shuffle = Builder.CreateShuffleVector(Vec, WidenShuffle, Mask);
+  replaceValue(I, *Shuffle);
   return true;
 }
 
@@ -3639,6 +3707,9 @@ bool VectorCombine::run() {
     // dispatching to folding functions if there's no chance of matching.
     if (IsFixedVectorType) {
       switch (Opcode) {
+      case Instruction::Call:
+        MadeChange |= foldVectorInsertToShuffle(I);
+        break;
       case Instruction::InsertElement:
         MadeChange |= vectorizeLoadInsert(I);
         break;
