@@ -1308,28 +1308,27 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-LINUX-NEXT:  .LBB13_1: # %inner_loop
 ; SSE-LINUX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-LINUX-NEXT:    movq %rcx, %r8
-; SSE-LINUX-NEXT:    shrq $6, %r8
-; SSE-LINUX-NEXT:    movq (%rsi,%r8,8), %r8
-; SSE-LINUX-NEXT:    btq %rcx, %r8
-; SSE-LINUX-NEXT:    leaq 1(%rcx), %rcx
+; SSE-LINUX-NEXT:    shrq $6, %rcx
+; SSE-LINUX-NEXT:    movq (%rsi,%rcx,8), %r9
+; SSE-LINUX-NEXT:    leaq 1(%r8), %rcx
+; SSE-LINUX-NEXT:    btq %r8, %r9
 ; SSE-LINUX-NEXT:    jae .LBB13_1
 ; SSE-LINUX-NEXT:  # %bb.2: # %loop_end
 ; SSE-LINUX-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; SSE-LINUX-NEXT:    leaq 1(%rax), %r8
+; SSE-LINUX-NEXT:    leaq 1(%rax), %r9
 ; SSE-LINUX-NEXT:    xorps %xmm4, %xmm4
-; SSE-LINUX-NEXT:    cvtsi2sd %r8, %xmm4
+; SSE-LINUX-NEXT:    cvtsi2sd %r9, %xmm4
 ; SSE-LINUX-NEXT:    movapd %xmm0, %xmm5
 ; SSE-LINUX-NEXT:    subsd %xmm4, %xmm5
 ; SSE-LINUX-NEXT:    mulsd %xmm1, %xmm5
-; SSE-LINUX-NEXT:    leaq -1(%rcx), %r9
 ; SSE-LINUX-NEXT:    xorps %xmm4, %xmm4
-; SSE-LINUX-NEXT:    cvtsi2sd %r9, %xmm4
+; SSE-LINUX-NEXT:    cvtsi2sd %r8, %xmm4
 ; SSE-LINUX-NEXT:    mulsd %xmm2, %xmm4
 ; SSE-LINUX-NEXT:    addsd %xmm5, %xmm4
 ; SSE-LINUX-NEXT:    divsd %xmm3, %xmm4
 ; SSE-LINUX-NEXT:    movsd %xmm4, -8(%rdi,%rax,8)
-; SSE-LINUX-NEXT:    movq %r8, %rax
-; SSE-LINUX-NEXT:    cmpq %r8, %rdx
+; SSE-LINUX-NEXT:    movq %r9, %rax
+; SSE-LINUX-NEXT:    cmpq %r9, %rdx
 ; SSE-LINUX-NEXT:    jge .LBB13_1
 ; SSE-LINUX-NEXT:  # %bb.3: # %loopdone
 ; SSE-LINUX-NEXT:    retq
@@ -1380,28 +1379,27 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; SSE-WIN-NEXT:  .LBB13_1: # %inner_loop
 ; SSE-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE-WIN-NEXT:    movq %r9, %r10
-; SSE-WIN-NEXT:    shrq $6, %r10
-; SSE-WIN-NEXT:    movq (%rdx,%r10,8), %r10
-; SSE-WIN-NEXT:    btq %r9, %r10
-; SSE-WIN-NEXT:    leaq 1(%r9), %r9
+; SSE-WIN-NEXT:    shrq $6, %r9
+; SSE-WIN-NEXT:    movq (%rdx,%r9,8), %r11
+; SSE-WIN-NEXT:    leaq 1(%r10), %r9
+; SSE-WIN-NEXT:    btq %r10, %r11
 ; SSE-WIN-NEXT:    jae .LBB13_1
 ; SSE-WIN-NEXT:  # %bb.2: # %loop_end
 ; SSE-WIN-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; SSE-WIN-NEXT:    leaq 1(%r8), %r10
+; SSE-WIN-NEXT:    leaq 1(%r8), %r11
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
-; SSE-WIN-NEXT:    cvtsi2sd %r10, %xmm4
+; SSE-WIN-NEXT:    cvtsi2sd %r11, %xmm4
 ; SSE-WIN-NEXT:    movapd %xmm2, %xmm5
 ; SSE-WIN-NEXT:    subsd %xmm4, %xmm5
 ; SSE-WIN-NEXT:    mulsd %xmm3, %xmm5
-; SSE-WIN-NEXT:    leaq -1(%r9), %r11
 ; SSE-WIN-NEXT:    xorps %xmm4, %xmm4
-; SSE-WIN-NEXT:    cvtsi2sd %r11, %xmm4
+; SSE-WIN-NEXT:    cvtsi2sd %r10, %xmm4
 ; SSE-WIN-NEXT:    mulsd %xmm1, %xmm4
 ; SSE-WIN-NEXT:    addsd %xmm5, %xmm4
 ; SSE-WIN-NEXT:    divsd %xmm0, %xmm4
 ; SSE-WIN-NEXT:    movsd %xmm4, -8(%rcx,%r8,8)
-; SSE-WIN-NEXT:    movq %r10, %r8
-; SSE-WIN-NEXT:    cmpq %r10, %rax
+; SSE-WIN-NEXT:    movq %r11, %r8
+; SSE-WIN-NEXT:    cmpq %r11, %rax
 ; SSE-WIN-NEXT:    jge .LBB13_1
 ; SSE-WIN-NEXT:  # %bb.3: # %loopdone
 ; SSE-WIN-NEXT:    movaps (%rsp), %xmm7 # 16-byte Reload
@@ -1465,25 +1463,24 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX1-NEXT:  .LBB13_1: # %inner_loop
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX1-NEXT:    movq %r9, %r10
-; AVX1-NEXT:    shrq $6, %r10
-; AVX1-NEXT:    movq (%rdx,%r10,8), %r10
-; AVX1-NEXT:    btq %r9, %r10
-; AVX1-NEXT:    leaq 1(%r9), %r9
+; AVX1-NEXT:    shrq $6, %r9
+; AVX1-NEXT:    movq (%rdx,%r9,8), %r11
+; AVX1-NEXT:    leaq 1(%r10), %r9
+; AVX1-NEXT:    btq %r10, %r11
 ; AVX1-NEXT:    jae .LBB13_1
 ; AVX1-NEXT:  # %bb.2: # %loop_end
 ; AVX1-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; AVX1-NEXT:    leaq 1(%r8), %r10
-; AVX1-NEXT:    vcvtsi2sd %r10, %xmm6, %xmm4
+; AVX1-NEXT:    leaq 1(%r8), %r11
+; AVX1-NEXT:    vcvtsi2sd %r11, %xmm6, %xmm4
 ; AVX1-NEXT:    vsubsd %xmm4, %xmm2, %xmm4
 ; AVX1-NEXT:    vmulsd %xmm3, %xmm4, %xmm4
-; AVX1-NEXT:    leaq -1(%r9), %r11
-; AVX1-NEXT:    vcvtsi2sd %r11, %xmm6, %xmm5
+; AVX1-NEXT:    vcvtsi2sd %r10, %xmm6, %xmm5
 ; AVX1-NEXT:    vmulsd %xmm1, %xmm5, %xmm5
 ; AVX1-NEXT:    vaddsd %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vdivsd %xmm0, %xmm4, %xmm4
 ; AVX1-NEXT:    vmovsd %xmm4, -8(%rcx,%r8,8)
-; AVX1-NEXT:    movq %r10, %r8
-; AVX1-NEXT:    cmpq %r10, %rax
+; AVX1-NEXT:    movq %r11, %r8
+; AVX1-NEXT:    cmpq %r11, %rax
 ; AVX1-NEXT:    jge .LBB13_1
 ; AVX1-NEXT:  # %bb.3: # %loopdone
 ; AVX1-NEXT:    vmovaps (%rsp), %xmm7 # 16-byte Reload
@@ -1547,25 +1544,24 @@ define dso_local void @loopclearance2(ptr nocapture %y, ptr %x, double %c1, doub
 ; AVX512VL-NEXT:  .LBB13_1: # %inner_loop
 ; AVX512VL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX512VL-NEXT:    movq %r9, %r10
-; AVX512VL-NEXT:    shrq $6, %r10
-; AVX512VL-NEXT:    movq (%rdx,%r10,8), %r10
-; AVX512VL-NEXT:    btq %r9, %r10
-; AVX512VL-NEXT:    leaq 1(%r9), %r9
+; AVX512VL-NEXT:    shrq $6, %r9
+; AVX512VL-NEXT:    movq (%rdx,%r9,8), %r11
+; AVX512VL-NEXT:    leaq 1(%r10), %r9
+; AVX512VL-NEXT:    btq %r10, %r11
 ; AVX512VL-NEXT:    jae .LBB13_1
 ; AVX512VL-NEXT:  # %bb.2: # %loop_end
 ; AVX512VL-NEXT:    # in Loop: Header=BB13_1 Depth=1
-; AVX512VL-NEXT:    leaq 1(%r8), %r10
-; AVX512VL-NEXT:    vcvtsi2sd %r10, %xmm6, %xmm4
+; AVX512VL-NEXT:    leaq 1(%r8), %r11
+; AVX512VL-NEXT:    vcvtsi2sd %r11, %xmm6, %xmm4
 ; AVX512VL-NEXT:    vsubsd %xmm4, %xmm2, %xmm4
 ; AVX512VL-NEXT:    vmulsd %xmm3, %xmm4, %xmm4
-; AVX512VL-NEXT:    leaq -1(%r9), %r11
-; AVX512VL-NEXT:    vcvtsi2sd %r11, %xmm6, %xmm5
+; AVX512VL-NEXT:    vcvtsi2sd %r10, %xmm6, %xmm5
 ; AVX512VL-NEXT:    vmulsd %xmm1, %xmm5, %xmm5
 ; AVX512VL-NEXT:    vaddsd %xmm5, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vdivsd %xmm0, %xmm4, %xmm4
 ; AVX512VL-NEXT:    vmovsd %xmm4, -8(%rcx,%r8,8)
-; AVX512VL-NEXT:    movq %r10, %r8
-; AVX512VL-NEXT:    cmpq %r10, %rax
+; AVX512VL-NEXT:    movq %r11, %r8
+; AVX512VL-NEXT:    cmpq %r11, %rax
 ; AVX512VL-NEXT:    jge .LBB13_1
 ; AVX512VL-NEXT:  # %bb.3: # %loopdone
 ; AVX512VL-NEXT:    vmovaps (%rsp), %xmm7 # 16-byte Reload
