@@ -784,7 +784,7 @@ protected:
     friend class CXXOperatorCallExpr;
 
     LLVM_PREFERRED_TYPE(CallExprBitfields)
-    unsigned : NumCallExprBits;
+    uint64_t : NumCallExprBits;
 
     /// The kind of this overloaded operator. One of the enumerator
     /// value of OverloadedOperatorKind.
@@ -797,7 +797,7 @@ protected:
     friend class CXXRewrittenBinaryOperator;
 
     LLVM_PREFERRED_TYPE(CallExprBitfields)
-    unsigned : NumCallExprBits;
+    uint64_t : NumCallExprBits;
 
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsReversed : 1;
