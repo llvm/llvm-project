@@ -43,6 +43,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-pre-ra-optimizations"
 
+static cl::opt<bool>
+    InflateToAVGPR("amdgpu-avgpr-inflation", cl::Hidden, cl::init(false),
+                   cl::desc("Enable register inflation to avgpr register class "
+                            "(which can be assigned to either AGPR or VGPR)."));
+
 namespace {
 
 class GCNPreRAOptimizationsImpl {
@@ -253,6 +258,13 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
     if (!LIS->hasInterval(Reg))
       continue;
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+
+    if (InflateToAVGPR && ST.hasGFX90AInsts() &&
+        (TRI->isAGPRClass(RC) || TRI->isVGPRClass(RC))) {
+      MRI->recomputeRegClass(Reg);
+      continue;
+    }
+
     if ((RC->MC->getSizeInBits() != 64 || !TRI->isSGPRClass(RC)) &&
         (ST.hasGFX90AInsts() || !TRI->isAGPRClass(RC)))
       continue;
