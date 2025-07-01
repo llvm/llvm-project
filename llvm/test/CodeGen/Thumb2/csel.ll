@@ -379,3 +379,17 @@ entry:
   %t = add i32 %s, %b
   ret i32 %t
 }
+
+; Rather than use a CNEG, use a CSINV to transform "a == 1 ? 1 : -1" toAdd commentMore actions
+; "a == 1 ? a : -1" to avoid materializing a constant.
+define i32 @test_cneg(i32 %x) {
+; CHECK-LABEL: test_cneg:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    movs r1, #1
+; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    cneg r0, r1, ne
+; CHECK-NEXT:    bx lr
+  %cmp = icmp eq i32 %x, 1
+  %res = select i1 %cmp, i32 1, i32 -1
+  ret i32 %res
+}
