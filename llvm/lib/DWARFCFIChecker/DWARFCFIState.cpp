@@ -144,9 +144,7 @@ dwarf::CFIProgram DWARFCFIState::convert(MCCFIInstruction Directive) {
     CFIP.addInstruction(dwarf::DW_CFA_GNU_args_size);
     break;
   case MCCFIInstruction::OpLabel:
-    // TODO: I don't know what it is, I have to implement it.
-    llvm_unreachable("CFI label instruction is not implemented yet, and it is "
-                     "not decided to be ignored.");
+    // `.cfi_label` does not have any functional effect on unwinding process.
     break;
   case MCCFIInstruction::OpValOffset:
     CFIP.addInstruction(dwarf::DW_CFA_val_offset, Directive.getRegister(),
