@@ -3102,6 +3102,21 @@ Record::getValueAsListOfDefs(StringRef FieldName) const {
   return Defs;
 }
 
+llvm::IRMemLocation Record::getLocationTypeAsInt(StringRef FieldName) const {
+  const Record *LocRec = getValueAsDef(FieldName);
+  StringRef Name = LocRec->getName();
+  if (Name == "AArch64_FPMR")
+    return static_cast<IRMemLocation>(
+        llvm::InaccessibleTargetMemLocation::AARCH64_FPMR);
+  else if (Name == "ZA")
+    return static_cast<IRMemLocation>(
+        llvm::InaccessibleTargetMemLocation::AARCH64_ZA);
+  else if (Name == "InaccessibleMem")
+    return llvm::IRMemLocation::InaccessibleMem;
+  else
+    PrintFatalError(getLoc(), "unknown IRMemLocation: " + Name);
+}
+
 int64_t Record::getValueAsInt(StringRef FieldName) const {
   const RecordVal *R = getValue(FieldName);
   if (!R || !R->getValue())

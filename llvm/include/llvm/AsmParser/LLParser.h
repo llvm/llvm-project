@@ -295,6 +295,7 @@ namespace llvm {
     };
     bool parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
                             bool InAttrGroup);
+    bool parseInaccessibleMemLocation(IRMemLocation &MemLoc);
     bool parseOptionalParamOrReturnAttrs(AttrBuilder &B, bool IsParam);
     bool parseOptionalParamAttrs(AttrBuilder &B) {
       return parseOptionalParamOrReturnAttrs(B, true);
