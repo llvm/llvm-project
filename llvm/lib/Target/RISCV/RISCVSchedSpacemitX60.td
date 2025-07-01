@@ -488,17 +488,17 @@ foreach mx = SchedMxList in {
   let Latency = SMX60GetArithmeticLatency<mx>.c in {
     defm "" : LMULWriteResMX<"WriteVIMinMaxV", [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMinMaxX", [SMX60_VIEU], mx, IsWorstCase>;
-
-    // Pattern of vadd, vsub, vrsub: 4/4/5/8
-    // Pattern of vand, vor, vxor:   4/4/8/16
-    // They are grouped together, so we used 4/4/5/8
-    // TODO: this is the only case where we don't use the worst case, should we?
-    defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIALUX",    [SMX60_VIEU], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
   }
 
   let Latency = SMX60GetBasicLatency<mx>.c in {
+    // Pattern of vadd, vsub, vrsub: 4/4/5/8
+    // Pattern of vand, vor, vxor:   4/4/8/16
+    // They are grouped together, so we used the worst case 4/4/5/16
+    // TODO: use InstRW to override individual instructions' scheduling data
+    defm "" : LMULWriteResMX<"WriteVIALUV",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIALUX",    [SMX60_VIEU], mx, IsWorstCase>;
+    defm "" : LMULWriteResMX<"WriteVIALUI",    [SMX60_VIEU], mx, IsWorstCase>;
+
     defm "" : LMULWriteResMX<"WriteVExtV",     [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeV",  [SMX60_VIEU], mx, IsWorstCase>;
     defm "" : LMULWriteResMX<"WriteVIMergeX",  [SMX60_VIEU], mx, IsWorstCase>;
