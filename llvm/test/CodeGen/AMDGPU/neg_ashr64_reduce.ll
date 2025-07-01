@@ -92,6 +92,7 @@ define <4 x i64> @v4_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
   ret <4 x i64> %ashr
 }
 
+; Ranges used when transformation is valid
 !0 = !{i64 -6000000000, i64 0}
 !1 = !{i64 32, i64 64}
 !2 = !{i64 -7000000000, i64 -1000}
@@ -100,3 +101,89 @@ define <4 x i64> @v4_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
 !5 = !{i64 38, i64 60}
 !6 = !{i64 -9000000000, i64 -3002}
 !7 = !{i64 38, i64 50}
+
+; Test that negative 64-bit values shifted by [2?-63] bits do NOT have
+; a hi-result created by moving an all-ones constant.
+
+define i64 @no_transform_scalar_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
+; CHECK-LABEL: no_transform_scalar_ashr_metadata:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
+; CHECK-NEXT:    flat_load_dword v6, v[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v6, v[4:5]
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %val = load i64, ptr %arg0.ptr, !range !8, !noundef !{}
+  %shift.amt = load i64, ptr %arg1.ptr, !range !9, !noundef !{}
+  %ashr = ashr i64 %val, %shift.amt
+  ret i64 %ashr
+}
+
+define <2 x i64> @no_transform_v2_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
+; CHECK-LABEL: no_transform_v2_ashr_metadata:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
+; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v8, v[4:5]
+; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v10, v[6:7]
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %val = load <2 x i64>, ptr %arg0.ptr, !range !10, !noundef !{}
+  %shift.amt = load <2 x i64>, ptr %arg1.ptr, !range !11, !noundef !{}
+  %ashr = ashr <2 x i64> %val, %shift.amt
+  ret <2 x i64> %ashr
+}
+
+define <3 x i64> @no_transform_v3_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
+; CHECK-LABEL: no_transform_v3_ashr_metadata:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[0:1]
+; CHECK-NEXT:    flat_load_dwordx2 v[11:12], v[0:1] offset:16
+; CHECK-NEXT:    flat_load_dword v5, v[2:3] offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[7:8]
+; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v6, v[9:10]
+; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v5, v[11:12]
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %val = load <3 x i64>, ptr %arg0.ptr, !range !12, !noundef !{}
+  %shift.amt = load <3 x i64>, ptr %arg1.ptr, !range !13, !noundef !{}
+  %ashr = ashr <3 x i64> %val, %shift.amt
+  ret <3 x i64> %ashr
+}
+
+define <4 x i64> @no_transform_v4_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
+; CHECK-LABEL: no_transform_v4_ashr_metadata:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[2:3]
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    flat_load_dwordx4 v[7:10], v[0:1]
+; CHECK-NEXT:    flat_load_dwordx4 v[11:14], v[0:1] offset:16
+; CHECK-NEXT:    flat_load_dwordx4 v[15:18], v[2:3] offset:16
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_ashrrev_i64 v[0:1], v4, v[7:8]
+; CHECK-NEXT:    v_ashrrev_i64 v[2:3], v6, v[9:10]
+; CHECK-NEXT:    v_ashrrev_i64 v[4:5], v15, v[11:12]
+; CHECK-NEXT:    v_ashrrev_i64 v[6:7], v17, v[13:14]
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %val = load <4 x i64>, ptr %arg0.ptr, !range !14, !noundef !{}
+  %shift.amt = load <4 x i64>, ptr %arg1.ptr, !range !15, !noundef !{}
+  %ashr = ashr <4 x i64> %val, %shift.amt
+  ret <4 x i64> %ashr
+}
+
+; Ranges used when transformation is invalid
+!8 = !{i64 -10000000000, i64 0}
+!9 = !{i64 29, i64 64}
+!10 = !{i64 -11000000000, i64 -1000}
+!11 = !{i64 28, i64 64}
+!12 = !{i64 -12000000000, i64 -2001}
+!13 = !{i64 27, i64 60}
+!14 = !{i64 -13000000000, i64 -3002}
+!15 = !{i64 26, i64 50}
+
