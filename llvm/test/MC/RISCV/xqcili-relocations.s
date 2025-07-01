@@ -107,8 +107,12 @@ qc.e.li s1, undef
 # OBJ-NEXT: R_RISCV_RELAX
 qc.li a1, %qc.abs20(undef)
 
-## FIXME: Broken
-## qc.e.li a2, undef
+# ASM: qc.e.li a2, undef
+# OBJ-NEXT: qc.e.li a2, 0x0
+# OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
+# OBJ-NEXT: R_RISCV_CUSTOM194 undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX
+qc.e.li a2, undef
 
 .section .text.other, "ax", @progbits
 

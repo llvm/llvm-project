@@ -192,7 +192,8 @@ li x13, 0xffffffff55555556
 # CHECK-S-OBJ-NEXT: addi t0, t0, -1365
 li x5, -2147485013
 
-# CHECK-ASM: addi a0, zero, %lo(1193046)
+# CHECK-ASM: li a0, %lo(1193046)
+# CHECK-ASM-NOALIAS: addi a0, zero, %lo(1193046)
 # CHECK-OBJ: addi a0, zero, %lo(1193046)
 li a0, %lo(0x123456)
 
@@ -214,7 +215,7 @@ li a0, CONST
 li a0, CONST
 
 .equ CONST, .Lbuf_end - .Lbuf
-# CHECK-ASM: li a0, CONST
+# CHECK-ASM: addi a0, zero, CONST
 # CHECK-ASM-NOALIAS: addi a0, zero, CONST
 # CHECK-OBJ-NOALIAS: addi a0, zero, 8
 li a0, CONST

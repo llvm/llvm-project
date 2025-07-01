@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
@@ -28,7 +29,6 @@
 namespace llvm {
 
 class MCContext;
-class MCExpr;
 class MCInst;
 class MCInstPrinter;
 class MCRegisterInfo;
@@ -179,6 +179,7 @@ public:
   LLVM_ABI void print(raw_ostream &OS, const MCContext *Ctx = nullptr) const;
   LLVM_ABI void dump() const;
   LLVM_ABI bool isBareSymbolRef() const;
+  LLVM_ABI bool isSimpleSymbolRef(MCExpr::Spec &Specifier) const;
   LLVM_ABI bool evaluateAsConstantImm(int64_t &Imm) const;
 };
 

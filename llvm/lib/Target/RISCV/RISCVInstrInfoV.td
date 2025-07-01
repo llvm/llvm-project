@@ -72,9 +72,9 @@ def VMaskCarryInOp : RegisterOperand<VMV0> {
 def simm5 : RISCVSImmLeafOp<5> {
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return isInt<5>(Imm);
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<5>(Imm);
   }];
 }
 
@@ -84,9 +84,9 @@ def simm5_plus1 : RISCVOp, ImmLeaf<XLenVT,
   let OperandType = "OPERAND_SIMM5_PLUS1";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return (isInt<5>(Imm) && Imm != -16) || Imm == 16;
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return (isInt<5>(Imm) && Imm != -16) || Imm == 16;
   }];
 }
 
