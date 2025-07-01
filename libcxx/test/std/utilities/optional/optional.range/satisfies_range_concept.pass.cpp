@@ -8,12 +8,10 @@
 
 // UNSUPPORTED: std-at-least-c++26
 
-#include <iostream>
 #include <optional>
 #include <ranges>
 
 int main() {
-  bool status = std::ranges::range<std::optional<int>>;
-  std::cout << "std::ranges::range<std::optional<int>> is " << status << std::endl;
+  static_assert(std::ranges::range<std::optional<int>>, "std::ranges::range<std::optional<int>> is false");
   return 0;
 }
