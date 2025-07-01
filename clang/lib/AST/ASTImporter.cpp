@@ -2071,7 +2071,8 @@ ASTNodeImporter::ImportDeclarationNameLoc(
 
   case DeclarationName::CXXOperatorName: {
     if (auto ToRangeOrErr = import(From.getCXXOperatorNameRange()))
-      To.setCXXOperatorNameRange(*ToRangeOrErr);
+      To.setCXXOperatorNameInfo(
+          Importer.ToContext.getCXXOperatorSourceInfo(*ToRangeOrErr));
     else
       return ToRangeOrErr.takeError();
     return Error::success();

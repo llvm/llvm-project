@@ -205,7 +205,7 @@ DiagnosticsEngine::DiagStateMap::lookup(SourceManager &SrcMgr,
 }
 
 DiagnosticsEngine::DiagState *
-DiagnosticsEngine::DiagStateMap::File::lookup(unsigned Offset) const {
+DiagnosticsEngine::DiagStateMap::File::lookup(SourceLocation::UIntTy Offset) const {
   auto OnePastIt =
       llvm::partition_point(StateTransitions, [=](const DiagStatePoint &P) {
         return P.Offset <= Offset;

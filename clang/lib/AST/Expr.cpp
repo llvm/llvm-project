@@ -441,7 +441,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
   DeclRefExprBits.CapturedByCopyInLambdaWithExplicitObjectParameter = false;
   DeclRefExprBits.NonOdrUseReason = NOUR;
   DeclRefExprBits.IsImmediateEscalating = false;
-  DeclRefExprBits.Loc = L;
+  Loc = L;
   setDependence(computeDependence(this, Ctx));
 }
 
@@ -454,7 +454,7 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
                          QualType T, ExprValueKind VK, NonOdrUseReason NOUR)
     : Expr(DeclRefExprClass, T, VK, OK_Ordinary), D(D),
       DNLoc(NameInfo.getInfo()) {
-  DeclRefExprBits.Loc = NameInfo.getLoc();
+  Loc = NameInfo.getLoc();
   DeclRefExprBits.HasQualifier = QualifierLoc ? 1 : 0;
   if (QualifierLoc)
     new (getTrailingObjects<NestedNameSpecifierLoc>())
@@ -618,7 +618,7 @@ PredefinedExpr::PredefinedExpr(SourceLocation L, QualType FNTy,
   bool HasFunctionName = SL != nullptr;
   PredefinedExprBits.HasFunctionName = HasFunctionName;
   PredefinedExprBits.IsTransparent = IsTransparent;
-  PredefinedExprBits.Loc = L;
+  Loc = L;
   if (HasFunctionName)
     setFunctionName(SL);
   setDependence(computeDependence(this));
@@ -1466,15 +1466,15 @@ static unsigned SizeOfCallExprInstance(Expr::StmtClass SC) {
 
 // changing the size of SourceLocation, CallExpr, and
 // subclasses requires careful considerations
-static_assert(sizeof(SourceLocation) == 4 && sizeof(CXXOperatorCallExpr) <= 32,
-              "we assume CXXOperatorCallExpr is at most 32 bytes");
+static_assert(sizeof(SourceLocation) == 8 && sizeof(CXXOperatorCallExpr) <= 40,
+              "we assume CXXOperatorCallExpr is at most 40 bytes");
 
 CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
                    ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                    SourceLocation RParenLoc, FPOptionsOverride FPFeatures,
                    unsigned MinNumArgs, ADLCallKind UsesADL)
     : Expr(SC, Ty, VK, OK_Ordinary), RParenLoc(RParenLoc) {
-  NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
+  CallExprBits.NumArgs = std::max<unsigned>(Args.size(), MinNumArgs);
   unsigned NumPreArgs = PreArgs.size();
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
@@ -1488,7 +1488,7 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
     setPreArg(I, PreArgs[I]);
   for (unsigned I = 0; I != Args.size(); ++I)
     setArg(I, Args[I]);
-  for (unsigned I = Args.size(); I != NumArgs; ++I)
+  for (unsigned I = Args.size(); I != CallExprBits.NumArgs; ++I)
     setArg(I, nullptr);
 
   this->computeDependence();
@@ -1504,7 +1504,8 @@ CallExpr::CallExpr(StmtClass SC, Expr *Fn, ArrayRef<Expr *> PreArgs,
 
 CallExpr::CallExpr(StmtClass SC, unsigned NumPreArgs, unsigned NumArgs,
                    bool HasFPFeatures, EmptyShell Empty)
-    : Expr(SC, Empty), NumArgs(NumArgs) {
+    : Expr(SC, Empty) {
+  CallExprBits.NumArgs = NumArgs;
   CallExprBits.NumPreArgs = NumPreArgs;
   assert((NumPreArgs == getNumPreArgs()) && "NumPreArgs overflow!");
   CallExprBits.HasFPFeatures = HasFPFeatures;
@@ -1727,7 +1728,7 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
       TemplateArgs || TemplateKWLoc.isValid();
   MemberExprBits.HadMultipleCandidates = false;
   MemberExprBits.NonOdrUseReason = NOUR;
-  MemberExprBits.OperatorLoc = OperatorLoc;
+  this->OperatorLoc = OperatorLoc;
 
   if (hasQualifier())
     new (getTrailingObjects<NestedNameSpecifierLoc>())
@@ -4421,7 +4422,7 @@ GenericSelectionExpr::GenericSelectionExpr(
          " and TypeSourceInfo!");
   assert(ResultIndex < NumAssocs && "ResultIndex is out-of-bounds!");
 
-  GenericSelectionExprBits.GenericLoc = GenericLoc;
+  GenericSelectionExprBits.GenericLoc = GenericLoc.getRawEncoding();
   getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
       ControllingExpr;
   llvm::copy(AssocExprs,
@@ -4448,7 +4449,7 @@ GenericSelectionExpr::GenericSelectionExpr(
          " and TypeSourceInfo!");
   assert(ResultIndex < NumAssocs && "ResultIndex is out-of-bounds!");
 
-  GenericSelectionExprBits.GenericLoc = GenericLoc;
+  GenericSelectionExprBits.GenericLoc = GenericLoc.getRawEncoding();
   getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
       ControllingType;
   llvm::copy(AssocExprs,
@@ -4472,7 +4473,7 @@ GenericSelectionExpr::GenericSelectionExpr(
          "Must have the same number of association expressions"
          " and TypeSourceInfo!");
 
-  GenericSelectionExprBits.GenericLoc = GenericLoc;
+  GenericSelectionExprBits.GenericLoc = GenericLoc.getRawEncoding();
   getTrailingObjects<Stmt *>()[getIndexOfControllingExpression()] =
       ControllingExpr;
   llvm::copy(AssocExprs,
@@ -4496,7 +4497,7 @@ GenericSelectionExpr::GenericSelectionExpr(
          "Must have the same number of association expressions"
          " and TypeSourceInfo!");
 
-  GenericSelectionExprBits.GenericLoc = GenericLoc;
+  GenericSelectionExprBits.GenericLoc = GenericLoc.getRawEncoding();
   getTrailingObjects<TypeSourceInfo *>()[getIndexOfControllingType()] =
       ControllingType;
   llvm::copy(AssocExprs,
@@ -4851,7 +4852,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   BinaryOperatorBits.Opc = opc;
   assert(!isCompoundAssignmentOp() &&
          "Use CompoundAssignOperator for compound assignments");
-  BinaryOperatorBits.OpLoc = opLoc;
+  this->OpLoc = opLoc;
   BinaryOperatorBits.ExcludedOverflowPattern = false;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
@@ -4871,7 +4872,7 @@ BinaryOperator::BinaryOperator(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
   BinaryOperatorBits.ExcludedOverflowPattern = false;
   assert(isCompoundAssignmentOp() &&
          "Use CompoundAssignOperator for compound assignments");
-  BinaryOperatorBits.OpLoc = opLoc;
+  this->OpLoc = opLoc;
   SubExprs[LHS] = lhs;
   SubExprs[RHS] = rhs;
   BinaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
@@ -4938,7 +4939,7 @@ UnaryOperator::UnaryOperator(const ASTContext &Ctx, Expr *input, Opcode opc,
     : Expr(UnaryOperatorClass, type, VK, OK), Val(input) {
   UnaryOperatorBits.Opc = opc;
   UnaryOperatorBits.CanOverflow = CanOverflow;
-  UnaryOperatorBits.Loc = l;
+  this->Loc = l;
   UnaryOperatorBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   if (hasStoredFPFeatures())
     setStoredFPFeatures(FPFeatures);

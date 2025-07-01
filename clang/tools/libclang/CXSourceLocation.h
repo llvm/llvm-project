@@ -30,9 +30,15 @@ translateSourceLocation(const SourceManager &SM, const LangOptions &LangOpts,
                         SourceLocation Loc) {
   if (Loc.isInvalid())
     return clang_getNullLocation();
+  uint32_t LocRaw;
+  if (!Loc.getRawEncoding32(LocRaw))
+    return clang_getNullLocation(); // location is too big for libclang ABI
 
-  CXSourceLocation Result = { { &SM, &LangOpts, },
-                              Loc.getRawEncoding() };
+  CXSourceLocation Result = {{
+                                 &SM,
+                                 &LangOpts,
+                             },
+                             LocRaw};
   return Result;
 }
   
@@ -63,12 +69,21 @@ static inline CXSourceRange translateSourceRange(ASTContext &Context,
 }
 
 static inline SourceLocation translateSourceLocation(CXSourceLocation L) {
-  return SourceLocation::getFromRawEncoding(L.int_data);
+   if (!L.ptr_data[0]) {
+    return SourceLocation();
+  }
+  const SourceManager &SM =
+      *static_cast<const SourceManager *>(L.ptr_data[0]);
+  return SourceLocation::getFromRawEncoding32(SM, L.int_data);
 }
 
 static inline SourceRange translateCXSourceRange(CXSourceRange R) {
-  return SourceRange(SourceLocation::getFromRawEncoding(R.begin_int_data),
-                     SourceLocation::getFromRawEncoding(R.end_int_data));
+  if (!R.ptr_data[0]) {
+    return SourceRange();
+  }
+  const SourceManager &SM = *static_cast<const SourceManager *>(R.ptr_data[0]);
+  return SourceRange(SourceLocation::getFromRawEncoding32(SM, R.begin_int_data),
+                     SourceLocation::getFromRawEncoding32(SM, R.end_int_data));
 }
 
 /// Translates CXSourceRange to CharSourceRange.

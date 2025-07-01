@@ -979,23 +979,30 @@ void clang_indexLoc_getFileLocation(CXIdxLoc location,
   if (file)   *file = nullptr;
   if (line)   *line = 0;
   if (column) *column = 0;
-  if (offset) *offset = 0;
-
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-  if (!location.ptr_data[0] || Loc.isInvalid())
+  if (offset)
+    *offset = 0;
+  if (!location.ptr_data[0])
+    return;
+  CXIndexDataConsumer &DataConsumer =
+      *static_cast<CXIndexDataConsumer *>(location.ptr_data[0]);
+  SourceLocation Loc = SourceLocation::getFromRawEncoding32(
+      DataConsumer.getASTContext().getSourceManager(), location.int_data);
+  if (Loc.isInvalid())
     return;
 
-  CXIndexDataConsumer &DataConsumer =
-      *static_cast<CXIndexDataConsumer*>(location.ptr_data[0]);
   DataConsumer.translateLoc(Loc, indexFile, file, line, column, offset);
 }
 
 CXSourceLocation clang_indexLoc_getCXSourceLocation(CXIdxLoc location) {
-  SourceLocation Loc = SourceLocation::getFromRawEncoding(location.int_data);
-  if (!location.ptr_data[0] || Loc.isInvalid())
-    return clang_getNullLocation();
+  if (!location.ptr_data[0])
+  return clang_getNullLocation();
 
   CXIndexDataConsumer &DataConsumer =
-      *static_cast<CXIndexDataConsumer*>(location.ptr_data[0]);
+      *static_cast<CXIndexDataConsumer *>(location.ptr_data[0]);
+  const auto &SM = DataConsumer.getASTContext().getSourceManager();
+  SourceLocation Loc =
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
+  if (Loc.isInvalid())
+    return clang_getNullLocation();
   return cxloc::translateSourceLocation(DataConsumer.getASTContext(), Loc);
 }

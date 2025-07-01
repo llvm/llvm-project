@@ -164,7 +164,7 @@ using LocalMacroID = uint32_t;
 const unsigned int NUM_PREDEF_MACRO_IDS = 1;
 
 /// An ID number that refers to an ObjC selector in an AST file.
-using SelectorID = uint32_t;
+using SelectorID = uint64_t;
 
 /// The number of predefined selector IDs.
 const unsigned int NUM_PREDEF_SELECTOR_IDS = 1;
