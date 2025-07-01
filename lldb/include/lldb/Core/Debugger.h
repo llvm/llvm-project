@@ -231,6 +231,8 @@ public:
 
   const char *GetIOHandlerHelpPrologue();
 
+  void RefreshIOHandler();
+
   void ClearIOHandlers();
 
   bool EnableLog(llvm::StringRef channel,

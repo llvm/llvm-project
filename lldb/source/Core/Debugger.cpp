@@ -1484,6 +1484,13 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   return true;
 }
 
+void Debugger::RefreshIOHandler() {
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  IOHandlerSP reader_sp(m_io_handler_stack.Top());
+  if (reader_sp)
+    reader_sp->Refresh();
+}
+
 StreamUP Debugger::GetAsyncOutputStream() {
   return std::make_unique<StreamAsynchronousIO>(*this,
                                                 StreamAsynchronousIO::STDOUT);
