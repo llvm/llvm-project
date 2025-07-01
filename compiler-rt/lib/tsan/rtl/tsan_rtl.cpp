@@ -662,7 +662,7 @@ void MapShadow(uptr addr, uptr size) {
           addr + size, meta_begin, meta_end);
 }
 
-#if !SANITIZER_GO
+#if !SANITIZER_GO && !SANITIZER_ANDROID
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
   stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
@@ -733,6 +733,9 @@ void Initialize(ThreadState *thr) {
 #if !SANITIZER_GO
   InitializeShadowMemory();
   InitializeAllocatorLate();
+#endif
+
+#if !SANITIZER_GO && !SANITIZER_ANDROID
   InstallDeadlySignalHandlers(TsanOnDeadlySignal);
 #endif
   // Setup correct file descriptor for error reports.
