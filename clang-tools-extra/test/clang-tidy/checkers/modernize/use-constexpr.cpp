@@ -454,6 +454,10 @@ namespace variable {
 
             static auto e1 = TemplatedVar1<int> + TemplatedVar1<unsigned int>;
         }
+
+    const auto check = [](const int & ref) { };
+    // CHECK-MESSAGES-17: :[[@LINE-1]]:16: warning: variable 'check' can be declared 'constexpr' [modernize-use-constexpr]
+    // CHECK-FIXES-17: constexpr  auto check = [](const int & ref) { };
     } // namespace literal_type
 
     namespace struct_type {

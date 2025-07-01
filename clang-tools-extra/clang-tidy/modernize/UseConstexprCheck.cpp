@@ -921,11 +921,16 @@ void UseConstexprCheck::onEndOfTranslationUnit() {
         << Var << R
         << FixItHint::CreateInsertion(Var->getInnerLocStart(),
                                       ConstexprString + " ");
+    // Since either of the locs can be in a macro, use `makeFileCharRange` to be
+    // sure that we have a consistent `CharSourceRange`, located entirely in the
+    // source file.
+    CharSourceRange FileRange = Lexer::makeFileCharRange(
+        CharSourceRange::getCharRange(Var->getInnerLocStart(),
+                                      Var->getLocation()),
+        Var->getASTContext().getSourceManager(), getLangOpts());
     if (const std::optional<Token> ConstToken =
             utils::lexer::getQualifyingToken(
-                tok::TokenKind::kw_const,
-                CharSourceRange::getTokenRange(Var->getSourceRange()),
-                Var->getASTContext(),
+                tok::TokenKind::kw_const, FileRange, Var->getASTContext(),
                 Var->getASTContext().getSourceManager())) {
       Diag << FixItHint::CreateRemoval(ConstToken->getLocation());
     }
