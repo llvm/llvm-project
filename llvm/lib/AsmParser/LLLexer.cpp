@@ -707,10 +707,14 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(write);
   KEYWORD(readwrite);
   KEYWORD(argmem);
+  KEYWORD(fpmr);
+  KEYWORD(za);
   KEYWORD(inaccessiblemem);
   KEYWORD(errnomem);
   KEYWORD(argmemonly);
   KEYWORD(inaccessiblememonly);
+  KEYWORD(inaccessiblewritememonly);
+  KEYWORD(inaccessiblereadmemonly);
   KEYWORD(inaccessiblemem_or_argmemonly);
   KEYWORD(nocapture);
   KEYWORD(address_is_null);

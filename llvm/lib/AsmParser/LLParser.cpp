@@ -1688,6 +1688,48 @@ static bool upgradeMemoryAttr(MemoryEffects &ME, lltok::Kind Kind) {
   }
 }
 
+static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
+  switch (Tok) {
+  case lltok::kw_argmem:
+    return IRMemLocation::ArgMem;
+  case lltok::kw_inaccessiblemem:
+    return IRMemLocation::InaccessibleMem;
+  case lltok::kw_errnomem:
+    return IRMemLocation::ErrnoMem;
+  case lltok::kw_fpmr:
+    return static_cast<IRMemLocation>(
+        llvm::InaccessibleTargetMemLocation::AARCH64_FPMR);
+  case lltok::kw_za:
+    return static_cast<IRMemLocation>(
+        llvm::InaccessibleTargetMemLocation::AARCH64_ZA);
+  default:
+    return std::nullopt;
+  }
+}
+
+bool LLParser::parseInaccessibleMemLocation(IRMemLocation &MemLoc) {
+  // It does not have location
+  if (Lex.getKind() != llvm::lltok::lparen)
+    return false;
+
+  Lex.Lex(); // eat '('
+
+  std::optional<IRMemLocation> LocOpt = keywordToLoc(Lex.getKind());
+  if (!LocOpt)
+    return tokError("invalid memory location keyword");
+
+  MemLoc = *LocOpt;
+
+  Lex.Lex(); // eat the keyword (e.g., 'fpmr', 'za')
+
+  if (Lex.getKind() != llvm::lltok::rparen)
+    return tokError("expected ')' after memory location");
+
+  Lex.Lex(); // eat ')'
+
+  return true; // success
+}
+
 /// parseFnAttributeValuePairs
 ///   ::= <attr> | <attr> '=' <value>
 bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
@@ -1698,6 +1740,11 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
   B.clear();
 
   MemoryEffects ME = MemoryEffects::unknown();
+  // Memory effects can span multiple locations, so we initialize a base
+  // MemoryEffects object once with default state, and then incrementally
+  // populate or combine effects for individual locations. This avoids
+  // rebuilding the full Data structure on each addition.
+  bool FirstME = true;
   while (true) {
     lltok::Kind Token = Lex.getKind();
     if (Token == lltok::rbrace)
@@ -1731,6 +1778,36 @@ bool LLParser::parseFnAttributeValuePairs(AttrBuilder &B,
 
     if (upgradeMemoryAttr(ME, Token)) {
       Lex.Lex();
+      continue;
+    }
+
+    if (Token == lltok::kw_inaccessiblereadmemonly) {
+      Lex.Lex(); // eat the keyword
+
+      IRMemLocation MemLoc;
+      if (parseInaccessibleMemLocation(MemLoc)) {
+        if (!FirstME)
+          ME = ME.getWithModRef(MemLoc, ModRefInfo::Ref);
+        else
+          ME &= MemoryEffects::inaccessibleReadMemOnly(MemLoc);
+      } else
+        ME = MemoryEffects::inaccessibleReadMemOnly();
+      FirstME = false;
+      continue;
+    }
+
+    if (Token == lltok::kw_inaccessiblewritememonly) {
+      Lex.Lex(); // eat the keyword
+
+      IRMemLocation MemLoc;
+      if (parseInaccessibleMemLocation(MemLoc)) {
+        if (!FirstME)
+          ME = ME.getWithModRef(MemLoc, ModRefInfo::Mod);
+        else
+          ME &= MemoryEffects::inaccessibleWriteMemOnly(MemLoc);
+      } else
+        ME &= MemoryEffects::inaccessibleWriteMemOnly();
+      FirstME = false;
       continue;
     }
 
@@ -2544,19 +2621,6 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
   return false;
 }
 
-static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
-  switch (Tok) {
-  case lltok::kw_argmem:
-    return IRMemLocation::ArgMem;
-  case lltok::kw_inaccessiblemem:
-    return IRMemLocation::InaccessibleMem;
-  case lltok::kw_errnomem:
-    return IRMemLocation::ErrnoMem;
-  default:
-    return std::nullopt;
-  }
-}
-
 static std::optional<ModRefInfo> keywordToModRef(lltok::Kind Tok) {
   switch (Tok) {
   case lltok::kw_none:
@@ -2567,6 +2631,10 @@ static std::optional<ModRefInfo> keywordToModRef(lltok::Kind Tok) {
     return ModRefInfo::Mod;
   case lltok::kw_readwrite:
     return ModRefInfo::ModRef;
+  case lltok::kw_inaccessiblewritememonly:
+    return ModRefInfo::Mod;
+  case lltok::kw_inaccessiblereadmemonly:
+    return ModRefInfo::Ref;
   default:
     return std::nullopt;
   }
