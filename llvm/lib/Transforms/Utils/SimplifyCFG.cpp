@@ -87,6 +87,7 @@
 #include <optional>
 #include <set>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -3436,7 +3437,7 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
 }
 
 static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
-                                        BasicBlock *To) {
+                                        BasicBlock *To, bool Strong = false) {
   // Don't look past the block defining the value, we might get the value from
   // a previous loop iteration.
   auto *I = dyn_cast<Instruction>(V);
@@ -3446,10 +3447,18 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
   // We know the value if the From block branches on it.
   auto *BI = dyn_cast<BranchInst>(From->getTerminator());
   if (BI && BI->isConditional() && BI->getCondition() == V &&
-      BI->getSuccessor(0) != BI->getSuccessor(1))
-    return BI->getSuccessor(0) == To ? ConstantInt::getTrue(BI->getContext())
-                                     : ConstantInt::getFalse(BI->getContext());
-
+      BI->getSuccessor(0) != BI->getSuccessor(1)) {
+    ConstantInt *KnownValue = 
+              BI->getSuccessor(0) == To ? ConstantInt::getTrue(BI->getContext())
+                                        : ConstantInt::getFalse(BI->getContext());
+    if (Strong) {
+      Value *Cond = BI->getCondition();
+      Instruction *CondInst = dyn_cast<Instruction>(Cond);
+      return (CondInst && CondInst->getParent() == From) ? KnownValue : nullptr; 
+    } else {
+      return KnownValue;
+    }
+  }
   return nullptr;
 }
 
@@ -3461,6 +3470,7 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
                                             const DataLayout &DL,
                                             AssumptionCache *AC) {
   SmallMapVector<ConstantInt *, SmallSetVector<BasicBlock *, 2>, 2> KnownValues;
+  std::unordered_set<ConstantInt *> StronglyKnownValues;
   BasicBlock *BB = BI->getParent();
   Value *Cond = BI->getCondition();
   PHINode *PN = dyn_cast<PHINode>(Cond);
@@ -3476,8 +3486,12 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
         KnownValues[CB].insert(PN->getIncomingBlock(U));
   } else {
     for (BasicBlock *Pred : predecessors(BB)) {
-      if (ConstantInt *CB = getKnownValueOnEdge(Cond, Pred, BB))
+      if (ConstantInt *CB = getKnownValueOnEdge(Cond, Pred, BB)) {
         KnownValues[CB].insert(Pred);
+        if (getKnownValueOnEdge(Cond, Pred, BB, true)) {
+          StronglyKnownValues.insert(CB);
+        }
+      }
     }
   }
 
@@ -3593,11 +3607,20 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     BranchInst *EdgeBI = cast<BranchInst>(EdgeBB->getTerminator());
     EdgeBI->setSuccessor(0, RealDest);
     EdgeBI->setDebugLoc(BI->getDebugLoc());
+    
+    bool RemoveCondBr = StronglyKnownValues.count(CB);
+    if (RemoveCondBr) {
+      RealDest->removePredecessor(BB);
+      ReplaceInstWithInst(BI, BranchInst::Create(BI->getSuccessor(CB->getZExtValue())));
+    }
 
     if (DTU) {
       SmallVector<DominatorTree::UpdateType, 2> Updates;
       Updates.push_back({DominatorTree::Delete, EdgeBB, BB});
       Updates.push_back({DominatorTree::Insert, EdgeBB, RealDest});
+      if (RemoveCondBr) {
+        Updates.push_back({DominatorTree::Delete, BB, RealDest});
+      }
       DTU->applyUpdates(Updates);
     }
 
@@ -3606,6 +3629,11 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // unnecessary SimplifyCFG iterations, but also makes sure that we don't
     // bypass the check for trivial cycles above.
     MergeBlockIntoPredecessor(EdgeBB, DTU);
+
+    // If we remove the conditional branch, cannot keep simplifying.
+    if (RemoveCondBr) {
+      return true; 
+    }
 
     // Signal repeat, simplifying any other constants.
     return std::nullopt;
