@@ -61,11 +61,7 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-LARGE-NEXT: /* 14 */      MCD::OPC_Decode, {{[0-9]+}}, {{[0-9]+}}, 1, // Opcode: FOO32
 // CHECK-LARGE-NEXT: /* 18 */      MCD::OPC_Fail,
 
-// Instruction length table
-// CHECK: 27,
-// CHECK-NEXT: 43,
-// CHECK-NEXT: };
-
+// CHECK-LABEL: decodeToMCInst
 // CHECK:      case 0:
 // CHECK-NEXT: tmp = fieldFromInstruction(insn, 8, 3);
 // CHECK-NEXT: if (!Check(S, DecodeRegClassRegisterClass(MI, tmp, Address, Decoder))) { return MCDisassembler::Fail; }
@@ -85,6 +81,13 @@ def FOO32 : MyVarInst<MemOp32> {
 // CHECK-NEXT: MI.addOperand(MCOperand::createImm(tmp));
 // CHECK-NEXT: return S;
 
+// Instruction length table
+// CHECK-LABEL: InstrLenTable
+// CHECK: 27,
+// CHECK-NEXT: 43,
+// CHECK-NEXT: };
+
+// CHECK-LABEL: decodeInstruction
 // CHECK-LABEL: case MCD::OPC_ExtractField: {
 // CHECK: makeUp(insn, Start + Len);
 

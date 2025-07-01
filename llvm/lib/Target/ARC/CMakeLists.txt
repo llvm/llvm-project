@@ -5,7 +5,9 @@ set(LLVM_TARGET_DEFINITIONS ARC.td)
 tablegen(LLVM ARCGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM ARCGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler
+         -non-templated-decode-to-mcinst-type-spec=uint32_t:=16,32
+         -non-templated-decode-to-mcinst-type-spec=uint64_t:=48,64)
 tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ARCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ARCGenSDNodeInfo.inc -gen-sd-node-info)

@@ -6,7 +6,9 @@ tablegen(LLVM ARMGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM ARMGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM ARMGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM ARMGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM ARMGenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM ARMGenDisassemblerTables.inc -gen-disassembler
+         -non-templated-decode-to-mcinst-type-spec=uint16_t:=16
+         -non-templated-decode-to-mcinst-type-spec=uint32_t:=32)
 tablegen(LLVM ARMGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM ARMGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM ARMGenInstrInfo.inc -gen-instr-info)
