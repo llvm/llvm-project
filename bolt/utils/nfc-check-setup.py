@@ -88,7 +88,6 @@ def main():
     if not source_dir:
         sys.exit("Source directory is not found")
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     # build the current commit
     subprocess.run(
         shlex.split("cmake --build . --target llvm-bolt"), cwd=args.build_dir
