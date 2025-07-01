@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_AST_PARENTMAP_H
 #define LLVM_CLANG_AST_PARENTMAP_H
 
+#include "llvm/Support/Casting.h"
+
 namespace clang {
 class Stmt;
 class Expr;
@@ -39,6 +41,25 @@ public:
   Stmt *getParentIgnoreParenImpCasts(Stmt *) const;
   Stmt *getOuterParenParent(Stmt *) const;
 
+  template <typename... Ts> Stmt *getOuterMostAncestor(Stmt *S) const {
+    Stmt *Res = nullptr;
+    while (S) {
+      if (llvm::isa<Ts...>(S))
+        Res = S;
+      S = getParent(S);
+    }
+    return Res;
+  }
+
+  template <typename... Ts> Stmt *getInnerMostAncestor(Stmt *S) const {
+    while (S) {
+      if (llvm::isa<Ts...>(S))
+        return S;
+      S = getParent(S);
+    }
+    return nullptr;
+  }
+
   const Stmt *getParent(const Stmt* S) const {
     return getParent(const_cast<Stmt*>(S));
   }
@@ -49,6 +70,16 @@ public:
 
   const Stmt *getParentIgnoreParenCasts(const Stmt *S) const {
     return getParentIgnoreParenCasts(const_cast<Stmt*>(S));
+  }
+
+  template <typename... Ts>
+  const Stmt *getOuterMostAncestor(const Stmt *S) const {
+    return getOuterMostAncestor<Ts...>(const_cast<Stmt *>(S));
+  }
+
+  template <typename... Ts>
+  const Stmt *getInnerMostAncestor(const Stmt *S) const {
+    return getInnerMostAncestor<Ts...>(const_cast<Stmt *>(S));
   }
 
   bool hasParent(const Stmt *S) const { return getParent(S) != nullptr; }
