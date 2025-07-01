@@ -862,20 +862,14 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         DW, Address, CS))
         break;
 
-      if (isGFX1250Only() &&
-          tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
-                        DW, Address, CS))
-        break;
-
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
                         Address, CS))
         break;
 
-      // FIXME: Should use DecoderTableGFX1250_FAKE1632, but it is not generated
-      //        yet.
       if (isGFX1250Only() &&
-          tryDecodeInst(DecoderTableGFX125032, MI, DW, Address, CS))
+          tryDecodeInst(DecoderTableGFX125032, DecoderTableGFX1250_FAKE1632, MI,
+                        DW, Address, CS))
         break;
 
       if (isGFX12() &&

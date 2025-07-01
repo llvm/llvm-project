@@ -479,7 +479,7 @@ bb:
 }
 
 ; CHECK: DIVERGENT: %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1) %addr)
-define amdgpu_kernel void @global_load_tr_b128_v4i16_(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
+define amdgpu_kernel void @global_load_tr_b128_v4i16(ptr addrspace(1) %addr, ptr addrspace(1) %out) {
 bb:
   %tmp0 = call <4 x i16> @llvm.amdgcn.global.load.tr.b128.v4i16(ptr addrspace(1) %addr)
   store <4 x i16> %tmp0, ptr addrspace(1) %out, align 8

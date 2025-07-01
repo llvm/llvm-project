@@ -1,4 +1,4 @@
-; RUN: llc -O0 -filetype=obj -o - %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -mtriple=x86_64 -O0 -filetype=obj -o - %s | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ; A basic test of using a DIExpression for DW_AT_data_bit_offset and
 ; DW_AT_bit_size.

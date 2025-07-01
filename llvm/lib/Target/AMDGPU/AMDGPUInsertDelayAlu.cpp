@@ -63,8 +63,8 @@ public:
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (SII->isXDL(MI))
-      return AMDGPU::isGFX1250Only(*ST) ? TRANS : VALU;
+    if (AMDGPU::isGFX1250Only(*ST) && SII->isXDLWMMA(MI))
+      return TRANS;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
     if (SIInstrInfo::isSALU(MI))
