@@ -1366,10 +1366,9 @@ LogicalResult RotateOp::verify() {
     return emitOpError() << "width must be a power of two";
 
   if (offsetValue.sge(widthValue) || offsetValue.slt(0)) {
-    SmallString<8> widthStr;
-    widthValue.toStringUnsigned(widthStr);
-    return emitOpError() << "offset must be in the range [0, "
-                         << std::string(std::move(widthStr)) << ")";
+    int64_t widthValueInt = widthValue.getSExtValue();
+    return emitOpError() << "offset must be in the range [0, " << widthValueInt
+                         << ")";
   }
 
   return success();
