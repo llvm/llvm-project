@@ -55,7 +55,8 @@ void populateByRefInitAndCleanupRegions(
     mlir::Value scalarInitValue, mlir::Block *initBlock,
     mlir::Value allocatedPrivVarArg, mlir::Value moldArg,
     mlir::Region &cleanupRegion, DeclOperationKind kind,
-    const Fortran::semantics::Symbol *sym = nullptr);
+    const Fortran::semantics::Symbol *sym = nullptr,
+    bool cannotHaveNonDefaultLowerBounds = false);
 
 /// Generate a fir::ShapeShift op describing the provided boxed array.
 /// `cannotHaveNonDefaultLowerBounds` should be set if `box` is known to have
@@ -65,6 +66,7 @@ void populateByRefInitAndCleanupRegions(
 /// elements without having to adjust each index.
 fir::ShapeShiftOp getShapeShift(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value box,
+                                bool cannotHaveNonDefaultLowerBounds = false,
                                 bool useDefaultLowerBounds = false);
 
 } // namespace omp

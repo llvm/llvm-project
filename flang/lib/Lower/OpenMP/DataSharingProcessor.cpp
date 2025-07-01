@@ -625,7 +625,7 @@ void DataSharingProcessor::privatizeSymbol(
         result.getDeallocRegion(),
         emitCopyRegion ? omp::DeclOperationKind::FirstPrivate
                        : omp::DeclOperationKind::Private,
-        symToPrivatize);
+        symToPrivatize, cannotHaveNonDefaultLowerBounds);
     // TODO: currently there are false positives from dead uses of the mold
     // arg
     if (result.initReadsFromMold())
