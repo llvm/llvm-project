@@ -304,6 +304,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcslcpy_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcslcpy_test.cpp
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.wchar.wcslcpy
+)
+
+add_libc_test(
   wcpncpy_test
   SUITE
     libc_wchar_unittests

@@ -340,3 +340,14 @@ add_entrypoint_object(
     libc.hdr.wchar_macros
     libc.src.string.string_utils
 )
+
+add_entrypoint_object(
+  wcslcpy
+  SRCS
+    wcslcpy.cpp
+  HDRS
+    wcslcpy.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.wchar_macros
+)
