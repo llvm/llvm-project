@@ -2,9 +2,18 @@
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
+// RUN: %clang_cc1 -DOMP60 -verify -fopenmp -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefixes=CHECK,OMP60 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefixes=CHECK,OMP60 %s
+
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+
+// RUN: %clang_cc1 -DOMP60 -verify -fopenmp-simd -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -std=c++11 -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DOMP60 -fopenmp-simd -fopenmp-version=60 -x c++ -triple %itanium_abi_triple -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -32,6 +41,12 @@ int tmain() {
   foo();
 #pragma omp parallel num_threads(T(23))
   foo();
+#ifdef OMP60
+#pragma omp parallel num_threads(strict: C)
+  foo();
+#pragma omp parallel num_threads(strict: T(23))
+  foo();
+#endif
   return 0;
 }
 
@@ -42,6 +57,12 @@ int main() {
   foo();
 #pragma omp parallel num_threads(a)
   foo();
+#ifdef OMP60
+#pragma omp parallel num_threads(strict: 2)
+  foo();
+#pragma omp parallel num_threads(strict: a)
+  foo();
+#endif
   return a + tmain<char, 5>() + tmain<S, 1>();
 }
 
@@ -70,6 +91,10 @@ int main() {
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 23)
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 5, i32 2, ptr null)
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 23, i32 2, ptr null)
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       ret [[INT_TY]] 0
 // CHECK-NEXT:  }
 
@@ -83,6 +108,14 @@ int main() {
 // CHECK:       call {{.*}}void @__kmpc_push_num_threads(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES]])
 // CHECK:       {{(invoke|call)}} {{.*}} [[S_TY_DESTR]](ptr {{[^,]*}} [[S_TEMP]])
 // CHECK:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 1, i32 2, ptr null)
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
+// OMP60:       {{(invoke|call)}} {{.*}} [[S_TY_CONSTR]](ptr {{[^,]*}} [[S_TEMP:%.+]], [[INTPTR_T_TY]] noundef [[INTPTR_T_TY_ATTR]]23)
+// OMP60:       [[S_CHAR_OP1:%.+]] = invoke{{.*}} i8 [[S_TY_CHAR_OP]](ptr {{[^,]*}} [[S_TEMP]])
+// OMP60:       [[RES1:%.+]] = sext {{.*}}i8 [[S_CHAR_OP1]] to i32
+// OMP60:       call {{.*}}void @__kmpc_push_num_threads_strict(ptr [[DEF_LOC_2]], i32 [[GTID]], i32 [[RES1]], i32 2, ptr null)
+// OMP60:       {{(invoke|call)}} {{.*}} [[S_TY_DESTR]](ptr {{[^,]*}} [[S_TEMP]])
+// OMP60:       call {{.*}}void {{.*}} @__kmpc_fork_call(
 // CHECK:       ret [[INT_TY]] 0
 // CHECK:       }
 
