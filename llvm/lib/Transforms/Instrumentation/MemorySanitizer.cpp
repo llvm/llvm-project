@@ -4289,7 +4289,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadows.
-  void handleAVXVpermil2var(IntrinsicInst &I) {
+  void handleAVXVpermi2var(IntrinsicInst &I) {
     assert(I.arg_size() == 3);
     assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
     assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
@@ -5291,7 +5291,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_vpermi2var_qi_128:
     case Intrinsic::x86_avx512_vpermi2var_qi_256:
     case Intrinsic::x86_avx512_vpermi2var_qi_512:
-      handleAVXVpermil2var(I);
+      handleAVXVpermi2var(I);
       break;
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
