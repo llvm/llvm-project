@@ -55,7 +55,7 @@ public:
   Expected<TreeProxy> load(ObjectRef Object) const;
   Expected<TreeProxy> load(ObjectProxy Object) const;
 
-  Expected<TreeProxy> create(ArrayRef<NamedTreeEntry> Entries = std::nullopt);
+  Expected<TreeProxy> create(ArrayRef<NamedTreeEntry> Entries = {});
 
 private:
   static constexpr StringLiteral SchemaName = "llvm::cas::schema::tree::v1";

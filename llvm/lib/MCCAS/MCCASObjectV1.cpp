@@ -164,8 +164,7 @@ MCSchema::MCSchema(cas::ObjectStore &CAS) : MCSchema::RTTIExtends(CAS) {
 Error MCSchema::fillCache() {
   std::optional<cas::ObjectRef> RootKindID;
   const unsigned Version = 0; // Bump this to error on old object files.
-  if (Error E = CAS.storeFromString(std::nullopt,
-                                    "mc:v1:schema:" + Twine(Version).str())
+  if (Error E = CAS.storeFromString({}, "mc:v1:schema:" + Twine(Version).str())
                     .moveInto(RootKindID))
     return E;
 

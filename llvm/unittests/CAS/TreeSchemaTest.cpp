@@ -24,9 +24,9 @@ TEST(TreeSchemaTest, Trees) {
 
   auto createBlobInBoth = [&](StringRef Content) {
     std::optional<ObjectRef> H1, H2;
-    EXPECT_THAT_ERROR(CAS1->storeFromString(std::nullopt, Content).moveInto(H1),
+    EXPECT_THAT_ERROR(CAS1->storeFromString({}, Content).moveInto(H1),
                       Succeeded());
-    EXPECT_THAT_ERROR(CAS2->storeFromString(std::nullopt, Content).moveInto(H2),
+    EXPECT_THAT_ERROR(CAS2->storeFromString({}, Content).moveInto(H2),
                       Succeeded());
     EXPECT_EQ(CAS1->getID(*H1), CAS2->getID(*H2));
     return *H1;
@@ -193,7 +193,7 @@ TEST(TreeSchemaTest, Trees) {
 TEST(TreeSchemaTest, Lookup) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   std::optional<ObjectRef> Node;
-  EXPECT_THAT_ERROR(CAS->storeFromString(std::nullopt, "blob").moveInto(Node),
+  EXPECT_THAT_ERROR(CAS->storeFromString({}, "blob").moveInto(Node),
                     Succeeded());
   ObjectRef Blob = *Node;
   SmallVector<NamedTreeEntry> FlatTreeEntries = {
@@ -228,7 +228,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
   std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
-    return cantFail(CAS->storeFromString(std::nullopt, Content));
+    return cantFail(CAS->storeFromString({}, Content));
   };
 
   HierarchicalTreeBuilder Builder;

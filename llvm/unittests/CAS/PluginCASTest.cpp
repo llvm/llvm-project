@@ -55,10 +55,8 @@ TEST(PluginCASTest, isMaterialized) {
     std::tie(CAS, AC) = std::move(*DBs);
 
     std::optional<CASID> ID1, ID2;
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
-                      Succeeded());
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "2").moveInto(ID2),
-                      Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, "2").moveInto(ID2), Succeeded());
     std::optional<ObjectRef> ID2Ref = CAS->getReference(*ID2);
     ASSERT_TRUE(ID2Ref);
     bool IsMaterialized = false;
@@ -84,8 +82,7 @@ TEST(PluginCASTest, isMaterialized) {
     std::tie(CAS, AC) = std::move(*DBs);
 
     std::optional<CASID> ID1, ID2;
-    ASSERT_THAT_ERROR(CAS->createProxy(std::nullopt, "1").moveInto(ID1),
-                      Succeeded());
+    ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
     ASSERT_THAT_ERROR(AC->get(*ID1, /*Globally=*/true).moveInto(ID2),
                       Succeeded());
     std::optional<ObjectRef> ID2Ref = CAS->getReference(*ID2);

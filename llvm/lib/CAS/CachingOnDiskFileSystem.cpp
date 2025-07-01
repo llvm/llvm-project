@@ -364,7 +364,7 @@ Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeSymlinkTo(DirectoryEntry &Parent,
                                            StringRef TreePath,
                                            StringRef Target) {
-  Expected<ObjectRef> Node = DB.storeFromString(std::nullopt, Target);
+  Expected<ObjectRef> Node = DB.storeFromString({}, Target);
   if (!Node)
     return Node.takeError();
   return &Cache->makeSymlink(Parent, TreePath, *Node, Target);

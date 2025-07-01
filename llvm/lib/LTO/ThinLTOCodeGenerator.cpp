@@ -523,7 +523,7 @@ static cas::CASID createCASProxyOrAbort(cas::ObjectStore &CAS, StringRef Key) {
   // the correct context.
   // TODO: We can have an alternative hashing function that doesn't need to
   // store the key into CAS to get the CacheKey.
-  auto CASKey = CAS.createProxy(std::nullopt, Key);
+  auto CASKey = CAS.createProxy({}, Key);
   if (!CASKey)
     report_fatal_error(CASKey.takeError());
   return CASKey->getID();

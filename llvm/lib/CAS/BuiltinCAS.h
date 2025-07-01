@@ -37,8 +37,7 @@ public:
   virtual Expected<ObjectRef>
   storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
                                 sys::fs::mapped_file_region Map) {
-    return storeImpl(ComputedHash, std::nullopt,
-                     ArrayRef(Map.data(), Map.size()));
+    return storeImpl(ComputedHash, {}, ArrayRef(Map.data(), Map.size()));
   }
 
   /// Both builtin CAS implementations provide lifetime for free, so this can

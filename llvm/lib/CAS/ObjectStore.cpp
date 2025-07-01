@@ -191,7 +191,7 @@ ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
   Data.reserve(ChunkSize * 2);
   if (Error E = sys::fs::readNativeFileToEOF(FD, Data, ChunkSize))
     return std::move(E);
-  return store(std::nullopt, ArrayRef(Data.data(), Data.size()));
+  return store({}, ArrayRef(Data.data(), Data.size()));
 }
 
 Error ObjectStore::validateTree(ObjectRef Root) {

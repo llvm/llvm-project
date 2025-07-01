@@ -57,8 +57,7 @@ CASOutputBackend::createFileImpl(StringRef ResolvedPath,
   return std::make_unique<CASOutputFile>(
       ResolvedPath, [&](StringRef Path, StringRef Bytes) -> Error {
         std::optional<ObjectRef> BytesRef;
-        if (Error E =
-                CAS.storeFromString(std::nullopt, Bytes).moveInto(BytesRef))
+        if (Error E = CAS.storeFromString({}, Bytes).moveInto(BytesRef))
           return E;
         addObject(Path, *BytesRef);
         return Error::success();

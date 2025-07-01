@@ -247,7 +247,7 @@ struct IndexRecordReader::Implementation {
             llvm::function_ref<bool(const IndexRecordOccurrence &)> receiver) {
     // FIXME: Use binary search and make this more efficient.
     unsigned lineEnd = lineStart+lineCount;
-    return foreachOccurrence(std::nullopt, std::nullopt,
+    return foreachOccurrence({}, {},
                              [&](const IndexRecordOccurrence &occur) -> bool {
                                if (occur.Line > lineEnd)
                                  return false; // we're done.
@@ -426,7 +426,7 @@ bool IndexRecordReader::foreachOccurrence(
 
 bool IndexRecordReader::foreachOccurrence(
             llvm::function_ref<bool(const IndexRecordOccurrence &)> Receiver) {
-  return foreachOccurrence(std::nullopt, std::nullopt, std::move(Receiver));
+  return foreachOccurrence({}, {}, std::move(Receiver));
 }
 
 bool IndexRecordReader::foreachOccurrenceInLineRange(unsigned lineStart,

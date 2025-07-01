@@ -72,7 +72,7 @@ storeDepDirectives(cas::ObjectStore &CAS,
     TokenIdx += Directive.Tokens.size();
   }
 
-  return CAS.storeFromString(std::nullopt, Buffer);
+  return CAS.storeFromString({}, Buffer);
 }
 
 template <typename T> static void readle(StringRef &Slice, T &Out) {
@@ -139,17 +139,17 @@ void DependencyScanningCASFilesystem::scanForDirectives(
 
   // Get a blob for the clang version string.
   if (!ClangFullVersionID)
-    ClangFullVersionID = reportAsFatalIfError(
-        CAS.storeFromString(std::nullopt, getClangFullVersion()));
+    ClangFullVersionID =
+        reportAsFatalIfError(CAS.storeFromString({}, getClangFullVersion()));
 
   // Get a blob for the dependency directives scan command.
   if (!DepDirectivesID)
     DepDirectivesID =
-        reportAsFatalIfError(CAS.storeFromString(std::nullopt, "directives"));
+        reportAsFatalIfError(CAS.storeFromString({}, "directives"));
 
   // Get an empty blob.
   if (!EmptyBlobID)
-    EmptyBlobID = reportAsFatalIfError(CAS.storeFromString(std::nullopt, ""));
+    EmptyBlobID = reportAsFatalIfError(CAS.storeFromString({}, ""));
 
   // Construct a tree for the input.
   std::optional<CASID> InputID;

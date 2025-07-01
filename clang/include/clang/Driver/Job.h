@@ -269,7 +269,7 @@ public:
                     ResponseFileSupport ResponseSupport, const char *Executable,
                     const llvm::opt::ArgStringList &Arguments,
                     ArrayRef<InputInfo> Inputs,
-                    ArrayRef<InputInfo> Outputs = std::nullopt);
+                    ArrayRef<InputInfo> Outputs = {});
 
   void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
              CrashReportInfo *CrashInfo = nullptr) const override;

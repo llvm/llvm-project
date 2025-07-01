@@ -43,7 +43,7 @@ public:
                                             /*RequiresNullTerminator*/ false);
     if (!Buffer)
       return Buffer.getError();
-    auto Blob = DB->storeFromString(std::nullopt, (*Buffer)->getBuffer());
+    auto Blob = DB->storeFromString({}, (*Buffer)->getBuffer());
     if (!Blob)
       return errorToErrorCode(Blob.takeError());
     return *Blob;

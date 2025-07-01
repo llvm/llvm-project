@@ -32,7 +32,7 @@ bool TreeSchema::isNode(const ObjectProxy &Node) const {
 }
 
 TreeSchema::TreeSchema(cas::ObjectStore &CAS) : TreeSchema::RTTIExtends(CAS) {
-  TreeKindRef = cantFail(CAS.storeFromString(std::nullopt, SchemaName));
+  TreeKindRef = cantFail(CAS.storeFromString({}, SchemaName));
 }
 
 ObjectRef TreeSchema::getKindRef() const { return *TreeKindRef; }

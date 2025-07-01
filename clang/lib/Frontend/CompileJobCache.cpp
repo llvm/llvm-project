@@ -682,7 +682,7 @@ Expected<llvm::cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
     return SerialDiags.takeError();
   if (*SerialDiags) {
     Expected<llvm::cas::ObjectRef> DiagsRef =
-        CAS->storeFromString(std::nullopt, **SerialDiags);
+        CAS->storeFromString({}, **SerialDiags);
     if (!DiagsRef)
       return DiagsRef.takeError();
     CachedResultBuilder.addOutput(OutputKind::SerializedDiagnostics, *DiagsRef);

@@ -52,17 +52,14 @@ static llvm::cas::CASID createCompileJobCacheKeyForArgs(
     Builder.push(InputRef, llvm::cas::TreeEntry::Tree, "object");
     break;
   }
-  Builder.push(
-      llvm::cantFail(CAS.storeFromString(std::nullopt, CommandLine)),
-      llvm::cas::TreeEntry::Regular, "command-line");
-  Builder.push(
-      llvm::cantFail(CAS.storeFromString(std::nullopt, "-cc1")),
-      llvm::cas::TreeEntry::Regular, "computation");
+  Builder.push(llvm::cantFail(CAS.storeFromString({}, CommandLine)),
+               llvm::cas::TreeEntry::Regular, "command-line");
+  Builder.push(llvm::cantFail(CAS.storeFromString({}, "-cc1")),
+               llvm::cas::TreeEntry::Regular, "computation");
 
   // FIXME: The version is maybe insufficient...
-  Builder.push(
-      llvm::cantFail(CAS.storeFromString(std::nullopt, getClangFullVersion())),
-      llvm::cas::TreeEntry::Regular, "version");
+  Builder.push(llvm::cantFail(CAS.storeFromString({}, getClangFullVersion())),
+               llvm::cas::TreeEntry::Regular, "version");
 
   return llvm::cantFail(Builder.create(CAS)).getID();
 }

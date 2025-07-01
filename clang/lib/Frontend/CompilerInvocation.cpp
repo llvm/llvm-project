@@ -1553,7 +1553,7 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
       llvm::cas::TreeSchema Schema(*CAS);
       // If we cannot create an empty tree, fall back to creating an empty
       // in-memory CAS.
-      if (llvm::Error E = Schema.create(std::nullopt).moveInto(EmptyRootID)) {
+      if (llvm::Error E = Schema.create({}).moveInto(EmptyRootID)) {
         consumeError(std::move(E));
         CAS = nullptr;
       }
@@ -1562,7 +1562,7 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
     if (!CAS) {
       CAS = llvm::cas::createInMemoryCAS();
       llvm::cas::TreeSchema Schema(*CAS);
-      EmptyRootID = llvm::cantFail(Schema.create(std::nullopt));
+      EmptyRootID = llvm::cantFail(Schema.create({}));
     }
     return llvm::cantFail(
         llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));
