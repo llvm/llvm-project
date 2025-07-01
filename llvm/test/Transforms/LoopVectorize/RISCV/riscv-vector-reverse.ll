@@ -105,10 +105,12 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<%9> = vector-end-pointer inbounds ir<%arrayidx>, vp<%0>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<%9>
-; CHECK-NEXT:      WIDEN ir<%add9> = add ir<%1>, ir<1>
+; CHECK-NEXT:      EMIT vp<%10> = reverse ir<%1>
+; CHECK-NEXT:      WIDEN ir<%add9> = add vp<%10>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%10> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
-; CHECK-NEXT:      WIDEN store vp<%10>, ir<%add9>
+; CHECK-NEXT:      vp<%11> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
+; CHECK-NEXT:      EMIT vp<%12> = reverse ir<%add9>
+; CHECK-NEXT:      WIDEN store vp<%11>, vp<%12>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
 ; CHECK-NEXT:    No successors
@@ -167,8 +169,10 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): At #9 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #10 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #11 Interval # 3
-; CHECK-NEXT:  LV(REG): At #12 Interval # 2
-; CHECK-NEXT:  LV(REG): At #13 Interval # 2
+; CHECK-NEXT:  LV(REG): At #12 Interval # 3
+; CHECK-NEXT:  LV(REG): At #13 Interval # 3
+; CHECK-NEXT:  LV(REG): At #14 Interval # 2
+; CHECK-NEXT:  LV(REG): At #15 Interval # 2
 ; CHECK-NEXT:  LV(REG): VF = vscale x 4
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
@@ -239,10 +243,12 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
 ; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
-; CHECK-NEXT:    WIDEN ir<%add9> = add ir<%19>, ir<1>
+; CHECK-NEXT:    EMIT vp<%5> = reverse ir<%19>
+; CHECK-NEXT:    WIDEN ir<%add9> = add vp<%5>, ir<1>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%add9>
+; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    EMIT vp<%7> = reverse ir<%add9>
+; CHECK-NEXT:    WIDEN store vp<%6>, vp<%7>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body
@@ -514,10 +520,12 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<%9> = vector-end-pointer inbounds ir<%arrayidx>, vp<%0>
 ; CHECK-NEXT:      WIDEN ir<%1> = load vp<%9>
-; CHECK-NEXT:      WIDEN ir<%conv1> = fadd ir<%1>, ir<1.000000e+00>
+; CHECK-NEXT:      EMIT vp<%10> = reverse ir<%1>
+; CHECK-NEXT:      WIDEN ir<%conv1> = fadd vp<%10>, ir<1.000000e+00>
 ; CHECK-NEXT:      CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:      vp<%10> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
-; CHECK-NEXT:      WIDEN store vp<%10>, ir<%conv1>
+; CHECK-NEXT:      vp<%11> = vector-end-pointer inbounds ir<%arrayidx3>, vp<%0>
+; CHECK-NEXT:      EMIT vp<%12> = reverse ir<%conv1>
+; CHECK-NEXT:      WIDEN store vp<%11>, vp<%12>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%6>, vp<%1>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%2>
 ; CHECK-NEXT:    No successors
@@ -576,8 +584,10 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:  LV(REG): At #9 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #10 Interval # 3
 ; CHECK-NEXT:  LV(REG): At #11 Interval # 3
-; CHECK-NEXT:  LV(REG): At #12 Interval # 2
-; CHECK-NEXT:  LV(REG): At #13 Interval # 2
+; CHECK-NEXT:  LV(REG): At #12 Interval # 3
+; CHECK-NEXT:  LV(REG): At #13 Interval # 3
+; CHECK-NEXT:  LV(REG): At #14 Interval # 2
+; CHECK-NEXT:  LV(REG): At #15 Interval # 2
 ; CHECK-NEXT:  LV(REG): VF = vscale x 4
 ; CHECK-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
@@ -648,10 +658,12 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:    vp<%4> = vector-end-pointer inbounds ir<%arrayidx>, ir<%18>
 ; CHECK-NEXT:    WIDEN ir<%19> = load vp<%4>
-; CHECK-NEXT:    WIDEN ir<%conv1> = fadd ir<%19>, ir<1.000000e+00>
+; CHECK-NEXT:    EMIT vp<%5> = reverse ir<%19>
+; CHECK-NEXT:    WIDEN ir<%conv1> = fadd vp<%5>, ir<1.000000e+00>
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
-; CHECK-NEXT:    vp<%5> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
-; CHECK-NEXT:    WIDEN store vp<%5>, ir<%conv1>
+; CHECK-NEXT:    vp<%6> = vector-end-pointer inbounds ir<%arrayidx3>, ir<%18>
+; CHECK-NEXT:    EMIT vp<%7> = reverse ir<%conv1>
+; CHECK-NEXT:    WIDEN store vp<%6>, vp<%7>
 ; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<%18>.1
 ; CHECK-NEXT:    EMIT branch-on-count vp<%index.next>, ir<%n.vec>
 ; CHECK-NEXT:  Successor(s): middle.block, vector.body

@@ -8880,6 +8880,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // bring the VPlan to its final state.
   // ---------------------------------------------------------------------------
 
+  // Adjust the result of reverse memory accesses.
+  VPlanTransforms::runPass(VPlanTransforms::adjustRecipesForReverseAccesses,
+                           *Plan);
+
   // Adjust the recipes for any inloop reductions.
   adjustRecipesForReductions(Plan, RecipeBuilder, Range.Start);
 

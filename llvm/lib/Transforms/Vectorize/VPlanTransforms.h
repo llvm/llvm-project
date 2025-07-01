@@ -239,6 +239,20 @@ struct VPlanTransforms {
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
   static void addBranchWeightToMiddleTerminator(VPlan &Plan, ElementCount VF);
+
+  /// Add reverse recipes for reverse memory accesses.
+  /// For reverse loads, transform
+  ///   WIDEN ir<%L> = load vp<%addr>
+  /// into
+  ///   WIDEN ir<%L> = load vp<%addr>
+  ///   EMIT   vp<%RevL> = reverse ir<%L>
+  ///
+  /// For reverse stores, transform
+  ///   WIDEN store vp<%addr>, ir<%SVal>
+  /// into
+  ///   EMIT   vp<%RevS> = reverse ir<%SVal>
+  ///   WIDEN  store vp<%addr>, vp<%RevS>
+  static void adjustRecipesForReverseAccesses(VPlan &Plan);
 };
 
 } // namespace llvm

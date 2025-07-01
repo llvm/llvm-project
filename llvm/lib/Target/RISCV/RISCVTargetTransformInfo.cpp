@@ -1541,6 +1541,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
   }
+  case Intrinsic::experimental_vp_reverse: {
+    return getShuffleCost(TTI::SK_Reverse,
+                          cast<VectorType>(ICA.getReturnType()),
+                          cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
+                          0, cast<VectorType>(ICA.getReturnType()));
+  }
   }
 
   if (ST->hasVInstructions() && RetTy->isVectorTy()) {
