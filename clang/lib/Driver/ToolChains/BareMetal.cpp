@@ -417,10 +417,20 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const SmallString<128> SysRootDir(computeSysRoot());
   if (!SysRootDir.empty()) {
     for (const Multilib &M : getOrderedMultilibs()) {
-      SmallString<128> Dir(SysRootDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      // Add include paths specified in multilib.yaml under the 'IncludePath'
+      // field
+      if (!M.includePath().empty()) {
+        for (const std::string &Path : M.includePath()) {
+          SmallString<128> Dir(SysRoot);
+          llvm::sys::path::append(Dir, Path);
+          addSystemInclude(DriverArgs, CC1Args, Dir.str());
+        }
+      } else {
+        SmallString<128> Dir(SysRootDir);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
     }
   }
 }
@@ -501,10 +511,21 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
         addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
         break;
       }
-      // Add generic path if nothing else succeeded so far.
-      llvm::sys::path::append(Dir, "include", "c++", "v1");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
-      break;
+      if (!M.includePath().empty()) {
+        // Add include paths specified in multilib.yaml under the 'IncludePath'
+        // field
+        for (const std::string &Path : M.includePath()) {
+          Dir = SysRoot;
+          llvm::sys::path::append(Dir, Path, "c++", "v1");
+          addSystemInclude(DriverArgs, CC1Args, Dir.str());
+        }
+        break;
+      } else {
+        // Add generic path if nothing else succeeded so far.
+        llvm::sys::path::append(Dir, "include", "c++", "v1");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+        break;
+      }
     }
     case ToolChain::CST_Libstdcxx: {
       llvm::sys::path::append(Dir, "include", "c++");
