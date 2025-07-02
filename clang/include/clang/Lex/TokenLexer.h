@@ -139,8 +139,9 @@ public:
   void Init(const Token *TokArray, unsigned NumToks, bool DisableMacroExpansion,
             bool OwnsTokens, bool IsReinject);
 
-  /// If the next token lexed will pop this macro off the expansion stack,
-  /// return std::nullopt, otherwise return the next unexpanded token.
+  /// If TokenLexer::isAtEnd returns true(the next token lexed will pop this
+  /// macro off the expansion stack), return std::nullopt, otherwise return the
+  /// next unexpanded token.
   std::optional<Token> peekNextPPToken() const;
 
   /// Lex and return a token from this macro stream.

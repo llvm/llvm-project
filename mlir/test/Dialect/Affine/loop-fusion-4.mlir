@@ -666,3 +666,80 @@ func.func @unrolled(%arg0: memref<2x4xf32>, %arg1: memref<1x2x4xf32>) {
   // PRODUCER-CONSUMER-MAXIMAL:          affine.load %{{.*}}[0, %{{.*}}, %{{.*}}]
   return
 }
+
+// -----
+
+// Exercises fix for crash reported at https://github.com/llvm/llvm-project/issues/139231
+
+#map = affine_map<(d0, d1) -> (d0 + d1)>
+#map1 = affine_map<(d0, d1) -> (d0 * 2 + d1 * 2)>
+module {
+  func.func @zero_candidates() {
+    %cst = arith.constant 2.221140e+03 : f32
+    %cst_0 = arith.constant 2.606200e+03 : f32
+    %cst_1 = arith.constant 3.224000e+03 : f32
+    %cst_2 = arith.constant 0.000000e+00 : f32
+    %alloc = memref.alloc() {alignment = 64 : i64} : memref<3x7x5x6xf32>
+    affine.for %arg0 = 0 to 3 {
+      affine.for %arg1 = 0 to 7 {
+        affine.for %arg2 = 0 to 5 {
+          affine.for %arg3 = 0 to 6 {
+            affine.store %cst_1, %alloc[%arg0, %arg1, %arg2, %arg3] : memref<3x7x5x6xf32>
+          }
+        }
+      }
+    }
+    %alloc_3 = memref.alloc() {alignment = 64 : i64} : memref<3x10x7x6xf32>
+    %subview = memref.subview %alloc_3[0, 2, 1, 0] [3, 7, 5, 6] [1, 1, 1, 1] : memref<3x10x7x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1], offset: 90>>
+    memref.copy %alloc, %subview : memref<3x7x5x6xf32> to memref<3x7x5x6xf32, strided<[420, 42, 6, 1], offset: 90>>
+    %alloc_4 = memref.alloc() {alignment = 64 : i64} : memref<3x10x3x6x1xf32>
+    affine.for %arg0 = 0 to 3 {
+      affine.for %arg1 = 0 to 10 {
+        affine.for %arg2 = 0 to 3 {
+          affine.for %arg3 = 0 to 6 {
+            affine.for %arg4 = 0 to 1 {
+              affine.store %cst_2, %alloc_4[%arg0, %arg1, %arg2, %arg3, %arg4] : memref<3x10x3x6x1xf32>
+            }
+          }
+        }
+      }
+    }
+    affine.for %arg0 = 0 to 3 {
+      affine.for %arg1 = 0 to 10 {
+        affine.for %arg2 = 0 to 3 {
+          affine.for %arg3 = 0 to 6 {
+            affine.for %arg4 = 0 to 1 {
+              affine.for %arg5 = 0 to 1 {
+                affine.for %arg6 = 0 to 2 {
+                  %0 = affine.apply #map(%arg1, %arg5)
+                  %1 = affine.apply #map1(%arg2, %arg6)
+                  %2 = affine.load %alloc_3[%arg0, %0, %1, %arg3] : memref<3x10x7x6xf32>
+                  %3 = affine.load %alloc_4[%arg0, %arg1, %arg2, %arg3, %arg4] : memref<3x10x3x6x1xf32>
+                  %4 = arith.mulf %2, %cst_0 : f32
+                  %5 = arith.addf %3, %4 : f32
+                  affine.store %5, %alloc_4[%arg0, %arg1, %arg2, %arg3, %arg4] : memref<3x10x3x6x1xf32>
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    %alloc_5 = memref.alloc() {alignment = 64 : i64} : memref<3x10x3x6xf32>
+    %expand_shape = memref.expand_shape %alloc_5 [[0], [1], [2], [3, 4]] output_shape [3, 10, 3, 6, 1] : memref<3x10x3x6xf32> into memref<3x10x3x6x1xf32>
+    affine.for %arg0 = 0 to 3 {
+      affine.for %arg1 = 0 to 10 {
+        affine.for %arg2 = 0 to 3 {
+          affine.for %arg3 = 0 to 6 {
+            affine.for %arg4 = 0 to 1 {
+              %0 = affine.load %alloc_4[%arg0, %arg1, %arg2, %arg3, %arg4] : memref<3x10x3x6x1xf32>
+              %1 = arith.addf %0, %cst : f32
+              affine.store %1, %expand_shape[%arg0, %arg1, %arg2, %arg3, %arg4] : memref<3x10x3x6x1xf32>
+            }
+          }
+        }
+      }
+    }
+    return
+  }
+}

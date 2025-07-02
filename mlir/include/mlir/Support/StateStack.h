@@ -15,8 +15,8 @@
 #ifndef MLIR_SUPPORT_STACKFRAME_H
 #define MLIR_SUPPORT_STACKFRAME_H
 
-#include "mlir/IR/Visitors.h"
 #include "mlir/Support/TypeID.h"
+#include "mlir/Support/WalkResult.h"
 #include <memory>
 
 namespace mlir {
