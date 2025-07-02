@@ -45,8 +45,9 @@ define i8 @test_disjoint_or(i8 %a, i8 %b) sanitize_memory {
 ; CHECK-IMPRECISE:      [[C:%.*]] = or disjoint i8 [[A]], [[B]]
 ; CHECK-IMPRECISE-NEXT: store i8 [[TMP11]], ptr @__msan_retval_tls, align 8
 ;
-; CHECK-PRECISE:         [[TMP10:%.*]] = and i8 [[TMP3]], [[TMP4]]
-; CHECK-PRECISE-NEXT:    [[TMP12:%.*]] = or i8 [[TMP11]], [[TMP10]]
+; CHECK-PRECISE:         [[TMP10:%.*]] = or i8 [[TMP3]], [[TMP4]]
+; CHECK-PRECISE-NEXT:    [[TMP11:%.*]] = xor i8 [[TMP10]], -1
+; CHECK-PRECISE-NEXT:    [[TMP12:%.*]] = or i8 [[TMP9]], [[TMP11]]
 ; CHECK-PRECISE-NEXT:    [[C:%.*]] = or disjoint i8 [[A]], [[B]]
 ; CHECK-PRECISE-NEXT:    store i8 [[TMP12]], ptr @__msan_retval_tls, align 8
 ;
