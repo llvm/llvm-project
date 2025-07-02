@@ -1,0 +1,20 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           1
+        Body:            037F200041016A21002000410A480B0B
+...

@@ -19,6 +19,14 @@ namespace mlir {
 struct WasmBinaryEncoding {
   /// Byte encodings for Wasm instructions.
   struct OpCode {
+    // Control instructions.
+    static constexpr std::byte block{0x02};
+    static constexpr std::byte loop{0x03};
+    static constexpr std::byte ifOpCode{0x04};
+    static constexpr std::byte elseOpCode{0x05};
+    static constexpr std::byte branchIf{0x0D};
+    static constexpr std::byte call{0x10};
+
     // Locals, globals, constants.
     static constexpr std::byte localGet{0x20};
     static constexpr std::byte localSet{0x21};
