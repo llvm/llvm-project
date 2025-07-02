@@ -55,18 +55,12 @@ define i32 @test_ctpop_poison(i32 %a) {
 
 define void @pow_poison_i16(i16 %arg_int,float %arg_flt, ptr %P) {
 ; CHECK-LABEL: @pow_poison_i16(
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call float @llvm.powi.f32.i16(float poison, i16 [[ARG_INT:%.*]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    store volatile float [[TMP1]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call float @llvm.pow.f32(float poison, float [[ARG_FLT:%.*]]) #[[ATTR1]]
-; CHECK-NEXT:    store volatile float [[TMP2]], ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = tail call float @llvm.powi.f32.i16(float [[ARG_FLT]], i16 poison) #[[ATTR1]]
-; CHECK-NEXT:    store volatile float [[TMP3]], ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call float @llvm.pow.f32(float [[ARG_FLT]], float poison) #[[ATTR1]]
-; CHECK-NEXT:    store volatile float [[TMP4]], ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call float @llvm.powi.f32.i16(float poison, i16 poison) #[[ATTR1]]
-; CHECK-NEXT:    store volatile float [[TMP5]], ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = tail call float @llvm.pow.f32(float poison, float poison) #[[ATTR1]]
-; CHECK-NEXT:    store volatile float [[TMP6]], ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %2 = tail call float @llvm.powi.f32.i16(float poison, i16 %arg_int) nounwind
