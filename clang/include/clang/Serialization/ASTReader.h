@@ -379,8 +379,7 @@ struct VisibleLookupBlockOffsets {
   uint64_t TULocalOffset = 0;
 
   operator bool() const {
-    return VisibleOffset || ModuleLocalOffset || // ModuleUnitLocalOffset ||
-           TULocalOffset;
+    return VisibleOffset || ModuleLocalOffset || TULocalOffset;
   }
 };
 
@@ -465,8 +464,6 @@ public:
   using ModuleReverseIterator = ModuleManager::ModuleReverseIterator;
 
 private:
-  using LocSeq = SourceLocationSequence;
-
   /// The receiver of some callbacks invoked by ASTReader.
   std::unique_ptr<ASTReaderListener> Listener;
 
@@ -528,7 +525,7 @@ private:
   ContinuousRangeMap<unsigned, ModuleFile*, 64> GlobalSLocEntryMap;
 
   using GlobalSLocOffsetMapType =
-      ContinuousRangeMap<unsigned, ModuleFile *, 64>;
+      ContinuousRangeMap<SourceLocation::UIntTy, ModuleFile *, 64>;
 
   /// A map of reversed (SourceManager::MaxLoadedOffset - SLocOffset)
   /// SourceLocation offsets to the modules containing them.
@@ -1455,6 +1452,12 @@ private:
     const StringRef *operator->() && = delete;
     const StringRef &operator*() && = delete;
   };
+
+  /// VarDecls with initializers containing side effects must be emitted,
+  /// but DeclMustBeEmitted is not allowed to deserialize the intializer.
+  /// FIXME: Lower memory usage by removing VarDecls once the initializer
+  /// is deserialized.
+  llvm::SmallPtrSet<Decl *, 16> InitSideEffectVars;
 
 public:
   /// Get the buffer for resolving paths.
@@ -2407,6 +2410,8 @@ public:
 
   bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
 
+  bool hasInitializerWithSideEffects(const VarDecl *VD) const override;
+
   /// Retrieve a selector from the given module with its local ID
   /// number.
   Selector getLocalSelector(ModuleFile &M, unsigned LocalID);
@@ -2438,18 +2443,16 @@ public:
   /// Read a source location from raw form and return it in its
   /// originating module file's source location space.
   std::pair<SourceLocation, unsigned>
-  ReadUntranslatedSourceLocation(RawLocEncoding Raw,
-                                 LocSeq *Seq = nullptr) const {
-    return SourceLocationEncoding::decode(Raw, Seq);
+  ReadUntranslatedSourceLocation(RawLocEncoding Raw) const {
+    return SourceLocationEncoding::decode(Raw);
   }
 
   /// Read a source location from raw form.
-  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw,
-                                    LocSeq *Seq = nullptr) const {
+  SourceLocation ReadSourceLocation(ModuleFile &MF, RawLocEncoding Raw) const {
     if (!MF.ModuleOffsetMap.empty())
       ReadModuleOffsetMap(MF);
 
-    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw, Seq);
+    auto [Loc, ModuleFileIndex] = ReadUntranslatedSourceLocation(Raw);
     ModuleFile *OwningModuleFile =
         ModuleFileIndex == 0 ? &MF : MF.TransitiveImports[ModuleFileIndex - 1];
 
@@ -2477,9 +2480,9 @@ public:
 
   /// Read a source location.
   SourceLocation ReadSourceLocation(ModuleFile &ModuleFile,
-                                    const RecordDataImpl &Record, unsigned &Idx,
-                                    LocSeq *Seq = nullptr) {
-    return ReadSourceLocation(ModuleFile, Record[Idx++], Seq);
+                                    const RecordDataImpl &Record,
+                                    unsigned &Idx) {
+    return ReadSourceLocation(ModuleFile, Record[Idx++]);
   }
 
   /// Read a FileID.
@@ -2498,7 +2501,7 @@ public:
 
   /// Read a source range.
   SourceRange ReadSourceRange(ModuleFile &F, const RecordData &Record,
-                              unsigned &Idx, LocSeq *Seq = nullptr);
+                              unsigned &Idx);
 
   static llvm::BitVector ReadBitVector(const RecordData &Record,
                                        const StringRef Blob);

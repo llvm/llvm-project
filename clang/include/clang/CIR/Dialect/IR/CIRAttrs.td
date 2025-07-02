@@ -47,6 +47,16 @@ class CIR_I32EnumAttr<string name, string summary, list<I32EnumAttrCase> cases>
   let cppNamespace = "::cir";
 }
 
+class CIR_I64EnumAttr<string name, string summary, list<I64EnumAttrCase> cases>
+    : I64EnumAttr<name, summary, cases> {
+  let cppNamespace = "::cir";
+}
+
+class CIR_EnumAttr<EnumAttrInfo info, string name = "", list<Trait> traits = []>
+    : EnumAttr<CIR_Dialect, info, name, traits> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
 class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
     : CIR_Attr<name, attrMnemonic, traits> {
   let returnType = "bool";
@@ -150,18 +160,17 @@ def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
     value of the specified floating-point type. Supporting only CIR FP types.
   }];
   let parameters = (ins
-    AttributeSelfTypeParameter<"", "::cir::CIRFPTypeInterface">:$type,
+    AttributeSelfTypeParameter<"", "::cir::FPTypeInterface">:$type,
     APFloatParameter<"">:$value
   );
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "const llvm::APFloat &":$value), [{
-      return $_get(type.getContext(), mlir::cast<CIRFPTypeInterface>(type),
-                   value);
+      return $_get(type.getContext(), mlir::cast<FPTypeInterface>(type), value);
     }]>,
     AttrBuilder<(ins "mlir::Type":$type,
                      "const llvm::APFloat &":$value), [{
-      return $_get($_ctxt, mlir::cast<CIRFPTypeInterface>(type), value);
+      return $_get($_ctxt, mlir::cast<FPTypeInterface>(type), value);
     }]>,
   ];
   let extraClassDeclaration = [{
@@ -330,36 +339,33 @@ def ConstComplexAttr : CIR_Attr<"ConstComplex", "const_complex",
 // VisibilityAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_VisibilityKind : I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
-  I32EnumAttrCase<"Default", 1, "default">,
-  I32EnumAttrCase<"Hidden", 2, "hidden">,
-  I32EnumAttrCase<"Protected", 3, "protected">
+def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
+  I32EnumAttrCase<"Default", 0, "default">,
+  I32EnumAttrCase<"Hidden", 1, "hidden">,
+  I32EnumAttrCase<"Protected", 2, "protected">
 ]> {
   let genSpecializedAttr = 0;
-  let cppNamespace = "::cir";
 }
 
-def CIR_VisibilityAttr : CIR_Attr<"Visibility", "visibility"> {
+def CIR_VisibilityAttr : CIR_EnumAttr<CIR_VisibilityKind, "visibility"> {
   let summary = "Visibility attribute";
   let description = [{
     Visibility attributes.
   }];
-  let parameters = (ins "VisibilityKind":$value);
 
-  let assemblyFormat = [{
-    $value
-  }];
+  let cppClassName = "VisibilityAttr";
 
+  let skipDefaultBuilders = 1;
   let builders = [
-    AttrBuilder<(ins CArg<"VisibilityKind", "cir::VisibilityKind::Default">:$value), [{
+    AttrBuilder<(ins CArg<"VisibilityKind",
+                          "cir::VisibilityKind::Default">:$value), [{
       return $_get($_ctxt, value);
     }]>
   ];
 
-  let skipDefaultBuilders = 1;
-
-  // Make DefaultValuedAttr accept VisibilityKind as default value ($0).
-  let constBuilderCall = "cir::VisibilityAttr::get($_builder.getContext(), $0)";
+  let assemblyFormat = [{
+    $value
+  }];
 
   let extraClassDeclaration = [{
     bool isDefault() const { return getValue() == VisibilityKind::Default; };

@@ -837,6 +837,16 @@ void ConversionFuncOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestValueWithBoundsOp
+//===----------------------------------------------------------------------===//
+
+void TestValueWithBoundsOp::populateBoundsForIndexValue(
+    Value v, ValueBoundsConstraintSet &cstr) {
+  cstr.bound(v) >= getMin().getSExtValue();
+  cstr.bound(v) <= getMax().getSExtValue();
+}
+
+//===----------------------------------------------------------------------===//
 // ReifyBoundOp
 //===----------------------------------------------------------------------===//
 

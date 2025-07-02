@@ -54,11 +54,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-LABEL: @simple_memset_tailfold(
 ; DATA-NEXT:  entry:
 ; DATA-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[UMAX]]
-; DATA-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DATA-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; DATA-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; DATA-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DATA:       vector.ph:
 ; DATA-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -98,11 +94,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-LABEL: @simple_memset_tailfold(
 ; DATA_NO_LANEMASK-NEXT:  entry:
 ; DATA_NO_LANEMASK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA_NO_LANEMASK-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[UMAX]]
-; DATA_NO_LANEMASK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_NO_LANEMASK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; DATA_NO_LANEMASK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; DATA_NO_LANEMASK-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA_NO_LANEMASK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DATA_NO_LANEMASK:       vector.ph:
 ; DATA_NO_LANEMASK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_NO_LANEMASK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
@@ -150,11 +142,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-LABEL: @simple_memset_tailfold(
 ; DATA_AND_CONTROL-NEXT:  entry:
 ; DATA_AND_CONTROL-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N:%.*]], i64 1)
-; DATA_AND_CONTROL-NEXT:    [[TMP0:%.*]] = sub i64 -1, [[UMAX]]
-; DATA_AND_CONTROL-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; DATA_AND_CONTROL-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
-; DATA_AND_CONTROL-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
-; DATA_AND_CONTROL-NEXT:    br i1 [[TMP3]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; DATA_AND_CONTROL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; DATA_AND_CONTROL:       vector.ph:
 ; DATA_AND_CONTROL-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; DATA_AND_CONTROL-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4

@@ -204,6 +204,42 @@ void DataSharingProcessor::collectOmpObjectListSymbol(
 }
 
 void DataSharingProcessor::collectSymbolsForPrivatization() {
+  // Add checks here for exceptional cases where privatization is not
+  // needed and be deferred to a later phase (like OpenMP IRBuilder).
+  // Such cases are suggested to be clearly documented and explained
+  // instead of being silently skipped
+  auto isException = [&](const Fortran::semantics::Symbol *sym) -> bool {
+    // `OmpPreDetermined` symbols cannot be exceptions since
+    // their privatized symbols are heavily used in FIR.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+      return false;
+
+    // The handling of linear clause is deferred to the OpenMP
+    // IRBuilder which is responsible for all its aspects,
+    // including privatization. Privatizing linear variables at this point would
+    // cause the following structure:
+    //
+    // omp.op linear(%linear = %step : !fir.ref<type>) {
+    //	Use %linear in this BB
+    // }
+    //
+    // to be changed to the following:
+    //
+    // omp. op linear(%linear = %step : !fir.ref<type>)
+    // 	private(%linear -> %arg0 : !fir.ref<i32>) {
+    //	Declare and use %arg0 in this BB
+    // }
+    //
+    // The OpenMP IRBuilder needs to map the linear MLIR value
+    // (i.e. %linear) to its `uses` in the BB to correctly
+    // implement the functionalities of linear clause. However,
+    // privatizing here disallows the IRBuilder to
+    // draw a relation between %linear and %arg0. Hence skip.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+      return true;
+    return false;
+  };
+
   for (const omp::Clause &clause : clauses) {
     if (const auto &privateClause =
             std::get_if<omp::clause::Private>(&clause.u)) {
@@ -222,10 +258,10 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
   }
 
   // TODO For common blocks, add the underlying objects within the block. Doing
-  // so, we won't need to explicitely handle block objects (or forget to do
+  // so, we won't need to explicitly handle block objects (or forget to do
   // so).
   for (auto *sym : explicitlyPrivatizedSymbols)
-    if (!sym->test(Fortran::semantics::Symbol::Flag::OmpLinear))
+    if (!isException(sym))
       allPrivatizedSymbols.insert(sym);
 }
 

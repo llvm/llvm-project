@@ -66,18 +66,22 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   DXILValMD->addOperand(Val);
 }
 
-void addRootSignature(ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
+void addRootSignature(llvm::dxbc::RootSignatureVersion RootSigVer,
+                      ArrayRef<llvm::hlsl::rootsig::RootElement> Elements,
                       llvm::Function *Fn, llvm::Module &M) {
   auto &Ctx = M.getContext();
 
-  llvm::hlsl::rootsig::MetadataBuilder Builder(Ctx, Elements);
-  MDNode *RootSignature = Builder.BuildRootSignature();
-  MDNode *FnPairing =
-      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature});
+  llvm::hlsl::rootsig::MetadataBuilder RSBuilder(Ctx, Elements);
+  MDNode *RootSignature = RSBuilder.BuildRootSignature();
+
+  ConstantAsMetadata *Version = ConstantAsMetadata::get(ConstantInt::get(
+      llvm::Type::getInt32Ty(Ctx), llvm::to_underlying(RootSigVer)));
+  MDNode *MDVals =
+      MDNode::get(Ctx, {ValueAsMetadata::get(Fn), RootSignature, Version});
 
   StringRef RootSignatureValKey = "dx.rootsignatures";
   auto *RootSignatureValMD = M.getOrInsertNamedMetadata(RootSignatureValKey);
-  RootSignatureValMD->addOperand(FnPairing);
+  RootSignatureValMD->addOperand(MDVals);
 }
 
 } // namespace
@@ -466,9 +470,11 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   // Add and identify root signature to function, if applicable
   for (const Attr *Attr : FD->getAttrs()) {
-    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr))
-      addRootSignature(RSAttr->getSignatureDecl()->getRootElements(), EntryFn,
+    if (const auto *RSAttr = dyn_cast<RootSignatureAttr>(Attr)) {
+      auto *RSDecl = RSAttr->getSignatureDecl();
+      addRootSignature(RSDecl->getVersion(), RSDecl->getRootElements(), EntryFn,
                        M);
+    }
   }
 }
 
@@ -580,12 +586,12 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLResourceBindingAttr *RBA) {
+  assert(RBA && "expect a nonnull binding attribute");
   llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
   auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
-  auto *Space =
-      llvm::ConstantInt::get(CGM.IntTy, RBA ? RBA->getSpaceNumber() : 0);
+  auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
   Value *Name = nullptr;
 
   llvm::Intrinsic::ID IntrinsicID =

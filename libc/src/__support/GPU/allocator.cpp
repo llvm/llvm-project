@@ -22,6 +22,7 @@
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -540,14 +541,35 @@ void deallocate(void *ptr) {
     return;
 
   // All non-slab allocations will be aligned on a 2MiB boundary.
-  if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
     return impl::rpc_free(ptr);
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
-  Slab *slab = reinterpret_cast<Slab *>(
-      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT));
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
   slab->deallocate(ptr);
   release_slab(slab);
+}
+
+void *reallocate(void *ptr, uint64_t size) {
+  if (ptr == nullptr)
+    return gpu::allocate(size);
+
+  // Non-slab allocations are considered foreign pointers so we fail.
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
+    return nullptr;
+
+  // The original slab pointer is the 2MiB boundary using the given pointer.
+  Slab *slab = cpp::launder(reinterpret_cast<Slab *>(
+      (reinterpret_cast<uintptr_t>(ptr) & ~SLAB_ALIGNMENT)));
+  if (slab->get_chunk_size() >= size)
+    return ptr;
+
+  // If we need a new chunk we reallocate and copy it over.
+  void *new_ptr = gpu::allocate(size);
+  inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
+  gpu::deallocate(ptr);
+  return new_ptr;
 }
 
 } // namespace gpu

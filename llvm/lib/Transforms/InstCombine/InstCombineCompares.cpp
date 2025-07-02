@@ -708,11 +708,13 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     return I;
   };
 
-  Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS && CanFold(GEPLHS->getNoWrapFlags())) {
+  CommonPointerBase Base = CommonPointerBase::compute(GEPLHS, RHS);
+  if (Base.Ptr == RHS && CanFold(Base.LHSNW)) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
-    Value *Offset = EmitGEPOffset(GEPLHS);
-    return NewICmp(GEPLHS->getNoWrapFlags(), Offset,
+    Type *IdxTy = DL.getIndexType(GEPLHS->getType());
+    Value *Offset =
+        EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, /*RewriteGEPs=*/true);
+    return NewICmp(Base.LHSNW, Offset,
                    Constant::getNullValue(Offset->getType()));
   }
 
@@ -750,6 +752,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.
+    Value *PtrBase = GEPLHS->getOperand(0);
     if (PtrBase != GEPRHS->getOperand(0)) {
       bool IndicesTheSame =
           GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
@@ -1298,6 +1301,14 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
     // eq/ne (mul X, Y)) with (icmp eq/ne X/Y) and if X/Y is known non-zero that
     // will fold to a constant elsewhere.
   }
+
+  // (icmp eq/ne f(X), 0) -> (icmp eq/ne X, 0)
+  // where f(X) == 0 if and only if X == 0
+  if (ICmpInst::isEquality(Pred))
+    if (Value *Stripped = stripNullTest(Cmp.getOperand(0)))
+      return new ICmpInst(Pred, Stripped,
+                          Constant::getNullValue(Stripped->getType()));
+
   return nullptr;
 }
 

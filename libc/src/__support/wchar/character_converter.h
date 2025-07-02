@@ -26,7 +26,9 @@ public:
   CharacterConverter(mbstate *mbstate);
 
   void clear();
-  bool isComplete();
+  bool isFull();
+  bool isEmpty();
+  bool isValidState();
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
