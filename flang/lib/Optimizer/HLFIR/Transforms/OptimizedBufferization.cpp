@@ -21,6 +21,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
@@ -758,6 +759,16 @@ public:
                   mlir::PatternRewriter &rewriter) const override;
 };
 
+static bool isAllocatableArray(mlir::Type ty) {
+  auto boxTy = mlir::dyn_cast<fir::BoxType>(ty);
+  if (!boxTy)
+    return false;
+  auto heapTy = mlir::dyn_cast<fir::HeapType>(boxTy.getElementType());
+  if (!heapTy)
+    return false;
+  return mlir::isa<fir::SequenceType>(heapTy.getElementType());
+}
+
 llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   // Since RHS is a scalar and LHS is an array, LHS must be allocated
@@ -787,31 +798,48 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
-  if (lhs.isSimplyContiguous() && extents.size() > 1) {
+  bool isArrayRef =
+      mlir::isa<fir::SequenceType>(fir::unwrapRefType(lhs.getType()));
+  if (lhs.isSimplyContiguous() && extents.size() > 1 &&
+      (isArrayRef || isAllocatableArray(lhs.getType()))) {
     // Flatten the array to use a single assign loop, that can be better
     // optimized.
     mlir::Value n = extents[0];
     for (size_t i = 1; i < extents.size(); ++i)
       n = builder.create<mlir::arith::MulIOp>(loc, n, extents[i]);
-    extents = {n};
-    shape = builder.genShape(loc, extents);
-    mlir::Type flatArrayType =
-        fir::ReferenceType::get(fir::SequenceType::get(eleTy, 1));
+    llvm::SmallVector<mlir::Value> flatExtents = {n};
+
+    mlir::Type flatArrayType;
     mlir::Value flatArray = lhs.getBase();
-    if (mlir::isa<fir::BoxType>(lhs.getType()))
-      flatArray = builder.create<fir::BoxAddrOp>(loc, flatArray);
-    flatArray = builder.createConvert(loc, flatArrayType, flatArray);
+    if (isArrayRef) {
+      // Array references must have fixed shape, when used in assignments.
+      int64_t flatExtent = 1;
+      for (const mlir::Value &extent : extents) {
+        mlir::Operation *op = extent.getDefiningOp();
+        assert(op && "no defining operation for constant array extent");
+        flatExtent *= fir::toInt(mlir::cast<mlir::arith::ConstantOp>(*op));
+      }
+
+      flatArrayType =
+          fir::ReferenceType::get(fir::SequenceType::get({flatExtent}, eleTy));
+      flatArray = builder.createConvert(loc, flatArrayType, flatArray);
+    } else {
+      shape = builder.genShape(loc, flatExtents);
+      flatArrayType = fir::BoxType::get(
+          fir::HeapType::get(fir::SequenceType::get(eleTy, 1)));
+      flatArray = builder.create<fir::ReboxOp>(loc, flatArrayType, flatArray,
+                                               shape, /*slice=*/mlir::Value{});
+    }
 
     hlfir::LoopNest loopNest =
-        hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+        hlfir::genLoopNest(loc, builder, flatExtents, /*isUnordered=*/true,
                            flangomp::shouldUseWorkshareLowering(assign));
     builder.setInsertionPointToStart(loopNest.body);
 
-    mlir::Value coor = builder.create<fir::ArrayCoorOp>(
-        loc, fir::ReferenceType::get(eleTy), flatArray, shape,
-        /*slice=*/mlir::Value{}, loopNest.oneBasedIndices,
-        /*typeparams=*/mlir::ValueRange{});
-    builder.create<fir::StoreOp>(loc, rhs, coor);
+    mlir::Value arrayElement =
+        builder.create<hlfir::DesignateOp>(loc, fir::ReferenceType::get(eleTy),
+                                           flatArray, loopNest.oneBasedIndices);
+    builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
   } else {
     hlfir::LoopNest loopNest =
         hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,

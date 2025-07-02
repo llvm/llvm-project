@@ -20,12 +20,10 @@ func.func @_QPtest1() {
 // CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.array<11x13xf32> {bindc_name = "x", uniq_name = "_QFtest1Ex"}
 // CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_3]], %[[VAL_4]] : (index, index) -> !fir.shape<2>
 // CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_6]]) {uniq_name = "_QFtest1Ex"} : (!fir.ref<!fir.array<11x13xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<11x13xf32>>, !fir.ref<!fir.array<11x13xf32>>)
-
-// CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_0]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.array<11x13xf32>>) -> !fir.ref<!fir.array<?xf32>>
-// CHECK:           fir.do_loop %[[VAL_10:.*]] = %[[VAL_1]] to %[[VAL_0]] step %[[VAL_1]] unordered {
-// CHECK:             %[[VAL_11:.*]] = fir.array_coor %[[VAL_9]](%[[VAL_8]]) %[[VAL_10]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
-// CHECK:             fir.store %[[VAL_2]] to %[[VAL_11]] : !fir.ref<f32>
+// CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.array<11x13xf32>>) -> !fir.ref<!fir.array<143xf32>>
+// CHECK:           fir.do_loop %[[VAL_9:.*]] = %[[VAL_1]] to %[[VAL_0]] step %[[VAL_1]] unordered {
+// CHECK:             %[[VAL_10:.*]] = hlfir.designate %[[VAL_8]] (%[[VAL_9]]) : (!fir.ref<!fir.array<143xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_2]] to %[[VAL_10]] : f32, !fir.ref<f32>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
@@ -150,11 +148,10 @@ func.func @_QPtest6(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {f
 // CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_6]]#1, %[[VAL_7]]#1 : index
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_10:.*]] = fir.box_addr %[[VAL_5]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !fir.heap<!fir.array<?x?xi32>>
-// CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.heap<!fir.array<?x?xi32>>) -> !fir.ref<!fir.array<?xi32>>
-// CHECK:           fir.do_loop %[[VAL_12:.*]] = %[[VAL_1]] to %[[VAL_8]] step %[[VAL_1]] unordered {
-// CHECK:             %[[VAL_13:.*]] = fir.array_coor %[[VAL_11]](%[[VAL_9]]) %[[VAL_12]] : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
-// CHECK:             fir.store %[[VAL_3]] to %[[VAL_13]] : !fir.ref<i32>
+// CHECK:           %[[VAL_10:.*]] = fir.rebox %[[VAL_5]](%[[VAL_9]]) : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_8]] step %[[VAL_1]] unordered {
+// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_11]]) : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+// CHECK:             hlfir.assign %[[VAL_3]] to %[[VAL_12]] : i32, !fir.ref<i32>
 // CHECK:           }
 // CHECK:           return
 // CHECK:         }
