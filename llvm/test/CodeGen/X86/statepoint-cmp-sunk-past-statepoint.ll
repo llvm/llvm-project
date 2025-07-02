@@ -61,8 +61,8 @@ zero:
 ; CHECK:      bb.4
 ; CHECK:      bb.5
 ; CHECK:        %4:gr64 = LEA64r %10, 1, $noreg, 8, $noreg
-; CHECK-LV:     %20:gr64 = COPY killed %10
-; CHECK-LIS:    %20:gr64 = COPY %10
+; CHECK-LV:     %3:gr64 = COPY killed %10
+; CHECK-LIS:    %3:gr64 = COPY %10
 ; CHECK-LV:     TEST64rr killed %1, %1, implicit-def $eflags
 ; CHECK:        JCC_1 %bb.1, 5, implicit killed $eflags
 ; CHECK:        JMP_1 %bb.6

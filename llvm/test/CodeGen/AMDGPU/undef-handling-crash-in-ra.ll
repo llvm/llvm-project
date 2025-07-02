@@ -83,7 +83,6 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    flat_store_dwordx2 v[58:59], v[46:47]
 ; CHECK-NEXT:    buffer_store_dword v47, v0, s[0:3], 0 offen offset:4
 ; CHECK-NEXT:    buffer_store_dword v44, v0, s[0:3], 0 offen
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
@@ -96,10 +95,11 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 1
 ; CHECK-NEXT:  ; %bb.3: ; %Flow
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
+; CHECK-NEXT:  .LBB0_4: ; %Flow8
+; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], s[4:5]
 ; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[42:43], v[42:43] op_sel:[0,1]
 ; CHECK-NEXT:    v_pk_mov_b32 v[2:3], v[44:45], v[44:45] op_sel:[0,1]
-; CHECK-NEXT:  .LBB0_4: ; %Flow8
-; CHECK-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
+; CHECK-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.5: ; %LeafBlock
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v42
