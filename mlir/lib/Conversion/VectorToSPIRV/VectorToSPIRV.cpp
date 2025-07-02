@@ -1023,17 +1023,12 @@ struct VectorStepOpConvert final : OpConversionPattern<vector::StepOp> {
 };
 
 struct VectorToElementOpConvert final
-    : public OpConversionPattern<vector::ToElementsOp> {
+    : OpConversionPattern<vector::ToElementsOp> {
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(vector::ToElementsOp toElementsOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    Type srcType =
-        getTypeConverter()->convertType(toElementsOp.getSource().getType());
-    if (!srcType)
-      return failure();
 
     SmallVector<Value> results(toElementsOp->getNumResults());
     Location loc = toElementsOp.getLoc();
@@ -1047,15 +1042,18 @@ struct VectorToElementOpConvert final
       return success();
     }
 
+    Type srcElementType = toElementsOp.getElements().getType().front();
+    Type elementType = getTypeConverter()->convertType(srcElementType);
+    if (!elementType)
+      return rewriter.notifyMatchFailure(
+          toElementsOp, "unsupported element type in source vector");
+
     for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
       // Create an CompositeExtract operation only for results that are not
       // dead.
       if (element.use_empty())
         continue;
 
-      auto elementType = getTypeConverter()->convertType(element.getType());
-      if (!elementType)
-        return failure();
       Value result = rewriter.create<spirv::CompositeExtractOp>(
           loc, elementType, adaptor.getSource(),
           rewriter.getI32ArrayAttr({static_cast<int32_t>(idx)}));
