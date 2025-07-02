@@ -319,7 +319,7 @@ struct GenericKernelTy {
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
-  const char *getName() const { return Name; }
+  const char *getName() const { return Name.c_str(); }
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
@@ -482,7 +482,7 @@ private:
                                 bool IsNumThreadsFromUser) const;
 
   /// The kernel name.
-  const char *Name;
+  std::string Name;
 
   /// The execution flags of the kernel.
   OMPTgtExecModeFlags ExecutionMode;
