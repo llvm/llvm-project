@@ -3434,6 +3434,86 @@ define <vscale x 4 x i32> @vid.v(<vscale x 4 x i32> %c, iXLen %vl) {
   ret <vscale x 4 x i32> %2
 }
 
+define <vscale x 4 x i32> @vslideup_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
+; NOVLOPT-LABEL: vslideup_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vslideup.vx v10, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vslideup_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vslideup.vx v10, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v10, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vslideup(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1, iXLen 3)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %1, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vslideup_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vslideup_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vslideup.vi v10, v8, 2
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v10, v10
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vslideup_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vslideup.vi v10, v8, 2
+; VLOPT-NEXT:    vadd.vv v8, v10, v10
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vslideup(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen -1, iXLen 3)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %1, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vslidedown_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %vl) {
+; NOVLOPT-LABEL: vslidedown_vx:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vslidedown.vx v8, v8, a0
+; NOVLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vslidedown_vx:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vslidedown.vx v8, v8, a0
+; VLOPT-NEXT:    vadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vslidedown(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1, iXLen 3)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %1, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
+define <vscale x 4 x i32> @vslidedown_vi(<vscale x 4 x i32> %a, iXLen %vl) {
+; NOVLOPT-LABEL: vslidedown_vi:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vslidedown.vi v8, v8, 2
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vadd.vv v8, v8, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vslidedown_vi:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vslidedown.vi v8, v8, 2
+; VLOPT-NEXT:    vadd.vv v8, v8, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x i32> @llvm.riscv.vslidedown(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen -1, iXLen 3)
+  %2 = call <vscale x 4 x i32> @llvm.riscv.vadd(<vscale x 4 x i32> poison, <vscale x 4 x i32> %1, <vscale x 4 x i32> %1, iXLen %vl)
+  ret <vscale x 4 x i32> %2
+}
+
 define <vscale x 4 x float> @vfadd_vv(<vscale x 4 x float> %a, <vscale x 4 x float> %b, iXLen %vl) {
 ; NOVLOPT-LABEL: vfadd_vv:
 ; NOVLOPT:       # %bb.0:
