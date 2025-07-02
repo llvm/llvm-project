@@ -4,14 +4,13 @@
 ; RUN: opt < %s -passes='cgscc(coro-split)' -S | FileCheck %s
 ;
 ; And the debug info:
+; REQUIRES: object-emission
 ; RUN: opt < %s -passes='cgscc(coro-split),coro-cleanup' \
-; RUN:   | llc -O0 -filetype=obj -o - \
+; RUN:   | %llc_dwarf -O0 -filetype=obj -o - \
 ; RUN:   | llvm-dwarfdump - \
 ; RUN:   | FileCheck %s -check-prefix=DWARF
 
 source_filename = "coro.c"
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 declare void @bar(...) local_unnamed_addr #2
 declare void @baz(...) local_unnamed_addr #2
