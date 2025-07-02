@@ -522,8 +522,8 @@ static bool verifyMaxAnisotropy(uint32_t MaxAnisotropy) {
 
 static bool verifyComparisonFunc(uint32_t ComparisonFunc) {
   switch (ComparisonFunc) {
-#define COMPARISON_FUNCTION(Num, Val)                                          \
-  case llvm::to_underlying(dxbc::SamplersComparisonFunction::Val):
+#define COMPARISON_FUNC(Num, Val)                                              \
+  case llvm::to_underlying(dxbc::ComparisonFunc::Val):
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
