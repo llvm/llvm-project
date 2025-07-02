@@ -1595,12 +1595,11 @@ TEST(STLExtrasTest, Fill) {
   std::vector<int> V1 = {1, 2, 3};
   std::vector<int> V2;
   int Val = 4;
-  auto IsSameAsVal = [&](int V) { return V == Val; };
   fill(V1, Val);
-  EXPECT_TRUE(llvm::all_of(V1, IsSameAsVal));
-  V2.resize(5);
+  EXPECT_THAT(V1, ElementsAre(Val, Val, Val));
+  V2.resize(4);
   fill(V2, Val);
-  EXPECT_TRUE(llvm::all_of(V2, IsSameAsVal));
+  EXPECT_THAT(V2, ElementsAre(Val, Val, Val, Val));
 }
 
 struct Foo;
