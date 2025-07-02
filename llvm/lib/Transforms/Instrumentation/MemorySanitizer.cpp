@@ -2525,11 +2525,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     Value *S = IRB.CreateOr({S1S2, V1S2, S1V2});
     if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
-      // "V1" and "V2" were NOT'ed above, but we still want to reuse them
-      // because they were IntCast'ed to the same type as the shadows.
-      //
-      // (V1 & V2) == ~(~V1 | ~V2) (de Morgan)
-      Value *V1V2 = IRB.CreateNot(IRB.CreateOr(V1, V2));
+      // "V1" and "V2" were NOT'ed above
+      V1 = IRB.CreateIntCast(I.getOperand(0), S1->getType(), false);
+      V2 = IRB.CreateIntCast(I.getOperand(1), S2->getType(), false);
+      Value *V1V2 = IRB.CreateAnd(V1, V2);
       S = IRB.CreateOr({S, V1V2});
     }
 
