@@ -831,6 +831,11 @@ Status MinidumpFileBuilder::AddLinuxFileStreams() {
 Status MinidumpFileBuilder::AddMemoryList() {
   Status error;
 
+  // Note this is here for testing. In the past there has been many occasions that the 64b
+  // code has regressed because it's wasteful and expensive to write a 4.2gb+ on every CI run
+  // to get around this and to exercise this codepath we define a flag in the options object.
+  bool force_64b_for_non_threads = m_save_core_options.ContainsFlag(&FORCE_64B_FLAG);
+
   // We first save the thread stacks to ensure they fit in the first UINT32_MAX
   // bytes of the core file. Thread structures in minidump files can only use
   // 32 bit memory descriptiors, so we emit them first to ensure the memory is

@@ -147,6 +147,12 @@ lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() {
   return m_memory_region_infos;
 }
 
+void SBSaveCoreOptions::AddFlag(const char *flag) {
+  LLDB_INSTRUMENT_VA(this, flag);
+
+  m_opaque_up->AddFlag(flag);
+}
+
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
   return *m_opaque_up;
 }

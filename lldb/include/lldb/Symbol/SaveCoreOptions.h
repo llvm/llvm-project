@@ -24,7 +24,7 @@ namespace lldb_private {
 
 class SaveCoreOptions {
 public:
-  SaveCoreOptions(){};
+  SaveCoreOptions() = default;
   ~SaveCoreOptions() = default;
 
   lldb_private::Status SetPluginName(const char *name);
@@ -53,6 +53,10 @@ public:
 
   llvm::Expected<uint64_t> GetCurrentSizeInBytes();
 
+  void AddFlag(const char *flag);
+
+  bool ContainsFlag(const char *flag) const;
+
   void Clear();
 
 private:
@@ -61,6 +65,7 @@ private:
   std::optional<std::string> m_plugin_name;
   std::optional<lldb_private::FileSpec> m_file;
   std::optional<lldb::SaveCoreStyle> m_style;
+  std::optional<std::unordered_set<std::string>> m_flags;
   lldb::ProcessSP m_process_sp;
   std::unordered_set<lldb::tid_t> m_threads_to_save;
   MemoryRanges m_regions_to_save;
