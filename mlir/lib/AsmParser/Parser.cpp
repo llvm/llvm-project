@@ -1830,10 +1830,14 @@ public:
   /// If `allowType` is false or `allowAttrs` are false then the respective
   /// parts of the grammar are not parsed.
   ParseResult parseArgument(Argument &result, bool allowType = false,
-                            bool allowAttrs = false) override {
+                            bool allowAttrs = false,
+                            function_ref<ParseResult(AsmParser &, Type &)>
+                            typeParser = {}) override {
     NamedAttrList attrs;
     if (parseOperand(result.ssaName, /*allowResultNumber=*/false) ||
-        (allowType && parseColonType(result.type)) ||
+        (allowType && !typeParser && parseColonType(result.type)) ||
+        (allowType && typeParser &&
+         (parseColon() || typeParser(*this, result.type))) ||
         (allowAttrs && parseOptionalAttrDict(attrs)) ||
         parseOptionalLocationSpecifier(result.sourceLoc))
       return failure();
@@ -1842,10 +1846,12 @@ public:
   }
 
   /// Parse a single argument if present.
-  OptionalParseResult parseOptionalArgument(Argument &result, bool allowType,
-                                            bool allowAttrs) override {
+  OptionalParseResult parseOptionalArgument(
+      Argument &result, bool allowType, bool allowAttrs,
+      function_ref<ParseResult(AsmParser &, Type &)> typeParser =
+      {}) override {
     if (parser.getToken().is(Token::percent_identifier))
-      return parseArgument(result, allowType, allowAttrs);
+      return parseArgument(result, allowType, allowAttrs, typeParser);
     return std::nullopt;
   }
 

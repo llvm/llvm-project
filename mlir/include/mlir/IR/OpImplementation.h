@@ -243,26 +243,36 @@ public:
       printArrowTypeList(types);
   }
   template <typename TypeRange>
-  void printArrowTypeList(TypeRange &&types) {
+  void
+  printArrowTypeList(TypeRange &&types,
+                     function_ref<void(AsmPrinter &, Type)> typePrinter = {}) {
     auto &os = getStream() << " -> ";
 
     bool wrapped = !llvm::hasSingleElement(types) ||
                    llvm::isa<FunctionType>((*types.begin()));
     if (wrapped)
       os << '(';
-    llvm::interleaveComma(types, *this);
+    llvm::interleaveComma(types, *this, [&](Type ty) {
+      if (typePrinter) typePrinter(*this, ty);
+      else printType(ty);
+    });
     if (wrapped)
       os << ')';
   }
 
   /// Print the two given type ranges in a functional form.
   template <typename InputRangeT, typename ResultRangeT>
-  void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
+  void printFunctionalType(
+      InputRangeT &&inputs, ResultRangeT &&results,
+      function_ref<void(AsmPrinter &, Type)> typePrinter = {}) {
     auto &os = getStream();
     os << '(';
-    llvm::interleaveComma(inputs, *this);
+    llvm::interleaveComma(inputs, *this, [&](Type ty) {
+      if (typePrinter) typePrinter(*this, ty);
+      else printType(ty);
+    });
     os << ')';
-    printArrowTypeList(results);
+    printArrowTypeList(results, typePrinter);
   }
 
   void printDimensionList(ArrayRef<int64_t> shape);
@@ -463,10 +473,11 @@ public:
   /// where location printing is controlled by the standard internal option.
   /// You may pass omitType=true to not print a type, and pass an empty
   /// attribute list if you don't care for attributes.
-  virtual void printRegionArgument(BlockArgument arg,
-                                   ArrayRef<NamedAttribute> argAttrs = {},
-                                   bool omitType = false) = 0;
-
+  /// You can override default type printing behavior with the typePrinter arg.
+  virtual void printRegionArgument(
+      BlockArgument arg, ArrayRef<NamedAttribute> argAttrs = {},
+      bool omitType = false,
+      function_ref<void(AsmPrinter &, Type)> typePrinter = {}) = 0;
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
@@ -1701,13 +1712,18 @@ public:
   ///
   /// If `allowType` is false or `allowAttrs` are false then the respective
   /// parts of the grammar are not parsed.
-  virtual ParseResult parseArgument(Argument &result, bool allowType = false,
-                                    bool allowAttrs = false) = 0;
+  /// You can override default type parsing behavior with the typeParser arg.
+  virtual ParseResult
+  parseArgument(Argument &result, bool allowType = false,
+                bool allowAttrs = false,
+                function_ref<ParseResult(AsmParser &, Type &)> typeParser =
+                    nullptr) = 0;
 
   /// Parse a single argument if present.
-  virtual OptionalParseResult
-  parseOptionalArgument(Argument &result, bool allowType = false,
-                        bool allowAttrs = false) = 0;
+  virtual OptionalParseResult parseOptionalArgument(
+      Argument &result, bool allowType = false, bool allowAttrs = false,
+      function_ref<ParseResult(AsmParser &, Type &)> typeParser =
+          nullptr) = 0;
 
   /// Parse zero or more arguments with a specified surrounding delimiter.
   virtual ParseResult parseArgumentList(SmallVectorImpl<Argument> &result,
