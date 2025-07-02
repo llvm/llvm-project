@@ -43,7 +43,8 @@ public:
 
   void writeTo(uint8_t *buf) override {
     assert(offset);
-    log("writing " + toString(*this));
+    log("writing " + toString(*this) + " offset=" + Twine(offset) +
+        " size=" + Twine(getSize()));
     memcpy(buf + offset, header.data(), header.size());
     memcpy(buf + offset + header.size(), body.data(), body.size());
   }

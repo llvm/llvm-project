@@ -91,12 +91,16 @@ unsigned WebAssemblyWasmObjectWriter::getRelocType(
   case WebAssembly::S_TYPEINDEX:
     return wasm::R_WASM_TYPE_INDEX_LEB;
   case WebAssembly::S_None:
+  case WebAssembly::S_DEBUG_REF:
     break;
   case WebAssembly::S_FUNCINDEX:
+    if (static_cast<unsigned>(Fixup.getKind()) ==
+        WebAssembly::fixup_uleb128_i32)
+      return wasm::R_WASM_FUNCTION_INDEX_LEB;
     return wasm::R_WASM_FUNCTION_INDEX_I32;
   }
 
-  switch (unsigned(Fixup.getKind())) {
+  switch (static_cast<unsigned>(Fixup.getKind())) {
   case WebAssembly::fixup_sleb128_i32:
     if (SymA.isFunction())
       return wasm::R_WASM_TABLE_INDEX_SLEB;

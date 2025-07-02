@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyMCAsmInfo.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
@@ -21,6 +22,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -43,6 +45,9 @@ public:
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
+
+  std::pair<bool, bool> relaxLEB128(MCLEBFragment &LF,
+                                    int64_t &Value) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
@@ -68,6 +73,26 @@ WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
              WebAssembly::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
+}
+
+std::pair<bool, bool> WebAssemblyAsmBackend::relaxLEB128(MCLEBFragment &LF,
+                                                         int64_t &Value) const {
+  const MCExpr &Expr = LF.getValue();
+  if (Expr.getKind() == MCExpr::ExprKind::SymbolRef) {
+    const MCSymbolRefExpr &SymExpr = llvm::cast<MCSymbolRefExpr>(Expr);
+    if (static_cast<WebAssembly::Specifier>(SymExpr.getSpecifier()) ==
+        WebAssembly::S_DEBUG_REF) {
+      Value = Asm->getSymbolOffset(SymExpr.getSymbol());
+      return std::make_pair(true, false);
+    }
+  }
+  // currently, this is only used for leb128 encoded function indices
+  // that require relocations
+  LF.getFixups().push_back(
+      MCFixup::create(0, &Expr, WebAssembly::fixup_uleb128_i32, Expr.getLoc()));
+  // ensure that the stored placeholder is large enough to hold any 32-bit val
+  Value = UINT32_MAX;
+  return std::make_pair(true, false);
 }
 
 bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,

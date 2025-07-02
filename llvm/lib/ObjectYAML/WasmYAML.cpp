@@ -94,6 +94,12 @@ static void sectionMapping(IO &IO, WasmYAML::TargetFeaturesSection &Section) {
   IO.mapRequired("Features", Section.Features);
 }
 
+static void sectionMapping(IO &IO, WasmYAML::BranchHintSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Name", Section.Name);
+  IO.mapRequired("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, WasmYAML::CustomSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
@@ -202,6 +208,10 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
       if (!IO.outputting())
         Section.reset(new WasmYAML::TargetFeaturesSection());
       sectionMapping(IO, *cast<WasmYAML::TargetFeaturesSection>(Section.get()));
+    } else if (SectionName == "metadata.code.branch_hint") {
+      if (!IO.outputting())
+        Section.reset(new WasmYAML::BranchHintSection());
+      sectionMapping(IO, *cast<WasmYAML::BranchHintSection>(Section.get()));
     } else {
       if (!IO.outputting())
         Section.reset(new WasmYAML::CustomSection(SectionName));
@@ -351,6 +361,31 @@ void MappingTraits<WasmYAML::FeatureEntry>::mapping(
     IO &IO, WasmYAML::FeatureEntry &FeatureEntry) {
   IO.mapRequired("Prefix", FeatureEntry.Prefix);
   IO.mapRequired("Name", FeatureEntry.Name);
+}
+
+template <>
+void MappingTraits<WasmYAML::CodeMetadataFuncEntry<WasmYAML::BranchHint>>::
+    mapping(IO &IO,
+            WasmYAML::CodeMetadataFuncEntry<WasmYAML::BranchHint> &FuncEntry) {
+  IO.mapRequired("FuncIdx", FuncEntry.FuncIdx);
+  IO.mapRequired("Hints", FuncEntry.Hints);
+}
+
+template <>
+void MappingTraits<WasmYAML::CodeMetadataItemEntry<WasmYAML::BranchHint>>::
+    mapping(IO &IO,
+            WasmYAML::CodeMetadataItemEntry<WasmYAML::BranchHint> &ItemEntry) {
+  IO.mapRequired("Offset", ItemEntry.Offset);
+  IO.mapRequired("Size", ItemEntry.Size);
+  IO.mapRequired("Data", ItemEntry.Data);
+}
+
+void ScalarEnumerationTraits<WasmYAML::BranchHint>::enumeration(
+    IO &IO, WasmYAML::BranchHint &BranchHint) {
+  IO.enumCase(BranchHint, "UNLIKELY",
+              static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::UNLIKELY));
+  IO.enumCase(BranchHint, "LIKELY",
+              static_cast<uint8_t>(wasm::WasmCodeMetadataBranchHint::LIKELY));
 }
 
 void MappingTraits<WasmYAML::SegmentInfo>::mapping(

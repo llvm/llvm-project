@@ -39,6 +39,7 @@ LLVM_YAML_STRONG_TYPEDEF(uint32_t, SegmentFlags)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, LimitFlags)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, ComdatKind)
 LLVM_YAML_STRONG_TYPEDEF(uint32_t, FeaturePolicyPrefix)
+LLVM_YAML_STRONG_TYPEDEF(uint32_t, BranchHint)
 
 struct FileHeader {
   yaml::Hex32 Version;
@@ -142,6 +143,17 @@ struct ProducerEntry {
 struct FeatureEntry {
   FeaturePolicyPrefix Prefix;
   std::string Name;
+};
+
+template <typename T> struct CodeMetadataItemEntry {
+  uint32_t Offset;
+  uint32_t Size;
+  T Data;
+};
+
+template <typename T> struct CodeMetadataFuncEntry {
+  uint32_t FuncIdx;
+  std::vector<CodeMetadataItemEntry<T>> Hints;
 };
 
 struct SegmentInfo {
@@ -284,6 +296,22 @@ struct TargetFeaturesSection : CustomSection {
   }
 
   std::vector<FeatureEntry> Features;
+};
+
+template <typename T> struct CodeMetadataSection : CustomSection {
+  CodeMetadataSection(const StringRef Name) : CustomSection(Name) {}
+  std::vector<CodeMetadataFuncEntry<T>> Entries;
+};
+
+struct BranchHintSection : CodeMetadataSection<BranchHint> {
+  BranchHintSection() : CodeMetadataSection("metadata.code.branch_hint") {}
+
+  static bool classof(const Section *S) {
+    auto C = dyn_cast<CustomSection>(S);
+    return C && C->Name == "metadata.code.branch_hint";
+  }
+
+  std::vector<CodeMetadataFuncEntry<BranchHint>> Entries;
 };
 
 struct TypeSection : Section {
@@ -447,6 +475,10 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::ComdatEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::Comdat)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::DylinkImportInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::WasmYAML::DylinkExportInfo)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::WasmYAML::CodeMetadataItemEntry<llvm::WasmYAML::BranchHint>)
+LLVM_YAML_IS_SEQUENCE_VECTOR(
+    llvm::WasmYAML::CodeMetadataFuncEntry<llvm::WasmYAML::BranchHint>)
 
 namespace llvm {
 namespace yaml {
@@ -527,8 +559,20 @@ template <> struct ScalarEnumerationTraits<WasmYAML::FeaturePolicyPrefix> {
   static void enumeration(IO &IO, WasmYAML::FeaturePolicyPrefix &Prefix);
 };
 
+template <> struct ScalarEnumerationTraits<WasmYAML::BranchHint> {
+  static void enumeration(IO &IO, WasmYAML::BranchHint &BranchHint);
+};
+
 template <> struct MappingTraits<WasmYAML::FeatureEntry> {
   static void mapping(IO &IO, WasmYAML::FeatureEntry &FeatureEntry);
+};
+
+template <typename T> struct MappingTraits<WasmYAML::CodeMetadataFuncEntry<T>> {
+  static void mapping(IO &IO, WasmYAML::CodeMetadataFuncEntry<T> &FuncEntry);
+};
+
+template <typename T> struct MappingTraits<WasmYAML::CodeMetadataItemEntry<T>> {
+  static void mapping(IO &IO, WasmYAML::CodeMetadataItemEntry<T> &ItemEntry);
 };
 
 template <> struct MappingTraits<WasmYAML::SegmentInfo> {
