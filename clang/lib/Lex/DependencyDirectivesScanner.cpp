@@ -419,7 +419,7 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
 }
 
 void Scanner::skipLine(const char *&First, const char *const End) {
-  const char * const OldFirst = First;
+  const char *const OldFirst = First;
   for (;;) {
     assert(First <= End);
     if (First == End)
