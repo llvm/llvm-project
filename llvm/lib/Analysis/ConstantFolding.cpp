@@ -2691,8 +2691,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
-        return ConstantFoldFP(fabs, APF, Ty,
-                              nvvm::GetNVVMDenromMode(nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
+        return ConstantFoldFP(
+            fabs, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_floor_ftz_f:
       case Intrinsic::nvvm_floor_f:
