@@ -852,27 +852,9 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
 }
 
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
-#define LANGOPT(Name, Bits, DefaultValue, Description)                         \
+#define LANGOPT(Name, Bits, DefaultValue, Compatibility, Description)          \
   llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Affecting" << " " << Description << "\n";
-#define COMPATIBLE_LANGOPT(Name, Bits, DefaultValue, Description)              \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Compatible" << " " << Description << "\n";
-#define COMPATIBLE_VALUE_LANGOPT(Name, Bits, DefaultValue, Description)        \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Compatible" << " " << Description << "\n";
-#define COMPATIBLE_ENUM_LANGOPT(Name, Type, Bits, DefaultValue, Description)   \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Compatible" << " " << Description << "\n";
-#define BENIGN_LANGOPT(Name, Bits, DefaultValue, Description)                  \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Benign" << " " << Description << "\n";
-#define BENIGN_VALUE_LANGOPT(Name, Bits, DefaultValue, Description)            \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Benign" << " " << Description << "\n";
-#define BENIGN_ENUM_LANGOPT(Name, Type, Bits, DefaultValue, Description)       \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << "Benign" << " " << Description << "\n";
+               << #Compatibility << " " << Description << "\n";
 #include "clang/Basic/LangOptions.def"
 
   llvm::InitializeAllTargetInfos();
