@@ -127,6 +127,8 @@ public:
     return *AddrSpace;
   }
   int32_t getConstant() const { return Offset; }
+  bool getDereference() const { return Dereference; }
+
   /// Some opcodes will modify the CFA location's register only, so we need
   /// to be able to modify the CFA register when evaluating DWARF Call Frame
   /// Information opcodes.
@@ -247,8 +249,8 @@ class UnwindRow {
   /// The address will be valid when parsing the instructions in a FDE. If
   /// invalid, this object represents the initial instructions of a CIE.
   std::optional<uint64_t> Address; ///< Address for row in FDE, invalid for CIE.
-  UnwindLocation CFAValue;   ///< How to unwind the Call Frame Address (CFA).
-  RegisterLocations RegLocs; ///< How to unwind all registers in this list.
+  UnwindLocation CFAValue;    ///< How to unwind the Call Frame Address (CFA).
+  RegisterLocations RegLocs;  ///< How to unwind all registers in this list.
 
 public:
   UnwindRow() : CFAValue(UnwindLocation::createUnspecified()) {}
