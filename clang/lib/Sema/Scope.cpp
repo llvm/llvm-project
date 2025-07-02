@@ -221,6 +221,7 @@ void Scope::dumpImpl(raw_ostream &OS) const {
       {OpenMPDirectiveScope, "OpenMPDirectiveScope"},
       {OpenMPLoopDirectiveScope, "OpenMPLoopDirectiveScope"},
       {OpenMPSimdDirectiveScope, "OpenMPSimdDirectiveScope"},
+      {OpenMPDispatchDirectiveScope, "OpenMPDispatchDirectiveScope"},
       {EnumScope, "EnumScope"},
       {SEHTryScope, "SEHTryScope"},
       {SEHExceptScope, "SEHExceptScope"},

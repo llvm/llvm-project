@@ -1669,7 +1669,7 @@ public:
                                            SourceLocation EndLoc) {
 
     return getSema().OpenMP().ActOnOpenMPExecutableDirective(
-        Kind, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
+        Kind, nullptr, DirName, CancelRegion, Clauses, AStmt, StartLoc, EndLoc);
   }
 
   /// Build a new OpenMP informational directive.

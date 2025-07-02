@@ -3758,6 +3758,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
         S->getDirectiveKind() == OMPD_masked ||
         S->getDirectiveKind() == OMPD_scope ||
         S->getDirectiveKind() == OMPD_assume ||
+        S->getDirectiveKind() == OMPD_dispatch ||
         isOpenMPLoopTransformationDirective(S->getDirectiveKind())) {
       Visit(S->getAssociatedStmt());
       return;
@@ -4227,6 +4228,8 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
     Traits.emplace_back(llvm::omp::TraitProperty::construct_for_for);
   if (isOpenMPSimdDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_simd_simd);
+  if (isOpenMPDispatchDirective(DKind))
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_dispatch_dispatch);
   Stack->handleConstructTrait(Traits, ScopeEntry);
 }
 
@@ -4279,6 +4282,11 @@ getTaskRegionParams(Sema &SemaRef) {
       std::make_pair(StringRef(), QualType()) // __context with shared vars
   };
   return Params;
+}
+
+static SmallVector<SemaOpenMP::CapturedParamNameType>
+getDispatchRegionParams(Sema &SemaRef) {
+  return getTaskRegionParams(SemaRef);
 }
 
 static SmallVector<SemaOpenMP::CapturedParamNameType>
@@ -4364,6 +4372,14 @@ static void processCapturedRegions(Sema &SemaRef, OpenMPDirectiveKind DKind,
     case OMPD_task:
       SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
                                        getTaskRegionParams(SemaRef), Level);
+      // Mark this captured region as inlined, because we don't use outlined
+      // function directly.
+      MarkAsInlined(SemaRef.getCurCapturedRegion());
+      break;
+    case OMPD_dispatch:
+      SemaRef.ActOnCapturedRegionStart(Loc, CurScope, CR_OpenMP,
+                                       /*getDispatchRegionParams(SemaRef)*/
+                                       getUnknownRegionParams(SemaRef), Level);
       // Mark this captured region as inlined, because we don't use outlined
       // function directly.
       MarkAsInlined(SemaRef.getCurCapturedRegion());
@@ -5987,7 +6003,7 @@ static bool teamsLoopCanBeParallelFor(Stmt *AStmt, Sema &SemaRef) {
 }
 
 StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
-    OpenMPDirectiveKind Kind, const DeclarationNameInfo &DirName,
+    OpenMPDirectiveKind Kind, Scope *Scope, const DeclarationNameInfo &DirName,
     OpenMPDirectiveKind CancelRegion, ArrayRef<OMPClause *> Clauses,
     Stmt *AStmt, SourceLocation StartLoc, SourceLocation EndLoc) {
   assert(isOpenMPExecutableDirective(Kind) && "Unexpected directive category");
@@ -6485,8 +6501,8 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
     Res = ActOnOpenMPInteropDirective(ClausesWithImplicit, StartLoc, EndLoc);
     break;
   case OMPD_dispatch:
-    Res = ActOnOpenMPDispatchDirective(ClausesWithImplicit, AStmt, StartLoc,
-                                       EndLoc);
+    Res = ActOnOpenMPDispatchDirective(Scope, ClausesWithImplicit, AStmt,
+                                       StartLoc, EndLoc);
     break;
   case OMPD_loop:
     Res = ActOnOpenMPGenericLoopDirective(ClausesWithImplicit, AStmt, StartLoc,
@@ -7132,7 +7148,8 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
                                        SourceLocation LParenLoc,
                                        MultiExprArg ArgExprs,
                                        SourceLocation RParenLoc,
-                                       Expr *ExecConfig) {
+                                       Expr *ExecConfig,
+                                       ArrayRef<OMPClause *> DispatchClauses) {
   // The common case is a regular call we do not want to specialize at all. Try
   // to make that case fast by bailing early.
   CallExpr *CE = dyn_cast<CallExpr>(Call.get());
@@ -7212,11 +7229,13 @@ ExprResult SemaOpenMP::ActOnOpenMPCall(ExprResult Call, Scope *Scope,
       Sema::TentativeAnalysisScope Trap(SemaRef);
 
       if (auto *SpecializedMethod = dyn_cast<CXXMethodDecl>(BestDecl)) {
-        auto *MemberCall = dyn_cast<CXXMemberCallExpr>(CE);
-        BestExpr = MemberExpr::CreateImplicit(
-            Context, MemberCall->getImplicitObjectArgument(),
-            /*IsArrow=*/false, SpecializedMethod, Context.BoundMemberTy,
-            MemberCall->getValueKind(), MemberCall->getObjectKind());
+        if (!SpecializedMethod->isStatic()) {
+          auto *MemberCall = dyn_cast<CXXMemberCallExpr>(CE);
+          BestExpr = MemberExpr::CreateImplicit(
+              Context, MemberCall->getImplicitObjectArgument(),
+              /*IsArrow=*/false, SpecializedMethod, Context.BoundMemberTy,
+              MemberCall->getValueKind(), MemberCall->getObjectKind());
+        }
       }
       NewCall = SemaRef.BuildCallExpr(Scope, BestExpr, LParenLoc, ArgExprs,
                                       RParenLoc, ExecConfig);
@@ -10573,13 +10592,17 @@ static Expr *getDirectCallExpr(Expr *E) {
 }
 
 StmtResult
-SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
+SemaOpenMP::ActOnOpenMPDispatchDirective(Scope *Scope,
+                                         ArrayRef<OMPClause *> Clauses,
                                          Stmt *AStmt, SourceLocation StartLoc,
                                          SourceLocation EndLoc) {
   if (!AStmt)
     return StmtError();
 
-  Stmt *S = cast<CapturedStmt>(AStmt)->getCapturedStmt();
+  Stmt *S = AStmt;
+  if (auto *Cap = dyn_cast<CapturedStmt>(S)) {
+    S = Cap->getCapturedStmt();
+  }
 
   // 5.1 OpenMP
   // expression-stmt : an expression statement with one of the following forms:
@@ -10587,6 +10610,8 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
   //   target-call ( [expression-list] );
 
   SourceLocation TargetCallLoc;
+
+  ExprResult CalleeExprCtx{}, CalleeExprNoctx{};
 
   if (!SemaRef.CurContext->isDependentContext()) {
     Expr *TargetCall = nullptr;
@@ -10613,13 +10638,76 @@ SemaOpenMP::ActOnOpenMPDispatchDirective(ArrayRef<OMPClause *> Clauses,
       Diag(E->getBeginLoc(), diag::err_omp_dispatch_statement_call);
       return StmtError();
     }
+
+    auto *CE = dyn_cast<CallExpr>(TargetCall);
+    SourceLocation LParenLoc = CE->getBeginLoc(); // might not be quite right but eh
+    MultiExprArg ArgExprs(CE->getArgs(), CE->getNumArgs());
+    SourceLocation RParenLoc = CE->getRParenLoc();
+    DSAStack->setContext(SemaRef.CurContext);
+    handleDeclareVariantConstructTrait(DSAStack, OMPD_dispatch, /*ScopeEntry=*/true);
+    CalleeExprCtx = ActOnOpenMPCall(ExprResult(TargetCall), Scope, LParenLoc,
+                                    ArgExprs, RParenLoc, nullptr, Clauses);
+    handleDeclareVariantConstructTrait(DSAStack, OMPD_dispatch, /*ScopeEntry=*/false);
+    CalleeExprNoctx = ActOnOpenMPCall(ExprResult(TargetCall), Scope,
+                                      LParenLoc, ArgExprs, RParenLoc,
+                                      nullptr, Clauses);
+
     TargetCallLoc = TargetCall->getExprLoc();
   }
 
+  auto &&SubstituteCall = [&S, &Scope](Sema &SemaRef, Expr *WithCall) -> Stmt * {
+    const Expr *E = dyn_cast<Expr>(S);
+    E = E->IgnoreParenCasts()->IgnoreImplicit();
+    if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+      if (BO->getOpcode() == BO_Assign) {
+        Expr *RHS = BO->getRHS();
+
+        if (isa<CXXMemberCallExpr, PseudoObjectExpr>(RHS)) {
+          CaptureVars CopyTransformer(SemaRef);
+          if (auto *POE = dyn_cast<PseudoObjectExpr>(WithCall)) {
+            // The 'CaptureVars' CopyTransformer ignores the semantic expr,
+            // but that's the one we want.  Extract it first.
+            WithCall = POE->getSemanticExpr(0);
+          }
+          WithCall = AssertSuccess(CopyTransformer.TransformExpr(WithCall));
+        }
+
+        Expr *LHS = BO->getLHS();
+        CaptureVars CopyTransformer(SemaRef);
+        Expr *LHSCopy = AssertSuccess(CopyTransformer.TransformExpr(LHS));
+        return AssertSuccess(SemaRef.BuildBinOp(Scope, {}, BO_Assign, LHSCopy,
+                                                WithCall));
+      }
+    } else if (isa<CXXMemberCallExpr, PseudoObjectExpr>(E)) {
+      if (auto *POE = dyn_cast<PseudoObjectExpr>(WithCall)) {
+        WithCall = POE->getSemanticExpr(0);
+      }
+      CaptureVars CopyTransformer(SemaRef);
+      return AssertSuccess(CopyTransformer.TransformExpr(WithCall));
+    } else {
+      // FIXME: Handle CXXOperatorCallExpr, etc.
+      return WithCall;
+    }
+  };
+
+  Stmt *CallStmtNoctx = nullptr;
+  Stmt *CallStmtCtx = nullptr;
+
   SemaRef.setFunctionHasBranchProtectedScope();
 
+  if (!SemaRef.CurContext->isDependentContext()) {
+    if (CalleeExprNoctx.isUsable()) {
+      CallStmtNoctx = SubstituteCall(SemaRef, CalleeExprNoctx.get());
+    }
+
+    if (CalleeExprCtx.isUsable()) {
+      CallStmtCtx = SubstituteCall(SemaRef, CalleeExprCtx.get());
+    }
+  }
+
   return OMPDispatchDirective::Create(getASTContext(), StartLoc, EndLoc,
-                                      Clauses, AStmt, TargetCallLoc);
+                                      Clauses, AStmt, CallStmtNoctx,
+                                      CallStmtCtx, TargetCallLoc);
 }
 
 static bool checkGenericLoopLastprivate(Sema &S, ArrayRef<OMPClause *> Clauses,
