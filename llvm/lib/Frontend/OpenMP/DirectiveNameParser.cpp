@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
@@ -17,7 +18,7 @@ namespace llvm::omp {
 DirectiveNameParser::DirectiveNameParser(SourceLanguage L) {
   // Take every directive, get its name in every version, break the name up
   // into whitespace-separated tokens, and insert each token.
-  for (size_t I = 0, E = Directive_enumSize; I != E; ++I) {
+  for (size_t I : llvm::seq<size_t>(Directive_enumSize)) {
     auto D = static_cast<Directive>(I);
     if (D == Directive::OMPD_unknown || !(getDirectiveLanguages(D) & L))
       continue;
