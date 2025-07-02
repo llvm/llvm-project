@@ -70,21 +70,6 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
 }
 
 //===----------------------------------------------------------------------===//
-// AtomicControlAttr
-//===----------------------------------------------------------------------===//
-
-// Atomic control attributes hold information about architectural
-// characteristics which are required for lowering atomic operations.
-def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
-  let parameters =
-      (ins DefaultValuedParameter<"bool", "false">:$amdgpu_ignore_denormal_mode,
-          DefaultValuedParameter<"bool", "false">:$amdgpu_fine_grained_memory,
-          DefaultValuedParameter<"bool", "false">:$amdgpu_remote_memory);
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-//===----------------------------------------------------------------------===//
 // TaskDependArrayAttr
 //===----------------------------------------------------------------------===//
 
