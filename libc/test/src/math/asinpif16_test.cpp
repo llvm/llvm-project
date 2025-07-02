@@ -28,17 +28,13 @@ TEST_F(LlvmLibcAsinpif16Test, PositiveRange) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinpi, x,
                                    LIBC_NAMESPACE::asinpif16(x), 0.5);
-    break;
   }
 }
 
 TEST_F(LlvmLibcAsinpif16Test, NegativeRange) {
-  int i = 0;
   for (uint16_t v = NEG_START; v <= NEG_STOP; ++v) {
     float16 x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Asinpi, -x,
                                    LIBC_NAMESPACE::asinpif16(-x), 0.5);
-    if (i++ == 10)
-      break;
   }
 }
