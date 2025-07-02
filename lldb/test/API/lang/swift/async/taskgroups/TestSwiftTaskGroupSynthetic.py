@@ -36,18 +36,21 @@ class TestCase(TestBase):
                         address = 0x[0-9a-f]+
                         id = \1
                         enqueuePriority = \.medium
+                        parent = (.+)
                         children = \{\}
                       \}
                       \[1\] = id:([1-9]\d*) flags:(?:running\|)?(?:enqueued\|)?groupChildTask \{
                         address = 0x[0-9a-f]+
-                        id = \2
+                        id = \3
                         enqueuePriority = \.medium
+                        parent = \2
                         children = \{\}
                       \}
                       \[2\] = id:([1-9]\d*) flags:(?:running\|)?(?:enqueued\|)?groupChildTask \{
                         address = 0x[0-9a-f]+
-                        id = \3
+                        id = \4
                         enqueuePriority = \.medium
+                        parent = \2
                         children = \{\}
                       \}
                     \}

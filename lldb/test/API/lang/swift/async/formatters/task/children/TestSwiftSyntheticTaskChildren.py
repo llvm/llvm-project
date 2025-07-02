@@ -21,14 +21,16 @@ class TestCase(TestBase):
                 textwrap.dedent(
                     r"""
                     \(UnsafeCurrentTask\) current_task = id:1 flags:(?:running|enqueued) \{
-                      address = 0x[0-9a-f]+
+                      address = (0x[0-9a-f]+)
                       id = 1
                       enqueuePriority = 0
+                      parent = nil
                       children = \{
                         0 = id:2 flags:(?:running\|)?(?:enqueued\|)?asyncLetTask \{
                           address = 0x[0-9a-f]+
                           id = 2
                           enqueuePriority = \.medium
+                          parent = \1 \{\}
                           children = \{\}
                         \}
                       \}

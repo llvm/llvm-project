@@ -25,6 +25,7 @@ class TestCase(TestBase):
                       address = 0x[0-9a-f]+
                       id = \1
                       enqueuePriority = \.medium
+                      parent = nil
                       children = \{\}
                     }
                     """
@@ -49,6 +50,7 @@ class TestCase(TestBase):
                       address = 0x[0-9a-f]+
                       id = \1
                       enqueuePriority = \.medium
+                      parent = 0x[0-9a-f]+ \{\}
                       children = \{\}
                     \}
                     """
