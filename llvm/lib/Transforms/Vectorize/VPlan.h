@@ -943,6 +943,8 @@ public:
     /// Creates a fixed-width vector containing all operands. The number of
     /// operands matches the vector element count.
     BuildVector,
+    /// Compute the final result of a AnyOf reduction with select(cmp(),x,y),
+    /// where one of (x,y) is loop invariant, and both x and y are integer type.
     ComputeAnyOfResult,
     ComputeFindLastIVResult,
     ComputeReductionResult,
@@ -960,7 +962,7 @@ public:
     // for all lanes, depending on its uses).
     PtrAdd,
     // Returns a scalar boolean value, which is true if any lane of its
-    // (boolean) vector operand is true. It produces the reduced value across
+    // (boolean) vector operands is true. It produces the reduced value across
     // all unrolled iterations. Unrolling will add all copies of its original
     // operand as additional operands.
     AnyOf,
