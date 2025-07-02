@@ -155,7 +155,8 @@ SaveCoreOptions::GetThreadsToSave() const {
   return thread_collection;
 }
 
-llvm::Expected<lldb_private::CoreFileMemoryRanges> SaveCoreOptions::GetMemoryRegionsToSave() {
+llvm::Expected<lldb_private::CoreFileMemoryRanges>
+SaveCoreOptions::GetMemoryRegionsToSave() {
   Status error;
   if (!m_process_sp)
     return Status::FromErrorString("Requires a process to be set.").takeError();
@@ -186,10 +187,12 @@ llvm::Expected<uint64_t> SaveCoreOptions::GetCurrentSizeInBytes() {
   if (error.Fail())
     return error.takeError();
 
-  llvm::Expected<lldb_private::CoreFileMemoryRanges> core_file_ranges_maybe = GetMemoryRegionsToSave();
+  llvm::Expected<lldb_private::CoreFileMemoryRanges> core_file_ranges_maybe =
+      GetMemoryRegionsToSave();
   if (!core_file_ranges_maybe)
     return core_file_ranges_maybe.takeError();
-  const lldb_private::CoreFileMemoryRanges &core_file_ranges = *core_file_ranges_maybe;
+  const lldb_private::CoreFileMemoryRanges &core_file_ranges =
+      *core_file_ranges_maybe;
   uint64_t total_in_bytes = 0;
   for (auto &core_range : core_file_ranges)
     total_in_bytes += core_range.data.range.size();

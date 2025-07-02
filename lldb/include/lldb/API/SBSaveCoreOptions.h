@@ -12,10 +12,10 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBMemoryRegionInfoList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
-#include "lldb/API/SBMemoryRegionInfoList.h"
 
 namespace lldb {
 
@@ -123,7 +123,7 @@ public:
   /// Get an unsorted copy of all memory regions to save
   ///
   /// \returns
-  ///   An unsorted copy of all memory regions to save. If no process or style 
+  ///   An unsorted copy of all memory regions to save. If no process or style
   ///   is specified an empty collection will be returned.
   SBMemoryRegionInfoList GetMemoryRegionsToSave();
 
@@ -146,7 +146,7 @@ public:
   /// \note
   ///   This API is currently only used for testing, with forcing Minidumps to
   ///   to 64b memory list the reason this api was added
-  void AddFlag(const char* flag);
+  void AddFlag(const char *flag);
 
   /// Reset all options.
   void Clear();
