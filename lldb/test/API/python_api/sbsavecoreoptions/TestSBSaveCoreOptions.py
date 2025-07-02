@@ -189,7 +189,6 @@ class SBSaveCoreOptionsAPICase(TestBase):
         self.assertEqual(0, memory_list.GetSize())
         options.Clear()
 
-
         # Validate we get back the single region we populate
         options.SetStyle(lldb.eSaveCoreCustomOnly)
         process = self.get_basic_process()
