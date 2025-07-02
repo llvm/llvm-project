@@ -220,7 +220,6 @@ LogicalResult CreateNdDescOp::verify() {
   return success();
 }
 
-
 ParseResult parseOptionalDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
