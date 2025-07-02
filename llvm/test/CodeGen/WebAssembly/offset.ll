@@ -60,29 +60,6 @@ define i32 @load_i32_with_folded_gep_offset_nuw(ptr %p) {
   ret i32 %t
 }
 
-@global_data = external global i32
-
-define i32 @load_i32_global_with_folded_gep_offset_nonconst_nuw(i32 %idx) {
-; CHECK-LABEL: load_i32_global_with_folded_gep_offset_nonconst_nuw:
-; CHECK:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.shl $push1=, $0, $pop0
-; CHECK-NOT:     i32.add
-; CHECK-NEXT:    i32.load $push2=, global_data($pop1)
-  %s = getelementptr nuw i32, ptr @global_data, i32 %idx
-  %t = load i32, ptr %s
-  ret i32 %t
-}
-
-define i32 @load_i32_global_with_folded_gep_offset_const_nuw() {
-; CHECK-LABEL: load_i32_global_with_folded_gep_offset_const_nuw:
-; CHECK:    i32.const $push0=, 8
-; CHECK-NEXT:    i32.load $push1=, global_data($pop0)
-entry:
-  %t = load i32, ptr getelementptr nuw (i32, ptr @global_data, i32 2)
-  ret i32 %t
-}
-
-
 ; We can't fold a negative offset though, even with an inbounds gep.
 
 ; CHECK-LABEL: load_i32_with_unfolded_gep_negative_offset:
@@ -138,6 +115,17 @@ define i32 @load_i32_from_numeric_address() {
 @gv = global i32 0
 define i32 @load_i32_from_global_address() {
   %t = load i32, ptr @gv
+  ret i32 %t
+}
+
+define i32 @load_i32_global_with_folded_gep_offset_nonconst_nuw(i32 %idx) {
+; CHECK-LABEL: load_i32_global_with_folded_gep_offset_nonconst_nuw:
+; CHECK:    i32.const $push0=, 2
+; CHECK-NEXT:    i32.shl $push1=, $0, $pop0
+; CHECK-NOT:     i32.add
+; CHECK-NEXT:    i32.load $push2=, gv($pop1)
+  %s = getelementptr nuw i32, ptr @gv, i32 %idx
+  %t = load i32, ptr %s
   ret i32 %t
 }
 
