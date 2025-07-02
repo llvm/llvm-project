@@ -81,6 +81,7 @@ typedef lldb::PlatformSP (*PlatformCreateInstance)(bool force,
 typedef lldb::ProcessSP (*ProcessCreateInstance)(
     lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
     const FileSpec *crash_file_path, bool can_connect);
+typedef lldb::ProtocolServerUP (*ProtocolServerCreateInstance)();
 typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(

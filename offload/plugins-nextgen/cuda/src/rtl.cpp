@@ -358,6 +358,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error unloadBinaryImpl(DeviceImageTy *Image) override {
+    assert(Context && "Invalid CUDA context");
+
+    // Each image has its own module.
+    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
+
+    // Unload the module of the image.
+    if (auto Err = CUDAImage.unloadModule())
+      return Err;
+
+    return Plugin::success();
+  }
+
   /// Deinitialize the device and release its resources.
   Error deinitImpl() override {
     if (Context) {
@@ -371,20 +384,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = CUDAEventManager.deinit())
       return Err;
-
-    // Close modules if necessary.
-    if (!LoadedImages.empty()) {
-      assert(Context && "Invalid CUDA context");
-
-      // Each image has its own module.
-      for (DeviceImageTy *Image : LoadedImages) {
-        CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(*Image);
-
-        // Unload the module of the image.
-        if (auto Err = CUDAImage.unloadModule())
-          return Err;
-      }
-    }
 
     if (Context) {
       CUresult Res = cuDevicePrimaryCtxRelease(Device);
@@ -931,7 +930,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     CUresult Res = cuDriverGetVersion(&TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("CUDA Driver Version", TmpInt);
+      // For consistency with other drivers, store the version as a string
+      // rather than an integer
+      Info.add("CUDA Driver Version", std::to_string(TmpInt));
 
     Info.add("CUDA OpenMP Device Number", DeviceId);
 

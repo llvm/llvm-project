@@ -16,11 +16,9 @@ use omp_lib
   !ERROR: At most one ALLOCATOR clause can appear on the ALLOCATE directive
   !$omp allocate(x, y) allocator(omp_default_mem_alloc) allocator(omp_default_mem_alloc)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !$omp allocate(darray) allocator(omp_default_mem_alloc)
       allocate ( darray(a, b) )
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: At most one ALLOCATOR clause can appear on the ALLOCATE directive
   !$omp allocate(darray) allocator(omp_default_mem_alloc) allocator(omp_default_mem_alloc)
       allocate ( darray(a, b) )

@@ -20,7 +20,7 @@ import sys
 
 # Main header regexes
 INCLUDE_FILENAME_REGEX = re.compile(
-    r'#include "lldb/API/(?P<include_filename>.*){0,1}"'
+    r'#include "lldb/(API/)?(?P<include_filename>.*){0,1}"'
 )
 
 # RPC header regexes
@@ -70,7 +70,7 @@ def modify_main_includes(input_file_path, output_file_path):
                     r"#include <LLDB/" + match.group("include_filename") + ">",
                     file_buffer,
                 )
-                output_file.write(file_buffer)
+            output_file.write(file_buffer)
 
 
 def remove_guards(output_file_path, unifdef_path, unifdef_guards):

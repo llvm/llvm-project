@@ -1,8 +1,10 @@
+add_subdirectory(LowLevel)
+
 add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFAbbreviationDeclaration.cpp
   DWARFAddressRange.cpp
   DWARFAcceleratorTable.cpp
-  DWARFCFIProgram.cpp
+  DWARFCFIPrinter.cpp
   DWARFCompileUnit.cpp
   DWARFContext.cpp
   DWARFDebugAbbrev.cpp
@@ -18,7 +20,7 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFDebugRangeList.cpp
   DWARFDebugRnglists.cpp
   DWARFDie.cpp
-  DWARFExpression.cpp
+  DWARFExpressionPrinter.cpp
   DWARFFormValue.cpp
   DWARFGdbIndex.cpp
   DWARFListTable.cpp
@@ -34,6 +36,7 @@ add_llvm_component_library(LLVMDebugInfoDWARF
 
   LINK_COMPONENTS
   BinaryFormat
+  DebugInfoDWARFLowLevel
   Object
   Support
   TargetParser

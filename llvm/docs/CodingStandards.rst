@@ -591,6 +591,8 @@ rather than C-style casts. There are two exceptions to this:
 
 * When casting to ``void`` to suppress warnings about unused variables (as an
   alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
+  Note that if the variable is unused because it's used only in ``assert``, use
+  ``[[maybe_unused]]`` instead of a C-style void cast.
 
 * When casting between integral types (including enums that are not strongly-
   typed), functional-style casts are permitted as an alternative to
@@ -1288,16 +1290,25 @@ These are two interesting different cases. In the first case, the call to
 ``V.size()`` is only useful for the assert, and we don't want it executed when
 assertions are disabled.  Code like this should move the call into the assert
 itself.  In the second case, the side effects of the call must happen whether
-the assert is enabled or not.  In this case, the value should be cast to void to
-disable the warning.  To be specific, it is preferred to write the code like
-this:
+the assert is enabled or not. In this case, the value should be defined using
+the ``[[maybe_unused]]`` attribute to suppress the warning. To be specific, it is
+preferred to write the code like this:
 
 .. code-block:: c++
 
   assert(V.size() > 42 && "Vector smaller than it should be");
 
-  bool NewToSet = Myset.insert(Value); (void)NewToSet;
+  [[maybe_unused]] bool NewToSet = Myset.insert(Value);
   assert(NewToSet && "The value shouldn't be in the set yet");
+
+In C code where ``[[maybe_unused]]`` is not supported, use ``void`` cast to
+suppress unused variable warning as follows:
+
+.. code-block:: c
+
+    LLVMValueRef Value = LLVMMetadataAsValue(Context, NodeMD);
+    assert(LLVMIsAValueAsMetadata(Value) != NULL);
+    (void)Value;
 
 Do Not Use ``using namespace std``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -278,7 +278,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     {
       WithMarkup M = markup(O, Markup::Immediate);
       O << "#";
-      MI->getOperand(1).getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *MI->getOperand(1).getExpr());
     }
     return;
   }
@@ -291,7 +291,7 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
     {
       WithMarkup M = markup(O, Markup::Immediate);
       O << "#";
-      MI->getOperand(2).getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *MI->getOperand(2).getExpr());
     }
     return;
   }
@@ -1163,7 +1163,7 @@ void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     printImm(MI, OpNo, STI, O);
   } else {
     assert(Op.isExpr() && "unknown operand kind in printOperand");
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -1240,7 +1240,7 @@ void AArch64InstPrinter::printAddSubImm(const MCInst *MI, unsigned OpNum,
     }
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
     printShifter(MI, OpNum + 1, STI, O);
   }
 }
@@ -1431,7 +1431,7 @@ void AArch64InstPrinter::printUImm12Offset(const MCInst *MI, unsigned OpNum,
     markup(O, Markup::Immediate) << '#' << formatImm(MO.getImm() * Scale);
   } else {
     assert(MO.isExpr() && "Unexpected operand type!");
-    MO.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO.getExpr());
   }
 }
 
@@ -1446,7 +1446,7 @@ void AArch64InstPrinter::printAMIndexedWB(const MCInst *MI, unsigned OpNum,
   } else {
     assert(MO1.isExpr() && "Unexpected operand type!");
     O << ", ";
-    MO1.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MO1.getExpr());
   }
   O << ']';
 }
@@ -1784,6 +1784,10 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
                                            unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  if (SymbolizeOperands)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNum);
 
   // If the label has already been resolved to an immediate offset (say, when
@@ -1805,7 +1809,7 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
     markup(O, Markup::Target) << formatHex((uint64_t)TargetAddress);
   } else {
     // Otherwise, just print the expression.
-    MI->getOperand(OpNum).getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *MI->getOperand(OpNum).getExpr());
   }
 }
 
@@ -1813,6 +1817,12 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
                                            unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  // Do not print the numeric target address when symbolizing.
+  // However, do print for ADRP, as this is typically used together with an ADD
+  // or an immediate-offset ldr/str and the label is likely at the wrong point.
+  if (SymbolizeOperands && MI->getOpcode() != AArch64::ADRP)
+    return;
+
   const MCOperand &Op = MI->getOperand(OpNum);
 
   // If the label has already been resolved to an immediate offset (say, when
@@ -1832,7 +1842,7 @@ void AArch64InstPrinter::printAdrAdrpLabel(const MCInst *MI, uint64_t Address,
   }
 
   // Otherwise, just print the expression.
-  MI->getOperand(OpNum).getExpr()->print(O, &MAI);
+  MAI.printExpr(O, *MI->getOperand(OpNum).getExpr());
 }
 
 void AArch64InstPrinter::printBarrierOption(const MCInst *MI, unsigned OpNo,

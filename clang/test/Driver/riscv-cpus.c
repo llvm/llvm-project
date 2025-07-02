@@ -751,3 +751,11 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45 | FileCheck -check-prefix=MTUNE-ANDES-AX45 %s
 // MTUNE-ANDES-AX45: "-tune-cpu" "andes-ax45"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=andes-ax45mpv | FileCheck -check-prefix=MCPU-ANDES-AX45MPV %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-andes-ax45mpv.c`
+// MCPU-ANDES-AX45MPV: "-target-cpu" "andes-ax45mpv"
+// MCPU-ANDES-AX45MPV-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45mpv | FileCheck -check-prefix=MTUNE-ANDES-AX45MPV %s
+// MTUNE-ANDES-AX45MPV: "-tune-cpu" "andes-ax45mpv"

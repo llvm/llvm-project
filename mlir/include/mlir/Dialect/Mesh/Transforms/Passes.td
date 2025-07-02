@@ -24,6 +24,21 @@ def ShardingPropagation : InterfacePass<"sharding-propagation", "mlir::FunctionO
     operation, and the operations themselves are added with sharding option
     attributes.
   }];
+  let options = [
+    Option<"traversal", "traversal",
+           "mlir::mesh::TraversalOrder", /*default=*/"mlir::mesh::TraversalOrder::BackwardForward",
+           "Traversal order to use for sharding propagation:",
+            [{::llvm::cl::values(
+              clEnumValN(mlir::mesh::TraversalOrder::Forward, "forward",
+              "Forward only traversal."),
+              clEnumValN(mlir::mesh::TraversalOrder::Backward, "backward",
+              "backward only traversal."),
+              clEnumValN(mlir::mesh::TraversalOrder::ForwardBackward, "forward-backward",
+              "forward-backward traversal."),
+              clEnumValN(mlir::mesh::TraversalOrder::BackwardForward, "backward-forward",
+              "backward-forward traversal.")
+            )}]>,
+  ];
   let dependentDialects = [
     "mesh::MeshDialect"
   ];

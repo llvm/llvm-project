@@ -62,8 +62,7 @@ cir::ConstantOp CIRGenBuilderTy::getConstInt(mlir::Location loc, mlir::Type t,
 cir::ConstantOp
 clang::CIRGen::CIRGenBuilderTy::getConstFP(mlir::Location loc, mlir::Type t,
                                            llvm::APFloat fpVal) {
-  assert(mlir::isa<cir::CIRFPTypeInterface>(t) &&
-         "expected floating point type");
+  assert(mlir::isa<cir::FPTypeInterface>(t) && "expected floating point type");
   return create<cir::ConstantOp>(loc, getAttr<cir::FPAttr>(t, fpVal));
 }
 

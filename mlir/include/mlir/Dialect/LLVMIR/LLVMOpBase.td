@@ -235,8 +235,7 @@ class LLVM_MemOpPatterns {
   }];
   code setInvariantGroupCode = [{
     if ($invariantGroup) {
-      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(),
-                                                 std::nullopt);
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
       inst->setMetadata(llvm::LLVMContext::MD_invariant_group, metadata);
     }
   }];

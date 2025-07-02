@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -52,7 +51,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
       *M, StrConstant->getType(), true, GlobalValue::PrivateLinkage,
       StrConstant, Name, nullptr, GlobalVariable::NotThreadLocal, AddressSpace);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(Align(1));
+  GV->setAlignment(M->getDataLayout().getPrefTypeAlign(getInt8Ty()));
   return GV;
 }
 
@@ -118,7 +117,7 @@ static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
   if (Scale == 1)
     return VScale;
 
-  return B.CreateMul(VScale, ConstantInt::get(Ty, Scale));
+  return B.CreateNUWMul(VScale, ConstantInt::get(Ty, Scale));
 }
 
 Value *IRBuilderBase::CreateElementCount(Type *Ty, ElementCount EC) {

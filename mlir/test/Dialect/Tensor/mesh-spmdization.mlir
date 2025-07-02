@@ -1,5 +1,5 @@
 // RUN: mlir-opt \
-// RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-constant-fold))" \
+// RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-single-fold))" \
 // RUN:   %s | FileCheck %s
 
 mesh.mesh @mesh_1d_4(shape = 4)

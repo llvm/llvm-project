@@ -210,6 +210,9 @@ Changes to the RISC-V Backend
 * The `Shlcofideleg` extension was added.
 * `-mcpu=sifive-x390` was added.
 * `-mtune=andes-45-series` was added.
+* Adds assembler support for the Andes `XAndesvbfhcvt` (Andes Vector BFLOAT16 Conversion extension).
+* `-mcpu=andes-ax45mpv` was added.
+* Removed -mattr=+no-rvc-hints that could be used to disable parsing and generation of RVC hints.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -249,6 +252,9 @@ Changes to the C API
 
 * Added ``LLVMDIBuilderCreateEnumeratorOfArbitraryPrecision`` for creating
   debugging metadata of enumerators larger than 64 bits.
+
+* Added ``LLVMGetICmpSameSign`` and ``LLVMSetICmpSameSign`` for the `samesign`
+  flag on `icmp` instructions.
 
 Changes to the CodeGen infrastructure
 -------------------------------------
@@ -298,6 +304,7 @@ Changes to LLDB
     stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
   ```
 * ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
+* LLDB now supports the `DWARF64` debugging information format.
 
 ### Changes to lldb-dap
 

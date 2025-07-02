@@ -1119,25 +1119,26 @@ void RISCVInsertVSETVLI::insertVSETVLI(MachineBasicBlock &MBB,
     LIS->InsertMachineInstrInMaps(*MI);
     LiveInterval &LI = LIS->getInterval(AVLReg);
     SlotIndex SI = LIS->getInstructionIndex(*MI).getRegSlot();
+    const VNInfo *CurVNI = Info.getAVLVNInfo();
     // If the AVL value isn't live at MI, do a quick check to see if it's easily
     // extendable. Otherwise, we need to copy it.
-    if (LI.getVNInfoBefore(SI) != Info.getAVLVNInfo()) {
+    if (LI.getVNInfoBefore(SI) != CurVNI) {
       if (!LI.liveAt(SI) && LI.containsOneValue())
         LIS->extendToIndices(LI, SI);
       else {
         Register AVLCopyReg =
             MRI->createVirtualRegister(&RISCV::GPRNoX0RegClass);
+        MachineBasicBlock *MBB = LIS->getMBBFromIndex(CurVNI->def);
         MachineBasicBlock::iterator II;
-        if (Info.getAVLVNInfo()->isPHIDef())
-          II = LIS->getMBBFromIndex(Info.getAVLVNInfo()->def)->getFirstNonPHI();
+        if (CurVNI->isPHIDef())
+          II = MBB->getFirstNonPHI();
         else {
-          II = LIS->getInstructionFromIndex(Info.getAVLVNInfo()->def);
+          II = LIS->getInstructionFromIndex(CurVNI->def);
           II = std::next(II);
         }
         assert(II.isValid());
-        auto AVLCopy =
-            BuildMI(*II->getParent(), II, DL, TII->get(RISCV::COPY), AVLCopyReg)
-                .addReg(AVLReg);
+        auto AVLCopy = BuildMI(*MBB, II, DL, TII->get(RISCV::COPY), AVLCopyReg)
+                           .addReg(AVLReg);
         LIS->InsertMachineInstrInMaps(*AVLCopy);
         MI->getOperand(1).setReg(AVLCopyReg);
         LIS->createAndComputeVirtRegInterval(AVLCopyReg);

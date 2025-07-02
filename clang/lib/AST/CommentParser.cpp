@@ -375,7 +375,7 @@ public:
       Pos.CurToken++;
     }
 
-    P.putBack(llvm::ArrayRef(Toks.begin() + Pos.CurToken, Toks.end()));
+    P.putBack(ArrayRef(Toks.begin() + Pos.CurToken, Toks.end()));
     Pos.CurToken = Toks.size();
 
     if (HavePartialTok)
@@ -431,7 +431,7 @@ Parser::parseCommandArgs(TextTokenRetokenizer &Retokenizer, unsigned NumArgs) {
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 ArrayRef<Comment::Argument>
@@ -448,7 +448,7 @@ Parser::parseThrowCommandArgs(TextTokenRetokenizer &Retokenizer,
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 ArrayRef<Comment::Argument>
@@ -466,7 +466,7 @@ Parser::parseParCommandArgs(TextTokenRetokenizer &Retokenizer,
     ParsedArgs++;
   }
 
-  return llvm::ArrayRef(Args, ParsedArgs);
+  return ArrayRef(Args, ParsedArgs);
 }
 
 BlockCommandComment *Parser::parseBlockCommand() {
@@ -638,14 +638,14 @@ HTMLStartTagComment *Parser::parseHTMLStartTag() {
     }
 
     case tok::html_greater:
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 Tok.getLocation(),
                                 /* IsSelfClosing = */ false);
       consumeToken();
       return HST;
 
     case tok::html_slash_greater:
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 Tok.getLocation(),
                                 /* IsSelfClosing = */ true);
       consumeToken();
@@ -663,14 +663,14 @@ HTMLStartTagComment *Parser::parseHTMLStartTag() {
           Tok.is(tok::html_slash_greater))
         continue;
 
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 SourceLocation(),
                                 /* IsSelfClosing = */ false);
       return HST;
 
     default:
       // Not a token from an HTML start tag.  Thus HTML tag prematurely ended.
-      S.actOnHTMLStartTagFinish(HST, S.copyArray(llvm::ArrayRef(Attrs)),
+      S.actOnHTMLStartTagFinish(HST, S.copyArray(ArrayRef(Attrs)),
                                 SourceLocation(),
                                 /* IsSelfClosing = */ false);
       bool StartLineInvalid;
@@ -809,7 +809,7 @@ BlockContentComment *Parser::parseParagraphOrBlockCommand() {
     break;
   }
 
-  return S.actOnParagraphComment(S.copyArray(llvm::ArrayRef(Content)));
+  return S.actOnParagraphComment(S.copyArray(ArrayRef(Content)));
 }
 
 VerbatimBlockComment *Parser::parseVerbatimBlock() {
@@ -847,12 +847,12 @@ VerbatimBlockComment *Parser::parseVerbatimBlock() {
   if (Tok.is(tok::verbatim_block_end)) {
     const CommandInfo *Info = Traits.getCommandInfo(Tok.getVerbatimBlockID());
     S.actOnVerbatimBlockFinish(VB, Tok.getLocation(), Info->Name,
-                               S.copyArray(llvm::ArrayRef(Lines)));
+                               S.copyArray(ArrayRef(Lines)));
     consumeToken();
   } else {
     // Unterminated \\verbatim block
     S.actOnVerbatimBlockFinish(VB, SourceLocation(), "",
-                               S.copyArray(llvm::ArrayRef(Lines)));
+                               S.copyArray(ArrayRef(Lines)));
   }
 
   return VB;
@@ -928,7 +928,7 @@ FullComment *Parser::parseFullComment() {
     while (Tok.is(tok::newline))
       consumeToken();
   }
-  return S.actOnFullComment(S.copyArray(llvm::ArrayRef(Blocks)));
+  return S.actOnFullComment(S.copyArray(ArrayRef(Blocks)));
 }
 
 } // end namespace comments

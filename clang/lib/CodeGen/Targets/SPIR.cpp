@@ -51,7 +51,7 @@ public:
         getABIInfo().getDataLayout().getAllocaAddrSpace());
   }
 
-  unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
   llvm::Type *
   getHLSLType(CodeGenModule &CGM, const Type *Ty,
@@ -75,6 +75,10 @@ public:
                                          SyncScope Scope,
                                          llvm::AtomicOrdering Ordering,
                                          llvm::LLVMContext &Ctx) const override;
+  bool supportsLibCall() const override {
+    return getABIInfo().getTarget().getTriple().getVendor() !=
+           llvm::Triple::AMD;
+  }
 };
 
 inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
@@ -219,7 +223,7 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
 }
 }
 
-unsigned CommonSPIRTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
+unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
 }
 
@@ -483,7 +487,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     assert(!ResAttrs.IsROV &&
            "Rasterizer order views not implemented for SPIR-V yet");
 
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     if (!ResAttrs.RawBuffer) {
       // convert element type
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);

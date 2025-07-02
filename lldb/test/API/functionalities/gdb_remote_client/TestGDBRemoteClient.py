@@ -356,6 +356,78 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
             ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
         )
 
+    def test_launch_lengthy_vRun(self):
+        class MyResponder(MockGDBServerResponder):
+            def __init__(self, *args, **kwargs):
+                self.started = False
+                return super().__init__(*args, **kwargs)
+
+            def qC(self):
+                if self.started:
+                    return "QCp10.10"
+                else:
+                    return "E42"
+
+            def qfThreadInfo(self):
+                if self.started:
+                    return "mp10.10"
+                else:
+                    return "E42"
+
+            def qsThreadInfo(self):
+                return "l"
+
+            def qEcho(self, num):
+                resp = "qEcho:" + str(num)
+                if num >= 2:
+                    # We have launched our program
+                    self.started = True
+                    return [resp, "T13"]
+
+                return resp
+
+            def qSupported(self, client_supported):
+                return "PacketSize=3fff;QStartNoAckMode+;qEcho+;"
+
+            def qHostInfo(self):
+                return "default_packet_timeout:1;"
+
+            def vRun(self, packet):
+                return [self.RESPONSE_NONE]
+
+            def A(self, packet):
+                return "E28"
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        # NB: apparently GDB packets are using "/" on Windows too
+        exe_path = self.getBuildArtifact("a").replace(os.path.sep, "/")
+        exe_hex = binascii.b2a_hex(exe_path.encode()).decode()
+        process = self.connect(target)
+        lldbutil.expect_state_changes(
+            self, self.dbg.GetListener(), process, [lldb.eStateConnected]
+        )
+
+        process = target.Launch(
+            lldb.SBListener(),
+            ["arg1", "arg2", "arg3"],  # argv
+            [],  # envp
+            None,  # stdin_path
+            None,  # stdout_path
+            None,  # stderr_path
+            None,  # working_directory
+            0,  # launch_flags
+            True,  # stop_at_entry
+            lldb.SBError(),
+        )  # error
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetProcessID(), 16)
+
+        self.assertPacketLogContains(
+            ["vRun;%s;61726731;61726732;61726733" % (exe_hex,)]
+        )
+
     def test_launch_QEnvironment(self):
         class MyResponder(MockGDBServerResponder):
             def qC(self):

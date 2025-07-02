@@ -153,11 +153,7 @@ define dso_local ptx_kernel void @escape_ptr(ptr nocapture noundef readnone %out
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    _Z6escapePv,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
 entry:
@@ -198,11 +194,7 @@ define dso_local ptx_kernel void @escape_ptr_gep(ptr nocapture noundef readnone 
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
 ; PTX-NEXT:    st.param.b64 [param0], %rd3;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    _Z6escapePv,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni _Z6escapePv, (param0);
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
 entry:
@@ -658,7 +650,7 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
-; PTX-NEXT:    .reg .b32 %r<4>;
+; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %bb
@@ -674,8 +666,7 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-NEXT:    add.u64 %rd2, %SPL, 4;
 ; PTX-NEXT:    add.u64 %rd4, %SPL, 0;
 ; PTX-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p1;
-; PTX-NEXT:    mov.b32 %r3, 1;
-; PTX-NEXT:    st.local.b32 [%rd5], %r3;
+; PTX-NEXT:    st.local.b32 [%rd5], 1;
 ; PTX-NEXT:    ret;
 bb:
   %ptrnew = select i1 %cond, ptr %input1, ptr %input2
@@ -838,7 +829,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
-; PTX-NEXT:    .reg .b32 %r<4>;
+; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<7>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %bb
@@ -857,8 +848,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-NEXT:  // %bb.1: // %second
 ; PTX-NEXT:    mov.b64 %rd6, %rd1;
 ; PTX-NEXT:  $L__BB14_2: // %merge
-; PTX-NEXT:    mov.b32 %r3, 1;
-; PTX-NEXT:    st.local.b32 [%rd6], %r3;
+; PTX-NEXT:    st.local.b32 [%rd6], 1;
 ; PTX-NEXT:    ret;
 bb:
   br i1 %cond, label %first, label %second
@@ -902,11 +892,7 @@ define ptx_kernel void @test_forward_byval_arg(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    { // callseq 2, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
 ; PTX-NEXT:    st.param.b32 [param0], %r1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    device_func,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 2
 ; PTX-NEXT:    ret;
   call void @device_func(ptr byval(i32) align 4 %input)
@@ -929,11 +915,7 @@ define void @device_func(ptr byval(i32) align 4 %input) {
 ; PTX-NEXT:    { // callseq 3, 0
 ; PTX-NEXT:    .param .align 4 .b8 param0[4];
 ; PTX-NEXT:    st.param.b32 [param0], %r1;
-; PTX-NEXT:    call.uni
-; PTX-NEXT:    device_func,
-; PTX-NEXT:    (
-; PTX-NEXT:    param0
-; PTX-NEXT:    );
+; PTX-NEXT:    call.uni device_func, (param0);
 ; PTX-NEXT:    } // callseq 3
 ; PTX-NEXT:    ret;
   call void @device_func(ptr byval(i32) align 4 %input)

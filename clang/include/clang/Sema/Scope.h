@@ -427,6 +427,17 @@ public:
     return false;
   }
 
+  /// isInObjcMethodScope - Return true if this scope is, or is contained, in an
+  /// C function body.
+  bool isInCFunctionScope() const {
+    for (const Scope *S = this; S; S = S->getParent()) {
+      if (S->isFunctionScope())
+        return true;
+    }
+
+    return false;
+  }
+
   /// isInObjcMethodScope - Return true if this scope is, or is contained in, an
   /// Objective-C method body.  Note that this method is not constant time.
   bool isInObjcMethodScope() const {

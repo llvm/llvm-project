@@ -115,3 +115,9 @@ class TestCase(TestBase):
 
         self.expect_var_path("up_user->id", type="int", value="30")
         self.expect_var_path("up_user->name", type="std::string", summary='"steph"')
+
+        self.runCmd("settings set target.experimental.use-DIL true")
+        self.expect_var_path("ptr_node->value", value="1")
+        self.expect_var_path("ptr_node->next->value", value="2")
+        self.expect_var_path("(*ptr_node).value", value="1")
+        self.expect_var_path("(*(*ptr_node).next).value", value="2")

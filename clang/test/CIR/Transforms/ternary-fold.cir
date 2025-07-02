@@ -14,7 +14,7 @@ module {
     cir.return %1 : !s32i
   }
 
-  //      CHECK: cir.func @fold_ternary(%{{.+}}: !s32i, %[[ARG:.+]]: !s32i) -> !s32i {
+  //      CHECK: cir.func{{.*}} @fold_ternary(%{{.+}}: !s32i, %[[ARG:.+]]: !s32i) -> !s32i {
   // CHECK-NEXT:   cir.return %[[ARG]] : !s32i
   // CHECK-NEXT: }
 
@@ -28,7 +28,7 @@ module {
     cir.return %0 : !s32i
   }
 
-  //      CHECK: cir.func @simplify_ternary(%[[ARG0:.+]]: !cir.bool, %[[ARG1:.+]]: !s32i) -> !s32i {
+  //      CHECK: cir.func{{.*}} @simplify_ternary(%[[ARG0:.+]]: !cir.bool, %[[ARG1:.+]]: !s32i) -> !s32i {
   // CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<42> : !s32i
   // CHECK-NEXT:   %[[#B:]] = cir.select if %[[ARG0]] then %[[#A]] else %[[ARG1]] : (!cir.bool, !s32i, !s32i) -> !s32i
   // CHECK-NEXT:   cir.return %[[#B]] : !s32i
@@ -44,7 +44,7 @@ module {
     cir.return %0 : !s32i
   }
 
-  //      CHECK: cir.func @simplify_ternary_false_const(%[[ARG0:.+]]: !cir.bool, %[[ARG1:.+]]: !s32i) -> !s32i {
+  //      CHECK: cir.func{{.*}} @simplify_ternary_false_const(%[[ARG0:.+]]: !cir.bool, %[[ARG1:.+]]: !s32i) -> !s32i {
   // CHECK-NEXT:   %[[#A:]] = cir.const #cir.int<24> : !s32i
   // CHECK-NEXT:   %[[#B:]] = cir.select if %[[ARG0]] then %[[ARG1]] else %[[#A]] : (!cir.bool, !s32i, !s32i) -> !s32i
   // CHECK-NEXT:   cir.return %[[#B]] : !s32i
@@ -62,7 +62,7 @@ module {
     cir.return %1 : !s32i
   }
 
-  //      CHECK: cir.func @non_simplifiable_ternary(%[[ARG0:.+]]: !cir.bool) -> !s32i {
+  //      CHECK: cir.func{{.*}} @non_simplifiable_ternary(%[[ARG0:.+]]: !cir.bool) -> !s32i {
   // CHECK-NEXT:   %[[#A:]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
   // CHECK-NEXT:   %[[#B:]] = cir.ternary(%[[ARG0]], true {
   // CHECK-NEXT:     %[[#C:]] = cir.const #cir.int<42> : !s32i

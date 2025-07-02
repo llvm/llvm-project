@@ -538,8 +538,7 @@ InstSeq generateTwoRegInstSeq(int64_t Val, const MCSubtargetInfo &STI,
 int getIntMatCost(const APInt &Val, unsigned Size, const MCSubtargetInfo &STI,
                   bool CompressionCost, bool FreeZeroes) {
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
-  bool HasRVC = CompressionCost && (STI.hasFeature(RISCV::FeatureStdExtC) ||
-                                    STI.hasFeature(RISCV::FeatureStdExtZca));
+  bool HasRVC = CompressionCost && STI.hasFeature(RISCV::FeatureStdExtZca);
   int PlatRegSize = IsRV64 ? 64 : 32;
 
   // Split the constant into platform register sized chunks, and calculate cost

@@ -106,6 +106,10 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
+  case PPC::BI__builtin_ppc_national2packed:
+  case PPC::BI__builtin_ppc_packed2zoned:
+  case PPC::BI__builtin_ppc_zoned2packed:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case PPC::BI__builtin_altivec_crypto_vshasigmaw:
   case PPC::BI__builtin_altivec_crypto_vshasigmad:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1) ||

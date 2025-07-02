@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -fvisibility=default -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-DEFAULT
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -fvisibility=protected -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-PROTECTED
-// RUN: %clang_cc1 %s -triple i386-unknown-unknown -fvisibility=hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
+// RUN: %clang_cc1 %s -triple i386-unknown-unknown -Wno-implicit-function-declaration -fvisibility=default -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-DEFAULT
+// RUN: %clang_cc1 %s -triple i386-unknown-unknown -Wno-implicit-function-declaration -fvisibility=protected -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-PROTECTED
+// RUN: %clang_cc1 %s -triple i386-unknown-unknown -Wno-implicit-function-declaration -fvisibility=hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 
 // CHECK-DEFAULT: @g_def ={{.*}} global i32 0
 // CHECK-DEFAULT: @g_com ={{.*}} global i32 0
@@ -72,3 +72,27 @@ __private_extern__ int test4 = 10;
 // CHECK-HIDDEN-LABEL: define hidden void @test5()
 __attribute__((availability(macosx,introduced=10.5,deprecated=10.6)))
 __private_extern__ void test5(void) {}
+
+
+#pragma clang attribute push([[gnu::visibility("hidden")]], apply_to=function)
+
+// CHECK-DEFAULT-LABEL: define hidden void @func()
+// CHECK-PROTECTED-LABEL: define hidden void @func()
+// CHECK-HIDDEN-LABEL: define hidden void @func()
+void func(void) {}
+
+void call(void) {
+  implicit_function();
+  // CHECK-DEFAULT-LABEL: declare hidden i32 @implicit_function(...)
+  // CHECK-PROTECTED-LABEL: declare hidden i32 @implicit_function(...)
+  // CHECK-HIDDEN-LABEL: declare hidden i32 @implicit_function(...)
+}
+
+#pragma clang attribute pop
+
+void call2(void) {
+  implicit_function2();
+  // CHECK-DEFAULT-LABEL: declare i32 @implicit_function2(...)
+  // CHECK-PROTECTED-LABEL: declare i32 @implicit_function2(...)
+  // CHECK-HIDDEN-LABEL: declare i32 @implicit_function2(...)
+}

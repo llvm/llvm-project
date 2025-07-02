@@ -1327,7 +1327,7 @@ struct MisleadingIndentationChecker {
     if (ColNo == 0 || TabStop == 1)
       return ColNo;
 
-    std::pair<FileID, unsigned> FIDAndOffset = SM.getDecomposedLoc(Loc);
+    FileIDAndOffset FIDAndOffset = SM.getDecomposedLoc(Loc);
 
     bool Invalid;
     StringRef BufData = SM.getBufferData(FIDAndOffset.first, &Invalid);
@@ -2345,8 +2345,8 @@ StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
     ArgsUnion ArgHints[] = {Hint.PragmaNameLoc, Hint.OptionLoc, Hint.StateLoc,
                             ArgsUnion(Hint.ValueExpr)};
     TempAttrs.addNew(Hint.PragmaNameLoc->getIdentifierInfo(), Hint.Range,
-                     /*scopeName=*/nullptr, Hint.PragmaNameLoc->getLoc(),
-                     ArgHints, /*numArgs=*/4, ParsedAttr::Form::Pragma());
+                     AttributeScopeInfo(), ArgHints, /*numArgs=*/4,
+                     ParsedAttr::Form::Pragma());
   }
 
   // Get the next statement.

@@ -635,15 +635,26 @@ bool isConfiguredQualifierOrType(const FormatToken *Tok,
 // If a token is an identifier and it's upper case, it could
 // be a macro and hence we need to be able to ignore it.
 bool isPossibleMacro(const FormatToken *Tok) {
-  if (!Tok)
-    return false;
+  assert(Tok);
   if (Tok->isNot(tok::identifier))
     return false;
-  if (Tok->TokenText.upper() == Tok->TokenText.str()) {
-    // T,K,U,V likely could be template arguments
-    return Tok->TokenText.size() != 1;
-  }
-  return false;
+
+  const auto Text = Tok->TokenText;
+  assert(Text.size() > 0);
+
+  // T,K,U,V likely could be template arguments
+  if (Text.size() == 1)
+    return false;
+
+  // It's unlikely that qualified names are object-like macros.
+  const auto *Prev = Tok->getPreviousNonComment();
+  if (Prev && Prev->is(tok::coloncolon))
+    return false;
+  const auto *Next = Tok->getNextNonComment();
+  if (Next && Next->is(tok::coloncolon))
+    return false;
+
+  return Text == Text.upper();
 }
 
 } // namespace format

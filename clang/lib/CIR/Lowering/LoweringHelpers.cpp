@@ -138,7 +138,7 @@ lowerConstArrayAttr(cir::ConstArrayAttr constArr,
     return convertToDenseElementsAttr<cir::IntAttr, mlir::APInt>(
         constArr, dims, type, converter->convertType(type));
 
-  if (mlir::isa<cir::CIRFPTypeInterface>(type))
+  if (mlir::isa<cir::FPTypeInterface>(type))
     return convertToDenseElementsAttr<cir::FPAttr, mlir::APFloat>(
         constArr, dims, type, converter->convertType(type));
 

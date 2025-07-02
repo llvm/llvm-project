@@ -735,7 +735,9 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
   case AMDGPU::V_ASHRREV_I16_e32:
   case AMDGPU::V_LSHLREV_B16_e32:
   case AMDGPU::V_LSHRREV_B16_e64:
+  case AMDGPU::V_LSHRREV_B16_opsel_e64:
   case AMDGPU::V_ASHRREV_I16_e64:
+  case AMDGPU::V_LSHLREV_B16_opsel_e64:
   case AMDGPU::V_LSHLREV_B16_e64: {
     // from: v_lshrrev_b16_e32 v1, 8, v0
     // to SDWA src:v0 src_sel:BYTE_1
@@ -758,11 +760,13 @@ SIPeepholeSDWA::matchSDWAOperand(MachineInstr &MI) {
       break;
 
     if (Opcode == AMDGPU::V_LSHLREV_B16_e32 ||
+        Opcode == AMDGPU::V_LSHLREV_B16_opsel_e64 ||
         Opcode == AMDGPU::V_LSHLREV_B16_e64)
       return std::make_unique<SDWADstOperand>(Dst, Src1, BYTE_1, UNUSED_PAD);
     return std::make_unique<SDWASrcOperand>(
         Src1, Dst, BYTE_1, false, false,
         Opcode != AMDGPU::V_LSHRREV_B16_e32 &&
+            Opcode != AMDGPU::V_LSHRREV_B16_opsel_e64 &&
             Opcode != AMDGPU::V_LSHRREV_B16_e64);
     break;
   }

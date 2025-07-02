@@ -125,79 +125,6 @@ static constexpr auto BuiltinAArch64Infos =
 #include "clang/Basic/BuiltinsAArch64.def"
     });
 
-void AArch64TargetInfo::setArchFeatures() {
-  if (*ArchInfo == llvm::AArch64::ARMV8R) {
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
-    HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-  } else if (ArchInfo->Version.getMajor() == 8) {
-    if (ArchInfo->Version.getMinor() >= 7u) {
-      HasWFxT = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 6u) {
-      HasBFloat16 = true;
-      HasMatMul = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 5u) {
-      HasAlternativeNZCV = true;
-      HasFRInt3264 = true;
-      HasSSBS = true;
-      HasSB = true;
-      HasPredRes = true;
-      HasBTI = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 4u) {
-      HasDotProd = true;
-      HasDIT = true;
-      HasFlagM = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 3u) {
-      HasRCPC = true;
-      FPU |= NeonMode;
-    }
-    if (ArchInfo->Version.getMinor() >= 2u) {
-      HasCCPP = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 1u) {
-      HasCRC = true;
-      HasLSE = true;
-      HasRDM = true;
-    }
-  } else if (ArchInfo->Version.getMajor() == 9) {
-    if (ArchInfo->Version.getMinor() >= 2u) {
-      HasWFxT = true;
-    }
-    if (ArchInfo->Version.getMinor() >= 1u) {
-      HasBFloat16 = true;
-      HasMatMul = true;
-    }
-    FPU |= SveMode;
-    HasSVE2 = true;
-    HasFullFP16 = true;
-    HasAlternativeNZCV = true;
-    HasFRInt3264 = true;
-    HasSSBS = true;
-    HasSB = true;
-    HasPredRes = true;
-    HasBTI = true;
-    HasDotProd = true;
-    HasDIT = true;
-    HasFlagM = true;
-    HasRCPC = true;
-    FPU |= NeonMode;
-    HasCCPP = true;
-    HasCRC = true;
-    HasLSE = true;
-    HasRDM = true;
-  }
-}
-
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
                                      const TargetOptions &Opts)
     : TargetInfo(Triple), ABI("aapcs") {
@@ -1266,7 +1193,6 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   }
 
   setDataLayout();
-  setArchFeatures();
 
   if (HasNoFP) {
     FPU &= ~FPUMode;

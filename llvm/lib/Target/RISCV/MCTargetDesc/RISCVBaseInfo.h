@@ -56,6 +56,7 @@ enum {
   InstFormatQC_EB = 24,
   InstFormatQC_EJ = 25,
   InstFormatQC_ES = 26,
+  InstFormatNDS_BRANCH_10 = 27,
   InstFormatOther = 31,
 
   InstFormatMask = 31,
@@ -336,6 +337,8 @@ enum OperandType : unsigned {
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
+  OPERAND_SIMM10,
+  OPERAND_SIMM10_UNSIGNED,
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM11,
   OPERAND_SIMM12,

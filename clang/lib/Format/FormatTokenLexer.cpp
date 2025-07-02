@@ -14,6 +14,7 @@
 
 #include "FormatTokenLexer.h"
 #include "FormatToken.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
@@ -1203,16 +1204,22 @@ static size_t countLeadingWhitespace(StringRef Text) {
   const unsigned char *const End = Text.bytes_end();
   const unsigned char *Cur = Begin;
   while (Cur < End) {
-    if (isspace(Cur[0])) {
+    if (isWhitespace(Cur[0])) {
       ++Cur;
-    } else if (Cur[0] == '\\' && (Cur[1] == '\n' || Cur[1] == '\r')) {
-      // A '\' followed by a newline always escapes the newline, regardless
-      // of whether there is another '\' before it.
+    } else if (Cur[0] == '\\') {
+      // A backslash followed by optional horizontal whitespaces (P22232R2) and
+      // then a newline always escapes the newline.
       // The source has a null byte at the end. So the end of the entire input
       // isn't reached yet. Also the lexer doesn't break apart an escaped
       // newline.
-      assert(End - Cur >= 2);
-      Cur += 2;
+      const auto *Lookahead = Cur + 1;
+      while (isHorizontalWhitespace(*Lookahead))
+        ++Lookahead;
+      // No line splice found; the backslash is a token.
+      if (!isVerticalWhitespace(*Lookahead))
+        break;
+      // Splice found, consume it.
+      Cur = Lookahead + 1;
     } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
                (Cur[3] == '\n' || Cur[3] == '\r')) {
       // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
@@ -1295,13 +1302,18 @@ FormatToken *FormatTokenLexer::getNextToken() {
       case '/':
         // The text was entirely whitespace when this loop was entered. Thus
         // this has to be an escape sequence.
-        assert(Text.substr(i, 2) == "\\\r" || Text.substr(i, 2) == "\\\n" ||
-               Text.substr(i, 4) == "\?\?/\r" ||
+        assert(Text.substr(i, 4) == "\?\?/\r" ||
                Text.substr(i, 4) == "\?\?/\n" ||
                (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
                            Text.substr(i - 1, 4) == "\?\?/\n")) ||
                (i >= 2 && (Text.substr(i - 2, 4) == "\?\?/\r" ||
-                           Text.substr(i - 2, 4) == "\?\?/\n")));
+                           Text.substr(i - 2, 4) == "\?\?/\n")) ||
+               (Text[i] == '\\' && [&]() -> bool {
+                 size_t j = i + 1;
+                 while (j < Text.size() && isHorizontalWhitespace(Text[j]))
+                   ++j;
+                 return j < Text.size() && (Text[j] == '\n' || Text[j] == '\r');
+               }()));
         InEscape = true;
         break;
       default:

@@ -1323,6 +1323,14 @@ m_NSWAdd(const LHS &L, const RHS &R) {
                                                                             R);
 }
 template <typename LHS, typename RHS>
+inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                 OverflowingBinaryOperator::NoSignedWrap, true>
+m_c_NSWAdd(const LHS &L, const RHS &R) {
+  return OverflowingBinaryOp_match<LHS, RHS, Instruction::Add,
+                                   OverflowingBinaryOperator::NoSignedWrap,
+                                   true>(L, R);
+}
+template <typename LHS, typename RHS>
 inline OverflowingBinaryOp_match<LHS, RHS, Instruction::Sub,
                                  OverflowingBinaryOperator::NoSignedWrap>
 m_NSWSub(const LHS &L, const RHS &R) {

@@ -136,7 +136,7 @@ public:
     AMDLIBM      // AMD Math Vector library.
   };
 
-  LLVM_ABI TargetLibraryInfoImpl();
+  LLVM_ABI TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
 
   // Provide value semantics.
@@ -294,6 +294,8 @@ class TargetLibraryInfo {
   std::bitset<NumLibFuncs> OverrideAsUnavailable;
 
 public:
+  TargetLibraryInfo() = delete;
+
   explicit TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
                              std::optional<const Function *> F = std::nullopt)
       : Impl(&Impl) {
@@ -649,7 +651,11 @@ class LLVM_ABI TargetLibraryInfoWrapperPass : public ImmutablePass {
 
 public:
   static char ID;
+
+  /// The default constructor should not be used and is only for pass manager
+  /// initialization purposes.
   TargetLibraryInfoWrapperPass();
+
   explicit TargetLibraryInfoWrapperPass(const Triple &T);
   explicit TargetLibraryInfoWrapperPass(const TargetLibraryInfoImpl &TLI);
 

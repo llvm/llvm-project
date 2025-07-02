@@ -3487,6 +3487,13 @@ bool CombinerHelper::matchUseVectorTruncate(MachineInstr &MI,
   if (!DstTy.getElementCount().isKnownMultipleOf(UnmergeSrcTy.getNumElements()))
     return false;
 
+  // Check the unmerge source and destination element types match
+  LLT UnmergeSrcEltTy = UnmergeSrcTy.getElementType();
+  Register UnmergeDstReg = UnmergeMI->getOperand(0).getReg();
+  LLT UnmergeDstEltTy = MRI.getType(UnmergeDstReg);
+  if (UnmergeSrcEltTy != UnmergeDstEltTy)
+    return false;
+
   // Only generate legal instructions post-legalizer
   if (!IsPreLegalize) {
     LLT MidTy = DstTy.changeElementType(UnmergeSrcTy.getScalarType());

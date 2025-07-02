@@ -2281,6 +2281,44 @@ TEST(TripleTest, XROS) {
   EXPECT_EQ(VersionTuple(17), Version);
 }
 
+TEST(TripleTest, BridgeOS) {
+  Triple T;
+  VersionTuple Version;
+
+  T = Triple("arm64-apple-bridgeos");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(0), Version);
+
+  T = Triple("arm64-apple-bridgeos1.0");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos1.0");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(1), Version);
+
+  T = Triple("arm64-apple-bridgeos9.0");
+  EXPECT_TRUE(T.isBridgeOS());
+  EXPECT_FALSE(T.isXROS());
+  EXPECT_TRUE(T.isOSDarwin());
+  EXPECT_FALSE(T.isiOS());
+  EXPECT_FALSE(T.isMacOSX());
+  EXPECT_FALSE(T.isSimulatorEnvironment());
+  EXPECT_EQ(T.getOSName(), "bridgeos9.0");
+  Version = T.getOSVersion();
+  EXPECT_EQ(VersionTuple(9), Version);
+}
+
 TEST(TripleTest, getOSVersion) {
   Triple T;
   VersionTuple Version;

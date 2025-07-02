@@ -17,7 +17,7 @@ struct S {
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
 
-// CIR: cir.func @_ZN1S10InlineFuncEv(%arg0: !cir.ptr<!rec_S> {{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @_ZN1S10InlineFuncEv(%arg0: !cir.ptr<!rec_S> {{.*}}) -> !s32i
 // CIR:   %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["this", init]
 // CIR:   %[[RET_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   cir.store %arg0, %[[THIS_ADDR]] : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
@@ -46,7 +46,7 @@ void use() {
   s.InlineFunc();
 }
 
-// CIR: cir.func @_Z3usev()
+// CIR: cir.func{{.*}} @_Z3usev()
 // CIR:   %[[S_ADDR:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s"]
 // CIR:   %[[RET_VAL:.*]] = cir.call @_ZN1S10InlineFuncEv(%[[S_ADDR]]) : (!cir.ptr<!rec_S>) -> !s32i
 // CIR:   cir.return

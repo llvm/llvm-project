@@ -260,6 +260,7 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  include <__cxx03/complex>
 #else
 #  include <__config>
+#  include <__cstddef/size_t.h>
 #  include <__fwd/complex.h>
 #  include <__fwd/tuple.h>
 #  include <__tuple/tuple_element.h>
