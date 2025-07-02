@@ -158,6 +158,13 @@ namespace llvm {
       return Data[Length-1];
     }
 
+    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    const T &consume_front() {
+      const T &Ret = front();
+      *this = drop_front();
+      return Ret;
+    }
+
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
     template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
@@ -350,6 +357,13 @@ namespace llvm {
     T &back() const {
       assert(!this->empty());
       return data()[this->size()-1];
+    }
+
+    /// consume_front() - Returns the first element and drops it from ArrayRef.
+    T &consume_front() {
+      const T &Ret = front();
+      *this = drop_front();
+      return Ret;
     }
 
     /// slice(n, m) - Chop off the first N elements of the array, and keep M

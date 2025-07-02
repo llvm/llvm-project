@@ -104,6 +104,15 @@ TEST(ArrayRefTest, DropFront) {
   EXPECT_TRUE(AR1.drop_front(2).equals(AR2));
 }
 
+TEST(ArrayRefTest, ConsumeFront) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(AR1.consume_front(), 4);
+  EXPECT_EQ(AR1.consume_front(), 8);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
 TEST(ArrayRefTest, DropWhile) {
   static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
   ArrayRef<int> AR1(TheNumbers);
