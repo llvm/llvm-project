@@ -164,8 +164,8 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
       if (NeedsExplicitVGPRCount) {
-        for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
-          const MachineOperand &MO = MI.getOperand(i);
+        for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
+          const MachineOperand &MO = MI.getOperand(I);
 
           if (!MO.isReg())
             continue;
@@ -186,10 +186,10 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
           if (IsChainCall || MI.isImplicitDef())
             continue;
 
-          unsigned Width = TRI.getRegSizeInBits(*RC) / 32;
+          unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
           unsigned HWReg = TRI.getHWRegIndex(Reg);
           int MaxUsed = HWReg + Width - 1;
-          MaxVGPR = MaxUsed > MaxVGPR ? MaxUsed : MaxVGPR;
+          MaxVGPR = std::max(MaxUsed, MaxVGPR);
         }
       }
 
