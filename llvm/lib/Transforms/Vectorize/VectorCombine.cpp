@@ -1829,15 +1829,15 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
   ScalarV = Builder.CreateBitCast(
       ScalarV,
       IntegerType::get(SrcTy->getContext(), DL->getTypeSizeInBits(SrcTy)));
-  unsigned SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
-  unsigned EltBitMask = (1ull << SrcEltSizeInBits) - 1;
+  uint64_t SrcEltSizeInBits = DL->getTypeSizeInBits(SrcTy->getElementType());
+  uint64_t EltBitMask = (1ull << SrcEltSizeInBits) - 1;
   for (User *U : Ext->users()) {
     auto *Extract = cast<ExtractElementInst>(U);
     uint64_t Idx =
         cast<ConstantInt>(Extract->getIndexOperand())->getZExtValue();
-    Value *S = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
-    Value *A = Builder.CreateAnd(S, EltBitMask);
-    U->replaceAllUsesWith(A);
+    Value *LShr = Builder.CreateLShr(ScalarV, Idx * SrcEltSizeInBits);
+    Value *And = Builder.CreateAnd(LShr, EltBitMask);
+    U->replaceAllUsesWith(And);
   }
   return true;
 }
