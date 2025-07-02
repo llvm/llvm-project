@@ -42,11 +42,14 @@ typedef void *rwlock_t;
 typedef void *process_t;                          // Process type is HANDLE
 typedef void *thread_t;                           // Host thread type
 typedef void *file_t;                             // Host file type
-typedef unsigned int __w64 socket_t;              // Host socket type
+typedef uintptr_t socket_t;                       // Host socket type
 typedef void *thread_arg_t;                       // Host thread argument type
 typedef unsigned thread_result_t;                 // Host thread result type
 typedef thread_result_t (*thread_func_t)(void *); // Host thread function type
 typedef void *pipe_t;                             // Host pipe type is HANDLE
+
+// printf macro for file_t
+#define PRIuFT PRIuPTR
 
 #else
 
@@ -63,11 +66,14 @@ typedef void *thread_result_t;          // Host thread result type
 typedef void *(*thread_func_t)(void *); // Host thread function type
 typedef int pipe_t;                     // Host pipe type
 
+// printf macro for file_t
+#define PRIuFT PRIi32
+
 #endif // _WIN32
 
-#define LLDB_INVALID_PROCESS ((lldb::process_t)-1)
+#define LLDB_INVALID_PROCESS ((lldb::process_t) - 1)
 #define LLDB_INVALID_HOST_THREAD ((lldb::thread_t)NULL)
-#define LLDB_INVALID_PIPE ((lldb::pipe_t)-1)
+#define LLDB_INVALID_PIPE ((lldb::pipe_t) - 1)
 #define LLDB_INVALID_CALLBACK_TOKEN ((lldb::callback_token_t) - 1)
 
 typedef void (*LogOutputCallback)(const char *, void *baton);
