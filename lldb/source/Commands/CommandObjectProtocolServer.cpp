@@ -93,6 +93,7 @@ protected:
       result.AppendMessageWithFormatv(
           "{0} server started with connection listeners: {1}", protocol,
           address);
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     }
   }
 };
