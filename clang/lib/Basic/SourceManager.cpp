@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -586,17 +587,6 @@ SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
 					  FileCharacter);
 }
 
-/// Helper function to determine if an input file requires conversion
-bool needConversion(StringRef Filename) {
-#ifdef __MVS__
-  llvm::ErrorOr<bool> NeedConversion =
-      llvm::needzOSConversion(Filename.str().c_str());
-  return NeedConversion && *NeedConversion;
-#else
-  return false;
-#endif
-}
-
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
@@ -616,8 +606,9 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
-  bool NeedConversion = needConversion(Filename);
-  if (NeedConversion) {
+  llvm::ErrorOr<bool> NeedConversion =
+      llvm::needConversion(Filename.str().c_str());
+  if (NeedConversion && *NeedConversion) {
     // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
     // conversion.
     if (std::optional<llvm::MemoryBufferRef> Buffer =
