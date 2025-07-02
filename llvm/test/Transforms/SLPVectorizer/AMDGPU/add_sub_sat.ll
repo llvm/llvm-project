@@ -382,7 +382,7 @@ define <4 x i8> @uadd_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1, ptr addrspace(1) 
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
 ; GFX7-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
 ; GFX7-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> undef, i8 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
 ; GFX7-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
 ; GFX7-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
@@ -432,7 +432,7 @@ define <4 x i8> @usub_sat_v4i8(<4 x i8> %arg0, <4 x i8> %arg1) {
 ; GFX7-NEXT:    [[ADD_1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_1]], i8 [[ARG1_1]])
 ; GFX7-NEXT:    [[ADD_2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_2]], i8 [[ARG1_2]])
 ; GFX7-NEXT:    [[ADD_3:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG0_3]], i8 [[ARG1_3]])
-; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> poison, i8 [[ADD_0]], i64 0
+; GFX7-NEXT:    [[INS_0:%.*]] = insertelement <4 x i8> undef, i8 [[ADD_0]], i64 0
 ; GFX7-NEXT:    [[INS_1:%.*]] = insertelement <4 x i8> [[INS_0]], i8 [[ADD_1]], i64 1
 ; GFX7-NEXT:    [[INS_2:%.*]] = insertelement <4 x i8> [[INS_1]], i8 [[ADD_2]], i64 2
 ; GFX7-NEXT:    [[INS_3:%.*]] = insertelement <4 x i8> [[INS_2]], i8 [[ADD_3]], i64 3
