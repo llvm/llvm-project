@@ -184,34 +184,34 @@ def CIR_IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
 // FPAttr
 //===----------------------------------------------------------------------===//
 
-def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
+def CIR_FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
   let summary = "An attribute containing a floating-point value";
   let description = [{
     An fp attribute is a literal attribute that represents a floating-point
     value of the specified floating-point type. Supporting only CIR FP types.
   }];
+
   let parameters = (ins
     AttributeSelfTypeParameter<"", "::cir::FPTypeInterface">:$type,
     APFloatParameter<"">:$value
   );
+
   let builders = [
     AttrBuilderWithInferredContext<(ins "mlir::Type":$type,
                                         "const llvm::APFloat &":$value), [{
       return $_get(type.getContext(), mlir::cast<FPTypeInterface>(type), value);
-    }]>,
-    AttrBuilder<(ins "mlir::Type":$type,
-                     "const llvm::APFloat &":$value), [{
-      return $_get($_ctxt, mlir::cast<FPTypeInterface>(type), value);
-    }]>,
+    }]>
   ];
+
   let extraClassDeclaration = [{
     static FPAttr getZero(mlir::Type type);
   }];
-  let genVerifyDecl = 1;
 
   let assemblyFormat = [{
     `<` custom<FloatLiteral>($value, ref($type)) `>`
   }];
+
+  let genVerifyDecl = 1;
 }
 
 

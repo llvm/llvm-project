@@ -165,8 +165,7 @@ public:
     assert(mlir::isa<cir::FPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()),
-        builder.getAttr<cir::FPAttr>(type, e->getValue()));
+        cgf.getLoc(e->getExprLoc()), cir::FPAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
