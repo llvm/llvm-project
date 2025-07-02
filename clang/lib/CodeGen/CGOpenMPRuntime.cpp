@@ -8833,19 +8833,8 @@ public:
         ++EI;
       }
     }
-    llvm::stable_sort(DeclComponentLists, [VD](const MapData &LHS,
-                                               const MapData &RHS) {
-      // For cases like map(p, p[0], p[0][0]), the shortest map, like map(p)
-      // in this case, should be handled first, to ensure that it gets the
-      // TARGET_PARAM flag.
-      OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
-          std::get<0>(LHS);
-      OMPClauseMappableExprCommon::MappableExprComponentListRef ComponentsR =
-          std::get<0>(RHS);
-      if (VD && VD->getType()->isAnyPointerType() &&
-          Components.size() != ComponentsR.size())
-        return Components.size() < ComponentsR.size();
-
+    llvm::stable_sort(DeclComponentLists, [](const MapData &LHS,
+                                             const MapData &RHS) {
       ArrayRef<OpenMPMapModifierKind> MapModifiers = std::get<2>(LHS);
       OpenMPMapClauseKind MapType = std::get<1>(RHS);
       bool HasPresent =
