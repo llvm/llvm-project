@@ -508,7 +508,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
   }
 
   // Create a metadata object for the exec mode global (auto-generated).
-  StaticGlobalTy<llvm::omp::OMPTgtExecModeFlags> ExecModeGlobal(Name,
+  StaticGlobalTy<llvm::omp::OMPTgtExecModeFlags> ExecModeGlobal(getName(),
                                                                 "_exec_mode");
 
   // Retrieve execution mode for the kernel. This may fail since some kernels
@@ -519,7 +519,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
     DP("Failed to read execution mode for '%s': %s\n"
        "Using default Bare (0) execution mode\n",
-       Name, ErrStr.data());
+       getName(), ErrStr.data());
 
     ExecutionMode = OMP_TGT_EXEC_MODE_BARE;
   } else {
@@ -527,12 +527,12 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     if (!GenericKernelTy::isValidExecutionMode(ExecModeGlobal.getValue()))
       return Plugin::error(ErrorCode::UNKNOWN, 
                            "Invalid execution mode %d for '%s'",
-                           ExecModeGlobal.getValue(), Name);
+                           ExecModeGlobal.getValue(), getName());
     ExecutionMode = ExecModeGlobal.getValue();
   }
 
   // Create a metadata object for the multi-device global (auto-generated).
-  StaticGlobalTy<int8_t> MultiDeviceGlobal(Name, "_multi_device");
+  StaticGlobalTy<int8_t> MultiDeviceGlobal(getName(), "_multi_device");
   if (auto Err = GHandler.readGlobalFromImage(GenericDevice, Image,
                                               MultiDeviceGlobal)) {
     DP("Missing symbol %s, continue execution anyway.\n",
