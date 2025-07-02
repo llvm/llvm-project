@@ -39,5 +39,6 @@ target modules lookup --type Foo --all
 # CHECK-NEXT: Best match found in
 # CHECK-NEXT: name = "Foo"
 
+# CHECK: 1 match found in {{.*}}.out
 # CHECK: 1 match found in {{.*}}lib1.dylib
 # CHECK: 1 match found in {{.*}}lib2.dylib
