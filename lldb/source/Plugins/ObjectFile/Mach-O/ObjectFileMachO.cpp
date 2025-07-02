@@ -415,6 +415,7 @@ public:
         break;
 
       default:
+        break;
       }
       offset = next_thread_state;
     }
@@ -536,6 +537,7 @@ public:
         }
         break;
       default:
+        break;
       }
       offset = next_thread_state;
     }
@@ -672,6 +674,7 @@ public:
         }
         break;
       default:
+        break;
       }
       offset = next_thread_state;
     }
