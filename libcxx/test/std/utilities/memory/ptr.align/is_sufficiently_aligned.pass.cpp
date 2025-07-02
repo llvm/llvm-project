@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 template <typename T>
-void test_is_sufficiently_aligned() {
+constexpr void test_is_sufficiently_aligned() {
   constexpr std::size_t N = alignof(T);
 
   alignas(8 * N) std::remove_cv_t<T> buf[5];
@@ -54,7 +54,7 @@ void test_is_sufficiently_aligned() {
 }
 
 template <typename T>
-void check(T* p) {
+constexpr void check(T* p) {
   ASSERT_SAME_TYPE(bool, decltype(std::is_sufficiently_aligned<alignof(T)>(p)));
   test_is_sufficiently_aligned<T>();
   test_is_sufficiently_aligned<const T>();
@@ -73,7 +73,7 @@ struct alignas(1) X {
 };
 static_assert(sizeof(X) == 2 * alignof(X));
 
-bool tests() {
+constexpr bool test() {
   char c;
   int i;
   long l;
@@ -107,7 +107,8 @@ bool tests() {
 }
 
 int main(int, char**) {
-  tests();
+  test();
+  static_assert(test());
 
   return 0;
 }

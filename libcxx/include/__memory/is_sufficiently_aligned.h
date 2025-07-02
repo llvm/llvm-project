@@ -23,8 +23,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 26
 
 template <size_t _Alignment, class _Tp>
-_LIBCPP_HIDE_FROM_ABI bool is_sufficiently_aligned(_Tp* __ptr) {
-  return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
+_LIBCPP_HIDE_FROM_ABI constexpr bool is_sufficiently_aligned(_Tp* __ptr) {
+  return __builtin_constant_p(__builtin_assume_aligned(__ptr, _Alignment) != nullptr);
 }
 
 #endif // _LIBCPP_STD_VER >= 26
