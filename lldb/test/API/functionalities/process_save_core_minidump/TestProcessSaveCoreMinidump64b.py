@@ -12,6 +12,7 @@ from lldbsuite.test import lldbutil
 # Constant from MinidumpFileBuilder.h, this forces 64b for non threads
 FORCE_64B = "force_64b"
 
+
 class ProcessSaveCoreMinidump64bTestCase(TestBase):
 
     def verify_minidump(
@@ -33,19 +34,34 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
             start_addr = region.GetRegionBase()
             end_addr = region.GetRegionEnd()
             actual_process_read_error = lldb.SBError()
-            actual = live_proc.ReadMemory(start_addr, end_addr - start_addr, actual_process_read_error)
+            actual = live_proc.ReadMemory(
+                start_addr, end_addr - start_addr, actual_process_read_error
+            )
             expected_process_read_error = lldb.SBError()
-            expected = core_proc.ReadMemory(start_addr, end_addr - start_addr, expected_process_read_error)
+            expected = core_proc.ReadMemory(
+                start_addr, end_addr - start_addr, expected_process_read_error
+            )
 
             # Both processes could fail to read a given memory region, so if they both pass
             # compare, then we'll fail them if the core differs from the live process.
-            if (actual_process_read_error.Success() and expected_process_read_error.Success()):
-                self.assertEqual(actual, expected, "Bytes differ between live process and core")
+            if (
+                actual_process_read_error.Success()
+                and expected_process_read_error.Success()
+            ):
+                self.assertEqual(
+                    actual, expected, "Bytes differ between live process and core"
+                )
 
             # Now we check if the error is the same, error isn't abnormal but they should fail for the same reason
             self.assertTrue(
-                (actual_process_read_error.Success() and expected_process_read_error.Success()) or
-                (actual_process_read_error.Fail() and expected_process_read_error.Fail())
+                (
+                    actual_process_read_error.Success()
+                    and expected_process_read_error.Success()
+                )
+                or (
+                    actual_process_read_error.Fail()
+                    and expected_process_read_error.Fail()
+                )
             )
 
     @skipUnlessArch("x86_64")
