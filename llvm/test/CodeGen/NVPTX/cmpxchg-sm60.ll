@@ -14,17 +14,17 @@ define i8 @monotonic_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_generic_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_monotonic_i8_generic_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB0_1: // %partword.cmpxchg.loop
@@ -41,7 +41,7 @@ define i8 @monotonic_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB0_1;
 ; SM60-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic monotonic
     ret i8 %new
@@ -59,17 +59,17 @@ define i8 @monotonic_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_global_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_monotonic_i8_global_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB1_1: // %partword.cmpxchg.loop
@@ -86,7 +86,7 @@ define i8 @monotonic_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %ne
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB1_1;
 ; SM60-NEXT:  $L__BB1_3: // %partword.cmpxchg.end
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new monotonic monotonic
     ret i8 %new
@@ -104,17 +104,17 @@ define i8 @monotonic_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_monotonic_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_monotonic_i8_shared_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_monotonic_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_monotonic_i8_shared_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB2_1: // %partword.cmpxchg.loop
@@ -131,7 +131,7 @@ define i8 @monotonic_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %ne
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB2_1;
 ; SM60-NEXT:  $L__BB2_3: // %partword.cmpxchg.end
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new monotonic monotonic
     ret i8 %new
@@ -149,17 +149,17 @@ define i8 @monotonic_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_generic_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_acquire_i8_generic_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB3_1: // %partword.cmpxchg.loop
@@ -177,7 +177,7 @@ define i8 @monotonic_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB3_1;
 ; SM60-NEXT:  $L__BB3_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic acquire
     ret i8 %new
@@ -195,17 +195,17 @@ define i8 @monotonic_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_global_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_acquire_i8_global_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB4_1: // %partword.cmpxchg.loop
@@ -223,7 +223,7 @@ define i8 @monotonic_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB4_1;
 ; SM60-NEXT:  $L__BB4_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new monotonic acquire
     ret i8 %new
@@ -241,17 +241,17 @@ define i8 @monotonic_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_acquire_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_acquire_i8_shared_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_acquire_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_acquire_i8_shared_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB5_1: // %partword.cmpxchg.loop
@@ -269,7 +269,7 @@ define i8 @monotonic_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB5_1;
 ; SM60-NEXT:  $L__BB5_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new monotonic acquire
     ret i8 %new
@@ -287,18 +287,18 @@ define i8 @monotonic_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_seq_cst_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB6_1: // %partword.cmpxchg.loop
@@ -316,7 +316,7 @@ define i8 @monotonic_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB6_1;
 ; SM60-NEXT:  $L__BB6_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic seq_cst
     ret i8 %new
@@ -334,18 +334,18 @@ define i8 @monotonic_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_seq_cst_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB7_1: // %partword.cmpxchg.loop
@@ -363,7 +363,7 @@ define i8 @monotonic_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB7_1;
 ; SM60-NEXT:  $L__BB7_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new monotonic seq_cst
     ret i8 %new
@@ -381,18 +381,18 @@ define i8 @monotonic_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [monotonic_seq_cst_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [monotonic_seq_cst_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [monotonic_seq_cst_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [monotonic_seq_cst_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB8_1: // %partword.cmpxchg.loop
@@ -410,7 +410,7 @@ define i8 @monotonic_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB8_1;
 ; SM60-NEXT:  $L__BB8_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new monotonic seq_cst
     ret i8 %new
@@ -428,17 +428,17 @@ define i8 @acquire_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_generic_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_monotonic_i8_generic_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB9_1: // %partword.cmpxchg.loop
@@ -456,7 +456,7 @@ define i8 @acquire_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB9_1;
 ; SM60-NEXT:  $L__BB9_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire monotonic
     ret i8 %new
@@ -474,17 +474,17 @@ define i8 @acquire_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_global_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_monotonic_i8_global_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB10_1: // %partword.cmpxchg.loop
@@ -502,7 +502,7 @@ define i8 @acquire_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB10_1;
 ; SM60-NEXT:  $L__BB10_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acquire monotonic
     ret i8 %new
@@ -520,17 +520,17 @@ define i8 @acquire_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_monotonic_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_monotonic_i8_shared_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_monotonic_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_monotonic_i8_shared_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB11_1: // %partword.cmpxchg.loop
@@ -548,7 +548,7 @@ define i8 @acquire_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB11_1;
 ; SM60-NEXT:  $L__BB11_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acquire monotonic
     ret i8 %new
@@ -566,17 +566,17 @@ define i8 @acquire_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_generic_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_acquire_i8_generic_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB12_1: // %partword.cmpxchg.loop
@@ -594,7 +594,7 @@ define i8 @acquire_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB12_1;
 ; SM60-NEXT:  $L__BB12_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire acquire
     ret i8 %new
@@ -612,17 +612,17 @@ define i8 @acquire_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_global_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_acquire_i8_global_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB13_1: // %partword.cmpxchg.loop
@@ -640,7 +640,7 @@ define i8 @acquire_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB13_1;
 ; SM60-NEXT:  $L__BB13_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acquire acquire
     ret i8 %new
@@ -658,17 +658,17 @@ define i8 @acquire_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_acquire_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_acquire_i8_shared_param_0];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_acquire_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_acquire_i8_shared_param_1];
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB14_1: // %partword.cmpxchg.loop
@@ -686,7 +686,7 @@ define i8 @acquire_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB14_1;
 ; SM60-NEXT:  $L__BB14_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acquire acquire
     ret i8 %new
@@ -704,18 +704,18 @@ define i8 @acquire_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_seq_cst_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB15_1: // %partword.cmpxchg.loop
@@ -733,7 +733,7 @@ define i8 @acquire_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB15_1;
 ; SM60-NEXT:  $L__BB15_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire seq_cst
     ret i8 %new
@@ -751,18 +751,18 @@ define i8 @acquire_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_seq_cst_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB16_1: // %partword.cmpxchg.loop
@@ -780,7 +780,7 @@ define i8 @acquire_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB16_1;
 ; SM60-NEXT:  $L__BB16_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acquire seq_cst
     ret i8 %new
@@ -798,18 +798,18 @@ define i8 @acquire_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acquire_seq_cst_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acquire_seq_cst_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acquire_seq_cst_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acquire_seq_cst_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB17_1: // %partword.cmpxchg.loop
@@ -827,7 +827,7 @@ define i8 @acquire_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB17_1;
 ; SM60-NEXT:  $L__BB17_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acquire seq_cst
     ret i8 %new
@@ -845,18 +845,18 @@ define i8 @release_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_monotonic_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB18_1: // %partword.cmpxchg.loop
@@ -873,7 +873,7 @@ define i8 @release_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB18_1;
 ; SM60-NEXT:  $L__BB18_3: // %partword.cmpxchg.end
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release monotonic
     ret i8 %new
@@ -891,18 +891,18 @@ define i8 @release_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_monotonic_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB19_1: // %partword.cmpxchg.loop
@@ -919,7 +919,7 @@ define i8 @release_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB19_1;
 ; SM60-NEXT:  $L__BB19_3: // %partword.cmpxchg.end
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new release monotonic
     ret i8 %new
@@ -937,18 +937,18 @@ define i8 @release_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_monotonic_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_monotonic_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_monotonic_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_monotonic_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB20_1: // %partword.cmpxchg.loop
@@ -965,7 +965,7 @@ define i8 @release_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    mov.b32 %r20, %r8;
 ; SM60-NEXT:    @%p2 bra $L__BB20_1;
 ; SM60-NEXT:  $L__BB20_3: // %partword.cmpxchg.end
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new release monotonic
     ret i8 %new
@@ -983,18 +983,18 @@ define i8 @release_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_acquire_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_acquire_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB21_1: // %partword.cmpxchg.loop
@@ -1012,7 +1012,7 @@ define i8 @release_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB21_1;
 ; SM60-NEXT:  $L__BB21_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release acquire
     ret i8 %new
@@ -1030,18 +1030,18 @@ define i8 @release_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_acquire_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_acquire_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB22_1: // %partword.cmpxchg.loop
@@ -1059,7 +1059,7 @@ define i8 @release_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB22_1;
 ; SM60-NEXT:  $L__BB22_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new release acquire
     ret i8 %new
@@ -1077,18 +1077,18 @@ define i8 @release_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_acquire_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_acquire_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_acquire_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_acquire_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB23_1: // %partword.cmpxchg.loop
@@ -1106,7 +1106,7 @@ define i8 @release_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB23_1;
 ; SM60-NEXT:  $L__BB23_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new release acquire
     ret i8 %new
@@ -1124,18 +1124,18 @@ define i8 @release_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_seq_cst_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB24_1: // %partword.cmpxchg.loop
@@ -1153,7 +1153,7 @@ define i8 @release_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB24_1;
 ; SM60-NEXT:  $L__BB24_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release seq_cst
     ret i8 %new
@@ -1171,18 +1171,18 @@ define i8 @release_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_seq_cst_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB25_1: // %partword.cmpxchg.loop
@@ -1200,7 +1200,7 @@ define i8 @release_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB25_1;
 ; SM60-NEXT:  $L__BB25_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new release seq_cst
     ret i8 %new
@@ -1218,18 +1218,18 @@ define i8 @release_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [release_seq_cst_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [release_seq_cst_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [release_seq_cst_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [release_seq_cst_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB26_1: // %partword.cmpxchg.loop
@@ -1247,7 +1247,7 @@ define i8 @release_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB26_1;
 ; SM60-NEXT:  $L__BB26_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new release seq_cst
     ret i8 %new
@@ -1265,18 +1265,18 @@ define i8 @acq_rel_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_monotonic_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB27_1: // %partword.cmpxchg.loop
@@ -1294,7 +1294,7 @@ define i8 @acq_rel_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB27_1;
 ; SM60-NEXT:  $L__BB27_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel monotonic
     ret i8 %new
@@ -1312,18 +1312,18 @@ define i8 @acq_rel_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_monotonic_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB28_1: // %partword.cmpxchg.loop
@@ -1341,7 +1341,7 @@ define i8 @acq_rel_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB28_1;
 ; SM60-NEXT:  $L__BB28_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acq_rel monotonic
     ret i8 %new
@@ -1359,18 +1359,18 @@ define i8 @acq_rel_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_monotonic_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_monotonic_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_monotonic_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_monotonic_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB29_1: // %partword.cmpxchg.loop
@@ -1388,7 +1388,7 @@ define i8 @acq_rel_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB29_1;
 ; SM60-NEXT:  $L__BB29_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acq_rel monotonic
     ret i8 %new
@@ -1406,18 +1406,18 @@ define i8 @acq_rel_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_acquire_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB30_1: // %partword.cmpxchg.loop
@@ -1435,7 +1435,7 @@ define i8 @acq_rel_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB30_1;
 ; SM60-NEXT:  $L__BB30_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel acquire
     ret i8 %new
@@ -1453,18 +1453,18 @@ define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_acquire_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB31_1: // %partword.cmpxchg.loop
@@ -1482,7 +1482,7 @@ define i8 @acq_rel_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB31_1;
 ; SM60-NEXT:  $L__BB31_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acq_rel acquire
     ret i8 %new
@@ -1500,18 +1500,18 @@ define i8 @acq_rel_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_acquire_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_acquire_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_acquire_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_acquire_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB32_1: // %partword.cmpxchg.loop
@@ -1529,7 +1529,7 @@ define i8 @acq_rel_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB32_1;
 ; SM60-NEXT:  $L__BB32_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acq_rel acquire
     ret i8 %new
@@ -1547,18 +1547,18 @@ define i8 @acq_rel_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_seq_cst_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB33_1: // %partword.cmpxchg.loop
@@ -1576,7 +1576,7 @@ define i8 @acq_rel_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB33_1;
 ; SM60-NEXT:  $L__BB33_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel seq_cst
     ret i8 %new
@@ -1594,18 +1594,18 @@ define i8 @acq_rel_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_seq_cst_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB34_1: // %partword.cmpxchg.loop
@@ -1623,7 +1623,7 @@ define i8 @acq_rel_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB34_1;
 ; SM60-NEXT:  $L__BB34_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new acq_rel seq_cst
     ret i8 %new
@@ -1641,18 +1641,18 @@ define i8 @acq_rel_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [acq_rel_seq_cst_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [acq_rel_seq_cst_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [acq_rel_seq_cst_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [acq_rel_seq_cst_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB35_1: // %partword.cmpxchg.loop
@@ -1670,7 +1670,7 @@ define i8 @acq_rel_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB35_1;
 ; SM60-NEXT:  $L__BB35_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new acq_rel seq_cst
     ret i8 %new
@@ -1688,18 +1688,18 @@ define i8 @seq_cst_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_monotonic_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB36_1: // %partword.cmpxchg.loop
@@ -1717,7 +1717,7 @@ define i8 @seq_cst_monotonic_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB36_1;
 ; SM60-NEXT:  $L__BB36_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst monotonic
     ret i8 %new
@@ -1735,18 +1735,18 @@ define i8 @seq_cst_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_monotonic_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB37_1: // %partword.cmpxchg.loop
@@ -1764,7 +1764,7 @@ define i8 @seq_cst_monotonic_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB37_1;
 ; SM60-NEXT:  $L__BB37_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new seq_cst monotonic
     ret i8 %new
@@ -1782,18 +1782,18 @@ define i8 @seq_cst_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_monotonic_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_monotonic_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_monotonic_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_monotonic_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB38_1: // %partword.cmpxchg.loop
@@ -1811,7 +1811,7 @@ define i8 @seq_cst_monotonic_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new)
 ; SM60-NEXT:    @%p2 bra $L__BB38_1;
 ; SM60-NEXT:  $L__BB38_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new seq_cst monotonic
     ret i8 %new
@@ -1829,18 +1829,18 @@ define i8 @seq_cst_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_acquire_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB39_1: // %partword.cmpxchg.loop
@@ -1858,7 +1858,7 @@ define i8 @seq_cst_acquire_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB39_1;
 ; SM60-NEXT:  $L__BB39_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst acquire
     ret i8 %new
@@ -1876,18 +1876,18 @@ define i8 @seq_cst_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_acquire_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB40_1: // %partword.cmpxchg.loop
@@ -1905,7 +1905,7 @@ define i8 @seq_cst_acquire_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB40_1;
 ; SM60-NEXT:  $L__BB40_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new seq_cst acquire
     ret i8 %new
@@ -1923,18 +1923,18 @@ define i8 @seq_cst_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_acquire_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_acquire_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_acquire_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_acquire_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB41_1: // %partword.cmpxchg.loop
@@ -1952,7 +1952,7 @@ define i8 @seq_cst_acquire_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB41_1;
 ; SM60-NEXT:  $L__BB41_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new seq_cst acquire
     ret i8 %new
@@ -1970,18 +1970,18 @@ define i8 @seq_cst_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_generic_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_generic_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_seq_cst_i8_generic_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_generic_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB42_1: // %partword.cmpxchg.loop
@@ -1999,7 +1999,7 @@ define i8 @seq_cst_seq_cst_i8_generic(ptr %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB42_1;
 ; SM60-NEXT:  $L__BB42_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst seq_cst
     ret i8 %new
@@ -2017,18 +2017,18 @@ define i8 @seq_cst_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_global_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_global_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_seq_cst_i8_global_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_global_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.global.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB43_1: // %partword.cmpxchg.loop
@@ -2046,7 +2046,7 @@ define i8 @seq_cst_seq_cst_i8_global(ptr addrspace(1) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB43_1;
 ; SM60-NEXT:  $L__BB43_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(1) %addr, i8 %cmp, i8 %new seq_cst seq_cst
     ret i8 %new
@@ -2064,18 +2064,18 @@ define i8 @seq_cst_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    ld.param.b8 %rs1, [seq_cst_seq_cst_i8_shared_param_2];
 ; SM60-NEXT:    ld.param.b64 %rd2, [seq_cst_seq_cst_i8_shared_param_0];
 ; SM60-NEXT:    membar.sys;
+; SM60-NEXT:    ld.param.b8 %r9, [seq_cst_seq_cst_i8_shared_param_1];
 ; SM60-NEXT:    and.b64 %rd1, %rd2, -4;
-; SM60-NEXT:    cvt.u32.u64 %r9, %rd2;
-; SM60-NEXT:    and.b32 %r10, %r9, 3;
-; SM60-NEXT:    shl.b32 %r1, %r10, 3;
-; SM60-NEXT:    mov.b32 %r11, 255;
-; SM60-NEXT:    shl.b32 %r12, %r11, %r1;
-; SM60-NEXT:    not.b32 %r2, %r12;
-; SM60-NEXT:    cvt.u32.u16 %r13, %rs1;
-; SM60-NEXT:    and.b32 %r14, %r13, 255;
-; SM60-NEXT:    shl.b32 %r3, %r14, %r1;
-; SM60-NEXT:    ld.param.b8 %r15, [seq_cst_seq_cst_i8_shared_param_1];
-; SM60-NEXT:    shl.b32 %r4, %r15, %r1;
+; SM60-NEXT:    cvt.u32.u64 %r10, %rd2;
+; SM60-NEXT:    and.b32 %r11, %r10, 3;
+; SM60-NEXT:    shl.b32 %r1, %r11, 3;
+; SM60-NEXT:    mov.b32 %r12, 255;
+; SM60-NEXT:    shl.b32 %r13, %r12, %r1;
+; SM60-NEXT:    not.b32 %r2, %r13;
+; SM60-NEXT:    cvt.u32.u16 %r14, %rs1;
+; SM60-NEXT:    and.b32 %r15, %r14, 255;
+; SM60-NEXT:    shl.b32 %r3, %r15, %r1;
+; SM60-NEXT:    shl.b32 %r4, %r9, %r1;
 ; SM60-NEXT:    ld.shared.b32 %r16, [%rd1];
 ; SM60-NEXT:    and.b32 %r20, %r16, %r2;
 ; SM60-NEXT:  $L__BB44_1: // %partword.cmpxchg.loop
@@ -2093,7 +2093,7 @@ define i8 @seq_cst_seq_cst_i8_shared(ptr addrspace(3) %addr, i8 %cmp, i8 %new) {
 ; SM60-NEXT:    @%p2 bra $L__BB44_1;
 ; SM60-NEXT:  $L__BB44_3: // %partword.cmpxchg.end
 ; SM60-NEXT:    membar.sys;
-; SM60-NEXT:    st.param.b32 [func_retval0], %r13;
+; SM60-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM60-NEXT:    ret;
     %pairold = cmpxchg ptr addrspace(3) %addr, i8 %cmp, i8 %new seq_cst seq_cst
     ret i8 %new

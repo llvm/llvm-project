@@ -363,8 +363,8 @@ Interpreter::Visit(const MemberOfNode *node) {
 
     if (!m_use_synthetic || !field_obj) {
       std::string errMsg = llvm::formatv(
-          "no member named '{0}' in {1}", node->GetFieldName(),
-          base->GetCompilerType().GetFullyUnqualifiedType().TypeDescription());
+          "\"{0}\" is not a member of \"({1}) {2}\"", node->GetFieldName(),
+          base->GetTypeName().AsCString("<invalid type>"), base->GetName());
       return llvm::make_error<DILDiagnosticError>(
           m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
     }
@@ -383,9 +383,9 @@ Interpreter::Visit(const MemberOfNode *node) {
   CompilerType base_type = base->GetCompilerType();
   if (node->GetIsArrow() && base->IsPointerType())
     base_type = base_type.GetPointeeType();
-  std::string errMsg =
-      llvm::formatv("no member named '{0}' in {1}", node->GetFieldName(),
-                    base_type.GetFullyUnqualifiedType().TypeDescription());
+  std::string errMsg = llvm::formatv(
+      "\"{0}\" is not a member of \"({1}) {2}\"", node->GetFieldName(),
+      base->GetTypeName().AsCString("<invalid type>"), base->GetName());
   return llvm::make_error<DILDiagnosticError>(
       m_expr, errMsg, node->GetLocation(), node->GetFieldName().size());
 }

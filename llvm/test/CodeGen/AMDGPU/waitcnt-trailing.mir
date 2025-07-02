@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck %s
+
+# Check that a trivial soft waitcnt at the end of a block is deleted even if it
+# is followed by a meta instruction.
+
+# CHECK-LABEL: name: waitcnt-no-redundant
+# CHECK: S_WAITCNT 0
+# CHECK: S_MOV_B32
+# CHECK-NOT: S_WAITCNT
+
+---
+name: waitcnt-no-redundant
+body: |
+  bb.1:
+    S_WAITCNT_soft 53119
+    $sgpr2 = S_MOV_B32 42
+    S_WAITCNT_soft 53119
+    $vgpr2 = IMPLICIT_DEF
+
+...

@@ -3463,6 +3463,13 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   ASTRecordLayouts[D] = NewEntry;
 
+  constexpr uint64_t MaxStructSizeInBytes = 1ULL << 60;
+  CharUnits StructSize = NewEntry->getSize();
+  if (static_cast<uint64_t>(StructSize.getQuantity()) >= MaxStructSizeInBytes) {
+    getDiagnostics().Report(D->getLocation(), diag::err_struct_too_large)
+        << D->getName() << MaxStructSizeInBytes;
+  }
+
   if (getLangOpts().DumpRecordLayouts) {
     llvm::outs() << "\n*** Dumping AST Record Layout\n";
     DumpRecordLayout(D, llvm::outs(), getLangOpts().DumpRecordLayoutsSimple);

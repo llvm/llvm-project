@@ -1234,14 +1234,12 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
   std::unique_ptr<GlobalIFunc> GI;
   GlobalValue *GV;
   if (IsAlias) {
-    GA.reset(GlobalAlias::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GA.reset(GlobalAlias::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GA.get();
   } else {
-    GI.reset(GlobalIFunc::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GI.reset(GlobalIFunc::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GI.get();
   }
   GV->setThreadLocalMode(TLM);

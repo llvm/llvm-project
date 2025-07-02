@@ -107,8 +107,6 @@ program OmpAtomicUpdate
 !CHECK: omp.atomic.update memory_order(relaxed) %[[VAL_Y_DECLARE]]#0 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:.*]]: i32):
 !CHECK:  {{.*}} = arith.cmpi sgt, %[[ARG]], {{.*}} : i32
-!CHECK:  {{.*}} = arith.select {{.*}}, %[[ARG]], {{.*}} : i32
-!CHECK:  {{.*}} = arith.cmpi sgt, {{.*}}
 !CHECK:  %[[TEMP:.*]] = arith.select {{.*}} : i32
 !CHECK:  omp.yield(%[[TEMP]] : i32)
 !CHECK: }
@@ -177,13 +175,9 @@ program OmpAtomicUpdate
 !CHECK:   %[[VAL_Z_LOADED:.*]] = fir.load %[[VAL_Z_DECLARE]]#0 : !fir.ref<i32>
 !CHECK:   omp.atomic.update %[[VAL_W_DECLARE]]#0 : !fir.ref<i32> {
 !CHECK:   ^bb0(%[[ARG_W:.*]]: i32):
-!CHECK:     %[[WX_CMP:.*]] = arith.cmpi sgt, %[[ARG_W]], %[[VAL_X_LOADED]] : i32
-!CHECK:     %[[WX_MIN:.*]] = arith.select %[[WX_CMP]], %[[ARG_W]], %[[VAL_X_LOADED]] : i32
-!CHECK:     %[[WXY_CMP:.*]] = arith.cmpi sgt, %[[WX_MIN]], %[[VAL_Y_LOADED]] : i32
-!CHECK:     %[[WXY_MIN:.*]] = arith.select %[[WXY_CMP]], %[[WX_MIN]], %[[VAL_Y_LOADED]] : i32
-!CHECK:     %[[WXYZ_CMP:.*]] = arith.cmpi sgt, %[[WXY_MIN]], %[[VAL_Z_LOADED]] : i32
-!CHECK:     %[[WXYZ_MIN:.*]] = arith.select %[[WXYZ_CMP]], %[[WXY_MIN]], %[[VAL_Z_LOADED]] : i32
-!CHECK:     omp.yield(%[[WXYZ_MIN]] : i32)
+!CHECK:     %[[W_CMP:.*]] = arith.cmpi sgt, %[[ARG_W]], {{.*}} : i32
+!CHECK:     %[[WXYZ_MAX:.*]] = arith.select %[[W_CMP]], %[[ARG_W]], {{.*}} : i32
+!CHECK:     omp.yield(%[[WXYZ_MAX]] : i32)
 !CHECK:   }
   !$omp atomic update
     w = max(w,x,y,z)

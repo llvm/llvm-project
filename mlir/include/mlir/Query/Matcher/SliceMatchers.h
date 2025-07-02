@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides matchers for MLIRQuery that peform slicing analysis
+// This file defines slicing-analysis matchers that extend and abstract the
+// core implementations from `SliceAnalysis.h`.
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,9 +17,9 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/IR/Operation.h"
 
-/// A matcher encapsulating `getBackwardSlice` method from SliceAnalysis.h.
-/// Additionally, it limits the slice computation to a certain depth level using
-/// a custom filter.
+/// Computes the backward-slice of all transitive defs reachable from `rootOp`,
+/// if `innerMatcher` matches. The traversal stops once the desired depth level
+/// is reached.
 ///
 /// Example: starting from node 9, assuming the matcher
 /// computes the slice for the first two depth levels:
@@ -119,6 +120,77 @@ bool BackwardSliceMatcher<Matcher>::matches(
                            : backwardSlice.size() >= 1;
 }
 
+/// Computes the backward-slice of all transitive defs reachable from `rootOp`,
+/// if `innerMatcher` matches. Traversal stops where `filterMatcher` matches.
+template <typename BaseMatcher, typename Filter>
+class PredicateBackwardSliceMatcher {
+public:
+  PredicateBackwardSliceMatcher(BaseMatcher innerMatcher, Filter filterMatcher,
+                                bool inclusive, bool omitBlockArguments,
+                                bool omitUsesFromAbove)
+      : innerMatcher(std::move(innerMatcher)),
+        filterMatcher(std::move(filterMatcher)), inclusive(inclusive),
+        omitBlockArguments(omitBlockArguments),
+        omitUsesFromAbove(omitUsesFromAbove) {}
+
+  bool match(Operation *rootOp, SetVector<Operation *> &backwardSlice) {
+    backwardSlice.clear();
+    BackwardSliceOptions options;
+    options.inclusive = inclusive;
+    options.omitUsesFromAbove = omitUsesFromAbove;
+    options.omitBlockArguments = omitBlockArguments;
+    if (innerMatcher.match(rootOp)) {
+      options.filter = [&](Operation *subOp) {
+        return !filterMatcher.match(subOp);
+      };
+      LogicalResult result = getBackwardSlice(rootOp, &backwardSlice, options);
+      assert(result.succeeded() && "expected backward slice to succeed");
+      (void)result;
+      return options.inclusive ? backwardSlice.size() > 1
+                               : backwardSlice.size() >= 1;
+    }
+    return false;
+  }
+
+private:
+  BaseMatcher innerMatcher;
+  Filter filterMatcher;
+  bool inclusive;
+  bool omitBlockArguments;
+  bool omitUsesFromAbove;
+};
+
+/// Computes the forward-slice of all users reachable from `rootOp`,
+/// if `innerMatcher` matches. Traversal stops where `filterMatcher` matches.
+template <typename BaseMatcher, typename Filter>
+class PredicateForwardSliceMatcher {
+public:
+  PredicateForwardSliceMatcher(BaseMatcher innerMatcher, Filter filterMatcher,
+                               bool inclusive)
+      : innerMatcher(std::move(innerMatcher)),
+        filterMatcher(std::move(filterMatcher)), inclusive(inclusive) {}
+
+  bool match(Operation *rootOp, SetVector<Operation *> &forwardSlice) {
+    forwardSlice.clear();
+    ForwardSliceOptions options;
+    options.inclusive = inclusive;
+    if (innerMatcher.match(rootOp)) {
+      options.filter = [&](Operation *subOp) {
+        return !filterMatcher.match(subOp);
+      };
+      getForwardSlice(rootOp, &forwardSlice, options);
+      return options.inclusive ? forwardSlice.size() > 1
+                               : forwardSlice.size() >= 1;
+    }
+    return false;
+  }
+
+private:
+  BaseMatcher innerMatcher;
+  Filter filterMatcher;
+  bool inclusive;
+};
+
 /// Matches transitive defs of a top-level operation up to N levels.
 template <typename Matcher>
 inline BackwardSliceMatcher<Matcher>
@@ -130,13 +202,35 @@ m_GetDefinitions(Matcher innerMatcher, int64_t maxDepth, bool inclusive,
                                        omitUsesFromAbove);
 }
 
-/// Matches all transitive defs of a top-level operation up to N levels
+/// Matches all transitive defs of a top-level operation up to N levels.
 template <typename Matcher>
 inline BackwardSliceMatcher<Matcher> m_GetAllDefinitions(Matcher innerMatcher,
                                                          int64_t maxDepth) {
   assert(maxDepth >= 0 && "maxDepth must be non-negative");
   return BackwardSliceMatcher<Matcher>(std::move(innerMatcher), maxDepth, true,
                                        false, false);
+}
+
+/// Matches all transitive defs of a top-level operation and stops where
+/// `filterMatcher` rejects.
+template <typename BaseMatcher, typename Filter>
+inline PredicateBackwardSliceMatcher<BaseMatcher, Filter>
+m_GetDefinitionsByPredicate(BaseMatcher innerMatcher, Filter filterMatcher,
+                            bool inclusive, bool omitBlockArguments,
+                            bool omitUsesFromAbove) {
+  return PredicateBackwardSliceMatcher<BaseMatcher, Filter>(
+      std::move(innerMatcher), std::move(filterMatcher), inclusive,
+      omitBlockArguments, omitUsesFromAbove);
+}
+
+/// Matches all users of a top-level operation and stops where
+/// `filterMatcher` rejects.
+template <typename BaseMatcher, typename Filter>
+inline PredicateForwardSliceMatcher<BaseMatcher, Filter>
+m_GetUsersByPredicate(BaseMatcher innerMatcher, Filter filterMatcher,
+                      bool inclusive) {
+  return PredicateForwardSliceMatcher<BaseMatcher, Filter>(
+      std::move(innerMatcher), std::move(filterMatcher), inclusive);
 }
 
 } // namespace mlir::query::matcher

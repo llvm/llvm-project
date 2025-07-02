@@ -1632,29 +1632,6 @@ BlockFrequencyInfoImplBase::Scaled64 BlockFrequencyInfoImpl<BT>::discrepancy(
 }
 #endif
 
-/// \note This should be a lambda, but that crashes GCC 4.7.
-namespace bfi_detail {
-
-template <class BT> struct BlockEdgesAdder {
-  using BlockT = BT;
-  using LoopData = BlockFrequencyInfoImplBase::LoopData;
-  using Successor = GraphTraits<const BlockT *>;
-
-  const BlockFrequencyInfoImpl<BT> &BFI;
-
-  explicit BlockEdgesAdder(const BlockFrequencyInfoImpl<BT> &BFI)
-      : BFI(BFI) {}
-
-  void operator()(IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
-                  const LoopData *OuterLoop) {
-    const BlockT *BB = BFI.RPOT[Irr.Node.Index];
-    for (const auto *Succ : children<const BlockT *>(BB))
-      G.addEdge(Irr, BFI.getNode(Succ), OuterLoop);
-  }
-};
-
-} // end namespace bfi_detail
-
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
     LoopData *OuterLoop, std::list<LoopData>::iterator Insert) {
@@ -1665,9 +1642,12 @@ void BlockFrequencyInfoImpl<BT>::computeIrreducibleMass(
 
   using namespace bfi_detail;
 
-  // Ideally, addBlockEdges() would be declared here as a lambda, but that
-  // crashes GCC 4.7.
-  BlockEdgesAdder<BT> addBlockEdges(*this);
+  auto addBlockEdges = [&](IrreducibleGraph &G, IrreducibleGraph::IrrNode &Irr,
+                           const LoopData *OuterLoop) {
+    const BlockT *BB = RPOT[Irr.Node.Index];
+    for (const auto *Succ : children<const BlockT *>(BB))
+      G.addEdge(Irr, getNode(Succ), OuterLoop);
+  };
   IrreducibleGraph G(*this, OuterLoop, addBlockEdges);
 
   for (auto &L : analyzeIrreducible(G, OuterLoop, Insert))

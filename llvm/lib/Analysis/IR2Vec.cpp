@@ -70,12 +70,17 @@ inline bool fromJSON(const llvm::json::Value &E, Embedding &Out,
 // ==----------------------------------------------------------------------===//
 // Embedding
 //===----------------------------------------------------------------------===//
-
 Embedding &Embedding::operator+=(const Embedding &RHS) {
   assert(this->size() == RHS.size() && "Vectors must have the same dimension");
   std::transform(this->begin(), this->end(), RHS.begin(), this->begin(),
                  std::plus<double>());
   return *this;
+}
+
+Embedding Embedding::operator+(const Embedding &RHS) const {
+  Embedding Result(*this);
+  Result += RHS;
+  return Result;
 }
 
 Embedding &Embedding::operator-=(const Embedding &RHS) {
@@ -85,10 +90,22 @@ Embedding &Embedding::operator-=(const Embedding &RHS) {
   return *this;
 }
 
+Embedding Embedding::operator-(const Embedding &RHS) const {
+  Embedding Result(*this);
+  Result -= RHS;
+  return Result;
+}
+
 Embedding &Embedding::operator*=(double Factor) {
   std::transform(this->begin(), this->end(), this->begin(),
                  [Factor](double Elem) { return Elem * Factor; });
   return *this;
+}
+
+Embedding Embedding::operator*(double Factor) const {
+  Embedding Result(*this);
+  Result *= Factor;
+  return Result;
 }
 
 Embedding &Embedding::scaleAndAdd(const Embedding &Src, float Factor) {
@@ -129,7 +146,6 @@ std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
   case IR2VecKind::Symbolic:
     return std::make_unique<SymbolicEmbedder>(F, Vocabulary);
   }
-  llvm_unreachable("Unknown IR2Vec kind");
   return nullptr;
 }
 

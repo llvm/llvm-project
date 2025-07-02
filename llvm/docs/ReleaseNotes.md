@@ -304,6 +304,7 @@ Changes to LLDB
     stop reason = SIGSEGV: sent by tkill system call (sender pid=649752, uid=2667987)
   ```
 * ELF Cores can now have their siginfo structures inspected using `thread siginfo`.
+* LLDB now supports the `DWARF64` debugging information format.
 
 ### Changes to lldb-dap
 

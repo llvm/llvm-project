@@ -3665,4 +3665,22 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
+//===----------------------------------------------------------------------===//
+// Test assembly format references
+//===----------------------------------------------------------------------===//
+
+def TestOpWithRegionRef : TEST_Op<"dummy_op_with_region_ref", [NoTerminator]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = [{
+    $body attr-dict custom<DummyRegionRef>(ref($body))
+  }];
+}
+
+def TestOpWithSuccessorRef : TEST_Op<"dummy_op_with_successor_ref"> {
+  let successors = (successor AnySuccessor:$successor);
+  let assemblyFormat = [{
+    $successor attr-dict custom<DummySuccessorRef>(ref($successor))
+  }];
+}
+
 #endif // TEST_OPS

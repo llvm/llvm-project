@@ -846,7 +846,7 @@ defm V_CMP_T_U32 : VOPC_I32 <"v_cmp_t_u32">;
 defm V_CMPX_F_U32 : VOPCX_I32 <"v_cmpx_f_u32">;
 defm V_CMPX_LT_U32 : VOPCX_I32 <"v_cmpx_lt_u32", "v_cmpx_gt_u32">;
 defm V_CMPX_EQ_U32 : VOPCX_I32 <"v_cmpx_eq_u32">;
-defm V_CMPX_LE_U32 : VOPCX_I32 <"v_cmpx_le_u32", "v_cmpx_le_u32">;
+defm V_CMPX_LE_U32 : VOPCX_I32 <"v_cmpx_le_u32", "v_cmpx_ge_u32">;
 defm V_CMPX_GT_U32 : VOPCX_I32 <"v_cmpx_gt_u32">;
 defm V_CMPX_NE_U32 : VOPCX_I32 <"v_cmpx_ne_u32">;
 defm V_CMPX_GE_U32 : VOPCX_I32 <"v_cmpx_ge_u32">;

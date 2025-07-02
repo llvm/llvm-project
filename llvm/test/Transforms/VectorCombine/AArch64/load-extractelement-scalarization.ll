@@ -15,8 +15,7 @@ define i32 @load_extract_idx_0(ptr %x) {
 
 define i32 @vscale_load_extract_idx_0(ptr %x) {
 ; CHECK-LABEL: @vscale_load_extract_idx_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[X:%.*]], i32 0, i32 0
-; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %lv = load <vscale x 4 x i32>, ptr %x

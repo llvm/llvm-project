@@ -1990,9 +1990,9 @@ defm FSetNE : FSET_FORMAT<setne, CmpNE, CmpNE_FTZ>;
 defm FSetNUM : FSET_FORMAT<seto, CmpNUM, CmpNUM_FTZ>;
 defm FSetNAN : FSET_FORMAT<setuo, CmpNAN, CmpNAN_FTZ>;
 
-def SDTDeclareParamProfile :
+def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
-def SDTDeclareScalarParamProfile :
+def SDTDeclareScalarParam :
   SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 def SDTLoadParamProfile : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDTLoadParamV2Profile : SDTypeProfile<2, 2, [SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisInt<3>]>;
@@ -2001,22 +2001,17 @@ def SDTStoreParamProfile : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV2Profile : SDTypeProfile<0, 4, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTStoreParamV4Profile : SDTypeProfile<0, 6, [SDTCisInt<0>, SDTCisInt<1>]>;
 def SDTMoveParamProfile : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
-def SDTProxyRegProfile : SDTypeProfile<1, 1, []>;
 
-def DeclareParam :
-  SDNode<"NVPTXISD::DeclareParam", SDTDeclareParamProfile,
+def SDTProxyReg : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
+
+
+def declare_array_param :
+  SDNode<"NVPTXISD::DeclareArrayParam", SDTDeclareArrayParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def DeclareScalarParam :
-  SDNode<"NVPTXISD::DeclareScalarParam", SDTDeclareScalarParamProfile,
+def declare_scalar_param :
+  SDNode<"NVPTXISD::DeclareScalarParam", SDTDeclareScalarParam,
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def DeclareRetParam :
-  SDNode<"NVPTXISD::DeclareRetParam",
-         SDTypeProfile<0, 2, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
-def DeclareRet :
-  SDNode<"NVPTXISD::DeclareRet",
-         SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+
 def LoadParam :
   SDNode<"NVPTXISD::LoadParam", SDTLoadParamProfile,
          [SDNPHasChain, SDNPMayLoad, SDNPOutGlue, SDNPInGlue]>;
@@ -2037,9 +2032,8 @@ def StoreParamV4 :
          [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
 def MoveParam :
   SDNode<"NVPTXISD::MoveParam", SDTMoveParamProfile, []>;
-def ProxyReg :
-  SDNode<"NVPTXISD::ProxyReg", SDTProxyRegProfile,
-         [SDNPHasChain, SDNPOutGlue, SDNPInGlue, SDNPSideEffect]>;
+def proxy_reg :
+  SDNode<"NVPTXISD::ProxyReg", SDTProxyReg, [SDNPHasChain]>;
 
   /// CALL(Chain, IsConvergent, IsIndirectCall/IsUniform, NumReturns,
   ///      NumParams, Callee, Proto, InGlue)
@@ -2188,23 +2182,17 @@ defm StoreParamV2F64  : StoreParamV2Inst<B64, f64imm, ".b64">;
 
 defm StoreParamV4F32  : StoreParamV4Inst<B32, f32imm, ".b32">;
 
-def DeclareRetMemInst :
-  NVPTXInst<(outs), (ins i32imm:$align, i32imm:$size),
-            ".param .align $align .b8 retval0[$size];",
-            [(DeclareRetParam imm:$align, imm:$size)]>;
-def DeclareRetScalarInst :
-  NVPTXInst<(outs), (ins i32imm:$size),
-            ".param .b$size retval0;",
-            [(DeclareRet imm:$size)]>;
-
-def DeclareParamInst :
-  NVPTXInst<(outs), (ins i32imm:$align, i32imm:$a, i32imm:$size),
-            ".param .align $align .b8 param$a[$size];",
-            [(DeclareParam imm:$align, imm:$a, imm:$size)]>;
-def DeclareScalarParamInst :
+def DECLARE_PARAM_array :
+  NVPTXInst<(outs), (ins i32imm:$a, i32imm:$align, i32imm:$size),
+            ".param .align $align .b8 \t$a[$size];", []>;
+def DECLARE_PARAM_scalar :
   NVPTXInst<(outs), (ins i32imm:$a, i32imm:$size),
-            ".param .b$size param$a;",
-            [(DeclareScalarParam imm:$a, imm:$size)]>;
+            ".param .b$size \t$a;", []>;
+
+def : Pat<(declare_array_param externalsym:$a, imm:$align, imm:$size),
+          (DECLARE_PARAM_array (to_texternsym $a), imm:$align, imm:$size)>;
+def : Pat<(declare_scalar_param externalsym:$a, imm:$size),
+          (DECLARE_PARAM_scalar (to_texternsym $a), imm:$size)>;
 
 foreach t = [I32RT, I64RT] in {
   defvar inst_name = "MOV" # t.Size # "_PARAM";
@@ -2217,7 +2205,7 @@ multiclass ProxyRegInst<string SzStr, NVPTXRegClass rc> {
   def NAME : BasicNVPTXInst<(outs rc:$dst), (ins rc:$src),
                  "mov." # SzStr>;
   foreach vt = rc.RegTypes in
-    def : Pat<(vt (ProxyReg vt:$src)), (!cast<NVPTXInst>(NAME) $src)>;
+    def : Pat<(vt (proxy_reg vt:$src)), (!cast<NVPTXInst>(NAME) $src)>;
 }
 
 defm ProxyRegB1  : ProxyRegInst<"pred", B1>;

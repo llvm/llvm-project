@@ -476,8 +476,10 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
     LLVM_DEBUG(dbgs() << "Beginning BR iteration #" << NoBRIters << '\n');
     bool BRChange = false;
-    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i)
+    for (unsigned i = 0, e = ImmBranches.size(); i != e; ++i) {
+      // Note: fixupImmediateBr can append to ImmBranches.
       BRChange |= fixupImmediateBr(ImmBranches[i]);
+    }
     if (BRChange && ++NoBRIters > 30)
       report_fatal_error("Branch Fix Up pass failed to converge!");
     LLVM_DEBUG(dumpBBs());

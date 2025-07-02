@@ -354,6 +354,20 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   let gdsValue = 1;
 }
 
+class DS_1A_Off16_NORET <string opName>
+: DS_Pseudo<opName,
+  (outs),
+  (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
+  " $addr$offset$gds"> {
+
+  let has_vdst = 0;
+  let has_offset = 1;
+  let has_data0 = 0;
+  let has_data1 = 0;
+  let has_m0_read = 0;
+  let IsAtomicNoRet = 1;
+}
+
 class DS_0A_RET <string opName> : DS_Pseudo<opName,
   (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst),
   (ins Offset:$offset, gds:$gds),
@@ -793,6 +807,24 @@ defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VReg_96>;
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VReg_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VReg_128>;
 } // End WaveSizePredicate = isWave32, mayStore = 0
+
+let OtherPredicates = [HasLdsBarrierArriveAtomic] in {
+let ASYNC_CNT = 1, LGKM_CNT = 0, Uses = [EXEC, ASYNCcnt], Defs = [ASYNCcnt] in {
+def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barrier_arrive_b64">;
+}
+
+def : GCNPat <
+  (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
+  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPR_32:$ptr, Offset:$offset, (i1 0))
+>;
+
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VReg_64>;
+
+def : GCNPat<
+  (i64 (int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 (DS1Addr1Offset i32:$ptr, i32:$offset), i64:$data)),
+  (DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 $ptr, $data, Offset:$offset, (i1 0))
+>;
+} // End OtherPredicates = [HasLdsBarrierArriveAtomic]
 
 } // End SubtargetPredicate = isGFX1250Plus
 
@@ -1326,14 +1358,14 @@ class Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<8> op, DS_Pseudo ps, int ef,
 // GFX12.
 //===----------------------------------------------------------------------===//
 
-multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME), bit needAlias = true> {
+multiclass DS_Real_gfx12<bits<8> op, string name = !tolower(NAME)> {
   defvar ps = !cast<DS_Pseudo>(NAME);
   let AssemblerPredicate = isGFX12Plus in {
     let DecoderNamespace = "GFX12" in
       def _gfx12 :
         Base_DS_Real_gfx6_gfx7_gfx10_gfx11_gfx12<op, ps, SIEncodingFamily.GFX12,
                                                name, /*hasGDS=*/false>;
-    if !and(needAlias, !ne(ps.Mnemonic, name)) then
+    if !ne(ps.Mnemonic, name) then
       def : AMDGPUMnemonicAlias<ps.Mnemonic, name>;
   } // End AssemblerPredicate
 }
@@ -1362,9 +1394,14 @@ defm DS_LOAD_TR16_B128    : DS_Real_gfx12<0x0fc>;
 defm DS_LOAD_TR8_B64      : DS_Real_gfx12<0x0fd>;
 
 defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
-  "ds_bvh_stack_push4_pop1_rtn_b32", true>;
+  "ds_bvh_stack_push4_pop1_rtn_b32">;
 defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
 defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
+
+let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
+defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12<0x056>;
+defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64   : DS_Real_gfx12<0x075>;
+}
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {

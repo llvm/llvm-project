@@ -999,6 +999,8 @@ def note_module_odr_violation_mismatch_decl_unknown : Note<
   "different friend declaration|different function template|different method|"
   "different instance variable|different property|another unexpected decl}2">;
 
+def err_struct_too_large : Error<
+  "structure '%0' is too large, which exceeds maximum allowed size of %1 bytes">;
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
     "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,

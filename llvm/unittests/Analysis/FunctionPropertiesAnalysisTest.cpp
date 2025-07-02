@@ -69,12 +69,12 @@ private:
         "labelTy",    "tokenTy",  "metadataTy", "unknownTy",     "function",
         "pointer",    "constant", "variable",   "getelementptr", "invoke",
         "landingpad", "resume",   "catch",      "cleanup"};
-    float EmbVal = 0.1;
+    float EmbVal = 0.1f;
 
     // Helper lambda to add entries to the vocabulary
     auto addEntry = [&](std::string key) {
       Vocabulary[key] = ir2vec::Embedding(Dim, EmbVal);
-      EmbVal += 0.1;
+      EmbVal += 0.1f;
     };
 
     for (auto &Name : SampleEntities)
@@ -129,7 +129,7 @@ protected:
   std::unique_ptr<ir2vec::Embedder> createEmbedder(const Function &F) {
     auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, Vocabulary);
     EXPECT_TRUE(static_cast<bool>(Emb));
-    return std::move(Emb);
+    return Emb;
   }
 };
 

@@ -121,7 +121,7 @@ define ptx_kernel void @grid_const_struct(ptr byval(%struct.s) align 4 %input, p
 define ptx_kernel void @grid_const_escape(ptr byval(%struct.s) align 4 %input) {
 ; PTX-LABEL: grid_const_escape(
 ; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<3>;
+; PTX-NEXT:    .reg .b32 %r<2>;
 ; PTX-NEXT:    .reg .b64 %rd<4>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
@@ -153,7 +153,7 @@ define ptx_kernel void @multiple_grid_const_escape(ptr byval(%struct.s) align 4 
 ; PTX-NEXT:    .local .align 4 .b8 __local_depot4[4];
 ; PTX-NEXT:    .reg .b64 %SP;
 ; PTX-NEXT:    .reg .b64 %SPL;
-; PTX-NEXT:    .reg .b32 %r<4>;
+; PTX-NEXT:    .reg .b32 %r<3>;
 ; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
@@ -255,7 +255,7 @@ define ptx_kernel void @grid_const_inlineasm_escape(ptr byval(%struct.s) align 4
 define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %output) {
 ; PTX-LABEL: grid_const_partial_escape(
 ; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<5>;
+; PTX-NEXT:    .reg .b32 %r<4>;
 ; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
@@ -295,7 +295,7 @@ define ptx_kernel void @grid_const_partial_escape(ptr byval(i32) %input, ptr %ou
 define ptx_kernel i32 @grid_const_partial_escapemem(ptr byval(%struct.s) %input, ptr %output) {
 ; PTX-LABEL: grid_const_partial_escapemem(
 ; PTX:       {
-; PTX-NEXT:    .reg .b32 %r<6>;
+; PTX-NEXT:    .reg .b32 %r<5>;
 ; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:

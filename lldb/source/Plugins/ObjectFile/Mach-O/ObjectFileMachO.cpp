@@ -184,46 +184,32 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
 
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       if (flavor == 0)
-        done = true;
-      else {
-        uint32_t i;
-        uint32_t count = data.GetU32(&offset);
-        switch (flavor) {
-        case GPRRegSet:
-          for (i = 0; i < count; ++i)
-            (&gpr.rax)[i] = data.GetU64(&offset);
-          SetError(GPRRegSet, Read, 0);
-          done = true;
-
-          break;
-        case FPURegSet:
-          // TODO: fill in FPU regs....
-          // SetError (FPURegSet, Read, -1);
-          done = true;
-
-          break;
-        case EXCRegSet:
-          exc.trapno = data.GetU32(&offset);
-          exc.err = data.GetU32(&offset);
-          exc.faultvaddr = data.GetU64(&offset);
-          SetError(EXCRegSet, Read, 0);
-          done = true;
-          break;
-        case 7:
-        case 8:
-        case 9:
-          // fancy flavors that encapsulate of the above flavors...
-          break;
-
-        default:
-          done = true;
-          break;
-        }
+        break;
+      uint32_t count = data.GetU32(&offset);
+      switch (flavor) {
+      case GPRRegSet: {
+        uint32_t *gpr_data = reinterpret_cast<uint32_t *>(&gpr.rax);
+        for (uint32_t i = 0; i < count && offset < data.GetByteSize(); ++i)
+          gpr_data[i] = data.GetU32(&offset);
+        SetError(GPRRegSet, Read, 0);
+      } break;
+      case FPURegSet:
+        // TODO: fill in FPU regs....
+        SetError(FPURegSet, Read, -1);
+        break;
+      case EXCRegSet:
+        exc.trapno = data.GetU32(&offset);
+        exc.err = data.GetU32(&offset);
+        exc.faultvaddr = data.GetU64(&offset);
+        SetError(EXCRegSet, Read, 0);
+        break;
+      default:
+        offset += count * 4;
+        break;
       }
     }
   }
@@ -353,11 +339,11 @@ public:
   }
 
 protected:
-  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return 0; }
+  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return -1; }
 
-  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return 0; }
+  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return -1; }
 
-  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return 0; }
+  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return -1; }
 
   int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
     return 0;

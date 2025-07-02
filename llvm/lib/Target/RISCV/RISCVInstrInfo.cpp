@@ -513,26 +513,24 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  Register SrcReg, bool KillSrc,
                                  bool RenamableDest, bool RenamableSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
+  unsigned KillFlag = getKillRegState(KillSrc);
 
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
-        .addReg(SrcReg,
-                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc))
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
         .addImm(0);
     return;
   }
 
   if (RISCV::GPRF16RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR16INX), DstReg)
-        .addReg(SrcReg,
-                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
     return;
   }
 
   if (RISCV::GPRF32RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::PseudoMV_FPR32INX), DstReg)
-        .addReg(SrcReg,
-                getKillRegState(KillSrc) | getRenamableRegState(RenamableSrc));
+        .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
     return;
   }
 
@@ -547,11 +545,11 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     // Emit an ADDI for both parts of GPRPair.
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
             TRI->getSubReg(DstReg, RISCV::sub_gpr_even))
-        .addReg(EvenReg, getKillRegState(KillSrc))
+        .addReg(EvenReg, KillFlag)
         .addImm(0);
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
             TRI->getSubReg(DstReg, RISCV::sub_gpr_odd))
-        .addReg(OddReg, getKillRegState(KillSrc))
+        .addReg(OddReg, KillFlag)
         .addImm(0);
     return;
   }
@@ -581,36 +579,36 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = RISCV::FSGNJ_S;
     }
     BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_S), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag)
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::FPR32RegClass.contains(DstReg) &&
       RISCV::GPRRegClass.contains(SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
   if (RISCV::GPRRegClass.contains(DstReg) &&
       RISCV::FPR32RegClass.contains(SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
@@ -618,7 +616,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       RISCV::GPRRegClass.contains(SrcReg)) {
     assert(STI.getXLen() == 64 && "Unexpected GPR size");
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 
@@ -626,7 +624,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       RISCV::FPR64RegClass.contains(SrcReg)) {
     assert(STI.getXLen() == 64 && "Unexpected GPR size");
     BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, KillFlag);
     return;
   }
 

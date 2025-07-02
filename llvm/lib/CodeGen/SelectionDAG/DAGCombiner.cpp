@@ -16714,28 +16714,25 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       Op = DAG.getFreeze(Op);
   }
 
-  SDValue R;
-  if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N0)) {
-    // Special case handling for ShuffleVectorSDNode nodes.
-    R = DAG.getVectorShuffle(N0.getValueType(), SDLoc(N0), Ops[0], Ops[1],
-                             SVN->getMask());
-  } else {
-    // NOTE: this strips poison generating flags.
-    // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
-    // ninf, nsz, or fast.
-    // However, contract, reassoc, afn, and arcp should be preserved,
-    // as these fast-math flags do not introduce poison values.
-    SDNodeFlags SrcFlags = N0->getFlags();
-    SDNodeFlags SafeFlags;
-    SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
-    SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
-    SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
-    SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
-    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops, SafeFlags);
-  }
-  assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
-         "Can't create node that may be undef/poison!");
-  return R;
+  SDLoc DL(N0);
+
+  // Special case handling for ShuffleVectorSDNode nodes.
+  if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N0))
+    return DAG.getVectorShuffle(N0.getValueType(), DL, Ops[0], Ops[1],
+                                SVN->getMask());
+
+  // NOTE: this strips poison generating flags.
+  // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
+  // ninf, nsz, or fast.
+  // However, contract, reassoc, afn, and arcp should be preserved,
+  // as these fast-math flags do not introduce poison values.
+  SDNodeFlags SrcFlags = N0->getFlags();
+  SDNodeFlags SafeFlags;
+  SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
+  SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
+  SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
+  SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
+  return DAG.getNode(N0.getOpcode(), DL, N0->getVTList(), Ops, SafeFlags);
 }
 
 /// We know that BV is a build_vector node with Constant, ConstantFP or Undef
@@ -18090,8 +18087,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // FIXME: use fast math flags instead of Options.UnsafeFPMath
   // TODO: Finally migrate away from global TargetOptions.
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-      (Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
+  if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
     if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {

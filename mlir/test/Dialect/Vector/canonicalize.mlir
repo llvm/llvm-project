@@ -3075,6 +3075,33 @@ func.func @from_elements_to_elements_shuffle(%a: vector<4x2xf32>) -> vector<4x2x
 
 // -----
 
+// CHECK-LABEL: func @from_elements_all_elements_constant(
+func.func @from_elements_all_elements_constant() -> vector<2x2xi32> {
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %c3_i32 = arith.constant 3 : i32
+  // CHECK: %[[RES:.*]] = arith.constant dense<{{\[\[0, 1\], \[2, 3\]\]}}> : vector<2x2xi32>
+  %res = vector.from_elements %c0_i32, %c1_i32, %c2_i32, %c3_i32 : vector<2x2xi32>
+  // CHECK: return %[[RES]]
+  return %res : vector<2x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @from_elements_partial_elements_constant(
+// CHECK-SAME:     %[[A:.*]]: f32
+func.func @from_elements_partial_elements_constant(%arg0: f32) -> vector<2xf32> {
+  // CHECK: %[[C:.*]] = arith.constant 1.000000e+00 : f32
+  %c = arith.constant 1.0 : f32
+  // CHECK: %[[RES:.*]] = vector.from_elements %[[A]], %[[C]] : vector<2xf32>
+  %res = vector.from_elements %arg0, %c : vector<2xf32>
+  // CHECK: return %[[RES]]
+  return %res : vector<2xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @vector_insert_const_regression(
 //       CHECK:   llvm.mlir.undef
 //       CHECK:   vector.insert

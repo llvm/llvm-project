@@ -847,7 +847,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
     return false;
   RF.setInst(Relaxed);
   RF.setContents(Code);
-  RF.getFixups() = Fixups;
+  RF.setFixups(Fixups);
   RemainingSize -= Delta;
   return true;
 }

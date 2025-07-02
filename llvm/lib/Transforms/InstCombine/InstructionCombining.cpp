@@ -1989,7 +1989,114 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   return replaceInstUsesWith(I, NewPN);
 }
 
+Instruction *InstCombinerImpl::foldBinopWithRecurrence(BinaryOperator &BO) {
+  if (!BO.isAssociative())
+    return nullptr;
+
+  // Find the interleaved binary ops.
+  auto Opc = BO.getOpcode();
+  auto *BO0 = dyn_cast<BinaryOperator>(BO.getOperand(0));
+  auto *BO1 = dyn_cast<BinaryOperator>(BO.getOperand(1));
+  if (!BO0 || !BO1 || !BO0->hasNUses(2) || !BO1->hasNUses(2) ||
+      BO0->getOpcode() != Opc || BO1->getOpcode() != Opc ||
+      !BO0->isAssociative() || !BO1->isAssociative() ||
+      BO0->getParent() != BO1->getParent())
+    return nullptr;
+
+  assert(BO.isCommutative() && BO0->isCommutative() && BO1->isCommutative() &&
+         "Expected commutative instructions!");
+
+  // Find the matching phis, forming the recurrences.
+  PHINode *PN0, *PN1;
+  Value *Start0, *Step0, *Start1, *Step1;
+  if (!matchSimpleRecurrence(BO0, PN0, Start0, Step0) || !PN0->hasOneUse() ||
+      !matchSimpleRecurrence(BO1, PN1, Start1, Step1) || !PN1->hasOneUse() ||
+      PN0->getParent() != PN1->getParent())
+    return nullptr;
+
+  assert(PN0->getNumIncomingValues() == 2 && PN1->getNumIncomingValues() == 2 &&
+         "Expected PHIs with two incoming values!");
+
+  // Convert the start and step values to constants.
+  auto *Init0 = dyn_cast<Constant>(Start0);
+  auto *Init1 = dyn_cast<Constant>(Start1);
+  auto *C0 = dyn_cast<Constant>(Step0);
+  auto *C1 = dyn_cast<Constant>(Step1);
+  if (!Init0 || !Init1 || !C0 || !C1)
+    return nullptr;
+
+  // Fold the recurrence constants.
+  auto *Init = ConstantFoldBinaryInstruction(Opc, Init0, Init1);
+  auto *C = ConstantFoldBinaryInstruction(Opc, C0, C1);
+  if (!Init || !C)
+    return nullptr;
+
+  // Create the reduced PHI.
+  auto *NewPN = PHINode::Create(PN0->getType(), PN0->getNumIncomingValues(),
+                                "reduced.phi");
+
+  // Create the new binary op.
+  auto *NewBO = BinaryOperator::Create(Opc, NewPN, C);
+  if (Opc == Instruction::FAdd || Opc == Instruction::FMul) {
+    // Intersect FMF flags for FADD and FMUL.
+    FastMathFlags Intersect = BO0->getFastMathFlags() &
+                              BO1->getFastMathFlags() & BO.getFastMathFlags();
+    NewBO->setFastMathFlags(Intersect);
+  } else {
+    OverflowTracking Flags;
+    Flags.AllKnownNonNegative = false;
+    Flags.AllKnownNonZero = false;
+    Flags.mergeFlags(*BO0);
+    Flags.mergeFlags(*BO1);
+    Flags.mergeFlags(BO);
+    Flags.applyFlags(*NewBO);
+  }
+  NewBO->takeName(&BO);
+
+  for (unsigned I = 0, E = PN0->getNumIncomingValues(); I != E; ++I) {
+    auto *V = PN0->getIncomingValue(I);
+    auto *BB = PN0->getIncomingBlock(I);
+    if (V == Init0) {
+      assert(((PN1->getIncomingValue(0) == Init1 &&
+               PN1->getIncomingBlock(0) == BB) ||
+              (PN1->getIncomingValue(1) == Init1 &&
+               PN1->getIncomingBlock(1) == BB)) &&
+             "Invalid incoming block!");
+      NewPN->addIncoming(Init, BB);
+    } else if (V == BO0) {
+      assert(((PN1->getIncomingValue(0) == BO1 &&
+               PN1->getIncomingBlock(0) == BB) ||
+              (PN1->getIncomingValue(1) == BO1 &&
+               PN1->getIncomingBlock(1) == BB)) &&
+             "Invalid incoming block!");
+      NewPN->addIncoming(NewBO, BB);
+    } else
+      llvm_unreachable("Unexpected incoming value!");
+  }
+
+  LLVM_DEBUG(dbgs() << "  Combined " << *PN0 << "\n           " << *BO0
+                    << "\n      with " << *PN1 << "\n           " << *BO1
+                    << '\n');
+
+  // Insert the new recurrence and remove the old (dead) ones.
+  InsertNewInstWith(NewPN, PN0->getIterator());
+  InsertNewInstWith(NewBO, BO0->getIterator());
+
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*BO0, PoisonValue::get(BO0->getType())));
+  eraseInstFromFunction(
+      *replaceInstUsesWith(*BO1, PoisonValue::get(BO1->getType())));
+  eraseInstFromFunction(*PN0);
+  eraseInstFromFunction(*PN1);
+
+  return replaceInstUsesWith(BO, NewBO);
+}
+
 Instruction *InstCombinerImpl::foldBinopWithPhiOperands(BinaryOperator &BO) {
+  // Attempt to fold binary operators whose operands are simple recurrences.
+  if (auto *NewBO = foldBinopWithRecurrence(BO))
+    return NewBO;
+
   // TODO: This should be similar to the incoming values check in foldOpIntoPhi:
   //       we are guarding against replicating the binop in >1 predecessor.
   //       This could miss matching a phi with 2 constant incoming values.

@@ -65,6 +65,10 @@ public:
   static void build(OpBuilder &builder, OperationState &result, Type type,
                     int64_t value);
 
+  /// Build a constant int op that produces an integer from an APInt
+  static void build(OpBuilder &builder, OperationState &result, Type type,
+                    const APInt &value);
+
   inline int64_t value() {
     return cast<IntegerAttr>(arith::ConstantOp::getValue()).getInt();
   }

@@ -1456,6 +1456,43 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
   return new ShuffleVectorInst(NewIntrinsic, Mask);
 }
 
+/// If all arguments of the intrinsic are reverses, try to pull the reverse
+/// after the intrinsic.
+Value *InstCombinerImpl::foldReversedIntrinsicOperands(IntrinsicInst *II) {
+  if (!isTriviallyVectorizable(II->getIntrinsicID()))
+    return nullptr;
+
+  // At least 1 operand must be a reverse with 1 use because we are creating 2
+  // instructions.
+  if (none_of(II->args(), [](Value *V) {
+        return match(V, m_OneUse(m_VecReverse(m_Value())));
+      }))
+    return nullptr;
+
+  Value *X;
+  Constant *C;
+  SmallVector<Value *> NewArgs;
+  for (Use &Arg : II->args()) {
+    if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                           Arg.getOperandNo(), nullptr))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg, m_VecReverse(m_Value(X))))
+      NewArgs.push_back(X);
+    else if (isSplatValue(Arg))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg, m_ImmConstant(C)))
+      NewArgs.push_back(Builder.CreateVectorReverse(C));
+    else
+      return nullptr;
+  }
+
+  // intrinsic (reverse X), (reverse Y), ... --> reverse (intrinsic X, Y, ...)
+  Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
+  Instruction *NewIntrinsic = Builder.CreateIntrinsic(
+      II->getType(), II->getIntrinsicID(), NewArgs, FPI);
+  return Builder.CreateVectorReverse(NewIntrinsic);
+}
+
 /// Fold the following cases and accepts bswap and bitreverse intrinsics:
 ///   bswap(logic_op(bswap(x), y)) --> logic_op(x, bswap(y))
 ///   bswap(logic_op(bswap(x), bswap(y))) --> logic_op(x, y) (ignores multiuse)
@@ -3865,6 +3902,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
+
+  if (Value *Reverse = foldReversedIntrinsicOperands(II))
+    return replaceInstUsesWith(*II, Reverse);
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.
