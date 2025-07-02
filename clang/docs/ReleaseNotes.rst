@@ -222,6 +222,7 @@ C Language Changes
 
     char buf1[3] = "foo"; // -Wunterminated-string-initialization
     char buf2[3] = "flarp"; // -Wexcess-initializers
+    char buf3[3] = "fo\0";  // This is fine, no warning.
 
   This diagnostic can be suppressed by adding the new ``nonstring`` attribute
   to the field or variable being initialized. #GH137705
@@ -883,6 +884,7 @@ Bug Fixes to AST Handling
 - Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 - Fixed a malformed printout of certain calling convention function attributes. (#GH143160)
 - Fixed dependency calculation for TypedefTypes (#GH89774)
+- Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
