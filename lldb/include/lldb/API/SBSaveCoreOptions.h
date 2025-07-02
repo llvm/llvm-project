@@ -140,6 +140,14 @@ public:
   ///   The expected size of the data contained in the core in bytes.
   uint64_t GetCurrentSizeInBytes(SBError &error);
 
+  /// Add a flag specific to a plugin provider, null or empty flags
+  /// will be ignored.
+  ///
+  /// \note
+  ///   This API is currently only used for testing, with forcing Minidumps to
+  ///   to 64b memory list the reason this api was added
+  void AddFlag(const char* flag);
+
   /// Reset all options.
   void Clear();
 
