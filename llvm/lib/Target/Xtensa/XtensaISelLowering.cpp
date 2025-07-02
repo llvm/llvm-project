@@ -936,7 +936,7 @@ SDValue XtensaTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(), "only emulated TLS supported",
         DL.getDebugLoc()));
-    return DAG.getUNDEF(Op->getValueType(0));
+    return DAG.getPOISON(Op->getValueType(0));
   }
 
   if (model == TLSModel::LocalExec || model == TLSModel::InitialExec) {
@@ -969,7 +969,7 @@ SDValue XtensaTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       DAG.getMachineFunction().getFunction(),
       "only local-exec and initial-exec TLS mode supported", DL.getDebugLoc()));
 
-  return DAG.getUNDEF(Op->getValueType(0));
+  return DAG.getPOISON(Op->getValueType(0));
 }
 
 SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
