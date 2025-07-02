@@ -19,10 +19,10 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -1093,12 +1093,14 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
     return false;
 
   // TODO: Allow intrinsics with different argument types
-  // TODO: Allow intrinsics with scalar arguments
-  if (II && (!isTriviallyVectorizable(II->getIntrinsicID()) ||
-             !all_of(II->args(), [&II](Value *Arg) {
-               return Arg->getType() == II->getType();
-             })))
-    return false;
+  if (II) {
+    if (!isTriviallyVectorizable(II->getIntrinsicID()))
+      return false;
+    for (auto [Idx, Arg] : enumerate(II->args()))
+      if (Arg->getType() != II->getType() &&
+          !isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(), Idx, &TTI))
+        return false;
+  }
 
   // Do not convert the vector condition of a vector select into a scalar
   // condition. That may cause problems for codegen because of differences in
@@ -1111,19 +1113,18 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   // Match constant vectors or scalars being inserted into constant vectors:
   // vec_op [VecC0 | (inselt VecC0, V0, Index)], ...
-  SmallVector<Constant *> VecCs;
-  SmallVector<Value *> ScalarOps;
+  SmallVector<Value *> VecCs, ScalarOps;
   std::optional<uint64_t> Index;
 
   auto Ops = II ? II->args() : I.operands();
-  for (Value *Op : Ops) {
+  for (auto [OpNum, Op] : enumerate(Ops)) {
     Constant *VecC;
     Value *V;
     uint64_t InsIdx = 0;
-    VectorType *OpTy = cast<VectorType>(Op->getType());
-    if (match(Op, m_InsertElt(m_Constant(VecC), m_Value(V),
-                              m_ConstantInt(InsIdx)))) {
+    if (match(Op.get(), m_InsertElt(m_Constant(VecC), m_Value(V),
+                                    m_ConstantInt(InsIdx)))) {
       // Bail if any inserts are out of bounds.
+      VectorType *OpTy = cast<VectorType>(Op->getType());
       if (OpTy->getElementCount().getKnownMinValue() <= InsIdx)
         return false;
       // All inserts must have the same index.
@@ -1134,7 +1135,11 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
         return false;
       VecCs.push_back(VecC);
       ScalarOps.push_back(V);
-    } else if (match(Op, m_Constant(VecC))) {
+    } else if (II && isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                                        OpNum, &TTI)) {
+      VecCs.push_back(Op.get());
+      ScalarOps.push_back(Op.get());
+    } else if (match(Op.get(), m_Constant(VecC))) {
       VecCs.push_back(VecC);
       ScalarOps.push_back(nullptr);
     } else {
@@ -1178,16 +1183,17 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   // Fold the vector constants in the original vectors into a new base vector to
   // get more accurate cost modelling.
   Value *NewVecC = nullptr;
+  TargetFolder Folder(*DL);
   if (CI)
-    NewVecC = ConstantFoldCompareInstOperands(CI->getPredicate(), VecCs[0],
-                                              VecCs[1], *DL);
+    NewVecC = Folder.FoldCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
   else if (UO)
-    NewVecC = ConstantFoldUnaryOpOperand(Opcode, VecCs[0], *DL);
+    NewVecC =
+        Folder.FoldUnOpFMF(UO->getOpcode(), VecCs[0], UO->getFastMathFlags());
   else if (BO)
-    NewVecC = ConstantFoldBinaryOpOperands(Opcode, VecCs[0], VecCs[1], *DL);
+    NewVecC = Folder.FoldBinOp(BO->getOpcode(), VecCs[0], VecCs[1]);
   else if (II->arg_size() == 2)
-    NewVecC = ConstantFoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
-                                          VecCs[1], II->getType(), II);
+    NewVecC = Folder.FoldBinaryIntrinsic(II->getIntrinsicID(), VecCs[0],
+                                         VecCs[1], II->getType(), &I);
 
   // Get cost estimate for the insert element. This cost will factor into
   // both sequences.
@@ -1195,8 +1201,9 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
   InstructionCost NewCost =
       ScalarOpCost + TTI.getVectorInstrCost(Instruction::InsertElement, VecTy,
                                             CostKind, *Index, NewVecC);
-  for (auto [Op, VecC, Scalar] : zip(Ops, VecCs, ScalarOps)) {
-    if (!Scalar)
+  for (auto [Idx, Op, VecC, Scalar] : enumerate(Ops, VecCs, ScalarOps)) {
+    if (!Scalar || (II && isVectorIntrinsicWithScalarOpAtArg(
+                              II->getIntrinsicID(), Idx, &TTI)))
       continue;
     InstructionCost InsertCost = TTI.getVectorInstrCost(
         Instruction::InsertElement, VecTy, CostKind, *Index, VecC, Scalar);
@@ -1240,16 +1247,12 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
 
   // Create a new base vector if the constant folding failed.
   if (!NewVecC) {
-    SmallVector<Value *> VecCValues;
-    VecCValues.reserve(VecCs.size());
-    append_range(VecCValues, VecCs);
     if (CI)
       NewVecC = Builder.CreateCmp(CI->getPredicate(), VecCs[0], VecCs[1]);
     else if (UO || BO)
-      NewVecC = Builder.CreateNAryOp(Opcode, VecCValues);
+      NewVecC = Builder.CreateNAryOp(Opcode, VecCs);
     else
-      NewVecC =
-          Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), VecCValues);
+      NewVecC = Builder.CreateIntrinsic(VecTy, II->getIntrinsicID(), VecCs);
   }
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);
