@@ -4271,7 +4271,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
-  void checkPermilvarIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+  void maskedCheckAVXIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
     auto IdxVectorSize =
         cast<FixedVectorType>(Idx->getType())->getNumElements();
     assert(isPowerOf2_64(IdxVectorSize));
@@ -4328,7 +4328,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Idx = I.getArgOperand(1);
     Value *BShadow = getShadow(&I, 2);
 
-    checkPermilvarIndexShadow(IRB, Idx, &I);
+    maskedCheckAVXIndexShadow(IRB, Idx, &I);
 
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
