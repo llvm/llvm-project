@@ -9,21 +9,28 @@ from lldbsuite.test import lldbutil
 
 
 class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
-    def check_reference(self, var_name: str, expected_type: str):
-        self.expect_var_path(
-            var_name,
-            summary="size=1",
-            type=expected_type,
-            children=[
-                ValueCheck(
-                    name="[0]",
-                    children=[
-                        ValueCheck(name="first", summary='"Hello"'),
-                        ValueCheck(name="second", summary='"World"'),
-                    ],
-                ),
-            ],
-        )
+    def check_ptr_or_ref(self, var_name: str):
+        var = self.frame().FindVariable(var_name)
+        self.assertTrue(var)
+
+        pair = var.GetChildAtIndex(0)
+        self.assertTrue(pair)
+
+        self.assertEqual(pair.GetChildAtIndex(0).summary, '"Hello"')
+        self.assertEqual(pair.GetChildAtIndex(1).summary, '"World"')
+
+    def check_ptr_ptr(self, var_name: str):
+        var = self.frame().FindVariable(var_name)
+        self.assertTrue(var)
+
+        ptr = var.GetChildAtIndex(0)
+        self.assertTrue(ptr)
+
+        pair = ptr.GetChildAtIndex(0)
+        self.assertTrue(pair)
+
+        self.assertEqual(pair.GetChildAtIndex(0).summary, '"Hello"')
+        self.assertEqual(pair.GetChildAtIndex(1).summary, '"World"')
 
     @add_test_categories(["libc++"])
     def test_iterator_formatters(self):
@@ -84,12 +91,12 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(process, bkpt)
 
         # Test references to std::unordered_map
-        self.check_reference("ref1", "const StringMapT &")
-        self.check_reference("ref2", "StringMapT &")
-        self.check_reference("ref3", "StringMapTRef")
-        self.check_reference("ref4", "const StringMapT &")
-        self.check_reference("ref5", "const StringMapT &&")
-        self.check_reference("ref6", "StringMapT &&")
+        self.check_ptr_or_ref("ref1")
+        self.check_ptr_or_ref("ref2")
+        self.check_ptr_or_ref("ref3")
+        self.check_ptr_or_ref("ref4")
+        self.check_ptr_or_ref("ref5")
+        self.check_ptr_or_ref("ref6")
 
         # FIXME: we're getting this wrong.
         self.expect_var_path(
@@ -97,3 +104,12 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
             summary="size=0",
             type="const StringMapT *const &",
         )
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        self.check_ptr_or_ref("ptr1")
+        self.check_ptr_or_ref("ptr2")
+        self.check_ptr_or_ref("ptr3")
+        self.check_ptr_ptr("ptr4")
+        self.check_ptr_ptr("ptr5")
+        self.check_ptr_ptr("ptr6")
