@@ -415,8 +415,6 @@ void ApplyFlags() {
   SetCanPoisonMemory(flags()->poison_heap);
   SetMallocContextSize(common_flags()->malloc_context_size);
 
-  __sanitizer_set_report_path(common_flags()->log_path);
-
   __asan_option_detect_stack_use_after_return =
       flags()->detect_stack_use_after_return;
 
@@ -461,6 +459,7 @@ static bool AsanInitInternal() {
   SetCheckUnwindCallback(CheckUnwind);
   SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
 
+  __sanitizer_set_report_path(common_flags()->log_path);
   __sanitizer::InitializePlatformEarly();
 
   // Setup internal allocator callback.
