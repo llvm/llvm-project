@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/DWARF/DWARFUnwindTable.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFUnwindTable.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/Support/Errc.h"
