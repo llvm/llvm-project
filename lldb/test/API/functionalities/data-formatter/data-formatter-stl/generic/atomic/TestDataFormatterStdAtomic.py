@@ -16,7 +16,6 @@ class StdAtomicTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    @skipIf(compiler=["gcc"])
     def do_test(self):
         """Test that std::atomic is correctly printed by LLDB"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
@@ -65,11 +64,13 @@ class StdAtomicTestCase(TestBase):
             "frame var p.child.parent", substrs=["p.child.parent = {\n  Value = 0x"]
         )
 
+    @skipIf(compiler=["gcc"])
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP" : 1})
         self.do_test()
 
+    @skipIf(compiler=["gcc"])
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP" : 1})

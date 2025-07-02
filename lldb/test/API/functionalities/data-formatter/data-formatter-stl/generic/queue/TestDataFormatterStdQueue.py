@@ -26,9 +26,6 @@ class TestDataFormatterStdQueue(TestBase):
             self.assertTrue(ch.IsValid())
             self.assertEqual(ch.GetValueAsSigned(), i + 1)
 
-    @expectedFailureAll(
-        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
-    )
     def do_test(self):
         """Test that std::queue is displayed correctly"""
         lldbutil.run_to_source_breakpoint(
@@ -38,11 +35,17 @@ class TestDataFormatterStdQueue(TestBase):
         self.check_variable("q1")
         self.check_variable("q2")
 
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
+    )
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP" : 1})
         self.do_test()
 
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
+    )
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP" : 1})

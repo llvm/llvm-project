@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class StdChronoDataFormatterTestCase(TestBase):
-    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     def do_test(self):
         """Test that that file and class static variables display correctly."""
         isNotWindowsHost = lldbplatformutil.getHostPlatform() != "windows"
@@ -432,11 +431,13 @@ class StdChronoDataFormatterTestCase(TestBase):
             ],
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP" : 1})
         self.do_test()
 
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP" : 1})

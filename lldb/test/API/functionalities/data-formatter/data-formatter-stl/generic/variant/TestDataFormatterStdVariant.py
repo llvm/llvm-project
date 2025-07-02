@@ -10,15 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class StdVariantDataFormatterTestCase(TestBase):
-    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
-    ## with -std=c++17.
-    @skipIf(
-        oslist=no_match(["macosx"]), compiler="clang", compiler_version=["<", "7.0"]
-    )
-    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
-    @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
-    ## std::get is unavailable for std::variant before macOS 10.14
-    @skipIf(macos_version=["<", "10.14"])
     def do_test(self):
         """Test that that file and class static variables display correctly."""
 
@@ -85,11 +76,29 @@ class StdVariantDataFormatterTestCase(TestBase):
             substrs=["v_300_types_no_value =  No Value"],
         )
 
+    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
+    ## with -std=c++17.
+    @skipIf(
+        oslist=no_match(["macosx"]), compiler="clang", compiler_version=["<", "7.0"]
+    )
+    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
+    @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
+    ## std::get is unavailable for std::variant before macOS 10.14
+    @skipIf(macos_version=["<", "10.14"])
     @add_test_categories(["libc++"])
     def test_libcxx(self):
         self.build(dictionary={"USE_LIBCPP" : 1})
         self.do_test()
 
+    ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
+    ## with -std=c++17.
+    @skipIf(
+        oslist=no_match(["macosx"]), compiler="clang", compiler_version=["<", "7.0"]
+    )
+    ## We are skipping gcc version less that 5.1 since this test requires -std=c++17
+    @skipIf(compiler="gcc", compiler_version=["<", "5.1"])
+    ## std::get is unavailable for std::variant before macOS 10.14
+    @skipIf(macos_version=["<", "10.14"])
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP" : 1})
