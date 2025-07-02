@@ -630,7 +630,8 @@ public:
   /// \}
 
   TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
-                                       Target &target,
+                                       Target &target, bool repl,
+                                       bool playground,
                                        const char *extra_options);
 
   static TypeSystemSwiftTypeRefForExpressionsSP GetForTarget(Target &target);
@@ -642,7 +643,10 @@ public:
   GetSwiftASTContextOrNull(const SymbolContext &sc) const override;
   /// This API needs to be called for a REPL or Playground before the first call
   /// to GetSwiftASTContext is being made.
-  void SetCompilerOptions(const char *compiler_options) {
+  void SetCompilerOptions(bool repl, bool playground,
+                         const char *compiler_options) {
+    m_repl = repl;
+    m_playground = playground;
     m_compiler_options = compiler_options;
   }
   lldb::TargetWP GetTargetWP() const override { return m_target_wp; }
@@ -673,6 +677,8 @@ public:
 protected:
   lldb::TargetWP m_target_wp;
   unsigned m_generation = 0;
+  bool m_repl = false;
+  bool m_playground = false;
   const char *m_compiler_options = nullptr;
 
   /// This exists to implement the PerformCompileUnitImports

@@ -1,12 +1,14 @@
 EXE = PlaygroundStub
 SWIFT_SOURCES = PlaygroundStub.swift
+# The real playground stub has no debug info and is written in C.
+SWIFTFLAGS_EXTRAS = -gnone
 
 # The deployment target we set is pre-ABI stability. The Swift driver will not
 # point the RPATH at the system library. Do it manually.
 LD_EXTRAS := -Xlinker -rpath -Xlinker /usr/lib/swift
-LD_EXTRAS += -L. -lPlaygroundsRuntime
+LD_EXTRAS += -L. -lPlaygroundsRuntime -F. -framework AuxSources
 
-PlaygroundStub: libPlaygroundsRuntime.dylib Dylib.framework
+PlaygroundStub: libPlaygroundsRuntime.dylib Dylib.framework AuxSources.framework
 
 include Makefile.rules
 
@@ -21,3 +23,10 @@ Dylib.framework: Dylib.swift
 		DYLIB_SWIFT_SOURCES=Dylib.swift \
 		DYLIB_NAME=Dylib \
 		SWIFTFLAGS_EXTRAS="-Xcc -DNEW_OPTION_FROM_DYLIB=1"
+
+AuxSources.framework: AuxSources.swift
+	"$(MAKE)" -f $(MAKEFILE_RULES) \
+		FRAMEWORK=AuxSources \
+		DYLIB_SWIFT_SOURCES=AuxSources.swift \
+		DYLIB_NAME=AuxSources \
+		SWIFTFLAGS_EXTRAS="-Xcc -DHAVE_AUXSOURCES=1"

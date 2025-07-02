@@ -805,7 +805,9 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                  "unknown error");
   // Notify SwiftASTContext that this is a Playground.
   if (m_options.GetPlaygroundTransformEnabled())
-    m_swift_scratch_ctx->SetCompilerOptions("");
+    m_swift_scratch_ctx->SetCompilerOptions(
+        m_options.GetREPLEnabled(), m_options.GetPlaygroundTransformEnabled(),
+        "");
 
   // For playgrounds, the target triple should be used for expression
   // evaluation, not the current module. This requires disabling precise

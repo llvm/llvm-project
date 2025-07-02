@@ -302,7 +302,8 @@ Status SwiftREPL::DoInitialization() {
     return Status::FromError(type_system_or_err.takeError());
   std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
       *type_system_or_err)
-      ->SetCompilerOptions(m_compiler_options.c_str());
+      ->SetCompilerOptions(/*repl=*/true, /*playgrounds=*/false,
+                           m_compiler_options.c_str());
 
   std::string format_str = "${ansi.negative}Swift " +
                            swift::version::getCompilerVersion() +
