@@ -2025,12 +2025,6 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
-  if (V.isDenormal())
-    return APFloat::getZero(V.getSemantics(), V.isNegative());
-  return V;
-}
-
 // Get only the upper word of the input double in 1.11.20 format
 // by making the lower 32-bits of the mantissa all 0.
 static const APFloat ZeroLower32Bits(const APFloat &V) {
@@ -2040,10 +2034,44 @@ static const APFloat ZeroLower32Bits(const APFloat &V) {
   return APFloat(V.getSemantics(), APInt(64, DoubleBits, false, false));
 }
 
+static const APFloat FTZPreserveSign(const APFloat &V) {
+  if (V.isDenormal())
+    return APFloat::getZero(V.getSemantics(), V.isNegative());
+  return V;
+}
+
+static const APFloat FlushToPositiveZero(const APFloat &V) {
+  if (V.isDenormal())
+    return APFloat::getZero(V.getSemantics(), false);
+  return V;
+}
+
+static const APFloat
+FlushWithDenormKind(const APFloat &V,
+                    DenormalMode::DenormalModeKind DenormKind) {
+  assert(DenormKind != DenormalMode::DenormalModeKind::Invalid &&
+         DenormKind != DenormalMode::DenormalModeKind::Dynamic);
+  switch (DenormKind) {
+  case DenormalMode::DenormalModeKind::IEEE:
+    return V;
+  case DenormalMode::DenormalModeKind::PreserveSign:
+    return FTZPreserveSign(V);
+  case DenormalMode::DenormalModeKind::PositiveZero:
+    return FlushToPositiveZero(V);
+  default:
+    llvm_unreachable("Invalid denormal mode!");
+  }
+}
+
 Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
-                         bool ShouldFTZPreservingSign = false) {
+                         DenormalMode DenormMode = DenormalMode::getIEEE()) {
+  if (!DenormMode.isValid() ||
+      DenormMode.Input == DenormalMode::DenormalModeKind::Dynamic ||
+      DenormMode.Output == DenormalMode::DenormalModeKind::Dynamic)
+    return nullptr;
+
   llvm_fenv_clearexcept();
-  auto Input = ShouldFTZPreservingSign ? FTZPreserveSign(V) : V;
+  auto Input = FlushWithDenormKind(V, DenormMode.Input);
   double Result = NativeFP(Input.convertToDouble());
   if (llvm_fenv_testexcept()) {
     llvm_fenv_clearexcept();
@@ -2051,12 +2079,11 @@ Constant *ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
   }
 
   Constant *Output = GetConstantFoldFPValue(Result, Ty);
-  if (ShouldFTZPreservingSign) {
-    const auto *CFP = static_cast<ConstantFP *>(Output);
-    return ConstantFP::get(Ty->getContext(),
-                           FTZPreserveSign(CFP->getValueAPF()));
-  }
-  return Output;
+  if (DenormMode.Output == DenormalMode::DenormalModeKind::IEEE)
+    return Output;
+  const auto *CFP = static_cast<ConstantFP *>(Output);
+  const auto Res = FlushWithDenormKind(CFP->getValueAPF(), DenormMode.Output);
+  return ConstantFP::get(Ty->getContext(), Res);
 }
 
 #if defined(HAS_IEE754_FLOAT128) && defined(HAS_LOGF128)
@@ -2642,38 +2669,48 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_ceil_ftz_f:
       case Intrinsic::nvvm_ceil_f:
       case Intrinsic::nvvm_ceil_d:
-        return ConstantFoldFP(ceil, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            ceil, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_cos_approx_ftz_f:
       case Intrinsic::nvvm_cos_approx_f:
-        return ConstantFoldFP(cos, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            cos, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_ex2_approx_ftz_f:
       case Intrinsic::nvvm_ex2_approx_d:
       case Intrinsic::nvvm_ex2_approx_f:
-        return ConstantFoldFP(exp2, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            exp2, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                (nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID))));
 
       case Intrinsic::nvvm_fabs_ftz:
       case Intrinsic::nvvm_fabs:
         return ConstantFoldFP(fabs, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+                              nvvm::GetNVVMDenromMode(nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_floor_ftz_f:
       case Intrinsic::nvvm_floor_f:
       case Intrinsic::nvvm_floor_d:
-        return ConstantFoldFP(floor, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            floor, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_lg2_approx_ftz_f:
       case Intrinsic::nvvm_lg2_approx_d:
       case Intrinsic::nvvm_lg2_approx_f: {
         if (APF.isNegative() || APF.isZero())
           return nullptr;
-        return ConstantFoldFP(log2, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            log2, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
       }
 
       case Intrinsic::nvvm_rcp_rm_ftz_f:
@@ -2719,8 +2756,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_round_ftz_f:
       case Intrinsic::nvvm_round_f:
       case Intrinsic::nvvm_round_d:
-        return ConstantFoldFP(round, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            round, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_rsqrt_approx_ftz_d:
       case Intrinsic::nvvm_rsqrt_approx_ftz_f:
@@ -2768,8 +2807,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
       case Intrinsic::nvvm_sin_approx_ftz_f:
       case Intrinsic::nvvm_sin_approx_f:
-        return ConstantFoldFP(sin, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            sin, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       case Intrinsic::nvvm_sqrt_rn_ftz_f:
       case Intrinsic::nvvm_sqrt_approx_ftz_f:
@@ -2779,8 +2820,10 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::nvvm_sqrt_approx_f:
         if (APF.isNegative())
           return nullptr;
-        return ConstantFoldFP(sqrt, APF, Ty,
-                              nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID));
+        return ConstantFoldFP(
+            sqrt, APF, Ty,
+            nvvm::GetNVVMDenromMode(
+                nvvm::UnaryMathIntrinsicShouldFTZ(IntrinsicID)));
 
       // AMDGCN Intrinsics:
       case Intrinsic::amdgcn_cos:

@@ -454,6 +454,12 @@ inline bool RCPIsApprox(Intrinsic::ID IntrinsicID) {
   llvm_unreachable("Checking approx flag for invalid rcp intrinsic");
 }
 
+inline DenormalMode GetNVVMDenromMode(bool ShouldFTZ) {
+  if (ShouldFTZ)
+    return DenormalMode::getPreserveSign();
+  return DenormalMode::getIEEE();
+}
+
 } // namespace nvvm
 } // namespace llvm
 #endif // LLVM_IR_NVVMINTRINSICUTILS_H
