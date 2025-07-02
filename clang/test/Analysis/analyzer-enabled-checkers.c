@@ -57,6 +57,7 @@
 // CHECK-NEXT: unix.StdCLibraryFunctions
 // CHECK-NEXT: unix.Vfork
 // CHECK-NEXT: unix.cstring.BadSizeArg
+// CHECK-NEXT: unix.cstring.MissingTerminatingZero
 // CHECK-NEXT: unix.cstring.NotNullTerminated
 // CHECK-NEXT: unix.cstring.NullArg
 

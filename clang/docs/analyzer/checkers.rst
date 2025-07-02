@@ -2098,6 +2098,58 @@ Check the size argument passed into C string functions for common erroneous patt
      // warn: potential buffer overflow
  }
 
+.. _unix-cstring-MissingTerminatingZero:
+
+unix.cstring.MissingTerminatingZero (C)
+"""""""""""""""""""""""""""""""""""""""
+Check for string arguments passed to C library functions where the terminating
+zero is missing.
+
+The checker can only follow initializations with constant values and assignment
+of constant values to string elements.
+
+.. code-block:: c
+
+ int test1() {
+   char buf[4] = {1, 2, 3, 4};
+   return strlen(buf); // warn
+ }
+
+ int test2() {
+   char buf[] = "abcd";
+   buf[4] = 'e';
+   return strlen(buf); // warn
+ }
+
+ int test3() {
+   char buf[4];
+   buf[3] = 100;
+   return strlen(buf + 3); // warn
+ }
+
+**Options**
+
+By default the checker assumes that any parameter of type ``const char *`` to a
+global C system function should be a null-terminated string. Additionally there
+is a list of exceptions which are identified by the function name and parameter
+index. This list is called "ignore list" and contains these default values:
+(``stpncpy``, 1), (``strncat``, 1), (``strncmp``, 0), (``strncmp``, 1),
+(``strncpy``, 1), (``strndup``, 0), (``strnlen``, 0)
+These functions are ignored because they have a length parameter and can work
+with non-null terminated strings. The list can be changed by the following
+options:
+
+* ``OmitDefaultIgnoreFunctions`` (boolean). If true, the default ignore list is
+  cleared. (Independently of ``IgnoreFunctionArgs`` contains values or not.)
+
+* ``IgnoreFunctionArgs``  (string). Can be used to add functions to the ignore
+  list. It should contain entries in form of "<function name> <parameter index>"
+  separated by comma. These values are added to the ignore list. For example
+  ``strlen 0, strcpy 0, strcpy 1`` adds ``strlen`` and ``strcpy`` (both
+  parameters) to the ignore list. A function name can be used at most 2 times
+  (with different parameter values). Default value of the option is an empty
+  string.
+
 .. _unix-cstring-NotNullTerminated:
 
 unix.cstring.NotNullTerminated (C)

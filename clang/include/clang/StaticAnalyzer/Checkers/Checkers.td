@@ -480,6 +480,34 @@ def CStringSyntaxChecker : Checker<"BadSizeArg">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
+def MissingTerminatingZeroChecker
+    : Checker<"MissingTerminatingZero">,
+      HelpText<
+          "Check for string arguments passed to C library functions where the "
+          "terminating zero is missing">,
+      CheckerOptions<
+          [CmdLineOption<
+               Boolean, "OmitDefaultIgnoreFunctions",
+               "The checker checks by default all 'const char *' arguments "
+               "of system library C functions, except for a built-in list "
+               "of functions. If this parameter is set to true, this ignore "
+               "list is not used, but functions can be still specified by "
+               "the 'IgnoreFunctionArgs' option.",
+               "false", Released>,
+           CmdLineOption<
+               String, "IgnoreFunctionArgs",
+               "Specifies a list of functions to ignore by the checker. This "
+               "list should contain comma-separated values in the format "
+               "'<name> <parm>' where <name> is the function name and "
+               "<parm> is the zero-based index of the parameter (with "
+               "'const char *' type). The same function can be specified "
+               "with different parameters at most 2 times. These functions "
+               "are added to the default ignore list, unless "
+               "'OmitDefaultIgnoreFunctions' is true.",
+               "", Released>,
+]>,
+      Documentation<HasDocumentation>;
+
 } // end "unix.cstring"
 
 let ParentPackage = CStringAlpha in {
