@@ -29,8 +29,8 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
     CallingConv::ID DefaultCC = FloatABIType == FloatABI::Hard
                                     ? CallingConv::ARM_AAPCS_VFP
                                     : CallingConv::ARM_AAPCS;
-    for (RTLIB::Libcall LC : RTLIB::libcalls())
-      Info.setLibcallCallingConv(LC, DefaultCC);
+    for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls())
+      Info.setLibcallImplCallingConv(LC, DefaultCC);
   }
 
   // Register based DivRem for AEABI (RTABI 4.2)
@@ -50,7 +50,7 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
 
       for (const auto &LC : LibraryCalls) {
         Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallCallingConv(LC.Op, LC.CC);
+        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
       }
     } else {
       const struct {
@@ -66,7 +66,7 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
 
       for (const auto &LC : LibraryCalls) {
         Info.setLibcallImpl(LC.Op, LC.Impl);
-        Info.setLibcallCallingConv(LC.Op, LC.CC);
+        Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
       }
     }
   }
@@ -89,7 +89,7 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
 
     for (const auto &LC : LibraryCalls) {
       Info.setLibcallImpl(LC.Op, LC.Impl);
-      Info.setLibcallCallingConv(LC.Op, LC.CC);
+      Info.setLibcallImplCallingConv(LC.Impl, LC.CC);
     }
   }
 
@@ -199,20 +199,34 @@ static void setMSP430Libcalls(RuntimeLibcallsInfo &Info, const Triple &TT) {
     Info.setLibcallImpl(LC.Op, LC.Impl);
 
   // Several of the runtime library functions use a special calling conv
-  Info.setLibcallCallingConv(RTLIB::UDIV_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::UREM_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::SDIV_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::SREM_I64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::ADD_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::SUB_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::MUL_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::DIV_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OEQ_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::UNE_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OGE_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OLT_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OLE_F64, CallingConv::MSP430_BUILTIN);
-  Info.setLibcallCallingConv(RTLIB::OGT_F64, CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divull,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_remull,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divlli,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_remlli,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_addd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_subd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_mpyd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_divd,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__oeq,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__une,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__oge,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__olt,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__ole,
+                                 CallingConv::MSP430_BUILTIN);
+  Info.setLibcallImplCallingConv(RTLIB::__mspabi_cmpd__ogt,
+                                 CallingConv::MSP430_BUILTIN);
 
   // TODO: __mspabi_srall, __mspabi_srlll, __mspabi_sllll
 }
@@ -352,10 +366,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       setLibcallImpl(RTLIB::SINCOS_STRET_F32, RTLIB::__sincosf_stret);
       setLibcallImpl(RTLIB::SINCOS_STRET_F64, RTLIB::__sincos_stret);
       if (TT.isWatchABI()) {
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F32,
-                              CallingConv::ARM_AAPCS_VFP);
-        setLibcallCallingConv(RTLIB::SINCOS_STRET_F64,
-                              CallingConv::ARM_AAPCS_VFP);
+        setLibcallImplCallingConv(RTLIB::__sincosf_stret,
+                                  CallingConv::ARM_AAPCS_VFP);
+        setLibcallImplCallingConv(RTLIB::__sincos_stret,
+                                  CallingConv::ARM_AAPCS_VFP);
       }
     }
 
@@ -420,7 +434,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
 
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
-      setLibcallCallingConv(LC.Op, LC.CC);
+      setLibcallImplCallingConv(LC.Impl, LC.CC);
     }
   }
 
@@ -428,10 +442,10 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
   else if (TT.getArch() == Triple::ArchType::avr) {
     // Several of the runtime library functions use a special calling conv
-    setLibcallCallingConv(RTLIB::SDIVREM_I8, CallingConv::AVR_BUILTIN);
-    setLibcallCallingConv(RTLIB::SDIVREM_I16, CallingConv::AVR_BUILTIN);
-    setLibcallCallingConv(RTLIB::UDIVREM_I8, CallingConv::AVR_BUILTIN);
-    setLibcallCallingConv(RTLIB::UDIVREM_I16, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__divmodqi4, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__divmodhi4, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__udivmodqi4, CallingConv::AVR_BUILTIN);
+    setLibcallImplCallingConv(RTLIB::__udivmodhi4, CallingConv::AVR_BUILTIN);
   }
 
   if (!TT.isWasm()) {
