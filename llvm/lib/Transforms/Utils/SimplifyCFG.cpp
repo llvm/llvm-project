@@ -6250,12 +6250,10 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
       if (!AndMask.isZero() && Known.getMaxValue().uge(AndMask)) {
         // Compute the number of bits that are free to vary.
         unsigned FreeBits = Known.countMaxActiveBits() - AndMask.popcount();
-        // Compute 2^FreeBits in order to check whether all the possible
-        // combinations of the free bits matches the number of cases.
-        APInt TopBit = APInt::getOneBitSet(
-            Condition->getType()->getIntegerBitWidth(), FreeBits);
 
-        if (TopBit == CaseCount) {
+        // Check if the number of values covered by the mask is equal
+        // to the number of cases.
+        if (FreeBits == Log2_32(CaseCount)) {
           Value *And = Builder.CreateAnd(Condition, AndMask);
           Value *Cmp = Builder.CreateICmpEQ(
               And, Constant::getIntegerValue(And->getType(), AndMask));
