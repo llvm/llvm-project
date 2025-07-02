@@ -6652,7 +6652,7 @@ void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
 
 SourceLocationEncoding::RawLocEncoding
 ASTWriter::getRawSourceLocationEncoding(SourceLocation Loc) {
-  unsigned BaseOffset = 0;
+  SourceLocation::UIntTy BaseOffset = 0;
   unsigned ModuleFileIndex = 0;
 
   // See SourceLocationEncoding.h for the encoding details.

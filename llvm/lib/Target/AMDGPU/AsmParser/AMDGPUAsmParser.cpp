@@ -8,6 +8,7 @@
 
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
+#include "MCTargetDesc/AMDGPUMCAsmInfo.h"
 #include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/AMDGPUMCKernelDescriptor.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -1151,7 +1152,7 @@ public:
     // clang-format on
   }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case Register:
       OS << "<register " << AMDGPUInstPrinter::getRegisterName(getReg())
@@ -1168,7 +1169,9 @@ public:
       OS << '\'' << getToken() << '\'';
       break;
     case Expression:
-      OS << "<expr " << *Expr << '>';
+      OS << "<expr ";
+      MAI.printExpr(OS, *Expr);
+      OS << '>';
       break;
     }
   }

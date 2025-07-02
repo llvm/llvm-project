@@ -208,21 +208,26 @@ class GlobalSaddrTable <bit is_saddr, string Name = ""> {
 // TODO: Is exec allowed for saddr? The disabled value 0x7f is the
 // same encoding value as exec_hi, so it isn't possible to use that if
 // saddr is 32-bit (which isn't handled here yet).
-class FLAT_Load_Pseudo <string opName, RegisterClass regClass,
-  bit HasTiedOutput = 0,
-  bit HasSaddr = 0, bit EnableSaddr = 0,
-  RegisterOperand vdata_op = getLdStRegisterOperand<regClass>.ret> : FLAT_Pseudo<
-  opName,
-  (outs vdata_op:$vdst),
-  !con(
+class FLAT_Load_Pseudo<
+    string opName, RegisterClass regClass, bit HasTiedOutput = 0,
+    bit HasSaddr = 0, bit EnableSaddr = 0>
+    : FLAT_Pseudo<opName, (outs), (ins), ""> {
+
+  defvar vdata_op = getLdStRegisterOperand<regClass>.ret;
+  let OutOperandList = (outs vdata_op:$vdst);
+  let InOperandList = !con(
     !if(EnableSaddr,
-      (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
-      (ins VReg_64:$vaddr)),
-      (ins flat_offset:$offset),
-      // FIXME: Operands with default values do not work with following non-optional operands.
-      !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
-                         (ins CPol_0:$cpol))),
-  " $vdst, $vaddr"#!if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")#"$offset$cpol"> {
+        (ins SReg_64_XEXEC_XNULL:$saddr, VGPR_32:$vaddr),
+        (ins VReg_64:$vaddr)),
+    (ins flat_offset:$offset),
+    // FIXME: Operands with default values do not work with following
+    // non-optional operands.
+    !if(HasTiedOutput, (ins CPol:$cpol, vdata_op:$vdst_in),
+                       (ins CPol_0:$cpol)));
+  let AsmOperands = " $vdst, $vaddr"
+    # !if(HasSaddr, !if(EnableSaddr, ", $saddr", ", off"), "")
+    # "$offset$cpol";
+
   let has_data = 0;
   let mayLoad = 1;
   let has_saddr = HasSaddr;
@@ -385,6 +390,23 @@ multiclass FLAT_Global_Store_AddTid_Pseudo<string opName, RegisterClass regClass
     GlobalSaddrTable<0, opName>;
   def _SADDR : FLAT_Global_Store_AddTid_Pseudo<opName, regClass, 1>,
     GlobalSaddrTable<1, opName>;
+}
+
+class FLAT_Global_Tensor_Pseudo<string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !con(!if(EnableSaddr, (ins SReg_64:$saddr, flat_offset:$offset), (ins )), (ins CPol_0:$cpol)),
+  !if(EnableSaddr, " $saddr$offset", " ")#"$cpol"> {
+
+  let is_flat_global = 1;
+  let has_vdst = 0;
+  let has_data = 0;
+  let has_vaddr = 0;
+  let mayLoad = 0;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let has_offset = EnableSaddr;
 }
 
 class FLAT_Global_Invalidate_Writeback<string opName, SDPatternOperator node = null_frag> :
@@ -1046,6 +1068,12 @@ let SubtargetPredicate = isGFX12Plus in {
   def GLOBAL_WB     : FLAT_Global_Invalidate_Writeback<"global_wb">;
   def GLOBAL_WBINV  : FLAT_Global_Invalidate_Writeback<"global_wbinv">;
 } // End SubtargetPredicate = isGFX12Plus
+
+let SubtargetPredicate = isGFX1250Plus in {
+
+def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
+def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
+} // End SubtargetPredicate = isGFX1250Plus
 
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte", VGPR_32>;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte", VGPR_32>;
@@ -1846,6 +1874,11 @@ let WaveSizePredicate = isWave64, OtherPredicates = [isGFX12PlusNot12_50] in {
   defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B64_w64, int_amdgcn_global_load_tr_b64, i32>;
   foreach vt = [v4i16, v4f16, v4bf16] in
     defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR_B128_w64, int_amdgcn_global_load_tr_b128, vt>;
+}
+
+let WaveSizePredicate = isWave32,  OtherPredicates = [HasTransposeLoadF4F6Insts] in {
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR4_B64, int_amdgcn_global_load_tr4_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_LOAD_TR6_B96, int_amdgcn_global_load_tr6_b96, v3i32>;
 }
 
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts, OtherPredicates = [HasFlatGlobalInsts] in {
@@ -3050,6 +3083,9 @@ multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME
   VFLAT_Real_AllAddr_gfx1250<op, name>,
   VFLAT_Real_RTN_gfx1250<op, name>,
   VFLAT_Real_SADDR_RTN_gfx1250<op, name>;
+
+defm TENSOR_SAVE                      : VFLAT_Real_gfx1250<0x06e>;
+defm TENSOR_STOP                      : VFLAT_Real_gfx1250<0x06f>;
 
 defm GLOBAL_LOAD_TR_B128_w32          : VFLAT_Real_AllAddr_gfx1250<0x057, "global_load_tr16_b128">;
 defm GLOBAL_LOAD_TR_B64_w32           : VFLAT_Real_AllAddr_gfx1250<0x058, "global_load_tr8_b64">;

@@ -125,7 +125,15 @@ public:
     return {};
   }
 
+  mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
+    return Visit(e->getSelectedExpr());
+  }
+
   mlir::Value VisitParenExpr(ParenExpr *pe) { return Visit(pe->getSubExpr()); }
+
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *ge) {
+    return Visit(ge->getResultExpr());
+  }
 
   /// Emits the address of the l-value, then loads and returns the result.
   mlir::Value emitLoadOfLValue(const Expr *e) {
@@ -149,8 +157,7 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()),
-        builder.getAttr<cir::IntAttr>(type, e->getValue()));
+        cgf.getLoc(e->getExprLoc()), cir::IntAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
@@ -158,8 +165,7 @@ public:
     assert(mlir::isa<cir::FPTypeInterface>(type) &&
            "expect floating-point type");
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()),
-        builder.getAttr<cir::FPAttr>(type, e->getValue()));
+        cgf.getLoc(e->getExprLoc()), cir::FPAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *e) {
@@ -901,14 +907,7 @@ public:
       assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
 
       BinOpInfo boInfo = emitBinOps(e);
-      if (e->getOpcode() == BO_EQ) {
-        result =
-            builder.create<cir::ComplexEqualOp>(loc, boInfo.lhs, boInfo.rhs);
-      } else {
-        assert(!cir::MissingFeatures::complexType());
-        cgf.cgm.errorNYI(loc, "complex not equal");
-        result = builder.getBool(false, loc);
-      }
+      result = builder.create<cir::CmpOp>(loc, kind, boInfo.lhs, boInfo.rhs);
     }
 
     return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
@@ -1962,21 +1961,21 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                                      "sizeof operator for VariableArrayType",
                                      e->getStmtClassName());
       return builder.getConstant(
-          loc, builder.getAttr<cir::IntAttr>(
-                   cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+          loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                                 llvm::APSInt(llvm::APInt(64, 1), true)));
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
         e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
         e->getStmtClassName());
     return builder.getConstant(
-        loc, builder.getAttr<cir::IntAttr>(
-                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+        loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                               llvm::APSInt(llvm::APInt(64, 1), true)));
   }
 
   return builder.getConstant(
-      loc, builder.getAttr<cir::IntAttr>(
-               cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
+      loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                             e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
 /// Return true if the specified expression is cheap enough and side-effect-free

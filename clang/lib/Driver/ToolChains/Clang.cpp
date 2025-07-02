@@ -4631,11 +4631,8 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   }
 
   if (Args.hasFlag(options::OPT_gkey_instructions,
-                   options::OPT_gno_key_instructions, false)) {
+                   options::OPT_gno_key_instructions, false))
     CmdArgs.push_back("-gkey-instructions");
-    CmdArgs.push_back("-mllvm");
-    CmdArgs.push_back("-dwarf-use-key-instructions");
-  }
 
   if (EmitCodeView) {
     CmdArgs.push_back("-gcodeview");
@@ -6284,7 +6281,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
   if (getLastProfileSampleUseArg(Args) &&
-      Args.hasArg(options::OPT_fsample_profile_use_profi)) {
+      Args.hasFlag(options::OPT_fsample_profile_use_profi,
+                   options::OPT_fno_sample_profile_use_profi, false)) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-sample-profile-use-profi");
   }

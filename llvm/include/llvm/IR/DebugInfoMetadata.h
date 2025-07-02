@@ -2217,7 +2217,7 @@ public:
   }
 };
 
-/// Subprogram description.
+/// Subprogram description. Uses SubclassData1.
 class DISubprogram : public DILocalScope {
   friend class LLVMContextImpl;
   friend class MDNode;
@@ -2264,7 +2264,8 @@ private:
 
   DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
                unsigned ScopeLine, unsigned VirtualIndex, int ThisAdjustment,
-               DIFlags Flags, DISPFlags SPFlags, ArrayRef<Metadata *> Ops);
+               DIFlags Flags, DISPFlags SPFlags, bool UsesKeyInstructions,
+               ArrayRef<Metadata *> Ops);
   ~DISubprogram() = default;
 
   static DISubprogram *
@@ -2276,15 +2277,17 @@ private:
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
           DINodeArray RetainedNodes, DITypeArray ThrownTypes,
           DINodeArray Annotations, StringRef TargetFuncName,
-          StorageType Storage, bool ShouldCreate = true) {
+          bool UsesKeyInstructions, StorageType Storage,
+          bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
                    ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
                    Flags, SPFlags, Unit, TemplateParams.get(), Declaration,
                    RetainedNodes.get(), ThrownTypes.get(), Annotations.get(),
                    getCanonicalMDString(Context, TargetFuncName),
-                   Storage, ShouldCreate);
+                   UsesKeyInstructions, Storage, ShouldCreate);
   }
+
   LLVM_ABI static DISubprogram *
   getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
           MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
@@ -2292,8 +2295,8 @@ private:
           int ThisAdjustment, DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
           Metadata *TemplateParams, Metadata *Declaration,
           Metadata *RetainedNodes, Metadata *ThrownTypes, Metadata *Annotations,
-          MDString *TargetFuncName, StorageType Storage,
-          bool ShouldCreate = true);
+          MDString *TargetFuncName, bool UsesKeyInstructions,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
@@ -2302,7 +2305,7 @@ private:
                         getThisAdjustment(), getFlags(), getSPFlags(),
                         getUnit(), getTemplateParams(), getDeclaration(),
                         getRetainedNodes(), getThrownTypes(), getAnnotations(),
-                        getTargetFuncName());
+                        getTargetFuncName(), getKeyInstructionsEnabled());
   }
 
 public:
@@ -2315,10 +2318,11 @@ public:
        DITemplateParameterArray TemplateParams = nullptr,
        DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
        DITypeArray ThrownTypes = nullptr, DINodeArray Annotations = nullptr,
-       StringRef TargetFuncName = ""),
+       StringRef TargetFuncName = "", bool UsesKeyInstructions = false),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
+       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName,
+       UsesKeyInstructions))
 
   DEFINE_MDNODE_GET(
       DISubprogram,
@@ -2328,10 +2332,12 @@ public:
        DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
        Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
        Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr,
-       Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr),
+       Metadata *Annotations = nullptr, MDString *TargetFuncName = nullptr,
+       bool UsesKeyInstructions = false),
       (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
        VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
-       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName))
+       Declaration, RetainedNodes, ThrownTypes, Annotations, TargetFuncName,
+       UsesKeyInstructions))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -2341,6 +2347,8 @@ public:
     NewSP->Flags = NewFlags;
     return NewSP;
   }
+
+  bool getKeyInstructionsEnabled() const { return SubclassData1; }
 
 public:
   unsigned getLine() const { return Line; }
