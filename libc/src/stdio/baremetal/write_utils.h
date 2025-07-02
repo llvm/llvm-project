@@ -28,11 +28,10 @@ LIBC_INLINE void write(::FILE *f, cpp::string_view new_str) {
 
 using StreamWriter = int (*)(cpp::string_view, void *);
 LIBC_INLINE StreamWriter get_write_hook(::FILE *f) {
-  if (f == stdout) {
+  if (f == stdout)
     return &stdout_write_hook;
-  } else if (f == stderr) {
+  else if (f == stderr)
     return &stderr_write_hook;
-  }
 
   return nullptr;
 }

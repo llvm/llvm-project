@@ -16,7 +16,6 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, putc, (int c, ::FILE *stream)) {
   char uc = static_cast<char>(c);
-
   write_utils::write(stream, cpp::string_view(&uc, 1));
 
   return 0;
