@@ -675,14 +675,14 @@ clang-cl-static)
     step "Running the libc++ tests"
     ${NINJA} ${VERBOSE_FLAG} -C "${BUILD_DIR}" check-cxx
 ;;
-clang-cl-no${VERBOSE_FLAG} -Cruntime)
+clang-cl-no-vcruntime)
     clean
     # Building libc++ in the same way as in clang-cl-dll above, but running
     # tests with -D_HAS_EXCEPTIONS=0, which users might set in certain
     # translation units while using libc++, even if libc++ is built with
     # exceptions enabled.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
-                              -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no${VERBOSE_FLAG} -Cruntime-clangcl.cfg.in"
+                              -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
     step "Running the libc++ tests"
     ${NINJA} ${VERBOSE_FLAG} -C "${BUILD_DIR}" check-cxx
 ;;
