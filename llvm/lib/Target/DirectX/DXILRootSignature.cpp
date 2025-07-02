@@ -493,8 +493,7 @@ static bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
 
 static bool verifySamplerFilter(uint32_t Value) {
   switch (Value) {
-#define FILTER(Num, Val)                                                       \
-  case llvm::to_underlying(dxbc::StaticSamplerFilter::Val):
+#define FILTER(Num, Val) case llvm::to_underlying(dxbc::SamplerFilter::Val):
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
