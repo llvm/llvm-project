@@ -15715,10 +15715,12 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   for (SDValue Opand : N->ops()) {
     // Build_vector with constants only.
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Opand);
-    if (!C)
+    ConstantFPSDNode *FPC = dyn_cast<ConstantFPSDNode>(Opand);
+    if (!C && !FPC)
       return SDValue();
-
-    ImmVal |= C->getZExtValue() << ImmSize;
+    uint64_t Val = C ? C->getZExtValue()
+                     : FPC->getValueAPF().bitcastToAPInt().getZExtValue();
+    ImmVal |= Val << ImmSize;
     ImmSize += EltSize;
     if (ImmSize > 64)
       return SDValue();
@@ -15734,7 +15736,7 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   // Avoid emitting build_vector with 1 element and directly emit value.
   if (ImmVals.size() == 1) {
     SDValue Val = DAG.getConstant(ImmVals[0], SL, MVT::i64);
-    return DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Val);
+    return DAG.getBitcast(VT, Val);
   }
 
   // Construct and return build_vector with 64b elements.
