@@ -2115,8 +2115,8 @@ void VPlanTransforms::addActiveLaneMask(
 }
 
 /// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
-/// EVL-based recipe without the mask. Returns nullptr if no EVL-based recipe
-/// could be created.
+/// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
+/// recipe could be created.
 /// \p HeaderMask  Header Mask.
 /// \p CurRecipe   Recipe to be transform.
 /// \p TypeInfo    VPlan-based type analysis.
