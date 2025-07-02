@@ -3267,6 +3267,34 @@ TEST(SignatureHelpTest, VariadicType) {
   }
 }
 
+TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
+  Annotations Code(R"cpp(
+    struct A {
+      void foo(this auto&& self, int arg); 
+    };
+    int main() {
+      A a {};
+      a.foo(^);
+    }
+  )cpp");
+
+  auto TU = TestTU::withCode(Code.code());
+  TU.ExtraArgs = {"-std=c++23"};
+
+  MockFS FS;
+  auto Inputs = TU.inputs(FS);
+
+  auto Preamble = TU.preamble();
+  ASSERT_TRUE(Preamble);
+
+  const auto Result = signatureHelp(testPath(TU.Filename), Code.point(),
+                                    *Preamble, Inputs, MarkupKind::PlainText);
+
+  EXPECT_EQ(1, Result.signatures.size());
+
+  EXPECT_THAT(Result.signatures[0], AllOf(sig("foo([[int arg]]) -> void")));
+}
+
 TEST(CompletionTest, IncludedCompletionKinds) {
   Annotations Test(R"cpp(#include "^)cpp");
   auto TU = TestTU::withCode(Test.code());
