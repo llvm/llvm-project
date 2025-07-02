@@ -127,7 +127,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
-  using FlagT = llvm::dxbc::DescriptorRangeFlags;
+  using llvm::dxbc::DescriptorRangeFlags;
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable(
       CBV(b0),
@@ -168,7 +168,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            FlagT::DataStaticWhileSetAtExecute);
+            DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -179,7 +179,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).NumDescriptors, 4u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 3u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset, 32u);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, FlagT::None);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::None);
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -191,7 +192,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 2u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, FlagT::None);
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
+            DescriptorRangeFlags::None);
 
   Elem = Elements[3];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
@@ -205,9 +207,11 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
   auto ValidDescriptorRangeFlags =
-      FlagT::DescriptorsVolatile | FlagT::DataVolatile |
-      FlagT::DataStaticWhileSetAtExecute | FlagT::DataStatic |
-      FlagT::DescriptorsStaticKeepingBufferBoundsChecks;
+      DescriptorRangeFlags::DescriptorsVolatile |
+      DescriptorRangeFlags::DataVolatile |
+      DescriptorRangeFlags::DataStaticWhileSetAtExecute |
+      DescriptorRangeFlags::DataStatic |
+      DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks;
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             ValidDescriptorRangeFlags);
 
@@ -470,7 +474,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
-  using FlagT = llvm::dxbc::RootFlags;
+  using llvm::dxbc::RootFlags;
   const llvm::StringLiteral Source = R"cc(
     RootFlags(),
     RootFlags(0),
@@ -506,30 +510,34 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
   ASSERT_EQ(Elements.size(), 3u);
 
   RootElement Elem = Elements[0];
-  ASSERT_TRUE(std::holds_alternative<FlagT>(Elem));
-  ASSERT_EQ(std::get<FlagT>(Elem), FlagT::None);
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
 
   Elem = Elements[1];
-  ASSERT_TRUE(std::holds_alternative<FlagT>(Elem));
-  ASSERT_EQ(std::get<FlagT>(Elem), FlagT::None);
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  ASSERT_EQ(std::get<RootFlags>(Elem), RootFlags::None);
 
   Elem = Elements[2];
-  ASSERT_TRUE(std::holds_alternative<FlagT>(Elem));
-  auto ValidRootFlags =
-      FlagT::AllowInputAssemblerInputLayout |
-      FlagT::DenyVertexShaderRootAccess | FlagT::DenyHullShaderRootAccess |
-      FlagT::DenyDomainShaderRootAccess | FlagT::DenyGeometryShaderRootAccess |
-      FlagT::DenyPixelShaderRootAccess | FlagT::AllowStreamOutput |
-      FlagT::LocalRootSignature | FlagT::DenyAmplificationShaderRootAccess |
-      FlagT::DenyMeshShaderRootAccess | FlagT::CBVSRVUAVHeapDirectlyIndexed |
-      FlagT::SamplerHeapDirectlyIndexed;
-  ASSERT_EQ(std::get<FlagT>(Elem), ValidRootFlags);
+  ASSERT_TRUE(std::holds_alternative<RootFlags>(Elem));
+  auto ValidRootFlags = RootFlags::AllowInputAssemblerInputLayout |
+                        RootFlags::DenyVertexShaderRootAccess |
+                        RootFlags::DenyHullShaderRootAccess |
+                        RootFlags::DenyDomainShaderRootAccess |
+                        RootFlags::DenyGeometryShaderRootAccess |
+                        RootFlags::DenyPixelShaderRootAccess |
+                        RootFlags::AllowStreamOutput |
+                        RootFlags::LocalRootSignature |
+                        RootFlags::DenyAmplificationShaderRootAccess |
+                        RootFlags::DenyMeshShaderRootAccess |
+                        RootFlags::CBVSRVUAVHeapDirectlyIndexed |
+                        RootFlags::SamplerHeapDirectlyIndexed;
+  ASSERT_EQ(std::get<RootFlags>(Elem), ValidRootFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
-  using FlagT = llvm::dxbc::RootDescriptorFlags;
+  using llvm::dxbc::RootDescriptorFlags;
   const llvm::StringLiteral Source = R"cc(
     CBV(b0),
     SRV(space = 4, t42, visibility = SHADER_VISIBILITY_GEOMETRY,
@@ -563,7 +571,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::All);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
-            FlagT::DataStaticWhileSetAtExecute);
+            RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
   Elem = Elements[1];
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
@@ -573,9 +581,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::Geometry);
-  auto ValidRootDescriptorFlags = FlagT::DataVolatile |
-                                  FlagT::DataStaticWhileSetAtExecute |
-                                  FlagT::DataStatic;
+  auto ValidRootDescriptorFlags =
+      RootDescriptorFlags::DataVolatile |
+      RootDescriptorFlags::DataStaticWhileSetAtExecute |
+      RootDescriptorFlags::DataStatic;
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, ValidRootDescriptorFlags);
 
   Elem = Elements[2];
@@ -586,8 +595,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::Hull);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, FlagT::DataVolatile);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, FlagT::DataVolatile);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
+            RootDescriptorFlags::DataVolatile);
 
   Elem = Elements[3];
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
@@ -596,7 +607,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 0u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::All);
-  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, FlagT::None);
+  ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, RootDescriptorFlags::None);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
