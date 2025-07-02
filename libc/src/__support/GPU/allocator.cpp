@@ -596,8 +596,7 @@ void *aligned_allocate(uint64_t alignment, uint64_t size) {
   // alignment and then round up. The index logic will round down properly.
   uint64_t rounded = size + alignment - 1;
   void *ptr = gpu::allocate(rounded);
-  return reinterpret_cast<void *>(
-      (reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & ~(alignment - 1));
+  return __builtin_align_up(ptr, alignment);
 }
 
 } // namespace gpu
