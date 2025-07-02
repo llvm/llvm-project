@@ -33,11 +33,11 @@
 
 #      define _LIBSYCL_DLL_LOCAL
 
-#      if _LIBSYCL_BUILD_SYCL_DLL
+#      ifdef _LIBSYCL_BUILDING_LIBRARY
 #        define _LIBSYCL_EXPORT __declspec(dllexport)
 #      else
 #        define _LIBSYCL_EXPORT __declspec(dllimport)
-#      endif //_LIBSYCL_BUILD_SYCL_DLL
+#      endif //_LIBSYCL_BUILDING_LIBRARY
 
 #    else // _WIN32
 

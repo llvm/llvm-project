@@ -13,6 +13,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 #===============================================================================
+# Limitations
+#===============================================================================
+
+if (CMAKE_SYSTEM_NAME STREQUAL Windows AND NOT MSVC)
+# Build with other compilers is not configured, not guaranteed and not tested.
+    message( FATAL_ERROR
+      "On Windows libsycl supports compiler which is some version of Microsoft"
+      " Visual C++ or another compiler simulating the Visual C++ cl"
+      " command-line syntax" )
+endif()
+
+#===============================================================================
 # Setup CMake Options
 #===============================================================================
 
@@ -94,11 +106,8 @@ add_custom_command(
 
 install(DIRECTORY "${LIBSYCL_SOURCE_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INCLUDE_DIR} COMPONENT sycl-headers)
 
-if (WIN32)
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION})
-  if (MSVC)
-    list(APPEND LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME}${LIBSYCL_MAJOR_VERSION}d)
-  endif()
 else()
   set(LIBSYCL_RT_LIBS ${LIBSYCL_SHARED_OUTPUT_NAME})
 endif()
