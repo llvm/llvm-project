@@ -424,11 +424,6 @@ void CompressInstEmitter::createInstOperandMapping(
       assert(ArgName == SourceDag->getArgNameStr(SourceOp->getValue().first) &&
              "Incorrect operand mapping detected!\n");
 
-      // Following four lines ensure the correct handling of a single tied
-      // operand in the Source Inst. SourceDagOp points to the position of
-      // appropriate Dag argument which is not correct in presence of tied
-      // operand in the Source Inst and must be incremented by 1 to reflect
-      // correct position of the operand in Source Inst
       unsigned SourceOpNo = SourceOp->getValue().second;
       DestOperandMap[OpNo].Data.Operand = SourceOpNo;
       SourceOperandMap[SourceOpNo].Data.Operand = OpNo;
