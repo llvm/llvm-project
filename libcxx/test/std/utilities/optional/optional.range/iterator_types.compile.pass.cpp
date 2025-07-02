@@ -8,13 +8,30 @@
 
 // UNSUPPORTED: std-at-least-c++26
 
-using Iter = std::optional<int>::iterator;
+#include <iterator>
+#include <type_traits>
+#include <cstddef>
+#include <optional>
 
-static_assert(std::random_access_iterator<Iter>);
-static_assert(std::contiguous_iterator<Iter>);
+using iterator = std::optional<int>::iterator;
+using const_iterator = std::optional<int>::const_iterator;
 
-static_assert(std::is_same_v<typename std::iterator_traits<Iter>::value_type, int>);
-static_assert(std::is_same_v<typename std::iterator_traits<Iter>::difference_type, std::ptrdiff_t>);
-static_assert(std::is_same_v<typename std::iterator_traits<Iter>::pointer, int*>);
-static_assert(std::is_same_v<typename std::iterator_traits<Iter>::reference, int&>);
-static_assert(std::is_same_v<typename std::iterator_traits<Iter>::iterator_category, std::random_access_iterator_tag>);
+// iterator
+
+static_assert(std::random_access_iterator<iterator>);
+static_assert(std::contiguous_iterator<iterator>);
+static_assert(std::is_same_v<typename std::iterator_traits<iterator>::value_type, int>);
+static_assert(std::is_same_v<typename std::iterator_traits<iterator>::difference_type, std::ptrdiff_t>);
+static_assert(std::is_same_v<typename std::iterator_traits<iterator>::pointer, int*>);
+static_assert(std::is_same_v<typename std::iterator_traits<iterator>::reference, int&>);
+static_assert(std::is_same_v<typename std::iterator_traits<iterator>::iterator_category, std::random_access_iterator_tag>);
+
+// const iterator
+
+static_assert(std::random_access_iterator<const_iterator>);
+static_assert(std::contiguous_iterator<const_iterator>);
+static_assert(std::is_same_v<typename std::iterator_traits<const_iterator>::value_type, int>);
+static_assert(std::is_same_v<typename std::iterator_traits<const_iterator>::difference_type, std::ptrdiff_t>);
+static_assert(std::is_same_v<typename std::iterator_traits<const_iterator>::pointer, int*>);
+static_assert(std::is_same_v<typename std::iterator_traits<const_iterator>::reference, int&>);
+static_assert(std::is_same_v<typename std::iterator_traits<const_iterator>::iterator_category, std::random_access_iterator_tag>);
