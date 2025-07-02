@@ -2890,6 +2890,13 @@ TypeSystemSwiftTypeRef::RemangleAsType(swift::Demangle::Demangler &dem,
   if (!node)
     return {};
 
+  // Guard against an empty opaque type. This can happen when demangling an
+  // OpaqueTypeRef (ex `$sBpD`). An empty opaque will assert when mangled.
+  if (auto *opaque_type =
+          swift_demangle::ChildAtPath(node, {Node::Kind::OpaqueType}))
+    if (!opaque_type->hasChildren())
+      return {};
+
   using namespace swift::Demangle;
   if (node->getKind() != Node::Kind::Global) {
     auto global = dem.createNode(Node::Kind::Global);
