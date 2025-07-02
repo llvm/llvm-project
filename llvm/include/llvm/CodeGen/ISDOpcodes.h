@@ -173,6 +173,7 @@ enum NodeType {
   /// materialized in registers.
   TargetConstant,
   TargetConstantFP,
+  TargetConstantAP,
 
   /// TargetGlobalAddress - Like GlobalAddress, but the DAG does no folding or
   /// anything else with this node, and this is valid in the target-specific

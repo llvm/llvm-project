@@ -1742,10 +1742,11 @@ class ConstantSDNode : public SDNode {
 
   const ConstantInt *Value;
 
-  ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val,
-                 SDVTList VTs)
-      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
-               VTs),
+  ConstantSDNode(bool isTarget, bool isOpaque, bool isAPTarget,
+                 const ConstantInt *val, SDVTList VTs)
+      : SDNode(isAPTarget ? ISD::TargetConstantAP
+                          : (isTarget ? ISD::TargetConstant : ISD::Constant),
+               0, DebugLoc(), VTs),
         Value(val) {
     assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
     ConstantSDNodeBits.IsOpaque = isOpaque;
@@ -1772,7 +1773,8 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::Constant ||
-           N->getOpcode() == ISD::TargetConstant;
+           N->getOpcode() == ISD::TargetConstant ||
+           N->getOpcode() == ISD::TargetConstantAP;
   }
 };
 

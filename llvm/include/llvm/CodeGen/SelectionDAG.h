@@ -683,7 +683,8 @@ public:
   LLVM_ABI SDValue getConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                                bool isTarget = false, bool isOpaque = false);
   LLVM_ABI SDValue getConstant(const APInt &Val, const SDLoc &DL, EVT VT,
-                               bool isTarget = false, bool isOpaque = false);
+                               bool isTarget = false, bool isOpaque = false,
+                               bool isArbitraryPrecision = false);
 
   LLVM_ABI SDValue getSignedConstant(int64_t Val, const SDLoc &DL, EVT VT,
                                      bool isTarget = false,
@@ -694,7 +695,8 @@ public:
                                       bool IsOpaque = false);
 
   LLVM_ABI SDValue getConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
-                               bool isTarget = false, bool isOpaque = false);
+                               bool isTarget = false, bool isOpaque = false,
+                               bool isArbitraryPrecision = false);
   LLVM_ABI SDValue getIntPtrConstant(uint64_t Val, const SDLoc &DL,
                                      bool isTarget = false);
   LLVM_ABI SDValue getShiftAmountConstant(uint64_t Val, EVT VT,
@@ -711,6 +713,10 @@ public:
   SDValue getTargetConstant(const APInt &Val, const SDLoc &DL, EVT VT,
                             bool isOpaque = false) {
     return getConstant(Val, DL, VT, true, isOpaque);
+  }
+  SDValue getTargetConstantAP(const APInt &Val, const SDLoc &DL, EVT VT,
+                              bool isOpaque = false) {
+    return getConstant(Val, DL, VT, true, isOpaque, true);
   }
   SDValue getTargetConstant(const ConstantInt &Val, const SDLoc &DL, EVT VT,
                             bool isOpaque = false) {

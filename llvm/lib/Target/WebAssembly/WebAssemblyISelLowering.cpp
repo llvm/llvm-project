@@ -18,6 +18,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -794,6 +795,7 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
 
   if (IsIndirect) {
     // Placeholder for the type index.
+    // This gets replaced with the correct value in WebAssemblyMCInstLower.cpp
     MIB.addImm(0);
     // The table into which this call_indirect indexes.
     MCSymbolWasm *Table = IsFuncrefCall
@@ -2251,6 +2253,71 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
     return SDValue(
         DAG.getMachineNode(GlobalGet, DL, PtrVT,
                            DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
+        0);
+  }
+  case Intrinsic::wasm_ref_test_func: {
+    // First emit the TABLE_GET instruction to convert function pointer ==>
+    // funcref
+    MachineFunction &MF = DAG.getMachineFunction();
+    auto PtrVT = getPointerTy(MF.getDataLayout());
+    MCSymbol *Table =
+        WebAssembly::getOrCreateFunctionTableSymbol(MF.getContext(), Subtarget);
+    SDValue TableSym = DAG.getMCSymbol(Table, PtrVT);
+    SDValue FuncRef =
+        SDValue(DAG.getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
+                                   MVT::funcref, TableSym, Op.getOperand(1)),
+                0);
+
+    // Encode the signature information into the type index placeholder.
+    // This gets decoded and converted into the actual type signature in
+    // WebAssemblyMCInstLower.cpp.
+    auto NParams = Op.getNumOperands() - 2;
+    auto Sig = APInt(NParams * 64, 0);
+    // The return type has to be a BlockType since it can be void.
+    {
+      SDValue Operand = Op.getOperand(2);
+      MVT VT = Operand.getValueType().getSimpleVT();
+      WebAssembly::BlockType V;
+      if (VT == MVT::Untyped) {
+        V = WebAssembly::BlockType::Void;
+      } else if (VT == MVT::i32) {
+        V = WebAssembly::BlockType::I32;
+      } else if (VT == MVT::i64) {
+        V = WebAssembly::BlockType::I64;
+      } else if (VT == MVT::f32) {
+        V = WebAssembly::BlockType::F32;
+      } else if (VT == MVT::f64) {
+        V = WebAssembly::BlockType::F64;
+      } else {
+        llvm_unreachable("Unhandled type!");
+      }
+      Sig |= (int64_t)V;
+    }
+    for (unsigned i = 3; i < Op.getNumOperands(); ++i) {
+      SDValue Operand = Op.getOperand(i);
+      MVT VT = Operand.getValueType().getSimpleVT();
+      wasm::ValType V;
+      if (VT == MVT::i32) {
+        V = wasm::ValType::I32;
+      } else if (VT == MVT::i64) {
+        V = wasm::ValType::I64;
+      } else if (VT == MVT::f32) {
+        V = wasm::ValType::F32;
+      } else if (VT == MVT::f64) {
+        V = wasm::ValType::F64;
+      } else {
+        llvm_unreachable("Unhandled type!");
+      }
+      Sig <<= 64;
+      Sig |= (int64_t)V;
+    }
+
+    SmallVector<SDValue, 4> Ops;
+    Ops.push_back(DAG.getTargetConstantAP(
+        Sig, DL, EVT::getIntegerVT(*DAG.getContext(), NParams * 64)));
+    Ops.push_back(FuncRef);
+    return SDValue(
+        DAG.getMachineNode(WebAssembly::REF_TEST_FUNCREF, DL, MVT::i32, Ops),
         0);
   }
   }

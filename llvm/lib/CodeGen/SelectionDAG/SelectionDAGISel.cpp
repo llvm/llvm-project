@@ -3255,6 +3255,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   case ISD::HANDLENODE:
   case ISD::MDNODE_SDNODE:
   case ISD::TargetConstant:
+  case ISD::TargetConstantAP:
   case ISD::TargetConstantFP:
   case ISD::TargetConstantPool:
   case ISD::TargetFrameIndex:
