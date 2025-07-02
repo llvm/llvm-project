@@ -119,7 +119,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
       continue;
     }
 
-    if (Token == "KHR") {
+    if (Token.size() == 3 && Token.upper() == "KHR") {
       for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         if (StringRef(ExtensionName).starts_with("SPV_KHR_"))
           EnabledExtensions.insert(ExtensionEnum);
