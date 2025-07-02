@@ -160,6 +160,8 @@ static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
 #define ROOT_SIGNATURE_FLAG(Num, Val) Val = Num,
 enum class RootFlags : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(SamplerHeapDirectlyIndexed)
 };
 
 LLVM_ABI ArrayRef<EnumEntry<RootFlags>> getRootFlags();
@@ -167,6 +169,8 @@ LLVM_ABI ArrayRef<EnumEntry<RootFlags>> getRootFlags();
 #define ROOT_DESCRIPTOR_FLAG(Num, Enum, Flag) Enum = Num,
 enum class RootDescriptorFlags : uint32_t {
 #include "DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(DataStatic)
 };
 
 LLVM_ABI ArrayRef<EnumEntry<RootDescriptorFlags>> getRootDescriptorFlags();
