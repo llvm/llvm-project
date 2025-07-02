@@ -43,11 +43,11 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 }
 
 // CHECK-LABEL: define void @_QPsimd_reduction
-// CHECK:         %[[VAL_0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-// CHECK:         %[[VAL_1:.*]] = alloca i32, i64 1, align 4
-// CHECK:         %[[VAL_2:.*]] = alloca i32, align 4
-// CHECK:         %[[VAL_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
-// CHECK:         %[[VAL_4:.*]] = alloca ptr, align 8
+// CHECK:         %[[MOLD:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
+// CHECK:         %[[ORIG_I:.*]] = alloca i32, i64 1, align 4
+// CHECK:         %[[PRIV_I:.*]] = alloca i32, align 4
+// CHECK:         %[[RED_VAR:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
+// CHECK:         %[[PTR_RED_VAR:.*]] = alloca ptr, align 8
 // CHECK:         br label %[[VAL_5:.*]]
 // CHECK:       omp.region.after_alloca:                          ; preds = %[[VAL_6:.*]]
 // CHECK:         br label %[[VAL_7:.*]]
@@ -56,8 +56,8 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_7]]
 // CHECK:         br label %[[VAL_9:.*]]
 // CHECK:       omp.reduction.init:                               ; preds = %[[VAL_8]]
-// CHECK:         store ptr %[[VAL_3]], ptr %[[VAL_4]], align 8
-// CHECK:         call void @init(ptr %[[VAL_0]], ptr %[[VAL_3]])
+// CHECK:         store ptr %[[RED_VAR]], ptr %[[PTR_RED_VAR]], align 8
+// CHECK:         call void @init(ptr %[[MOLD]], ptr %[[RED_VAR]])
 // CHECK:         br label %[[VAL_10:.*]]
 // CHECK:       omp.simd.region:                                  ; preds = %[[VAL_9]]
 // CHECK:         br label %[[VAL_11:.*]]
@@ -74,7 +74,7 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK:         %[[VAL_21:.*]] = add i32 %[[VAL_20]], 1
 // CHECK:         br label %[[VAL_22:.*]]
 // CHECK:       omp.loop_nest.region:                             ; preds = %[[VAL_18]]
-// CHECK:         store i32 %[[VAL_21]], ptr %[[VAL_2]], align 4, !llvm.access.group ![[ACCESS_GROUP:.*]]
+// CHECK:         store i32 %[[VAL_21]], ptr %[[PRIV_I]], align 4, !llvm.access.group ![[ACCESS_GROUP:.*]]
 // CHECK:         br label %[[VAL_23:.*]]
 // CHECK:       omp.region.cont1:                                 ; preds = %[[VAL_22]]
 // CHECK:         br label %[[VAL_13]]
@@ -86,10 +86,10 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_19]]
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_24]]
-// CHECK:         %[[VAL_26:.*]] = load ptr, ptr %[[VAL_4]], align 8
-// CHECK:         call void @combine(ptr %[[VAL_0]], ptr %[[VAL_26]])
-// CHECK:         %[[VAL_27:.*]] = load ptr, ptr %[[VAL_4]], align 8
-// CHECK:         call void @cleanup(ptr %[[VAL_27]])
+// CHECK:         %[[RED_VAR2:.*]] = load ptr, ptr %[[PTR_RED_VAR]], align 8
+// CHECK:         call void @combine(ptr %[[MOLD]], ptr %[[RED_VAR2]])
+// CHECK:         %[[RED_VAR3:.*]] = load ptr, ptr %[[PTR_RED_VAR]], align 8
+// CHECK:         call void @cleanup(ptr %[[RED_VAR3]])
 // CHECK:         ret void
 
 // CHECK: ![[ACCESS_GROUP]] = distinct !{}

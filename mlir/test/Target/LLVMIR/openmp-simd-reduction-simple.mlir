@@ -35,10 +35,10 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 }
 
 // CHECK-LABEL: define void @_QPsimd_reduction(
-// CHECK:         %[[VAL_0:.*]] = alloca i32, i64 1, align 4
-// CHECK:         store float 0.000000e+00, ptr %[[VAL_1:.*]], align 4
-// CHECK:         %[[VAL_2:.*]] = alloca i32, align 4
-// CHECK:         %[[VAL_3:.*]] = alloca float, align 4
+// CHECK:         %[[ORIG_I:.*]] = alloca i32, i64 1, align 4
+// CHECK:         store float 0.000000e+00, ptr %[[ORIG_SUM:.*]], align 4
+// CHECK:         %[[PRIV_I:.*]] = alloca i32, align 4
+// CHECK:         %[[RED_VAR:.*]] = alloca float, align 4
 // CHECK:         br label %[[VAL_4:.*]]
 // CHECK:       omp.region.after_alloca:                          ; preds = %[[VAL_5:.*]]
 // CHECK:         br label %[[VAL_6:.*]]
@@ -47,7 +47,7 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK:       omp.private.init:                                 ; preds = %[[VAL_6]]
 // CHECK:         br label %[[VAL_8:.*]]
 // CHECK:       omp.reduction.init:                               ; preds = %[[VAL_7]]
-// CHECK:         store float 0.000000e+00, ptr %[[VAL_3]], align 4
+// CHECK:         store float 0.000000e+00, ptr %[[RED_VAR]], align 4
 // CHECK:         br label %[[VAL_9:.*]]
 // CHECK:       omp.simd.region:                                  ; preds = %[[VAL_8]]
 // CHECK:         br label %[[VAL_10:.*]]
@@ -64,15 +64,15 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK:         %[[VAL_20:.*]] = add i32 %[[VAL_19]], 1
 // CHECK:         br label %[[VAL_21:.*]]
 // CHECK:       omp.loop_nest.region:                             ; preds = %[[VAL_17]]
-// CHECK:         store i32 %[[VAL_20]], ptr %[[VAL_2]], align 4, !llvm.access.group ![[ACCESS_GROUP:.*]]
-// CHECK:         %[[VAL_22:.*]] = load float, ptr %[[VAL_3]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
-// CHECK:         %[[VAL_23:.*]] = load i32, ptr %[[VAL_2]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
+// CHECK:         store i32 %[[VAL_20]], ptr %[[PRIV_I]], align 4, !llvm.access.group ![[ACCESS_GROUP:.*]]
+// CHECK:         %[[RED_VAL:.*]] = load float, ptr %[[RED_VAR]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
+// CHECK:         %[[VAL_23:.*]] = load i32, ptr %[[PRIV_I]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
 // CHECK:         %[[VAL_24:.*]] = sext i32 %[[VAL_23]] to i64
 // CHECK:         %[[VAL_25:.*]] = sub nsw i64 %[[VAL_24]], 1
 // CHECK:         %[[VAL_26:.*]] = getelementptr float, ptr %[[VAL_27:.*]], i64 %[[VAL_25]]
 // CHECK:         %[[VAL_28:.*]] = load float, ptr %[[VAL_26]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
-// CHECK:         %[[VAL_29:.*]] = fadd contract float %[[VAL_22]], %[[VAL_28]]
-// CHECK:         store float %[[VAL_29]], ptr %[[VAL_3]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
+// CHECK:         %[[VAL_29:.*]] = fadd contract float %[[RED_VAL]], %[[VAL_28]]
+// CHECK:         store float %[[VAL_29]], ptr %[[RED_VAR]], align 4, !llvm.access.group ![[ACCESS_GROUP]]
 // CHECK:         br label %[[VAL_30:.*]]
 // CHECK:       omp.region.cont1:                                 ; preds = %[[VAL_21]]
 // CHECK:         br label %[[VAL_12]]
@@ -84,10 +84,10 @@ llvm.func @_QPsimd_reduction(%arg0: !llvm.ptr {fir.bindc_name = "a", llvm.nocapt
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_18]]
 // CHECK:         br label %[[VAL_32:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_31]]
-// CHECK:         %[[VAL_33:.*]] = load float, ptr %[[VAL_1]], align 4
-// CHECK:         %[[VAL_34:.*]] = load float, ptr %[[VAL_3]], align 4
-// CHECK:         %[[VAL_35:.*]] = fadd contract float %[[VAL_33]], %[[VAL_34]]
-// CHECK:         store float %[[VAL_35]], ptr %[[VAL_1]], align 4
+// CHECK:         %[[SUM_VAL:.*]] = load float, ptr %[[ORIG_SUM]], align 4
+// CHECK:         %[[RED_VAL:.*]] = load float, ptr %[[RED_VAR]], align 4
+// CHECK:         %[[COMBINED_VAL:.*]] = fadd contract float %[[SUM_VAL]], %[[RED_VAL]]
+// CHECK:         store float %[[COMBINED_VAL]], ptr %[[ORIG_SUM]], align 4
 // CHECK:         ret void
 
 // CHECK: ![[ACCESS_GROUP]] = distinct !{}
