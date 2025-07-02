@@ -14,7 +14,6 @@ FORCE_64B = "force_64b"
 
 
 class ProcessSaveCoreMinidump64bTestCase(TestBase):
-
     def verify_minidump(
         self,
         core_proc,
