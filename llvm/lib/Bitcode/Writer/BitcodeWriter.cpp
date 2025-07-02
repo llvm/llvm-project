@@ -2351,10 +2351,9 @@ void ModuleBitcodeWriter::writeDILabel(
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(N->getColumn());
-  Record.push_back(
-      N->getCoroSuspendIdx().has_value()
-          ? (uint64_t)N->getCoroSuspendIdx().value()
-          : std::numeric_limits<uint64_t>::max());
+  Record.push_back(N->getCoroSuspendIdx().has_value()
+                       ? (uint64_t)N->getCoroSuspendIdx().value()
+                       : std::numeric_limits<uint64_t>::max());
 
   Stream.EmitRecord(bitc::METADATA_LABEL, Record, Abbrev);
   Record.clear();
