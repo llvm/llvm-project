@@ -220,13 +220,13 @@ define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all"
 ; COMPAT-NEXT:    bl foo
 ; COMPAT-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; COMPAT-NEXT:    .cfi_def_cfa_offset 0
+; COMPAT-NEXT:    .cfi_restore w30
 ; COMPAT-NEXT:  .LBB9_2: // %exit
 ; COMPAT-NEXT:    adrp x8, var
 ; COMPAT-NEXT:    mov w9, #42 // =0x2a
 ; COMPAT-NEXT:    str x9, [x8, :lo12:var]
 ; COMPAT-NEXT:    hint #29
 ; COMPAT-NEXT:    .cfi_negate_ra_state
-; COMPAT-NEXT:    .cfi_restore w30
 ; COMPAT-NEXT:    ret
 ;
 ; V83A-LABEL: shrink_wrap_sign_all:
@@ -241,11 +241,11 @@ define void @shrink_wrap_sign_all(i32 %x, i32 %cond) "sign-return-address"="all"
 ; V83A-NEXT:    bl foo
 ; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V83A-NEXT:    .cfi_def_cfa_offset 0
+; V83A-NEXT:    .cfi_restore w30
 ; V83A-NEXT:  .LBB9_2: // %exit
 ; V83A-NEXT:    adrp x8, var
 ; V83A-NEXT:    mov w9, #42 // =0x2a
 ; V83A-NEXT:    str x9, [x8, :lo12:var]
-; V83A-NEXT:    .cfi_restore w30
 ; V83A-NEXT:    retaa
 entry:
   %cond.bool = icmp eq i32 %cond, 0
