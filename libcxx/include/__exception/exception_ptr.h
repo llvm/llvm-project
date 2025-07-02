@@ -142,7 +142,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
     return std::__make_exception_ptr_via_throw(__e);
   }
 
-#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201103L
+#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && !defined(_LIBCPP_CXX03_LANG)
   return std::__make_exception_ptr_explicit(__e);
 #    else
   return std::__make_exception_ptr_via_throw(__e);
