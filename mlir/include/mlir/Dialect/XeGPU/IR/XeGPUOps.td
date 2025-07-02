@@ -182,8 +182,8 @@ def XeGPU_CreateNdDescOp: XeGPU_Op<"create_nd_tdesc", [Pure, ViewLikeOpInterface
 
       // The offsets are allowed to be empty. The Traits verification of OffsetSizeAndStrideOpInterface interface assumes offsets being present. So it is set to be MAX to indicate user not passed any value (kDynamic means offsets passed as variable).
       setConstOffsets(llvm::SmallVector<int64_t, 4>(getTensorDescShape().size(), std::numeric_limits<int64_t>::max()));
-      // setConstOffsets(llvm::SmallVector<int64_t, 4>(getTensorDescShape().size(), 0));
       //setConstOffsets(llvm::SmallVector<int64_t, 4>(getTensorDescShape().size(), mlir::ShapedType::kDynamic));
+
       attr = getConstOffsetsAttr();
       return attr;
     }

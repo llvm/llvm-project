@@ -136,8 +136,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
          shape.size() == strides.size() && shape.size() == offsets.size());
 
   Type srcTy = source.getType();
-  assert(isa<IntegerType>(srcTy) ||
-         isa<MemRefType>(srcTy) && "Source has to be either int or memref.");
+  assert((isa<IntegerType>(srcTy) ||
+         isa<MemRefType>(srcTy)) && "Source has to be either int or memref.");
 
   llvm::SmallVector<Value> dynamicOffsets;
   llvm::SmallVector<Value> dynamicShape;
@@ -222,27 +222,30 @@ LogicalResult CreateNdDescOp::verify() {
 }
 
 
-ParseResult parseOptionalDynamicIndexList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
-    SmallVectorImpl<Type> *valueTypes = nullptr,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
-inline ParseResult parseOptionalDynamicIndexList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
-    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-  DenseBoolArrayAttr scalableFlags;
-  return parseOptionalDynamicIndexList(parser, values, integers, scalableFlags,
-                               valueTypes, delimiter);
-}
+//ParseResult parseOptionalDynamicIndexList(
+//    OpAsmParser &parser,
+//    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+//    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
+//    SmallVectorImpl<Type> *valueTypes = nullptr,
+//    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
+//inline ParseResult parseOptionalDynamicIndexList(
+//    OpAsmParser &parser,
+//    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+//    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
+//    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+//  DenseBoolArrayAttr scalableFlags;
+//  return parseOptionalDynamicIndexList(parser, values, integers, scalableFlags,
+//                               valueTypes, delimiter);
+//}
+
+
 
 ParseResult parseOptionalDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags,
-    SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
+    SmallVectorImpl<Type> *valueTypes = nullptr,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
 
   SmallVector<int64_t, 4> integerVals;
   SmallVector<bool, 4> scalableVals;
@@ -286,18 +289,15 @@ ParseResult parseOptionalDynamicIndexList(
 ::mlir::ParseResult CreateNdDescOp::parse(::mlir::OpAsmParser &parser, ::mlir::OperationState &result) {
   ::mlir::OpAsmParser::UnresolvedOperand sourceRawOperand{};
   ::llvm::ArrayRef<::mlir::OpAsmParser::UnresolvedOperand> sourceOperands(&sourceRawOperand, 1);  ::llvm::SMLoc sourceOperandsLoc;
-  (void)sourceOperandsLoc;
+
   ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> offsetsOperands;
   ::llvm::SMLoc offsetsOperandsLoc;
-  (void)offsetsOperandsLoc;
   ::mlir::DenseI64ArrayAttr const_offsetsAttr;
   ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> shapeOperands;
   ::llvm::SMLoc shapeOperandsLoc;
-  (void)shapeOperandsLoc;
   ::mlir::DenseI64ArrayAttr const_shapeAttr;
   ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> stridesOperands;
   ::llvm::SMLoc stridesOperandsLoc;
-  (void)stridesOperandsLoc;
   ::mlir::DenseI64ArrayAttr const_stridesAttr;
   ::mlir::Type sourceRawType{};
   ::llvm::ArrayRef<::mlir::Type> sourceTypes(&sourceRawType, 1);
@@ -308,45 +308,32 @@ ParseResult parseOptionalDynamicIndexList(
   if (parser.parseOperand(sourceRawOperand))
     return ::mlir::failure();
 
-      auto optionalOffsetResult = [&]() -> ::mlir::OptionalParseResult {
-      {
-        // skip the "offsets :" at the begining if it exists 
-        if (::mlir::succeeded(parser.parseOptionalKeyword("offsets"))) {
-          if (parser.parseColon())
-         return ::mlir::failure();
-        }
-        offsetsOperandsLoc = parser.getCurrentLocation();
-        auto odsResult = parseOptionalDynamicIndexList(parser, offsetsOperands, const_offsetsAttr);
-        // Debug print for offsets parsing using LLVM_DEBUG
-        LLVM_DEBUG(llvm::dbgs() << "parseOptionalDynamicIndexList returned: " << (odsResult ? "failure" : "success") << "\n");
-        LLVM_DEBUG(llvm::dbgs() << "offsetsOperands size: " << offsetsOperands.size() << "\n");
-        if (const_offsetsAttr)
-          LLVM_DEBUG(llvm::dbgs() << "const_offsetsAttr: " << const_offsetsAttr << "\n");
-        if (const_offsetsAttr)
-          result.getOrAddProperties<CreateNdDescOp::Properties>().const_offsets = const_offsetsAttr;
-      }
-        return ::mlir::success();
-      }();
 
-      if (optionalOffsetResult.has_value() && ::mlir::failed(*optionalOffsetResult)) {
-        LLVM_DEBUG(llvm::dbgs() << "optionalOffsetResult failed\n");
-        return ::mlir::failure();
-      } 
+    // skip the "offsets :" at the begining if it exists 
+    //if (::mlir::succeeded(parser.parseOptionalKeyword("offsets"))) {
+    //  if (parser.parseColon())
+    // return ::mlir::failure();
+    //}
+    offsetsOperandsLoc = parser.getCurrentLocation();
+
+    DenseBoolArrayAttr scalableFlags;
+    auto odsResult = parseOptionalDynamicIndexList(parser, offsetsOperands, const_offsetsAttr, scalableFlags);
+
+    if (const_offsetsAttr) {
+      if (odsResult) return ::mlir::failure();
+      result.getOrAddProperties<CreateNdDescOp::Properties>().const_offsets = const_offsetsAttr;
+    } 
 
   if (::mlir::succeeded(parser.parseOptionalKeyword("shape"))) {
-    LLVM_DEBUG(llvm::dbgs() << "Parsing 'shape' keyword\n");
     if (parser.parseColon())
       return ::mlir::failure();
     {
       shapeOperandsLoc = parser.getCurrentLocation();
       auto odsResult = parseDynamicIndexList(parser, shapeOperands, const_shapeAttr);
-      LLVM_DEBUG(llvm::dbgs() << "parseDynamicIndexList for shape returned: " << (odsResult ? "failure" : "success") << "\n");
-      LLVM_DEBUG(llvm::dbgs() << "shapeOperands size: " << shapeOperands.size() << "\n");
-      if (const_shapeAttr)
-        LLVM_DEBUG(llvm::dbgs() << "const_shapeAttr: " << const_shapeAttr << "\n");
-      if (odsResult) return ::mlir::failure();
-      if (const_shapeAttr)
+      if (const_shapeAttr) {
+        if (odsResult) return ::mlir::failure();
         result.getOrAddProperties<CreateNdDescOp::Properties>().const_shape = const_shapeAttr;
+      }
     }
 
     if (parser.parseKeyword("strides"))
@@ -356,13 +343,10 @@ ParseResult parseOptionalDynamicIndexList(
     {
       stridesOperandsLoc = parser.getCurrentLocation();
       auto odsResult = parseDynamicIndexList(parser, stridesOperands, const_stridesAttr);
-      LLVM_DEBUG(llvm::dbgs() << "parseDynamicIndexList for strides returned: " << (odsResult ? "failure" : "success") << "\n");
-      LLVM_DEBUG(llvm::dbgs() << "stridesOperands size: " << stridesOperands.size() << "\n");
-      if (const_stridesAttr)
-        LLVM_DEBUG(llvm::dbgs() << "const_stridesAttr: " << const_stridesAttr << "\n");
-      if (odsResult) return ::mlir::failure();
-      if (const_stridesAttr)
+      if (const_stridesAttr) {
+        if (odsResult) return ::mlir::failure();
         result.getOrAddProperties<CreateNdDescOp::Properties>().const_strides = const_stridesAttr;
+      }
     }
   }
   {
