@@ -296,7 +296,7 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name)
-      : Name(Name, &Name[strlen(Name) + 1]), PreferredNumThreads(0),
+      : Name(StringRef{Name, strlen(Name) + 1}), PreferredNumThreads(0),
         MaxNumThreads(0) {
     // The null terminator from the input string was also copied to ensure that
     // Name.data() will always be null terminated. Pop the last character to
