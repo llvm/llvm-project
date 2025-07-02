@@ -11,4 +11,6 @@
 #include <optional>
 #include <ranges>
 
-static_assert(std::ranges::range<std::optional<int>>);
+static_assert(std::ranges::sized_range<std::optional<int>>);
+static_assert(std::ranges::common_range<std::optional<int>>);
+static_assert(std::ranges::contiguous_range<std::optional<int>>);
