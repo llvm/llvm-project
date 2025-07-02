@@ -79,13 +79,9 @@ define <8 x float> @insert_extract_v8f32(<8 x float> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.w $fa1, $a0
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    movgr2fr.w $fa2, $a0
-; CHECK-NEXT:    movfr2gr.s $a0, $fa1
+; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; CHECK-NEXT:    movfr2gr.s $a0, $fa2
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 5
+; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 5
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <8 x float> %a, i32 3
@@ -115,13 +111,9 @@ define <4 x double> @insert_extract_v4f64(<4 x double> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    movgr2fr.d $fa1, $a0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    movgr2fr.d $fa2, $a0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa1
+; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
 ; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 0
-; CHECK-NEXT:    movfr2gr.d $a0, $fa2
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 2
+; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 2
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <4 x double> %a, i32 1
