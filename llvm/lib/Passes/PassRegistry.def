@@ -240,6 +240,43 @@ MODULE_PASS_WITH_PARAMS(
     },
     parseStructuralHashPrinterPassOptions, "detailed;call-target-ignored")
 
+MODULE_PASS_WITH_PARAMS(
+    "default", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildPerModuleDefaultPipeline(L);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "thinlto-pre-link", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildThinLTOPreLinkDefaultPipeline(L);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "thinlto", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildThinLTODefaultPipeline(L, nullptr);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "lto-pre-link", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      if (PTO.UnifiedLTO) {
+        // When UnifiedLTO is enabled, use the ThinLTO pre-link pipeline. This
+        // avoids compile-time performance regressions and keeps the pre-link
+        // LTO pipeline "unified" for both LTO modes.
+        return buildThinLTOPreLinkDefaultPipeline(L);
+      }
+      return buildLTOPreLinkDefaultPipeline(L);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+MODULE_PASS_WITH_PARAMS(
+    "lto", "", [&](OptimizationLevel L) {
+      setupOptionsForPipelineAlias(PTO, L);
+      return buildLTODefaultPipeline(L, nullptr);
+    },
+    parseOptLevelParam, "O0;O1;O2;O3;Os;Oz")
+
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS

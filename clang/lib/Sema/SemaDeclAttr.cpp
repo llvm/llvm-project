@@ -40,6 +40,7 @@
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaAVR.h"
@@ -1936,6 +1937,49 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 
   D->addAttr(::new (S.Context) NakedAttr(S.Context, AL));
+}
+
+// FIXME: This is a best-effort heuristic.
+// Currently only handles single throw expressions (optionally with
+// ExprWithCleanups). We could expand this to perform control-flow analysis for
+// more complex patterns.
+static bool isKnownToAlwaysThrow(const FunctionDecl *FD) {
+  if (!FD->hasBody())
+    return false;
+  const Stmt *Body = FD->getBody();
+  const Stmt *OnlyStmt = nullptr;
+
+  if (const auto *Compound = dyn_cast<CompoundStmt>(Body)) {
+    if (Compound->size() != 1)
+      return false; // More than one statement, can't be known to always throw.
+    OnlyStmt = *Compound->body_begin();
+  } else {
+    OnlyStmt = Body;
+  }
+
+  // Unwrap ExprWithCleanups if necessary.
+  if (const auto *EWC = dyn_cast<ExprWithCleanups>(OnlyStmt)) {
+    OnlyStmt = EWC->getSubExpr();
+  }
+  // Check if the only statement is a throw expression.
+  return isa<CXXThrowExpr>(OnlyStmt);
+}
+
+void clang::inferNoReturnAttr(Sema &S, const Decl *D) {
+  auto *FD = dyn_cast<FunctionDecl>(D);
+  if (!FD)
+    return;
+
+  auto *NonConstFD = const_cast<FunctionDecl *>(FD);
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  if (Diags.isIgnored(diag::warn_falloff_nonvoid, FD->getLocation()) &&
+      Diags.isIgnored(diag::warn_suggest_noreturn_function, FD->getLocation()))
+    return;
+
+  if (!FD->hasAttr<NoReturnAttr>() && !FD->hasAttr<InferredNoReturnAttr>() &&
+      isKnownToAlwaysThrow(FD)) {
+    NonConstFD->addAttr(InferredNoReturnAttr::CreateImplicit(S.Context));
+  }
 }
 
 static void handleNoReturnAttr(Sema &S, Decl *D, const ParsedAttr &Attrs) {

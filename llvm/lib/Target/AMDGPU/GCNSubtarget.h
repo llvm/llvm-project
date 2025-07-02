@@ -1451,8 +1451,6 @@ public:
 
   bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
-  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
-
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1468,6 +1466,8 @@ public:
   bool hasMinimum3Maximum3PKF16() const {
     return HasMinimum3Maximum3PKF16;
   }
+
+  bool hasTransposeLoadF4F6Insts() const { return HasTransposeLoadF4F6Insts; }
 
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.

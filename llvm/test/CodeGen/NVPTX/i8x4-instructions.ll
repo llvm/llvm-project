@@ -14,11 +14,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <4 x i8> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, -66911489;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], -66911489;
 ; CHECK-NEXT:    ret;
   ret <4 x i8> <i8 -1, i8 2, i8 3, i8 -4>
 }
