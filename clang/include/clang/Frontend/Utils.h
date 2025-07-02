@@ -50,7 +50,7 @@ class CodeGenOptions;
 void InitializePreprocessor(Preprocessor &PP, const PreprocessorOptions &PPOpts,
                             const PCHContainerReader &PCHContainerRdr,
                             const FrontendOptions &FEOpts,
-                            const CodeGenOptions &CodeGenOptions);
+                            const CodeGenOptions &CodeGenOpts);
 
 /// DoPrintPreprocessedInput - Implement -E mode.
 void DoPrintPreprocessedInput(Preprocessor &PP, raw_ostream *OS,
