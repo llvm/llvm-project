@@ -551,4 +551,62 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
   ];
 }
 
+def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
+  let description = [{
+    Methods that are common for OpenMP loop transformation operations.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+
+    InterfaceMethod<
+      /*description=*/[{
+        Get the indices for the arguments that represent CanonicalLoopInfo
+        applyees, i.e. loops that are transformed/consumed by this operation.
+      }],
+      /*returnType=*/ "std::pair<unsigned, unsigned>",
+      /*methodName=*/ "getApplyeesODSOperandIndexAndLength",
+      /*args=*/(ins)
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Get the indices for the arguments that represent CanonicalLoopInfo
+        generatees, i.e. loops that created by this operation.
+      }],
+      /*returnType=*/ "std::pair<unsigned, unsigned>",
+      /*methodName=*/ "getGenerateesODSOperandIndexAndLength",
+      /*args=*/(ins)
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return the number of applyees of this loop transformation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "getNumApplyees",
+      /*args=*/       (ins),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        return  $_op.getApplyeesODSOperandIndexAndLength().second;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return the number of generatees of this loop transformation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "getNumGeneratees",
+      /*args=*/       (ins),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        return  $_op.getGenerateesODSOperandIndexAndLength().second;
+      }]
+    >,
+
+  ];
+}
+
 #endif // OPENMP_OPS_INTERFACES
