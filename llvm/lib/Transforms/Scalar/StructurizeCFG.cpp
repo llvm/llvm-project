@@ -426,7 +426,7 @@ static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
     return false;
 
   // If the instruction is not a zero cost instruction, return false.
-  auto Cost = TTI->getInstructionCost(I, TargetTransformInfo::TCK_CodeSize);
+  auto Cost = TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   InstructionCost::CostType CostVal =
       Cost.isValid()
           ? Cost.getValue()
@@ -435,8 +435,8 @@ static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
     return false;
 
   // Check if any operands are instructions defined in the same block.
-  for (unsigned i = 0, e = I->getNumOperands(); i < e; ++i) {
-    if (auto *OpI = dyn_cast<Instruction>(I->getOperand(i))) {
+  for (auto &Op : I->operands()) {
+    if (auto *OpI = dyn_cast<Instruction>(Op)) {
       if (OpI->getParent() == BB)
         return false;
     }
@@ -976,7 +976,9 @@ void StructurizeCFG::simplifyHoistedPhis() {
 
     for (int i = 0; i < 2; i++) {
       Value *V = Phi->getIncomingValue(i);
-      if (!HoistedValues.count(V))
+      auto BBIt = HoistedValues.find(V);
+
+      if (BBIt == HoistedValues.end())
         continue;
 
       Value *OtherV = Phi->getIncomingValue(!i);
@@ -992,7 +994,7 @@ void StructurizeCFG::simplifyHoistedPhis() {
         break;
       }
       if (PoisonValBBIdx == -1 ||
-          !DT->dominates(HoistedValues[V],
+          !DT->dominates(BBIt->second,
                          OtherPhi->getIncomingBlock(PoisonValBBIdx)))
         continue;
 
