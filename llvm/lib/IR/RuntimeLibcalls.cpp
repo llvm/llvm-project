@@ -343,7 +343,7 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
   if (TT.isX86() && TT.isGNUEnvironment())
     setLongDoubleIsF128Libm(*this, /*FiniteOnlyFuncs=*/true);
 
-  if (TT.isX86() || TT.isVE()) {
+  if (TT.isX86() || TT.isVE() || TT.isARM() || TT.isThumb()) {
     if (ExceptionModel == ExceptionHandling::SjLj)
       setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
   }
