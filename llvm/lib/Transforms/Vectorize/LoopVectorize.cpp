@@ -9173,7 +9173,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
         CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
 
-      const RecurrenceDescriptor &RdxDesc = Legal->getReductionVars().lookup(
+      RecurrenceDescriptor RdxDesc = Legal->getRecurrenceDescriptor(
           cast<PHINode>(PhiR->getUnderlyingInstr()));
       // Non-FP RdxDescs will have all fast math flags set, so clear them.
       FastMathFlags FMFs = isa<FPMathOperator>(CurrentLinkI)

@@ -301,6 +301,11 @@ public:
   /// Returns the reduction variables found in the loop.
   const ReductionList &getReductionVars() const { return Reductions; }
 
+  RecurrenceDescriptor getRecurrenceDescriptor(PHINode *PN) const {
+    assert(Reductions.contains(PN) && "no recurrence descriptor for phi");
+    return Reductions.lookup(PN);
+  }
+
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
