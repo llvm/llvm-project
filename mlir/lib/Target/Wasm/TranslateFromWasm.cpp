@@ -232,6 +232,20 @@ private:
   parseConstInst(OpBuilder &builder,
                  std::enable_if_t<std::is_arithmetic_v<valueT>> * = nullptr);
 
+  /// Construct an operation with \p numOperands operands and a single result.
+  /// Each operand must have the same type. Suitable for e.g. binops, unary
+  /// ops, etc.
+  ///
+  /// \p opcode - The WASM opcode to build.
+  /// \p valueType - The operand and result type for the built instruction.
+  /// \p numOperands - The number of operands for the built operation.
+  ///
+  /// \returns The parsed instruction result, or failure.
+  template <typename opcode, typename valueType, unsigned int numOperands>
+  inline parsed_inst_t
+  buildNumericOp(OpBuilder &builder,
+                 std::enable_if_t<std::is_arithmetic_v<valueType>> * = nullptr);
+
   /// This function generates a dispatch tree to associate an opcode with a
   /// parser. Parsers are registered by specialising the
   /// `parseSpecificInstruction` function for the op code to handle.
@@ -862,6 +876,95 @@ inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
     WasmBinaryEncoding::OpCode::constFP64>(OpBuilder &builder) {
   return parseConstInst<double>(builder);
 }
+
+template <typename opcode, typename valueType, unsigned int numOperands>
+inline parsed_inst_t ExpressionParser::buildNumericOp(
+    OpBuilder &builder, std::enable_if_t<std::is_arithmetic_v<valueType>> *) {
+  auto ty = buildLiteralType<valueType>(builder);
+  LLVM_DEBUG(llvm::dbgs() << "*** buildNumericOp: numOperands = " << numOperands
+                          << ", type = " << ty << " ***\n");
+  auto tysToPop = llvm::SmallVector<Type, numOperands>();
+  tysToPop.resize(numOperands);
+  std::fill(tysToPop.begin(), tysToPop.end(), ty);
+  auto operands = popOperands(tysToPop);
+  if (failed(operands))
+    return failure();
+  auto op = builder.create<opcode>(*currentOpLoc, *operands).getResult();
+  LLVM_DEBUG(llvm::dbgs() << "Built: ");
+  LLVM_DEBUG(op.dump());
+  return {{op}};
+}
+
+// Convenience macro for generating numerical operations.
+#define BUILD_NUMERIC_OP(OP_NAME, N_ARGS, PREFIX, SUFFIX, TYPE)                \
+  template <>                                                                  \
+  inline parsed_inst_t ExpressionParser::parseSpecificInstruction<             \
+      WasmBinaryEncoding::OpCode::PREFIX##SUFFIX>(OpBuilder & builder) {       \
+    return buildNumericOp<OP_NAME, TYPE, N_ARGS>(builder);                     \
+  }
+
+// Macro to define binops that only support integer types.
+#define BUILD_NUMERIC_BINOP_INT(OP_NAME, PREFIX)                               \
+  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, I32, int32_t)                           \
+  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, I64, int64_t)
+
+// Macro to define binops that only support floating point types.
+#define BUILD_NUMERIC_BINOP_FP(OP_NAME, PREFIX)                                \
+  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, F32, float)                             \
+  BUILD_NUMERIC_OP(OP_NAME, 2, PREFIX, F64, double)
+
+// Macro to define binops that support both floating point and integer types.
+#define BUILD_NUMERIC_BINOP_INTFP(OP_NAME, PREFIX)                             \
+  BUILD_NUMERIC_BINOP_INT(OP_NAME, PREFIX)                                     \
+  BUILD_NUMERIC_BINOP_FP(OP_NAME, PREFIX)
+
+// Macro to implement unary ops that only support integers.
+#define BUILD_NUMERIC_UNARY_OP_INT(OP_NAME, PREFIX)                            \
+  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, I32, int32_t)                           \
+  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, I64, int64_t)
+
+// Macro to implement unary ops that support integer and floating point types.
+#define BUILD_NUMERIC_UNARY_OP_FP(OP_NAME, PREFIX)                             \
+  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, F32, float)                             \
+  BUILD_NUMERIC_OP(OP_NAME, 1, PREFIX, F64, double)
+
+BUILD_NUMERIC_BINOP_FP(CopySignOp, copysign)
+BUILD_NUMERIC_BINOP_FP(DivOp, div)
+BUILD_NUMERIC_BINOP_FP(MaxOp, max)
+BUILD_NUMERIC_BINOP_FP(MinOp, min)
+BUILD_NUMERIC_BINOP_INT(AndOp, and)
+BUILD_NUMERIC_BINOP_INT(DivSIOp, divS)
+BUILD_NUMERIC_BINOP_INT(DivUIOp, divU)
+BUILD_NUMERIC_BINOP_INT(OrOp, or)
+BUILD_NUMERIC_BINOP_INT(RemSIOp, remS)
+BUILD_NUMERIC_BINOP_INT(RemUIOp, remU)
+BUILD_NUMERIC_BINOP_INT(RotlOp, rotl)
+BUILD_NUMERIC_BINOP_INT(RotrOp, rotr)
+BUILD_NUMERIC_BINOP_INT(ShLOp, shl)
+BUILD_NUMERIC_BINOP_INT(ShRSOp, shrS)
+BUILD_NUMERIC_BINOP_INT(ShRUOp, shrU)
+BUILD_NUMERIC_BINOP_INT(XOrOp, xor)
+BUILD_NUMERIC_BINOP_INTFP(AddOp, add)
+BUILD_NUMERIC_BINOP_INTFP(MulOp, mul)
+BUILD_NUMERIC_BINOP_INTFP(SubOp, sub)
+BUILD_NUMERIC_UNARY_OP_FP(AbsOp, abs)
+BUILD_NUMERIC_UNARY_OP_FP(CeilOp, ceil)
+BUILD_NUMERIC_UNARY_OP_FP(FloorOp, floor)
+BUILD_NUMERIC_UNARY_OP_FP(NegOp, neg)
+BUILD_NUMERIC_UNARY_OP_FP(SqrtOp, sqrt)
+BUILD_NUMERIC_UNARY_OP_FP(TruncOp, trunc)
+BUILD_NUMERIC_UNARY_OP_INT(ClzOp, clz)
+BUILD_NUMERIC_UNARY_OP_INT(CtzOp, ctz)
+BUILD_NUMERIC_UNARY_OP_INT(PopCntOp, popcnt)
+
+// Don't need these anymore so let's undef them.
+#undef BUILD_NUMERIC_BINOP_FP
+#undef BUILD_NUMERIC_BINOP_INT
+#undef BUILD_NUMERIC_BINOP_INTFP
+#undef BUILD_NUMERIC_UNARY_OP_FP
+#undef BUILD_NUMERIC_UNARY_OP_INT
+#undef BUILD_NUMERIC_OP
+#undef BUILD_NUMERIC_CAST_OP
 
 class WasmBinaryParser {
 private:
