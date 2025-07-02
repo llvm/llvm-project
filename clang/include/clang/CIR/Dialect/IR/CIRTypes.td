@@ -35,7 +35,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 
 def CIR_IntType : CIR_Type<"Int", "int", [
     DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
-    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
   let summary = "Integer type with arbitrary precision up to a fixed limit";
   let description = [{

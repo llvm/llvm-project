@@ -138,6 +138,11 @@ void uniform_memset(uint32_t *s, uint32_t c, uint32_t n, uint64_t uniform) {
     s[i] = c;
 }
 
+// Indicates that the provided value is a power of two.
+static inline constexpr bool is_pow2(uint64_t x) {
+  return x && (x & (x - 1)) == 0;
+}
+
 } // namespace impl
 
 /// A slab allocator used to hand out identically sized slabs of memory.
@@ -570,6 +575,28 @@ void *reallocate(void *ptr, uint64_t size) {
   inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
   gpu::deallocate(ptr);
   return new_ptr;
+}
+
+void *aligned_allocate(uint32_t alignment, uint64_t size) {
+  // All alignment values must be a non-zero power of two.
+  if (!impl::is_pow2(alignment))
+    return nullptr;
+
+  // If the requested alignment is less than what we already provide this is
+  // just a normal allocation.
+  if (alignment < MIN_ALIGNMENT + 1)
+    return gpu::allocate(size);
+
+  // We can't handle alignments greater than 2MiB so we simply fail.
+  if (alignment > SLAB_ALIGNMENT + 1)
+    return nullptr;
+
+  // Trying to handle allocation internally would break the assumption that each
+  // chunk is identical to eachother. Allocate enough memory with worst-case
+  // alignment and then round up. The index logic will round down properly.
+  uint64_t rounded = size + alignment - 1;
+  void *ptr = gpu::allocate(rounded);
+  return __builtin_align_up(ptr, alignment);
 }
 
 } // namespace gpu
