@@ -61,7 +61,7 @@ If you rely on a platform or configuration that is not one of the defaults, we s
 
 In addition, source archives are available:
 * `<sub-project>*.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
-* To get all the `llvm-project` source code for this release, choose the one of the `Source Code` archives.
+* To get all the `llvm-project` source code for this release, choose `llvm-project-{release}.src.tar.xz`.
 
 ## Verifying Packages
 
