@@ -516,7 +516,7 @@ omp.declare_reduction @add_reduction_i32 : i32 init {
   %0 = llvm.add %arg0, %arg1 : i32
   omp.yield(%0 : i32)
 }
-llvm.func @simd_reduction(%1 : !llvm.ptr, %3 : !llvm.ptr, %6 : i32, %7 : i32) {
+llvm.func @do_simd_reduction(%1 : !llvm.ptr, %3 : !llvm.ptr, %6 : i32, %7 : i32) {
   omp.wsloop reduction(@add_reduction_i32 %3 -> %arg0 : !llvm.ptr) {
     // expected-warning@below {{simd information on composite construct discarded}}
     omp.simd reduction(@add_reduction_i32 %arg0 -> %arg1 : !llvm.ptr) {
