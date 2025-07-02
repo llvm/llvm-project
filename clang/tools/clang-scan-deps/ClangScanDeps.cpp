@@ -852,11 +852,6 @@ getCompilationDatabase(int argc, char **argv, std::string &ErrorMessage) {
 }
 
 int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
-#define LANGOPT(Name, Bits, DefaultValue, Compatibility, Description)          \
-  llvm::outs() << #Name << " " << Bits << " " << #DefaultValue << " "          \
-               << #Compatibility << " " << Description << "\n";
-#include "clang/Basic/LangOptions.def"
-
   llvm::InitializeAllTargetInfos();
   std::string ErrorMessage;
   std::unique_ptr<tooling::CompilationDatabase> Compilations =
