@@ -1,0 +1,15 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module m1
+  type ty_device
+    integer, device, allocatable, dimension(:) :: x
+  end type
+end module
+
+program main
+  use m1
+  type(ty_device) :: a
+end
+
+! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "main"}
+! CHECK: %{{.*}} = fir.alloca !fir.type<_QMm1Tty_device{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "a", uniq_name = "_QFEa"}
