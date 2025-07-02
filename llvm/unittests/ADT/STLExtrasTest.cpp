@@ -1591,6 +1591,18 @@ TEST(STLExtrasTest, Includes) {
   }
 }
 
+TEST(STLExtrasTest, Fill) {
+  std::vector<int> V1 = {1, 2, 3};
+  std::vector<int> V2;
+  int Val = 4;
+  auto IsSameAsVal = [&](int V) { return V == Val; };
+  fill(V1, Val);
+  EXPECT_TRUE(llvm::all_of(V1, IsSameAsVal));
+  V2.resize(5);
+  fill(V2, Val);
+  EXPECT_TRUE(llvm::all_of(V2, IsSameAsVal));
+}
+
 struct Foo;
 struct Bar {};
 
