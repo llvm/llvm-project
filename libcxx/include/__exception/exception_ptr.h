@@ -63,7 +63,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
   template <class _Ep>
-  friend _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT;
+  friend _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep&) _NOEXCEPT;
 
 public:
   // exception_ptr is basically a COW string so it is trivially relocatable.
