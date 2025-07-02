@@ -2246,13 +2246,22 @@ insertBits(IntType &field, IntType bits, unsigned startBit, unsigned numBits) {
 // emitDecodeInstruction - Emit the templated helper function
 // decodeInstruction().
 static void emitDecodeInstruction(formatted_raw_ostream &OS, bool IsVarLenInst,
-                                  unsigned OpcodeMask) {
+                                  unsigned OpcodeMask,
+                                  StringRef SpecializedInsnType) {
   const bool HasTryDecode = OpcodeMask & ((1 << MCD::OPC_TryDecode) |
                                           (1 << MCD::OPC_TryDecodeOrFail));
   const bool HasCheckPredicate =
       OpcodeMask &
       ((1 << MCD::OPC_CheckPredicate) | (1 << MCD::OPC_CheckPredicateOrFail));
   const bool HasSoftFail = OpcodeMask & (1 << MCD::OPC_SoftFail);
+
+  auto emitTemplate = [&OS, SpecializedInsnType] {
+    if (SpecializedInsnType.empty())
+      OS << "template <typename InsnType>\n";
+  };
+
+  StringRef InsnType =
+      SpecializedInsnType.empty() ? "InsnType" : SpecializedInsnType;
 
   OS << R"(
 static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
@@ -2262,11 +2271,13 @@ static unsigned decodeNumToSkip(const uint8_t *&Ptr) {
   if (getNumToSkipInBytes() == 3)
     OS << "  NumToSkip |= (*Ptr++) << 16;\n";
   OS << R"(  return NumToSkip;
-}
+})";
 
-template <typename InsnType>
-static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
-                                      InsnType insn, uint64_t Address,
+  emitTemplate();
+  OS << R"(
+static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI, )";
+  OS << InsnType << " insn,\n";
+  OS << R"(                             uint64_t Address,
                                       const MCDisassembler *DisAsm,
                                       const MCSubtargetInfo &STI)";
   if (IsVarLenInst) {
@@ -2787,7 +2798,11 @@ namespace {
     emitPredicateFunction(OS, TableInfo.Predicates);
 
   // Emit the main entry point for the decoder, decodeInstruction().
-  emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask);
+  // Generate non-templated code if exactly one InsnCPPType was specified.
+  StringRef SpecializedInsnType =
+      NonTemplatedInsnTypes.size() == 1 ? NonTemplatedInsnTypes[0].CPPType : "";
+
+  emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, SpecializedInsnType);
 
   OS << "\n} // namespace\n";
 }
