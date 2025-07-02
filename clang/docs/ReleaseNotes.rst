@@ -872,6 +872,10 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Improved handling of variables with ``consteval`` constructors, to
+  consistently treat the initializer as manifestly constant-evaluated.
+  (#GH135281)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
