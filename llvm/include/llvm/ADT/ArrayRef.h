@@ -165,6 +165,13 @@ namespace llvm {
       return Ret;
     }
 
+    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    const T &consume_back() {
+      const T &Ret = back();
+      *this = drop_back();
+      return Ret;
+    }
+
     // copy - Allocate copy in Allocator and return ArrayRef<T> to it.
     template <typename Allocator> MutableArrayRef<T> copy(Allocator &A) {
       T *Buff = A.template Allocate<T>(Length);
@@ -361,8 +368,15 @@ namespace llvm {
 
     /// consume_front() - Returns the first element and drops it from ArrayRef.
     T &consume_front() {
-      const T &Ret = front();
+      T &Ret = front();
       *this = drop_front();
+      return Ret;
+    }
+
+    /// consume_back() - Returns the last element and drops it from ArrayRef.
+    T &consume_back() {
+      T &Ret = back();
+      *this = drop_back();
       return Ret;
     }
 
