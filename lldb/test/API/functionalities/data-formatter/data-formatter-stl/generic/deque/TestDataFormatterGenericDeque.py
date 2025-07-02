@@ -121,9 +121,7 @@ class GenericDequeDataFormatterTestCase(TestBase):
         lldbutil.continue_to_breakpoint(process, bkpt)
 
         # first value added
-        self.expect(
-            "frame variable empty", substrs=["empty = size=1", "[0] = 1", "}"]
-        )
+        self.expect("frame variable empty", substrs=["empty = size=1", "[0] = 1", "}"])
 
         # add remaining values
         lldbutil.continue_to_breakpoint(process, bkpt)
