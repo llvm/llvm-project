@@ -525,7 +525,7 @@ private:
   ContinuousRangeMap<unsigned, ModuleFile*, 64> GlobalSLocEntryMap;
 
   using GlobalSLocOffsetMapType =
-      ContinuousRangeMap<unsigned, ModuleFile *, 64>;
+      ContinuousRangeMap<SourceLocation::UIntTy, ModuleFile *, 64>;
 
   /// A map of reversed (SourceManager::MaxLoadedOffset - SLocOffset)
   /// SourceLocation offsets to the modules containing them.

@@ -5600,9 +5600,8 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
   }
 
   // Segmented shuffle matching.
-  if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
-      ST->isSVEorStreamingSVEAvailable() && Kind == TTI::SK_PermuteSingleSrc &&
-      isa<FixedVectorType>(SrcTy) && !Mask.empty() &&
+  if (Kind == TTI::SK_PermuteSingleSrc && isa<FixedVectorType>(SrcTy) &&
+      !Mask.empty() && SrcTy->getPrimitiveSizeInBits().isNonZero() &&
       SrcTy->getPrimitiveSizeInBits().isKnownMultipleOf(
           AArch64::SVEBitsPerBlock)) {
 
@@ -5612,7 +5611,14 @@ AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
     unsigned SegmentElts = VTy->getNumElements() / Segments;
 
     // dupq zd.t, zn.t[idx]
-    if (isDUPQMask(Mask, Segments, SegmentElts))
+    if ((ST->hasSVE2p1() || ST->hasSME2p1()) &&
+        ST->isSVEorStreamingSVEAvailable() &&
+        isDUPQMask(Mask, Segments, SegmentElts))
+      return LT.first;
+
+    // mov zd.q, vn
+    if (ST->isSVEorStreamingSVEAvailable() &&
+        isDUPFirstSegmentMask(Mask, Segments, SegmentElts))
       return LT.first;
   }
 

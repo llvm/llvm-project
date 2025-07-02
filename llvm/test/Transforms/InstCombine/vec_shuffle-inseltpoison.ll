@@ -1278,9 +1278,9 @@ define <2 x float> @fsub_splat_constant1(<2 x float> %x) {
 
 define <2 x float> @fneg(<2 x float> %x) {
 ; CHECK-LABEL: @fneg(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
-; CHECK-NEXT:    ret <2 x float> [[R]]
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = shufflevector <2 x float> [[R]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x float> [[R1]]
 ;
   %splat = shufflevector <2 x float> %x, <2 x float> poison, <2 x i32> zeroinitializer
   %r = fsub <2 x float> <float -0.0, float -0.0>, %splat
