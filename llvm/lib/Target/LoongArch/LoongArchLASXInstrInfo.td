@@ -1282,6 +1282,32 @@ multiclass PatCCXrXrF<CondCode CC, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
 }
 
+multiclass PairInsertExtractPatV8<ValueType vecty, ValueType elemty> {
+  foreach imm1 = 0...3 in {
+    foreach imm2 = 0...3 in {
+      defvar Imm = !or(!shl(imm2, 4), imm1);
+      def : Pat<(vector_insert (vector_insert vecty:$xd,
+                    (elemty (vector_extract vecty:$xj, imm1)), imm2),
+                    (elemty (vector_extract vecty:$xj, !add(imm1, 4))),
+                    !add(imm2, 4)),
+                (XVEXTRINS_W $xd, $xj, Imm)>;
+    }
+  }
+}
+
+multiclass PairInsertExtractPatV4<ValueType vecty, ValueType elemty> {
+  foreach imm1 = 0...1 in {
+    foreach imm2 = 0...1 in {
+      defvar Imm = !or(!shl(imm2, 4), imm1);
+      def : Pat<(vector_insert (vector_insert vecty:$xd,
+                    (elemty (vector_extract vecty:$xj, imm1)), imm2),
+                    (elemty (vector_extract vecty:$xj, !add(imm1, 2))),
+                    !add(imm2, 2)),
+                (XVEXTRINS_D $xd, $xj, Imm)>;
+    }
+  }
+}
+
 let Predicates = [HasExtLASX] in {
 
 // XVADD_{B/H/W/D}
@@ -1581,6 +1607,38 @@ defm : PatCCXrXrF<SETUNE, "XVFCMP_CUNE">;
 
 defm : PatCCXrXrF<SETO, "XVFCMP_COR">;
 defm : PatCCXrXrF<SETUO, "XVFCMP_CUN">;
+
+// Insert two elements extracted from vector into vector. (The positions
+// of the two elements must be same in the source or destination vector's
+// front and back 128bits.)
+// 2*XVPICKVE2GR_{W/D} + 2*XVINSGR2VR_{W/D} -> XVEXTRINS_{W/D}
+// XVPERMI_D + 2*XVPICKVE2GR_{B/H} + 2*PseudoXVINSGR2VR_{B/H} -> XVEXTRINS_{W/D}
+foreach imm1 = 0...15 in {
+  foreach imm2 = 0...15 in {
+    defvar Imm = !or(!shl(imm2, 4), imm1);
+    def : Pat<(vector_insert (vector_insert v32i8:$xd,
+                  (GRLenVT (vector_extract v32i8:$xj, imm1)), imm2),
+                  (GRLenVT (vector_extract v32i8:$xj, !add(imm1, 16))),
+                  !add(imm2, 16)),
+              (XVEXTRINS_B $xd, $xj, Imm)>;
+  }
+}
+
+foreach imm1 = 0...7 in {
+  foreach imm2 = 0...7 in {
+    defvar Imm = !or(!shl(imm2, 4), imm1);
+    def : Pat<(vector_insert (vector_insert v16i16:$xd,
+                  (GRLenVT (vector_extract v16i16:$xj, imm1)), imm2),
+                  (GRLenVT (vector_extract v16i16:$xj, !add(imm1, 8))),
+                  !add(imm2, 8)),
+              (XVEXTRINS_H $xd, $xj, Imm)>;
+  }
+}
+
+defm : PairInsertExtractPatV8<v8i32, GRLenVT>;
+defm : PairInsertExtractPatV8<v8f32, f32>;
+defm : PairInsertExtractPatV4<v4i64, GRLenVT>;
+defm : PairInsertExtractPatV4<v4f64, f64>;
 
 // PseudoXVINSGR2VR_{B/H}
 def : Pat<(vector_insert v32i8:$xd, GRLenVT:$rj, uimm5:$imm),

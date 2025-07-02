@@ -4,14 +4,7 @@
 define <32 x i8> @insert_extract_v32i8(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 1
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr1, 15
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 1
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvextrins.b $xr0, $xr0, 31
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <32 x i8> %a, i32 15
@@ -24,14 +17,7 @@ entry:
 define <16 x i16> @insert_extract_v16i16(<16 x i16> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 1
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr1, 7
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvextrins.h $xr0, $xr0, 23
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <16 x i16> %a, i32 7
@@ -44,10 +30,7 @@ entry:
 define <8 x i32> @insert_extract_v8i32(<8 x i32> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 5
+; CHECK-NEXT:    xvextrins.w $xr0, $xr0, 19
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <8 x i32> %a, i32 3
@@ -60,10 +43,7 @@ entry:
 define <8 x float> @insert_extract_v8f32(<8 x float> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    xvpickve2gr.w $a1, $xr0, 7
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
-; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a1, 5
+; CHECK-NEXT:    xvextrins.w $xr0, $xr0, 19
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <8 x float> %a, i32 3
@@ -76,10 +56,7 @@ entry:
 define <4 x i64> @insert_extract_v4i64(<4 x i64> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 0
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 2
+; CHECK-NEXT:    xvextrins.d $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <4 x i64> %a, i32 1
@@ -92,10 +69,7 @@ entry:
 define <4 x double> @insert_extract_v4f64(<4 x double> %a) nounwind {
 ; CHECK-LABEL: insert_extract_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    xvpickve2gr.d $a1, $xr0, 3
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 0
-; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a1, 2
+; CHECK-NEXT:    xvextrins.d $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
 entry:
   %b_lo = extractelement <4 x double> %a, i32 1
