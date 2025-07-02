@@ -638,26 +638,19 @@ namespace nttp_auto {
     template struct A<B>;
   } // namespace t1
   namespace t2 {
-    // FIXME: Shouldn't accept parameters after a parameter pack.
     template<template<auto... Va1, auto Va2> class> struct A {};
-    // new-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
-    // expected-note@-2 {{previous template template parameter is here}}
+    // expected-error@-1 {{template parameter pack must be the last template parameter}}
+    // old-note@-2 {{previous template template parameter is here}}
     template<int... Vi> struct B;
-    // new-note@-1 {{template parameter is declared here}}
-    // old-note@-2 {{too few template parameters}}
+    // old-note@-1 {{too few template parameters}}
     template struct A<B>;
-    // new-note@-1 {{different template parameters}}
-    // old-error@-2 {{different template parameters}}
+    // old-error@-1 {{different template parameters}}
   } // namespace t2
   namespace t3 {
-    // FIXME: Shouldn't accept parameters after a parameter pack.
     template<template<auto... Va1, auto... Va2> class> struct A {};
-    // new-error@-1 {{deduced non-type template argument does not have the same type as the corresponding template parameter ('auto' vs 'int')}}
-    // new-note@-2 {{previous template template parameter is here}}
+    // expected-error@-1 {{template parameter pack must be the last template parameter}}
     template<int... Vi> struct B;
-    // new-note@-1 {{template parameter is declared here}}
     template struct A<B>;
-    // new-note@-1 {{different template parameters}}
   } // namespace t3
 } // namespace nttp_auto
 

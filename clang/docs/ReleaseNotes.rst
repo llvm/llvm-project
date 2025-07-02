@@ -1078,6 +1078,9 @@ Bug Fixes to C++ Support
   template parameter. Now, such expression can be used with ``static_assert`` and ``constexpr``. (#GH123498)
 - Correctly determine the implicit constexprness of lambdas in dependent contexts. (#GH97958) (#GH114234)
 - Fix that some dependent immediate expressions did not cause immediate escalation (#GH119046)
+- Fixes matching of nested template template parameters. (#GH130362)
+- Correctly diagnoses template template paramters which have a pack parameter
+  not in the last position.
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
