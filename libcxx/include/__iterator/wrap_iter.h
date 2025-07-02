@@ -117,6 +117,10 @@ private:
   friend class span;
   template <class _Tp, size_t _Size>
   friend struct array;
+#if _LIBCPP_STD_VER >= 26
+  template <typename _Tp>
+  friend class optional;
+#endif
 };
 
 template <class _Iter1>

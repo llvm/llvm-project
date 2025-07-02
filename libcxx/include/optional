@@ -601,119 +601,7 @@ constexpr bool ranges::enable_view<optional<_T>> = true;
 template <class _T>
 constexpr auto format_kind<optional<_T>> = range_format::disabled;
 
-template <typename _Tp>
-class __optional_iterator {
-  using _Base = __wrap_iter<_Tp*>;
-  _Base __it_;
-
-public:
-  using value_type        = _Tp;
-  using difference_type   = typename _Base::difference_type;
-  using pointer           = typename _Base::pointer;
-  using reference         = typename _Base::reference;
-  using iterator_category = random_access_iterator_tag;
-  using iterator_concept  = contiguous_iterator_tag;
-
-private:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __optional_iterator(_Base __it) noexcept : __it_(__it) {}
-
-  _LIBCPP_HIDE_FROM_ABI friend class __wrap_iter<_Tp*>;
-  _LIBCPP_HIDE_FROM_ABI friend class __wrap_iter<const _Tp*>;
-
-  _LIBCPP_HIDE_FROM_ABI friend class optional<std::remove_const_t<_Tp>>;
-  _LIBCPP_HIDE_FROM_ABI friend class optional<const _Tp>;
-
-public:
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator() : __it_(_Base()) {}
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator(const __optional_iterator&)            = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator=(const __optional_iterator&) = default;
-
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const { return *__it_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr pointer operator->() const { return __it_.operator->(); } 
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator++() noexcept {
-    ++__it_;
-    return *this;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator operator++(int) noexcept {
-    auto __tmp = *this;
-    ++__it_;
-    return __tmp;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator--() noexcept {
-    --__it_;
-    return *this;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator operator--(int) noexcept {
-    auto __tmp = *this;
-    --__it_;
-    return __tmp;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator+=(difference_type __n) noexcept {
-    __it_ += __n;
-    return *this;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr __optional_iterator& operator-=(difference_type __n) noexcept {
-    __it_ -= __n;
-    return *this;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __optional_iterator
-  operator+(__optional_iterator __i, difference_type __n) noexcept {
-    return __optional_iterator(__i.__it_ + __n);
-  }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __optional_iterator
-  operator+(difference_type __n, __optional_iterator __i) noexcept {
-    return __i + __n;
-  }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __optional_iterator
-  operator-(__optional_iterator __i, difference_type __n) noexcept {
-    return __optional_iterator(__i.__it_ - __n);
-  }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(__optional_iterator __a, __optional_iterator __b) noexcept {
-    return __a.__it_ - __b.__it_;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const noexcept { return *(__it_ + __n); }
-
-  _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const __optional_iterator& __other) const {
-    return __it_ == __other.__it_;
-  }
-
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator<(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
-    return __a.__it_ < __b.__it_;
-  }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator>(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
-    return __a.__it_ > __b.__it_;
-  }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator<=(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
-    return __a.__it_ <= __b.__it_;
-  }
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool
-  operator>=(const __optional_iterator& __a, const __optional_iterator& __b) noexcept {
-    return __a.__it_ >= __b.__it_;
-  }
-
-  template <typename _Ut = _Tp>
-  _LIBCPP_HIDE_FROM_ABI constexpr operator __optional_iterator<const _Tp>() const
-    requires(!std::is_const_v<_Ut>)
-  {
-    return __optional_iterator<const _Tp>(__wrap_iter<const _Tp*>{__it_.base()});
-  }
-};
-template <typename _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp* to_address(const __optional_iterator<_Tp>& __it) noexcept {
-  return std::to_address(__it.__it_);
-}
-
-#    endif // _LIBCPP_STD_VER >= 26
+#    endif
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
@@ -726,10 +614,8 @@ public:
   using value_type = _Tp;
 
 #    if _LIBCPP_STD_VER >= 26
-
-  using iterator       = __optional_iterator<_Tp>;
-  using const_iterator = __optional_iterator<const _Tp&>;
-
+  using iterator       = __wrap_iter<_Tp>;
+  using const_iterator = __wrap_iter<const _Tp>;
 #    endif // _LIBCPP_STD_VER >= 26
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
@@ -1126,20 +1012,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() {
     if (!this->has_value())
       return end();
-    return iterator(__wrap_iter(static_cast<_Tp*>(this->__get())));
+    return iterator(static_cast<_Tp>(this->__get()));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const {
     if (!this->has_value())
       return end();
-    return const_iterator(__wrap_iter(static_cast<const _Tp*>(this->__get())));
+    return const_iterator(static_cast<const _Tp>(this->__get()));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() { return iterator(__wrap_iter(static_cast<_Tp*>(nullptr))); }
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() { return iterator(static_cast<_Tp>(nullptr)); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const {
-    return const_iterator(__wrap_iter(static_cast<const _Tp*>(nullptr)));
-  }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const { return const_iterator(static_cast<const _Tp>(nullptr)); }
 
 #    endif // _LIBCPP_STD_VER >= 26
 
