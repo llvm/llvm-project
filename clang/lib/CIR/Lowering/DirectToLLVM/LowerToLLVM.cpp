@@ -2318,15 +2318,20 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   mlir::MLIRContext *context = storageType.getContext();
   unsigned storageSize = 0;
 
-  if (auto arTy = mlir::dyn_cast<cir::ArrayType>(storageType))
-    storageSize = arTy.getSize() * 8;
-  else if (auto intTy = mlir::dyn_cast<cir::IntType>(storageType))
-    storageSize = intTy.getWidth();
-  else
-    llvm_unreachable(
-        "Either ArrayType or IntType expected for bitfields storage");
-
-  mlir::IntegerType intType = mlir::IntegerType::get(context, storageSize);
+  mlir::IntegerType intType =
+      TypeSwitch<mlir::Type, mlir::IntegerType>(storageType)
+          .Case<cir::ArrayType>([&](cir::ArrayType atTy) {
+            storageSize = atTy.getSize() * 8;
+            return mlir::IntegerType::get(context, storageSize);
+          })
+          .Case<cir::IntType>([&](cir::IntType intTy) {
+            storageSize = intTy.getWidth();
+            return mlir::IntegerType::get(context, storageSize);
+          })
+          .Default([](mlir::Type) -> mlir::IntegerType {
+            llvm_unreachable(
+                "Either ArrayType or IntType expected for bitfields storage");
+          });
 
   mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
       op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());
