@@ -65,7 +65,7 @@ DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
   if (func_load_addr == LLDB_INVALID_ADDRESS)
     func_load_addr = m_func_file_addr;
   
-  // translate to file-relative PC
+  // Translate to file-relative PC.
   lldb::addr_t file_pc = load_addr - func_load_addr + m_func_file_addr;
 
   if (const auto *entry = m_exprs.FindEntryThatContains(file_pc)) {
