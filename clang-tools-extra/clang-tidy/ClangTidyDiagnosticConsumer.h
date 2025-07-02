@@ -293,19 +293,9 @@ public:
                         const Diagnostic &Info) override;
 
   void BeginSourceFile(const LangOptions &LangOpts,
-                       const Preprocessor *PP = nullptr) override {
-    DiagnosticConsumer::BeginSourceFile(LangOpts, PP);
+                       const Preprocessor *PP = nullptr) override;
 
-    assert(!InSourceFile);
-    InSourceFile = true;
-  }
-
-  void EndSourceFile() override {
-    assert(InSourceFile);
-    InSourceFile = false;
-
-    DiagnosticConsumer::EndSourceFile();
-  }
+  void EndSourceFile() override;
 
   // Retrieve the diagnostics that were captured.
   std::vector<ClangTidyError> take();
