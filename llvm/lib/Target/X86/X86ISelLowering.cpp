@@ -47254,13 +47254,14 @@ static SDValue combineToExtendBoolVectorInReg(
                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
 }
 
-/// If a vector select has an operand that is -1 or 0, try to simplify the
+/// If a vector select has an left operand that is 0, try to simplify the
 /// select to a bitwise logic operation.
-/// TODO: Move to DAGCombiner, possibly using TargetLowering::hasAndNot()?
-static SDValue
-combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const X86Subtarget &Subtarget) {
+/// TODO: Move to DAGCombiner.combineVSelectWithAllOnesOrZeros, possibly using
+/// TargetLowering::hasAndNot()?
+static SDValue combineVSelectWithLastZeros(SDNode *N, SelectionDAG &DAG,
+                                           const SDLoc &DL,
+                                           TargetLowering::DAGCombinerInfo &DCI,
+                                           const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
@@ -47273,20 +47274,6 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  // TODO: Use isNullOrNullSplat() to distinguish constants with undefs?
-  // TODO: Can we assert that both operands are not zeros (because that should
-  //       get simplified at node creation time)?
-  bool TValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
-  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
-
-  // If both inputs are 0/undef, create a complete zero vector.
-  // FIXME: As noted above this should be handled by DAGCombiner/getNode.
-  if (TValIsAllZeros && FValIsAllZeros) {
-    if (VT.isFloatingPoint())
-      return DAG.getConstantFP(0.0, DL, VT);
-    return DAG.getConstant(0, DL, VT);
-  }
-
   // To use the condition operand as a bitwise mask, it must have elements that
   // are the same size as the select elements. Ie, the condition operand must
   // have already been promoted from the IR select condition type <N x i1>.
@@ -47295,56 +47282,15 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
     return SDValue();
 
-  // Try to invert the condition if true value is not all 1s and false value is
-  // not all 0s. Only do this if the condition has one use.
-  bool TValIsAllOnes = ISD::isBuildVectorAllOnes(LHS.getNode());
-  if (!TValIsAllOnes && !FValIsAllZeros && Cond.hasOneUse() &&
-      // Check if the selector will be produced by CMPP*/PCMP*.
-      Cond.getOpcode() == ISD::SETCC &&
-      // Check if SETCC has already been promoted.
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT) ==
-          CondVT) {
-    bool FValIsAllOnes = ISD::isBuildVectorAllOnes(RHS.getNode());
-
-    if (TValIsAllZeros || FValIsAllOnes) {
-      SDValue CC = Cond.getOperand(2);
-      ISD::CondCode NewCC = ISD::getSetCCInverse(
-          cast<CondCodeSDNode>(CC)->get(), Cond.getOperand(0).getValueType());
-      Cond = DAG.getSetCC(DL, CondVT, Cond.getOperand(0), Cond.getOperand(1),
-                          NewCC);
-      std::swap(LHS, RHS);
-      TValIsAllOnes = FValIsAllOnes;
-      FValIsAllZeros = TValIsAllZeros;
-    }
-  }
-
   // Cond value must be 'sign splat' to be converted to a logical op.
   if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
     return SDValue();
 
-  // vselect Cond, 111..., 000... -> Cond
-  if (TValIsAllOnes && FValIsAllZeros)
-    return DAG.getBitcast(VT, Cond);
-
   if (!TLI.isTypeLegal(CondVT))
     return SDValue();
 
-  // vselect Cond, 111..., X -> or Cond, X
-  if (TValIsAllOnes) {
-    SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
-    SDValue Or = DAG.getNode(ISD::OR, DL, CondVT, Cond, CastRHS);
-    return DAG.getBitcast(VT, Or);
-  }
-
-  // vselect Cond, X, 000... -> and Cond, X
-  if (FValIsAllZeros) {
-    SDValue CastLHS = DAG.getBitcast(CondVT, LHS);
-    SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, CastLHS);
-    return DAG.getBitcast(VT, And);
-  }
-
   // vselect Cond, 000..., X -> andn Cond, X
-  if (TValIsAllZeros) {
+  if (ISD::isBuildVectorAllZeros(LHS.getNode())) {
     SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
     SDValue AndN;
     // The canonical form differs for i1 vectors - x86andnp is not used
@@ -48105,7 +48051,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
 
-  if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, DL, DCI, Subtarget))
+  if (SDValue V = combineVSelectWithLastZeros(N, DAG, DL, DCI, Subtarget))
     return V;
 
   if (SDValue V = combineVSelectToBLENDV(N, DAG, DL, DCI, Subtarget))
