@@ -420,8 +420,7 @@ void DWARFFormValue::Dump(Stream &s) const {
       DumpAddress(s.AsRawOstream(), uvalue, sizeof(uint64_t) * 2);
     else
       DumpAddress(s.AsRawOstream(), uvalue,
-                  4 * 2); // 4 for DWARF32, 8 for DWARF64, but we don't
-                          // support DWARF64 yet
+                  m_unit->GetFormParams().getRefAddrByteSize());
     break;
   }
   case DW_FORM_ref1:
