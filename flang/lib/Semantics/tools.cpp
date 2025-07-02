@@ -1083,8 +1083,8 @@ const Scope *FindCUDADeviceContext(const Scope *scope) {
 
 bool IsDeviceAllocatable(const Symbol &symbol) {
   if (IsAllocatable(symbol)) {
-    if (const auto *details =
-            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    if (const auto *details{
+            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
       if (details->cudaDataAttr() &&
           *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
         return true;

@@ -2174,13 +2174,13 @@ bool IsAutomatic(const Symbol &original) {
 }
 
 bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
     const Fortran::semantics::DeclTypeSpec *type{details->type()};
     const Fortran::semantics::DerivedTypeSpec *derived{
         type ? type->AsDerived() : nullptr};
     if (derived) {
-      if (auto iter{FindCUDADeviceAllocatableUltimateComponent(*derived)}) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
         return false;
       }
     }
