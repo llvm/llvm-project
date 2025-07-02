@@ -239,122 +239,12 @@ VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  const bool scalar_is_load_addr = true;
-  auto [addr_of_string, addr_type] =
-      valobj.IsPointerOrReferenceType()
-          ? valobj.GetPointerValue()
-          : valobj.GetAddressOf(scalar_is_load_addr);
-  if (addr_of_string != LLDB_INVALID_ADDRESS) {
-    switch (addr_type) {
-    case eAddressTypeLoad: {
-      ProcessSP process_sp(valobj.GetProcessSP());
-      if (!process_sp)
-        return false;
+  ValueObjectSP ptr = valobj.GetChildAtNamePath({"_M_dataplus", "_M_p"});
+  if (!ptr)
+    return false;
 
-      StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      Status error;
-      lldb::addr_t addr_of_data =
-          process_sp->ReadPointerFromMemory(addr_of_string, error);
-      if (error.Fail() || addr_of_data == 0 ||
-          addr_of_data == LLDB_INVALID_ADDRESS)
-        return false;
-      options.SetLocation(addr_of_data);
-      options.SetTargetSP(valobj.GetTargetSP());
-      options.SetStream(&stream);
-      options.SetNeedsZeroTermination(false);
-      options.SetBinaryZeroIsTerminator(true);
-      lldb::addr_t size_of_data = process_sp->ReadPointerFromMemory(
-          addr_of_string + process_sp->GetAddressByteSize(), error);
-      if (error.Fail())
-        return false;
-      options.SetSourceSize(size_of_data);
-      options.SetHasSourceSize(true);
-
-      if (!StringPrinter::ReadStringAndDumpToStream<
-              StringPrinter::StringElementType::UTF8>(options)) {
-        stream.Printf("Summary Unavailable");
-        return true;
-      } else
-        return true;
-    } break;
-    case eAddressTypeHost:
-      break;
-    case eAddressTypeInvalid:
-    case eAddressTypeFile:
-      break;
-    }
-  }
-  return false;
-}
-
-bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  const bool scalar_is_load_addr = true;
-  auto [addr_of_string, addr_type] = valobj.GetAddressOf(scalar_is_load_addr);
-  if (addr_of_string != LLDB_INVALID_ADDRESS) {
-    switch (addr_type) {
-    case eAddressTypeLoad: {
-      ProcessSP process_sp(valobj.GetProcessSP());
-      if (!process_sp)
-        return false;
-
-      CompilerType wchar_compiler_type =
-          valobj.GetCompilerType().GetBasicTypeFromAST(lldb::eBasicTypeWChar);
-
-      if (!wchar_compiler_type)
-        return false;
-
-      // Safe to pass nullptr for exe_scope here.
-      std::optional<uint64_t> size =
-          llvm::expectedToOptional(wchar_compiler_type.GetBitSize(nullptr));
-      if (!size)
-        return false;
-      const uint32_t wchar_size = *size;
-
-      StringPrinter::ReadStringAndDumpToStreamOptions options(valobj);
-      Status error;
-      lldb::addr_t addr_of_data =
-          process_sp->ReadPointerFromMemory(addr_of_string, error);
-      if (error.Fail() || addr_of_data == 0 ||
-          addr_of_data == LLDB_INVALID_ADDRESS)
-        return false;
-      options.SetLocation(addr_of_data);
-      options.SetTargetSP(valobj.GetTargetSP());
-      options.SetStream(&stream);
-      options.SetNeedsZeroTermination(false);
-      options.SetBinaryZeroIsTerminator(false);
-      lldb::addr_t size_of_data = process_sp->ReadPointerFromMemory(
-          addr_of_string + process_sp->GetAddressByteSize(), error);
-      if (error.Fail())
-        return false;
-      options.SetSourceSize(size_of_data);
-      options.SetHasSourceSize(true);
-      options.SetPrefixToken("L");
-
-      switch (wchar_size) {
-      case 8:
-        return StringPrinter::ReadStringAndDumpToStream<
-            StringPrinter::StringElementType::UTF8>(options);
-      case 16:
-        return StringPrinter::ReadStringAndDumpToStream<
-            StringPrinter::StringElementType::UTF16>(options);
-      case 32:
-        return StringPrinter::ReadStringAndDumpToStream<
-            StringPrinter::StringElementType::UTF32>(options);
-      default:
-        stream.Printf("size for wchar_t is not valid");
-        return true;
-      }
-      return true;
-    } break;
-    case eAddressTypeHost:
-      break;
-    case eAddressTypeInvalid:
-    case eAddressTypeFile:
-      break;
-    }
-  }
-  return false;
+  stream << ptr->GetSummaryAsCString();
+  return true;
 }
 
 LibStdcppSharedPtrSyntheticFrontEnd::LibStdcppSharedPtrSyntheticFrontEnd(
