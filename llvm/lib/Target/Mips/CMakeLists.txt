@@ -6,8 +6,7 @@ tablegen(LLVM MipsGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM MipsGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MipsGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MipsGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler
-              -non-templated-decode-to-mcinst-type-spec=uint32_t:=16,32)
+tablegen(LLVM MipsGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM MipsGenFastISel.inc -gen-fast-isel)
 tablegen(LLVM MipsGenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM MipsGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
