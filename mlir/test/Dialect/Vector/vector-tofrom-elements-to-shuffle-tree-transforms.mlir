@@ -18,6 +18,26 @@ func.func @trivial_forwarding(%a: vector<8xf32>) -> vector<8xf32> {
 
 // -----
 
+func.func @unsupported_multi_dim_vector_inputs(%a: vector<2x4xf32>, %b: vector<2x4xf32>) -> vector<4xf32> {
+  %0:8 = vector.to_elements %a : vector<2x4xf32>
+  %1:8 = vector.to_elements %b : vector<2x4xf32>
+  %2 = vector.from_elements %0#0, %0#7,
+                            %1#0, %1#7 : vector<4xf32>
+  return %2 : vector<4xf32>
+}
+
+// -----
+
+func.func @unsupported_multi_dim_vector_output(%a: vector<8xf32>, %b: vector<8xf32>) -> vector<2x2xf32> {
+  %0:8 = vector.to_elements %a : vector<8xf32>
+  %1:8 = vector.to_elements %b : vector<8xf32>
+  %2 = vector.from_elements %0#0, %0#7,
+                            %1#0, %1#7 : vector<2x2xf32>
+  return %2 : vector<2x2xf32>
+}
+
+// -----
+
 func.func @single_input_shuffle(%a: vector<8xf32>) -> vector<8xf32> {
   %0:8 = vector.to_elements %a : vector<8xf32>
   %1 = vector.from_elements %0#7, %0#0, %0#6, %0#1, %0#5, %0#2, %0#4, %0#3 : vector<8xf32>
@@ -344,7 +364,6 @@ func.func @shuffle_tree_broadcast_4x2_to_32(%a: vector<2xf32>,
 
 // -----
 
-
 func.func @shuffle_tree_arbitrary_mixed_sizes(
      %a : vector<2xf32>,
      %b : vector<1xf32>,
@@ -360,11 +379,15 @@ func.func @shuffle_tree_arbitrary_mixed_sizes(
   return %5 : vector<6xf32>
 }
 
-// TODO: Support mixed vector sizes.
-
 //   CHECK-LABEL: func @shuffle_tree_arbitrary_mixed_sizes(
-// CHECK-COUNT-5:   vector.to_elements
-//        CHECK:    vector.from_elements
+//  CHECK-SAME:     %[[A:.*]]: vector<2xf32>, %[[B:.*]]: vector<1xf32>, %[[C:.*]]: vector<3xf32>, %[[D:.*]]: vector<1xf32>, %[[E:.*]]: vector<5xf32>
+//       CHECK:   %[[L0SH0:.*]] = vector.shuffle %[[A]], %[[C]] [0, 2, -1, -1] : vector<2xf32>, vector<3xf32>
+//       CHECK:   %[[L0SH1:.*]] = vector.shuffle %[[D]], %[[E]] [0, 1, -1, 4] : vector<1xf32>, vector<5xf32>
+//       CHECK:   %[[L0SH2:.*]] = vector.shuffle %[[B]], %[[B]] [0, -1, -1, -1] : vector<1xf32>, vector<1xf32>
+//       CHECK:   %[[L1SH0:.*]] = vector.shuffle %[[L0SH0]], %[[L0SH1]] [0, 1, 4, 5, -1, 7] : vector<4xf32>, vector<4xf32>
+//       CHECK:   %[[L2SH0:.*]] = vector.shuffle %[[L0SH2]], %[[L0SH2]] [0, -1, -1, -1, -1, -1] : vector<4xf32>, vector<4xf32>
+//       CHECK:   %[[L3SH0:.*]] = vector.shuffle %[[L1SH0]], %[[L2SH0]] [0, 1, 2, 3, 6, 5] : vector<6xf32>, vector<6xf32>
+//       CHECK:   return %[[L3SH0]] : vector<6xf32>
 
 // -----
 
