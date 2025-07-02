@@ -1683,8 +1683,7 @@ foreach(f ${files})
   set(dst "${LIBCXX_GENERATED_INCLUDE_DIR}/${f}")
   add_custom_command(OUTPUT ${dst}
     DEPENDS ${src}
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst}
-    COMMENT "Copying CXX header ${f}")
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src} ${dst})
   list(APPEND _all_includes "${dst}")
 endforeach()
 
