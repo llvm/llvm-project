@@ -1084,9 +1084,9 @@ def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
     "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
-def ext_main_invalid_linkage_specification : ExtWarn<
-  "'main' should not be "
-  "'extern \"%select{C|C++}0\"'">, InGroup<Main>;
+def ext_main_invalid_linkage_specification : ExtWarn<"'main' should not be "
+                                                     "'extern \"C\"'">,
+                                             InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
