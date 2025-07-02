@@ -848,66 +848,37 @@ static unsigned getBranchOpcode(ISD::CondCode Cond) {
 }
 
 static std::pair<unsigned, unsigned> getFPBranchKind(ISD::CondCode Cond) {
-  unsigned BrKind;
-  unsigned CmpKind;
-
   switch (Cond) {
   case ISD::SETUNE:
-    BrKind = Xtensa::BF;
-    CmpKind = Xtensa::OEQ_S;
-    break;
+    return std::make_pair(Xtensa::BF, Xtensa::OEQ_S);
   case ISD::SETUO:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::UN_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::UN_S);
   case ISD::SETO:
-    BrKind = Xtensa::BF;
-    CmpKind = Xtensa::UN_S;
-    break;
+    return std::make_pair(Xtensa::BF, Xtensa::UN_S);
   case ISD::SETUEQ:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::UEQ_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::UEQ_S);
   case ISD::SETULE:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::ULE_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::ULE_S);
   case ISD::SETULT:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::ULT_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::ULT_S);
   case ISD::SETEQ:
   case ISD::SETOEQ:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::OEQ_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::OEQ_S);
   case ISD::SETNE:
-    BrKind = Xtensa::BF;
-    CmpKind = Xtensa::OEQ_S;
-    break;
+    return std::make_pair(Xtensa::BF, Xtensa::OEQ_S);
   case ISD::SETLE:
   case ISD::SETOLE:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::OLE_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::OLE_S);
   case ISD::SETLT:
   case ISD::SETOLT:
-    BrKind = Xtensa::BT;
-    CmpKind = Xtensa::OLT_S;
-    break;
+    return std::make_pair(Xtensa::BT, Xtensa::OLT_S);
   case ISD::SETGE:
-    BrKind = Xtensa::BF;
-    CmpKind = Xtensa::OLT_S;
-    break;
+    return std::make_pair(Xtensa::BF, Xtensa::OLT_S);
   case ISD::SETGT:
-    BrKind = Xtensa::BF;
-    CmpKind = Xtensa::OLE_S;
-    break;
+    return std::make_pair(Xtensa::BF, Xtensa::OLE_S);
   default:
     llvm_unreachable("Invalid condition!");
   }
-
-  return std::make_pair(BrKind, CmpKind);
 }
 
 SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
