@@ -803,6 +803,8 @@ public:
   size_t size() const { return NumElements; }
   bool empty() const { return NumElements == 0; }
 
+  std::vector<int64_t> getAsListOfInts() const;
+
   const Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off list");
   }
