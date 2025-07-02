@@ -110,9 +110,21 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   let TSFlags{3} = HasAGPR;
   let TSFlags{4} = HasSGPR;
 
-  // RegisterClass (e.g. AGPR / VGPR) priority for allocation
-  field int RegClassPriority = 1;
-  field int RegClassBit = 5;
+  // RA will use RegisterClass AllocationPriority amongst other info (e.g. ordering in the basic block) 
+  // to decide which registers to try to assign first. Usually, this RegisterClass priority is given
+  // very high priority, if not the highest priority, when considering which VirtReg to allocate next.
+  //
+  // We have 5 bits to assign AllocationPriorities to RegisterClasses. Generally, it is beneficial to 
+  // assign more constrained RegisterClasses first. As a result, we prioritize larger register classes
+  // over smaller register classes. 
+  // 
+  // The interesting case is the vector register case on architectures which have ARegs, VRegs, AVRegs.
+  // In this case, we would like to assign ARegs and VRegs before AVRegs, as AVRegs are less constrained
+  // and can be assigned to both AGPRs and VGPRs. We use the 5th bit to encode this into the 
+  // RegisterClass AllocationPriority. BaseClassPriority is used to turn the bit on, and BaseClassScaleFactor
+  // is used for scaling of the bit (i.e. 1 << 4).
+  field int BaseClassPriority = 1;
+  field int BaseClassScaleFactor = 16;
 
 }
 
@@ -580,7 +592,7 @@ let HasVGPR = 1 in {
 def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
                             (add (interleave (sequence "VGPR%u_LO16", 0, 255),
                                              (sequence "VGPR%u_HI16", 0, 255)))> {
-  let AllocationPriority = !add(2, !mul(RegClassPriority, !shl(1, RegClassBit)));
+  let AllocationPriority = !add(2, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 16;
   let GeneratePressureSet = 0;
 
@@ -606,7 +618,7 @@ def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 // i16/f16 only on VI+
 def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                             (add (sequence "VGPR%u", 0, 255))> {
-  let AllocationPriority = !add(0, !mul(RegClassPriority, !shl(1, RegClassBit)));
+  let AllocationPriority = !add(0, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 32;
   let Weight = 1;
   let BaseClassOrder = 32;
@@ -615,7 +627,7 @@ def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types
 // Identical to VGPR_32 except it only contains the low 128 (Lo128) registers.
 def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                             (add (sequence "VGPR%u", 0, 127))> {
-  let AllocationPriority = !add(0, !mul(RegClassPriority, !shl(1, RegClassBit)));
+  let AllocationPriority = !add(0, !mul(BaseClassPriority, BaseClassScaleFactor));
   let GeneratePressureSet = 0;
   let Size = 32;
   let Weight = 1;
@@ -945,15 +957,23 @@ class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
 
   // Requires n v_mov_b32 to copy
   let CopyCost = numRegs;
+
+  // Since we only have 5 bits for the RegisterClass Allocation Priorty, and since we use the 
+  // 5th bit for BaseClassPriority, we need to encode the SizePriority into 4 bits. As a result 
+  // of this encoding, for registers with numRegs 15 or 16, we give SizePriority of 14, and for 
+  // regsters with numRegs 17+ we give SizePriority of 15. In  practice, there is only one 
+  // RegClass per Vector Register type in each of these groups (i.e. numRegs = 15,16 : {VReg_512}, 
+  // and numRegs = 17+ : {VReg_1024}). Therefore, we have not lost any info by compressing. 
   defvar SizePrioriity = !if(!le(numRegs, 14), !sub(numRegs, 1), !if(!le(numRegs, 16), 14, 15));
-  let AllocationPriority = !add(SizePrioriity, !mul(RegClassPriority, !shl(1, RegClassBit)));
+  
+  let AllocationPriority = !add(SizePrioriity, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Weight = numRegs;
 }
 
 // Define a register tuple class, along with one requiring an even
 // aligned base register.
 multiclass VRegClass<int numRegs, list<ValueType> regTypes, dag regList> {
-  let HasVGPR = 1, RegClassPriority = 1 in {
+  let HasVGPR = 1, BaseClassPriority = 1 in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, regList> {
       let BaseClassOrder = !mul(numRegs, 32);
@@ -987,7 +1007,7 @@ defm VReg_1024 : VRegClass<32, Reg1024Types.types, (add VGPR_1024)>;
 }
 
 multiclass ARegClass<int numRegs, list<ValueType> regTypes, dag regList> {
-  let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1, RegClassPriority = 1 in {
+  let CopyCost = !add(numRegs, numRegs, 1), HasAGPR = 1, BaseClassPriority = 1 in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, regList> {
       let BaseClassOrder = !mul(numRegs, 32);
@@ -1072,7 +1092,7 @@ def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_6
 def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_32)> {
   let HasVGPR = 1;
   let HasAGPR = 1;
-  let RegClassPriority = 0;
+  let BaseClassPriority = 0;
   let Size = 32;
 }
 } // End GeneratePressureSet = 0
@@ -1081,7 +1101,7 @@ def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_3
 // aligned base register.
 multiclass AVRegClass<int numRegs, list<ValueType> regTypes,
                       dag vregList,  dag aregList> {
-  let HasVGPR = 1, HasAGPR = 1, RegClassPriority = 0 in {
+  let HasVGPR = 1, HasAGPR = 1, BaseClassPriority = 0 in {
     // Define the regular class.
     def "" : VRegClassBase<numRegs, regTypes, (add vregList, aregList)>;
 
