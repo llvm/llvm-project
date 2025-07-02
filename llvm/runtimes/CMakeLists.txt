@@ -409,7 +409,7 @@ function(runtime_register_target name)
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
                                       -DCOMPILER_RT_DEFAULT_TARGET_ONLY=ON
-                                      -DLLVM_RUNTIMES_TARGET=${name}
+				      -DLLVM_RUNTIME_TARGETS=${name}
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
                            EXTRA_TARGETS ${${name}_extra_targets}

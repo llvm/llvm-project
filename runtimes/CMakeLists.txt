@@ -165,8 +165,8 @@ endif()
 set(LLVM_COMPILER_CHECKED ON)
 
 # This can be used to detect whether we're targeting a GPU architecture.
-if("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn" OR
-   "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
+if("${LLVM_RUNTIME_TARGETS}" MATCHES "^amdgcn" OR
+   "${LLVM_RUNTIME_TARGETS}" MATCHES "^nvptx64")
   set(LLVM_RUNTIMES_GPU_BUILD ON)
 endif()
 
@@ -336,10 +336,10 @@ if(SUB_COMPONENTS)
     endif()
   endforeach()
 
-  if(LLVM_RUNTIMES_TARGET)
+  if(LLVM_RUNTIME_TARGETS)
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in
-      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Components.cmake)
+      ${CMAKE_CURRENT_BINARY_DIR}/runtimes/${LLVM_RUNTIME_TARGETS}/Components.cmake)
   else()
     configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/Components.cmake.in

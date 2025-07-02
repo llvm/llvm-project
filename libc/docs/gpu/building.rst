@@ -105,7 +105,7 @@ targeting a GPU architecture.
      -DCMAKE_C_COMPILER=$TARGET_C_COMPILER     \
      -DCMAKE_CXX_COMPILER=$TARGET_CXX_COMPILER \
      -DLLVM_LIBC_FULL_BUILD=ON                 \
-     -DLLVM_RUNTIMES_TARGET=$TARGET_TRIPLE     \
+     -DLLVM_RUNTIME_TARGETS=$TARGET_TRIPLE     \
      -DCMAKE_BUILD_TYPE=Release
   $> ninja install
 

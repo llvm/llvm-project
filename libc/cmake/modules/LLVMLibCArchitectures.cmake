@@ -106,24 +106,24 @@ set(LIBC_TARGET_ARCHITECTURE ${compiler_arch})
 set(LIBC_TARGET_OS ${compiler_sys})
 set(LIBC_CROSSBUILD FALSE)
 
-# One should not set LLVM_RUNTIMES_TARGET and LIBC_TARGET_TRIPLE
-if(LLVM_RUNTIMES_TARGET AND LIBC_TARGET_TRIPLE)
+# One should not set LLVM_RUNTIME_TARGETS and LIBC_TARGET_TRIPLE
+if(LLVM_RUNTIME_TARGETS AND LIBC_TARGET_TRIPLE)
   message(FATAL_ERROR
-          "libc build: Specify only LLVM_RUNTIMES_TARGET if you are doing a "
+          "libc build: Specify only LLVM_RUNTIME_TARGETS if you are doing a "
           "runtimes/bootstrap build. If you are doing a standalone build, "
           "specify only LIBC_TARGET_TRIPLE.")
 endif()
 
 set(explicit_target_triple)
-if(LLVM_RUNTIMES_TARGET)
-  set(explicit_target_triple ${LLVM_RUNTIMES_TARGET})
+if(LLVM_RUNTIME_TARGETS)
+  set(explicit_target_triple ${LLVM_RUNTIME_TARGETS})
 elseif(LIBC_TARGET_TRIPLE)
   set(explicit_target_triple ${LIBC_TARGET_TRIPLE})
 endif()
 
 # The libc's target architecture and OS are set to match the compiler's default
 # target triple above. However, one can explicitly set LIBC_TARGET_TRIPLE or
-# LLVM_RUNTIMES_TARGET (for runtimes/bootstrap build). If one of them is set,
+# LLVM_RUNTIME_TARGETS (for runtimes/bootstrap build). If one of them is set,
 # then we will use that target triple to deduce libc's target OS and
 # architecture.
 if(explicit_target_triple)
@@ -198,7 +198,7 @@ endif()
 
 
 # If the compiler target triple is not the same as the triple specified by
-# LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+# LIBC_TARGET_TRIPLE or LLVM_RUNTIME_TARGETS, we will add a --target option
 # if the compiler is clang. If the compiler is GCC we just error out as there
 # is no equivalent of an option like --target.
 if(explicit_target_triple AND

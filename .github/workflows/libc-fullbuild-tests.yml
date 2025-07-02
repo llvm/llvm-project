@@ -97,7 +97,7 @@ jobs:
         -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
         -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
-        -DLLVM_RUNTIMES_TARGET=${{ matrix.target }} \
+        -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
         -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
         -DLLVM_LIBC_FULL_BUILD=ON \
         -G Ninja \
