@@ -10,6 +10,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <system_error>
 
@@ -62,7 +63,8 @@ char ECError::ID = 0;
 char StringError::ID = 0;
 char FileError::ID = 0;
 
-void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner) {
+LLVM_ABI void logAllUnhandledErrors(Error E, raw_ostream &OS,
+                                    Twine ErrorBanner) {
   if (!E)
     return;
   OS << ErrorBanner;
@@ -125,7 +127,7 @@ std::error_code errorToErrorCode(Error Err) {
 }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-void Error::fatalUncheckedError() const {
+LLVM_ABI void Error::fatalUncheckedError() const {
   dbgs() << "Program aborted due to an unhandled Error:\n";
   if (getPtr()) {
     getPtr()->log(dbgs());

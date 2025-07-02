@@ -20,7 +20,7 @@
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
-
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -300,7 +300,7 @@ llvm::Expected<Expr *> Interpreter::ExtractValueFromExpr(Expr *E) {
 using namespace clang;
 
 // Temporary rvalue struct that need special care.
-REPL_EXTERNAL_VISIBILITY void *
+REPL_EXTERNAL_VISIBILITY LLVM_ABI void *
 __clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
                                       void *OpaqueType) {
   Value &VRef = *(Value *)OutVal;
@@ -308,8 +308,9 @@ __clang_Interpreter_SetValueWithAlloc(void *This, void *OutVal,
   return VRef.getPtr();
 }
 
-extern "C" void REPL_EXTERNAL_VISIBILITY __clang_Interpreter_SetValueNoAlloc(
-    void *This, void *OutVal, void *OpaqueType, ...) {
+extern "C" LLVM_ABI void REPL_EXTERNAL_VISIBILITY
+__clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
+                                    ...) {
   Value &VRef = *(Value *)OutVal;
   Interpreter *I = static_cast<Interpreter *>(This);
   VRef = Value(I, OpaqueType);

@@ -37,6 +37,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/VersionTuple.h"
@@ -526,7 +527,7 @@ TranslationUnitDecl *Decl::getTranslationUnitDecl() {
   return cast<TranslationUnitDecl>(DC);
 }
 
-ASTContext &Decl::getASTContext() const {
+LLVM_ABI ASTContext &Decl::getASTContext() const {
   return getTranslationUnitDecl()->getASTContext();
 }
 
@@ -613,7 +614,7 @@ ExternalSourceSymbolAttr *Decl::getExternalSourceSymbolAttr() const {
   return nullptr;
 }
 
-bool Decl::hasDefiningAttr() const {
+LLVM_ABI bool Decl::hasDefiningAttr() const {
   return hasAttr<AliasAttr>() || hasAttr<IFuncAttr>() ||
          hasAttr<LoaderUninitializedAttr>();
 }
@@ -1047,7 +1048,7 @@ void Decl::addAttr(Attr *A) {
   Attrs.insert(I, A);
 }
 
-const AttrVec &Decl::getAttrs() const {
+LLVM_ABI const AttrVec &Decl::getAttrs() const {
   assert(HasAttrs && "No attrs to get!");
   return getASTContext().getDeclAttrs(this);
 }
@@ -1065,7 +1066,7 @@ Decl *Decl::castFromDeclContext (const DeclContext *D) {
   }
 }
 
-DeclContext *Decl::castToDeclContext(const Decl *D) {
+LLVM_ABI DeclContext *Decl::castToDeclContext(const Decl *D) {
   Decl::Kind DK = D->getKind();
   switch(DK) {
 #define DECL(NAME, BASE)
@@ -1291,7 +1292,7 @@ DeclContext::DeclContext(Decl::Kind K) {
   setUseQualifiedLookup(false);
 }
 
-bool DeclContext::classof(const Decl *D) {
+LLVM_ABI bool DeclContext::classof(const Decl *D) {
   Decl::Kind DK = D->getKind();
   switch (DK) {
 #define DECL(NAME, BASE)
@@ -1662,7 +1663,7 @@ ExternalASTSource::SetExternalVisibleDeclsForName(const DeclContext *DC,
   return List.getLookupResult();
 }
 
-DeclContext::decl_iterator DeclContext::decls_begin() const {
+LLVM_ABI DeclContext::decl_iterator DeclContext::decls_begin() const {
   if (hasExternalLexicalStorage())
     LoadLexicalDeclsFromExternalStorage();
   return decl_iterator(FirstDecl);
@@ -1891,7 +1892,7 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
   }
 }
 
-DeclContext::lookup_result
+LLVM_ABI DeclContext::lookup_result
 DeclContext::lookup(DeclarationName Name) const {
   // For transparent DeclContext, we should lookup in their enclosing context.
   if (getDeclKind() == Decl::LinkageSpec || getDeclKind() == Decl::Export)

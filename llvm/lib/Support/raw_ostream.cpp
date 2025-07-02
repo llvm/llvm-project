@@ -72,7 +72,7 @@ constexpr raw_ostream::Colors raw_ostream::WHITE;
 constexpr raw_ostream::Colors raw_ostream::SAVEDCOLOR;
 constexpr raw_ostream::Colors raw_ostream::RESET;
 
-raw_ostream::~raw_ostream() {
+LLVM_ABI raw_ostream::~raw_ostream() {
   // raw_ostream's subclasses should take care to flush the buffer
   // in their destructors.
   assert(OutBufCur == OutBufStart &&
@@ -103,8 +103,8 @@ void raw_ostream::SetBuffered() {
     SetUnbuffered();
 }
 
-void raw_ostream::SetBufferAndMode(char *BufferStart, size_t Size,
-                                   BufferKind Mode) {
+LLVM_ABI void raw_ostream::SetBufferAndMode(char *BufferStart, size_t Size,
+                                            BufferKind Mode) {
   assert(((Mode == BufferKind::Unbuffered && !BufferStart && Size == 0) ||
           (Mode != BufferKind::Unbuffered && BufferStart && Size != 0)) &&
          "stream must be unbuffered or have at least one byte");
@@ -122,7 +122,7 @@ void raw_ostream::SetBufferAndMode(char *BufferStart, size_t Size,
   assert(OutBufStart <= OutBufEnd && "Invalid size!");
 }
 
-raw_ostream &raw_ostream::operator<<(unsigned long N) {
+LLVM_ABI raw_ostream &raw_ostream::operator<<(unsigned long N) {
   write_integer(*this, static_cast<uint64_t>(N), 0, IntegerStyle::Integer);
   return *this;
 }
@@ -215,7 +215,7 @@ raw_ostream &raw_ostream::operator<<(double N) {
   return *this;
 }
 
-void raw_ostream::flush_nonempty() {
+LLVM_ABI void raw_ostream::flush_nonempty() {
   assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
   size_t Length = OutBufCur - OutBufStart;
   OutBufCur = OutBufStart;
@@ -242,7 +242,7 @@ raw_ostream &raw_ostream::write(unsigned char C) {
   return *this;
 }
 
-raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
+LLVM_ABI raw_ostream &raw_ostream::write(const char *Ptr, size_t Size) {
   // Group exceptional cases into a single branch.
   if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
     if (LLVM_UNLIKELY(!OutBufStart)) {
@@ -905,7 +905,7 @@ raw_fd_ostream &llvm::outs() {
   return S;
 }
 
-raw_fd_ostream &llvm::errs() {
+LLVM_ABI raw_fd_ostream &llvm::errs() {
   // On z/OS we need to enable auto conversion
   static std::error_code EC = enableAutoConversion(STDERR_FILENO);
   assert(!EC);

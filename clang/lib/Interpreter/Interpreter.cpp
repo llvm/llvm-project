@@ -49,6 +49,7 @@
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -194,6 +195,7 @@ IncrementalCompilerBuilder::create(std::string TT,
   return CreateCI(**ErrOrCC1Args);
 }
 
+LLVM_ABI
 llvm::Expected<std::unique_ptr<CompilerInstance>>
 IncrementalCompilerBuilder::CreateCpp() {
   std::vector<const char *> Argv;
@@ -524,7 +526,9 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
   return CI.get();
 }
 
-CompilerInstance *Interpreter::getCompilerInstance() { return CI.get(); }
+LLVM_ABI CompilerInstance *Interpreter::getCompilerInstance() {
+  return CI.get();
+}
 
 llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
   if (!IncrExecutor) {
@@ -577,7 +581,7 @@ Interpreter::RegisterPTU(TranslationUnitDecl *TU,
   return LastPTU;
 }
 
-llvm::Expected<PartialTranslationUnit &>
+LLVM_ABI llvm::Expected<PartialTranslationUnit &>
 Interpreter::Parse(llvm::StringRef Code) {
   // If we have a device parser, parse it first. The generated code will be
   // included in the host compilation
@@ -673,7 +677,7 @@ llvm::Error Interpreter::CreateExecutor() {
 
 void Interpreter::ResetExecutor() { IncrExecutor.reset(); }
 
-llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
+LLVM_ABI llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
   LLVM_DEBUG(
       llvm::dbgs() << "execute-ptu "

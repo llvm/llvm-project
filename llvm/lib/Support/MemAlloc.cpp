@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemAlloc.h"
+#include "llvm/Support/Compiler.h"
 #include <new>
 
 // These are out of line to have __cpp_aligned_new not affect ABI.
 
+LLVM_ABI
 LLVM_ATTRIBUTE_RETURNS_NONNULL LLVM_ATTRIBUTE_RETURNS_NOALIAS void *
 llvm::allocate_buffer(size_t Size, size_t Alignment) {
   void *Result = ::operator new(Size,

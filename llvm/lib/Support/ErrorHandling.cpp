@@ -17,6 +17,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -219,8 +220,8 @@ void llvm::install_out_of_memory_new_handler() {
 }
 #endif
 
-void llvm::llvm_unreachable_internal(const char *msg, const char *file,
-                                     unsigned line) {
+LLVM_ABI void llvm::llvm_unreachable_internal(const char *msg, const char *file,
+                                              unsigned line) {
   // This code intentionally doesn't call the ErrorHandler callback, because
   // llvm_unreachable is intended to be used to indicate "impossible"
   // situations, and not legitimate runtime errors.

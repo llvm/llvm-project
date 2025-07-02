@@ -3895,7 +3895,7 @@ void ASTContext::adjustExceptionSpec(
 
 /// getComplexType - Return the uniqued reference to the type for a complex
 /// number with the specified element type.
-QualType ASTContext::getComplexType(QualType T) const {
+LLVM_ABI QualType ASTContext::getComplexType(QualType T) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
@@ -4079,7 +4079,7 @@ QualType ASTContext::getBlockPointerType(QualType T) const {
 
 /// getLValueReferenceType - Return the uniqued reference to the type for an
 /// lvalue reference to the specified type.
-QualType
+LLVM_ABI QualType
 ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
   assert((!T->isPlaceholderType() ||
           T->isSpecificPlaceholderType(BuiltinType::UnknownAny)) &&
@@ -5251,7 +5251,7 @@ QualType ASTContext::getInjectedClassNameType(CXXRecordDecl *Decl,
 
 /// getTypeDeclType - Return the unique reference to the type for the
 /// specified type declaration.
-QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
+LLVM_ABI QualType ASTContext::getTypeDeclTypeSlow(const TypeDecl *Decl) const {
   assert(Decl && "Passed null for Decl param");
   assert(!Decl->TypeForDecl && "TypeForDecl present in slow case");
 
@@ -13125,7 +13125,7 @@ VTableContextBase *ASTContext::getVTableContext() {
   return VTContext.get();
 }
 
-MangleContext *ASTContext::createMangleContext(const TargetInfo *T) {
+LLVM_ABI MangleContext *ASTContext::createMangleContext(const TargetInfo *T) {
   if (!T)
     T = Target;
   switch (T->getCXXABI().getKind()) {

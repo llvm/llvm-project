@@ -31,6 +31,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <optional>
@@ -549,6 +550,7 @@ void ClassTemplateDecl::LoadLazySpecializations(
   loadLazySpecializationsImpl(OnlyPartial);
 }
 
+LLVM_ABI
 llvm::FoldingSetVector<ClassTemplateSpecializationDecl> &
 ClassTemplateDecl::getSpecializations() const {
   LoadLazySpecializations();
@@ -1451,7 +1453,8 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
   }
 }
 
-VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {
+LLVM_ABI VarTemplateDecl *
+VarTemplateSpecializationDecl::getSpecializedTemplate() const {
   if (const auto *PartialSpec =
           SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
     return PartialSpec->PartialSpecialization->getSpecializedTemplate();

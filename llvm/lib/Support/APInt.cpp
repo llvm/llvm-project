@@ -20,6 +20,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -104,7 +105,8 @@ void APInt::initFromArray(ArrayRef<uint64_t> bigVal) {
   clearUnusedBits();
 }
 
-APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal) : BitWidth(numBits) {
+LLVM_ABI APInt::APInt(unsigned numBits, ArrayRef<uint64_t> bigVal)
+    : BitWidth(numBits) {
   initFromArray(bigVal);
 }
 
@@ -281,7 +283,7 @@ bool APInt::equalSlowCase(const APInt &RHS) const {
   return std::equal(U.pVal, U.pVal + getNumWords(), RHS.U.pVal);
 }
 
-int APInt::compare(const APInt& RHS) const {
+LLVM_ABI int APInt::compare(const APInt &RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord())
     return U.VAL < RHS.U.VAL ? -1 : U.VAL > RHS.U.VAL;
@@ -289,7 +291,7 @@ int APInt::compare(const APInt& RHS) const {
   return tcCompare(U.pVal, RHS.U.pVal, getNumWords());
 }
 
-int APInt::compareSigned(const APInt& RHS) const {
+LLVM_ABI int APInt::compareSigned(const APInt &RHS) const {
   assert(BitWidth == RHS.BitWidth && "Bit widths must be same for comparison");
   if (isSingleWord()) {
     int64_t lhsSext = SignExtend64(U.VAL, BitWidth);
@@ -982,7 +984,7 @@ APInt APInt::truncSSat(unsigned width) const {
 }
 
 // Sign extend to a new width.
-APInt APInt::sext(unsigned Width) const {
+LLVM_ABI APInt APInt::sext(unsigned Width) const {
   assert(Width >= BitWidth && "Invalid APInt SignExtend request");
 
   if (Width <= APINT_BITS_PER_WORD)
@@ -1009,7 +1011,7 @@ APInt APInt::sext(unsigned Width) const {
 }
 
 //  Zero extend to a new width.
-APInt APInt::zext(unsigned width) const {
+LLVM_ABI APInt APInt::zext(unsigned width) const {
   assert(width >= BitWidth && "Invalid APInt ZeroExtend request");
 
   if (width <= APINT_BITS_PER_WORD)

@@ -44,6 +44,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -650,7 +651,7 @@ template <> const CountAttributedType *Type::getAs() const {
 /// getUnqualifiedDesugaredType - Pull any qualifiers and syntactic
 /// sugar off the given type.  This should produce an object of the
 /// same dynamic type as the canonical type.
-const Type *Type::getUnqualifiedDesugaredType() const {
+LLVM_ABI const Type *Type::getUnqualifiedDesugaredType() const {
   const Type *Cur = this;
 
   while (true) {
@@ -2302,7 +2303,7 @@ bool Type::hasUnsignedIntegerRepresentation() const {
   return isUnsignedIntegerOrEnumerationType();
 }
 
-bool Type::isFloatingType() const {
+LLVM_ABI bool Type::isFloatingType() const {
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType))
     return BT->isFloatingPoint();
   if (const auto *CT = dyn_cast<ComplexType>(CanonicalType))
@@ -4227,7 +4228,9 @@ static TagDecl *getInterestingTagDecl(TagDecl *decl) {
   return decl;
 }
 
-TagDecl *TagType::getDecl() const { return getInterestingTagDecl(decl); }
+LLVM_ABI TagDecl *TagType::getDecl() const {
+  return getInterestingTagDecl(decl);
+}
 
 bool TagType::isBeingDefined() const { return getDecl()->isBeingDefined(); }
 

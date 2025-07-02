@@ -59,6 +59,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2255,7 +2256,7 @@ bool VarDecl::isInExternCXXContext() const {
 
 VarDecl *VarDecl::getCanonicalDecl() { return getFirstDecl(); }
 
-VarDecl::DefinitionKind
+LLVM_ABI VarDecl::DefinitionKind
 VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isThisDeclarationADemotedDefinition())
     return DeclarationOnly;
@@ -3763,7 +3764,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
 /// getNumParams - Return the number of parameters this function must have
 /// based on its FunctionType.  This is the length of the ParamInfo array
 /// after it has been created.
-unsigned FunctionDecl::getNumParams() const {
+LLVM_ABI unsigned FunctionDecl::getNumParams() const {
   const auto *FPT = getType()->getAs<FunctionProtoType>();
   return FPT ? FPT->getNumParams() : 0;
 }
@@ -4200,7 +4201,7 @@ bool FunctionDecl::isTemplateInstantiation() const {
   return clang::isTemplateInstantiation(getTemplateSpecializationKind());
 }
 
-FunctionDecl *
+LLVM_ABI FunctionDecl *
 FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   // If this is a generic lambda call operator specialization, its
   // instantiation pattern is always its primary template's pattern
@@ -4265,7 +4266,7 @@ FunctionDecl::getTemplateSpecializationInfo() const {
       TemplateOrSpecialization);
 }
 
-const TemplateArgumentList *
+LLVM_ABI const TemplateArgumentList *
 FunctionDecl::getTemplateSpecializationArgs() const {
   if (FunctionTemplateSpecializationInfo *Info =
           dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
@@ -5143,7 +5144,7 @@ RecordDecl *RecordDecl::CreateDeserialized(const ASTContext &C,
   return R;
 }
 
-bool RecordDecl::isInjectedClassName() const {
+LLVM_ABI bool RecordDecl::isInjectedClassName() const {
   return isImplicit() && getDeclName() && getDeclContext()->isRecord() &&
     cast<RecordDecl>(getDeclContext())->getDeclName() == getDeclName();
 }

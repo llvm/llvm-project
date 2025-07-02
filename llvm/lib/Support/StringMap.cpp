@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/xxhash.h"
@@ -43,7 +44,9 @@ static inline unsigned *getHashTable(StringMapEntryBase **TheTable,
   return reinterpret_cast<unsigned *>(TheTable + NumBuckets + 1);
 }
 
-uint32_t StringMapImpl::hash(StringRef Key) { return xxh3_64bits(Key); }
+LLVM_ABI uint32_t StringMapImpl::hash(StringRef Key) {
+  return xxh3_64bits(Key);
+}
 
 StringMapImpl::StringMapImpl(unsigned InitSize, unsigned itemSize) {
   ItemSize = itemSize;
@@ -83,8 +86,8 @@ void StringMapImpl::init(unsigned InitSize) {
 /// specified bucket will be non-null.  Otherwise, it will be null.  In either
 /// case, the FullHashValue field of the bucket will be set to the hash value
 /// of the string.
-unsigned StringMapImpl::LookupBucketFor(StringRef Name,
-                                        uint32_t FullHashValue) {
+LLVM_ABI unsigned StringMapImpl::LookupBucketFor(StringRef Name,
+                                                 uint32_t FullHashValue) {
 #ifdef EXPENSIVE_CHECKS
   assert(FullHashValue == hash(Name));
 #endif
@@ -215,7 +218,7 @@ StringMapEntryBase *StringMapImpl::RemoveKey(StringRef Key) {
 
 /// RehashTable - Grow the table, redistributing values into the buckets with
 /// the appropriate mod-of-hashtable-size.
-unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
+LLVM_ABI unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
   unsigned NewSize;
   // If the hash table is now more than 3/4 full, or if fewer than 1/8 of
   // the buckets are empty (meaning that many are filled with tombstones),

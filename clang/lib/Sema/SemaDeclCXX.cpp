@@ -50,6 +50,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <map>
@@ -11959,7 +11960,7 @@ EnumDecl *Sema::getStdAlignValT() const {
   return cast_or_null<EnumDecl>(StdAlignValT.get(Context.getExternalSource()));
 }
 
-NamespaceDecl *Sema::getStdNamespace() const {
+LLVM_ABI NamespaceDecl *Sema::getStdNamespace() const {
   return cast_or_null<NamespaceDecl>(
                                  StdNamespace.get(Context.getExternalSource()));
 }

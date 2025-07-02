@@ -86,7 +86,7 @@ protected:
   /// capacity for.
   ///
   /// This does not construct or destroy any elements in the vector.
-  void set_size(size_t N) {
+  LLVM_ABI void set_size(size_t N) {
     assert(N <= capacity()); // implies no overflow in assignment
     Size = static_cast<Size_T>(N);
   }

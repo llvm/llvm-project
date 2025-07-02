@@ -25,6 +25,7 @@
 
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/circular_raw_ostream.h"
@@ -159,7 +160,7 @@ static void debug_user_sig_handler(void *Cookie) {
 }
 
 /// dbgs - Return a circular-buffered debug stream.
-raw_ostream &llvm::dbgs() {
+LLVM_ABI raw_ostream &llvm::dbgs() {
   // Do one-time initialization in a thread-safe way.
   static struct dbgstream {
     circular_raw_ostream strm;
