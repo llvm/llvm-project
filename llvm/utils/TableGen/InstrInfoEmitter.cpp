@@ -237,7 +237,6 @@ void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
 ///
 /// Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
 /// we can just skip them. Hence accept just the TargetInstructions.
-
 void InstrInfoEmitter::emitOperandNameMappings(
     raw_ostream &OS, const CodeGenTarget &Target,
     ArrayRef<const CodeGenInstruction *> TargetInstructions) {
