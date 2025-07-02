@@ -2962,7 +2962,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::Type *reductionType = moduleTranslation.convertType(decl.getType());
 
     // We have one less load for by-ref case because that load is now inside of
-    // the reduction region
+    // the reduction region.
     llvm::Value *redValue = originalVariable;
     if (!byRef)
       redValue =
@@ -2976,12 +2976,12 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
       return failure();
     builder.restoreIP(res.get());
 
-    // for by-ref case, the store is inside of the reduction region
+    // For by-ref case, the store is inside of the reduction region.
     if (!byRef)
       builder.CreateStore(reduced, originalVariable);
   }
 
-  // After the construct, deallocate private reduction variables
+  // After the construct, deallocate private reduction variables.
   SmallVector<Region *> reductionRegions;
   llvm::transform(reductionDecls, std::back_inserter(reductionRegions),
                   [](omp::DeclareReductionOp reductionDecl) {
