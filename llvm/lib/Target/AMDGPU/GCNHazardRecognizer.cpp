@@ -46,8 +46,8 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
 
 // This is intended for debugging purposes only.
 static cl::opt<unsigned>
-    NopPadding("amdgpu-snop-padding", cl::Hidden,
-               cl::desc("Insert a s_nop x between every isntruction"));
+    NopPadding("amdgpu-snop-padding", cl::init(0), cl::Hidden,
+               cl::desc("Insert a s_nop x between every instruction"));
 
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
@@ -305,8 +305,7 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
   CurrCycleInstr = nullptr;
-  unsigned NopPad = NopPadding.getNumOccurrences() ? NopPadding : 0;
-  return std::max(W, NopPad);
+  return std::max(W, NopPadding.getValue());
 }
 
 unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
