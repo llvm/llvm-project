@@ -990,15 +990,21 @@ defset list<RuntimeLibcallImpl> LibmF128FiniteLibcalls = {
 defvar AllDefaultLibCalls =
     !foreach(entry, AllDefaultRuntimeLibcallImpls, entry.Provides);
 
-// These libcalls are only available in libgcc, not compiler-rt for
-// 32-bit arch. They are available on both for 64-bit.
-defvar LibCallsCompilerRT64OrLibGCC = [
+// Exist in libgcc and compiler-rt for 64-bit targets, or if
+// COMPILER_RT_ENABLE_SOFTWARE_INT128.
+defvar Int128RTLibcalls = [
    __ashlti3, __lshrti3, __ashrti3, __multi3, __mulodi4
 ];
 
+// Only available in compiler-rt
+defvar CompilerRTOnlyInt128Libcalls = [
+  __mulodi4
+];
+
 defvar DefaultRuntimeLibcallImpls =
-  !listremove(AllDefaultRuntimeLibcallImpls,
-              LibCallsCompilerRT64OrLibGCC);
+  !listremove(!listremove(AllDefaultRuntimeLibcallImpls,
+                          Int128RTLibcalls),
+                          CompilerRTOnlyInt128Libcalls);
 
 defvar DefaultRuntimeLibcallImpls_f128 =
     !filter(entry, DefaultRuntimeLibcallImpls,
@@ -1013,7 +1019,7 @@ defvar DefaultLibcallImpls32 = DefaultRuntimeLibcallImpls;
 
 /// Default set of libcall impls for 64-bit architectures.
 defvar DefaultLibcallImpls64 = !listconcat(DefaultRuntimeLibcallImpls,
-                                           LibCallsCompilerRT64OrLibGCC);
+                                           Int128RTLibcalls);
 
 defvar DarwinSinCosStret = LibcallImpls<(add __sincosf_stret, __sincos_stret),
                                         darwinHasSinCosStret>;
@@ -1063,7 +1069,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
   isAArch64_ExceptArm64EC,
   (add DefaultRuntimeLibcallImpls,
        AArch64LibcallImpls,
-       LibcallImpls<(add LibCallsCompilerRT64OrLibGCC), isAArch64_ILP64>,
+       LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
@@ -1644,8 +1650,7 @@ def PPCSystemLibrary
            __extendkftf2, __trunctfkf2,
            LibmF128Libcalls, AIX32Calls, AIX64Calls,
            AvailableIf<memcpy, isNotAIX>,
-           LibcallImpls<(add LibCallsCompilerRT64OrLibGCC),
-                        isPPC64/* or is libgcc*/>)>;
+           LibcallImpls<(add Int128RTLibcalls), isPPC64>)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -1831,5 +1836,6 @@ def isWasm : RuntimeLibcallPredicate<"TT.isWasm()">;
 // this on emscripten depending on what they end up doing.
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
-      (add DefaultRuntimeLibcallImpls, LibCallsCompilerRT64OrLibGCC,
+      (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
+           CompilerRTOnlyInt128Libcalls,
            emscripten_return_address)>;
