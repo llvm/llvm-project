@@ -45042,7 +45042,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   unsigned NumElts = DemandedElts.getBitWidth();
 
   switch (Op.getOpcode()) {
+  case X86ISD::BLENDI:
   case X86ISD::PSHUFD:
+  case X86ISD::UNPCKL:
+  case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
@@ -45086,11 +45089,16 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
     return false;
+    // SSE blends.
+  case X86ISD::BLENDI:
+  case X86ISD::BLENDV:
+    return false;
+    // SSE target shuffles.
   case X86ISD::PSHUFD:
+  case X86ISD::UNPCKL:
+  case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMV3:
-  case X86ISD::UNPCKH:
-  case X86ISD::UNPCKL:
     return false;
     // SSE comparisons handle all icmp/fcmp cases.
     // TODO: Add CMPM/MM with test coverage.
