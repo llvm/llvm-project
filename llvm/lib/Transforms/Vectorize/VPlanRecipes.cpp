@@ -2656,6 +2656,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
             Instruction::ZExt,
         RedTy, SrcVecTy, Ctx.CostKind);
   }
+  llvm_unreachable("Unknown VPExpressionRecipe::ExpressionTypes enum");
 }
 
 bool VPExpressionRecipe::mayReadOrWriteMemory() const {
