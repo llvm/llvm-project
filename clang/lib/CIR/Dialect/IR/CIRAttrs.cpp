@@ -69,6 +69,21 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
 }
 
 //===----------------------------------------------------------------------===//
+// OptInfoAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult OptInfoAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  unsigned level, unsigned size) {
+  if (level > 3)
+    return emitError()
+           << "optimization level must be between 0 and 3 inclusive";
+  if (size > 2)
+    return emitError()
+           << "size optimization level must be between 0 and 2 inclusive";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ConstPtrAttr definitions
 //===----------------------------------------------------------------------===//
 
