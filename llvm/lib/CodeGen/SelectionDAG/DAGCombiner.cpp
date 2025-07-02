@@ -23175,13 +23175,13 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     auto CanonicalizeBuildVector = [&](SmallVectorImpl<SDValue> &Ops,
                                        bool FreezeUndef = false) {
       assert(Ops.size() == NumElts && "Unexpected vector size");
+      SDValue UndefOp = FreezeUndef ? DAG.getFreeze(DAG.getUNDEF(MaxEltVT))
+                                    : DAG.getUNDEF(MaxEltVT);
       for (SDValue &Op : Ops) {
         if (Op)
           Op = VT.isInteger() ? DAG.getAnyExtOrTrunc(Op, DL, MaxEltVT) : Op;
-        else if (FreezeUndef)
-          Op = DAG.getFreeze(DAG.getUNDEF(MaxEltVT));
         else
-          Op = DAG.getUNDEF(MaxEltVT);
+          Op = UndefOp;
       }
       return DAG.getBuildVector(VT, DL, Ops);
     };
@@ -23196,7 +23196,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
         return CanonicalizeBuildVector(Ops);
 
       // FREEZE(UNDEF) - build new BUILD_VECTOR from already inserted operands.
-      if (ISD::isFreezeUndef(CurVec.getNode()))
+      if (ISD::isFreezeUndef(CurVec.getNode()) && CurVec.hasOneUse())
         return CanonicalizeBuildVector(Ops, /*FreezeUndef=*/true);
 
       // BUILD_VECTOR - insert unused operands and build new BUILD_VECTOR.
