@@ -1143,6 +1143,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::SIGN_EXTEND_INREG, ISD::CONCAT_VECTORS,
                        ISD::EXTRACT_SUBVECTOR, ISD::INSERT_SUBVECTOR,
                        ISD::STORE, ISD::BUILD_VECTOR});
+  setTargetDAGCombine(ISD::SMIN);
   setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::LOAD);
 
@@ -20998,10 +20999,10 @@ static SDValue performBuildVectorCombine(SDNode *N,
 
 // A special combine for the sqdmulh family of instructions.
 // smin( sra ( mul( sext v0, sext v1 ) ), SHIFT_AMOUNT ),
-// SATURATING_VAL ) can be reduced to sext(sqdmulh(...))
+// SATURATING_VAL ) can be reduced to sqdmulh(...)
 static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
 
-  if (N->getOpcode() != ISD::TRUNCATE)
+  if (N->getOpcode() != ISD::SMIN)
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -21009,12 +21010,7 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
   if (!VT.isVector() || VT.getScalarSizeInBits() > 64)
     return SDValue();
 
-  SDValue SMin = N->getOperand(0);
-
-  if (SMin.getOpcode() != ISD::SMIN)
-    return SDValue();
-
-  ConstantSDNode *Clamp = isConstOrConstSplat(SMin.getOperand(1));
+  ConstantSDNode *Clamp = isConstOrConstSplat(N->getOperand(1));
 
   if (!Clamp)
     return SDValue();
@@ -21034,8 +21030,8 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
   }
 
-  SDValue Sra = SMin.getOperand(0);
-  if (Sra.getOpcode() != ISD::SRA)
+  SDValue Sra = N->getOperand(0);
+  if (Sra.getOpcode() != ISD::SRA || !Sra.hasOneUse())
     return SDValue();
 
   ConstantSDNode *RightShiftVec = isConstOrConstSplat(Sra.getOperand(1));
@@ -21062,11 +21058,27 @@ static SDValue trySQDMULHCombine(SDNode *N, SelectionDAG &DAG) {
       SExt0Type.getFixedSizeInBits() > 128)
     return SDValue();
 
-  SDValue V0 = SExt0.getOperand(0);
-  SDValue V1 = SExt1.getOperand(0);
+  // Source vectors with width < 64 are illegal and will need to be extended
+  unsigned SourceVectorWidth = SExt0Type.getFixedSizeInBits();
+  SDValue V0 = (SourceVectorWidth < 64) ? SExt0 : SExt0.getOperand(0);
+  SDValue V1 = (SourceVectorWidth < 64) ? SExt1 : SExt1.getOperand(0);
 
-  SDLoc DL(SMin);
-  return DAG.getNode(AArch64ISD::SQDMULH, DL, SExt0Type, V0, V1);
+  SDLoc DL(N);
+  SDValue SQDMULH =
+      DAG.getNode(AArch64ISD::SQDMULH, DL, V0.getValueType(), V0, V1);
+  EVT DestVT = N->getValueType(0);
+  if (DestVT.getScalarSizeInBits() > SExt0Type.getScalarSizeInBits())
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, SQDMULH);
+
+  return SQDMULH;
+}
+
+static SDValue performSMINCombine(SDNode *N, SelectionDAG &DAG) {
+  if (SDValue V = trySQDMULHCombine(N, DAG)) {
+    return V;
+  }
+
+  return SDValue();
 }
 
 static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
@@ -21081,10 +21093,6 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
         N0.getOperand(0).getValueType().getScalarType() == MVT::i64)
       Op = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op);
     return DAG.getNode(N0.getOpcode(), DL, VT, Op);
-  }
-
-  if (SDValue V = trySQDMULHCombine(N, DAG)) {
-    return DAG.getNode(ISD::TRUNCATE, DL, VT, V);
   }
 
   // Performing the following combine produces a preferable form for ISEL.
@@ -26824,6 +26832,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performAddSubCombine(N, DCI);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
+  case ISD::SMIN:
+    return performSMINCombine(N, DAG);
   case ISD::TRUNCATE:
     return performTruncateCombine(N, DAG, DCI);
   case AArch64ISD::ANDS:
