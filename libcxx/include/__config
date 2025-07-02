@@ -1155,7 +1155,7 @@ typedef __char32_t char32_t;
 
 // Allow for build-time disabling of unsigned integer sanitization
 #  if __has_attribute(no_sanitize) && !defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow")))
+#    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK __attribute__((__no_sanitize__("unsigned-integer-overflow", "shift-out-of-bounds")))
 #  else
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif
