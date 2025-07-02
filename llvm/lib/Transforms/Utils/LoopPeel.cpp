@@ -81,9 +81,9 @@ static cl::opt<bool> DisableAdvancedPeeling(
     cl::desc(
         "Disable advance peeling. Issues for convergent targets (D134803)."));
 
-static cl::opt<bool>
-    EnablePeelingForIV("enable-peeling-for-iv", cl::init(false), cl::Hidden,
-                       cl::desc("Enable peeling to make a PHI into an IV"));
+static cl::opt<bool> EnablePeelingForIV(
+    "enable-peeling-for-iv", cl::init(false), cl::Hidden,
+    cl::desc("Enable peeling to convert Phi nodes into IVs"));
 
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
@@ -247,9 +247,10 @@ PhiAnalyzer::PhiAnalyzer(const Loop &L, unsigned MaxIterations, bool PeelForIV)
   assert(MaxIterations > 0 && "no peeling is allowed?");
 }
 
-/// Test if \p Phi is induction variable or not. It can be checked by using
-/// SCEV, but it's expensive to calculate it here. Instead, we perform the
-/// cheaper checks, which cannot detect complex one but enough for some cases.
+/// Test whether \p Phi is an induction variable. Although this can be
+/// determined using SCEV analysis, it is expensive to compute here. Instead,
+/// we perform cheaper checks that may not detect complex cases but are
+/// sufficient for some situations.
 bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
   // Currently we only support a loop that has single latch.
   BasicBlock *Latch = L.getLoopLatch();
@@ -260,9 +261,9 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
   SmallPtrSet<Value *, 4> Visited;
   bool VisitBinOp = false;
 
-  // Start at the incoming value of the phi and follow definitions. We consider
-  // the phi to be an IV if we can return to it again by traversing only add,
-  // sub, or cast instructions.
+  // Starting from the incoming value of the Phi, we follow the use-def chain.
+  // We consider Phi to be an IV if we can reach it again by traversing only
+  // add, sub, or cast instructions.
   while (true) {
     if (Cur == Phi)
       break;
@@ -293,11 +294,16 @@ bool PhiAnalyzer::isInductionPHI(const PHINode *Phi) const {
     }
   }
 
-  // If there are only cast instructions, the phi is not an IV. Return false in
-  // this case.
+  // Ignore cases where no binary operations are visited.
   return VisitBinOp;
 }
 
+/// When either \p LHS or \p RHS is an IV, the result of \p CmpOrBinaryOp is
+/// considered an IV only if it is an addition or a subtraction. Otherwise the
+/// result can be a value that is neither an loop-invariant nor an IV.
+///
+/// If both \p LHS and \p RHS are loop-invariants, then the result of
+/// \CmpOrBinaryOp is also a loop-invariant.
 PhiAnalyzer::PeelCounter
 PhiAnalyzer::mergeTwoCounter(const Instruction &CmpOrBinaryOp,
                              const PeelCounterValue &LHS,
@@ -306,13 +312,6 @@ PhiAnalyzer::mergeTwoCounter(const Instruction &CmpOrBinaryOp,
   auto &[RVal, RTy] = RHS;
   unsigned NewVal = std::max(LVal, RVal);
 
-  // If either the type of LHS or the type of RHS is an induction, then the
-  // result of this instruction is also an induction only if it is an addition
-  // or a subtraction (after peeling enough times). Otherwise it can be a value
-  // that is neither an invariant nor an induction.
-  //
-  // If both the type of LHS and the type of RHS are invariants, then the
-  // result is also an invariant.
   if (LTy == PeelCounterType::Induction || RTy == PeelCounterType::Induction) {
     if (const auto *BinOp = dyn_cast<BinaryOperator>(&CmpOrBinaryOp)) {
       if (BinOp->getOpcode() == Instruction::Add ||
@@ -803,11 +802,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
   // induction, and try to peel the maximum number of iterations among these
   // values, thus turning all those Phis into invariants or inductions.
   if (MaxPeelCount > DesiredPeelCount) {
-    // Check how many iterations are useful for resolving Phis.
-    // TODO: Compute `PeelForIV` with some heuristic. Peeling a loop to make a
-    // PHI into an IV is usually good for loop vectorization, so we should
-    // perform such peelings if the loop body is vectorizable (e.g., doesn't
-    // contain function calls).
+    // Check how many iterations are useful for resolving Phis
     auto NumPeels = PhiAnalyzer(*L, MaxPeelCount, EnablePeelingForIV)
                         .calculateIterationsToPeel();
     if (NumPeels)
