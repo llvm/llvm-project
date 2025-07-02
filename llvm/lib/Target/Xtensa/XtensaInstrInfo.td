@@ -575,7 +575,7 @@ def WUR : RRR_Inst<0x00, 0x03, 0x0F, (outs UR:$ur), (ins AR:$t),
 }
 
 def RUR : RRR_Inst<0x00, 0x03, 0x0E, (outs AR:$r), (ins UR:$ur),
-                  "rur\t$r, $ur", []> {
+                  "rur\t$r, $ur", [(set AR:$r, (Xtensa_rur UR:$ur))]> {
   bits<8> ur;
 
   let s = ur{7-4};
