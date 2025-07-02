@@ -70,6 +70,8 @@ export module bar;
 
 int main() {} // expected-warning {{'main' should not be attached to a named module; consider adding C++ language linkage}}
 
+extern "C++" int main() {}
+
 static int m;
 
 int n;
