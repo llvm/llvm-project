@@ -54,6 +54,7 @@ struct DirectiveNameParser {
     std::unique_ptr<TransitionMapTy> Transition;
 
     State *next(StringRef Tok);
+    const State *next(StringRef Tok) const;
     bool isValid() const {
       return Value != Directive::OMPD_unknown || !Transition->empty();
     }

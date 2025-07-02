@@ -32,7 +32,7 @@ DirectiveNameParser::apply(const State *Current, StringRef Tok) const {
   if (!Current)
     return Current;
   assert(Current->isValid() && "Invalid input state");
-  if (const State *Next = const_cast<State *>(Current)->next(Tok))
+  if (const State *Next = Current->next(Tok))
     return Next->isValid() ? Next : nullptr;
   return nullptr;
 }
@@ -83,6 +83,14 @@ DirectiveNameParser::insertTransition(State *From, StringRef Tok) {
   auto [Where, DidIt] = From->Transition->try_emplace(Tok, State());
   assert(DidIt && "Map insertion failed");
   return &Where->second;
+}
+
+const DirectiveNameParser::State *
+DirectiveNameParser::State::next(StringRef Tok) const {
+  if (!Transition)
+    return nullptr;
+  auto F = Transition->find(Tok);
+  return F != Transition->end() ? &F->second : nullptr;
 }
 
 DirectiveNameParser::State *DirectiveNameParser::State::next(StringRef Tok) {
