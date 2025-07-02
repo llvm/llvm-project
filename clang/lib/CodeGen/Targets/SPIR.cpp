@@ -487,13 +487,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     assert(!ResAttrs.IsROV &&
            "Rasterizer order views not implemented for SPIR-V yet");
 
-    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     if (!ResAttrs.RawBuffer) {
       // convert element type
       return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
-    llvm::Type *ElemType = CGM.getTypes().ConvertType(ContainedTy);
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;
     bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
@@ -530,7 +529,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
     Ty = V->getElementType();
   assert(!Ty->isVectorType() && "We still have a vector type.");
 
-  llvm::Type *SampledType = CGM.getTypes().ConvertType(Ty);
+  llvm::Type *SampledType = CGM.getTypes().ConvertTypeForMem(Ty);
 
   assert((SampledType->isIntegerTy() || SampledType->isFloatingPointTy()) &&
          "The element type for a SPIR-V resource must be a scalar integer or "
