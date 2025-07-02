@@ -24,7 +24,7 @@
 ; ASM-CHECK-NEXT:   .int8   14
 ; ASM-CHECK-NEXT:   .ascii  "branch-hinting"
 
-; ASM-CHECK:        .section        metadata.code.branch_hint,"",@
+; ASM-CHECK:        .section        .custom_section.metadata.code.branch_hint,"",@
 ; ASM-CHECK-NEXT:   .asciz  "\202\200\200\200"
 ; ASM-CHECK-NEXT:   .uleb128 test_unlikely_likely_branch@FUNCINDEX
 ; ASM-CHECK-NEXT:   .int8   2

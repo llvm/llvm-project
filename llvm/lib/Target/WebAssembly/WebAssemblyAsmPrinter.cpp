@@ -462,7 +462,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
 
 void WebAssemblyAsmPrinter::emitBranchHintSection() const {
   MCSectionWasm *BranchHintsSection = OutContext.getWasmSection(
-      "metadata.code.branch_hint", SectionKind::getMetadata());
+      ".custom_section.metadata.code.branch_hint", SectionKind::getMetadata());
   OutStreamer->pushSection();
   OutStreamer->switchSection(BranchHintsSection);
   const uint32_t NumFunctionHints =
