@@ -28,8 +28,7 @@
 # RUN: llvm-exegesis --mtriple=aarch64 --mcpu=neoverse-v2 --mode=inverse_throughput --benchmark-phase=prepare-and-assemble-snippet --opcode-name=MOVIv2s_msl 2>&1 | FileCheck %s --check-prefix=MOVIv2s_msl_throughput
 # MOVIv2s_msl_latency-NOT: Not all operands were initialized by the snippet generator for MOVIv2s_msl opcode
 
-// TODO: Update this test when serial execution strategy is added
-# MOVIv2s_msl_latency: MOVIv2s_msl: No strategy found to make the execution serial
+// TODO: Add test to check if the immediate value is correct when serial execution strategy is added for MOVIv2s_msl
 
 
 # MOVIv2s_msl_throughput-NOT: Not all operands were initialized by the snippet generator for MOVIv2s_msl opcode
@@ -37,7 +36,7 @@
 # MOVIv2s_msl_throughput-NEXT: mode: inverse_throughput
 # MOVIv2s_msl_throughput-NEXT: key: 
 # MOVIv2s_msl_throughput-NEXT:   instructions:
-# MOVIv2s_msl_throughput-NEXT:     MOVIv2s_msl [[REG1:D[0-9]+|LR]] i_0x1 i_0x8
+# MOVIv2s_msl_throughput-NEXT:     MOVIv2s_msl [[REG1:D[0-9]+|LR]] i_0x1 i_0x108
 # MOVIv2s_msl_throughput: ...
 
 
