@@ -84,19 +84,20 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
                     # only step one thread that is at the breakpoint and stop
                     break
 
-    def test_step_over(self):
+    def test_step_over_inlined_function(self):
         """
         Test stepping over when the program counter is in another file.
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         source = "main.cpp"
-        breakpoint1_line = line_number(source, "// breakpoint 2")
+        breakpoint_lines = [line_number(source, "// breakpoint 2")]
         step_over_pos = line_number(source, "// position_after_step_over")
-        lines = [breakpoint1_line]
-        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        breakpoint_ids = self.set_source_breakpoints(source, breakpoint_lines)
         self.assertEqual(
-            len(breakpoint_ids), len(lines), "expect correct number of breakpoints."
+            len(breakpoint_ids),
+            len(breakpoint_lines),
+            "expect correct number of breakpoints.",
         )
         self.continue_to_breakpoints(breakpoint_ids)
 
