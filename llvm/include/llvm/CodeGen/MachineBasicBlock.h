@@ -735,8 +735,9 @@ public:
   /// Returns the MCSymbol marking the end of this basic block.
   LLVM_ABI MCSymbol *getEndSymbol() const;
 
-  /// Returns a temporary MCSymbol marking the beginning of a callsite.
-  LLVM_ABI MCSymbol *createCallsiteSymbol() const;
+  /// Returns a temporary MCSymbol marking the beginning of a callsite, and
+  /// appends it to `CallsiteSymbols`.
+  MCSymbol *createCallsiteSymbol() const;
 
   /// Returns true if this block may have an INLINEASM_BR (overestimate, by
   /// checking if any of the successors are indirect targets of any inlineasm_br
