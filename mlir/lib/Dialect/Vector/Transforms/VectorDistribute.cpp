@@ -20,6 +20,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1778,37 +1779,53 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     if (llvm::is_contained(distTypes, Type{}))
       return failure();
 
-    llvm::errs() << "escpaing values size: " << escapingValues.size() << "\n";
-
-    SmallVector<Value> yieldedValuesFromWarpOp;
-    // All init args of the forOp are yielded from the original warp op.
-    for (Value initArg : forOp.getInitArgs()) {
-      yieldedValuesFromWarpOp.push_back(initArg);
-      // find distributed type for the init arg.
-      Type distType = initArg.getType();
-      if (auto vecType = dyn_cast<VectorType>(distType)) {
-        AffineMap map = distributionMapFn(initArg);
-        distType = getDistributedType(vecType, map, warpOp.getWarpSize());
-      }
-      distTypes.push_back(distType);
-    }
-    // All escaping values are yielded from the original warp op.
-    yieldedValuesFromWarpOp.insert(yieldedValuesFromWarpOp.end(),
-                                   escapingValues.begin(),
-                                   escapingValues.end());
     // record result mapping.
     SmallVector<unsigned> resultIdx;
+    llvm::SmallDenseMap<unsigned, unsigned> forResultToWarpResultMapping;
     for (OpOperand &yieldOperand : yield->getOpOperands()) {
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation())
         continue;
       OpResult forResult = cast<OpResult>(yieldOperand.get());
       resultIdx.push_back(forResult.getResultNumber());
+      forResultToWarpResultMapping[forResult.getResultNumber()] =
+          yieldOperand.getOperandNumber();
       // yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
     }
 
+    // llvm::errs() << "escpaing values size: " << escapingValues.size() <<
+    // "\n";
+
+    SmallVector<Value> yieldedValuesFromWarpOp;
+    SmallVector<Type> yieldedTypesFromWarpOp;
+    // All init args of the forOp are yielded from the original warp op.
+    for (auto [i, initArg] : llvm::enumerate(forOp.getInitArgs())) {
+      yieldedValuesFromWarpOp.push_back(initArg);
+      // find distributed type for the init arg.
+      Type distType = initArg.getType();
+      if (auto vecType = dyn_cast<VectorType>(distType)) {
+        if (forResultToWarpResultMapping.contains(i)) {
+          // If the init arg is yielded from the warp op, we need to compute the
+          // distributed type.
+          distType =
+              warpOp.getResult(forResultToWarpResultMapping[i]).getType();
+        } else {
+          AffineMap map = distributionMapFn(initArg);
+          distType = getDistributedType(vecType, map, warpOp.getWarpSize());
+        }
+      }
+      // llvm::errs() << "distributed type: " << distType << "\n";
+      yieldedTypesFromWarpOp.push_back(distType);
+    }
+    // All escaping values are yielded from the original warp op.
+    yieldedValuesFromWarpOp.insert(yieldedValuesFromWarpOp.end(),
+                                   escapingValues.begin(),
+                                   escapingValues.end());
+    yieldedTypesFromWarpOp.insert(yieldedTypesFromWarpOp.end(),
+                                  distTypes.begin(), distTypes.end());
+
     // SmallVector<size_t> newRetIndices;
     WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
-        rewriter, warpOp, yieldedValuesFromWarpOp, distTypes);
+        rewriter, warpOp, yieldedValuesFromWarpOp, yieldedTypesFromWarpOp);
     yield = cast<gpu::YieldOp>(
         newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
 
@@ -1839,15 +1856,27 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     SmallVector<Type> warpInputType(forOp.getResultTypes().begin(),
                                     forOp.getResultTypes().end());
     llvm::SmallDenseMap<Value, int64_t> argIndexMapping;
+    // llvm::errs() << "setting arg index mapping\n";
     for (size_t i = forOp.getInitArgs().size(); i < newWarpOp->getNumResults();
          ++i) {
       warpInput.push_back(newWarpOp.getResult(i));
-      argIndexMapping[escapingValues[i]] = warpInputType.size();
-      warpInputType.push_back(inputTypes[i]);
+      argIndexMapping[escapingValues[i - forOp.getInitArgs().size()]] =
+          warpInputType.size();
+      warpInputType.push_back(inputTypes[i - forOp.getInitArgs().size()]);
     }
+    // for (auto [i, r] : llvm::enumerate(
+    //          newWarpOp.getResults().drop_front(forOp.getInitArgs().size())))
+    //          {
+    //   warpInput.push_back(r);
+    //   argIndexMapping[escapingValues[i]] = warpInputType.size();
+    //   warpInputType.push_back(inputTypes[i]);
+    // }
+    // llvm::errs() << "go here\n";
     auto innerWarp = rewriter.create<WarpExecuteOnLane0Op>(
         newWarpOp.getLoc(), newForOp.getResultTypes(), newWarpOp.getLaneid(),
         newWarpOp.getWarpSize(), warpInput, warpInputType);
+    // newForOp->getParentOp()->print(llvm::outs());
+    // llvm::outs() << "\n";
 
     SmallVector<Value> argMapping;
     argMapping.push_back(newForOp.getInductionVar());
@@ -1874,10 +1903,10 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     rewriter.eraseOp(forOpCopy);
     // Replace the warpOp result coming from the original ForOp.
     // print resultIdx for debugging.
-    llvm::errs() << "resultIdx: ";
-    for (auto idx : resultIdx)
-      llvm::errs() << idx << " ";
-    llvm::errs() << "\n";
+    // llvm::errs() << "resultIdx: ";
+    // for (auto idx : resultIdx)
+    //   llvm::errs() << idx << " ";
+    // llvm::errs() << "\n";
     for (const auto &res : llvm::enumerate(resultIdx)) {
       rewriter.replaceAllUsesExcept(warpOp.getResult(res.value()),
                                     newForOp.getResult(res.index()), newForOp);
@@ -1894,8 +1923,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
         operand.set(innerWarp.getBodyRegion().getArgument(it->second));
       }
     });
-    newForOp->getParentOp()->print(llvm::outs());
-    llvm::outs() << "\n";
+    // newForOp->getParentOp()->print(llvm::outs());
+    // llvm::outs() << "\n";
 
     // Finally, hoist out any now uniform code from the inner warp op.
     mlir::vector::moveScalarUniformCode(innerWarp);
