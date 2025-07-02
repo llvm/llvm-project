@@ -150,9 +150,9 @@ void Mangled::SetValue(ConstString name) {
 
 // BEGIN SWIFT
 #ifdef LLDB_ENABLE_SWIFT
-static ConstString GetSwiftDemangledStr(ConstString m_mangled,
-                                        const SymbolContext *sc,
-                                        ConstString &m_demangled) {
+std::pair<ConstString, DemangledNameInfo>
+GetSwiftDemangledStr(ConstString m_mangled, const SymbolContext *sc,
+                     ConstString &m_demangled) {
   const char *mangled_name = m_mangled.AsCString("");
   Log *log = GetLog(LLDBLog::Demangle);
   LLDB_LOGF(log, "demangle swift: %s", mangled_name);
@@ -168,7 +168,7 @@ static ConstString GetSwiftDemangledStr(ConstString m_mangled,
   if (!sc || !sc->function) {
     LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)", mangled_name,
               demangled.c_str());
-    return ConstString(demangled);
+    return std::make_pair(ConstString(demangled), info);
   }
   if (demangled.empty()) {
     LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
@@ -178,7 +178,7 @@ static ConstString GetSwiftDemangledStr(ConstString m_mangled,
               demangled.c_str());
     m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
   }
-  return m_demangled;
+  return std::make_pair(m_demangled, info);
 }
 #endif // LLDB_ENABLE_SWIFT
 // END SWIFT
@@ -387,7 +387,11 @@ ConstString Mangled::GetDemangledNameImpl(
     // Demangling a swift name requires the swift compiler. This is
     // explicitly unsupported on llvm.org.
 #ifdef LLDB_ENABLE_SWIFT
-    return GetSwiftDemangledStr(m_mangled, sc, m_demangled);
+  {
+    auto demangled = GetSwiftDemangledStr(m_mangled, sc, m_demangled);
+    m_demangled_info.emplace(std::move(demangled.second));
+    return demangled.first;
+  }
 #endif // LLDB_ENABLE_SWIFT
   break;
   case eManglingSchemeNone:
