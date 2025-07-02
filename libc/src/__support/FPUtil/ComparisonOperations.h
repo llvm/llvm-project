@@ -1,4 +1,4 @@
-//===-- Comparison operations on floating point numbers --------*- C++ -*-===//
+//===-- Comparison operations on floating point numbers ---------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,7 +64,8 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
   FPBits x_bits(x);
   FPBits y_bits(y);
 
-  if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan())
+  if (x_bits.is_signaling_nan() || y_bits.is_signaling_nan() ||
+      x_bits.is_quiet_nan() || y_bits.is_quiet_nan())
     fputil::raise_except_if_required(FE_INVALID);
 
   // Any comparison with NaN returns false

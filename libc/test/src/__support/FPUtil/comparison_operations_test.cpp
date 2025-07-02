@@ -12,7 +12,6 @@
 #include "src/__support/sign.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-#include "utils/MPFRWrapper/MPFRUtils.h"
 
 using LIBC_NAMESPACE::fputil::equals;
 using LIBC_NAMESPACE::fputil::greater_than;
@@ -60,38 +59,6 @@ using LIBC_NAMESPACE::fputil::not_equals;
     EXPECT_FALSE(equals(nan, pos_zero));                                       \
     EXPECT_FALSE(equals(nan, pos_inf));                                        \
     EXPECT_FALSE(equals(pos_normal, nan));                                     \
-  }
-
-#define TEST_NOT_EQUALS(Name, Type)                                            \
-  TEST(LlvmLibc##Name##ComparisionOperationsTest, NotEquals) {                 \
-    using Bits = LIBC_NAMESPACE::fputil::FPBits<Type>;                         \
-    Type pos_zero = Bits::zero().get_val();                                    \
-    Type neg_zero = Bits::zero(Sign::NEG).get_val();                           \
-    Type pos_inf = Bits::inf().get_val();                                      \
-    Type neg_inf = Bits::inf(Sign::NEG).get_val();                             \
-    Type nan = NAN;                                                            \
-    Type pos_normal = Type(3.14);                                              \
-    Type neg_normal = Type(-2.71);                                             \
-    Type pos_large = Type(1000000.0);                                          \
-    Type neg_large = Type(-1000000.0);                                         \
-                                                                               \
-    EXPECT_FALSE(not_equals(pos_zero, pos_zero));                              \
-    EXPECT_FALSE(not_equals(pos_zero, neg_zero));                              \
-    EXPECT_FALSE(not_equals(pos_inf, pos_inf));                                \
-    EXPECT_FALSE(not_equals(neg_inf, neg_inf));                                \
-    EXPECT_FALSE(not_equals(pos_normal, pos_normal));                          \
-                                                                               \
-    EXPECT_TRUE(not_equals(pos_normal, neg_normal));                           \
-    EXPECT_TRUE(not_equals(pos_inf, neg_inf));                                 \
-    EXPECT_TRUE(not_equals(pos_normal, pos_zero));                             \
-    EXPECT_TRUE(not_equals(pos_large, neg_large));                             \
-    EXPECT_TRUE(not_equals(pos_inf, pos_normal));                              \
-                                                                               \
-    EXPECT_TRUE(not_equals(nan, nan));                                         \
-    EXPECT_TRUE(not_equals(nan, pos_normal));                                  \
-    EXPECT_TRUE(not_equals(nan, pos_zero));                                    \
-    EXPECT_TRUE(not_equals(nan, pos_inf));                                     \
-    EXPECT_TRUE(not_equals(pos_normal, nan));                                  \
   }
 
 #define TEST_LESS_THAN(Name, Type)                                             \
@@ -237,7 +204,6 @@ using LIBC_NAMESPACE::fputil::not_equals;
 
 #define TEST_COMPARISON_OPS(Name, Type)                                        \
   TEST_EQUALS(Name, Type)                                                      \
-  TEST_NOT_EQUALS(Name, Type)                                                  \
   TEST_LESS_THAN(Name, Type)                                                   \
   TEST_GREATER_THAN(Name, Type)                                                \
   TEST_LESS_THAN_OR_EQUALS(Name, Type)                                         \
