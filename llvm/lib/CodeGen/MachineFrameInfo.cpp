@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -80,7 +81,7 @@ int MachineFrameInfo::CreateVariableSizedObject(Align Alignment,
   return (int)Objects.size()-NumFixedObjects-1;
 }
 
-int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
+int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t Offset,
                                         bool IsImmutable, bool IsAliased) {
   assert(Size != 0 && "Cannot allocate zero size fixed stack objects!");
   // The alignment of the frame index can be determined from its offset from
@@ -90,23 +91,22 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
   // stack needs realignment, we can't assume that the stack will in fact be
   // aligned.
   Align Alignment =
-      commonAlignment(ForcedRealign ? Align(1) : StackAlignment, SPOffset);
+      commonAlignment(ForcedRealign ? Align(1) : StackAlignment, Offset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
-                 StackObject(Size, Alignment, SPOffset, IsImmutable,
+                 StackObject(Size, Alignment, Offset, IsImmutable,
                              /*IsSpillSlot=*/false, /*Alloca=*/nullptr,
                              IsAliased));
   return -++NumFixedObjects;
 }
 
-int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size,
-                                                  int64_t SPOffset,
+int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size, int64_t Offset,
                                                   bool IsImmutable) {
   Align Alignment =
-      commonAlignment(ForcedRealign ? Align(1) : StackAlignment, SPOffset);
+      commonAlignment(ForcedRealign ? Align(1) : StackAlignment, Offset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
-                 StackObject(Size, Alignment, SPOffset, IsImmutable,
+                 StackObject(Size, Alignment, Offset, IsImmutable,
                              /*IsSpillSlot=*/true, /*Alloca=*/nullptr,
                              /*IsAliased=*/false));
   return -++NumFixedObjects;
@@ -221,6 +221,12 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
     if (SO.StackID != 0)
       OS << "id=" << static_cast<unsigned>(SO.StackID) << ' ';
 
+    if (SO.Alloca && !SO.Alloca->getName().empty())
+      OS << "alloca=" << SO.Alloca->getName() << ' ';
+
+    if (SO.isSpillSlot)
+      OS << "spill ";
+
     if (SO.Size == ~0ULL) {
       OS << "dead\n";
       continue;
@@ -233,8 +239,13 @@ void MachineFrameInfo::print(const MachineFunction &MF, raw_ostream &OS) const{
 
     if (i < NumFixedObjects)
       OS << ", fixed";
-    if (i < NumFixedObjects || SO.SPOffset != -1) {
-      int64_t Off = SO.SPOffset - ValOffset;
+    if (SO.UnderlyingSlot == MachineFrameInfo::IsUnderlyingSlot)
+      OS << ", underlying";
+    if (SO.UnderlyingSlot > MachineFrameInfo::IsUnderlyingSlot) {
+      OS << ", placed=" << "fi#" << (int)(SO.UnderlyingSlot - NumFixedObjects)
+         << "+" << SO.Offset;
+    } else if (i < NumFixedObjects || SO.Offset != -1) {
+      int64_t Off = SO.Offset - ValOffset;
       OS << ", at location [SP";
       if (Off > 0)
         OS << "+" << Off;

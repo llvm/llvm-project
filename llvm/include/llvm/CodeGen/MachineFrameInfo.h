@@ -120,12 +120,18 @@ public:
                       ///< triggered protection.  3rd closest to the protector.
   };
 
+  static constexpr int NoUnderlyingSlot = std::numeric_limits<int>::min();
+  static constexpr int IsUnderlyingSlot = std::numeric_limits<int>::min() + 1;
+
 private:
   // Represent a single object allocated on the stack.
   struct StackObject {
     // The offset of this object from the stack pointer on entry to
     // the function.  This field has no meaning for a variable sized element.
-    int64_t SPOffset;
+    // After getting placed this is relative to SP
+    // If UnderlyingSlot is not NoUnderlyingSlot, this is relative to the start
+    // of the UnderlyingSlot
+    int64_t Offset;
 
     // The size of this object on the stack. 0 means a variable sized object,
     // ~0ULL means a dead object.
@@ -133,6 +139,10 @@ private:
 
     // The required alignment of this stack slot.
     Align Alignment;
+
+    // If not NoUnderlyingSlot, it Indicate that this slot should be placed
+    // at Offset, into the slot UnderlyingSlot
+    int UnderlyingSlot = NoUnderlyingSlot;
 
     // If true, the value of the stack object is set before
     // entering the function and is not modified inside the function. By
@@ -183,10 +193,10 @@ private:
 
     uint8_t SSPLayout = SSPLK_None;
 
-    StackObject(uint64_t Size, Align Alignment, int64_t SPOffset,
+    StackObject(uint64_t Size, Align Alignment, int64_t Offset,
                 bool IsImmutable, bool IsSpillSlot, const AllocaInst *Alloca,
                 bool IsAliased, uint8_t StackID = 0)
-        : SPOffset(SPOffset), Size(Size), Alignment(Alignment),
+        : Offset(Offset), Size(Size), Alignment(Alignment),
           isImmutable(IsImmutable), isSpillSlot(IsSpillSlot), StackID(StackID),
           Alloca(Alloca), isAliased(IsAliased) {}
   };
@@ -532,7 +542,7 @@ public:
            "Invalid Object Idx!");
     assert(!isDeadObjectIndex(ObjectIdx) &&
            "Getting frame offset for a dead object?");
-    return Objects[ObjectIdx+NumFixedObjects].SPOffset;
+    return Objects[ObjectIdx + NumFixedObjects].Offset;
   }
 
   bool isObjectZExt(int ObjectIdx) const {
@@ -561,12 +571,12 @@ public:
 
   /// Set the stack frame offset of the specified object. The
   /// offset is relative to the stack pointer on entry to the function.
-  void setObjectOffset(int ObjectIdx, int64_t SPOffset) {
+  void setObjectOffset(int ObjectIdx, int64_t Offset) {
     assert(unsigned(ObjectIdx+NumFixedObjects) < Objects.size() &&
            "Invalid Object Idx!");
     assert(!isDeadObjectIndex(ObjectIdx) &&
            "Setting frame offset for a dead object?");
-    Objects[ObjectIdx+NumFixedObjects].SPOffset = SPOffset;
+    Objects[ObjectIdx + NumFixedObjects].Offset = Offset;
   }
 
   SSPLayoutKind getObjectSSPLayout(int ObjectIdx) const {
@@ -760,6 +770,18 @@ public:
     Objects[ObjectIdx+NumFixedObjects].StackID = ID;
     // If ID > 0, MaxAlignment may now be overly conservative.
     // If ID == 0, MaxAlignment will need to be updated separately.
+  }
+
+  int getUnderlyingSlot(int ObjectIdx) const {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    return Objects[ObjectIdx + NumFixedObjects].UnderlyingSlot;
+  }
+
+  void setUnderlyingSlot(int ObjectIdx, int Underlying) {
+    assert(unsigned(ObjectIdx + NumFixedObjects) < Objects.size() &&
+           "Invalid Object Idx!");
+    Objects[ObjectIdx + NumFixedObjects].UnderlyingSlot = Underlying;
   }
 
   /// Returns true if the specified index corresponds to a dead object.
