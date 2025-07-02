@@ -1311,11 +1311,12 @@ def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 //===----------------------------------------------------------------------===//
 
 // Several of the runtime library functions use a special calling conv
-def __divmodqi4 : RuntimeLibcallImpl<SDIVREM_I8>; // CallingConv::AVR_BUILTIN
-def __divmodhi4 : RuntimeLibcallImpl<SDIVREM_I16>; // CallingConv::AVR_BUILTIN
+def __divmodqi4 : RuntimeLibcallImpl<SDIVREM_I8>;
+def __divmodhi4 : RuntimeLibcallImpl<SDIVREM_I16>;
+def __udivmodqi4 : RuntimeLibcallImpl<UDIVREM_I8>;
+def __udivmodhi4 : RuntimeLibcallImpl<UDIVREM_I16>;
+
 //def __divmodsi4 : RuntimeLibcallImpl<SDIVREM_I32>;
-def __udivmodqi4 : RuntimeLibcallImpl<UDIVREM_I8>; // CallingConv::AVR_BUILTIN
-def __udivmodhi4 : RuntimeLibcallImpl<UDIVREM_I16>; // CallingConv::AVR_BUILTIN
 //def __udivmodsi4 : RuntimeLibcallImpl<UDIVREM_I32>;
 
 // Standard sinf/cosf name replaced with "sin" and "cos". Define a
@@ -1341,9 +1342,12 @@ def AVRSystemLibrary
                // Standard f64 names are replaced
                sin, cos, sinf, cosf),
 
-              __divmodqi4, __divmodhi4, __divmodsi4, __udivmodqi4, __udivmodhi4,
-              __udivmodsi4,
-
+              // Several of the runtime library functions use a special calling
+              // conv
+              LibcallsWithCC<(add __divmodqi4, __divmodhi4, __udivmodqi4,
+                                 __udivmodhi4),
+                             AVR_BUILTIN>,
+              __divmodsi4, __udivmodsi4,
               // Trigonometric rtlib functions
               avr_sin, avr_cos)>;
 
@@ -1566,6 +1570,117 @@ def __mspabi_mpyll : RuntimeLibcallImpl<MUL_I64>;
 
 // setLibcallCallingConv(MUL_I64, CallingConv::MSP430_BUILTIN);
 
+def isMSP430 : RuntimeLibcallPredicate<"TT.getArch() == Triple::msp430">;
+
+defvar MSP430DefaultOptOut = [
+  __addsf3, __divsf3, __extendsfdf2, __truncdfsf2, __fixsfsi,
+  __fixsfdi, __fixunssfsi, __mulsf3, __eqsf2, __gesf2, __gtsf2,
+  __divhi3, __divsi3, __ashlsi3, __floatsidf, __floatsisf,
+  __ashrsi3, __modhi3, __udivsi3, __fixdfsi, __fixunssfdi,
+  __udivhi3, __umodsi3, __nesf2, __lesf2, __floatundisf,
+  __fixdfdi, __fixunsdfsi, __modsi3, __floatunsisf,
+  __fixunsdfdi, __ltsf2, __floatdisf, __floatdidf,
+  __lshrsi3, __subsf3, __umodhi3, __floatunsidf,
+  __floatundidf
+];
+
+// EABI Libcalls - EABI Section 6.2
+def MSP430SystemLibrary
+    : SystemRuntimeLibrary<isMSP430,
+    (add (sub DefaultRuntimeLibcallImpls, MSP430DefaultOptOut),
+
+      // Floating point conversions - EABI Table 6
+      __mspabi_cvtdf,
+      __mspabi_cvtfd,
+      // The following is NOT implemented in libgcc
+      //__mspabi_fixdi,
+      __mspabi_fixdli,
+      __mspabi_fixdlli,
+      // The following is NOT implemented in libgcc
+      // __mspabi_fixdu
+      __mspabi_fixdul,
+      __mspabi_fixdull,
+      // The following is NOT implemented in libgcc
+      //__mspabi_fixfi,
+      __mspabi_fixfli,
+      __mspabi_fixflli,
+      // The following is NOT implemented in libgcc
+      //__mspabi_fixfu,
+      __mspabi_fixful,
+      __mspabi_fixfull,
+      // TODO The following IS implemented in libgcc
+      //__mspabi_fltid
+      __mspabi_fltlid,
+      // TODO The following IS implemented in libgcc but is not in the EABI
+      __mspabi_fltllid,
+      // TODO The following IS implemented in libgcc
+      //__mspabi_fltud,
+      __mspabi_fltuld,
+      // The following IS implemented in libgcc but is not in the EABI
+      __mspabi_fltulld,
+      // TODO The following IS implemented in libgcc
+      //__mspabi_fltif,
+      __mspabi_fltlif,
+      // TODO The following IS implemented in libgcc but is not in the EABI
+      __mspabi_fltllif,
+      // TODO The following IS implemented in libgcc
+      //__mspabi_fltuf,
+      __mspabi_fltulf,
+      // The following IS implemented in libgcc but is not in the EABI
+      __mspabi_fltullf,
+
+      // Floating point comparisons - EABI Table 7
+      LibcallsWithCC<(add __mspabi_cmpd__oeq,
+                          __mspabi_cmpd__une,
+                          __mspabi_cmpd__oge,
+                          __mspabi_cmpd__olt,
+                          __mspabi_cmpd__ole,
+                          __mspabi_cmpd__ogt), MSP430_BUILTIN>,
+      __mspabi_cmpf__oeq,
+      __mspabi_cmpf__une,
+      __mspabi_cmpf__oge,
+      __mspabi_cmpf__olt,
+      __mspabi_cmpf__ole,
+      __mspabi_cmpf__ogt,
+
+      // Floating point arithmetic - EABI Table 8
+      LibcallsWithCC<(add __mspabi_addd,
+      __mspabi_subd,
+      __mspabi_mpyd,
+      __mspabi_divd), MSP430_BUILTIN>,
+
+      __mspabi_addf,
+      __mspabi_subf,
+      __mspabi_mpyf,
+      __mspabi_divf,
+
+      // The following are NOT implemented in libgcc
+      // __mspabi_negd,
+      // __mspabi_negf,
+
+      // Universal Integer Operations - EABI Table 9
+      __mspabi_divi,
+      __mspabi_divli,
+      LibcallsWithCC<(add __mspabi_divlli), MSP430_BUILTIN>,
+      __mspabi_divu,
+      __mspabi_divul,
+      LibcallsWithCC<(add __mspabi_divull), MSP430_BUILTIN>,
+      __mspabi_remi,
+      __mspabi_remli,
+      LibcallsWithCC<(add __mspabi_remlli), MSP430_BUILTIN>,
+      __mspabi_remu,
+      __mspabi_remul,
+      LibcallsWithCC<(add __mspabi_remull), MSP430_BUILTIN>,
+
+      // Bitwise Operations - EABI Table 10
+      // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
+      __mspabi_srll,
+      __mspabi_sral,
+      __mspabi_slll
+      // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
+  )
+>;
+
 //===----------------------------------------------------------------------===//
 // NVPTX Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -1708,11 +1823,12 @@ def _Q_ulltoq : RuntimeLibcallImpl<UINTTOFP_I64_F128>;
 //===----------------------------------------------------------------------===//
 
 // TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()
-def _alldiv : RuntimeLibcallImpl<SDIV_I64>; // CallingConv::X86_StdCall
-def _aulldiv : RuntimeLibcallImpl<UDIV_I64>; // CallingConv::X86_StdCall
-def _allrem : RuntimeLibcallImpl<SREM_I64>; // CallingConv::X86_StdCall
-def _aullrem : RuntimeLibcallImpl<UREM_I64>; // CallingConv::X86_StdCall
-def _allmul : RuntimeLibcallImpl<MUL_I64>; // CallingConv::X86_StdCall
+
+def _alldiv : RuntimeLibcallImpl<SDIV_I64>;
+def _aulldiv : RuntimeLibcallImpl<UDIV_I64>;
+def _allrem : RuntimeLibcallImpl<SREM_I64>;
+def _aullrem : RuntimeLibcallImpl<UREM_I64>;
+def _allmul : RuntimeLibcallImpl<MUL_I64>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
