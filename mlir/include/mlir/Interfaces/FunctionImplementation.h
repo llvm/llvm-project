@@ -49,7 +49,8 @@ ParseResult parseFunctionSignatureWithArguments(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<DictionaryAttr> &resultAttrs);
+    SmallVectorImpl<DictionaryAttr> &resultAttrs,
+    function_ref<ParseResult(OpAsmParser &, Type &)> typeParser = nullptr);
 
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
@@ -59,25 +60,28 @@ ParseResult parseFunctionSignatureWithArguments(
 /// whether the function is variadic.  If the builder returns a null type,
 /// `result` will not contain the `type` attribute.  The caller can then add a
 /// type, report the error or delegate the reporting to the op's verifier.
-ParseResult parseFunctionOp(OpAsmParser &parser, OperationState &result,
-                            bool allowVariadic, StringAttr typeAttrName,
-                            FuncTypeBuilder funcTypeBuilder,
-                            StringAttr argAttrsName, StringAttr resAttrsName);
+ParseResult parseFunctionOp(
+    OpAsmParser &parser, OperationState &result, bool allowVariadic,
+    StringAttr typeAttrName, FuncTypeBuilder funcTypeBuilder,
+    StringAttr argAttrsName, StringAttr resAttrsName,
+    function_ref<ParseResult(OpAsmParser &, Type &)> typeParser = nullptr);
 
 /// Printer implementation for function-like operations.
-void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
-                     StringRef typeAttrName, StringAttr argAttrsName,
-                     StringAttr resAttrsName);
+void printFunctionOp(
+    OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
+    StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName,
+    function_ref<void(OpAsmPrinter &, Type)> typePrinter = nullptr);
 
 /// Prints the signature of the function-like operation `op`. Assumes `op` has
 /// is a FunctionOpInterface and has passed verification.
-inline void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
-                                   ArrayRef<Type> argTypes, bool isVariadic,
-                                   ArrayRef<Type> resultTypes) {
+inline void printFunctionSignature(
+    OpAsmPrinter &p, FunctionOpInterface op, ArrayRef<Type> argTypes,
+    bool isVariadic, ArrayRef<Type> resultTypes,
+    function_ref<void(OpAsmPrinter &, Type)> typePrinter = nullptr) {
   call_interface_impl::printFunctionSignature(
       p, argTypes, op.getArgAttrsAttr(), isVariadic, resultTypes,
       op.getResAttrsAttr(), &op->getRegion(0),
-      /*printEmptyResult=*/false);
+      /*printEmptyResult=*/false, typePrinter);
 }
 
 /// Prints the list of function prefixed with the "attributes" keyword. The

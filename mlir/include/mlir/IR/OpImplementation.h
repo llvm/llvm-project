@@ -463,10 +463,10 @@ public:
   /// where location printing is controlled by the standard internal option.
   /// You may pass omitType=true to not print a type, and pass an empty
   /// attribute list if you don't care for attributes.
-  virtual void printRegionArgument(BlockArgument arg,
-                                   ArrayRef<NamedAttribute> argAttrs = {},
-                                   bool omitType = false) = 0;
-
+  virtual void printRegionArgument(
+      BlockArgument arg, ArrayRef<NamedAttribute> argAttrs = {},
+      bool omitType = false,
+      function_ref<void(OpAsmPrinter &, Type)> typePrinter = nullptr) = 0;
   /// Print implementations for various things an operation contains.
   virtual void printOperand(Value value) = 0;
   virtual void printOperand(Value value, raw_ostream &os) = 0;
@@ -1701,13 +1701,17 @@ public:
   ///
   /// If `allowType` is false or `allowAttrs` are false then the respective
   /// parts of the grammar are not parsed.
-  virtual ParseResult parseArgument(Argument &result, bool allowType = false,
-                                    bool allowAttrs = false) = 0;
+  virtual ParseResult
+  parseArgument(Argument &result, bool allowType = false,
+                bool allowAttrs = false,
+                function_ref<ParseResult(OpAsmParser &, Type &)> typeParser =
+                    nullptr) = 0;
 
   /// Parse a single argument if present.
-  virtual OptionalParseResult
-  parseOptionalArgument(Argument &result, bool allowType = false,
-                        bool allowAttrs = false) = 0;
+  virtual OptionalParseResult parseOptionalArgument(
+      Argument &result, bool allowType = false, bool allowAttrs = false,
+      function_ref<ParseResult(OpAsmParser &, Type &)> typeParser =
+          nullptr) = 0;
 
   /// Parse zero or more arguments with a specified surrounding delimiter.
   virtual ParseResult parseArgumentList(SmallVectorImpl<Argument> &result,
