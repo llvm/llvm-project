@@ -18,7 +18,7 @@ LLVM_LIBC_FUNCTION(void *, aligned_alloc, (size_t alignment, size_t size)) {
   // FIXME: NVIDIA targets currently use the built-in 'malloc' which we cannot
   // reason with. But we still need to provide this function for compatibility.
 #ifndef LIBC_TARGET_ARCH_IS_NVPTX
-  return gpu::aligned_allocate(alignment, size);
+  return gpu::aligned_allocate(static_cast<uint32_t>(alignment), size);
 #else
   (void)alignment;
   (void)size;
