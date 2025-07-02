@@ -10,6 +10,7 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -86,7 +87,9 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
     }
   }
 }
-
+  uint64_t combine_uint32_to_uint64(uint32_t high, uint32_t low) {
+      return (static_cast<uint64_t>(high) << 32) | low;
+  }
 static void reportErrors(Module &M, DXILResourceMap &DRM,
                          DXILResourceBindingInfo &DRBI,
                          RootSignatureBindingInfo &RSBI,
@@ -101,18 +104,24 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
   // Assuming this is used to validate only the root signature assigned to the
   // entry function.
+  //Start test stuff
+  if(MMI.EntryPropertyVec.size() == 0)
+    return;
+
   std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
       RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
   if (!RootSigDesc)
     return;
 
-  for (const mcdxbc::RootParameterInfo &Info :
-       RootSigDesc->ParametersContainer) {
+  using MapT = llvm::IntervalMap<uint64_t, llvm::dxil::ResourceInfo::ResourceBinding, sizeof(llvm::dxil::ResourceInfo::ResourceBinding), llvm::IntervalMapInfo<uint64_t>>;
+  MapT::Allocator Allocator;
+  MapT BindingsMap(Allocator);
+  auto RSD = *RootSigDesc;
+   for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
     const auto &[Type, Loc] =
-        RootSigDesc->ParametersContainer.getTypeAndLocForParameter(
-            Info.Location);
+        RootSigDesc->ParametersContainer.getTypeAndLocForParameter(I);
     switch (Type) {
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV):{
       dxbc::RTS0::v2::RootDescriptor Desc =
           RootSigDesc->ParametersContainer.getRootDescriptor(Loc);
 
@@ -120,8 +129,27 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
       Binding.LowerBound = Desc.ShaderRegister;
       Binding.Space = Desc.RegisterSpace;
       Binding.Size = 1;
+
+      BindingsMap.insert(combine_uint32_to_uint64(Binding.Space, Binding.LowerBound), combine_uint32_to_uint64(Binding.Space, Binding.LowerBound + Binding.Size -1), Binding);
       break;
     }
+    // case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):{
+    //   mcdxbc::DescriptorTable Table =
+    //       RootSigDesc->ParametersContainer.getDescriptorTable(Loc);
+    //   for (const dxbc::RTS0::v2::DescriptorRange &Range : Table){
+    //     Range.
+    //   }
+      
+    //   break;
+    // }
+    }
+
+  }
+
+  for(const auto &CBuf : DRM.cbuffers()) {
+    auto Binding = CBuf.getBinding();
+    if(!BindingsMap.overlaps(combine_uint32_to_uint64(Binding.Space, Binding.LowerBound), combine_uint32_to_uint64(Binding.Space, Binding.LowerBound + Binding.Size -1)))
+      auto X = 1;
   }
 }
 } // namespace
@@ -146,7 +174,7 @@ public:
     DXILResourceBindingInfo &DRBI =
         getAnalysis<DXILResourceBindingWrapperPass>().getBindingInfo();
 
-    RootSignatureBindingInfo &RSBI =
+    RootSignatureBindingInfo& RSBI =
         getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
     dxil::ModuleMetadataInfo &MMI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
