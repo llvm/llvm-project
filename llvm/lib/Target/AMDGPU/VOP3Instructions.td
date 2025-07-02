@@ -223,7 +223,8 @@ defm V_ALIGNBIT_B32 : VOP3Inst_t16_with_profiles <"v_alignbit_b32",
 
 defm V_ALIGNBYTE_B32 : VOP3Inst <"v_alignbyte_b32", VOP3_Profile<VOP_I32_I32_I32_I32>, int_amdgcn_alignbyte>;
 
-// In gfx9 and 10, opsel is allowed for V_ALIGNBIT_B32 and V_ALIGNBYTE_B32
+// In gfx9 and 10, opsel is allowed for V_ALIGNBIT_B32 and V_ALIGNBYTE_B32.
+// Hardware uses opsel[1:0] to byte-select src2. Other opsel bits are ignored.
 defm V_ALIGNBIT_B32_opsel : VOP3Inst <"v_alignbit_b32_opsel", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_OPSEL>>;
 defm V_ALIGNBYTE_B32_opsel : VOP3Inst <"v_alignbyte_b32_opsel", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_OPSEL>>;
 
@@ -2105,8 +2106,8 @@ defm V_BFI_B32         : VOP3_Real_gfx6_gfx7_gfx10<0x14a>;
 defm V_FMA_F32         : VOP3_Real_gfx6_gfx7_gfx10<0x14b>;
 defm V_FMA_F64         : VOP3_Real_gfx6_gfx7_gfx10<0x14c>;
 defm V_LERP_U8         : VOP3_Real_gfx6_gfx7_gfx10<0x14d>;
-defm V_ALIGNBIT_B32    : VOP3_Real_gfx6_gfx7_gfx10<0x14e>;
-defm V_ALIGNBYTE_B32   : VOP3_Real_gfx6_gfx7_gfx10<0x14f>;
+defm V_ALIGNBIT_B32    : VOP3_Real_gfx6_gfx7<0x14e>;
+defm V_ALIGNBYTE_B32   : VOP3_Real_gfx6_gfx7<0x14f>;
 defm V_MULLIT_F32      : VOP3_Real_gfx6_gfx7_gfx10<0x150>;
 defm V_MIN3_F32        : VOP3_Real_gfx6_gfx7_gfx10<0x151>;
 defm V_MIN3_I32        : VOP3_Real_gfx6_gfx7_gfx10<0x152>;
@@ -2279,8 +2280,10 @@ defm V_BFI_B32          : VOP3_Real_vi <0x1ca>;
 defm V_FMA_F32          : VOP3_Real_vi <0x1cb>;
 defm V_FMA_F64          : VOP3_Real_vi <0x1cc>;
 defm V_LERP_U8          : VOP3_Real_vi <0x1cd>;
+let SubtargetPredicate = isGFX8Only in {
 defm V_ALIGNBIT_B32     : VOP3_Real_vi <0x1ce>;
 defm V_ALIGNBYTE_B32    : VOP3_Real_vi <0x1cf>;
+}
 defm V_MIN3_F32         : VOP3_Real_vi <0x1d0>;
 defm V_MIN3_I32         : VOP3_Real_vi <0x1d1>;
 defm V_MIN3_U32         : VOP3_Real_vi <0x1d2>;
