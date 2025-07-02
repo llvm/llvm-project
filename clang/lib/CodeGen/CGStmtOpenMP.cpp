@@ -2395,6 +2395,12 @@ void CodeGenFunction::EmitOMPPrivateLoopCounters(
   for (const Expr *E : S.counters()) {
     const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*I)->getDecl());
+    // Privatize original counter variable (e.g., __beginN, __endN, __rangeN)
+    if (!LocalDeclMap.count(VD)) {
+      Address Addr = CreateMemTemp(VD->getType(), VD->getName());
+      LocalDeclMap.insert({VD, Addr});
+      (void)LoopScope.addPrivate(VD, Addr);
+    }
     // Emit var without initialization.
     AutoVarEmission VarEmission = EmitAutoVarAlloca(*PrivateVD);
     EmitAutoVarCleanups(VarEmission);
