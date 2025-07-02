@@ -207,8 +207,8 @@ public:
   /// context.
   static lldb::TypeSystemSP
   CreateInstance(const SymbolContext &sc,
-                 TypeSystemSwiftTypeRef &typeref_typesystem,
-                 const char *extra_options = nullptr);
+                 TypeSystemSwiftTypeRef &typeref_typesystem, bool repl = false,
+                 bool playground = false, const char *extra_options = nullptr);
 
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
@@ -539,7 +539,7 @@ public:
   swift::TBDGenOptions &GetTBDGenOptions();
 
   void ClearModuleDependentCaches() override;
-  void LogConfiguration(bool is_repl = false);
+  void LogConfiguration(bool repl = false, bool playground = false);
   bool HasTarget();
   bool HasExplicitModules() const { return m_has_explicit_modules; }
   bool CheckProcessChanged();
