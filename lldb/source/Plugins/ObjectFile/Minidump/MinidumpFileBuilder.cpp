@@ -834,7 +834,7 @@ Status MinidumpFileBuilder::AddMemoryList() {
   // Note this is here for testing. In the past there has been many occasions that the 64b
   // code has regressed because it's wasteful and expensive to write a 4.2gb+ on every CI run
   // to get around this and to exercise this codepath we define a flag in the options object.
-  bool force_64b_for_non_threads = m_save_core_options.ContainsFlag(&FORCE_64B_FLAG);
+  bool force_64b_for_non_threads = m_save_core_options.ContainsFlag(FORCE_64B_FLAG);
 
   // We first save the thread stacks to ensure they fit in the first UINT32_MAX
   // bytes of the core file. Thread structures in minidump files can only use
@@ -895,7 +895,7 @@ Status MinidumpFileBuilder::AddMemoryList() {
     const addr_t range_size = core_range.range.size();
     // We don't need to check for stacks here because we already removed them
     // from all_core_memory_ranges.
-    if (total_size + range_size < UINT32_MAX) {
+    if (!force_64b_for_non_threads && total_size + range_size < UINT32_MAX) {
       ranges_32.push_back(core_range);
       total_size += range_size;
     } else {

@@ -140,7 +140,7 @@ public:
   ///   The expected size of the data contained in the core in bytes.
   uint64_t GetCurrentSizeInBytes(SBError &error);
 
-  /// Add a flag specific to a plugin provider, null or empty flags
+  /// Add a flag to be consumed by the specified plugin, null or empty flags
   /// will be ignored.
   ///
   /// \note
