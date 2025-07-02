@@ -7460,6 +7460,8 @@ def err_typecheck_illegal_increment_decrement : Error<
   "cannot %select{decrement|increment}1 value of type %0">;
 def err_typecheck_expect_int : Error<
   "used type %0 where integer is required">;
+def err_typecheck_expect_function_pointer
+    : Error<"used type %0 where function pointer is required">;
 def err_typecheck_expect_hlsl_resource : Error<
   "used type %0 where __hlsl_resource_t is required">;
 def err_typecheck_arithmetic_incomplete_or_sizeless_type : Error<
@@ -12995,6 +12997,10 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
+def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
+    : Error<"__builtin_wasm_test_function_pointer_signature not supported for "
+            "function pointers with reference types in their "
+            "%select{return|parameter}0 type">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented
