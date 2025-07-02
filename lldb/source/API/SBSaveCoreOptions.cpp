@@ -128,6 +128,25 @@ uint64_t SBSaveCoreOptions::GetCurrentSizeInBytes(SBError &error) {
   return *expected_bytes;
 }
 
+lldb::SBMemoryRegionInfoList SBSaveCoreOptions::GetMemoryRegionsToSave() {
+  LLDB_INSTRUMENT_VA(this);
+  llvm::Expected<lldb_private::CoreFileMemoryRanges> memory_ranges = m_opaque_up->GetMemoryRegionsToSave();
+  if (!memory_ranges) {
+    llvm::consumeError(memory_ranges.takeError());
+    return SBMemoryRegionInfoList();
+  }
+
+  
+  SBMemoryRegionInfoList m_memory_region_infos;
+  for (const auto &range : *memory_ranges) {
+    SBMemoryRegionInfo region_info(nullptr, 
+      range.GetRangeBase(), range.GetRangeEnd(), range.data.lldb_permissions, /*mapped=*/true);
+    m_memory_region_infos.Append(region_info);
+  }
+
+  return m_memory_region_infos;
+}
+
 lldb_private::SaveCoreOptions &SBSaveCoreOptions::ref() const {
   return *m_opaque_up;
 }

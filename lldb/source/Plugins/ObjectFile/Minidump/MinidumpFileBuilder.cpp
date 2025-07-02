@@ -1138,7 +1138,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
   offset_t starting_offset =
       GetCurrentDataEndOffset() + sizeof(llvm::minidump::Memory64ListHeader);
   // The base_rva needs to start after the directories, which is right after
-  // this 8 byte variable.
+  // the descriptors + the size of the header.
   offset_t base_rva =
       starting_offset +
       (ranges.size() * sizeof(llvm::minidump::MemoryDescriptor_64));

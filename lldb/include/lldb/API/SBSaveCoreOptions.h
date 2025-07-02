@@ -15,6 +15,7 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
+#include "lldb/API/SBMemoryRegionInfoList.h"
 
 namespace lldb {
 
@@ -118,6 +119,13 @@ public:
   ///   An unsorted copy of all threads to save. If no process is specified
   ///   an empty collection will be returned.
   SBThreadCollection GetThreadsToSave() const;
+
+  /// Get an unsorted copy of all memory regions to save
+  ///
+  /// \returns
+  ///   An unsorted copy of all memory regions to save. If no process or style 
+  ///   is specified an empty collection will be returned.
+  SBMemoryRegionInfoList GetMemoryRegionsToSave();
 
   /// Get the current total number of bytes the core is expected to have
   /// excluding the overhead of the core file format. Requires a Process and
