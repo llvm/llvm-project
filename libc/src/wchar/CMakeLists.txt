@@ -214,6 +214,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  wcscspn
+  SRCS
+    wcscspn.cpp
+  HDRS
+    wcscspn.h
+  DEPENDS
+    libc.hdr.wchar_macros
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   wmemcmp
   SRCS
     wmemcmp.cpp

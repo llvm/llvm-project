@@ -1333,20 +1333,6 @@ bool GE(InterpState &S, CodePtr OpPC) {
 }
 
 //===----------------------------------------------------------------------===//
-// InRange
-//===----------------------------------------------------------------------===//
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InRange(InterpState &S, CodePtr OpPC) {
-  const T RHS = S.Stk.pop<T>();
-  const T LHS = S.Stk.pop<T>();
-  const T Value = S.Stk.pop<T>();
-
-  S.Stk.push<bool>(LHS <= Value && Value <= RHS);
-  return true;
-}
-
-//===----------------------------------------------------------------------===//
 // Dup, Pop, Test
 //===----------------------------------------------------------------------===//
 
