@@ -35,7 +35,6 @@ namespace clang {
 class TextDiagnostic : public DiagnosticRenderer {
   raw_ostream &OS;
   const Preprocessor *PP;
-  llvm::StringMap<SmallString<128>> SimplifiedFileNameCache;
 
 public:
   TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
