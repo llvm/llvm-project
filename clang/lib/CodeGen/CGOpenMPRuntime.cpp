@@ -8892,8 +8892,56 @@ public:
           CurCaptureVarInfo.append(CurInfoForComponentLists);
         };
 
-    GenerateInfoForComponentLists(DeclComponentLists,
+    // Next, we break-down the lists of components into lists that should be
+    // handled together.
+    //
+    // For now, we handle maps on pointers by themselves, and everything else
+    // together.
+    //
+    // TODO: Do this based on which lists have the same attachable-base-pointer
+    // e.g. The map clauses below, which are present on the same construct,
+    // should be handled grouped together based on their
+    // attachable-base-pointers:
+    //   map-clause                | attachable-base-pointer
+    //   --------------------------+------------------------
+    //   map(p, ps)                | none
+    //   map(p[0])                 | p
+    //   map(p[0]->b, p[0]->c)     | p[0]
+    //   map(ps->d, ps->e, ps->pt) | ps
+    //   map(ps->pt->d, ps->pt->e) | ps->pt
+
+    MapDataArrayTy ListsThatMapPointerVDItself;
+    MapDataArrayTy RemainingLists;
+    bool IsVDPointerType = VD && VD->getType()->isPointerType();
+
+    for (const MapData &L : DeclComponentLists) {
+      if (IsVDPointerType) {
+        OMPClauseMappableExprCommon::MappableExprComponentListRef Components =
+            std::get<0>(L);
+        bool IsMapOfPointerVD =
+            Components.size() == 1 &&
+            Components[0].getAssociatedDeclaration() &&
+            Components[0].getAssociatedDeclaration()->getCanonicalDecl() == VD;
+        if (IsMapOfPointerVD) {
+          ListsThatMapPointerVDItself.push_back(L);
+          continue;
+        }
+      }
+      RemainingLists.push_back(L);
+    }
+
+    // If VD is a pointer, and there are component-lists mapping VD itself,
+    // like: `int *p; ... map(p)`, we handle them first, and
+    // the first one from the should get the TARGET_PARAM flag.
+    GenerateInfoForComponentLists(ListsThatMapPointerVDItself,
                                   /*IsEligibleForTargetParamFlag=*/true);
+    // Then we handle all the other lists together. Note that since we already
+    // added TARGET_PARAM for the pointer case, we shouldn't add it again if
+    // if there are other lists that get handled here, for example, the list
+    // for `map(p[0:10]` in `int *p; ... map(p, p[0:10])`.
+    GenerateInfoForComponentLists(
+        RemainingLists,
+        /*IsEligibleForTargetParamFlag=*/ListsThatMapPointerVDItself.empty());
   }
 
   /// Generate the base pointers, section pointers, sizes, map types, and
