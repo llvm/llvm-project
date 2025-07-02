@@ -231,8 +231,10 @@ The following "string" options are available:
 |                                 |                | *both* this and quarantine_size_kb to zero will |
 |                                 |                | disable the quarantine entirely.                |
 +---------------------------------+----------------+-------------------------------------------------+
-| dealloc_type_mismatch           | false          | Whether or not we report errors on              |
+| dealloc_type_mismatch           | true           | Whether or not we report errors on              |
 |                                 |                | malloc/delete, new/free, new/delete[], etc.     |
+|                                 |                |                                                 |
+|                                 |                | Current false on Android, Fuchsia, and Trusty.  |
 +---------------------------------+----------------+-------------------------------------------------+
 | delete_size_mismatch            | true           | Whether or not we report errors on mismatch     |
 |                                 |                | between sizes of new and delete.                |
