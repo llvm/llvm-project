@@ -267,8 +267,8 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
       // AVRs that have a separate program memory (that's most AVRs) store
       // .rodata sections in RAM,
       // but XMEGA3 family maps all flash in the data space.
-      // Invoking __do_copy_data with 0 bytes to copy will crash,
-      // so we let the loader handle this for newer devices.
+      // Forcing pulling in __do_copy_data with 0 bytes to copy is a (minor)
+      // waste, so we let the loader handle this for newer devices.
       if (!(SubTM->hasFeatureSetFamilyXMEGA2() ||
             SubTM->hasFeatureSetFamilyXMEGA3() ||
             SubTM->hasFeatureSetFamilyXMEGA4()))
