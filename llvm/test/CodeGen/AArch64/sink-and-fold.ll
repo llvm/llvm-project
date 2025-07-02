@@ -151,7 +151,7 @@ define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast" {
 ; CHECK-NEXT:  .LBB4_3: // %LI
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1
 ; CHECK-NEXT:    // Child Loop BB4_6 Depth 2
-; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov x21, xzr
 ; CHECK-NEXT:    add x23, x22, #1
 ; CHECK-NEXT:    b .LBB4_6
 ; CHECK-NEXT:  .LBB4_4: // %if.else
@@ -159,16 +159,14 @@ define void @f4(ptr %a, i64 %n) nounwind "target-features"="+alu-lsl-fast" {
 ; CHECK-NEXT:    ldr w0, [x20, x22, lsl #2]
 ; CHECK-NEXT:  .LBB4_5: // %LJ.latch
 ; CHECK-NEXT:    // in Loop: Header=BB4_6 Depth=2
-; CHECK-NEXT:    add x8, x21, #1
+; CHECK-NEXT:    cmp x21, x19
 ; CHECK-NEXT:    str w0, [x20, x21, lsl #2]
-; CHECK-NEXT:    sub x9, x8, #1
-; CHECK-NEXT:    cmp x9, x19
+; CHECK-NEXT:    add x21, x21, #1
 ; CHECK-NEXT:    b.ge .LBB4_2
 ; CHECK-NEXT:  .LBB4_6: // %LJ
 ; CHECK-NEXT:    // Parent Loop BB4_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    mov x21, x8
-; CHECK-NEXT:    ldr w8, [x20, x8, lsl #2]
+; CHECK-NEXT:    ldr w8, [x20, x21, lsl #2]
 ; CHECK-NEXT:    tbz w8, #31, .LBB4_4
 ; CHECK-NEXT:  // %bb.7: // %if.then
 ; CHECK-NEXT:    // in Loop: Header=BB4_6 Depth=2

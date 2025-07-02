@@ -315,14 +315,14 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   }
 
   // If we haven't found this binop, insert it.
-  // TODO: Use the Builder, which will make CreateBinOp below fold with
-  // InstSimplifyFolder.
-  Instruction *BO = Builder.Insert(BinaryOperator::Create(Opcode, LHS, RHS));
-  BO->setDebugLoc(Loc);
-  if (Flags & SCEV::FlagNUW)
-    BO->setHasNoUnsignedWrap();
-  if (Flags & SCEV::FlagNSW)
-    BO->setHasNoSignedWrap();
+  Value *BO = Builder.CreateBinOp(Opcode, LHS, RHS);
+  if (auto *BOI = dyn_cast<Instruction>(BO)) {
+    BOI->setDebugLoc(Loc);
+    if (Flags & SCEV::FlagNUW)
+      BOI->setHasNoUnsignedWrap();
+    if (Flags & SCEV::FlagNSW)
+      BOI->setHasNoSignedWrap();
+  }
 
   return BO;
 }
