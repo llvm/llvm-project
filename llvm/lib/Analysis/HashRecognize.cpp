@@ -497,42 +497,46 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-/// Checks if \p Reference is reachable from \p Needle on the use-def chain, and
-/// that there are no stray PHI nodes while digging the use-def chain. \p
-/// BOToMatch is a CRC peculiarity: at least one of the Users of Needle needs to
-/// match this OpCode, which is XOR for CRC.
-static bool arePHIsIntertwined(
-    const PHINode *Needle, const PHINode *Reference, const Loop &L,
-    Instruction::BinaryOps BOToMatch = Instruction::BinaryOpsEnd) {
-  // Initialize the worklist with Users of the Needle.
+/// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
+/// of \p SI's condition, ignoring any casts. The purpose of this function is to
+/// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
+/// computation. We cannot check the correctness of casts at this point, and
+/// rely on the KnownBits propagation to check correctness of the CRC
+/// computation.
+///
+/// In other words, it checks for the following pattern:
+///
+/// loop:
+///   %P1 = phi [_, %entry], [%P1.next, %loop]
+///   %P2 = phi [_, %entry], [%P2.next, %loop]
+///   ...
+///   %xor = xor (CastOrSelf %P1), (CastOrSelf %P2)
+///
+/// where %xor is in the use-def chain of \p SI's condition.
+static bool isConditionalOnXorOfPHIs(const SelectInst *SI, const PHINode *P1,
+                                     const PHINode *P2, const Loop &L) {
   SmallVector<const Instruction *> Worklist;
-  for (const User *U : Needle->users()) {
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (L.contains(UI))
-        Worklist.push_back(UI);
-  }
 
-  // BOToMatch is usually XOR for CRC.
-  if (BOToMatch != Instruction::BinaryOpsEnd) {
-    if (count_if(Worklist, [BOToMatch](const Instruction *I) {
-          return I->getOpcode() == BOToMatch;
-        }) != 1)
-      return false;
-  }
+  // matchConditionalRecurrence has already ensured that the SelectInst's
+  // condition is an Instruction.
+  Worklist.push_back(cast<Instruction>(SI->getCondition()));
 
   while (!Worklist.empty()) {
     const Instruction *I = Worklist.pop_back_val();
 
-    // Since Needle is never pushed onto the Worklist, I must either be the
-    // Reference PHI node (in which case we're done), or a stray PHI node (in
-    // which case we abort).
+    // Don't add a PHI's operands to the Worklist.
     if (isa<PHINode>(I))
-      return I == Reference;
+      continue;
 
+    // If we match an XOR of the two PHIs ignoring casts, we're done.
+    if (match(I, m_c_Xor(m_CastOrSelf(m_Specific(P1)),
+                         m_CastOrSelf(m_Specific(P2)))))
+      return true;
+
+    // Continue along the use-def chain.
     for (const Use &U : I->operands())
       if (auto *UI = dyn_cast<Instruction>(U))
-        // Don't push Needle back onto the Worklist.
-        if (UI != Needle && L.contains(UI))
+        if (L.contains(UI))
           Worklist.push_back(UI);
   }
   return false;
@@ -586,9 +590,19 @@ HashRecognize::recognizeCRC() const {
   if (SimpleRecurrence) {
     if (isBigEndianBitShift(SimpleRecurrence.BO, SE) != ByteOrderSwapped)
       return "Loop with non-unit bitshifts";
-    if (!arePHIsIntertwined(SimpleRecurrence.Phi, ConditionalRecurrence.Phi, L,
-                            Instruction::BinaryOps::Xor))
-      return "Simple recurrence doesn't use conditional recurrence with XOR";
+
+    // Ensure that the PHIs have exactly two uses:
+    // the bit-shift, and the XOR (or a cast feeding into the XOR).
+    if (!ConditionalRecurrence.Phi->hasNUses(2) ||
+        !SimpleRecurrence.Phi->hasNUses(2))
+      return "Recurrences have stray uses";
+
+    // Check that the SelectInst ConditionalRecurrence.Step is conditional on
+    // the XOR of SimpleRecurrence.Phi and ConditionalRecurrence.Phi.
+    if (!isConditionalOnXorOfPHIs(cast<SelectInst>(ConditionalRecurrence.Step),
+                                  SimpleRecurrence.Phi,
+                                  ConditionalRecurrence.Phi, L))
+      return "Recurrences not intertwined with XOR";
   }
 
   // Make sure that the computed value is used in the exit block: this should be
