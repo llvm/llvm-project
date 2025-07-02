@@ -92,7 +92,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_next_stop()
 
-        ptr_deref = self.dap_server.request_evaluate("*rawptr")["body"]
+        ptr_deref = self.dap_server.request_evaluate("*rawptr", context="repl")["body"]
         memref = ptr_deref["memoryReference"]
 
         # We can read the complete string
