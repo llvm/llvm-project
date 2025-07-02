@@ -35,7 +35,7 @@ namespace llvm::omp {
 ///   if (S == nullptr) {
 ///     // Error: ended up in a state from which there is no possible path
 ///     // to a successful parse.
-///   } else if (S->Value == OMPD_unknown)
+///   } else if (S->Value == OMPD_unknown) {
 ///     // Parsed a sequence of tokens that are not a complete name, but
 ///     // parsing more tokens could lead to a successful parse.
 ///   } else {
