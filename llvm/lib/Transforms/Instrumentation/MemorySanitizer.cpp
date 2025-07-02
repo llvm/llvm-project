@@ -4314,7 +4314,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
     assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
     assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
-    auto ArgVectorSize =
+    [[maybe_unused]] auto ArgVectorSize =
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
     assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
                ->getNumElements() == ArgVectorSize);
