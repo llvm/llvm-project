@@ -4149,10 +4149,14 @@ class AMDGPUTensorLoadStoreD2:
     "", [SDNPMemOperand]
   >;
 
-def int_amdgcn_tensor_load_to_lds : AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_store_from_lds : AMDGPUTensorLoadStore;
-def int_amdgcn_tensor_load_to_lds_d2 : AMDGPUTensorLoadStoreD2;
-def int_amdgcn_tensor_store_from_lds_d2 : AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_load_to_lds :
+  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_store_from_lds :
+  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds">, AMDGPUTensorLoadStore;
+def int_amdgcn_tensor_load_to_lds_d2 :
+  ClangBuiltin<"__builtin_amdgcn_tensor_load_to_lds_d2">, AMDGPUTensorLoadStoreD2;
+def int_amdgcn_tensor_store_from_lds_d2 :
+  ClangBuiltin<"__builtin_amdgcn_tensor_store_from_lds_d2">, AMDGPUTensorLoadStoreD2;
 
 class AMDGPUClusterLoad<LLVMType ptr_ty>:
   Intrinsic<

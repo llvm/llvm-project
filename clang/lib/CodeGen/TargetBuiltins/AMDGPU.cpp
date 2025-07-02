@@ -691,10 +691,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {ConvertType(E->getType())});
     return Builder.CreateCall(F, {Args});
   }
-  case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
-  case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:
-  case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds:
-  case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds_d2:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b64:
@@ -709,18 +705,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_global_store_async_from_lds_b128: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
-      IID = Intrinsic::amdgcn_tensor_load_to_lds;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:
-      IID = Intrinsic::amdgcn_tensor_load_to_lds_d2;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds:
-      IID = Intrinsic::amdgcn_tensor_store_from_lds;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds_d2:
-      IID = Intrinsic::amdgcn_tensor_store_from_lds_d2;
-      break;
     case AMDGPU::BI__builtin_amdgcn_cluster_load_async_to_lds_b8:
       IID = Intrinsic::amdgcn_cluster_load_async_to_lds_b8;
       break;
