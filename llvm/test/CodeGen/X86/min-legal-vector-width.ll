@@ -174,8 +174,8 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-SKX:       # %bb.0: # %entry
 ; CHECK-SKX-NEXT:    movl %edx, %eax
 ; CHECK-SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-SKX-NEXT:    xorl %ecx, %ecx
 ; CHECK-SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-SKX-NEXT:    xorl %ecx, %ecx
 ; CHECK-SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-SKX-NEXT:    .p2align 4
 ; CHECK-SKX-NEXT:  .LBB8_1: # %vector.body
@@ -184,17 +184,17 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-SKX-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm4
 ; CHECK-SKX-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm5
 ; CHECK-SKX-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
-; CHECK-SKX-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; CHECK-SKX-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
 ; CHECK-SKX-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
 ; CHECK-SKX-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
-; CHECK-SKX-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
+; CHECK-SKX-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
 ; CHECK-SKX-NEXT:    addq $32, %rcx
 ; CHECK-SKX-NEXT:    cmpq %rcx, %rax
 ; CHECK-SKX-NEXT:    jne .LBB8_1
 ; CHECK-SKX-NEXT:  # %bb.2: # %middle.block
-; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm1, %ymm1
-; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm2, %ymm2
 ; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; CHECK-SKX-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; CHECK-SKX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-SKX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-SKX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -209,8 +209,8 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-AVX512:       # %bb.0: # %entry
 ; CHECK-AVX512-NEXT:    movl %edx, %eax
 ; CHECK-AVX512-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-AVX512-NEXT:    xorl %ecx, %ecx
 ; CHECK-AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512-NEXT:    xorl %ecx, %ecx
 ; CHECK-AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-AVX512-NEXT:    .p2align 4
 ; CHECK-AVX512-NEXT:  .LBB8_1: # %vector.body
@@ -219,17 +219,17 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-AVX512-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm4
 ; CHECK-AVX512-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm5
 ; CHECK-AVX512-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
-; CHECK-AVX512-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; CHECK-AVX512-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
 ; CHECK-AVX512-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
 ; CHECK-AVX512-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
-; CHECK-AVX512-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
+; CHECK-AVX512-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
 ; CHECK-AVX512-NEXT:    addq $32, %rcx
 ; CHECK-AVX512-NEXT:    cmpq %rcx, %rax
 ; CHECK-AVX512-NEXT:    jne .LBB8_1
 ; CHECK-AVX512-NEXT:  # %bb.2: # %middle.block
-; CHECK-AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm1
-; CHECK-AVX512-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; CHECK-AVX512-NEXT:    vpaddd %ymm0, %ymm2, %ymm2
 ; CHECK-AVX512-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; CHECK-AVX512-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; CHECK-AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -244,8 +244,8 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-VBMI:       # %bb.0: # %entry
 ; CHECK-VBMI-NEXT:    movl %edx, %eax
 ; CHECK-VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-VBMI-NEXT:    xorl %ecx, %ecx
 ; CHECK-VBMI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-VBMI-NEXT:    xorl %ecx, %ecx
 ; CHECK-VBMI-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; CHECK-VBMI-NEXT:    .p2align 4
 ; CHECK-VBMI-NEXT:  .LBB8_1: # %vector.body
@@ -254,17 +254,17 @@ define dso_local i32 @_Z9test_charPcS_i_256(ptr nocapture readonly, ptr nocaptur
 ; CHECK-VBMI-NEXT:    vpmovsxbw (%rdi,%rcx), %ymm4
 ; CHECK-VBMI-NEXT:    vpmovsxbw 16(%rsi,%rcx), %ymm5
 ; CHECK-VBMI-NEXT:    vpmaddwd %ymm3, %ymm5, %ymm3
-; CHECK-VBMI-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; CHECK-VBMI-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
 ; CHECK-VBMI-NEXT:    vpmovsxbw (%rsi,%rcx), %ymm3
 ; CHECK-VBMI-NEXT:    vpmaddwd %ymm4, %ymm3, %ymm3
-; CHECK-VBMI-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
+; CHECK-VBMI-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
 ; CHECK-VBMI-NEXT:    addq $32, %rcx
 ; CHECK-VBMI-NEXT:    cmpq %rcx, %rax
 ; CHECK-VBMI-NEXT:    jne .LBB8_1
 ; CHECK-VBMI-NEXT:  # %bb.2: # %middle.block
-; CHECK-VBMI-NEXT:    vpaddd %ymm0, %ymm1, %ymm1
-; CHECK-VBMI-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; CHECK-VBMI-NEXT:    vpaddd %ymm0, %ymm2, %ymm2
 ; CHECK-VBMI-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
+; CHECK-VBMI-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
 ; CHECK-VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; CHECK-VBMI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; CHECK-VBMI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -889,7 +889,7 @@ define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa (%rsi), %ymm2
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa 32(%rsi), %ymm3
-; CHECK-SKX-VBMI-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-SKX-VBMI-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-SKX-VBMI-NEXT:    vpandn %ymm3, %ymm4, %ymm5
 ; CHECK-SKX-VBMI-NEXT:    vpmaddubsw %ymm5, %ymm1, %ymm5
 ; CHECK-SKX-VBMI-NEXT:    vpand %ymm4, %ymm3, %ymm3
@@ -912,7 +912,7 @@ define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-AVX512-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; CHECK-AVX512-NEXT:    vmovdqa (%rsi), %ymm2
 ; CHECK-AVX512-NEXT:    vmovdqa 32(%rsi), %ymm3
-; CHECK-AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-AVX512-NEXT:    vpand %ymm4, %ymm3, %ymm5
 ; CHECK-AVX512-NEXT:    vpmaddubsw %ymm5, %ymm1, %ymm5
 ; CHECK-AVX512-NEXT:    vpandn %ymm3, %ymm4, %ymm3
@@ -936,7 +936,7 @@ define dso_local void @mul256(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-VBMI-NEXT:    vmovdqa 32(%rdi), %ymm1
 ; CHECK-VBMI-NEXT:    vmovdqa (%rsi), %ymm2
 ; CHECK-VBMI-NEXT:    vmovdqa 32(%rsi), %ymm3
-; CHECK-VBMI-NEXT:    vpbroadcastw {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-VBMI-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-VBMI-NEXT:    vpandn %ymm3, %ymm4, %ymm5
 ; CHECK-VBMI-NEXT:    vpmaddubsw %ymm5, %ymm1, %ymm5
 ; CHECK-VBMI-NEXT:    vpand %ymm4, %ymm3, %ymm3
@@ -964,7 +964,7 @@ define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-SKX-VBMI:       # %bb.0:
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-SKX-VBMI-NEXT:    vmovdqa64 (%rsi), %zmm1
-; CHECK-SKX-VBMI-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-SKX-VBMI-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-SKX-VBMI-NEXT:    vpandnq %zmm1, %zmm2, %zmm3
 ; CHECK-SKX-VBMI-NEXT:    vpmaddubsw %zmm3, %zmm0, %zmm3
 ; CHECK-SKX-VBMI-NEXT:    vpandq %zmm2, %zmm1, %zmm1
@@ -979,7 +979,7 @@ define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-AVX512-NEXT:    vmovdqa64 (%rsi), %zmm1
-; CHECK-AVX512-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-AVX512-NEXT:    vpandq %zmm2, %zmm1, %zmm3
 ; CHECK-AVX512-NEXT:    vpmaddubsw %zmm3, %zmm0, %zmm3
 ; CHECK-AVX512-NEXT:    vpandnq %zmm1, %zmm2, %zmm1
@@ -994,7 +994,7 @@ define dso_local void @mul512(ptr %a, ptr %b, ptr %c) "min-legal-vector-width"="
 ; CHECK-VBMI:       # %bb.0:
 ; CHECK-VBMI-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; CHECK-VBMI-NEXT:    vmovdqa64 (%rsi), %zmm1
-; CHECK-VBMI-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; CHECK-VBMI-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
 ; CHECK-VBMI-NEXT:    vpandnq %zmm1, %zmm2, %zmm3
 ; CHECK-VBMI-NEXT:    vpmaddubsw %zmm3, %zmm0, %zmm3
 ; CHECK-VBMI-NEXT:    vpandq %zmm2, %zmm1, %zmm1
@@ -1127,7 +1127,7 @@ define <16 x i16> @trunc_v16i32_v16i16_zeroes(ptr %x) nounwind "min-legal-vector
 ; CHECK-LABEL: trunc_v16i32_v16i16_zeroes:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
 ; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <16 x i32>, ptr %x
@@ -1182,7 +1182,7 @@ define <16 x i16> @trunc_v16i32_v16i16_sign(ptr %x) nounwind "min-legal-vector-w
 ; CHECK-LABEL: trunc_v16i32_v16i16_sign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa (%rdi), %ymm1
-; CHECK-NEXT:    vpmovsxbw {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm0 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31]
 ; CHECK-NEXT:    vpermi2w 32(%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = load <16 x i32>, ptr %x
@@ -1993,21 +1993,21 @@ define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind "min-legal-v
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-SKX-NEXT:    retq
 ;
 ; CHECK-AVX512-LABEL: splatconstant_rotate_v32i8:
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-AVX512-NEXT:    retq
 ;
 ; CHECK-VBMI1-LABEL: splatconstant_rotate_v32i8:
 ; CHECK-VBMI1:       # %bb.0:
 ; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-VBMI1-NEXT:    retq
 ;
 ; CHECK-GFNI-LABEL: splatconstant_rotate_v32i8:
@@ -2025,7 +2025,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-SKX:       # %bb.0:
 ; CHECK-SKX-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-SKX-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-SKX-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-SKX-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-SKX-NEXT:    retq
 ;
@@ -2033,7 +2033,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-AVX512:       # %bb.0:
 ; CHECK-AVX512-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-AVX512-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-AVX512-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-AVX512-NEXT:    retq
 ;
@@ -2041,7 +2041,7 @@ define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind "min-le
 ; CHECK-VBMI1:       # %bb.0:
 ; CHECK-VBMI1-NEXT:    vpsllw $4, %ymm0, %ymm1
 ; CHECK-VBMI1-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (mem & (ymm0 ^ ymm1))
+; CHECK-VBMI1-NEXT:    vpternlogd {{.*#+}} ymm0 = ymm0 ^ (m32bcst & (ymm0 ^ ymm1))
 ; CHECK-VBMI1-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; CHECK-VBMI1-NEXT:    retq
 ;

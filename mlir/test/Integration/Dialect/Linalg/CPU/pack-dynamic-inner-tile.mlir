@@ -121,13 +121,17 @@ module @transforms attributes { transform.with_named_sequence } {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 
-    // 3. Bufferize before lowering to LLVM
+    // 4. Bufferize before lowering to LLVM
     %bufferize = transform.bufferization.one_shot_bufferize %module
       {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
-    // 4. Canonicalize
+    // 5. Deallocate buffers.
     %func_op_bufferized = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">
-    transform.apply_patterns to %func_op_bufferized {
+    %func_op_deallocated = transform.apply_registered_pass "buffer-deallocation-pipeline" to %func_op_bufferized
+      : (!transform.op<"func.func">) -> !transform.op<"func.func">
+
+    // 6. Canonicalize
+    transform.apply_patterns to %func_op_deallocated {
       transform.apply_patterns.canonicalization
     } : !transform.op<"func.func">
 

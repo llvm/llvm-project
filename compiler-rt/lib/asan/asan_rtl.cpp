@@ -451,6 +451,18 @@ static bool AsanInitInternal() {
 
   DisableCoreDumperIfNecessary();
 
+#if SANITIZER_POSIX
+  if (StackSizeIsUnlimited()) {
+    VPrintf(1,
+            "WARNING: Unlimited stack size detected. This may affect "
+            "compatibility with the shadow mappings.\n");
+    // MSan and TSan re-exec with a fixed size stack. We don't do that because
+    // it may break the program. InitializeShadowMemory() will, if needed,
+    // re-exec without ASLR, which solves most shadow mapping compatibility
+    // issues.
+  }
+#endif  // SANITIZER_POSIX
+
   InitializeShadowMemory();
 
   AsanTSDInit(PlatformTSDDtor);

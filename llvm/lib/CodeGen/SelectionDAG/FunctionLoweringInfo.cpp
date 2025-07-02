@@ -295,7 +295,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
 
       DebugLoc DL = PN.getDebugLoc();
-      unsigned PHIReg = ValueMap[&PN];
+      Register PHIReg = ValueMap[&PN];
       assert(PHIReg && "PHI node does not have an assigned virtual register!");
 
       SmallVector<EVT, 4> ValueVTs;
@@ -369,7 +369,6 @@ void FunctionLoweringInfo::clear() {
   StatepointStackSlots.clear();
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
-  PreprocessedDbgDeclares.clear();
   PreprocessedDVRDeclares.clear();
 }
 
@@ -578,7 +577,7 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
       ValueVTs.clear();
       ComputeValueVTs(*TLI, Fn->getDataLayout(),
                       P.first->getType(), ValueVTs);
-      unsigned Reg = P.second;
+      Register Reg = P.second;
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i)

@@ -37,7 +37,7 @@ class FileEntry;
 class FileManager;
 class GlobalModuleIndex;
 class HeaderSearch;
-class InMemoryModuleCache;
+class ModuleCache;
 class PCHContainerReader;
 
 namespace serialization {
@@ -65,7 +65,7 @@ class ModuleManager {
   FileManager &FileMgr;
 
   /// Cache of PCM files.
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
 
   /// Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
@@ -133,9 +133,9 @@ public:
       SmallVectorImpl<std::unique_ptr<ModuleFile>>::reverse_iterator>;
   using ModuleOffset = std::pair<uint32_t, StringRef>;
 
-  explicit ModuleManager(FileManager &FileMgr, InMemoryModuleCache &ModuleCache,
-                         const PCHContainerReader &PCHContainerRdr,
-                         const HeaderSearch &HeaderSearchInfo);
+  ModuleManager(FileManager &FileMgr, ModuleCache &ModCache,
+                const PCHContainerReader &PCHContainerRdr,
+                const HeaderSearch &HeaderSearchInfo);
 
   /// Forward iterator to traverse all loaded modules.
   ModuleIterator begin() { return Chain.begin(); }
@@ -306,7 +306,7 @@ public:
   /// View the graphviz representation of the module graph.
   void viewGraph();
 
-  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+  ModuleCache &getModuleCache() const { return *ModCache; }
 };
 
 } // namespace serialization

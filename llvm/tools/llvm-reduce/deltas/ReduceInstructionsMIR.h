@@ -14,10 +14,10 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_MIR_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEINSTRUCTIONS_MIR_H
 
-namespace llvm {
-class TestRunner;
+#include "Delta.h"
 
-void reduceInstructionsMIRDeltaPass(TestRunner &Test);
+namespace llvm {
+void reduceInstructionsMIRDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

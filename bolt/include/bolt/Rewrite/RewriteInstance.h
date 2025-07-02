@@ -248,7 +248,7 @@ private:
   /// The \p SymbolName, \p SymbolAddress, \p Addend and \p ExtractedValue
   /// parameters will be set on success. The \p Skip argument indicates
   /// that the relocation was analyzed, but it must not be processed.
-  bool analyzeRelocation(const object::RelocationRef &Rel, uint64_t &RType,
+  bool analyzeRelocation(const object::RelocationRef &Rel, uint32_t &RType,
                          std::string &SymbolName, bool &IsSectionRelocation,
                          uint64_t &SymbolAddress, int64_t &Addend,
                          uint64_t &ExtractedValue, bool &Skip) const;

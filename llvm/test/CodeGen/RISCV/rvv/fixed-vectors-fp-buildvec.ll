@@ -46,10 +46,11 @@ define <4 x float> @hang_when_merging_stores_after_legalization(<8 x float> %x, 
 ; CHECK-NEXT:    vslideup.vi v12, v10, 2, v0.t
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vmv.v.i v10, 12
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v10
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v0, 12
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v12, v0
 ; CHECK-NEXT:    ret
   %z = shufflevector <8 x float> %x, <8 x float> %y, <4 x i32> <i32 0, i32 7, i32 8, i32 15>
@@ -1572,18 +1573,22 @@ define <2 x half> @vid_addend1_v2f16() {
 ;
 ; RV32ZVFHMIN-LABEL: vid_addend1_v2f16:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, 262148
-; RV32ZVFHMIN-NEXT:    addi a0, a0, -1024
-; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32ZVFHMIN-NEXT:    vid.v v8
+; RV32ZVFHMIN-NEXT:    li a0, 15
+; RV32ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV32ZVFHMIN-NEXT:    slli a0, a0, 10
+; RV32ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vid_addend1_v2f16:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    lui a0, 262148
-; RV64ZVFHMIN-NEXT:    addi a0, a0, -1024
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64ZVFHMIN-NEXT:    vid.v v8
+; RV64ZVFHMIN-NEXT:    li a0, 15
+; RV64ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV64ZVFHMIN-NEXT:    slli a0, a0, 10
+; RV64ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV64ZVFHMIN-NEXT:    ret
   ret <2 x half> <half 1.0, half 2.0>
 }
@@ -1607,18 +1612,22 @@ define <2 x half> @vid_denominator2_v2f16() {
 ;
 ; RV32ZVFHMIN-LABEL: vid_denominator2_v2f16:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, 245764
-; RV32ZVFHMIN-NEXT:    addi a0, a0, -2048
-; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV32ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32ZVFHMIN-NEXT:    vid.v v8
+; RV32ZVFHMIN-NEXT:    li a0, 7
+; RV32ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV32ZVFHMIN-NEXT:    slli a0, a0, 11
+; RV32ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV32ZVFHMIN-NEXT:    ret
 ;
 ; RV64ZVFHMIN-LABEL: vid_denominator2_v2f16:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    lui a0, 245764
-; RV64ZVFHMIN-NEXT:    addi a0, a0, -2048
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vmv.s.x v8, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64ZVFHMIN-NEXT:    vid.v v8
+; RV64ZVFHMIN-NEXT:    li a0, 7
+; RV64ZVFHMIN-NEXT:    vsll.vi v8, v8, 10
+; RV64ZVFHMIN-NEXT:    slli a0, a0, 11
+; RV64ZVFHMIN-NEXT:    vadd.vx v8, v8, a0
 ; RV64ZVFHMIN-NEXT:    ret
   ret <2 x half> <half 0.5, half 1.0>
 }

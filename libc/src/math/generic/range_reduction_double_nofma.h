@@ -81,7 +81,7 @@ LIBC_INLINE unsigned LargeRangeReduction::fast(double x, DoubleDouble &u) {
 //     b = round(sin(k * pi/128) - a, D, RN);
 //     print("{", b, ",", a, "},");
 //   };
-LIBC_INLINE constexpr DoubleDouble SIN_K_PI_OVER_128[256] = {
+LIBC_INLINE constexpr DoubleDouble SIN_K_PI_OVER_128[] = {
     {0, 0},
     {0x1.f938a73db97fbp-58, 0x1.92155f7a3667cp-6},
     {-0x1.912bd0d569a9p-61, 0x1.91f65f10dd814p-5},

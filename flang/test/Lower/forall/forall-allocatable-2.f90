@@ -18,12 +18,8 @@ end subroutine forall_with_allocatable2
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.box<!fir.array<?xf32>>{{.*}}) {
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}> {bindc_name = "thing", uniq_name = "_QFforall_with_allocatable2Ething"}
-! CHECK:         %[[VAL_3:.*]] = fir.embox %[[VAL_2]] : (!fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-! CHECK:         %[[VAL_4:.*]] = fir.address_of(@_QQclX{{.*}}) : !fir.ref<!fir.char<1,
-! CHECK:         %[[VAL_5:.*]] = arith.constant {{.*}} : i32
-! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_3]] : (!fir.box<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.box<none>
-! CHECK:         %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-! CHECK:         fir.call @_FortranAInitialize(%[[VAL_6]], %[[VAL_7]], %[[VAL_5]]) {{.*}}: (!fir.box<none>, !fir.ref<i8>, i32) -> ()
+! CHECK:         %[[ADDR:.*]] =  fir.address_of(@_QQ_QFforall_with_allocatable2Tt.DerivedInit) : !fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+! CHECK:         fir.copy %[[ADDR]] to %[[VAL_2]] no_overlap : !fir.ref<!fir.type<_QFforall_with_allocatable2Tt{i:i32,arr:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
 ! CHECK:         %[[VAL_9:.*]] = arith.constant 5 : i32
 ! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 ! CHECK:         %[[VAL_11:.*]] = arith.constant 15 : i32

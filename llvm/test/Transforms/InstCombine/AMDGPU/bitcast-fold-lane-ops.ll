@@ -311,3 +311,15 @@ define i32 @test_bitcast_f32_to_i32_readlane_convergencetoken(float %val, i32 in
   %result = call i32 @llvm.amdgcn.readlane.i32(i32 %bitcast, i32 %lane.index) [ "convergencectrl"(token %t) ]
   ret i32 %result
 }
+
+define i32 @test_bitcast_f32_to_i32_ds_bpermute(float %val, i32 %addr) {
+; CHECK-LABEL: define i32 @test_bitcast_f32_to_i32_ds_bpermute(
+; CHECK-SAME: float [[VAL:%.*]], i32 [[ADDR:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[VAL]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.ds.bpermute(i32 [[ADDR]], i32 [[BITCAST]])
+; CHECK-NEXT:    ret i32 [[RESULT]]
+;
+  %bitcast = bitcast float %val to i32
+  %result = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %bitcast)
+  ret i32 %result
+}

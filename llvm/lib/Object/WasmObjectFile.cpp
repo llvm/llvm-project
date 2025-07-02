@@ -291,6 +291,12 @@ static wasm::WasmLimits readLimits(WasmObjectFile::ReadContext &Ctx) {
   Result.Minimum = readVaruint64(Ctx);
   if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_MAX)
     Result.Maximum = readVaruint64(Ctx);
+  if (Result.Flags & wasm::WASM_LIMITS_FLAG_HAS_PAGE_SIZE) {
+    uint32_t PageSizeLog2 = readVaruint32(Ctx);
+    if (PageSizeLog2 >= 32)
+      report_fatal_error("log2(wasm page size) too large");
+    Result.PageSize = 1 << PageSizeLog2;
+  }
   return Result;
 }
 

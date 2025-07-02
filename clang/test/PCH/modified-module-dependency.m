@@ -17,4 +17,4 @@
 // CHECK: file '[[TEST_H:.*[/\\]test\.h]]' has been modified since the precompiled header '[[PREFIX_PCH:.*/prefix\.pch]]' was built
 // CHECK: '[[TEST_H]]' required by '[[TEST_PCM:.*[/\\]test\.pcm]]'
 // CHECK: '[[TEST_PCM]]' required by '[[PREFIX_PCH]]'
-// CHECK: please rebuild precompiled header '[[PREFIX_PCH]]'
+// CHECK: please rebuild precompiled file '[[PREFIX_PCH]]'

@@ -62,7 +62,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel create((float)ArrayParam[2])
   while(1);
-  // expected-error@+2{{invalid tag 'invalid' on 'create' clause}}
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'create' clause}}
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc parallel create(invalid:(float)ArrayParam[2])
   while(1);
@@ -75,5 +75,28 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   for(int i = 5; i < 10;++i);
   // expected-error@+1{{OpenACC 'present_or_create' clause is not valid on 'loop' directive}}
 #pragma acc loop present_or_create(LocalInt)
+  for(int i = 5; i < 10;++i);
+}
+void ModList() {
+  int V1;
+  // expected-error@+4{{OpenACC 'always' modifier not valid on 'create' clause}}
+  // expected-error@+3{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc parallel create(always, alwaysin, alwaysout, zero, readonly: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc serial create(always: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'alwaysin' modifier not valid on 'create' clause}}
+#pragma acc kernels create(alwaysin: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'create' clause}}
+#pragma acc parallel create(alwaysout: V1)
+  for(int i = 5; i < 10;++i);
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
+#pragma acc serial create(readonly: V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel create(capture:V1)
   for(int i = 5; i < 10;++i);
 }

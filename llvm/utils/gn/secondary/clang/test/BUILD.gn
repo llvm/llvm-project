@@ -44,7 +44,12 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
+    "BUILD_SHARED_LIBS=0",
+    "LLVM_LINK_LLVM_DYLIB=0",
+    "CLANG_LINK_CLANG_DYLIB=0",
     "LLVM_WITH_Z3=0",
+    "TEST_WITH_Z3_DEVEL=0",
+    "Z3_INCLUDE_DIR=",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
@@ -65,6 +70,7 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",
+    "LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",
@@ -73,7 +79,6 @@ write_lit_config("lit_site_cfg") {
     "LLVM_USE_SANITIZER=",
     "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
-    "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
   ]
 
@@ -184,6 +189,7 @@ group("test") {
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
     "//llvm/tools/llvm-ifs",
+    "//llvm/tools/llvm-link",
     "//llvm/tools/llvm-lto",
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-modextract",

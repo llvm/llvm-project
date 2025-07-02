@@ -237,12 +237,9 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
               // ScriptInterpreter. For now, we just replace dots with
               // underscores, but if we ever support anything other than
               // Python we will need to rework this
-              std::replace(module_basename.begin(), module_basename.end(), '.',
-                           '_');
-              std::replace(module_basename.begin(), module_basename.end(), ' ',
-                           '_');
-              std::replace(module_basename.begin(), module_basename.end(), '-',
-                           '_');
+              llvm::replace(module_basename, '.', '_');
+              llvm::replace(module_basename, ' ', '_');
+              llvm::replace(module_basename, '-', '_');
               ScriptInterpreter *script_interpreter =
                   target->GetDebugger().GetScriptInterpreter();
               if (script_interpreter &&
@@ -1337,33 +1334,6 @@ lldb_private::Status PlatformDarwin::FindBundleBinaryInExecSearchPaths(
   return Status();
 }
 
-std::string PlatformDarwin::FindComponentInPath(llvm::StringRef path,
-                                                llvm::StringRef component) {
-  auto begin = llvm::sys::path::begin(path);
-  auto end = llvm::sys::path::end(path);
-  for (auto it = begin; it != end; ++it) {
-    if (it->contains(component)) {
-      llvm::SmallString<128> buffer;
-      llvm::sys::path::append(buffer, begin, ++it,
-                              llvm::sys::path::Style::posix);
-      return buffer.str().str();
-    }
-  }
-  return {};
-}
-
-FileSpec PlatformDarwin::GetCurrentToolchainDirectory() {
-  if (FileSpec fspec = HostInfo::GetShlibDir())
-    return FileSpec(FindComponentInPath(fspec.GetPath(), ".xctoolchain"));
-  return {};
-}
-
-FileSpec PlatformDarwin::GetCurrentCommandLineToolsDirectory() {
-  if (FileSpec fspec = HostInfo::GetShlibDir())
-    return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
-  return {};
-}
-
 llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
 #if !defined(__APPLE__)
   return llvm::Triple::MacOSX;
@@ -1424,6 +1394,9 @@ PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
                       llvm::toString(sdk_or_err.takeError())));
 
   auto [sdk, _] = std::move(*sdk_or_err);
+
+  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
+    return sdk.GetSysroot().GetPath();
 
   auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!path_or_err)

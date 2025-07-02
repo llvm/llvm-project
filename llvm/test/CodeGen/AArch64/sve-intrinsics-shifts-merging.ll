@@ -60,7 +60,7 @@ define <vscale x 2 x i64> @asr_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 16 x i8> @asr_wide_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: asr_wide_i8_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    asr z0.b, p0/m, z0.b, z1.d
 ; CHECK-NEXT:    ret
@@ -74,7 +74,7 @@ define <vscale x 16 x i8> @asr_wide_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16
 define <vscale x 8 x i16> @asr_wide_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: asr_wide_i16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
 ; CHECK-NEXT:    asr z0.h, p0/m, z0.h, z1.d
 ; CHECK-NEXT:    ret
@@ -88,7 +88,7 @@ define <vscale x 8 x i16> @asr_wide_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 
 define <vscale x 4 x i32> @asr_wide_i32_zero(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: asr_wide_i32_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
 ; CHECK-NEXT:    asr z0.s, p0/m, z0.s, z1.d
 ; CHECK-NEXT:    ret
@@ -214,7 +214,7 @@ define <vscale x 2 x i64> @lsl_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 16 x i8> @lsl_wide_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: lsl_wide_i8_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    lsl z0.b, p0/m, z0.b, z1.d
 ; CHECK-NEXT:    ret
@@ -228,7 +228,7 @@ define <vscale x 16 x i8> @lsl_wide_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16
 define <vscale x 8 x i16> @lsl_wide_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: lsl_wide_i16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
 ; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.d
 ; CHECK-NEXT:    ret
@@ -242,7 +242,7 @@ define <vscale x 8 x i16> @lsl_wide_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 
 define <vscale x 4 x i32> @lsl_wide_i32_zero(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: lsl_wide_i32_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
 ; CHECK-NEXT:    lsl z0.s, p0/m, z0.s, z1.d
 ; CHECK-NEXT:    ret
@@ -312,7 +312,7 @@ define <vscale x 2 x i64> @lsr_i64_zero(<vscale x 2 x i1> %pg, <vscale x 2 x i64
 define <vscale x 16 x i8> @lsr_wide_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: lsr_wide_i8_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.b, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.b, p0, z0.b, z2.b
 ; CHECK-NEXT:    lsr z0.b, p0/m, z0.b, z1.d
 ; CHECK-NEXT:    ret
@@ -326,7 +326,7 @@ define <vscale x 16 x i8> @lsr_wide_i8_zero(<vscale x 16 x i1> %pg, <vscale x 16
 define <vscale x 8 x i16> @lsr_wide_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: lsr_wide_i16_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.h, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z2.h
 ; CHECK-NEXT:    lsr z0.h, p0/m, z0.h, z1.d
 ; CHECK-NEXT:    ret
@@ -340,7 +340,7 @@ define <vscale x 8 x i16> @lsr_wide_i16_zero(<vscale x 8 x i1> %pg, <vscale x 8 
 define <vscale x 4 x i32> @lsr_wide_i32_zero(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: lsr_wide_i32_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
 ; CHECK-NEXT:    lsr z0.s, p0/m, z0.s, z1.d
 ; CHECK-NEXT:    ret

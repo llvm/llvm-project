@@ -18,7 +18,7 @@
 ! CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QQclX4641494C) : !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX4641494C"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#1 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]]#0 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
 ! CHECK:           %[[VAL_14:.*]] = arith.constant false
 ! CHECK:           %[[VAL_15:.*]] = arith.constant false
@@ -62,7 +62,7 @@ end subroutine test1
 ! CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QQclX4641494C) : !fir.ref<!fir.char<1,4>>
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]] typeparams %[[VAL_12]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX4641494C"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
-! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]]#1 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_13]]#0 : (!fir.ref<!fir.char<1,4>>) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
 ! CHECK:           %[[VAL_16:.*]] = arith.constant false
 ! CHECK:           %[[VAL_17:.*]] = arith.constant false

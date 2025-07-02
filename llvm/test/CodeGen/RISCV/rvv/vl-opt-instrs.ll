@@ -3063,9 +3063,9 @@ define <vscale x 4 x i32> @vmv_v_x(<vscale x 4 x i32> %a, i32 %x, iXLen %vl) {
 define <vscale x 1 x i8> @vmv_v_v(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b, <vscale x 1 x i8> %c, <vscale x 1 x i1> %m, iXLen %vl) {
 ; NOVLOPT-LABEL: vmv_v_v:
 ; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    vsetvli a1, zero, e8, mf8, tu, ma
+; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; NOVLOPT-NEXT:    vmv.v.v v8, v9
-; NOVLOPT-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; NOVLOPT-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; NOVLOPT-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; NOVLOPT-NEXT:    ret
 ;
@@ -5073,23 +5073,23 @@ define <vscale x 4 x float> @vfwmaccbf16_vf(<vscale x 4 x float> %a, bfloat %b, 
 define <vscale x 4 x double> @vfsqrt(<vscale x 4 x float> %a) {
 ; NOVLOPT-LABEL: vfsqrt:
 ; NOVLOPT:       # %bb.0:
-; NOVLOPT-NEXT:    fsrmi a0, 0
 ; NOVLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vfsqrt.v v10, v8
+; NOVLOPT-NEXT:    vmv2r.v v12, v8
+; NOVLOPT-NEXT:    fsrmi a0, 0
+; NOVLOPT-NEXT:    vfsqrt.v v14, v8
 ; NOVLOPT-NEXT:    fsrm a0
 ; NOVLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vfwmacc.vv v12, v8, v10
-; NOVLOPT-NEXT:    vmv4r.v v8, v12
+; NOVLOPT-NEXT:    vfwmacc.vv v8, v12, v14
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vfsqrt:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    fsrmi a0, 0
 ; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; VLOPT-NEXT:    vfsqrt.v v10, v8
+; VLOPT-NEXT:    vmv2r.v v12, v8
+; VLOPT-NEXT:    fsrmi a0, 0
+; VLOPT-NEXT:    vfsqrt.v v14, v8
 ; VLOPT-NEXT:    fsrm a0
-; VLOPT-NEXT:    vfwmacc.vv v12, v8, v10
-; VLOPT-NEXT:    vmv4r.v v8, v12
+; VLOPT-NEXT:    vfwmacc.vv v8, v12, v14
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x float> @llvm.riscv.vfsqrt.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 0, iXLen 7)
   %2 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %1, iXLen 7, iXLen 6, iXLen 0)
@@ -5100,18 +5100,18 @@ define <vscale x 4 x double> @vfrsqrt7(<vscale x 4 x float> %a) {
 ; NOVLOPT-LABEL: vfrsqrt7:
 ; NOVLOPT:       # %bb.0:
 ; NOVLOPT-NEXT:    vsetivli zero, 7, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vfrsqrt7.v v10, v8
+; NOVLOPT-NEXT:    vmv2r.v v12, v8
+; NOVLOPT-NEXT:    vfrsqrt7.v v14, v8
 ; NOVLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; NOVLOPT-NEXT:    vfwmacc.vv v12, v8, v10
-; NOVLOPT-NEXT:    vmv4r.v v8, v12
+; NOVLOPT-NEXT:    vfwmacc.vv v8, v12, v14
 ; NOVLOPT-NEXT:    ret
 ;
 ; VLOPT-LABEL: vfrsqrt7:
 ; VLOPT:       # %bb.0:
 ; VLOPT-NEXT:    vsetivli zero, 6, e32, m2, ta, ma
-; VLOPT-NEXT:    vfrsqrt7.v v10, v8
-; VLOPT-NEXT:    vfwmacc.vv v12, v8, v10
-; VLOPT-NEXT:    vmv4r.v v8, v12
+; VLOPT-NEXT:    vmv2r.v v12, v8
+; VLOPT-NEXT:    vfrsqrt7.v v14, v8
+; VLOPT-NEXT:    vfwmacc.vv v8, v12, v14
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x float> @llvm.riscv.vfrsqrt7.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %a, iXLen 7)
   %2 = call <vscale x 4 x double> @llvm.riscv.vfwmacc(<vscale x 4 x double> poison, <vscale x 4 x float> %a, <vscale x 4 x float> %1, iXLen 7, iXLen 6, iXLen 0)

@@ -12,7 +12,7 @@
 
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -308,11 +308,10 @@ AArch64MCCodeEmitter::getAddSubImmOpValue(const MCInst &MI, unsigned OpIdx,
 
   // Set the shift bit of the add instruction for relocation types
   // R_AARCH64_TLSLE_ADD_TPREL_HI12 and R_AARCH64_TLSLD_ADD_DTPREL_HI12.
-  if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(Expr)) {
-    AArch64MCExpr::VariantKind RefKind = A64E->getKind();
-    if (RefKind == AArch64MCExpr::VK_TPREL_HI12 ||
-        RefKind == AArch64MCExpr::VK_DTPREL_HI12 ||
-        RefKind == AArch64MCExpr::VK_SECREL_HI12)
+  if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
+    AArch64::Specifier RefKind = A64E->getSpecifier();
+    if (RefKind == AArch64::S_TPREL_HI12 || RefKind == AArch64::S_DTPREL_HI12 ||
+        RefKind == AArch64::S_SECREL_HI12)
       ShiftVal = 12;
   }
   return ShiftVal == 0 ? 0 : (1 << ShiftVal);
@@ -718,15 +717,15 @@ unsigned AArch64MCCodeEmitter::fixMOVZ(const MCInst &MI, unsigned EncodedValue,
     return EncodedValue;
 
   const MCExpr *E = UImm16MO.getExpr();
-  if (const AArch64MCExpr *A64E = dyn_cast<AArch64MCExpr>(E)) {
-    switch (A64E->getKind()) {
-    case AArch64MCExpr::VK_DTPREL_G2:
-    case AArch64MCExpr::VK_DTPREL_G1:
-    case AArch64MCExpr::VK_DTPREL_G0:
-    case AArch64MCExpr::VK_GOTTPREL_G1:
-    case AArch64MCExpr::VK_TPREL_G2:
-    case AArch64MCExpr::VK_TPREL_G1:
-    case AArch64MCExpr::VK_TPREL_G0:
+  if (auto *A64E = dyn_cast<MCSpecifierExpr>(E)) {
+    switch (A64E->getSpecifier()) {
+    case AArch64::S_DTPREL_G2:
+    case AArch64::S_DTPREL_G1:
+    case AArch64::S_DTPREL_G0:
+    case AArch64::S_GOTTPREL_G1:
+    case AArch64::S_TPREL_G2:
+    case AArch64::S_TPREL_G1:
+    case AArch64::S_TPREL_G0:
       return EncodedValue & ~(1u << 30);
     default:
       // Nothing to do for an unsigned fixup.
@@ -749,9 +748,7 @@ void AArch64MCCodeEmitter::encodeInstruction(const MCInst &MI,
     auto Reloc = STI.getTargetTriple().getEnvironment() == Triple::GNUILP32
                      ? ELF::R_AARCH64_P32_TLSDESC_CALL
                      : ELF::R_AARCH64_TLSDESC_CALL;
-    Fixups.push_back(
-        MCFixup::create(0, MI.getOperand(0).getExpr(),
-                        MCFixupKind(FirstLiteralRelocationKind + Reloc)));
+    Fixups.push_back(MCFixup::create(0, MI.getOperand(0).getExpr(), Reloc));
     return;
   }
 

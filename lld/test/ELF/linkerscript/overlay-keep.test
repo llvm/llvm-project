@@ -1,0 +1,51 @@
+# REQUIRES: x86
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s -o a.o
+# RUN: ld.lld a.o --gc-sections --script nokeep.t -o a
+# RUN: llvm-objdump --section-headers a | FileCheck --check-prefix=NOKEEP %s
+# RUN: ld.lld a.o --gc-sections --script keep.t -o a
+# RUN: llvm-objdump --section-headers a | FileCheck --check-prefix=KEEP %s
+
+# NOKEEP:      Sections:
+# NOKEEP-NEXT: Idx Name          Size
+# NOKEEP-NEXT:   0               00000000
+# NOKEEP-NEXT:   1 .text         00000004
+# NOKEEP-NEXT:   2 .keep1        00000000
+
+# KEEP:      Sections:
+# KEEP-NEXT: Idx Name          Size
+# KEEP-NEXT:   0               00000000
+# KEEP-NEXT:   1 .text         00000004
+# KEEP-NEXT:   2 .keep1        00000004
+# KEEP-NEXT:   3 .keep2        00000004
+
+#--- a.s
+.global _start
+_start:
+ .long 1
+
+.section .keep1, "a"
+keep1:
+ .long 2
+
+.section .keep2, "a"
+keep2:
+ .long 3
+
+#--- nokeep.t
+SECTIONS {
+  .text : { *(.text) }
+  OVERLAY 0x1000 : AT ( 0x4000 ) {
+    .keep1 { *(.keep1) }
+    .keep2 { *(.keep2) }
+  }
+}
+
+#--- keep.t
+SECTIONS {
+  .text : { *(.text) }
+  OVERLAY 0x1000 : AT ( 0x4000 ) {
+    .keep1 { KEEP(*(.keep1)) }
+    .keep2 { KEEP(*(.keep2)) }
+  }
+}

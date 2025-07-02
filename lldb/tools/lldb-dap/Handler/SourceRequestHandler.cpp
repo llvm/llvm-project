@@ -7,113 +7,64 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Handler/RequestHandler.h"
 #include "LLDBUtils.h"
-#include "RequestHandler.h"
+#include "Protocol/ProtocolRequests.h"
+#include "Protocol/ProtocolTypes.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBSymbol.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
-#include "llvm/Support/JSON.h"
+#include "lldb/lldb-types.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_dap {
 
-// "SourceRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Source request; value of command field is 'source'. The
-//     request retrieves the source code for a given source reference.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "source" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/SourceArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "SourceArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'source' request.",
-//   "properties": {
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "Specifies the source content to load. Either
-//       source.path or source.sourceReference must be specified."
-//     },
-//     "sourceReference": {
-//       "type": "integer",
-//       "description": "The reference to the source. This is the same as
-//       source.sourceReference. This is provided for backward compatibility
-//       since old backends do not understand the 'source' attribute."
-//     }
-//   },
-//   "required": [ "sourceReference" ]
-// },
-// "SourceResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'source' request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "content": {
-//             "type": "string",
-//             "description": "Content of the source reference."
-//           },
-//           "mimeType": {
-//             "type": "string",
-//             "description": "Optional content type (mime type) of the source."
-//           }
-//         },
-//         "required": [ "content" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void SourceRequestHandler::operator()(const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
-  const auto *source = arguments->getObject("source");
-  llvm::json::Object body;
-  int64_t source_ref = GetUnsigned(
-      source, "sourceReference", GetUnsigned(arguments, "sourceReference", 0));
+/// Source request; value of command field is 'source'. The request retrieves
+/// the source code for a given source reference.
+llvm::Expected<protocol::SourceResponseBody>
+SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
 
-  if (source_ref) {
-    lldb::SBProcess process = dap.target.GetProcess();
-    // Upper 32 bits is the thread index ID
-    lldb::SBThread thread =
-        process.GetThreadByIndexID(GetLLDBThreadIndexID(source_ref));
-    // Lower 32 bits is the frame index
-    lldb::SBFrame frame = thread.GetFrameAtIndex(GetLLDBFrameID(source_ref));
-    if (!frame.IsValid()) {
-      response["success"] = false;
-      response["message"] = "source not found";
-    } else {
-      lldb::SBInstructionList insts =
-          frame.GetSymbol().GetInstructions(dap.target);
-      lldb::SBStream stream;
-      insts.GetDescription(stream);
-      body["content"] = stream.GetData();
-      body["mimeType"] = "text/x-lldb.disassembly";
-      response.try_emplace("body", std::move(body));
-    }
+  uint32_t source_ref =
+      args.source->sourceReference.value_or(args.sourceReference);
+  const std::optional<lldb::addr_t> source_addr_opt =
+      dap.GetSourceReferenceAddress(source_ref);
+
+  if (!source_addr_opt)
+    return llvm::make_error<DAPError>(
+        llvm::formatv("Unknown source reference {}", source_ref));
+
+  lldb::SBAddress address(*source_addr_opt, dap.target);
+  if (!address.IsValid())
+    return llvm::make_error<DAPError>("source not found");
+
+  lldb::SBSymbol symbol = address.GetSymbol();
+  lldb::SBInstructionList insts;
+
+  if (symbol.IsValid()) {
+    insts = symbol.GetInstructions(dap.target);
   } else {
-    response["success"] = false;
-    response["message"] =
-        "invalid arguments, expected source.sourceReference to be set";
+    // No valid symbol, just return the disassembly.
+    insts = dap.target.ReadInstructions(
+        address, dap.k_number_of_assembly_lines_for_nodebug);
   }
 
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  if (!insts || insts.GetSize() == 0)
+    return llvm::make_error<DAPError>(
+        llvm::formatv("no instruction source for address {}",
+                      address.GetLoadAddress(dap.target)));
+
+  lldb::SBStream stream;
+  lldb::SBExecutionContext exe_ctx(dap.target);
+  insts.GetDescription(stream, exe_ctx);
+  return protocol::SourceResponseBody{/*content=*/stream.GetData(),
+                                      /*mimeType=*/
+                                      "text/x-lldb.disassembly"};
 }
 
 } // namespace lldb_dap

@@ -52,6 +52,14 @@ findGeneratorByName(llvm::StringRef Format);
 
 std::string getTagType(TagTypeKind AS);
 
+// This anchor is used to force the linker to link in the generated object file
+// and thus register the generators.
+extern volatile int YAMLGeneratorAnchorSource;
+extern volatile int MDGeneratorAnchorSource;
+extern volatile int HTMLGeneratorAnchorSource;
+extern volatile int MHTMLGeneratorAnchorSource;
+extern volatile int JSONGeneratorAnchorSource;
+
 } // namespace doc
 } // namespace clang
 

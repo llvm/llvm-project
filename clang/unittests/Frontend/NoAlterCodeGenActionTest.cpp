@@ -52,11 +52,10 @@ public:
   }
 };
 
-class TestCodeGenAction : public EmitLLVMAction {
+class TestCodeGenAction : public EmitLLVMOnlyAction {
 public:
-  using Base = EmitLLVMAction;
-  TestCodeGenAction(llvm::LLVMContext *_VMContext = nullptr)
-      : EmitLLVMAction(_VMContext) {}
+  using Base = EmitLLVMOnlyAction;
+  using Base::Base;
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override {

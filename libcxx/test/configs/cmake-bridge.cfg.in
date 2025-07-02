@@ -23,6 +23,7 @@ config.recursiveExpansionLimit = 10
 config.test_exec_root = os.path.join('@LIBCXX_BINARY_DIR@', 'test')
 
 # Add substitutions for bootstrapping the test suite configuration
+config.substitutions.append(('%{bin-dir}', '@LIBCXX_BINARY_DIR@'))
 config.substitutions.append(('%{libcxx-dir}', '@LIBCXX_SOURCE_DIR@'))
 config.substitutions.append(('%{install-prefix}', '@LIBCXX_TESTING_INSTALL_PREFIX@'))
 config.substitutions.append(('%{include-dir}', '@LIBCXX_TESTING_INSTALL_PREFIX@/@LIBCXX_INSTALL_INCLUDE_DIR@'))

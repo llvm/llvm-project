@@ -24,3 +24,13 @@ end function
 ! FAST: {{%[A-Za-z0-9._]+}} = math.erfc {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! RELAXED: {{%[A-Za-z0-9._]+}} = math.erfc {{%[A-Za-z0-9._]+}} {{.*}}: f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @erfc({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64
+
+function dtest_real8(x)
+  real(8) :: x, dtest_real8
+  dtest_real8 = derfc(x)
+end function
+
+! ALL-LABEL: @_QPdtest_real8
+! FAST: {{%[A-Za-z0-9._]+}} = math.erfc {{%[A-Za-z0-9._]+}} {{.*}}: f64
+! RELAXED: {{%[A-Za-z0-9._]+}} = math.erfc {{%[A-Za-z0-9._]+}} {{.*}}: f64
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @erfc({{%[A-Za-z0-9._]+}}) {{.*}}: (f64) -> f64

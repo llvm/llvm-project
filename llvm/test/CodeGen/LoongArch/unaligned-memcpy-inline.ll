@@ -15,7 +15,7 @@ define void @t0(ptr %out, ptr %in) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a2, $zero, 16
-; LA32-NEXT:    bl %plt(memcpy)
+; LA32-NEXT:    bl memcpy
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -27,7 +27,8 @@ define void @t0(ptr %out, ptr %in) {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
 ; LA64-NEXT:    ori $a2, $zero, 16
-; LA64-NEXT:    bl %plt(memcpy)
+; LA64-NEXT:    pcaddu18i $ra, %call36(memcpy)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret

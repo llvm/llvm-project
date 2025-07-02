@@ -21,6 +21,9 @@
 
 namespace clang::CIRGen {
 
+// Forward declaration to avoid a circular dependency
+class CIRGenBuilderTy;
+
 class Address {
 
   // The boolean flag indicates whether the pointer is known to be non-null.
@@ -52,14 +55,41 @@ public:
            elementType);
   }
 
+  Address(mlir::Value pointer, clang::CharUnits alignment)
+      : Address(pointer,
+                mlir::cast<cir::PointerType>(pointer.getType()).getPointee(),
+                alignment) {
+    assert((!alignment.isZero() || pointer == nullptr) &&
+           "creating valid address with invalid alignment");
+  }
+
   static Address invalid() { return Address(nullptr); }
   bool isValid() const {
     return pointerAndKnownNonNull.getPointer() != nullptr;
   }
 
+  /// Return address with different element type, a bitcast pointer, and
+  /// the same alignment.
+  Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
+
   mlir::Value getPointer() const {
     assert(isValid());
     return pointerAndKnownNonNull.getPointer();
+  }
+
+  mlir::Value getBasePointer() const {
+    // TODO(cir): Remove the version above when we catchup with OG codegen on
+    // ptr auth.
+    assert(isValid() && "pointer isn't valid");
+    return getPointer();
+  }
+
+  mlir::Type getType() const {
+    assert(mlir::cast<cir::PointerType>(
+               pointerAndKnownNonNull.getPointer().getType())
+               .getPointee() == elementType);
+
+    return mlir::cast<cir::PointerType>(getPointer().getType());
   }
 
   mlir::Type getElementType() const {
@@ -69,6 +99,8 @@ public:
                .getPointee() == elementType);
     return elementType;
   }
+
+  clang::CharUnits getAlignment() const { return alignment; }
 };
 
 } // namespace clang::CIRGen

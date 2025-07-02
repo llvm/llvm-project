@@ -9,7 +9,8 @@ Introduction
 ============
 
 Certain kinds of code transformations can inadvertently result in a loss of
-debug info, or worse, make debug info misrepresent the state of a program.
+debug info, or worse, make debug info misrepresent the state of a program. Debug
+info availability is also essential for SamplePGO.
 
 This document specifies how to correctly update debug info in various kinds of
 code transformations, and offers suggestions for how to create targeted debug
@@ -89,9 +90,14 @@ has a location with an accurate scope attached, and b) to prevent misleading
 single-stepping (or breakpoint) behavior. Often, merged instructions are memory
 accesses which can trap: having an accurate scope attached greatly assists in
 crash triage by identifying the (possibly inlined) function where the bad
-memory access occurred. This rule is also meant to assist SamplePGO by banning
-scenarios in which a sample of a block containing a merged instruction is
-misattributed to a block containing one of the instructions-to-be-merged.
+memory access occurred.
+
+To maintain distinct source locations for SamplePGO, it is often beneficial to
+retain an arbitrary but deterministic location instead of discarding line and
+column information as part of merging. In particular, loss of location
+information for calls inhibit optimizations such as indirect call promotion.
+This behavior can be optionally enabled until support for accurately
+representing merged instructions in the line table is implemented.
 
 Examples of transformations that should follow this rule include:
 
@@ -162,6 +168,47 @@ location is available.
 See the discussion in the section about
 :ref:`merging locations<WhenToMergeLocation>` for examples of when the rule for
 dropping locations applies.
+
+.. _NewInstLocations:
+
+Setting locations for new instructions
+--------------------------------------
+
+Whenever a new instruction is created and there is no suitable location for that
+instruction, that instruction should be annotated accordingly. There are a set
+of special ``DebugLoc`` values that can be set on an instruction to annotate the
+reason that it does not have a valid location. These are as follows:
+
+* ``DebugLoc::getCompilerGenerated()``: This indicates that the instruction is a
+  compiler-generated instruction, i.e. it is not associated with any user source
+  code.
+
+* ``DebugLoc::getDropped()``: This indicates that the instruction has
+  intentionally had its source location removed, according to the rules for
+  :ref:`dropping locations<WhenToDropLocation>`; this is set automatically by
+  ``Instruction::dropLocation()``.
+
+* ``DebugLoc::getUnknown()``: This indicates that the instruction does not have
+  a known or currently knowable source location, e.g. that it is infeasible to
+  determine the correct source location, or that the source location is
+  ambiguous in a way that LLVM cannot currently represent.
+
+* ``DebugLoc::getTemporary()``: This is used for instructions that we don't
+  expect to be emitted (e.g. ``UnreachableInst``), and so should not need a
+  valid location; if we ever try to emit a temporary location into an object/asm
+  file, this indicates that something has gone wrong.
+
+Where applicable, these should be used instead of leaving an instruction without
+an assigned location or explicitly setting the location as ``DebugLoc()``.
+Ordinarily these special locations are identical to an absent location, but LLVM
+built with coverage-tracking
+(``-DLLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING="COVERAGE"``) will keep track of
+these special locations in order to detect unintentionally-missing locations;
+for this reason, the most important rule is to *not* apply any of these if it
+isn't clear which, if any, is appropriate - an absent location can be detected
+and fixed, while an incorrectly annotated instruction is much harder to detect.
+On the other hand, if any of these clearly apply, then they should be used to
+prevent false positives from being flagged up.
 
 Rules for updating debug values
 ===============================

@@ -14,14 +14,13 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE6:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[SRC_1]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp olt <4 x double> [[TMP3]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr double, ptr [[TMP7]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP8]], i32 8, <4 x i1> [[TMP5]])
@@ -57,7 +56,7 @@ define void @check_widen_intrinsic_with_nnan(ptr noalias %dst.0, ptr noalias %ds
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP24:%.*]] = phi <4 x double> [ [[TMP20]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP23]], %[[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP0]], -1
+; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr double, ptr [[DST_0]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr double, ptr [[TMP26]], i32 0
 ; CHECK-NEXT:    call void @llvm.masked.store.v4f64.p0(<4 x double> zeroinitializer, ptr [[TMP27]], i32 8, <4 x i1> [[TMP4]])

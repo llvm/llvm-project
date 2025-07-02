@@ -360,10 +360,6 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   case FK_Data_4:
   case FK_Data_8:
     break;
-
-  case FK_GPRel_4:
-    llvm_unreachable("don't know how to adjust this fixup");
-    break;
   }
 }
 
@@ -372,21 +368,36 @@ AVRAsmBackend::createObjectTargetWriter() const {
   return createAVRELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-void AVRAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+bool AVRAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
+                             const MCValue &Target, uint64_t &FixedValue,
+                             bool IsResolved) {
+  // AVR sets the fixup value to bypass the assembly time overflow with a
+  // relocation.
+  if (IsResolved) {
+    auto TargetVal = MCValue::get(Target.getAddSym(), Target.getSubSym(),
+                                  FixedValue, Target.getSpecifier());
+    if (forceRelocation(F, Fixup, TargetVal))
+      IsResolved = false;
+  }
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
+  return IsResolved;
+}
+
+void AVRAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved,
-                               const MCSubtargetInfo *STI) const {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+                               bool IsResolved) {
+  if (mc::isRelocation(Fixup.getKind()))
     return;
-  adjustFixupValue(Fixup, Target, Value, &Asm.getContext());
+  adjustFixupValue(Fixup, Target, Value, &getContext());
   if (Value == 0)
     return; // Doesn't change encoding.
 
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 
   // The number of bits in the fixup mask
-  auto NumBits = Info.TargetSize + Info.TargetOffset;
+  unsigned NumBits = Info.TargetSize + Info.TargetOffset;
   auto NumBytes = (NumBits / 8) + ((NumBits % 8) == 0 ? 0 : 1);
 
   // Shift the value into position.
@@ -418,7 +429,7 @@ std::optional<MCFixupKind> AVRAsmBackend::getFixupKind(StringRef Name) const {
   return std::nullopt;
 }
 
-MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // NOTE: Many AVR fixups work on sets of non-contignous bits. We work around
   // this by saying that the fixup is the size of the entire instruction.
   const static MCFixupKindInfo Infos[AVR::NumTargetFixupKinds] = {
@@ -479,13 +490,13 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   // Fixup kinds from .reloc directive are like R_AVR_NONE. They do not require
   // any extra processing.
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < AVR::NumTargetFixupKinds &&
          "Invalid kind!");
 
   return Infos[Kind - FirstTargetFixupKind];
@@ -502,18 +513,15 @@ bool AVRAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCValue &Target,
-                                          const uint64_t Value,
-                                          const MCSubtargetInfo *STI) {
+bool AVRAsmBackend::forceRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                    const MCValue &Target) {
   switch ((unsigned)Fixup.getKind()) {
   default:
-    return Fixup.getKind() >= FirstLiteralRelocationKind;
+    return false;
 
   case AVR::fixup_7_pcrel:
   case AVR::fixup_13_pcrel: {
-    uint64_t ValueEx = Value;
+    uint64_t Offset = Target.getConstant();
     uint64_t Size = AVRAsmBackend::getFixupKindInfo(Fixup.getKind()).TargetSize;
 
     // If the jump is too large to encode it, fall back to a relocation.
@@ -521,7 +529,8 @@ bool AVRAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
     // Note that trying to actually link that relocation *would* fail, but the
     // hopes are that the module we're currently compiling won't be actually
     // linked to the final binary.
-    return !adjust::adjustRelativeBranch(Size, Fixup, ValueEx, STI);
+    return !adjust::adjustRelativeBranch(Size, Fixup, Offset,
+                                         getContext().getSubtargetInfo());
   }
 
   case AVR::fixup_call:

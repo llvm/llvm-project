@@ -29,4 +29,4 @@ Options
 .. option:: StrictMode
 
    If set to `true`, the check will also flag functions and variables that
-   already have internal linkage as redundant.
+   already have internal linkage as redundant. Default is `false`.

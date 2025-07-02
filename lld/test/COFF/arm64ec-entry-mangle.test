@@ -97,7 +97,7 @@ RUN: not lld-link -machine:arm64ec -dll -out:test.dll demangled-func.obj loadcon
 RUN:              "-entry:#func" 2>&1 | FileCheck -check-prefix=FUNC-NOT-FOUND %s
 RUN: not lld-link -machine:arm64ec -dll -out:test.dll demangled-func.obj loadconfig-arm64ec.obj \
 RUN:              -noentry "-export:#func" 2>&1 | FileCheck -check-prefix=FUNC-NOT-FOUND %s
-FUNC-NOT-FOUND: undefined symbol: #func
+FUNC-NOT-FOUND: undefined symbol: #func (EC symbol)
 
 Verify that the linker recognizes the demangled x86_64 _DllMainCRTStartup.
 RUN: lld-link -machine:arm64ec -dll -out:test.dll x64-dll-main.obj loadconfig-arm64ec.obj

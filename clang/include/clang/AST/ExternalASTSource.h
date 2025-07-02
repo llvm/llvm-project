@@ -51,6 +51,7 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
+class VarDecl;
 
 /// Abstract interface for external sources of AST nodes.
 ///
@@ -190,6 +191,14 @@ public:
   enum ExtKind { EK_Always, EK_Never, EK_ReplyHazy };
 
   virtual ExtKind hasExternalDefinitions(const Decl *D);
+
+  /// True if this function declaration was a definition before in its own
+  /// module.
+  virtual bool wasThisDeclarationADefinition(const FunctionDecl *FD);
+
+  virtual bool hasInitializerWithSideEffects(const VarDecl *VD) const {
+    return false;
+  }
 
   /// Finds all declarations lexically contained within the given
   /// DeclContext, after applying an optional filter predicate.
@@ -421,6 +430,17 @@ public:
       assert(Source &&
              "Cannot deserialize a lazy pointer without an AST source");
       SetPtr((Source->*Get)(OffsT(GetU64() >> 1)));
+    }
+    return GetPtr();
+  }
+
+  /// Retrieve the pointer to the AST node that this lazy pointer points to,
+  /// if it can be done without triggering deserialization.
+  ///
+  /// \returns a pointer to the AST node, or null if not yet deserialized.
+  T *getWithoutDeserializing() const {
+    if (isOffset()) {
+      return nullptr;
     }
     return GetPtr();
   }

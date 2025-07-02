@@ -41,6 +41,8 @@ endif()
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
+option(OFFLOAD_INCLUDE_TESTS "Generate and build offload tests." ${LLVM_INCLUDE_TESTS})
+
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
@@ -322,14 +324,6 @@ else()
 endif()
 endmacro()
 
-if(OPENMP_STANDALONE_BUILD OR TARGET omp)
-  # Check LIBOMP_HAVE_VERSION_SCRIPT_FLAG
-  include(LLVMCheckCompilerLinkerFlag)
-  if(NOT APPLE)
-    llvm_check_compiler_linker_flag(C "-Wl,--version-script=${CMAKE_CURRENT_LIST_DIR}/../openmp/runtime/src/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  endif()
-endif()
-
 # OMPT support for libomptarget
 # Follow host OMPT support and check if host support has been requested.
 # LIBOMP_HAVE_OMPT_SUPPORT indicates whether host OMPT support has been implemented.
@@ -371,6 +365,8 @@ set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
 set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
+add_subdirectory(tools/offload-tblgen)
+
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
 add_subdirectory(DeviceRTL)
@@ -379,16 +375,20 @@ add_subdirectory(tools)
 # Build target agnostic offloading library.
 add_subdirectory(libomptarget)
 
-add_subdirectory(tools/offload-tblgen)
 add_subdirectory(liboffload)
 
 # Add tests.
-add_subdirectory(test)
+if(OFFLOAD_INCLUDE_TESTS)
+  add_subdirectory(test)
 
-# Add unit tests if GMock/GTest is present
-if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest)
-  if (NOT TARGET llvm_gtest)
+  # Add unit tests if GMock/GTest is present
+  if(NOT LLVM_THIRD_PARTY_DIR)
+    set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
+  endif()
+  if(EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
   endif()
-  add_subdirectory(unittests)
+  if(TARGET llvm_gtest)
+    add_subdirectory(unittests)
+  endif()
 endif()

@@ -17,13 +17,17 @@ define i32 @duplicate_returns(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:  # %bb.2: # %if.else2
 ; CHECK-NEXT:    bge $a1, $a0, .LBB0_6
 ; CHECK-NEXT:  # %bb.3: # %if.then3
-; CHECK-NEXT:    b %plt(test2)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(test2)
+; CHECK-NEXT:    jr $t8
 ; CHECK-NEXT:  .LBB0_4: # %if.then
-; CHECK-NEXT:    b %plt(test)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(test)
+; CHECK-NEXT:    jr $t8
 ; CHECK-NEXT:  .LBB0_5: # %if.then2
-; CHECK-NEXT:    b %plt(test1)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(test1)
+; CHECK-NEXT:    jr $t8
 ; CHECK-NEXT:  .LBB0_6: # %if.else3
-; CHECK-NEXT:    b %plt(test3)
+; CHECK-NEXT:    pcaddu18i $t8, %call36(test3)
+; CHECK-NEXT:    jr $t8
 entry:
   %cmp = icmp eq i32 %a, 0
   br i1 %cmp, label %if.then, label %if.else

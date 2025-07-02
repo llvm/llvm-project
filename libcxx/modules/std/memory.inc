@@ -17,6 +17,9 @@ export namespace std {
   // [ptr.align], pointer alignment
   using std::align;
   using std::assume_aligned;
+#if _LIBCPP_STD_VER >= 26
+  using std::is_sufficiently_aligned;
+#endif
 
   // [obj.lifetime], explicit lifetime management
   //  using std::start_lifetime_as;

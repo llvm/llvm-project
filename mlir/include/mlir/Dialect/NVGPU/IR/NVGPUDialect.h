@@ -53,11 +53,11 @@ constexpr unsigned kMaxTMALastdimByte = 128;
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.h.inc"
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPU.h.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.h.inc"
 
 #endif // MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_

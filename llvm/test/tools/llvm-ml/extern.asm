@@ -1,5 +1,5 @@
-; RUN: llvm-ml -m32 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-32
-; RUN: llvm-ml -m64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+; RUN: llvm-ml -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+; RUN: llvm-ml64 -filetype=s %s /Fo - | FileCheck %s --check-prefixes=CHECK,CHECK-64
 
 extern foo : dword, bar : word, baz : proc
 ; CHECK: .extern foo

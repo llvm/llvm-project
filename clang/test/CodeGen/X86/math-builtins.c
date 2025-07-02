@@ -38,6 +38,24 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO-NEXT: [[FREXP_F128_0:%.+]] = extractvalue { fp128, i32 } [[FREXP_F128]], 0
 
 
+// NO__ERRNO: [[MODF_F64:%.+]] = call { double, double } @llvm.modf.f64(double %{{.+}})
+// NO__ERRNO-NEXT: [[MODF_F64_FP:%.+]] = extractvalue { double, double } [[MODF_F64]], 0
+// NO__ERRNO-NEXT: [[MODF_F64_IP:%.+]] = extractvalue { double, double } [[MODF_F64]], 1
+// NO__ERRNO-NEXT: store double [[MODF_F64_IP]], ptr %{{.+}}, align 8
+
+// NO__ERRNO: [[MODF_F32:%.+]] = call { float, float } @llvm.modf.f32(float %{{.+}})
+// NO__ERRNO-NEXT: [[MODF_F32_FP:%.+]] = extractvalue { float, float } [[MODF_F32]], 0
+// NO__ERRNO-NEXT: [[MODF_F32_IP:%.+]] = extractvalue { float, float } [[MODF_F32]], 1
+// NO__ERRNO-NEXT: store float [[MODF_F32_IP]], ptr %{{.+}}, align 4
+
+// NO__ERRNO: [[MODF_F80:%.+]] = call { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80 %{{.+}})
+// NO__ERRNO-NEXT: [[MODF_F80_FP:%.+]] = extractvalue { x86_fp80, x86_fp80 } [[MODF_F80]], 0
+// NO__ERRNO-NEXT: [[MODF_F80_IP:%.+]] = extractvalue { x86_fp80, x86_fp80 } [[MODF_F80]], 1
+// NO__ERRNO-NEXT: store x86_fp80 [[MODF_F80_IP]], ptr %{{.+}}, align 16
+
+// NO__ERRNO: call fp128 @modff128(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+
+
 // NO__ERRNO: [[SINCOS_F64:%.+]] = call { double, double } @llvm.sincos.f64(double %{{.+}})
 // NO__ERRNO-NEXT: [[SINCOS_F64_0:%.+]] = extractvalue { double, double } [[SINCOS_F64]], 0
 // NO__ERRNO-NEXT: [[SINCOS_F64_1:%.+]] = extractvalue { double, double } [[SINCOS_F64]], 1
@@ -158,13 +176,13 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_modf(f,d);       __builtin_modff(f,fp);      __builtin_modfl(f,l); __builtin_modff128(f,l);
 
-// NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
-// NO__ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
+// HAS_ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
+// HAS_ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
 // HAS_ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
 
   __builtin_nan(c);        __builtin_nanf(c);       __builtin_nanl(c); __builtin_nanf128(c);

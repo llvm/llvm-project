@@ -145,10 +145,13 @@ private:
 
   /// Custom lowering for ISD::FP_ROUND for MVT::f16.
   SDValue lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue splitFP_ROUNDVectorOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINNUM_FMAXNUM(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFMINIMUMNUM_FMAXIMUMNUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFMINIMUM_FMAXIMUM(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue promoteUniformOpToI32(SDValue Op, DAGCombinerInfo &DCI) const;
+  SDValue lowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
@@ -217,6 +220,7 @@ private:
                                           DAGCombinerInfo &DCI) const;
 
   SDValue performAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performPtrAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAddCarrySubCarryCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAddCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -257,6 +261,8 @@ public:
                                        const GCNSubtarget *Subtarget);
 
   bool shouldExpandVectorDynExt(SDNode *N) const;
+
+  bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
 
 private:
   // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
@@ -303,8 +309,10 @@ public:
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
   // While address space 7 should never make it to codegen, it still needs to
-  // have a MVT to prevent some analyses that query this function from breaking,
-  // so, to work around the lack of i160, map it to v5i32.
+  // have a MVT to prevent some analyses that query this function from breaking.
+  // We use the custum MVT::amdgpuBufferFatPointer and
+  // amdgpu::amdgpuBufferStridedPointer for this, though we use v8i32 for the
+  // memory type (which is probably unused).
   MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
   MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
 
@@ -461,7 +469,6 @@ public:
                                   EVT VT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   const LLT Ty) const override;
-  bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
   bool isFMADLegal(const SelectionDAG &DAG, const SDNode *N) const override;
   bool isFMADLegal(const MachineInstr &MI, const LLT Ty) const override;
 
@@ -509,13 +516,14 @@ public:
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
-  void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis, Register R,
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
                                       KnownBits &Known,
                                       const APInt &DemandedElts,
                                       const MachineRegisterInfo &MRI,
                                       unsigned Depth = 0) const override;
 
-  Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
+  Align computeKnownAlignForTargetInstr(GISelValueTracking &Analysis,
+                                        Register R,
                                         const MachineRegisterInfo &MRI,
                                         unsigned Depth = 0) const override;
   bool isSDNodeSourceOfDivergence(const SDNode *N, FunctionLoweringInfo *FLI,
@@ -538,14 +546,11 @@ public:
 
   bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
                                  const TargetRegisterInfo *TRI,
-                                 const TargetInstrInfo *TII, unsigned &PhysReg,
-                                 int &Cost) const override;
+                                 const TargetInstrInfo *TII,
+                                 MCRegister &PhysReg, int &Cost) const override;
 
-  bool isProfitableToHoist(Instruction *I) const override;
-
-  bool isKnownNeverNaNForTargetNode(SDValue Op,
-                                    const SelectionDAG &DAG,
-                                    bool SNaN = false,
+  bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                    const SelectionDAG &DAG, bool SNaN = false,
                                     unsigned Depth = 0) const override;
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
   AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;

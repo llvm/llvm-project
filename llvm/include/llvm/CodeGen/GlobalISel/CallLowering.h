@@ -24,6 +24,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <functional>
@@ -41,7 +42,7 @@ struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
 
-class CallLowering {
+class LLVM_ABI CallLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();
@@ -172,7 +173,7 @@ public:
   ///
   /// ValueAssigner should not depend on any specific function state, and
   /// only determine the types and locations for arguments.
-  struct ValueAssigner {
+  struct LLVM_ABI ValueAssigner {
     ValueAssigner(bool IsIncoming, CCAssignFn *AssignFn_,
                   CCAssignFn *AssignFnVarArg_ = nullptr)
         : AssignFn(AssignFn_), AssignFnVarArg(AssignFnVarArg_),
@@ -239,7 +240,7 @@ public:
         : ValueAssigner(false, AssignFn_, AssignFnVarArg_) {}
   };
 
-  struct ValueHandler {
+  struct LLVM_ABI ValueHandler {
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     const bool IsIncomingArgumentHandler;
@@ -328,7 +329,7 @@ public:
 
   /// Base class for ValueHandlers used for arguments coming into the current
   /// function, or for return values received from a call.
-  struct IncomingValueHandler : public ValueHandler {
+  struct LLVM_ABI IncomingValueHandler : public ValueHandler {
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
         : ValueHandler(/*IsIncoming*/ true, MIRBuilder, MRI) {}
 
@@ -597,7 +598,7 @@ public:
                  ArrayRef<Register> ResRegs,
                  ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
                  std::optional<PtrAuthInfo> PAI, Register ConvergenceCtrlToken,
-                 std::function<unsigned()> GetCalleeReg) const;
+                 std::function<Register()> GetCalleeReg) const;
 
   /// For targets which want to use big-endian can enable it with
   /// enableBigEndian() hook
@@ -608,6 +609,15 @@ public:
   virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }
 };
 
+extern template LLVM_ABI void
+CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const Function &FuncInfo) const;
+
+extern template LLVM_ABI void
+CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
+                                    const DataLayout &DL,
+                                    const CallBase &FuncInfo) const;
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H

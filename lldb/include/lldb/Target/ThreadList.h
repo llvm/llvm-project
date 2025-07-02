@@ -113,6 +113,10 @@ public:
   /// If a thread can "resume" without having to resume the target, it
   /// will return false for WillResume, and then the process will not be
   /// restarted.
+  /// Sets *direction to the run direction of the thread(s) that will
+  /// be resumed. If threads that we want to run disagree about the
+  /// direction, we execute forwards and pop any of the thread plans
+  /// that requested reverse execution.
   ///
   /// \return
   ///    \b true instructs the process to resume normally,
@@ -120,7 +124,7 @@ public:
   ///    the process will not actually run.  The thread must then return
   ///    the correct StopInfo when asked.
   ///
-  bool WillResume();
+  bool WillResume(lldb::RunDirection &direction);
 
   void DidResume();
 

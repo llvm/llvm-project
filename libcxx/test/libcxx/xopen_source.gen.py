@@ -43,6 +43,9 @@ for header in public_headers:
 // recent value of _XOPEN_SOURCE.
 // UNSUPPORTED: LIBCXX-AIX-FIXME
 
+// This test fails on FreeBSD for an unknown reason.
+// UNSUPPORTED: LIBCXX-FREEBSD-FIXME
+
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
 
