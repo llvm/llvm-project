@@ -1153,9 +1153,7 @@ enum : unsigned {
   SHT_LLVM_SYMPART = 0x6fff4c05,   // Symbol partition specification.
   SHT_LLVM_PART_EHDR = 0x6fff4c06, // ELF header for loadable partition.
   SHT_LLVM_PART_PHDR = 0x6fff4c07, // Phdrs for loadable partition.
-  SHT_LLVM_BB_ADDR_MAP_V0 =
-      0x6fff4c08, // LLVM Basic Block Address Map (old version kept for
-                  // backward-compatibility).
+  // SHT_LLVM_BB_ADDR_MAP_V0 = 0x6fff4c08,  // Do not use.
   SHT_LLVM_CALL_GRAPH_PROFILE = 0x6fff4c09, // LLVM Call Graph Profile.
   SHT_LLVM_BB_ADDR_MAP = 0x6fff4c0a,        // LLVM Basic Block Address Map.
   SHT_LLVM_OFFLOADING = 0x6fff4c0b,         // LLVM device offloading data.

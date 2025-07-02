@@ -13069,6 +13069,99 @@ SDValue DAGCombiner::visitVP_SELECT(SDNode *N) {
   return SDValue();
 }
 
+static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
+                                                SDValue FVal,
+                                                const TargetLowering &TLI,
+                                                SelectionDAG &DAG,
+                                                const SDLoc &DL) {
+  if (!TLI.isTypeLegal(TVal.getValueType()))
+    return SDValue();
+
+  EVT VT = TVal.getValueType();
+  EVT CondVT = Cond.getValueType();
+
+  assert(CondVT.isVector() && "Vector select expects a vector selector!");
+
+  bool IsTAllZero = ISD::isBuildVectorAllZeros(TVal.getNode());
+  bool IsTAllOne = ISD::isBuildVectorAllOnes(TVal.getNode());
+  bool IsFAllZero = ISD::isBuildVectorAllZeros(FVal.getNode());
+  bool IsFAllOne = ISD::isBuildVectorAllOnes(FVal.getNode());
+
+  // no vselect(cond, 0/-1, X) or vselect(cond, X, 0/-1), return
+  if (!IsTAllZero && !IsTAllOne && !IsFAllZero && !IsFAllOne)
+    return SDValue();
+
+  // select Cond, 0, 0 → 0
+  if (IsTAllZero && IsFAllZero) {
+    return VT.isFloatingPoint() ? DAG.getConstantFP(0.0, DL, VT)
+                                : DAG.getConstant(0, DL, VT);
+  }
+
+  // check select(setgt lhs, -1), 1, -1 --> or (sra lhs, bitwidth - 1), 1
+  APInt TValAPInt;
+  if (Cond.getOpcode() == ISD::SETCC &&
+      Cond.getOperand(2) == DAG.getCondCode(ISD::SETGT) &&
+      Cond.getOperand(0).getValueType() == VT && VT.isSimple() &&
+      ISD::isConstantSplatVector(TVal.getNode(), TValAPInt) &&
+      TValAPInt.isOne() &&
+      ISD::isConstantSplatVectorAllOnes(Cond.getOperand(1).getNode()) &&
+      ISD::isConstantSplatVectorAllOnes(FVal.getNode())) {
+    return SDValue();
+  }
+
+  // To use the condition operand as a bitwise mask, it must have elements that
+  // are the same size as the select elements. Ie, the condition operand must
+  // have already been promoted from the IR select condition type <N x i1>.
+  // Don't check if the types themselves are equal because that excludes
+  // vector floating-point selects.
+  if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
+    return SDValue();
+
+  // Cond value must be 'sign splat' to be converted to a logical op.
+  if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
+    return SDValue();
+
+  // Try inverting Cond and swapping T/F if it gives all-ones/all-zeros form
+  if (!IsTAllOne && !IsFAllZero && Cond.hasOneUse() &&
+      Cond.getOpcode() == ISD::SETCC &&
+      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT) ==
+          CondVT) {
+    if (IsTAllZero || IsFAllOne) {
+      SDValue CC = Cond.getOperand(2);
+      ISD::CondCode InverseCC = ISD::getSetCCInverse(
+          cast<CondCodeSDNode>(CC)->get(), Cond.getOperand(0).getValueType());
+      Cond = DAG.getSetCC(DL, CondVT, Cond.getOperand(0), Cond.getOperand(1),
+                          InverseCC);
+      std::swap(TVal, FVal);
+      std::swap(IsTAllOne, IsFAllOne);
+      std::swap(IsTAllZero, IsFAllZero);
+    }
+  }
+
+  assert(DAG.ComputeNumSignBits(Cond) == CondVT.getScalarSizeInBits() &&
+         "Select condition no longer all-sign bits");
+
+  // select Cond, -1, 0 → bitcast Cond
+  if (IsTAllOne && IsFAllZero)
+    return DAG.getBitcast(VT, Cond);
+
+  // select Cond, -1, x → or Cond, x
+  if (IsTAllOne) {
+    SDValue X = DAG.getBitcast(CondVT, FVal);
+    SDValue Or = DAG.getNode(ISD::OR, DL, CondVT, Cond, X);
+    return DAG.getBitcast(VT, Or);
+  }
+
+  // select Cond, x, 0 → and Cond, x
+  if (IsFAllZero) {
+    SDValue X = DAG.getBitcast(CondVT, TVal);
+    SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, X);
+    return DAG.getBitcast(VT, And);
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -13336,6 +13429,9 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
 
   if (SimplifyDemandedVectorElts(SDValue(N, 0)))
     return SDValue(N, 0);
+
+  if (SDValue V = combineVSelectWithAllOnesOrZeros(N0, N1, N2, TLI, DAG, DL))
+    return V;
 
   return SDValue();
 }
@@ -16609,21 +16705,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
   // Try to push freeze through instructions that propagate but don't produce
   // poison as far as possible. If an operand of freeze follows three
-  // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
-  // guaranteed-non-poison operands (or is a BUILD_VECTOR or similar) then push
+  // conditions 1) one-use, and 2) does not produce poison then push
   // the freeze through to the operands that are not guaranteed non-poison.
   // NOTE: we will strip poison-generating flags, so ignore them here.
   if (DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false,
                                  /*ConsiderFlags*/ false) ||
       N0->getNumValues() != 1 || !N0->hasOneUse())
     return SDValue();
-
-  bool AllowMultipleMaybePoisonOperands =
-      N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
-      N0.getOpcode() == ISD::BUILD_VECTOR ||
-      N0.getOpcode() == ISD::BUILD_PAIR ||
-      N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-      N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -16657,10 +16745,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       MaybePoisonOperandNumbers.push_back(OpNo);
     if (!HadMaybePoisonOperands)
       continue;
-    if (IsNewMaybePoisonOperand && !AllowMultipleMaybePoisonOperands) {
-      // Multiple maybe-poison ops when not allowed - bail out.
-      return SDValue();
-    }
   }
   // NOTE: the whole op may be not guaranteed to not be undef or poison because
   // it could create undef or poison due to it's poison-generating flags.
@@ -16714,28 +16798,25 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       Op = DAG.getFreeze(Op);
   }
 
-  SDValue R;
-  if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N0)) {
-    // Special case handling for ShuffleVectorSDNode nodes.
-    R = DAG.getVectorShuffle(N0.getValueType(), SDLoc(N0), Ops[0], Ops[1],
-                             SVN->getMask());
-  } else {
-    // NOTE: this strips poison generating flags.
-    // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
-    // ninf, nsz, or fast.
-    // However, contract, reassoc, afn, and arcp should be preserved,
-    // as these fast-math flags do not introduce poison values.
-    SDNodeFlags SrcFlags = N0->getFlags();
-    SDNodeFlags SafeFlags;
-    SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
-    SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
-    SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
-    SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
-    R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops, SafeFlags);
-  }
-  assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
-         "Can't create node that may be undef/poison!");
-  return R;
+  SDLoc DL(N0);
+
+  // Special case handling for ShuffleVectorSDNode nodes.
+  if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(N0))
+    return DAG.getVectorShuffle(N0.getValueType(), DL, Ops[0], Ops[1],
+                                SVN->getMask());
+
+  // NOTE: this strips poison generating flags.
+  // Folding freeze(op(x, ...)) -> op(freeze(x), ...) does not require nnan,
+  // ninf, nsz, or fast.
+  // However, contract, reassoc, afn, and arcp should be preserved,
+  // as these fast-math flags do not introduce poison values.
+  SDNodeFlags SrcFlags = N0->getFlags();
+  SDNodeFlags SafeFlags;
+  SafeFlags.setAllowContract(SrcFlags.hasAllowContract());
+  SafeFlags.setAllowReassociation(SrcFlags.hasAllowReassociation());
+  SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
+  SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
+  return DAG.getNode(N0.getOpcode(), DL, N0->getVTList(), Ops, SafeFlags);
 }
 
 /// We know that BV is a build_vector node with Constant, ConstantFP or Undef
@@ -16820,7 +16901,7 @@ ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
 static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
   assert(N.getOpcode() == ISD::FMUL);
 
-  return Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath ||
+  return Options.AllowFPOpFusion == FPOpFusion::Fast ||
          N->getFlags().hasAllowContract();
 }
 
@@ -17093,8 +17174,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     return SDValue();
 
   const SDNodeFlags Flags = N->getFlags();
-  bool AllowFusionGlobally = (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-                              Options.UnsafeFPMath || HasFMAD);
+  bool AllowFusionGlobally =
+      (Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD);
 
   // If the subtraction is not contractable, do not combine.
   if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
@@ -17249,13 +17330,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     }
   }
 
-  auto isReassociable = [&Options](SDNode *N) {
-    return Options.UnsafeFPMath || N->getFlags().hasAllowReassociation();
-  };
-
-  auto isContractableAndReassociableFMUL = [&isContractableFMUL,
-                                            &isReassociable](SDValue N) {
-    return isContractableFMUL(N) && isReassociable(N.getNode());
+  auto isContractableAndReassociableFMUL = [&isContractableFMUL](SDValue N) {
+    return isContractableFMUL(N) && N->getFlags().hasAllowReassociation();
   };
 
   auto isFusedOp = [&](SDValue N) {
@@ -17263,8 +17339,8 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   };
 
   // More folding opportunities when target permits.
-  if (Aggressive && isReassociable(N)) {
-    bool CanFuse = Options.UnsafeFPMath || N->getFlags().hasAllowContract();
+  if (Aggressive && N->getFlags().hasAllowReassociation()) {
+    bool CanFuse = N->getFlags().hasAllowContract();
     // fold (fsub (fma x, y, (fmul u, v)), z)
     //   -> (fma x, y (fma u, v, (fneg z)))
     if (CanFuse && isFusedOp(N0) &&
@@ -17421,8 +17497,7 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   // Floating-point multiply-add with intermediate rounding. This can result
   // in a less precise result due to the changed rounding order.
-  bool HasFMAD = Options.UnsafeFPMath &&
-                 (LegalOperations && TLI.isFMADLegal(DAG, N));
+  bool HasFMAD = LegalOperations && TLI.isFMADLegal(DAG, N);
 
   // No valid opcode, do not combine.
   if (!HasFMAD && !HasFMA)
@@ -18096,8 +18171,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitFMA(SDNode *N) {
 
   // FIXME: use fast math flags instead of Options.UnsafeFPMath
   // TODO: Finally migrate away from global TargetOptions.
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-      (Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
+  if ((Options.NoNaNsFPMath && Options.NoInfsFPMath) ||
       (N->getFlags().hasNoNaNs() && N->getFlags().hasNoInfs())) {
     if (Options.NoSignedZerosFPMath || N->getFlags().hasNoSignedZeros() ||
         (N2CFP && !N2CFP->isExactlyValue(-0.0))) {
@@ -18321,8 +18395,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // Only do the transform if the reciprocal is a legal fp immediate that
     // isn't too nasty (eg NaN, denormal, ...).
     if (((st == APFloat::opOK && !Recip.isDenormal()) ||
-         (st == APFloat::opInexact &&
-          (Options.UnsafeFPMath || Flags.hasAllowReciprocal()))) &&
+         (st == APFloat::opInexact && Flags.hasAllowReciprocal())) &&
         (!LegalOperations ||
          // FIXME: custom lowering of ConstantFP might fail (see e.g. ARM
          // backend)... we should handle this gracefully after Legalize.
@@ -18333,7 +18406,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
                          DAG.getConstantFP(Recip, DL, VT));
   }
 
-  if (Options.UnsafeFPMath || Flags.hasAllowReciprocal()) {
+  if (Flags.hasAllowReciprocal()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
     if (N1.getOpcode() == ISD::FSQRT) {
@@ -18408,7 +18481,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
   // Fold X/Sqrt(X) -> Sqrt(X)
   if ((Options.NoSignedZerosFPMath || Flags.hasNoSignedZeros()) &&
-      (Options.UnsafeFPMath || Flags.hasAllowReassociation()))
+      Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
 
@@ -23195,13 +23268,16 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
     // Ensure all the operands are the same value type, fill any missing
     // operands with UNDEF and create the BUILD_VECTOR.
-    auto CanonicalizeBuildVector = [&](SmallVectorImpl<SDValue> &Ops) {
+    auto CanonicalizeBuildVector = [&](SmallVectorImpl<SDValue> &Ops,
+                                       bool FreezeUndef = false) {
       assert(Ops.size() == NumElts && "Unexpected vector size");
+      SDValue UndefOp = FreezeUndef ? DAG.getFreeze(DAG.getUNDEF(MaxEltVT))
+                                    : DAG.getUNDEF(MaxEltVT);
       for (SDValue &Op : Ops) {
         if (Op)
           Op = VT.isInteger() ? DAG.getAnyExtOrTrunc(Op, DL, MaxEltVT) : Op;
         else
-          Op = DAG.getUNDEF(MaxEltVT);
+          Op = UndefOp;
       }
       return DAG.getBuildVector(VT, DL, Ops);
     };
@@ -23214,6 +23290,10 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       // UNDEF - build new BUILD_VECTOR from already inserted operands.
       if (CurVec.isUndef())
         return CanonicalizeBuildVector(Ops);
+
+      // FREEZE(UNDEF) - build new BUILD_VECTOR from already inserted operands.
+      if (ISD::isFreezeUndef(CurVec.getNode()) && CurVec.hasOneUse())
+        return CanonicalizeBuildVector(Ops, /*FreezeUndef=*/true);
 
       // BUILD_VECTOR - insert unused operands and build new BUILD_VECTOR.
       if (CurVec.getOpcode() == ISD::BUILD_VECTOR && CurVec.hasOneUse()) {

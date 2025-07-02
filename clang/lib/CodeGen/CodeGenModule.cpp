@@ -332,6 +332,72 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+static void checkDataLayoutConsistency(const TargetInfo &Target,
+                                       llvm::LLVMContext &Context,
+                                       const LangOptions &Opts) {
+#ifndef NDEBUG
+  // Don't verify non-standard ABI configurations.
+  if (Opts.AlignDouble || Opts.OpenCL || Opts.HLSL)
+    return;
+
+  llvm::Triple Triple = Target.getTriple();
+  llvm::DataLayout DL(Target.getDataLayoutString());
+  auto Check = [&](const char *Name, llvm::Type *Ty, unsigned Alignment) {
+    llvm::Align DLAlign = DL.getABITypeAlign(Ty);
+    llvm::Align ClangAlign(Alignment / 8);
+    if (DLAlign != ClangAlign) {
+      llvm::errs() << "For target " << Triple.str() << " type " << Name
+                   << " mapping to " << *Ty << " has data layout alignment "
+                   << DLAlign.value() << " while clang specifies "
+                   << ClangAlign.value() << "\n";
+      abort();
+    }
+  };
+
+  Check("bool", llvm::Type::getIntNTy(Context, Target.BoolWidth),
+        Target.BoolAlign);
+  Check("short", llvm::Type::getIntNTy(Context, Target.ShortWidth),
+        Target.ShortAlign);
+  Check("int", llvm::Type::getIntNTy(Context, Target.IntWidth),
+        Target.IntAlign);
+  Check("long", llvm::Type::getIntNTy(Context, Target.LongWidth),
+        Target.LongAlign);
+  // FIXME: M68k specifies incorrect long long alignment in both LLVM and Clang.
+  if (Triple.getArch() != llvm::Triple::m68k)
+    Check("long long", llvm::Type::getIntNTy(Context, Target.LongLongWidth),
+          Target.LongLongAlign);
+  // FIXME: There are int128 alignment mismatches on multiple targets.
+  if (Target.hasInt128Type() && !Target.getTargetOpts().ForceEnableInt128 &&
+      !Triple.isAMDGPU() && !Triple.isSPIRV() &&
+      Triple.getArch() != llvm::Triple::ve)
+    Check("__int128", llvm::Type::getIntNTy(Context, 128), Target.Int128Align);
+
+  if (Target.hasFloat16Type())
+    Check("half", llvm::Type::getFloatingPointTy(Context, *Target.HalfFormat),
+          Target.HalfAlign);
+  if (Target.hasBFloat16Type())
+    Check("bfloat", llvm::Type::getBFloatTy(Context), Target.BFloat16Align);
+  Check("float", llvm::Type::getFloatingPointTy(Context, *Target.FloatFormat),
+        Target.FloatAlign);
+  // FIXME: AIX specifies wrong double alignment in DataLayout
+  if (!Triple.isOSAIX()) {
+    Check("double",
+          llvm::Type::getFloatingPointTy(Context, *Target.DoubleFormat),
+          Target.DoubleAlign);
+    Check("long double",
+          llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
+          Target.LongDoubleAlign);
+  }
+  // FIXME: Wasm has a mismatch in f128 alignment between Clang and LLVM.
+  if (Target.hasFloat128Type() && !Triple.isWasm())
+    Check("__float128", llvm::Type::getFP128Ty(Context), Target.Float128Align);
+  if (Target.hasIbm128Type())
+    Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
+
+  Check("void*", llvm::PointerType::getUnqual(Context), Target.PointerAlign);
+#endif
+}
+
 CodeGenModule::CodeGenModule(ASTContext &C,
                              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                              const HeaderSearchOptions &HSO,
@@ -487,6 +553,9 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
     llvm::sort(this->MSHotPatchFunctions);
   }
+
+  if (!Context.getAuxTargetInfo())
+    checkDataLayoutConsistency(Context.getTargetInfo(), LLVMContext, LangOpts);
 }
 
 CodeGenModule::~CodeGenModule() {}

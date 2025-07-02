@@ -62,7 +62,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -12401,12 +12400,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
 void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   // [basic.start.main]p3
-  //    The main function shall not be declared with a linkage-specification.
-  if (FD->isExternCContext() ||
-      (FD->isExternCXXContext() &&
-       FD->getDeclContext()->getRedeclContext()->isTranslationUnit()))
-    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
-        << FD->getLanguageLinkage();
+  //    The main function shall not be declared with C linkage-specification.
+  if (FD->isExternCContext())
+    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification);
 
   // C++11 [basic.start.main]p3:
   //   A program that [...] declares main to be inline, static or
@@ -13524,21 +13520,19 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
 
   // The target is "hidden" (from the dynamic linker) if:
   // 1. On posix, it has hidden visibility, or
-  // 2. On windows, it has no import/export annotation
+  // 2. On windows, it has no import/export annotation, and neither does the
+  // class which directly contains it.
   if (Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
     if (Target->hasAttr<DLLExportAttr>() || Target->hasAttr<DLLImportAttr>())
       return false;
 
     // If the variable isn't directly annotated, check to see if it's a member
     // of an annotated class.
-    const VarDecl *VD = dyn_cast<VarDecl>(Target);
+    const CXXRecordDecl *Ctx =
+        dyn_cast<CXXRecordDecl>(Target->getDeclContext());
+    if (Ctx && (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
+      return false;
 
-    if (VD && VD->isStaticDataMember()) {
-      const CXXRecordDecl *Ctx = dyn_cast<CXXRecordDecl>(VD->getDeclContext());
-      if (Ctx &&
-          (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
-        return false;
-    }
   } else if (Lnk.getVisibility() != HiddenVisibility) {
     // Posix case
     return false;
