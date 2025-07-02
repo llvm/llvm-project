@@ -92,18 +92,19 @@ public:
   friend _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 };
 
+#  if _LIBCPP_HAS_EXCEPTIONS
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep& __e) _NOEXCEPT {
   using _Ep2 = __decay_t<_Ep>;
   void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
-#  ifdef __wasm__
+#    ifdef __wasm__
   auto __cleanup = [](void* __p) -> void* {
     std::__destroy_at(static_cast<_Ep2*>(__p));
     return __p;
   };
-#  else
+#    else
   auto __cleanup = [](void* __p) { std::__destroy_at(static_cast<_Ep2*>(__p)); };
-#  endif
+#    endif
   (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), __cleanup);
 
   try {
@@ -126,7 +127,6 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_via_throw(_Ep& __e) _NO
 
 template <class _Ep>
 _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
-#  if _LIBCPP_HAS_EXCEPTIONS
   // Objective-C exceptions are thrown via pointer. When throwing an Objective-C exception,
   // Clang generates a call to `objc_exception_throw` instead of the usual `__cxa_throw`.
   // That function creates an exception with a special Objective-C typeinfo instead of
@@ -147,12 +147,13 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
 #    else
   return std::__make_exception_ptr_via_throw(__e);
 #    endif
-
-#  else // !LIBCPP_HAS_EXCEPTIONS
-  ((void)__e);
-  std::abort();
-#  endif
 }
+#  else  // !_LIBCPP_HAS_EXCEPTIONS
+template <class _Ep>
+_LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep) _NOEXCEPT {
+  std::abort();
+}
+#  endif // _LIBCPP_HAS_EXCEPTIONS
 
 #else // _LIBCPP_ABI_MICROSOFT
 

@@ -10,6 +10,7 @@
 // throwing an exception created via `std::make_exception_ptr`.
 // See http://llvm.org/PR135089.
 
+// UNSUPPORTED: no-exceptions
 // UNSUPPORTED: c++03
 
 // This test requires the Objective-C ARC, which is (only?) available on Darwin
