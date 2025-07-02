@@ -911,8 +911,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             MetadataDecodeErr = MetadataOrErr.takeError();
             break;
           }
-          BBEntries.push_back(
-              {ID, Offset + PrevBBEndOffset, Size, *MetadataOrErr, CallsiteOffsets});
+          BBEntries.push_back({ID, Offset + PrevBBEndOffset, Size,
+                               *MetadataOrErr, CallsiteOffsets});
           PrevBBEndOffset += Offset + Size;
         }
         TotalNumBlocks += BBEntries.size();
