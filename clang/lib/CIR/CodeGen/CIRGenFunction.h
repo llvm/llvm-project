@@ -878,6 +878,8 @@ public:
 
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
+  void emitImplicitAssignmentOperatorBody(FunctionArgList &args);
+
   void emitInitializerForField(clang::FieldDecl *field, LValue lhs,
                                clang::Expr *init);
 

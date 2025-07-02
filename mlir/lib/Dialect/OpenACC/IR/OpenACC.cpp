@@ -3169,6 +3169,53 @@ void ExitDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<RemoveConstantIfCondition<ExitDataOp>>(context);
 }
 
+void ExitDataOp::addAsyncOnly(MLIRContext *context,
+                              llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  setAsyncAttr(mlir::UnitAttr::get(context));
+}
+
+void ExitDataOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getAsyncAttr());
+  assert(!getAsyncOperand());
+
+  getAsyncOperandMutable().append(newValue);
+}
+
+void ExitDataOp::addWaitOnly(MLIRContext *context,
+                             llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  setWaitAttr(mlir::UnitAttr::get(context));
+}
+
+void ExitDataOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  assert(effectiveDeviceTypes.empty());
+  assert(!getWaitAttr());
+  assert(getWaitOperands().empty());
+  assert(!getWaitDevnum());
+
+  // if hasDevnum, the first value is the devnum. The 'rest' go into the
+  // operands list.
+  if (hasDevnum) {
+    getWaitDevnumMutable().append(newValues.front());
+    newValues = newValues.drop_front();
+  }
+
+  getWaitOperandsMutable().append(newValues);
+}
+
 //===----------------------------------------------------------------------===//
 // EnterDataOp
 //===----------------------------------------------------------------------===//
@@ -3805,6 +3852,49 @@ mlir::Value UpdateOp::getWaitDevnum(mlir::acc::DeviceType deviceType) {
   return getWaitDevnumValue(getWaitOperandsDeviceType(), getWaitOperands(),
                             getWaitOperandsSegments(), getHasWaitDevnum(),
                             deviceType);
+}
+
+void UpdateOp::addAsyncOnly(MLIRContext *context,
+                            llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOnlyAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOnlyAttr(), effectiveDeviceTypes));
+}
+
+void UpdateOp::addAsyncOperand(
+    MLIRContext *context, mlir::Value newValue,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setAsyncOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getAsyncOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValue,
+      getAsyncOperandsMutable()));
+}
+
+void UpdateOp::addWaitOnly(MLIRContext *context,
+                           llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+  setWaitOnlyAttr(addDeviceTypeAffectedOperandHelper(context, getWaitOnlyAttr(),
+                                                     effectiveDeviceTypes));
+}
+
+void UpdateOp::addWaitOperands(
+    MLIRContext *context, bool hasDevnum, mlir::ValueRange newValues,
+    llvm::ArrayRef<DeviceType> effectiveDeviceTypes) {
+
+  llvm::SmallVector<int32_t> segments;
+  if (getWaitOperandsSegments())
+    llvm::copy(*getWaitOperandsSegments(), std::back_inserter(segments));
+
+  setWaitOperandsDeviceTypeAttr(addDeviceTypeAffectedOperandHelper(
+      context, getWaitOperandsDeviceTypeAttr(), effectiveDeviceTypes, newValues,
+      getWaitOperandsMutable(), segments));
+  setWaitOperandsSegments(segments);
+
+  llvm::SmallVector<mlir::Attribute> hasDevnums;
+  if (getHasWaitDevnumAttr())
+    llvm::copy(getHasWaitDevnumAttr(), std::back_inserter(hasDevnums));
+  hasDevnums.insert(
+      hasDevnums.end(),
+      std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
+      mlir::BoolAttr::get(context, hasDevnum));
+  setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
 }
 
 //===----------------------------------------------------------------------===//

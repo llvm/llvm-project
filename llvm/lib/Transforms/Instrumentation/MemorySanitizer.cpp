@@ -158,6 +158,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -4270,6 +4271,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, PtrSrcOrigin);
   }
 
+  void checkPermilvarIndexShadow(IRBuilder<> &IRB, Value *Idx, Instruction *I) {
+    auto IdxVectorSize =
+        cast<FixedVectorType>(Idx->getType())->getNumElements();
+    assert(isPowerOf2_64(IdxVectorSize));
+    auto *IdxVectorElemType =
+        cast<FixedVectorType>(Idx->getType())->getElementType();
+    Constant *IndexBits =
+        ConstantInt::get(IdxVectorElemType, IdxVectorSize - 1);
+    auto *IdxShadow = getShadow(Idx);
+    // Only the low bits of Idx are used.
+    Value *V = nullptr;
+    for (size_t i = 0; i < IdxVectorSize; ++i) {
+      V = IRB.CreateExtractElement(IdxShadow, i);
+      assert(V->getType() == IndexBits->getType());
+      V = IRB.CreateOr(V, IRB.CreateAnd(V, IndexBits));
+    }
+    insertShadowCheck(V, getOrigin(Idx), I);
+  }
+
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
   void handleAVXVpermilvar(IntrinsicInst &I) {
@@ -4294,7 +4314,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
     assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
     assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
+    auto ArgVectorSize =
         cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
     assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
                ->getNumElements() == ArgVectorSize);
@@ -4307,7 +4327,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *AShadow = getShadow(&I, 0);
     Value *Idx = I.getArgOperand(1);
     Value *BShadow = getShadow(&I, 2);
-    insertShadowCheck(Idx, &I);
+
+    checkPermilvarIndexShadow(IRB, Idx, &I);
+
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
     AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());

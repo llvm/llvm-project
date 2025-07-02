@@ -1543,6 +1543,15 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
     setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
 
+    if (Subtarget->hasV8Ops()) {
+      setOperationAction(ISD::FFLOOR, MVT::v2f32, Legal);
+      setOperationAction(ISD::FFLOOR, MVT::v4f32, Legal);
+      setOperationAction(ISD::FROUND, MVT::v2f32, Legal);
+      setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v2f32, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
+    }
+
     if (Subtarget->hasFullFP16()) {
       setOperationAction(ISD::FMINNUM, MVT::v4f16, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::v4f16, Legal);
@@ -1553,6 +1562,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMAXIMUM, MVT::v4f16, Legal);
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
+
+      setOperationAction(ISD::FFLOOR, MVT::v4f16, Legal);
+      setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
+      setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
+      setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
+      setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
     }
   }
 
@@ -2766,9 +2782,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Build a sequence of copy-to-reg nodes chained together with token chain
   // and flag operands which copy the outgoing args into the appropriate regs.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, dl, RegsToPass[i].first,
-                             RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, dl, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
@@ -2952,9 +2967,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const uint32_t *Mask;
