@@ -253,11 +253,23 @@ Error ExegesisAArch64Target::randomizeTargetMCOperand(
   case MCOI::OperandType::OPERAND_UNKNOWN: {
     unsigned Opcode = Instr.getOpcode();
     switch (Opcode) {
+    // MSL (Masking Shift Left) immediate operand for 32-bit splatted SIMD constants
+    // Correspond to AArch64InstructionSelector::tryAdvSIMDModImm321s(
     case AArch64::MOVIv2s_msl:
-    case AArch64::MOVIv4s_msl:
     case AArch64::MVNIv2s_msl:
+      // Type 7: Pattern 0x00 0x00 abcdefgh 0xFF 0x00 0x00 abcdefgh 0xFF
+      // Creates 2-element 32-bit vector with 8-bit immediate at positions [15:8] and [47:40]
+      // Shift value 264 (0x108) for Type 7 pattern encoding
+      // Corresponds to AArch64_AM::encodeAdvSIMDModImmType7()
+      AssignedValue = MCOperand::createImm(264);
+      return Error::success();
+    case AArch64::MOVIv4s_msl:
     case AArch64::MVNIv4s_msl:
-      AssignedValue = MCOperand::createImm(8); // or 16
+      // Type 8: Pattern 0x00 abcdefgh 0xFF 0xFF 0x00 abcdefgh 0xFF 0xFF  
+      // Creates 4-element 32-bit vector with 8-bit immediate at positions [23:16] and [55:48]
+      // Shift value 272 (0x110) for Type 8 pattern encoding
+      // Corresponds to AArch64_AM::encodeAdvSIMDModImmType8()
+      AssignedValue = MCOperand::createImm(272);
       return Error::success();
     default:
       AssignedValue = MCOperand::createImm(0);
