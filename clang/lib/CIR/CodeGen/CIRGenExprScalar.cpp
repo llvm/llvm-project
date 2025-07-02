@@ -157,8 +157,7 @@ public:
   mlir::Value VisitIntegerLiteral(const IntegerLiteral *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
-        cgf.getLoc(e->getExprLoc()),
-        builder.getAttr<cir::IntAttr>(type, e->getValue()));
+        cgf.getLoc(e->getExprLoc()), cir::IntAttr::get(type, e->getValue()));
   }
 
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
@@ -1970,21 +1969,21 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                                      "sizeof operator for VariableArrayType",
                                      e->getStmtClassName());
       return builder.getConstant(
-          loc, builder.getAttr<cir::IntAttr>(
-                   cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+          loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                                 llvm::APSInt(llvm::APInt(64, 1), true)));
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
         e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
         e->getStmtClassName());
     return builder.getConstant(
-        loc, builder.getAttr<cir::IntAttr>(
-                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+        loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                               llvm::APSInt(llvm::APInt(64, 1), true)));
   }
 
   return builder.getConstant(
-      loc, builder.getAttr<cir::IntAttr>(
-               cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
+      loc, cir::IntAttr::get(cgf.cgm.UInt64Ty,
+                             e->EvaluateKnownConstInt(cgf.getContext())));
 }
 
 /// Return true if the specified expression is cheap enough and side-effect-free
