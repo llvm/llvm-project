@@ -541,7 +541,7 @@ void deallocate(void *ptr) {
     return;
 
   // All non-slab allocations will be aligned on a 2MiB boundary.
-  if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
     return impl::rpc_free(ptr);
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
@@ -556,7 +556,7 @@ void *reallocate(void *ptr, uint64_t size) {
     return gpu::allocate(size);
 
   // Non-slab allocations are considered foreign pointers so we fail.
-  if ((reinterpret_cast<uintptr_t>(ptr) & SLAB_ALIGNMENT) == 0)
+  if (__builtin_is_aligned(ptr, SLAB_ALIGNMENT + 1))
     return nullptr;
 
   // The original slab pointer is the 2MiB boundary using the given pointer.
