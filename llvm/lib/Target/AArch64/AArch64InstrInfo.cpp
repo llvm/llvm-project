@@ -1009,6 +1009,18 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return MI.isAsCheapAsAMove();
   }
 
+  if (MI.isCopy()) {
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    if (DstReg.isVirtual() && SrcReg.isVirtual()) {
+      const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+      const TargetRegisterClass *SrcRC = MRI.getRegClass(SrcReg);
+      if (!SrcRC->hasSuperClassEq(DstRC) && !SrcRC->contains(DstReg))
+        return false;
+    }
+  }
+
   switch (MI.getOpcode()) {
   default:
     return MI.isAsCheapAsAMove();
