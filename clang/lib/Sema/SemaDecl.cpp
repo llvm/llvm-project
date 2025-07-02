@@ -12487,8 +12487,8 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
       FD->setInvalidDecl(true);
     }
 
-    // In C++ [basic.start.main]p3, it is said a program attaching main to a
-    // named module is ill-formed.
+    // [basic.start.main]p3:
+    // A program that declares a function main that belongs to the global scope and is attached to a named module is ill-formed.
     if (FD->isInNamedModule()) {
       const SourceLocation start = FD->getTypeSpecStartLoc();
       Diag(start, diag::warn_main_in_named_module)
