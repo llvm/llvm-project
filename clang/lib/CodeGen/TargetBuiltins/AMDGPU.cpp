@@ -621,32 +621,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
   }
-  case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
-  case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:
-  case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds:
-  case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds_d2: {
-    Intrinsic::ID IID;
-    switch (BuiltinID) {
-    case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds:
-      IID = Intrinsic::amdgcn_tensor_load_to_lds;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_load_to_lds_d2:
-      IID = Intrinsic::amdgcn_tensor_load_to_lds_d2;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds:
-      IID = Intrinsic::amdgcn_tensor_store_from_lds;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_tensor_store_from_lds_d2:
-      IID = Intrinsic::amdgcn_tensor_store_from_lds_d2;
-      break;
-    }
-
-    SmallVector<Value *, 5> Args;
-    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
-      Args.push_back(EmitScalarExpr(E->getArg(i)));
-    llvm::Function *F = CGM.getIntrinsic(IID, {});
-    return Builder.CreateCall(F, {Args});
-  }
   case AMDGPU::BI__builtin_amdgcn_load_to_lds: {
     // Should this have asan instrumentation?
     return emitBuiltinWithOneOverloadedType<5>(*this, E,
