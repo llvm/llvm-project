@@ -496,13 +496,13 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
           args.getLastArg(clang::driver::options::OPT_triple))
     opts.triple = a->getValue();
 
-  opts.ignoreDenormalMode = args.hasFlag(
+  opts.atomicIgnoreDenormalMode = args.hasFlag(
       clang::driver::options::OPT_fatomic_ignore_denormal_mode,
       clang::driver::options::OPT_fno_atomic_ignore_denormal_mode, false);
-  opts.fineGrainedMemory = args.hasFlag(
+  opts.atomicFineGrainedMemory = args.hasFlag(
       clang::driver::options::OPT_fatomic_fine_grained_memory,
       clang::driver::options::OPT_fno_atomic_fine_grained_memory, false);
-  opts.remoteMemory =
+  opts.atomicRemoteMemory =
       args.hasFlag(clang::driver::options::OPT_fatomic_remote_memory,
                    clang::driver::options::OPT_fno_atomic_remote_memory, false);
 
