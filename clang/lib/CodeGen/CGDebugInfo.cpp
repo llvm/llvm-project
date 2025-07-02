@@ -4183,17 +4183,16 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
         llvm::MDNode::replaceWithDistinct(llvm::TempDICompositeType(RealDecl));
     break;
   }
-     auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Ty->getDecl());
-   if(CTSD) {
-   CXXRecordDecl *TemplateDecl =
-            CTSD->getSpecializedTemplate()->getTemplatedDecl();
-   RegionMap[TemplateDecl].reset(RealDecl);
-   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
-   }
- else {
-  RegionMap[Ty->getDecl()].reset(RealDecl);
-  TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
-}
+  auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Ty->getDecl());
+  if (CTSD) {
+    CXXRecordDecl *TemplateDecl =
+        CTSD->getSpecializedTemplate()->getTemplatedDecl();
+    RegionMap[TemplateDecl].reset(RealDecl);
+    TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
+  } else {
+    RegionMap[Ty->getDecl()].reset(RealDecl);
+    TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
+  }
 
   if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     DBuilder.replaceArrays(RealDecl, llvm::DINodeArray(),
