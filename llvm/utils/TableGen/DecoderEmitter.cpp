@@ -93,22 +93,6 @@ static cl::opt<bool> UseFnTableInDecodeToMCInst(
         "of the generated code."),
     cl::init(false), cl::cat(DisassemblerEmitterCat));
 
-// Option to generate a non-templated version of `decodeToMCInst`. The
-// templated `decodeToMCInst` is templated on `InsnType` and a given `InsnType`
-// can target instructions with one or more Bitwidths. So the option to
-// generate a non-templated `decodeToMCInst` is a typespec of the form
-// type::=list-of-sizes.
-
-// For example, for the AMDGPU target, the type `DecoderUInt128` is used for
-// both 96 and 128 bit instructions. So the generated non-templated
-// `decodeToMCInst` will support decoding both these instruction Bitwidths and
-// the option will be DecoderUInt128::=96,128
-static cl::list<std::string> DecodeToMCInstTypeSpecs(
-    "non-templated-decode-to-mcinst-type-spec",
-    cl::desc("list of C++ types and associated bitwidths to used to generate "
-             "non-templated `decodeToMCInst`."),
-    cl::cat(DisassemblerEmitterCat));
-
 STATISTIC(NumEncodings, "Number of encodings considered");
 STATISTIC(NumEncodingsLackingDisasm,
           "Number of encodings without disassembler info");
@@ -233,6 +217,14 @@ struct EncodingIDAndOpcode {
 using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
 using NamespacesHwModesMap = std::map<std::string, std::set<StringRef>>;
 
+// Result of parsing the `InsnCPPTypes` and `InstBitwidths` fields in the Target
+// instruction set.
+using BitwidthSet = SmallSet<unsigned, 4>;
+struct NonTemplatedInsnType {
+  StringRef CPPType;
+  BitwidthSet Bitwidths;
+};
+
 class DecoderEmitter {
   const RecordKeeper &RK;
   std::vector<EncodingAndInst> NumberedEncodings;
@@ -257,6 +249,8 @@ public:
   void run(raw_ostream &o);
 
 private:
+  SmallVector<NonTemplatedInsnType>
+  parseNonTemplatedInsnTypes(BitwidthSet &InstrBitwidths);
   CodeGenTarget Target;
 
 public:
@@ -2565,66 +2559,63 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
     break;
   }
 }
+SmallVector<NonTemplatedInsnType>
+DecoderEmitter::parseNonTemplatedInsnTypes(BitwidthSet &InstrBitwidths) {
+  SmallVector<NonTemplatedInsnType> Parsed;
 
-// Result of parsing a single `non-templated-decode-to-mcinst-type-spec` option.
-using BitwidthSet = SmallSet<unsigned, 4>;
-struct NonTemplatedTypeSpec {
-  StringRef Type;
-  BitwidthSet Bitwidths;
-};
+  const Record *InstructionSet = Target.getInstructionSet();
+  std::vector<StringRef> InsnCPPTypes =
+      InstructionSet->getValueAsListOfStrings("InsnCPPTypes");
 
-static SmallVector<NonTemplatedTypeSpec>
-parseNonTemplatedTypeSpec(BitwidthSet &InstrBitwidths) {
-  SmallVector<NonTemplatedTypeSpec> Parsed;
-  if (DecodeToMCInstTypeSpecs.empty()) {
-    // If no `non-templated-decode-to-mcinst-type-spec` option is specified,
+  if (InsnCPPTypes.empty()) {
+    // If no `InsnCPPTypes` is specified in the instruction info,
     // create a type-spec with empty values, which will trigger generation of
     // a templated `decodeToMCInst`.
     Parsed.emplace_back();
     return Parsed;
   }
 
-  Parsed.reserve(DecodeToMCInstTypeSpecs.size());
+  // Use field locations for error reporting.
+  SMLoc CPPTypesLoc = InstructionSet->getFieldLoc("InsnCPPTypes");
+  SMLoc BitwidthsLoc = InstructionSet->getFieldLoc("InsnBitwidths");
+
+  const ListInit *InsnBitwidths =
+      InstructionSet->getValueAsListInit("InsnBitwidths");
+
+  Parsed.reserve(InsnCPPTypes.size());
   BitwidthSet OptionBitwidths;
 
-  for (StringRef TypeSpec : DecodeToMCInstTypeSpecs) {
+  for (const auto &[CPPType, BWL] :
+       zip_equal(InsnCPPTypes, InsnBitwidths->getElements())) {
     BitwidthSet Bitwidths;
-    // Each `non-templated-decode-to-mcinst-type-spec` is of the form
-    // <type>:=<list of bitwidths>. Note, <type> can in general be a templated
-    // type, so using the token ":=" as a separator to allow many general C++
-    // types here.
-    auto [Type, ListOfBitWidths] = TypeSpec.split(":=");
-    if (Type.empty())
-      PrintFatalError("Invalid typespec: " + TypeSpec);
+    if (CPPType.empty())
+      PrintFatalError(CPPTypesLoc,
+                      "CPP Type cannot be empty in `InsnCPPTypes`");
+    const auto *BitwidthList = dyn_cast<ListInit>(BWL);
+    if (!BitwidthList || BitwidthList->empty())
+      PrintFatalError(BitwidthsLoc,
+                      "No bitwidths specified for InsnCPPType : " + CPPType);
 
-    for (StringRef BwStr : split(ListOfBitWidths, ',')) {
-      unsigned Bitwidth;
-      if (BwStr.getAsInteger(10, Bitwidth))
-        PrintFatalError("Invalid bitwidth: " + BwStr + " in typespec " +
-                        TypeSpec);
-
+    for (int64_t Bitwidth : BitwidthList->getAsListOfInts()) {
       if (!OptionBitwidths.insert(Bitwidth).second)
-        PrintFatalError("Bitwidth " + Twine(Bitwidth) + " already specified.");
+        PrintFatalError(BitwidthsLoc,
+                        "Bitwidth " + Twine(Bitwidth) + " already specified.");
 
       if (!InstrBitwidths.contains(Bitwidth))
-        PrintFatalError(Twine("No instruction of Bitwidth ") + Twine(Bitwidth) +
-                        " supported.");
-
+        PrintFatalError(BitwidthsLoc, "No instruction of bitwidth " +
+                                          Twine(Bitwidth) + " supported.");
       InstrBitwidths.erase(Bitwidth);
       Bitwidths.insert(Bitwidth);
     }
-
-    if (Bitwidths.empty())
-      PrintFatalError("No bitwidth specified in typespec " + TypeSpec);
-
-    Parsed.emplace_back(NonTemplatedTypeSpec{Type, Bitwidths});
+    Parsed.emplace_back(NonTemplatedInsnType{CPPType, Bitwidths});
   }
 
   if (!InstrBitwidths.empty()) {
+    // FIXME: Add PrintFatalError that accepts a location and a function_ref.
     PrintFatalError([&InstrBitwidths](raw_ostream &OS) {
       OS << "Bitwidth(s) ";
-      llvm::interleaveComma(InstrBitwidths, OS);
-      OS << " missing in `non-templated-decode-to-mcinst-type-spec` options.";
+      interleaveComma(InstrBitwidths, OS);
+      OS << " missing in `InsnBitwidths`";
     });
   }
   return Parsed;
@@ -2747,12 +2738,12 @@ namespace {
     const unsigned Bitwidth = 8 * NSAndByteSize.second;
     InstrBitwidths.insert(Bitwidth);
   }
-  SmallVector<NonTemplatedTypeSpec> NonTemplatedTypeSpecs =
-      parseNonTemplatedTypeSpec(InstrBitwidths);
+  SmallVector<NonTemplatedInsnType> NonTemplatedInsnTypes =
+      parseNonTemplatedInsnTypes(InstrBitwidths);
 
   DecoderTableInfo TableInfo;
   unsigned OpcodeMask = 0;
-  for (const auto &[NTType, NTBitwidths] : NonTemplatedTypeSpecs) {
+  for (const auto &[NTType, NTBitwidths] : NonTemplatedInsnTypes) {
     // Reset the Decoders for each non-templated type.
     TableInfo.Decoders.clear();
 

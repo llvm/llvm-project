@@ -40,7 +40,11 @@ include "AArch64SchedPredExynos.td"
 include "AArch64SchedPredNeoverse.td"
 include "AArch64Combine.td"
 
-def AArch64InstrInfo : InstrInfo;
+def AArch64InstrInfo : InstrInfo {
+  // Opt-in into non-templated code for instruction decoder.
+  let InsnCPPTypes = ["uint32_t"];
+  let InsnBitwidths = [[32]];
+}
 
 //===----------------------------------------------------------------------===//
 // Named operands for MRS/MSR/TLBI/...

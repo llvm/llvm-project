@@ -6,10 +6,7 @@ tablegen(LLVM AMDGPUGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM AMDGPUGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM AMDGPUGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AMDGPUGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler
-         -non-templated-decode-to-mcinst-type-spec=uint32_t:=32
-         -non-templated-decode-to-mcinst-type-spec=uint64_t:=64
-         -non-templated-decode-to-mcinst-type-spec=DecoderUInt128:=96,128)
+tablegen(LLVM AMDGPUGenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AMDGPUGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM AMDGPUGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM AMDGPUGenMCPseudoLowering.inc -gen-pseudo-lowering)
