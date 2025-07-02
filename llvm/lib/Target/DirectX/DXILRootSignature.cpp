@@ -534,7 +534,7 @@ static bool verifyComparisonFunc(uint32_t ComparisonFunc) {
 static bool verifyBorderColor(uint32_t BorderColor) {
   switch (BorderColor) {
 #define STATIC_BORDER_COLOR(Num, Val)                                          \
-  case llvm::to_underlying(dxbc::SamplersBorderColor::Val):
+  case llvm::to_underlying(dxbc::StaticBorderColor::Val):
 #include "llvm/BinaryFormat/DXContainerConstants.def"
     return true;
   }
