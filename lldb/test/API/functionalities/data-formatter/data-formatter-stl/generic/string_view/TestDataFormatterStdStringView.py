@@ -74,7 +74,9 @@ class StdStringViewDataFormatterTestCase(TestBase):
             type="std::wstring_view",
             summary='L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"',
         )
-        self.expect_var_path("u16_string", type="std::u16string_view", summary='u"ß水氶"')
+        self.expect_var_path(
+            "u16_string", type="std::u16string_view", summary='u"ß水氶"'
+        )
         self.expect_var_path("u16_empty", type="std::u16string_view", summary='u""')
         self.expect_var_path(
             "u32_string", type="std::u32string_view", summary='U"🍄🍅🍆🍌"'
@@ -138,7 +140,9 @@ class StdStringViewDataFormatterTestCase(TestBase):
             type="std::wstring_view",
             summary='L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"',
         )
-        self.expect_var_path("u16_string", type="std::u16string_view", summary='u"ß水氶"')
+        self.expect_var_path(
+            "u16_string", type="std::u16string_view", summary='u"ß水氶"'
+        )
         self.expect_var_path("u16_empty", type="std::u16string_view", summary='u""')
         self.expect_var_path(
             "u32_string", type="std::u32string_view", summary='U"🍄🍅🍆🍌"'
@@ -160,7 +164,7 @@ class StdStringViewDataFormatterTestCase(TestBase):
     )
     @add_test_categories(["libc++"])
     def test_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP" : 1})
+        self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
     @expectedFailureAll(
@@ -168,5 +172,5 @@ class StdStringViewDataFormatterTestCase(TestBase):
     )
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
-        self.build(dictionary={"USE_LIBSTDCPP" : 1})
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()

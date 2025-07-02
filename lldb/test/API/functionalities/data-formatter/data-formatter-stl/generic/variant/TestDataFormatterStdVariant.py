@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -87,7 +86,7 @@ class StdVariantDataFormatterTestCase(TestBase):
     @skipIf(macos_version=["<", "10.14"])
     @add_test_categories(["libc++"])
     def test_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP" : 1})
+        self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
     ## Clang 7.0 is the oldest Clang that can reliably parse newer libc++ versions
@@ -101,5 +100,5 @@ class StdVariantDataFormatterTestCase(TestBase):
     @skipIf(macos_version=["<", "10.14"])
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
-        self.build(dictionary={"USE_LIBSTDCPP" : 1})
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()

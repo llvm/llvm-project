@@ -158,13 +158,13 @@ class StdSpanDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP" : 1})
+        self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
     @add_test_categories(["libstdcxx"])
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_libstdcxx(self):
-        self.build(dictionary={"USE_LIBSTDCPP" : 1})
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
 
     def do_test_ref_and_ptr(self):
@@ -183,11 +183,11 @@ class StdSpanDataFormatterTestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_ref_and_ptr_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP" : 1})
+        self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test_ref_and_ptr()
 
     @add_test_categories(["libstdcxx"])
     @skipIf(compiler="clang", compiler_version=["<", "11.0"])
     def test_ref_and_ptr_libstdcxx(self):
-        self.build(dictionary={"USE_LIBSTDCPP" : 1})
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test_ref_and_ptr()

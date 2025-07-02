@@ -114,10 +114,10 @@ class StdUnorderedMapIteratorDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libc++"])
     def test_libcxx(self):
-        self.build(dictionary={"USE_LIBCPP" : 1})
+        self.build(dictionary={"USE_LIBCPP": 1})
         self.do_test()
 
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
-        self.build(dictionary={"USE_LIBSTDCPP" : 1})
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
         self.do_test()
