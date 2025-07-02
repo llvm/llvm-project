@@ -100,7 +100,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
   // to not break some ObjC invariants. ObjC types are thrown by a pointer, hence the condition;
   // although it does also trigger for some valid c++ usages, this should be a case rare enough to
   // not complicate the condition any further
-  if constexpr (std::is_pointer_v<_Ep>) {
+  if constexpr (is_pointer<_Ep>::value) {
     try {
       throw __e;
     } catch (...) {
