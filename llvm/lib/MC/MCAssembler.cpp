@@ -142,7 +142,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
+bool MCAssembler::evaluateFixup(const MCFragment &F, const MCFixup &Fixup,
                                 MCValue &Target, uint64_t &Value,
                                 bool RecordReloc,
                                 MutableArrayRef<char> Contents) const {
@@ -178,7 +178,7 @@ bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
     bool ShouldAlignPC =
         FixupFlags & MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
     if (IsPCRel) {
-      uint64_t Offset = getFragmentOffset(*DF) + Fixup.getOffset();
+      uint64_t Offset = getFragmentOffset(F) + Fixup.getOffset();
 
       // A number of ARM fixups in Thumb mode require that the effective PC
       // address be determined as the 32-bit aligned version of the actual
@@ -189,7 +189,7 @@ bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
 
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
         IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
-            *Add, *DF, false, true);
+            *Add, F, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
@@ -202,8 +202,8 @@ bool MCAssembler::evaluateFixup(const MCFragment *DF, const MCFixup &Fixup,
 
   if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
     IsResolved = false;
-  IsResolved = getBackend().addReloc(*DF, Fixup, Target, Value, IsResolved);
-  getBackend().applyFixup(*DF, Fixup, Target, Contents, Value, IsResolved);
+  IsResolved = getBackend().addReloc(F, Fixup, Target, Value, IsResolved);
+  getBackend().applyFixup(F, Fixup, Target, Contents, Value, IsResolved);
   return true;
 }
 
@@ -934,7 +934,7 @@ void MCAssembler::layout() {
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         MCValue Target;
-        evaluateFixup(&Frag, Fixup, Target, FixedValue,
+        evaluateFixup(Frag, Fixup, Target, FixedValue,
                       /*RecordReloc=*/true, Contents);
       }
     }
@@ -951,27 +951,27 @@ void MCAssembler::Finish() {
   assert(PendingErrors.empty());
 }
 
-bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                       const MCRelaxableFragment *DF) const {
+bool MCAssembler::fixupNeedsRelaxation(const MCRelaxableFragment &F,
+                                       const MCFixup &Fixup) const {
   assert(getBackendPtr() && "Expected assembler backend");
   MCValue Target;
   uint64_t Value;
-  bool Resolved = evaluateFixup(DF, const_cast<MCFixup &>(Fixup), Target, Value,
+  bool Resolved = evaluateFixup(F, const_cast<MCFixup &>(Fixup), Target, Value,
                                 /*RecordReloc=*/false, {});
   return getBackend().fixupNeedsRelaxationAdvanced(Fixup, Target, Value,
                                                    Resolved);
 }
 
-bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F) const {
+bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment &F) const {
   assert(getBackendPtr() && "Expected assembler backend");
   // If this inst doesn't ever need relaxation, ignore it. This occurs when we
   // are intentionally pushing out inst fragments, or because we relaxed a
   // previous instruction to one that doesn't need relaxation.
-  if (!getBackend().mayNeedRelaxation(F->getInst(), *F->getSubtargetInfo()))
+  if (!getBackend().mayNeedRelaxation(F.getInst(), *F.getSubtargetInfo()))
     return false;
 
-  for (const MCFixup &Fixup : F->getFixups())
-    if (fixupNeedsRelaxation(Fixup, F))
+  for (const MCFixup &Fixup : F.getFixups())
+    if (fixupNeedsRelaxation(F, Fixup))
       return true;
 
   return false;
@@ -980,7 +980,7 @@ bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F) const {
 bool MCAssembler::relaxInstruction(MCRelaxableFragment &F) {
   assert(getEmitterPtr() &&
          "Expected CodeEmitter defined for relaxInstruction");
-  if (!fragmentNeedsRelaxation(&F))
+  if (!fragmentNeedsRelaxation(F))
     return false;
 
   ++stats::RelaxedInstructions;
