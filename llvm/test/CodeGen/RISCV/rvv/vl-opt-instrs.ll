@@ -4540,6 +4540,46 @@ define <vscale x 4 x float> @vfsgnjx_vf(<vscale x 4 x float> %a, float %b, iXLen
   ret <vscale x 4 x float> %2
 }
 
+define <vscale x 4 x float> @vfmerge_vf(<vscale x 4 x float> %a, float %b, <vscale x 4 x i1> %c, iXLen %vl) {
+; NOVLOPT-LABEL: vfmerge_vf:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfmerge.vfm v10, v8, fa0, v0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfmerge_vf:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfmerge.vfm v10, v8, fa0, v0
+; VLOPT-NEXT:    vfadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x float> @llvm.riscv.vfmerge(<vscale x 4 x float> poison, <vscale x 4 x float> %a, float %b, <vscale x 4 x i1> %c, iXLen -1)
+  %2 = call <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %1, <vscale x 4 x float> %a, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x float> %2
+}
+
+define <vscale x 4 x float> @vfmv_v_f(<vscale x 4 x float> %a, float %b, iXLen %vl) {
+; NOVLOPT-LABEL: vfmv_v_f:
+; NOVLOPT:       # %bb.0:
+; NOVLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfmv.v.f v10, fa0
+; NOVLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; NOVLOPT-NEXT:    vfadd.vv v8, v10, v8
+; NOVLOPT-NEXT:    ret
+;
+; VLOPT-LABEL: vfmv_v_f:
+; VLOPT:       # %bb.0:
+; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfmv.v.f v10, fa0
+; VLOPT-NEXT:    vfadd.vv v8, v10, v8
+; VLOPT-NEXT:    ret
+  %1 = call <vscale x 4 x float> @llvm.riscv.vfmv.v.f(<vscale x 4 x float> poison, float %b, iXLen -1)
+  %2 = call <vscale x 4 x float> @llvm.riscv.vfadd.nxv4f32.nxv4f32(<vscale x 4 x float> poison, <vscale x 4 x float> %1, <vscale x 4 x float> %a, iXLen 7, iXLen %vl)
+  ret <vscale x 4 x float> %2
+}
+
 define <vscale x 4 x float> @vfmacc_vv(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %c, iXLen %vl) {
 ; NOVLOPT-LABEL: vfmacc_vv:
 ; NOVLOPT:       # %bb.0:
