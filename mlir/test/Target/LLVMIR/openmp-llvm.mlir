@@ -1462,7 +1462,7 @@ llvm.func @omp_atomic_update(%x:!llvm.ptr, %expr: i32, %xbool: !llvm.ptr, %exprb
   ^bb0(%xval: i32):
     %newval = llvm.mul %xval, %expr : i32
     omp.yield(%newval : i32)
-  } {atomic_control = #omp.atomic_control<>}
+  }
   // CHECK: atomicrmw add ptr %[[x]], i32 %[[expr]] monotonic
   omp.atomic.update %x : !llvm.ptr {
   ^bb0(%xval: i32):

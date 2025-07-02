@@ -3223,7 +3223,6 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
 
   llvm::AtomicOrdering atomicOrdering =
       convertAtomicOrdering(opInst.getMemoryOrder());
-
   // Generate update code.
   auto updateFn =
       [&opInst, &moduleTranslation](
@@ -3242,21 +3241,27 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
     return moduleTranslation.lookupValue(yieldop.getResults()[0]);
   };
 
-  mlir::omp::AtomicControlAttr atomicControlAttr =
-      opInst.getAtomicControlAttr();
-  bool isAmdgpuIgnoreDenormalMode =
-      atomicControlAttr.getAmdgpuIgnoreDenormalMode();
-  bool isAmdgpuNoFineGrainedMemory =
-      !atomicControlAttr.getAmdgpuFineGrainedMemory();
-  bool isAmdgpuNoRemoteMemory = !atomicControlAttr.getAmdgpuRemoteMemory();
+  bool isIgnoreDenormalMode = false;
+  bool isNoFineGrainedMemory = false;
+  bool isNoRemoteMemory = false;
+  if(opInst->hasAttr(opInst.getAtomicControlAttrName())) {
+    mlir::omp::AtomicControlAttr atomicControlAttr =
+        opInst.getAtomicControlAttr();
+    isIgnoreDenormalMode =
+        atomicControlAttr.getIgnoreDenormalMode();
+    isNoFineGrainedMemory =
+        !atomicControlAttr.getFineGrainedMemory();
+    isNoRemoteMemory = !atomicControlAttr.getRemoteMemory();
+    
+  }
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createAtomicUpdate(
           ompLoc, allocaIP, llvmAtomicX, llvmExpr, atomicOrdering, binop,
-          updateFn, isXBinopExpr, isAmdgpuIgnoreDenormalMode,
-          isAmdgpuNoFineGrainedMemory, isAmdgpuNoRemoteMemory);
+          updateFn, isXBinopExpr, isIgnoreDenormalMode,
+          isNoFineGrainedMemory, isNoRemoteMemory);
 
   if (failed(handleError(afterIP, *opInst)))
     return failure();
@@ -3346,17 +3351,17 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     return moduleTranslation.lookupValue(yieldop.getResults()[0]);
   };
 
-  bool isAmdgpuIgnoreDenormalMode = false;
-  bool isAmdgpuNoFineGrainedMemory = true;
-  bool isAmdgpuNoRemoteMemory = true;
+  bool isIgnoreDenormalMode = false;
+  bool isNoFineGrainedMemory = true;
+  bool isNoRemoteMemory = true;
   if (atomicUpdateOp) {
     mlir::omp::AtomicControlAttr atomicControlAttr =
         atomicUpdateOp.getAtomicControlAttr();
-    isAmdgpuIgnoreDenormalMode =
-        atomicControlAttr.getAmdgpuIgnoreDenormalMode();
-    isAmdgpuNoFineGrainedMemory =
-        !atomicControlAttr.getAmdgpuFineGrainedMemory();
-    isAmdgpuNoRemoteMemory = !atomicControlAttr.getAmdgpuRemoteMemory();
+    isIgnoreDenormalMode =
+        atomicControlAttr.getIgnoreDenormalMode();
+    isNoFineGrainedMemory =
+        !atomicControlAttr.getFineGrainedMemory();
+    isNoRemoteMemory = !atomicControlAttr.getRemoteMemory();
   }
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
@@ -3365,8 +3370,8 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
       ompBuilder->createAtomicCapture(
           ompLoc, allocaIP, llvmAtomicX, llvmAtomicV, llvmExpr, atomicOrdering,
           binop, updateFn, atomicUpdateOp, isPostfixUpdate, isXBinopExpr,
-          isAmdgpuIgnoreDenormalMode, isAmdgpuNoFineGrainedMemory,
-          isAmdgpuNoRemoteMemory);
+          isIgnoreDenormalMode, isNoFineGrainedMemory,
+          isNoRemoteMemory);
 
   if (failed(handleError(afterIP, *atomicCaptureOp)))
     return failure();

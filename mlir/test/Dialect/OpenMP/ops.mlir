@@ -1371,7 +1371,7 @@ func.func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>,
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield(%newval : i32)
-  } {atomic_control = #omp.atomic_control<>}
+  }
   // CHECK: omp.atomic.update %[[XBOOL]] : memref<i1>
   // CHECK-NEXT: (%[[XVAL:.*]]: i1):
   // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.and %[[XVAL]], %[[EXPRBOOL]] : i1
