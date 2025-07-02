@@ -29,7 +29,7 @@ add_libc_test(
   DEPENDS
     libc.src.__support.wchar.string_converter
     libc.src.__support.wchar.mbstate
-    libc.src.__support.wchar.error_or
+    libc.src.__support.error_or
     libc.hdr.errno_macros
     libc.hdr.types.char32_t
 )

@@ -26,25 +26,20 @@ private:
   const T *src;
   size_t src_len;
   size_t src_idx;
+  size_t bytes_pushed;
+  size_t num_to_write;
 
   int pushFullCharacter() {
-    if (!cr.isEmpty())
-      return 0;
-
-    int original_idx = src_idx;
-    while (!cr.isFull() && src_idx < src_len) {
-      int err = cr.push(src[src_idx++]);
-      if (err != 0) {
-        // point to the beginning of the invalid sequence
-        src_idx = original_idx;
+    for (bytes_pushed = 0; !cr.isFull() && src_idx + bytes_pushed < src_len;
+         ++bytes_pushed) {
+      int err = cr.push(src[src_idx + bytes_pushed]);
+      if (err != 0)
         return err;
-      }
     }
 
     // if we aren't able to read a full character from the source string
-    if (src_idx == src_len && !cr.isFull()) {
-      // src points to the beginning of the character
-      src_idx = original_idx;
+    if (src_idx + bytes_pushed == src_len && !cr.isFull()) {
+      src_idx += bytes_pushed;
       return -1;
     }
 
@@ -52,34 +47,64 @@ private:
   }
 
 public:
-  StringConverter(const T *s, mbstate *ps)
-      : cr(ps), src(s), src_len(SIZE_MAX), src_idx(0) {}
-  StringConverter(const T *s, size_t len, mbstate *ps)
-      : cr(ps), src(s), src_len(len), src_idx(0) {}
+  StringConverter(const T *s, size_t srclen, size_t dstlen, mbstate *ps)
+      : cr(ps), src(s), src_len(srclen), src_idx(0), bytes_pushed(0),
+        num_to_write(dstlen) {
+    pushFullCharacter();
+  }
+
+  StringConverter(const T *s, size_t dstlen, mbstate *ps)
+      : StringConverter(s, SIZE_MAX, dstlen, ps) {}
 
   ErrorOr<char32_t> popUTF32() {
-    int err = pushFullCharacter();
-    if (err != 0)
-      return Error(err);
+    if (cr.isEmpty()) {
+      int err = pushFullCharacter();
+      if (err != 0)
+        return Error(err);
+
+      if (cr.sizeAsUTF32() > num_to_write) {
+        cr.clear();
+        return Error(-1);
+      }
+    }
 
     auto out = cr.pop_utf32();
+    if (cr.isEmpty())
+      src_idx += bytes_pushed;
+
     if (out.has_value() && out.value() == L'\0')
       src_len = src_idx;
+
+    num_to_write--;
 
     return out;
   }
 
   ErrorOr<char8_t> popUTF8() {
-    int err = pushFullCharacter();
-    if (err != 0)
-      return Error(err);
+    if (cr.isEmpty()) {
+      int err = pushFullCharacter();
+      if (err != 0)
+        return Error(err);
+
+      if (cr.sizeAsUTF8() > num_to_write) {
+        cr.clear();
+        return Error(-1);
+      }
+    }
 
     auto out = cr.pop_utf8();
+    if (cr.isEmpty())
+      src_idx += bytes_pushed;
+
     if (out.has_value() && out.value() == '\0')
       src_len = src_idx;
 
+    num_to_write--;
+
     return out;
   }
+
+  size_t getSourceIndex() { return src_idx; }
 };
 
 } // namespace internal
