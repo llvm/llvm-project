@@ -413,9 +413,6 @@ public:
           SetError(EXCRegSet, Read, 0);
         }
         break;
-
-      default:
-        break;
       }
       offset = next_thread_state;
     }
@@ -535,8 +532,6 @@ public:
           exc.exception = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        break;
-      default:
         break;
       }
       offset = next_thread_state;
@@ -672,8 +667,6 @@ public:
           exc.far = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        break;
-      default:
         break;
       }
       offset = next_thread_state;
