@@ -1331,16 +1331,16 @@ define amdgpu_kernel void @v_insertelement_v16bf16_3(ptr addrspace(1) %out, ptr 
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_load_dword s6, s[4:5], 0x10
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v8, 5, v0
-; GFX942-NEXT:    v_mov_b32_e32 v9, 0x5040100
+; GFX942-NEXT:    v_lshlrev_b32_e32 v4, 5, v0
+; GFX942-NEXT:    v_mov_b32_e32 v5, 0x5040100
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3]
-; GFX942-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3] offset:16
+; GFX942-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
+; GFX942-NEXT:    global_load_dwordx4 v[6:9], v4, s[2:3] offset:16
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
-; GFX942-NEXT:    v_perm_b32 v1, s6, v1, v9
+; GFX942-NEXT:    v_perm_b32 v1, s6, v1, v5
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
-; GFX942-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GFX942-NEXT:    global_store_dwordx4 v4, v[6:9], s[0:1] offset:16
+; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #1
   %tid.ext = sext i32 %tid to i64

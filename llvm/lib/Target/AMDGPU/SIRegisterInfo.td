@@ -112,6 +112,7 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
 
   // RegisterClass (e.g. AGPR / VGPR) priority for allocation
   field int RegClassPriority = 1;
+  field int RegClassBit = 5;
 
 }
 
@@ -575,7 +576,7 @@ let HasVGPR = 1 in {
 def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
                             (add (interleave (sequence "VGPR%u_LO16", 0, 255),
                                              (sequence "VGPR%u_HI16", 0, 255)))> {
-  let AllocationPriority = 2;
+  let AllocationPriority = !add(2, !mul(RegClassPriority, !shl(1, RegClassBit)));
   let Size = 16;
   let GeneratePressureSet = 0;
 
@@ -601,7 +602,7 @@ def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
 // i16/f16 only on VI+
 def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                             (add (sequence "VGPR%u", 0, 255))> {
-  let AllocationPriority = 0;
+  let AllocationPriority = !add(0, !mul(RegClassPriority, !shl(1, RegClassBit)));
   let Size = 32;
   let Weight = 1;
   let BaseClassOrder = 32;
@@ -610,7 +611,7 @@ def VGPR_32 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types
 // Identical to VGPR_32 except it only contains the low 128 (Lo128) registers.
 def VGPR_32_Lo128 : SIRegisterClass<"AMDGPU", !listconcat(Reg32Types.types, Reg16Types.types), 32,
                             (add (sequence "VGPR%u", 0, 127))> {
-  let AllocationPriority = 0;
+  let AllocationPriority = !add(0, !mul(RegClassPriority, !shl(1, RegClassBit)));
   let GeneratePressureSet = 0;
   let Size = 32;
   let Weight = 1;
@@ -941,7 +942,7 @@ class VRegClassBase<int numRegs, list<ValueType> regTypes, dag regList> :
   // Requires n v_mov_b32 to copy
   let CopyCost = numRegs;
   defvar SizePrioriity = !if(!le(numRegs, 14), !sub(numRegs, 1), !if(!le(numRegs, 16), 14, 15));
-  let AllocationPriority = !add(SizePrioriity, !mul(RegClassPriority, 16));
+  let AllocationPriority = !add(SizePrioriity, !mul(RegClassPriority, !shl(1, RegClassBit)));
   let Weight = numRegs;
 }
 
@@ -1067,6 +1068,7 @@ def VS_64 : SIRegisterClass<"AMDGPU", VReg_64.RegTypes, 32, (add VReg_64, SReg_6
 def AV_32 : SIRegisterClass<"AMDGPU", VGPR_32.RegTypes, 32, (add VGPR_32, AGPR_32)> {
   let HasVGPR = 1;
   let HasAGPR = 1;
+  let RegClassPriority = 0;
   let Size = 32;
 }
 } // End GeneratePressureSet = 0

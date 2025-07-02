@@ -261,13 +261,13 @@ define amdgpu_kernel void @widen_f16_constant_load(ptr addrspace(4) %arg) {
 ; GFX11-TRUE16-LABEL: widen_f16_constant_load:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_f16_e64 v2.l, s0, 4.0
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-TRUE16-NEXT:    v_add_f16_e64 v0.l, s0, 4.0
+; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: widen_f16_constant_load:
@@ -393,18 +393,16 @@ define amdgpu_kernel void @no_widen_i16_constant_divergent_load(ptr addrspace(4)
 ; GFX11-TRUE16-LABEL: no_widen_i16_constant_divergent_load:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_4) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_nc_u16 v2.l, 0x3e7, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_or_b16 v2.l, v2.l, 4
-; GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, 0x3e7, v0.l
+; GFX11-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, 4
+; GFX11-TRUE16-NEXT:    global_store_b16 v[1:2], v0, off
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: no_widen_i16_constant_divergent_load:

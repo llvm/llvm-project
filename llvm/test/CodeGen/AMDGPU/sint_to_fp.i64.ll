@@ -1110,13 +1110,13 @@ define amdgpu_kernel void @v_sint_to_fp_v4i64_to_v4f16(ptr addrspace(1) %out, pt
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v2
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v2.h, v3
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v3
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v3, 3, v8
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v0.h, v0.l
-; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v0, v2.h, v2.l
-; GFX11-TRUE16-NEXT:    global_store_b64 v3, v[0:1], s[0:1]
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v2, v0.h, v0.l
+; GFX11-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.h, v1.l
+; GFX11-TRUE16-NEXT:    global_store_b64 v3, v[1:2], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: v_sint_to_fp_v4i64_to_v4f16:

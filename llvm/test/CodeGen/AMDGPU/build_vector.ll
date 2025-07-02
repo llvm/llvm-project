@@ -307,13 +307,13 @@ define amdgpu_kernel void @build_v2i32_from_v4i16_shuffle(ptr addrspace(1) %out,
 ; GFX942-LABEL: build_v2i32_from_v4i16_shuffle:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
+; GFX942-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX942-NEXT:    s_lshl_b32 s2, s2, 16
-; GFX942-NEXT:    v_mov_b32_e32 v0, s2
-; GFX942-NEXT:    v_mov_b32_e32 v1, s3
-; GFX942-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-NEXT:    v_mov_b32_e32 v2, s2
+; GFX942-NEXT:    v_mov_b32_e32 v3, s3
+; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 entry:
   %shuf = shufflevector <4 x i16> %in, <4 x i16> zeroinitializer, <2 x i32> <i32 0, i32 2>
