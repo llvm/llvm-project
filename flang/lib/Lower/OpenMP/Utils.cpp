@@ -12,9 +12,8 @@
 
 #include "Utils.h"
 
-#include "Clauses.h"
-
 #include "ClauseFinder.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
