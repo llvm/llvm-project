@@ -487,6 +487,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
     break;
   }
 
+  Options.MCOptions.DwarfVersion = CodeGenOpts.DwarfVersion;
   Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
   Options.MCOptions.EmitCompactUnwindNonCanonical =
