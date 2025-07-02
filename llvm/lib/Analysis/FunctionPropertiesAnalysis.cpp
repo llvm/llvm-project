@@ -204,16 +204,12 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
     // We instantiate the IR2Vec embedder each time, as having an unique
     // pointer to the embedder as member of the class would make it
     // non-copyable. Instantiating the embedder in itself is not costly.
-    auto EmbOrErr = ir2vec::Embedder::create(IR2VecKind::Symbolic,
+    auto Embedder = ir2vec::Embedder::create(IR2VecKind::Symbolic,
                                              *BB.getParent(), *IR2VecVocab);
-    if (Error Err = EmbOrErr.takeError()) {
-      handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
-        BB.getContext().emitError("Error creating IR2Vec embeddings: " +
-                                  EI.message());
-      });
+    if (!Embedder) {
+      BB.getContext().emitError("Error creating IR2Vec embeddings");
       return;
     }
-    auto Embedder = std::move(*EmbOrErr);
     const auto &BBEmbedding = Embedder->getBBVector(BB);
     // Subtract BBEmbedding from Function embedding if the direction is -1,
     // and add it if the direction is +1.
