@@ -473,7 +473,8 @@ class VectorType;
                                         unsigned *Fast) const override;
 
     EVT getOptimalMemOpType(const MemOp &Op,
-                            const AttributeList &FuncAttributes) const override;
+                            const AttributeList &FuncAttributes,
+                            LLVMContext *Context = nullptr) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
     bool isTruncateFree(EVT SrcVT, EVT DstVT) const override;

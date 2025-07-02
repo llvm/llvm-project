@@ -1662,7 +1662,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   PredictableSelectIsExpensive = Subtarget.predictableSelectIsExpensive();
 
   MaxStoresPerMemsetOptSize = Subtarget.getMaxStoresPerMemset(/*OptSize=*/true);
-  MaxStoresPerMemset = Subtarget.getMaxStoresPerMemset(/*OptSize=*/false);
+  MaxStoresPerMemset = Subtarget.hasVInstructions()
+                           ? Subtarget.getRealMinVLen() / 8
+                           : Subtarget.getMaxStoresPerMemset(/*OptSize=*/false);
 
   MaxGluedStoresPerMemcpy = Subtarget.getMaxGluedStoresPerMemcpy();
   MaxStoresPerMemcpyOptSize = Subtarget.getMaxStoresPerMemcpy(/*OptSize=*/true);
@@ -23749,9 +23751,9 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   return Subtarget.enableUnalignedVectorMem();
 }
 
-
-EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
-                                             const AttributeList &FuncAttributes) const {
+EVT RISCVTargetLowering::getOptimalMemOpType(
+    const MemOp &Op, const AttributeList &FuncAttributes,
+    LLVMContext *Context) const {
   if (!Subtarget.hasVInstructions())
     return MVT::Other;
 
@@ -23779,6 +23781,17 @@ EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
   // fixed vectors.
   if (MinVLenInBytes <= RISCV::RVVBytesPerBlock)
     return MVT::Other;
+
+  // If Op size is greater than LMUL8 memory operation, we don't support inline
+  // of memset. Return EVT based on Op size to avoid redundant splitting and
+  // merging operations if Op size is no greater than LMUL8 memory operation.
+  if (Op.isMemset()) {
+    if (Op.size() > 8 * MinVLenInBytes)
+      return MVT::Other;
+    if (Op.size() % 8 == 0)
+      return EVT::getVectorVT(*Context, MVT::i64, Op.size() / 8);
+    return EVT::getVectorVT(*Context, MVT::i8, Op.size());
+  }
 
   // Prefer i8 for non-zero memset as it allows us to avoid materializing
   // a large scalar constant and instead use vmv.v.x/i to do the

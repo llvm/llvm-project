@@ -331,8 +331,8 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
-                          const AttributeList &FuncAttributes) const override;
+  EVT getOptimalMemOpType(const MemOp &Op, const AttributeList &FuncAttributes,
+                          LLVMContext *Context = nullptr) const override;
 
   bool splitValueIntoRegisterParts(
       SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
