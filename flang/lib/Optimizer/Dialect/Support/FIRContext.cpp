@@ -88,34 +88,49 @@ void fir::setTuneCPU(mlir::ModuleOp mod, llvm::StringRef cpu) {
   mod->setAttr(tuneCpuName, mlir::StringAttr::get(ctx, cpu));
 }
 
-static constexpr const char *ignoreDenormalModeName =
-    "fir.ignore.denormal.mode";
-void fir::setIgnoreDenormalMode(mlir::ModuleOp mod) {
-  auto *ctx = mod.getContext();
-  mod->setAttr(ignoreDenormalModeName, mlir::UnitAttr::get(ctx));
+static constexpr const char *atomicIgnoreDenormalModeName =
+    "fir.atomic_ignore_denormal_mode";
+void fir::setAtomicIgnoreDenormalMode(mlir::ModuleOp mod, bool value) {
+  if(value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicIgnoreDenormalModeName, mlir::UnitAttr::get(ctx));
+  } else {
+    if(mod->hasAttr(atomicIgnoreDenormalModeName))
+      mod->removeAttr(atomicIgnoreDenormalModeName);
+  }
 }
 
-bool fir::getIgnoreDenormalMode(mlir::ModuleOp mod) {
-  return mod->hasAttrOfType<mlir::UnitAttr>(ignoreDenormalModeName);
+bool fir::getAtomicIgnoreDenormalMode(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(atomicIgnoreDenormalModeName);
 }
 
-static constexpr const char *fineGrainedMemoryName = "fir.fine.grained.memory";
-void fir::setFineGrainedMemory(mlir::ModuleOp mod) {
-  auto *ctx = mod.getContext();
-  mod->setAttr(fineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+static constexpr const char *atomicFineGrainedMemoryName = "fir.atomic_fine_grained_memory";
+void fir::setAtomicFineGrainedMemory(mlir::ModuleOp mod, bool value) {
+  if(value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicFineGrainedMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if(mod->hasAttr(atomicFineGrainedMemoryName))
+      mod->removeAttr(atomicFineGrainedMemoryName);
+  }
 }
 
-bool fir::getFineGrainedMemory(mlir::ModuleOp mod) {
-  return mod->hasAttrOfType<mlir::UnitAttr>(fineGrainedMemoryName);
+bool fir::getAtomicFineGrainedMemory(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(atomicFineGrainedMemoryName);
 }
-static constexpr const char *remoteMemoryName = "fir.remote.memory";
-void fir::setRemoteMemory(mlir::ModuleOp mod) {
-  auto *ctx = mod.getContext();
-  mod->setAttr(remoteMemoryName, mlir::UnitAttr::get(ctx));
+static constexpr const char *atomicRemoteMemoryName = "fir.atomic_remote_memory";
+void fir::setAtomicRemoteMemory(mlir::ModuleOp mod, bool value) {
+  if(value) {
+    auto *ctx = mod.getContext();
+    mod->setAttr(atomicRemoteMemoryName, mlir::UnitAttr::get(ctx));
+  } else {
+    if(mod->hasAttr(atomicRemoteMemoryName))
+      mod->removeAttr(atomicRemoteMemoryName);
+  }
 }
 
-bool fir::getRemoteMemory(mlir::ModuleOp mod) {
-  return mod->hasAttrOfType<mlir::UnitAttr>(remoteMemoryName);
+bool fir::getAtomicRemoteMemory(mlir::ModuleOp mod) {
+  return mod->hasAttrOfType<mlir::UnitAttr>(atomicRemoteMemoryName);
 }
 
 llvm::StringRef fir::getTuneCPU(mlir::ModuleOp mod) {
