@@ -4091,7 +4091,7 @@ let Predicates = [HasSVE2_or_SME] in {
   defm WHILERW_PXX : sve2_int_while_rr<0b1, "whilerw", "int_aarch64_sve_whilerw">;
 } // End HasSVE2_or_SME
 
-let Predicates = [HasSVEAES, HasNonStreamingSVE2_or_SSVE_AES] in {
+let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {
   // SVE2 crypto destructive binary operations
   let isCommutable = 1 in {
   def AESE_ZZZ_B : sve2_crypto_des_bin_op<0b00, "aese", ZPR8, int_aarch64_sve_aese, nxv16i8>;
@@ -4116,19 +4116,19 @@ let Predicates = [HasSVE2SM4] in {
   def SM4E_ZZZ_S : sve2_crypto_des_bin_op<0b10, "sm4e", ZPR32, int_aarch64_sve_sm4e, nxv4i32>;
 } // End HasSVE2SM4
 
-let Predicates = [HasSVE2SHA3] in {
+let Predicates = [HasSVESHA3, HasNonStreamingSVE_or_SME2p1] in {
   // SVE2 crypto constructive binary operations
   defm RAX1_ZZZ_D : sve2_crypto_cons_bin_op<0b1, "rax1", ZPR64, int_aarch64_sve_rax1, nxv2i64>;
-} // End HasSVE2SHA3
+} // End HasSVESHA3, HasNonStreamingSVE_or_SME2p1
 
-let Predicates = [HasSVEBitPerm, HasNonStreamingSVE2_or_SSVE_BitPerm] in {
+let Predicates = [HasSVEBitPerm, HasNonStreamingSVE_or_SSVE_BitPerm] in {
   // SVE2 bitwise permute
   defm BEXT_ZZZ : sve2_misc_bitwise<0b1100, "bext", int_aarch64_sve_bext_x>;
   defm BDEP_ZZZ : sve2_misc_bitwise<0b1101, "bdep", int_aarch64_sve_bdep_x>;
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 }
 
-let Predicates = [HasSVEAES2, HasNonStreamingSVE2_or_SSVE_AES] in {
+let Predicates = [HasSVEAES2, HasNonStreamingSVE_or_SSVE_AES] in {
   // SVE_AES2 multi-vector instructions (x2)
   def AESE_2ZZI_B    : sve_crypto_binary_multi2<0b000, "aese">;
   def AESD_2ZZI_B    : sve_crypto_binary_multi2<0b010, "aesd">;
