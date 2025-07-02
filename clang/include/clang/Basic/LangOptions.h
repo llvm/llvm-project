@@ -77,7 +77,7 @@ public:
   using RoundingMode = llvm::RoundingMode;
   using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
 
-  /// For ASTs produced with different value, signifies their level of
+  /// For ASTs produced with different option value, signifies their level of
   /// compatibility.
   enum class CompatibilityKind {
     /// Does affect the construction of the AST in a way that does prevent
