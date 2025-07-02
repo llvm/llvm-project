@@ -684,7 +684,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (mlir::isa<cir::BoolType>(ty))
       return builder.getCIRBoolAttr(value.getInt().getZExtValue());
     assert(mlir::isa<cir::IntType>(ty) && "expected integral type");
-    return cgm.getBuilder().getAttr<cir::IntAttr>(ty, value.getInt());
+    return cir::IntAttr::get(ty, value.getInt());
   }
   case APValue::Float: {
     const llvm::APFloat &init = value.getFloat();
@@ -789,8 +789,8 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       llvm::APSInt real = value.getComplexIntReal();
       llvm::APSInt imag = value.getComplexIntImag();
       return builder.getAttr<cir::ConstComplexAttr>(
-          complexType, builder.getAttr<cir::IntAttr>(complexElemTy, real),
-          builder.getAttr<cir::IntAttr>(complexElemTy, imag));
+          complexType, cir::IntAttr::get(complexElemTy, real),
+          cir::IntAttr::get(complexElemTy, imag));
     }
 
     assert(isa<cir::FPTypeInterface>(complexElemTy) &&
