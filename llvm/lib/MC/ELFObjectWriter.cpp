@@ -28,7 +28,6 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCFixupKindInfo.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -399,8 +398,9 @@ static bool isIFunc(const MCSymbolELF *Symbol) {
     const MCSymbolRefExpr *Value;
     if (!Symbol->isVariable() ||
         !(Value = dyn_cast<MCSymbolRefExpr>(Symbol->getVariableValue())) ||
-        Value->getKind() != MCSymbolRefExpr::VK_None ||
-        mergeTypeForSet(Symbol->getType(), ELF::STT_GNU_IFUNC) != ELF::STT_GNU_IFUNC)
+        Value->getSpecifier() ||
+        mergeTypeForSet(Symbol->getType(), ELF::STT_GNU_IFUNC) !=
+            ELF::STT_GNU_IFUNC)
       return false;
     Symbol = &cast<MCSymbolELF>(Value->getSymbol());
   }

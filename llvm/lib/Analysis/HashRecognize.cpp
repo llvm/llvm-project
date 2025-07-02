@@ -472,7 +472,7 @@ static bool checkExtractBits(const KnownBits &Known, unsigned N,
 /// polynomial. The optimization technique of table-lookup for CRC is also
 /// called the Sarwate algorithm.
 CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
-                                        bool ByteOrderSwapped) const {
+                                        bool ByteOrderSwapped) {
   unsigned BW = GenPoly.getBitWidth();
   CRCTable Table;
   Table[0] = APInt::getZero(BW);
@@ -686,6 +686,13 @@ void HashRecognize::print(raw_ostream &OS) const {
 void HashRecognize::dump() const { print(dbgs()); }
 #endif
 
+std::optional<PolynomialInfo> HashRecognize::getResult() const {
+  auto Res = HashRecognize(L, SE).recognizeCRC();
+  if (std::holds_alternative<PolynomialInfo>(Res))
+    return std::get<PolynomialInfo>(Res);
+  return std::nullopt;
+}
+
 HashRecognize::HashRecognize(const Loop &L, ScalarEvolution &SE)
     : L(L), SE(SE) {}
 
@@ -693,13 +700,6 @@ PreservedAnalyses HashRecognizePrinterPass::run(Loop &L,
                                                 LoopAnalysisManager &AM,
                                                 LoopStandardAnalysisResults &AR,
                                                 LPMUpdater &) {
-  AM.getResult<HashRecognizeAnalysis>(L, AR).print(OS);
+  HashRecognize(L, AR.SE).print(OS);
   return PreservedAnalyses::all();
 }
-
-HashRecognize HashRecognizeAnalysis::run(Loop &L, LoopAnalysisManager &AM,
-                                         LoopStandardAnalysisResults &AR) {
-  return {L, AR.SE};
-}
-
-AnalysisKey HashRecognizeAnalysis::Key;

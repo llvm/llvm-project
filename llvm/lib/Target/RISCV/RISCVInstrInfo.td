@@ -502,6 +502,12 @@ def uimm6gt32 : ImmLeaf<XLenVT, [{
 // Addressing modes.
 def AddrRegImm : ComplexPattern<iPTR, 2, "SelectAddrRegImm">;
 
+class AddrRegRegScale<int N>
+    : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<"#N#">">;
+class AddrRegZextRegScale<int N>
+    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<"#N#", 32>",
+                     [], [], 10>;
+
 // Return the negation of an immediate value.
 def NegImm : SDNodeXForm<imm, [{
   return CurDAG->getSignedTargetConstant(-N->getSExtValue(), SDLoc(N),
@@ -1686,7 +1692,7 @@ defm : BccPat<SETGE, BGE>;
 defm : BccPat<SETULT, BLTU>;
 defm : BccPat<SETUGE, BGEU>;
 
-let Predicates = [HasStdExtCOrZca, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : BrccCompressOpt<SETEQ, BEQ>;
   def : BrccCompressOpt<SETNE, BNE>;
 }
@@ -2266,6 +2272,9 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvqdotq.td"
+
+// Packed SIMD
+include "RISCVInstrInfoP.td"
 
 // Compressed
 include "RISCVInstrInfoC.td"

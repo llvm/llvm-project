@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/Parallel.h"
@@ -201,7 +202,8 @@ struct ChunkRange {
 class Writer {
 public:
   Writer(COFFLinkerContext &c)
-      : buffer(c.e.outputBuffer), delayIdata(c), ctx(c) {}
+      : buffer(c.e.outputBuffer), strtab(StringTableBuilder::WinCOFF),
+        delayIdata(c), ctx(c) {}
   void run();
 
 private:
@@ -281,7 +283,7 @@ private:
 
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
-  std::vector<char> strtab;
+  StringTableBuilder strtab;
   std::vector<llvm::object::coff_symbol16> outputSymtab;
   std::vector<ECCodeMapEntry> codeMap;
   IdataContents idata;
@@ -1434,14 +1436,6 @@ void Writer::assignOutputSectionIndices() {
           sc->setOutputSectionIdx(mc->getOutputSectionIdx());
 }
 
-size_t Writer::addEntryToStringTable(StringRef str) {
-  assert(str.size() > COFF::NameSize);
-  size_t offsetOfEntry = strtab.size() + 4; // +4 for the size field
-  strtab.insert(strtab.end(), str.begin(), str.end());
-  strtab.push_back('\0');
-  return offsetOfEntry;
-}
-
 std::optional<coff_symbol16> Writer::createSymbol(Defined *def) {
   coff_symbol16 sym;
   switch (def->kind()) {
@@ -1482,7 +1476,8 @@ std::optional<coff_symbol16> Writer::createSymbol(Defined *def) {
   StringRef name = def->getName();
   if (name.size() > COFF::NameSize) {
     sym.Name.Offset.Zeroes = 0;
-    sym.Name.Offset.Offset = addEntryToStringTable(name);
+    sym.Name.Offset.Offset = 0; // Filled in later.
+    strtab.add(name);
   } else {
     memset(sym.Name.ShortName, 0, COFF::NameSize);
     memcpy(sym.Name.ShortName, name.data(), name.size());
@@ -1514,6 +1509,7 @@ void Writer::createSymbolAndStringTable() {
   // solution where discardable sections have long names preserved and
   // non-discardable sections have their names truncated, to ensure that any
   // section which is mapped at runtime also has its name mapped at runtime.
+  SmallVector<OutputSection *> longNameSections;
   for (OutputSection *sec : ctx.outputSections) {
     if (sec->name.size() <= COFF::NameSize)
       continue;
@@ -1525,9 +1521,13 @@ void Writer::createSymbolAndStringTable() {
           << " is longer than 8 characters and will use a non-standard string "
              "table";
     }
-    sec->setStringTableOff(addEntryToStringTable(sec->name));
+    // Put the section name in the begin of strtab so that its offset is less
+    // than Max7DecimalOffset otherwise lldb/gdb will not read it.
+    strtab.add(sec->name, /*Priority=*/UINT8_MAX);
+    longNameSections.push_back(sec);
   }
 
+  std::vector<std::pair<size_t, StringRef>> longNameSymbols;
   if (ctx.config.writeSymtab) {
     for (ObjFile *file : ctx.objFileInstances) {
       for (Symbol *b : file->getSymbols()) {
@@ -1542,15 +1542,22 @@ void Writer::createSymbolAndStringTable() {
             continue;
         }
 
-        if (std::optional<coff_symbol16> sym = createSymbol(d))
+        if (std::optional<coff_symbol16> sym = createSymbol(d)) {
+          if (d->getName().size() > COFF::NameSize)
+            longNameSymbols.emplace_back(outputSymtab.size(), d->getName());
           outputSymtab.push_back(*sym);
+        }
 
         if (auto *dthunk = dyn_cast<DefinedImportThunk>(d)) {
           if (!dthunk->wrappedSym->writtenToSymtab) {
             dthunk->wrappedSym->writtenToSymtab = true;
             if (std::optional<coff_symbol16> sym =
-                    createSymbol(dthunk->wrappedSym))
+                    createSymbol(dthunk->wrappedSym)) {
+              if (d->getName().size() > COFF::NameSize)
+                longNameSymbols.emplace_back(outputSymtab.size(),
+                                             dthunk->wrappedSym->getName());
               outputSymtab.push_back(*sym);
+            }
           }
         }
       }
@@ -1560,11 +1567,19 @@ void Writer::createSymbolAndStringTable() {
   if (outputSymtab.empty() && strtab.empty())
     return;
 
+  strtab.finalize();
+  for (OutputSection *sec : longNameSections)
+    sec->setStringTableOff(strtab.getOffset(sec->name));
+  for (auto P : longNameSymbols) {
+    coff_symbol16 &sym = outputSymtab[P.first];
+    sym.Name.Offset.Offset = strtab.getOffset(P.second);
+  }
+
   // We position the symbol table to be adjacent to the end of the last section.
   uint64_t fileOff = fileSize;
   pointerToSymbolTable = fileOff;
   fileOff += outputSymtab.size() * sizeof(coff_symbol16);
-  fileOff += 4 + strtab.size();
+  fileOff += strtab.getSize();
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
@@ -1945,9 +1960,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   // Create the string table, it follows immediately after the symbol table.
   // The first 4 bytes is length including itself.
   buf = reinterpret_cast<uint8_t *>(&symbolTable[numberOfSymbols]);
-  write32le(buf, strtab.size() + 4);
-  if (!strtab.empty())
-    memcpy(buf + 4, strtab.data(), strtab.size());
+  strtab.write(buf);
 }
 
 void Writer::openFile(StringRef path) {
