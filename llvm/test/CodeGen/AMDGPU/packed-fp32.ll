@@ -490,18 +490,43 @@ define amdgpu_kernel void @fadd_v2_v_lit_hi0(ptr addrspace(1) %a) {
 ; GFX900-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX900-NEXT:    s_endpgm
 ;
-; PACKED-LABEL: fadd_v2_v_lit_hi0:
-; PACKED:       ; %bb.0:
-; PACKED-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; PACKED-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; PACKED-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; PACKED-NEXT:    s_mov_b64 s[2:3], 0x3f800000
-; PACKED-NEXT:    s_waitcnt lgkmcnt(0)
-; PACKED-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
-; PACKED-NEXT:    s_waitcnt vmcnt(0)
-; PACKED-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3]
-; PACKED-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
-; PACKED-NEXT:    s_endpgm
+; GFX90A-SDAG-LABEL: fadd_v2_v_lit_hi0:
+; GFX90A-SDAG:       ; %bb.0:
+; GFX90A-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX90A-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX90A-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX90A-SDAG-NEXT:    s_mov_b64 s[2:3], 0x3f800000
+; GFX90A-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX90A-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX90A-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3]
+; GFX90A-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX90A-SDAG-NEXT:    s_endpgm
+;
+; PACKED-GISEL-LABEL: fadd_v2_v_lit_hi0:
+; PACKED-GISEL:       ; %bb.0:
+; PACKED-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; PACKED-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; PACKED-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; PACKED-GISEL-NEXT:    s_mov_b64 s[2:3], 0x3f800000
+; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-GISEL-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; PACKED-GISEL-NEXT:    s_waitcnt vmcnt(0)
+; PACKED-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], s[2:3]
+; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; PACKED-GISEL-NEXT:    s_endpgm
+;
+; GFX942-SDAG-LABEL: fadd_v2_v_lit_hi0:
+; GFX942-SDAG:       ; %bb.0:
+; GFX942-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX942-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX942-SDAG-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    global_load_dwordx2 v[0:1], v2, s[0:1]
+; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-SDAG-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 1.0
+; GFX942-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; GFX942-SDAG-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
