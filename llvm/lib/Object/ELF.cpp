@@ -885,9 +885,7 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
         for (uint32_t BlockIndex = 0; !MetadataDecodeErr && !ULEBSizeErr &&
                                       Cur && (BlockIndex < NumBlocksInBBRange);
              ++BlockIndex) {
-          uint32_t ID = Version >= 2
-                            ? readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr)
-                            : BlockIndex;
+          uint32_t ID = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           uint32_t Offset = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
           // Read the callsite offsets.
           uint32_t LastCallsiteOffset = 0;
@@ -907,11 +905,6 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
           uint32_t Size = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr) +
                           LastCallsiteOffset;
           uint32_t MD = readULEB128As<uint32_t>(Data, Cur, ULEBSizeErr);
-          if (Version >= 1) {
-            // Offset is calculated relative to the end of the previous BB.
-            Offset += PrevBBEndOffset;
-            PrevBBEndOffset = Offset + Size;
-          }
           Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
               BBAddrMap::BBEntry::Metadata::decode(MD);
           if (!MetadataOrErr) {
@@ -919,7 +912,8 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
             break;
           }
           BBEntries.push_back(
-              {ID, Offset, Size, *MetadataOrErr, CallsiteOffsets});
+              {ID, Offset + PrevBBEndOffset, Size, *MetadataOrErr, CallsiteOffsets});
+          PrevBBEndOffset += Offset + Size;
         }
         TotalNumBlocks += BBEntries.size();
       }
