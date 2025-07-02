@@ -276,7 +276,7 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
               "%p ConnectionFileDescriptor::Read()  fd = %" PRIu64
               ", dst = %p, dst_len = %" PRIu64 ") => %" PRIu64 ", error = %s",
               static_cast<void *>(this),
-              static_cast<file_t>(m_io_sp->GetWaitableHandle()),
+              static_cast<uint64_t>(m_io_sp->GetWaitableHandle()),
               static_cast<void *>(dst), static_cast<uint64_t>(dst_len),
               static_cast<uint64_t>(bytes_read), error.AsCString());
   }
@@ -380,7 +380,7 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
               "%p ConnectionFileDescriptor::Write(fd = %" PRIu64
               ", src = %p, src_len = %" PRIu64 ") => %" PRIu64 " (error = %s)",
               static_cast<void *>(this),
-              static_cast<file_t>(m_io_sp->GetWaitableHandle()),
+              static_cast<uint64_t>(m_io_sp->GetWaitableHandle()),
               static_cast<const void *>(src), static_cast<uint64_t>(src_len),
               static_cast<uint64_t>(bytes_sent), error.AsCString());
   }
