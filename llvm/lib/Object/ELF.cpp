@@ -317,7 +317,6 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_SYMPART);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_EHDR);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_PHDR);
-    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP_V0);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
@@ -833,33 +832,24 @@ decodeBBAddrMapImpl(const ELFFile<ELFT> &EF,
   BBAddrMap::Features FeatEnable{};
   while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
          Cur.tell() < Content.size()) {
-    if (Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
-      Version = Data.getU8(Cur);
-      if (!Cur)
-        break;
-      if (Version > 3)
-        return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
-                           Twine(static_cast<int>(Version)));
-      Feature = Data.getU8(Cur); // Feature byte
-      if (!Cur)
-        break;
-      auto FeatEnableOrErr = BBAddrMap::Features::decode(Feature);
-      if (!FeatEnableOrErr)
-        return FeatEnableOrErr.takeError();
-      FeatEnable = *FeatEnableOrErr;
-      if (FeatEnable.hasPGOAnalysis() && Version < 2)
-        return createError(
-            "version should be >= 2 for SHT_LLVM_BB_ADDR_MAP when "
-            "PGO features are enabled: version = " +
-            Twine(static_cast<int>(Version)) +
-            " feature = " + Twine(static_cast<int>(Feature)));
-      if (FeatEnable.CallsiteOffsets && Version < 3)
-        return createError(
-            "version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
-            "callsite offsets feature is enabled: version = " +
-            Twine(static_cast<int>(Version)) +
-            " feature = " + Twine(static_cast<int>(Feature)));
-    }
+    Version = Data.getU8(Cur);
+    if (!Cur)
+      break;
+    if (Version < 2 || Version > 3)
+      return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
+                         Twine(static_cast<int>(Version)));
+    Feature = Data.getU8(Cur); // Feature byte
+    if (!Cur)
+      break;
+    auto FeatEnableOrErr = BBAddrMap::Features::decode(Feature);
+    if (!FeatEnableOrErr)
+      return FeatEnableOrErr.takeError();
+    FeatEnable = *FeatEnableOrErr;
+    if (FeatEnable.CallsiteOffsets && Version < 3)
+      return createError("version should be >= 3 for SHT_LLVM_BB_ADDR_MAP when "
+                         "callsite offsets feature is enabled: version = " +
+                         Twine(static_cast<int>(Version)) +
+                         " feature = " + Twine(static_cast<int>(Feature)));
     uint32_t NumBlocksInBBRange = 0;
     uint32_t NumBBRanges = 1;
     typename ELFFile<ELFT>::uintX_t RangeBaseAddress = 0;
