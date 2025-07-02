@@ -10,11 +10,11 @@ define i64 @test(ptr addrspace(1) %p) !dbg !11 {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec, debug-instr-number 1 :: (load (s32) from %ir.p, addrspace 1)
-  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[GLOBAL_LOAD_DWORD]], implicit $exec, debug-instr-number 2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[V_ASHRREV_I32_e64_]]
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD killed [[COPY2]], 0, 0, implicit $exec,  debug-instr-number 1 :: (load (s32) from %ir.p, addrspace 1)
+  ; CHECK-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[GLOBAL_LOAD_DWORD]], implicit $exec,  debug-instr-number 2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY killed [[V_ASHRREV_I32_e64_]]
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[GLOBAL_LOAD_DWORD]], %subreg.sub0, killed [[COPY3]], %subreg.sub1
-  ; CHECK-NEXT:   DBG_INSTR_REF !17, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, i64)), dbg-instr-ref(1, 0), dbg-instr-ref(2, 0), debug-location !18
+  ; CHECK-NEXT:   DBG_INSTR_REF !17, !DIExpression(DIOpArg(0, i32), DIOpArg(1, i32), DIOpComposite(2, i64)), dbg-instr-ref(1, 0), dbg-instr-ref(2, 0),  debug-location !18
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; CHECK-NEXT:   $vgpr0 = COPY [[GLOBAL_LOAD_DWORD]]
   ; CHECK-NEXT:   $vgpr1 = COPY [[COPY4]]
