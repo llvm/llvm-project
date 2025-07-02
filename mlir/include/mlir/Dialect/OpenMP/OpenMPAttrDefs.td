@@ -23,6 +23,21 @@ class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
 }
 
 //===----------------------------------------------------------------------===//
+// AtomicControlAttr
+//===----------------------------------------------------------------------===//
+
+// Atomic control attributes hold information about architectural
+// characteristics which are required for lowering atomic operations.
+def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
+  let parameters =
+      (ins DefaultValuedParameter<"bool", "false">:$ignore_denormal_mode,
+          DefaultValuedParameter<"bool", "false">:$fine_grained_memory,
+          DefaultValuedParameter<"bool", "false">:$remote_memory);
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DeclareTargetAttr
 //===----------------------------------------------------------------------===//
 
@@ -50,21 +65,6 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
     DefaultValuedParameter<"bool", "false">:$no_gpu_lib,
     DefaultValuedParameter<"uint32_t", "50">:$openmp_device_version
   );
-
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
-//===----------------------------------------------------------------------===//
-// AtomicControlAttr
-//===----------------------------------------------------------------------===//
-
-// Atomic control attributes hold information about architectural
-// characteristics which are required for lowering atomic operations.
-def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
-  let parameters =
-      (ins DefaultValuedParameter<"bool", "false">:$ignore_denormal_mode,
-          DefaultValuedParameter<"bool", "false">:$fine_grained_memory,
-          DefaultValuedParameter<"bool", "false">:$remote_memory);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
