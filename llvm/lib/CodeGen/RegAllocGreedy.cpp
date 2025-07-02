@@ -2290,7 +2290,6 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
   RecoloringStack RecolorStack;
-
   MCRegister Reg =
       selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack);
   if (Reg == ~0U && (CutOffInfo != CO_None)) {
