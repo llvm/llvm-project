@@ -1794,6 +1794,18 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
 }
 
 // Vector extraction with constant index.
+foreach imm = 16...31 in {
+  defvar Imm = !and(imm, 15);
+  def : Pat<(i64 (vector_extract v32i8:$xj, imm)),
+            (VPICKVE2GR_B (EXTRACT_SUBREG (XVPERMI_D v32i8:$xj, 14), sub_128),
+                Imm)>;
+}
+foreach imm = 8...15 in {
+  defvar Imm = !and(imm, 7);
+  def : Pat<(i64 (vector_extract v16i16:$xj, imm)),
+            (VPICKVE2GR_H (EXTRACT_SUBREG (XVPERMI_D v16i16:$xj, 14), sub_128),
+                Imm)>;
+}
 def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
           (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
 def : Pat<(i64 (vector_extract v16i16:$xj, uimm3:$imm)),
