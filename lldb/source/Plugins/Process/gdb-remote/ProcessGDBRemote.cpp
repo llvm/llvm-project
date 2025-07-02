@@ -895,7 +895,15 @@ Status ProcessGDBRemote::HandleGPUActions(const GPUActions &gpu_action) {
       return error;
   }
 
-  // Any commands below require a GPU process
+  // Any commands below require a GPU process and it needs to have published
+  // its public state as stopped, otherwise the following unwanted behaviors
+  // might occur:
+  //  - if the state is running, then these actions will fail
+  //  - if the public state is not yet stopped, then there might be race
+  //    conditions in which the action triggered by the code below ends up
+  //    using stale information, as the GPU target hasn't finished processing
+  //    its internal metadata. It's worth mentioning that there are multiple
+  //    threads operating on the GPU target.
   if (!(gpu_action.load_libraries || gpu_action.resume_gpu_process || 
       gpu_action.wait_for_gpu_process_to_resume))
     return error;
