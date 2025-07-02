@@ -14,6 +14,9 @@
 #ifndef LLVM_LIB_TARGET_DIRECTX_DXILPOSTOPTIMIZATIONVALIDATION_H
 #define LLVM_LIB_TARGET_DIRECTX_DXILPOSTOPTIMIZATIONVALIDATION_H
 
+#include "DXILRootSignature.h"
+#include "llvm/ADT/IntervalMap.h"
+#include "llvm/Analysis/DXILResource.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {

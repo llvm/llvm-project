@@ -10,12 +10,9 @@
 #include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
-#include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/Analysis/DXILResource.h"
-#include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -173,8 +170,7 @@ public:
         getAnalysis<DXILResourceWrapperPass>().getResourceMap();
     DXILResourceBindingInfo &DRBI =
         getAnalysis<DXILResourceBindingWrapperPass>().getBindingInfo();
-
-    RootSignatureBindingInfo& RSBI =
+    RootSignatureBindingInfo &RSBI =
         getAnalysis<RootSignatureAnalysisWrapper>().getRSInfo();
     dxil::ModuleMetadataInfo &MMI =
         getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
