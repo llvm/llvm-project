@@ -171,6 +171,8 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TranslationUnitDeps TU;
 
   TU.ID.ContextHash = std::move(ContextHash);
+  TU.ID.ModuleName = std::move(ModuleName);
+  TU.NamedModuleDeps = std::move(NamedModuleDeps);
   TU.FileDeps = std::move(Dependencies);
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
   TU.Commands = std::move(Commands);
