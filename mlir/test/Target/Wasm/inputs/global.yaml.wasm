@@ -55,4 +55,9 @@ Sections:
         InitExpr:
           Opcode:          F64_CONST
           Value:           4623507967449235456
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            230023016A230223036A6A0B
 ...

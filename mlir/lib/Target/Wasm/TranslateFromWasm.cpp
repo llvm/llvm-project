@@ -300,6 +300,12 @@ public:
     return valueStack.pushResults(results, &currentOpLoc.value());
   }
 
+  /// The local.set and local.tee operations behave similarly and only differ
+  /// on their return value. This function factorizes the behavior of the two
+  /// operations in one place.
+  template <typename OpToCreate>
+  parsed_inst_t parseSetOrTee(OpBuilder &);
+
 private:
   std::optional<Location> currentOpLoc;
   ParserHead &parser;
@@ -784,6 +790,70 @@ ExpressionParser::parse(OpBuilder &builder,
     if (failed(pushResults(res)))
       return failure();
   }
+}
+
+template <>
+inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
+    WasmBinaryEncoding::OpCode::localGet>(OpBuilder &builder) {
+  auto id = parser.parseLiteral<uint32_t>();
+  auto instLoc = *currentOpLoc;
+  if (failed(id))
+    return failure();
+  if (*id >= locals.size())
+    return emitError(instLoc, "Invalid local index. Function has ")
+           << locals.size() << " accessible locals, received index " << *id;
+  return {{builder.create<LocalGetOp>(instLoc, locals[*id]).getResult()}};
+}
+
+template <>
+inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
+    WasmBinaryEncoding::OpCode::globalGet>(OpBuilder &builder) {
+  auto id = parser.parseLiteral<uint32_t>();
+  auto instLoc = *currentOpLoc;
+  if (failed(id))
+    return failure();
+  if (*id >= symbols.globalSymbols.size())
+    return emitError(instLoc, "Invalid global index. Function has ")
+           << symbols.globalSymbols.size()
+           << " accessible globals, received index " << *id;
+  auto globalVar = symbols.globalSymbols[*id];
+  auto globalOp = builder.create<GlobalGetOp>(instLoc, globalVar.globalType,
+                                              globalVar.symbol);
+
+  return {{globalOp.getResult()}};
+}
+
+template <typename OpToCreate>
+parsed_inst_t ExpressionParser::parseSetOrTee(OpBuilder &builder) {
+  auto id = parser.parseLiteral<uint32_t>();
+  if (failed(id))
+    return failure();
+  if (*id >= locals.size())
+    return emitError(*currentOpLoc, "Invalid local index. Function has ")
+           << locals.size() << " accessible locals, received index " << *id;
+  if (valueStack.empty())
+    return emitError(
+        *currentOpLoc,
+        "Invalid stack access, trying to access a value on an empty stack.");
+
+  parsed_inst_t poppedOp = popOperands(locals[*id].getType().getElementType());
+  if (failed(poppedOp))
+    return failure();
+  return {
+      builder.create<OpToCreate>(*currentOpLoc, locals[*id], poppedOp->front())
+          ->getResults()};
+}
+
+template <>
+inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
+    WasmBinaryEncoding::OpCode::localSet>(OpBuilder &builder) {
+  return parseSetOrTee<LocalSetOp>(builder);
+}
+
+template <>
+inline parsed_inst_t ExpressionParser::parseSpecificInstruction<
+    WasmBinaryEncoding::OpCode::localTee>(OpBuilder &builder) {
+  return parseSetOrTee<LocalTeeOp>(builder);
 }
 
 template <typename T>
