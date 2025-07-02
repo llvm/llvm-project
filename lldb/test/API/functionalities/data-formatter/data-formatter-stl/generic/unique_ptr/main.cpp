@@ -15,7 +15,7 @@ struct NodeU {
 // representation when the type of the second element is an empty class. So
 // we need a deleter class with a dummy data member to trigger the other path.
 struct NonEmptyIntDeleter {
-  void operator()(int* ptr) { delete ptr; }
+  void operator()(int *ptr) { delete ptr; }
 
   int dummy_ = 9999;
 };
