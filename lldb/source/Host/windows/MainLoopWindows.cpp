@@ -19,6 +19,7 @@
 #include <cerrno>
 #include <csignal>
 #include <ctime>
+#include <thread>
 #include <io.h>
 #include <vector>
 #include <winsock2.h>
