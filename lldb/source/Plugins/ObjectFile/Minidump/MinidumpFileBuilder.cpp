@@ -977,6 +977,7 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
   const lldb::addr_t addr = range.range.start();
   const lldb::addr_t size = range.range.size();
   Log *log = GetLog(LLDBLog::Object);
+  uint64_t total_bytes_read = 0;
   Status addDataError;
   Process::ReadMemoryChunkCallback callback =
       [&](Status &error, lldb::addr_t current_addr, const void *buf,
@@ -984,7 +985,7 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     if (error.Fail() || bytes_read == 0) {
       LLDB_LOGF(log,
                 "Failed to read memory region at: 0x%" PRIx64
-                ". Bytes read: %" PRIx64 ", error: %s",
+                ". Bytes read: 0x%" PRIx64 ", error: %s",
                 current_addr, bytes_read, error.AsCString());
 
       // If we failed in a memory read, we would normally want to skip
@@ -997,6 +998,10 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
       return lldb_private::IterationAction::Stop;
     }
 
+    if (current_addr != addr + total_bytes_read) {
+      LLDB_LOGF(log, "Current addr is at expected address, 0x%" PRIx64 ", expected at 0x%" PRIx64, current_addr, addr + total_bytes_read);
+    }
+
     // Write to the minidump file with the chunk potentially flushing to
     // disk.
     // This error will be captured by the outer scope and is considered fatal.
@@ -1006,13 +1011,14 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     if (addDataError.Fail())
       return lldb_private::IterationAction::Stop;
 
+    total_bytes_read += bytes_read;
     // If we have a partial read, report it, but only if the partial read
     // didn't finish reading the entire region.
     if (bytes_read != data_buffer.GetByteSize() &&
-        current_addr + bytes_read != size) {
+        total_bytes_read != size) {
       LLDB_LOGF(log,
-                "Memory region at: %" PRIx64 " partiall read 0x%" PRIx64
-                " bytes out of %" PRIx64 " bytes.",
+                "Memory region at: 0x%" PRIx64 " partial read 0x%" PRIx64
+                " bytes out of 0x%" PRIx64 " bytes.",
                 current_addr, bytes_read,
                 data_buffer.GetByteSize() - bytes_read);
 
@@ -1059,7 +1065,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
 
     LLDB_LOGF(log,
               "AddMemoryList %zu/%zu reading memory for region "
-              "(%" PRIx64 " bytes) [%" PRIx64 ", %" PRIx64 ")",
+              "(0x%" PRIx64 " bytes) [0x%" PRIx64 ", 0x%" PRIx64 ")",
               region_index, ranges.size(), size, addr, addr + size);
     ++region_index;
 
@@ -1130,7 +1136,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
   // Capture the starting offset for all the descriptors so we can clean them up
   // if needed.
   offset_t starting_offset =
-      GetCurrentDataEndOffset() + sizeof(llvm::support::ulittle64_t);
+      GetCurrentDataEndOffset() + sizeof(llvm::minidump::Memory64ListHeader);
   // The base_rva needs to start after the directories, which is right after
   // this 8 byte variable.
   offset_t base_rva =
