@@ -7,5 +7,12 @@ PROGRAM P
   !CHECK-NOT: FALSE
   WRITE(*,*) 'FALSE'
 #endif
+#if ((1 || 2) != 3)
+  !CHECK: TRUE
+  WRITE(*,*) 'TRUE'
+#else
+  !CHECK-NOT: FALSE
+  WRITE(*,*) 'FALSE'
+#endif
 END PROGRAM
 
