@@ -1276,14 +1276,19 @@ static std::int64_t ExpressionValue(const TokenSequence &token,
       left = right >= 64 ? 0 : left >> right;
       break;
     case BITAND:
-    case AND:
       left = left & right;
+      break;
+    // (bool)(1 && 2) != (bool)(1 & 2), we can't use bitwise AND here.
+    case AND:
+      left = left && right;
       break;
     case BITXOR:
       left = left ^ right;
       break;
-    case BITOR:
+    // (bool)(1 || 2) == (bool)(1 | 2), seems like we can use `|` here.
+    // But should we?
     case OR:
+    case BITOR:
       left = left | right;
       break;
     case LT:
