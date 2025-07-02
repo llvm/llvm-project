@@ -174,7 +174,13 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
 // even if new frame records are not created.
 static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
                                         const llvm::Triple &Triple) {
-  if (Triple.isARM() || Triple.isThumb()) {
+  switch (Triple.getArch()) {
+  default:
+    return false;
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
     // For 32-bit Arm, the -mframe-chain=aapcs and -mframe-chain=aapcs+leaf
     // options require the frame pointer register to be reserved (or point to a
     // new AAPCS-compilant frame record), even with	-fno-omit-frame-pointer.
@@ -183,8 +189,13 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
       return V != "none";
     }
     return false;
+
+  case llvm::Triple::aarch64:
+    // Arm64 Windows requires that the frame chain is valid, as there is no
+    // way to indicate during a stack walk that a frame has used the frame
+    // pointer as a general purpose register.
+    return Triple.isOSWindows();
   }
-  return false;
 }
 
 // True if a target-specific option causes -fno-omit-frame-pointer to also
