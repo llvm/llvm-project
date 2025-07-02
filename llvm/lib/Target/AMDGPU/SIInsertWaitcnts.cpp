@@ -197,8 +197,7 @@ static bool isNormalMode(InstCounterType MaxCounter) {
 
 VmemType getVmemType(const MachineInstr &Inst) {
   assert(updateVMCntOnly(Inst));
-  if (!SIInstrInfo::isMIMG(Inst) && !SIInstrInfo::isVIMAGE(Inst) &&
-      !SIInstrInfo::isVSAMPLE(Inst))
+  if (!SIInstrInfo::isImage(Inst))
     return VMEM_NOSAMPLER;
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
   const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
