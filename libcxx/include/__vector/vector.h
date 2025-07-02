@@ -850,7 +850,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
   std::swap(this->__begin_, __v.__data_.__begin_);
   std::swap(this->__end_, __v.__data_.__end_);
   std::swap(this->__cap_, __v.__data_.__cap_);
-  __v.__data_.__first_ = __v.begin();
+  __v.__data_.__update_first(__v.begin());
   __annotate_new(size());
 }
 
