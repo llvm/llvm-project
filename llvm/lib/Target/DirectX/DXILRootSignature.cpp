@@ -28,7 +28,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <utility>
 
@@ -639,10 +638,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  if (HasRun)
-    return false;
-  FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
-      RootSignatureBindingInfo(analyzeModule(M)));
+  if (!FuncToRsMap)
+    FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
+        RootSignatureBindingInfo(analyzeModule(M)));
   return false;
 }
 
