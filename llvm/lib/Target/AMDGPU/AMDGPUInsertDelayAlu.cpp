@@ -156,10 +156,9 @@ public:
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
     }
 
-    // Update this DelayInfo after issuing an instruction. IsVALU should be 1
-    // when issuing a (non-TRANS) VALU, else 0. IsTRANS should be 1 when issuing
-    // a TRANS, else 0. Cycles is the number of cycles it takes to issue the
-    // instruction.  Return true if there is no longer any useful delay info.
+    // Update this DelayInfo after issuing an instruction of the specified type.
+    // Cycles is the number of cycles it takes to issue the instruction.  Return
+    // true if there is no longer any useful delay info.
     bool advance(DelayType Type, unsigned Cycles) {
       bool Erase = true;
 
