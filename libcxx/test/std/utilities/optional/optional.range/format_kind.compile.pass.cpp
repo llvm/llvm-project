@@ -11,7 +11,4 @@
 #include <format>
 #include <optional>
 
-int main() {
-  static_assert(std::format_kind<std::optional<int>>);
-  return 0;
-}
+static_assert(std::format_kind<std::optional<int>>);

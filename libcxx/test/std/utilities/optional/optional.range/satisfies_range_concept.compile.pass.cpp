@@ -11,7 +11,4 @@
 #include <optional>
 #include <ranges>
 
-int main() {
-  static_assert(std::ranges::range<std::optional<int>>);
-  return 0;
-}
+static_assert(std::ranges::range<std::optional<int>>);

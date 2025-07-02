@@ -8,21 +8,13 @@
 
 // UNSUPPORTED: std-at-least-c++26
 
-#include <iterator>
-#include <optional>
+using Iter = std::optional<int>::iterator;
 
-int main() {
-  using Iter = std::optional<int>::iterator;
+static_assert(std::random_access_iterator<Iter>);
+static_assert(std::contiguous_iterator<Iter>);
 
-  std::iterator_traits<int> s;
-  static_assert(std::random_access_iterator<Iter>);
-  static_assert(std::contiguous_iterator<Iter>);
-
-  static_assert(std::is_same_v<typename std::iterator_traits<Iter>::value_type, int>);
-  static_assert(std::is_same_v<typename std::iterator_traits<Iter>::difference_type, std::ptrdiff_t>);
-  static_assert(std::is_same_v<typename std::iterator_traits<Iter>::pointer, int*>);
-  static_assert(std::is_same_v<typename std::iterator_traits<Iter>::reference, int&>);
-  static_assert(
-      std::is_same_v<typename std::iterator_traits<Iter>::iterator_category, std::random_access_iterator_tag>);
-  return 0;
-}
+static_assert(std::is_same_v<typename std::iterator_traits<Iter>::value_type, int>);
+static_assert(std::is_same_v<typename std::iterator_traits<Iter>::difference_type, std::ptrdiff_t>);
+static_assert(std::is_same_v<typename std::iterator_traits<Iter>::pointer, int*>);
+static_assert(std::is_same_v<typename std::iterator_traits<Iter>::reference, int&>);
+static_assert(std::is_same_v<typename std::iterator_traits<Iter>::iterator_category, std::random_access_iterator_tag>);
