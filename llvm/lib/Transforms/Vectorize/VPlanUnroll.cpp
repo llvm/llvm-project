@@ -345,10 +345,11 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     if (ToSkip.contains(&R) || isa<VPIRInstruction>(&R))
       continue;
 
-    // Add all VPValues for all parts to ComputeReductionResult which combines
-    // the parts to compute the final reduction value.
+    // Add all VPValues for all parts to AnyOf and Compute*Result which combine
+    // all parts to compute the final value.
     VPValue *Op1;
-    if (match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
+    if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
                       m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
         match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
                       m_VPValue(), m_VPValue(Op1))) ||
