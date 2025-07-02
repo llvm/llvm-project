@@ -326,6 +326,25 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getDistScheduleChunkSize())
       result = todo("dist_schedule with chunk_size");
   };
+  auto checkFirstprivate = [&todo](auto op, LogicalResult &result) {
+    // Firstprivate is not listed as supported by the simd operation in
+    // OpenMP 6.0. This is here to catch it because it is allowed at the dialect
+    // level.
+    if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::SimdOp>) {
+      std::optional<ArrayAttr> privateSyms = op.getPrivateSyms();
+      if (!privateSyms)
+        return;
+      for (const Attribute &sym : *privateSyms) {
+        omp::PrivateClauseOp privatizer =
+            findPrivatizer(op, cast<SymbolRefAttr>(sym));
+        if (privatizer.getDataSharingType() ==
+            omp::DataSharingClauseType::FirstPrivate) {
+          result = todo("firstprivate");
+          break;
+        }
+      }
+    }
+  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -441,6 +460,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkReduction(op, result);
       })
       .Case([&](omp::SimdOp op) {
+        checkFirstprivate(op, result);
         checkLinear(op, result);
         checkReduction(op, result);
       })
@@ -2894,7 +2914,8 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
           .failed())
     return failure();
 
-  // TODO: no call to copyFirstPrivateVars?
+  // No call to copyFirstPrivateVars because firstprivate is not allowed on
+  // SIMD.
 
   assert(afterAllocas.get()->getSinglePredecessor());
   if (failed(initReductionVars(simdOp, reductionArgs, builder,
