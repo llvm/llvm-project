@@ -189,7 +189,9 @@ struct Slab {
 
   // Get the number of bytes needed to contain the bitfield bits.
   constexpr static uint32_t bitfield_bytes(uint32_t chunk_size) {
-    return ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8;
+    return __builtin_align_up(
+        ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8,
+        MIN_ALIGNMENT + 1);
   }
 
   // The actual amount of memory available excluding the bitfield and metadata.
@@ -584,7 +586,7 @@ void *aligned_allocate(uint32_t alignment, uint64_t size) {
 
   // If the requested alignment is less than what we already provide this is
   // just a normal allocation.
-  if (alignment < MIN_ALIGNMENT + 1)
+  if (alignment <= MIN_ALIGNMENT + 1)
     return gpu::allocate(size);
 
   // We can't handle alignments greater than 2MiB so we simply fail.
@@ -594,7 +596,7 @@ void *aligned_allocate(uint32_t alignment, uint64_t size) {
   // Trying to handle allocation internally would break the assumption that each
   // chunk is identical to eachother. Allocate enough memory with worst-case
   // alignment and then round up. The index logic will round down properly.
-  uint64_t rounded = size + alignment - 1;
+  uint64_t rounded = size + alignment - MIN_ALIGNMENT;
   void *ptr = gpu::allocate(rounded);
   return __builtin_align_up(ptr, alignment);
 }

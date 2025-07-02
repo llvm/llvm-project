@@ -1586,7 +1586,6 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::dataMemberType());
   assert(!cir::MissingFeatures::methodType());
 
-  // Lower to LLVM comparison op.
   if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
     bool isSigned = mlir::isa<cir::IntType>(type)
                         ? mlir::cast<cir::IntType>(type).isSigned()
@@ -1595,22 +1594,82 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
         convertCmpKindToICmpPredicate(cmpOp.getKind(), isSigned);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
+    return mlir::success();
+  }
+
+  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
     mlir::LLVM::ICmpPredicate kind =
         convertCmpKindToICmpPredicate(cmpOp.getKind(),
                                       /* isSigned=*/false);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::FPTypeInterface>(type)) {
+    return mlir::success();
+  }
+
+  if (mlir::isa<cir::FPTypeInterface>(type)) {
     mlir::LLVM::FCmpPredicate kind =
         convertCmpKindToFCmpPredicate(cmpOp.getKind());
     rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else {
-    return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
+    return mlir::success();
   }
 
-  return mlir::success();
+  if (mlir::isa<cir::ComplexType>(type)) {
+    mlir::Value lhs = adaptor.getLhs();
+    mlir::Value rhs = adaptor.getRhs();
+    mlir::Location loc = cmpOp.getLoc();
+
+    auto complexType = mlir::cast<cir::ComplexType>(cmpOp.getLhs().getType());
+    mlir::Type complexElemTy =
+        getTypeConverter()->convertType(complexType.getElementType());
+
+    auto lhsReal =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 0);
+    auto lhsImag =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 1);
+    auto rhsReal =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 0);
+    auto rhsImag =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 1);
+
+    if (cmpOp.getKind() == cir::CmpOpKind::eq) {
+      if (complexElemTy.isInteger()) {
+        auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::eq, lhsReal, rhsReal);
+        auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::eq, lhsImag, rhsImag);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmpOp, realCmp, imagCmp);
+        return mlir::success();
+      }
+
+      auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
+      auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmpOp, realCmp, imagCmp);
+      return mlir::success();
+    }
+
+    if (cmpOp.getKind() == cir::CmpOpKind::ne) {
+      if (complexElemTy.isInteger()) {
+        auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::ne, lhsReal, rhsReal);
+        auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::ne, lhsImag, rhsImag);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmpOp, realCmp, imagCmp);
+        return mlir::success();
+      }
+
+      auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::une, lhsReal, rhsReal);
+      auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::une, lhsImag, rhsImag);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmpOp, realCmp, imagCmp);
+      return mlir::success();
+    }
+  }
+
+  return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
 }
 
 mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
@@ -1901,7 +1960,6 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
                CIRToLLVMComplexCreateOpLowering,
-               CIRToLLVMComplexEqualOpLowering,
                CIRToLLVMComplexImagOpLowering,
                CIRToLLVMComplexRealOpLowering,
                CIRToLLVMConstantOpLowering,
@@ -2242,43 +2300,6 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
       op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMComplexEqualOpLowering::matchAndRewrite(
-    cir::ComplexEqualOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value lhs = adaptor.getLhs();
-  mlir::Value rhs = adaptor.getRhs();
-
-  auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
-  mlir::Type complexElemTy =
-      getTypeConverter()->convertType(complexType.getElementType());
-
-  mlir::Location loc = op.getLoc();
-  auto lhsReal =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 0);
-  auto lhsImag =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 1);
-  auto rhsReal =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 0);
-  auto rhsImag =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 1);
-
-  if (complexElemTy.isInteger()) {
-    auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
-        loc, mlir::LLVM::ICmpPredicate::eq, lhsReal, rhsReal);
-    auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
-        loc, mlir::LLVM::ICmpPredicate::eq, lhsImag, rhsImag);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
-    return mlir::success();
-  }
-
-  auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
-      loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
-  auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
-      loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
   return mlir::success();
 }
 
