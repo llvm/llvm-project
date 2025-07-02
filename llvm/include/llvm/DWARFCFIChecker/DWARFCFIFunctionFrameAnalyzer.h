@@ -25,7 +25,7 @@ namespace llvm {
 /// instantiates a `DWARFCFIAnalysis` for each frame. The errors/warnings are
 /// emitted through the `MCContext` instance to the constructor. If a frame
 /// finishes without being started or if all the frames are not finished before
-/// this classes is destructured, the program fails through an assertion.
+/// this classes is destructed, the program fails through an assertion.
 class CFIFunctionFrameAnalyzer : public CFIFunctionFrameReceiver {
 public:
   CFIFunctionFrameAnalyzer(MCContext &Context, const MCInstrInfo &MCII)
