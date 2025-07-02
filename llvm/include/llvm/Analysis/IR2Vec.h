@@ -107,9 +107,12 @@ public:
   const std::vector<double> &getData() const { return Data; }
 
   /// Arithmetic operators
-  Embedding &operator+=(const Embedding &RHS);
-  Embedding &operator-=(const Embedding &RHS);
-  Embedding &operator*=(double Factor);
+  LLVM_ABI Embedding &operator+=(const Embedding &RHS);
+  LLVM_ABI Embedding operator+(const Embedding &RHS) const;
+  LLVM_ABI Embedding &operator-=(const Embedding &RHS);
+  LLVM_ABI Embedding operator-(const Embedding &RHS) const;
+  LLVM_ABI Embedding &operator*=(double Factor);
+  LLVM_ABI Embedding operator*(double Factor) const;
 
   /// Adds Src Embedding scaled by Factor with the called Embedding.
   /// Called_Embedding += Src * Factor
@@ -117,7 +120,8 @@ public:
 
   /// Returns true if the embedding is approximately equal to the RHS embedding
   /// within the specified tolerance.
-  bool approximatelyEquals(const Embedding &RHS, double Tolerance = 1e-6) const;
+  LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance = 1e-4) const;
 
   void print(raw_ostream &OS) const;
 };
@@ -171,7 +175,7 @@ public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
-  LLVM_ABI static Expected<std::unique_ptr<Embedder>>
+  LLVM_ABI static std::unique_ptr<Embedder>
   create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
 
   /// Returns a map containing instructions and the corresponding embeddings for
