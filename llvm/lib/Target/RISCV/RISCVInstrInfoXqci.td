@@ -1486,6 +1486,9 @@ def : QCIMVCCIPat <SETULT, QC_MVLTUI>;
 }
 
 let Predicates = [HasVendorXqcics, IsRV32] in {
+def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2),(XLenVT GPRNoX0:$rs3)),
+          (QC_SELECTEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs3, GPRNoX0:$rs2)>;
+
 let AddedComplexity = 1 in {
 def : QCISELECTCCIPat <SETEQ,  QC_SELECTEQI>;
 def : QCISELECTCCIPat <SETNE,  QC_SELECTNEI>;
