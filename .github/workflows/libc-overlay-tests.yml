@@ -16,7 +16,8 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
       fail-fast: false
       matrix:
-        build_type: [Debug, Release, MinSizeRel]
+        build_type: [Debug]
+        os: [ubuntu-24.04,ubuntu-24.04-arm, windows-2022, windows-2025, macos-14]
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
@@ -88,6 +89,10 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
+    - name: Check clang version
+      run: >
+        clang++ --version
+
     # Use MinSizeRel to reduce the size of the build.
     # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
     # by the sccache tool.
@@ -110,7 +115,6 @@ jobs:
         cmake 
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel 
-        --config MinSizeRel 
         --target libc
 
     - name: Test
@@ -119,3 +123,4 @@ jobs:
         --build ${{ steps.strings.outputs.build-output-dir }} 
         --parallel 
         --target check-libc
+        -- -v
