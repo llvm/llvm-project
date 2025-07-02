@@ -293,10 +293,21 @@ static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid section name record");
+
       // Check for the i386 and other (x86_64, ARM) conventions
-      if (S.find("__DATA,__objc_catlist") != std::string::npos ||
-          S.find("__OBJC,__category") != std::string::npos ||
-          S.find("__TEXT,__swift") != std::string::npos)
+
+      SmallVector<StringRef, 2> SplitName;
+      StringRef(S).split(SplitName, ',');
+      if (SplitName.size() < 2)
+        break;
+      StringRef Segment = SplitName[0].trim();
+      StringRef Section = SplitName[1].trim();
+
+      if (Segment == "__DATA" && Section.starts_with("__objc_catlist"))
+        return true;
+      if (Segment == "__OBJC" && Section.starts_with("__category"))
+        return true;
+      if (Segment == "__TEXT" && Section.starts_with("__swift"))
         return true;
       break;
     }
