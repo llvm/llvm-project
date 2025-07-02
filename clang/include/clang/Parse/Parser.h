@@ -121,6 +121,15 @@ enum class ParenParseOption {
   CastExpr         // Also allow '(' type-name ')' <anything>
 };
 
+/// In a call to ParseParenExpression, are the initial parentheses part of an
+/// operator that requires the parens be there (like typeof(int)) or could they
+/// be something else, such as part of a compound literal or a sizeof
+/// expression, etc.
+enum class ParenExprKind {
+  PartOfOperator, // typeof(int)
+  Unknown, // sizeof(int) or sizeof (int)1.0f, or compound literal, etc
+};
+
 /// Describes the behavior that should be taken for an __if_exists
 /// block.
 enum class IfExistsBehavior {
@@ -4189,15 +4198,15 @@ private:
   /// \endverbatim
   bool ParseSimpleExpressionList(SmallVectorImpl<Expr *> &Exprs);
 
-  /// ParseParenExpression - This parses the unit that starts with a '(' token,
-  /// based on what is allowed by ExprType.  The actual thing parsed is returned
-  /// in ExprType. If stopIfCastExpr is true, it will only return the parsed
-  /// type, not the parsed cast-expression. If ParenKnownToBeNonCast is true,
+  /// This parses the unit that starts with a '(' token, based on what is
+  /// allowed by ExprType. The actual thing parsed is returned in ExprType. If
+  /// StopIfCastExpr is true, it will only return the parsed type, not the
+  /// parsed cast-expression. If ParenBehavior is ParenExprKind::PartOfOperator,
   /// the initial open paren and its matching close paren are known to be part
   /// of another grammar production and not part of the operand. e.g., the
-  /// typeof and typeof_unqual operators in C. If it is false, then the function
-  /// has to parse the parens to determine whether they're part of a cast or
-  /// compound literal expression rather than a parenthesized type.
+  /// typeof and typeof_unqual operators in C. Otherwise, the function has to
+  /// parse the parens to determine whether they're part of a cast or compound
+  /// literal expression rather than a parenthesized type.
   ///
   /// \verbatim
   ///       primary-expression: [C99 6.5.1]
@@ -4222,8 +4231,9 @@ private:
   ///       '(' '[' expression ']' { '[' expression ']' } cast-expression
   /// \endverbatim
   ExprResult ParseParenExpression(ParenParseOption &ExprType,
-                                  bool stopIfCastExpr, bool isTypeCast,
-                                  bool ParenKnownToBeNonCast,
+                                  bool StopIfCastExpr,
+                                  ParenExprKind ParenBehavior,
+                                  TypoCorrectionTypeBehavior CorrectionBehavior,
                                   ParsedType &CastTy,
                                   SourceLocation &RParenLoc);
 

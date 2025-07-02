@@ -756,10 +756,9 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     }
     ParsedType CastTy;
     SourceLocation RParenLoc;
-    Res = ParseParenExpression(
-        ParenExprType, false /*stopIfCastExr*/,
-        CorrectionBehavior == TypoCorrectionTypeBehavior::AllowTypes,
-        false /*ParenKnownToBeNonCast*/, CastTy, RParenLoc);
+    Res = ParseParenExpression(ParenExprType, /*StopIfCastExr=*/false,
+                               ParenExprKind::Unknown, CorrectionBehavior,
+                               CastTy, RParenLoc);
 
     // FIXME: What should we do if a vector literal is followed by a
     // postfix-expression suffix? Usually postfix operators are permitted on
@@ -2131,8 +2130,11 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     ParenParseOption ExprType = ParenParseOption::CastExpr;
     SourceLocation LParenLoc = Tok.getLocation(), RParenLoc;
 
-    Operand = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
-                                   ParenKnownToBeNonCast, CastTy, RParenLoc);
+    Operand = ParseParenExpression(
+        ExprType, /*StopIfCastExr=*/true,
+        ParenKnownToBeNonCast ? ParenExprKind::PartOfOperator
+                              : ParenExprKind::Unknown,
+        TypoCorrectionTypeBehavior::AllowBoth, CastTy, RParenLoc);
     CastRange = SourceRange(LParenLoc, RParenLoc);
 
     // If ParseParenExpression parsed a '(typename)' sequence only, then this is
@@ -2606,11 +2608,11 @@ bool Parser::tryParseOpenMPArrayShapingCastPart() {
   return !ErrorFound;
 }
 
-ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
-                                        bool stopIfCastExpr, bool isTypeCast,
-                                        bool ParenKnownToBeNonCast,
-                                        ParsedType &CastTy,
-                                        SourceLocation &RParenLoc) {
+ExprResult
+Parser::ParseParenExpression(ParenParseOption &ExprType, bool StopIfCastExpr,
+                             ParenExprKind ParenBehavior,
+                             TypoCorrectionTypeBehavior CorrectionBehavior,
+                             ParsedType &CastTy, SourceLocation &RParenLoc) {
   assert(Tok.is(tok::l_paren) && "Not a paren expr!");
   ColonProtectionRAIIObject ColonProtection(*this, false);
   BalancedDelimiterTracker T(*this, tok::l_paren);
@@ -2732,7 +2734,7 @@ ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
     // in which case we should treat it as type-id.
     // if stopIfCastExpr is false, we need to determine the context past the
     // parens, so we defer to ParseCXXAmbiguousParenExpression for that.
-    if (isAmbiguousTypeId && !stopIfCastExpr) {
+    if (isAmbiguousTypeId && !StopIfCastExpr) {
       ExprResult res = ParseCXXAmbiguousParenExpression(ExprType, CastTy, T,
                                                         ColonProtection);
       RParenLoc = T.getCloseLocation();
@@ -2765,7 +2767,7 @@ ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
       T.consumeClose();
       ColonProtection.restore();
       RParenLoc = T.getCloseLocation();
-      if (!ParenKnownToBeNonCast && Tok.is(tok::l_brace)) {
+      if (ParenBehavior == ParenExprKind::Unknown && Tok.is(tok::l_brace)) {
         ExprType = ParenParseOption::CompoundLiteral;
         TypeResult Ty;
         {
@@ -2775,7 +2777,7 @@ ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
         return ParseCompoundLiteralExpression(Ty.get(), OpenLoc, RParenLoc);
       }
 
-      if (!ParenKnownToBeNonCast && Tok.is(tok::l_paren)) {
+      if (ParenBehavior == ParenExprKind::Unknown && Tok.is(tok::l_paren)) {
         // This could be OpenCL vector Literals
         if (getLangOpts().OpenCL)
         {
@@ -2826,7 +2828,7 @@ ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
 
         // Note that this doesn't parse the subsequent cast-expression, it just
         // returns the parsed type to the callee.
-        if (stopIfCastExpr) {
+        if (StopIfCastExpr) {
           TypeResult Ty;
           {
             InMessageExpressionRAIIObject InMessage(*this, false);
@@ -2868,7 +2870,8 @@ ExprResult Parser::ParseParenExpression(ParenParseOption &ExprType,
              isFoldOperator(NextToken().getKind())) {
     ExprType = ParenParseOption::FoldExpr;
     return ParseFoldExpression(ExprResult(), T);
-  } else if (isTypeCast) {
+  } else if (CorrectionBehavior == TypoCorrectionTypeBehavior::AllowTypes) {
+    // FIXME: This should not be predicated on typo correction behavior.
     // Parse the expression-list.
     InMessageExpressionRAIIObject InMessage(*this, false);
     ExprVector ArgExprs;
