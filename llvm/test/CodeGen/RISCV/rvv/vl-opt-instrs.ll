@@ -3445,9 +3445,8 @@ define <vscale x 4 x i32> @vslideup_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %v
 ;
 ; VLOPT-LABEL: vslideup_vx:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vslideup.vx v10, v8, a0
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vslideup.vx v10, v8, a0
 ; VLOPT-NEXT:    vadd.vv v8, v10, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vslideup(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1, iXLen 3)
@@ -3466,9 +3465,8 @@ define <vscale x 4 x i32> @vslideup_vi(<vscale x 4 x i32> %a, iXLen %vl) {
 ;
 ; VLOPT-LABEL: vslideup_vi:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vslideup.vi v10, v8, 2
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vslideup.vi v10, v8, 2
 ; VLOPT-NEXT:    vadd.vv v8, v10, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vslideup(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen -1, iXLen 3)
@@ -3487,9 +3485,8 @@ define <vscale x 4 x i32> @vslidedown_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen 
 ;
 ; VLOPT-LABEL: vslidedown_vx:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vslidedown.vx v8, v8, a0
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vslidedown.vx v8, v8, a0
 ; VLOPT-NEXT:    vadd.vv v8, v8, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vslidedown(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1, iXLen 3)
@@ -3508,9 +3505,8 @@ define <vscale x 4 x i32> @vslidedown_vi(<vscale x 4 x i32> %a, iXLen %vl) {
 ;
 ; VLOPT-LABEL: vslidedown_vi:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vslidedown.vi v8, v8, 2
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vslidedown.vi v8, v8, 2
 ; VLOPT-NEXT:    vadd.vv v8, v8, v8
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vslidedown(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen 2, iXLen -1, iXLen 3)
