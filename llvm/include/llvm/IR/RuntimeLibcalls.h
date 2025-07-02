@@ -60,6 +60,14 @@ struct RuntimeLibcallsInfo {
       FloatABI::ABIType FloatABI = FloatABI::Default,
       EABI EABIVersion = EABI::Default, StringRef ABIName = "") {
     initSoftFloatCmpLibcallPredicates();
+
+    // FIXME: The ExceptionModel parameter is to handle the field in
+    // TargetOptions. This interface fails to distinguish the forced disable
+    // case for targets which support exceptions by default. This should
+    // probably be a module flag and removed from TargetOptions.
+    if (ExceptionModel == ExceptionHandling::None)
+      ExceptionModel = TT.getDefaultExceptionHandling();
+
     initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName);
   }
 
