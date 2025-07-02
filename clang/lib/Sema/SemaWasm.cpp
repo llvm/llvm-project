@@ -227,6 +227,53 @@ bool SemaWasm::BuiltinWasmTableCopy(CallExpr *TheCall) {
   return false;
 }
 
+bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(CallExpr *TheCall) {
+  if (SemaRef.checkArgCount(TheCall, 1))
+    return true;
+
+  Expr *FuncPtrArg = TheCall->getArg(0);
+  QualType ArgType = FuncPtrArg->getType();
+
+  // Check that the argument is a function pointer
+  const PointerType *PtrTy = ArgType->getAs<PointerType>();
+  if (!PtrTy) {
+    return Diag(FuncPtrArg->getBeginLoc(),
+                diag::err_typecheck_expect_function_pointer)
+           << ArgType << FuncPtrArg->getSourceRange();
+  }
+
+  const FunctionProtoType *FuncTy =
+      PtrTy->getPointeeType()->getAs<FunctionProtoType>();
+  if (!FuncTy) {
+    return Diag(FuncPtrArg->getBeginLoc(),
+                diag::err_typecheck_expect_function_pointer)
+           << ArgType << FuncPtrArg->getSourceRange();
+  }
+
+  // Check that the function pointer doesn't use reference types
+  if (FuncTy->getReturnType().isWebAssemblyReferenceType()) {
+    return Diag(
+               FuncPtrArg->getBeginLoc(),
+               diag::err_wasm_builtin_test_fp_sig_cannot_include_reference_type)
+           << 0 << FuncTy->getReturnType() << FuncPtrArg->getSourceRange();
+  }
+  auto NParams = FuncTy->getNumParams();
+  for (unsigned I = 0; I < NParams; I++) {
+    if (FuncTy->getParamType(I).isWebAssemblyReferenceType()) {
+      return Diag(
+                 FuncPtrArg->getBeginLoc(),
+                 diag::
+                     err_wasm_builtin_test_fp_sig_cannot_include_reference_type)
+             << 1 << FuncPtrArg->getSourceRange();
+    }
+  }
+
+  // Set return type to int (the result of the test)
+  TheCall->setType(getASTContext().IntTy);
+
+  return false;
+}
+
 bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
                                                    unsigned BuiltinID,
                                                    CallExpr *TheCall) {
@@ -249,6 +296,8 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
     return BuiltinWasmTableFill(TheCall);
   case WebAssembly::BI__builtin_wasm_table_copy:
     return BuiltinWasmTableCopy(TheCall);
+  case WebAssembly::BI__builtin_wasm_test_function_pointer_signature:
+    return BuiltinWasmTestFunctionPointerSignature(TheCall);
   }
 
   return false;

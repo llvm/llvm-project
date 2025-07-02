@@ -36,6 +36,11 @@ multiclass REF_I<WebAssemblyRegClass rc, ValueType vt, string ht> {
         Requires<[HasReferenceTypes]>;
 }
 
+let usesCustomInserter = 1, isPseudo = 1 in defm REF_TEST_FUNCREF_PSEUDO
+    : I<(outs I32:$res), (ins TypeIndex:$type, FUNCREF:$ref, variable_ops),
+        (outs), (ins TypeIndex:$type), [], "ref.test.pseudo\t$type, $ref",
+        "ref.test.pseudo $type", -1>;
+
 defm REF_TEST_FUNCREF :
   I<(outs I32: $res),
     (ins TypeIndex:$type, FUNCREF: $ref),

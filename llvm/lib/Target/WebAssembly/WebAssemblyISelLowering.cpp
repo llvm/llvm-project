@@ -18,6 +18,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -501,6 +502,51 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
   return Result;
 }
 
+static MachineBasicBlock *LowerRefTestFuncRef(MachineInstr &MI, DebugLoc DL,
+                                              MachineBasicBlock *BB,
+                                              const TargetInstrInfo &TII) {
+  // Lower a REF_TEST_FUNCREF_PSEUDO instruction into a REF_TEST_FUNCREF
+  // instruction by combining the signature info Imm operands that
+  // SelectionDag/InstrEmitter.cpp makes into one CImm operand. Put this into
+  // the type index placeholder for REF_TEST_FUNCREF
+  Register ResultReg = MI.getOperand(0).getReg();
+  Register FuncRefReg = MI.getOperand(1).getReg();
+
+  auto NParams = MI.getNumOperands() - 3;
+  auto Sig = APInt(NParams * 64, 0);
+
+  {
+    uint64_t V = MI.getOperand(2).getImm();
+    Sig |= int64_t(V);
+  }
+
+  for (unsigned I = 3; I < MI.getNumOperands(); I++) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isImm()) {
+      // I'm not really sure what these are or where they come from but it seems
+      // to be okay to ignore them
+      continue;
+    }
+    uint16_t V = MO.getImm();
+    Sig <<= 64;
+    Sig |= int64_t(V);
+  }
+
+  ConstantInt *TypeInfo =
+      ConstantInt::get(BB->getParent()->getFunction().getContext(), Sig);
+
+  // Put the type info first in the placeholder for the type index, then the
+  // actual funcref arg
+  BuildMI(*BB, MI, DL, TII.get(WebAssembly::REF_TEST_FUNCREF), ResultReg)
+      .addCImm(TypeInfo)
+      .addReg(FuncRefReg);
+
+  // Remove the original instruction
+  MI.eraseFromParent();
+
+  return BB;
+}
+
 // Lower an fp-to-int conversion operator from the LLVM opcode, which has an
 // undefined result on invalid/overflow, to the WebAssembly opcode, which
 // traps on invalid/overflow.
@@ -862,6 +908,8 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
+  case WebAssembly::REF_TEST_FUNCREF_PSEUDO:
+    return LowerRefTestFuncRef(MI, DL, BB, TII);
   case WebAssembly::FP_TO_SINT_I32_F32:
     return LowerFPToInt(MI, DL, BB, TII, false, false, false,
                         WebAssembly::I32_TRUNC_S_F32);
@@ -2252,6 +2300,72 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
         DAG.getMachineNode(GlobalGet, DL, PtrVT,
                            DAG.getTargetExternalSymbol(TlsBase, PtrVT)),
         0);
+  }
+  case Intrinsic::wasm_ref_test_func: {
+    // First emit the TABLE_GET instruction to convert function pointer ==>
+    // funcref
+    MachineFunction &MF = DAG.getMachineFunction();
+    auto PtrVT = getPointerTy(MF.getDataLayout());
+    MCSymbol *Table =
+        WebAssembly::getOrCreateFunctionTableSymbol(MF.getContext(), Subtarget);
+    SDValue TableSym = DAG.getMCSymbol(Table, PtrVT);
+    SDValue FuncRef =
+        SDValue(DAG.getMachineNode(WebAssembly::TABLE_GET_FUNCREF, DL,
+                                   MVT::funcref, TableSym, Op.getOperand(1)),
+                0);
+
+    SmallVector<SDValue, 4> Ops;
+    Ops.push_back(FuncRef);
+
+    // We want to encode the type information into an APInt which we'll put
+    // in a CImm. However, in SelectionDag/InstrEmitter.cpp there is no code
+    // path that emits a CImm. So we need a custom inserter to put it in.
+
+    // We'll put each type argument in a separate TargetConstant which gets
+    // lowered to a MachineInstruction Imm. We combine these into a CImm in our
+    // custom inserter because it creates a problem downstream to have all these
+    // extra immediates.
+    {
+      SDValue Operand = Op.getOperand(2);
+      MVT VT = Operand.getValueType().getSimpleVT();
+      WebAssembly::BlockType V;
+      if (VT == MVT::Untyped) {
+        V = WebAssembly::BlockType::Void;
+      } else if (VT == MVT::i32) {
+        V = WebAssembly::BlockType::I32;
+      } else if (VT == MVT::i64) {
+        V = WebAssembly::BlockType::I64;
+      } else if (VT == MVT::f32) {
+        V = WebAssembly::BlockType::F32;
+      } else if (VT == MVT::f64) {
+        V = WebAssembly::BlockType::F64;
+      } else {
+        llvm_unreachable("Unhandled type!");
+      }
+      Ops.push_back(DAG.getTargetConstant((int64_t)V, DL, MVT::i64));
+    }
+
+    for (unsigned i = 3; i < Op.getNumOperands(); ++i) {
+      SDValue Operand = Op.getOperand(i);
+      MVT VT = Operand.getValueType().getSimpleVT();
+      wasm::ValType V;
+      if (VT == MVT::i32) {
+        V = wasm::ValType::I32;
+      } else if (VT == MVT::i64) {
+        V = wasm::ValType::I64;
+      } else if (VT == MVT::f32) {
+        V = wasm::ValType::F32;
+      } else if (VT == MVT::f64) {
+        V = wasm::ValType::F64;
+      } else {
+        llvm_unreachable("Unhandled type!");
+      }
+      Ops.push_back(DAG.getTargetConstant((int64_t)V, DL, MVT::i64));
+    }
+
+    return SDValue(DAG.getMachineNode(WebAssembly::REF_TEST_FUNCREF_PSEUDO, DL,
+                                      MVT::i32, Ops),
+                   0);
   }
   }
 }
