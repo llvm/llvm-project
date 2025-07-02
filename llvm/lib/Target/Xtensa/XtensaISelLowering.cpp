@@ -101,6 +101,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ConstantPool, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+  setOperationAction(ISD::GlobalTLSAddress, PtrVT, Custom);
   setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::JumpTable, PtrVT, Custom);
 
@@ -972,6 +973,58 @@ SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
   return Res;
 }
 
+SDValue XtensaTargetLowering::LowerGlobalTLSAddress(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
+  SDLoc DL(Op);
+  EVT PtrVT = Op.getValueType();
+  const GlobalValue *GV = G->getGlobal();
+
+  if (DAG.getTarget().useEmulatedTLS())
+    return LowerToTLSEmulatedModel(G, DAG);
+
+  TLSModel::Model model = getTargetMachine().getTLSModel(GV);
+
+  if (!Subtarget.hasTHREADPTR()) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(), "only emulated TLS supported",
+        DL.getDebugLoc()));
+    return DAG.getPOISON(Op->getValueType(0));
+  }
+
+  if (model == TLSModel::LocalExec || model == TLSModel::InitialExec) {
+    bool Priv = GV->isPrivateLinkage(GV->getLinkage());
+    MachineFunction &MF = DAG.getMachineFunction();
+    XtensaMachineFunctionInfo *XtensaFI =
+        MF.getInfo<XtensaMachineFunctionInfo>();
+    unsigned LabelId = XtensaFI->createCPLabelId();
+
+    // Create a constant pool entry for the callee address
+    XtensaConstantPoolValue *CPV = XtensaConstantPoolSymbol::Create(
+        *DAG.getContext(), GV->getName().str().c_str(), LabelId, Priv,
+        XtensaCP::TPOFF);
+
+    // Get the address of the callee into a register
+    SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+    SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+    SDValue Addr = DAG.getLoad(
+        PtrVT, DL, DAG.getEntryNode(), CPWrap,
+        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+
+    SDValue TPRegister = DAG.getRegister(Xtensa::THREADPTR, MVT::i32);
+    SDValue ThreadPointer =
+        DAG.getNode(XtensaISD::RUR, DL, MVT::i32, TPRegister);
+
+    return DAG.getNode(ISD::ADD, DL, PtrVT, ThreadPointer, Addr);
+  }
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "only local-exec and initial-exec TLS mode supported", DL.getDebugLoc()));
+
+  return DAG.getPOISON(Op->getValueType(0));
+}
+
 SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
   BlockAddressSDNode *Node = cast<BlockAddressSDNode>(Op);
@@ -1406,6 +1459,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerRETURNADDR(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return LowerGlobalTLSAddress(Op, DAG);
   case ISD::BlockAddress:
     return LowerBlockAddress(Op, DAG);
   case ISD::JumpTable:
@@ -1459,6 +1514,8 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::RET";
   case XtensaISD::RETW:
     return "XtensaISD::RETW";
+  case XtensaISD::RUR:
+    return "XtensaISD::RUR";
   case XtensaISD::SELECT_CC:
     return "XtensaISD::SELECT_CC";
   case XtensaISD::SELECT_CC_FP:
