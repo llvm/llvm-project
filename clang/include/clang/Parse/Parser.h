@@ -101,8 +101,13 @@ enum class ObjCTypeQual {
   NumQuals
 };
 
-/// TypeCastState - State whether an expression is or may be a type cast.
-enum class TypeCastState { NotTypeCast = 0, MaybeTypeCast, IsTypeCast };
+/// If a typo should be encountered, should typo correction suggest type names,
+/// non type names, or both?
+enum class TypoCorrectionTypeBehavior {
+  AllowNonTypes,
+  AllowTypes,
+  AllowBoth,
+};
 
 /// Control what ParseCastExpression will parse.
 enum class CastParseKind { AnyCastExpr = 0, UnaryExprOnly, PrimaryExprOnly };
@@ -3709,11 +3714,12 @@ public:
   ///         assignment-expression ...[opt]
   ///         expression ',' assignment-expression ...[opt]
   /// \endverbatim
-  ExprResult
-  ParseExpression(TypeCastState isTypeCast = TypeCastState::NotTypeCast);
+  ExprResult ParseExpression(TypoCorrectionTypeBehavior CorrectionBehavior =
+                                 TypoCorrectionTypeBehavior::AllowNonTypes);
 
   ExprResult ParseConstantExpressionInExprEvalContext(
-      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
+      TypoCorrectionTypeBehavior CorrectionBehavior =
+          TypoCorrectionTypeBehavior::AllowNonTypes);
   ExprResult ParseConstantExpression();
   ExprResult ParseArrayBoundExpression();
   ExprResult ParseCaseExpression(SourceLocation CaseLoc);
@@ -3750,8 +3756,9 @@ public:
   ExprResult ParseConstraintLogicalOrExpression(bool IsTrailingRequiresClause);
 
   /// Parse an expr that doesn't include (top-level) commas.
-  ExprResult ParseAssignmentExpression(
-      TypeCastState isTypeCast = TypeCastState::NotTypeCast);
+  ExprResult
+  ParseAssignmentExpression(TypoCorrectionTypeBehavior CorrectionBehavior =
+                                TypoCorrectionTypeBehavior::AllowNonTypes);
 
   ExprResult ParseConditionalExpression();
 
@@ -4017,14 +4024,15 @@ private:
   ///
   ExprResult ParseCastExpression(CastParseKind ParseKind,
                                  bool isAddressOfOperand, bool &NotCastExpr,
-                                 TypeCastState isTypeCast,
+                                 TypoCorrectionTypeBehavior CorrectionBehavior,
                                  bool isVectorLiteral = false,
                                  bool *NotPrimaryExpression = nullptr);
-  ExprResult
-  ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand = false,
-                      TypeCastState isTypeCast = TypeCastState::NotTypeCast,
-                      bool isVectorLiteral = false,
-                      bool *NotPrimaryExpression = nullptr);
+  ExprResult ParseCastExpression(CastParseKind ParseKind,
+                                 bool isAddressOfOperand = false,
+                                 TypoCorrectionTypeBehavior CorrectionBehavior =
+                                     TypoCorrectionTypeBehavior::AllowNonTypes,
+                                 bool isVectorLiteral = false,
+                                 bool *NotPrimaryExpression = nullptr);
 
   /// Returns true if the next token cannot start an expression.
   bool isNotExpressionStart();
