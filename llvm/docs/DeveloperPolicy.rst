@@ -236,7 +236,7 @@ features added.  Some tips for getting your testcase approved:
   testing tools, like the ``clang -verify`` flag (`docs
   <https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics>`_)
   and the ``clangd -lit-test``
-  flag, which are preferred over FileCheck.
+  flag, which are preferred over ``FileCheck``.
 
 * Changes to libraries, such as Support, which are not directly observable
   through tool invocations, are often best tested with unit tests. Unit tests
