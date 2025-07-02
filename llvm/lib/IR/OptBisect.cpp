@@ -86,7 +86,7 @@ void OptDisable::setDisabled(StringRef Pass) {
 }
 
 bool OptDisable::shouldRunPass(const StringRef PassName,
-                               StringRef IRDescription) {
+                               StringRef IRDescription) const {
   assert(isEnabled());
 
   bool ShouldRun = !DisabledPasses.contains(PassName.lower());
