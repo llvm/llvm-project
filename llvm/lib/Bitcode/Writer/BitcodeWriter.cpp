@@ -3941,25 +3941,6 @@ void ModuleBitcodeWriter::writeBlockInfo() {
         FUNCTION_INST_LOAD_ABBREV)
       llvm_unreachable("Unexpected abbrev ordering!");
   }
-  { // INST_UNOP abbrev for FUNCTION_BLOCK.
-    // auto Abbv = std::make_shared<BitCodeAbbrev>();
-    // Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_UNOP));
-    // Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LHS
-    // Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // opc
-    // if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
-    //     FUNCTION_INST_UNOP_ABBREV)
-    //   llvm_unreachable("Unexpected abbrev ordering!");
-  }
-  { // INST_UNOP_FLAGS abbrev for FUNCTION_BLOCK.
-    // auto Abbv = std::make_shared<BitCodeAbbrev>();
-    // Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_UNOP));
-    // Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // LHS
-    // Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 4)); // opc
-    // Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8)); // flags
-    // if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
-    //     FUNCTION_INST_UNOP_FLAGS_ABBREV)
-    //   llvm_unreachable("Unexpected abbrev ordering!");
-  }
   { // INST_BINOP abbrev for FUNCTION_BLOCK.
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_BINOP));
