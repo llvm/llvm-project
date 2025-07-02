@@ -369,7 +369,7 @@ RecurrenceInfo::digRecurrence(Instruction *V,
 /// A Conditional Recurrence is a recurrence of the form:
 ///
 /// loop:
-///    %rec = [%start, %entry], [%step, %loop]
+///    %rec = phi [%start, %entry], [%step, %loop]
 ///    ...
 ///    %step = select _, %tv, %fv
 ///
