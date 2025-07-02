@@ -5,10 +5,6 @@ if (NOT LLVM_INCLUDE_SPIRV_TOOLS_TESTS)
   return()
 endif ()
 
-if (NOT "SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD AND NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(FATAL_ERROR "Building SPIRV-Tools tests is unsupported without the SPIR-V target or mlir project")
-endif ()
-
 # SPIRV_DIS, SPIRV_VAL, SPIRV_AS and SPIRV_LINK variables can be used to provide paths to existing
 # spirv-dis, spirv-val, spirv-as, and spirv-link binaries, respectively. Otherwise, build them from
 # SPIRV-Tools source.
