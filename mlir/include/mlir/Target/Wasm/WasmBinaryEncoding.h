@@ -129,6 +129,33 @@ struct WasmBinaryEncoding {
     static constexpr std::byte maxF64{0xA5};
     static constexpr std::byte copysignF64{0xA6};
     static constexpr std::byte wrap{0xA7};
+
+    // Conversion operations
+    static constexpr std::byte extendS{0xAC};
+    static constexpr std::byte extendU{0xAD};
+    static constexpr std::byte convertSI32F32{0xB2};
+    static constexpr std::byte convertUI32F32{0xB3};
+    static constexpr std::byte convertSI64F32{0xB4};
+    static constexpr std::byte convertUI64F32{0xB5};
+
+    static constexpr std::byte demoteF64ToF32{0xB6};
+
+    static constexpr std::byte convertSI32F64{0xB7};
+    static constexpr std::byte convertUI32F64{0xB8};
+    static constexpr std::byte convertSI64F64{0xB9};
+    static constexpr std::byte convertUI64F64{0xBA};
+
+    static constexpr std::byte promoteF32ToF64{0xBB};
+    static constexpr std::byte reinterpretF32AsI32{0xBC};
+    static constexpr std::byte reinterpretF64AsI64{0xBD};
+    static constexpr std::byte reinterpretI32AsF32{0xBE};
+    static constexpr std::byte reinterpretI64AsF64{0xBF};
+
+    static constexpr std::byte extendI328S{0xC0};
+    static constexpr std::byte extendI3216S{0xC1};
+    static constexpr std::byte extendI648S{0xC2};
+    static constexpr std::byte extendI6416S{0xC3};
+    static constexpr std::byte extendI6432S{0xC4};
   };
 
   /// Byte encodings of types in Wasm binaries
