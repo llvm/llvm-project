@@ -52,13 +52,15 @@ static LogicalResult baseInBufferAddrSpace(PatternRewriter &rewriter,
 }
 
 static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
-                                           vector::MaskedLoadOp maskedOp) {
+                                           vector::MaskedLoadOp maskedOp,
+                                           bool passthru) {
   VectorType vectorType = maskedOp.getVectorType();
   Value load = builder.create<vector::LoadOp>(
       loc, vectorType, maskedOp.getBase(), maskedOp.getIndices());
-  Value res = builder.create<arith::SelectOp>(
-      loc, vectorType, maskedOp.getMask(), load, maskedOp.getPassThru());
-  return res;
+  if (passthru)
+    load = builder.create<arith::SelectOp>(loc, vectorType, maskedOp.getMask(),
+                                           load, maskedOp.getPassThru());
+  return load;
 }
 
 /// Check if the given value comes from a:
@@ -112,8 +114,8 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     // so, take the fast path and don't generate a if condition, because we know
     // doing the oob load is always safe.
     if (succeeded(matchFullSelect(rewriter, maskedOp.getMask()))) {
-      Value load =
-          createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(), maskedOp);
+      Value load = createVectorLoadForMaskedLoad(rewriter, maskedOp.getLoc(),
+                                                 maskedOp, /*passthru=*/true);
       rewriter.replaceOp(maskedOp, load);
       return success();
     }
@@ -175,7 +177,8 @@ struct MaskedLoadLowering final : OpRewritePattern<vector::MaskedLoadOp> {
     };
 
     auto elseBuilder = [&](OpBuilder &builder, Location loc) {
-      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp);
+      Value res = createVectorLoadForMaskedLoad(builder, loc, maskedOp,
+                                                /*passthru=*/true);
       rewriter.create<scf::YieldOp>(loc, res);
     };
 
@@ -202,7 +205,8 @@ public:
 
     Value cond = maybeCond.value();
     auto trueBuilder = [&](OpBuilder &builder, Location loc) {
-      Value res = createVectorLoadForMaskedLoad(builder, loc, loadOp);
+      Value res = createVectorLoadForMaskedLoad(builder, loc, loadOp,
+                                                /*passthru=*/false);
       rewriter.create<scf::YieldOp>(loc, res);
     };
     auto falseBuilder = [&](OpBuilder &builder, Location loc) {
