@@ -35,28 +35,30 @@ enum class RootSignatureElementKind {
 };
 
 class RootSignatureBindingInfo {
-  private:
-    SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
+private:
+  SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> FuncToRsMap;
 
-  public:
+public:
   using iterator =
-        SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>::iterator;
+      SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc>::iterator;
 
-  RootSignatureBindingInfo () = default;
-  RootSignatureBindingInfo(SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> Map) : FuncToRsMap(Map) {};
+  RootSignatureBindingInfo() = default;
+  RootSignatureBindingInfo(
+      SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> Map)
+      : FuncToRsMap(Map){};
 
   iterator find(const Function *F) { return FuncToRsMap.find(F); }
 
   iterator end() { return FuncToRsMap.end(); }
 
-  std::optional<mcdxbc::RootSignatureDesc> getDescForFunction(const Function* F) {
+  std::optional<mcdxbc::RootSignatureDesc>
+  getDescForFunction(const Function *F) {
     const auto FuncRs = find(F);
     if (FuncRs == end())
       return std::nullopt;
 
     return FuncRs->second;
   }
-  
 };
 
 class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
@@ -64,8 +66,7 @@ class RootSignatureAnalysis : public AnalysisInfoMixin<RootSignatureAnalysis> {
   static AnalysisKey Key;
 
 public:
-
-RootSignatureAnalysis() = default;
+  RootSignatureAnalysis() = default;
 
   using Result = RootSignatureBindingInfo;
 
@@ -89,8 +90,8 @@ public:
 
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
-  RootSignatureBindingInfo& getRSInfo() {return *FuncToRsMap;}
-  
+  RootSignatureBindingInfo &getRSInfo() { return *FuncToRsMap; }
+
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
