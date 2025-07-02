@@ -1048,7 +1048,8 @@ struct VectorToElementOpConvert final
     }
 
     for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
-      // Create an CompositeExtract operation only for results that are not dead.
+      // Create an CompositeExtract operation only for results that are not
+      // dead.
       if (element.use_empty())
         continue;
 
