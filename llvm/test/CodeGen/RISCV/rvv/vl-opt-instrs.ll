@@ -3445,9 +3445,8 @@ define <vscale x 4 x i32> @vslide1up_vx(<vscale x 4 x i32> %a, iXLen %b, iXLen %
 ;
 ; VLOPT-LABEL: vslide1up_vx:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a2, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vslide1up.vx v10, v8, a0
 ; VLOPT-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
+; VLOPT-NEXT:    vslide1up.vx v10, v8, a0
 ; VLOPT-NEXT:    vadd.vv v8, v10, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x i32> @llvm.riscv.vslide1up(<vscale x 4 x i32> poison, <vscale x 4 x i32> %a, iXLen %b, iXLen -1)
@@ -3466,9 +3465,8 @@ define <vscale x 4 x float> @vfslide1up_vf(<vscale x 4 x float> %a, float %b, iX
 ;
 ; VLOPT-LABEL: vfslide1up_vf:
 ; VLOPT:       # %bb.0:
-; VLOPT-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
-; VLOPT-NEXT:    vfslide1up.vf v10, v8, fa0
 ; VLOPT-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; VLOPT-NEXT:    vfslide1up.vf v10, v8, fa0
 ; VLOPT-NEXT:    vfadd.vv v8, v10, v10
 ; VLOPT-NEXT:    ret
   %1 = call <vscale x 4 x float> @llvm.riscv.vfslide1up(<vscale x 4 x float> poison, <vscale x 4 x float> %a, float %b, iXLen -1)
