@@ -1796,25 +1796,33 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     yieldedValuesFromWarpOp.insert(yieldedValuesFromWarpOp.end(),
                                    escapingValues.begin(),
                                    escapingValues.end());
-
-    SmallVector<size_t> newRetIndices;
-    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, yieldedValuesFromWarpOp, distTypes, newRetIndices);
-    yield = cast<gpu::YieldOp>(
-        newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
-
-    SmallVector<Value> newOperands;
+    // record result mapping.
     SmallVector<unsigned> resultIdx;
-    // Collect the new init args coming from the new warp op.
-    for (size_t i = 0; i < forOp.getInitArgs().size(); ++i)
-      newOperands.push_back(newWarpOp.getResult(newRetIndices[i]));
     for (OpOperand &yieldOperand : yield->getOpOperands()) {
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation())
         continue;
       OpResult forResult = cast<OpResult>(yieldOperand.get());
       resultIdx.push_back(forResult.getResultNumber());
-      yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
+      // yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
     }
+
+    // SmallVector<size_t> newRetIndices;
+    WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndReplaceReturns(
+        rewriter, warpOp, yieldedValuesFromWarpOp, distTypes);
+    yield = cast<gpu::YieldOp>(
+        newWarpOp.getBodyRegion().getBlocks().begin()->getTerminator());
+
+    SmallVector<Value> newOperands;
+    // Collect the new init args coming from the new warp op.
+    for (size_t i = 0; i < forOp.getInitArgs().size(); ++i)
+      newOperands.push_back(newWarpOp.getResult(i));
+    // for (OpOperand &yieldOperand : yield->getOpOperands()) {
+    //   if (yieldOperand.get().getDefiningOp() != forOp.getOperation())
+    //     continue;
+    //   OpResult forResult = cast<OpResult>(yieldOperand.get());
+    //   resultIdx.push_back(forResult.getResultNumber());
+    //   yieldOperand.set(forOp.getInitArgs()[forResult.getResultNumber()]);
+    // }
 
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPointAfter(newWarpOp);
@@ -1831,7 +1839,8 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     SmallVector<Type> warpInputType(forOp.getResultTypes().begin(),
                                     forOp.getResultTypes().end());
     llvm::SmallDenseMap<Value, int64_t> argIndexMapping;
-    for (size_t i = forOp.getInitArgs().size(); i < newRetIndices.size(); ++i) {
+    for (size_t i = forOp.getInitArgs().size(); i < newWarpOp->getNumResults();
+         ++i) {
       warpInput.push_back(newWarpOp.getResult(i));
       argIndexMapping[escapingValues[i]] = warpInputType.size();
       warpInputType.push_back(inputTypes[i]);
@@ -1870,12 +1879,13 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       llvm::errs() << idx << " ";
     llvm::errs() << "\n";
     for (const auto &res : llvm::enumerate(resultIdx)) {
-      rewriter.replaceAllUsesWith(newWarpOp.getResult(res.value()),
-                                  newForOp.getResult(res.index()));
+      rewriter.replaceAllUsesExcept(warpOp.getResult(res.value()),
+                                    newForOp.getResult(res.index()), newForOp);
       // newForOp->setOperand(res.index() + 3,
       // newWarpOp.getResult(res.value()));
     }
     rewriter.eraseOp(forOp);
+    rewriter.eraseOp(warpOp);
     newForOp.walk([&](Operation *op) {
       for (OpOperand &operand : op->getOpOperands()) {
         auto it = argIndexMapping.find(operand.get());
