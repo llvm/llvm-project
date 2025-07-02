@@ -550,6 +550,17 @@ after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
 
+Obtaining Other Access or Permissions
+-------------------------------------
+
+To obtain access other than commit access, you can raise an issue like the one
+for obtaining commit access. However, instead of including PRs you have authored,
+include evidence of your need for the type of access you want.
+
+For example, if you are helping to triage issues and want the ability to add
+labels, include links to issues you have triaged previously and explain how
+having this ability would help that work.
+
 .. _discuss the change/gather consensus:
 
 Making a Major Change

@@ -690,22 +690,14 @@ void MCAsmStreamer::emitDarwinTargetVariantBuildVersion(
 }
 
 void MCAsmStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
-  // Do not emit a .set on inlined target assignments.
-  bool EmitSet = true;
-  if (auto *E = dyn_cast<MCTargetExpr>(Value))
-    if (E->inlineAssignedExpr())
-      EmitSet = false;
-  if (EmitSet) {
-    bool UseSet = MAI->usesSetToEquateSymbol();
-    if (UseSet)
-      OS << ".set ";
-    Symbol->print(OS, MAI);
-    OS << (UseSet ? ", " : " = ");
-    MAI->printExpr(OS, *Value);
+  bool UseSet = MAI->usesSetToEquateSymbol();
+  if (UseSet)
+    OS << ".set ";
+  Symbol->print(OS, MAI);
+  OS << (UseSet ? ", " : " = ");
+  MAI->printExpr(OS, *Value);
 
-    EmitEOL();
-  }
-
+  EmitEOL();
   MCStreamer::emitAssignment(Symbol, Value);
 }
 
@@ -1229,7 +1221,7 @@ void MCAsmStreamer::PrintQuotedString(StringRef Data, raw_ostream &OS) const {
         continue;
       }
 
-      if (isPrint((unsigned char)C)) {
+      if (isPrint(C)) {
         OS << (char)C;
         continue;
       }

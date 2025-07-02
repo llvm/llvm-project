@@ -92,7 +92,7 @@ void ConnectionFileDescriptor::OpenCommandPipe() {
 
   Log *log = GetLog(LLDBLog::Connection);
   // Make the command file descriptor here:
-  Status result = m_pipe.CreateNew(/*child_processes_inherit=*/false);
+  Status result = m_pipe.CreateNew();
   if (!result.Success()) {
     LLDB_LOGF(log,
               "%p ConnectionFileDescriptor::OpenCommandPipe () - could not "
@@ -451,7 +451,8 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
     if (timeout)
       select_helper.SetTimeout(*timeout);
 
-    select_helper.FDSetRead(handle);
+    // FIXME: Migrate to MainLoop.
+    select_helper.FDSetRead((lldb::socket_t)handle);
 #if defined(_WIN32)
     // select() won't accept pipes on Windows.  The entire Windows codepath
     // needs to be converted over to using WaitForMultipleObjects and event
@@ -493,7 +494,7 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           break; // Lets keep reading to until we timeout
         }
       } else {
-        if (select_helper.FDIsSetRead(handle))
+        if (select_helper.FDIsSetRead((lldb::socket_t)handle))
           return eConnectionStatusSuccess;
 
         if (select_helper.FDIsSetRead(pipe_fd)) {

@@ -219,8 +219,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       Ctx.reportError(Fixup.getLoc(), "fixup must be 16-byte aligned");
     return Value >> 4;
   case AArch64::fixup_aarch64_movw: {
-    AArch64MCExpr::Specifier RefKind =
-        static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
+    AArch64::Specifier RefKind =
+        static_cast<AArch64::Specifier>(Target.getSpecifier());
     if (AArch64::getSymbolLoc(RefKind) != AArch64::S_ABS &&
         AArch64::getSymbolLoc(RefKind) != AArch64::S_SABS) {
       if (!RefKind) {
@@ -421,8 +421,8 @@ void AArch64AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
     return;
 
   if (Fixup.getTargetKind() == FK_Data_8 && TheTriple.isOSBinFormatELF()) {
-    auto RefKind = static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
-    AArch64MCExpr::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
+    auto RefKind = static_cast<AArch64::Specifier>(Target.getSpecifier());
+    AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
     if (SymLoc == AArch64::S_AUTH || SymLoc == AArch64::S_AUTHADDR) {
       const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
       if (!Expr) {
@@ -474,8 +474,8 @@ void AArch64AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
 
   // FIXME: getFixupKindInfo() and getFixupKindNumBytes() could be fixed to
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
-  AArch64MCExpr::Specifier RefKind =
-      static_cast<AArch64MCExpr::Specifier>(Target.getSpecifier());
+  AArch64::Specifier RefKind =
+      static_cast<AArch64::Specifier>(Target.getSpecifier());
   if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS ||
       (!RefKind && Fixup.getTargetKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.

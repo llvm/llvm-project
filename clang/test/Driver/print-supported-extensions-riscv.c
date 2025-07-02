@@ -184,7 +184,7 @@
 // CHECK-NEXT:     xsfmmbase            0.6       'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero)
 // CHECK-NEXT:     xsfvcp               1.0       'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)
 // CHECK-NEXT:     xsfvfnrclipxfqf      1.0       'XSfvfnrclipxfqf' (SiFive FP32-to-int8 Ranged Clip Instructions)
-// CHECK-NEXT:     xsfvfwmaccqqq        1.0       'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))
+// CHECK-NEXT:     xsfvfwmaccqqq        1.0       'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction (4-by-4))
 // CHECK-NEXT:     xsfvqmaccdod         1.0       'XSfvqmaccdod' (SiFive Int8 Matrix Multiplication Instructions (2-by-8 and 8-by-2))
 // CHECK-NEXT:     xsfvqmaccqoq         1.0       'XSfvqmaccqoq' (SiFive Int8 Matrix Multiplication Instructions (4-by-8 and 8-by-4))
 // CHECK-NEXT:     xsifivecdiscarddlone 1.0       'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)

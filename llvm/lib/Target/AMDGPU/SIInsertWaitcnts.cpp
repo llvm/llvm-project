@@ -151,14 +151,14 @@ enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
   SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
   // unknown use the first slot. The first slot is also always updated in
   // addition to known location's slot to properly generate waits if dependent
   // instruction's location is unknown.
-  EXTRA_VGPR_LDS = 0,
-  NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_EXTRA_VGPRS, // Where SGPR starts.
+  FIRST_LDS_VGPR = SQ_MAX_PGM_VGPRS, // Extra slots for LDS stores.
+  NUM_LDS_VGPRS = 9,                 // One more than the stores we track.
+  NUM_ALL_VGPRS = SQ_MAX_PGM_VGPRS + NUM_LDS_VGPRS, // Where SGPRs start.
 };
 
 // Enumerate different types of result-returning VMEM operations. Although
@@ -302,12 +302,8 @@ public:
   }
 
   unsigned getSgprScoresIdx(InstCounterType T) const {
-    if (T == SmemAccessCounter)
-      return 0;
-    if (T == X_CNT)
-      return 1;
-
-    llvm_unreachable("Invalid SMEM counter");
+    assert(isSmemCounter(T) && "Invalid SMEM counter");
+    return T == X_CNT ? 1 : 0;
   }
 
   unsigned getScoreLB(InstCounterType T) const {
@@ -325,10 +321,8 @@ public:
   }
 
   unsigned getRegScore(int GprNo, InstCounterType T) const {
-    if (GprNo < NUM_ALL_VGPRS) {
+    if (GprNo < NUM_ALL_VGPRS)
       return VgprScores[T][GprNo];
-    }
-    assert(isSmemCounter(T));
     return SgprScores[getSgprScoresIdx(T)][GprNo - NUM_ALL_VGPRS];
   }
 
@@ -494,7 +488,7 @@ private:
   unsigned char VgprVmemTypes[NUM_ALL_VGPRS] = {0};
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
-  SmallVector<const MachineInstr *, NUM_EXTRA_VGPRS - 1> LDSDMAStores;
+  SmallVector<const MachineInstr *, NUM_LDS_VGPRS - 1> LDSDMAStores;
 };
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -866,7 +860,6 @@ void WaitcntBrackets::setScoreByInterval(RegInterval Interval,
       VgprUB = std::max(VgprUB, RegNo);
       VgprScores[CntTy][RegNo] = Score;
     } else {
-      assert(isSmemCounter(CntTy));
       SgprUB = std::max(SgprUB, RegNo - NUM_ALL_VGPRS);
       SgprScores[getSgprScoresIdx(CntTy)][RegNo - NUM_ALL_VGPRS] = Score;
     }
@@ -1006,12 +999,8 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
     }
   } else if (T == X_CNT) {
-    for (const MachineOperand &Op : Inst.all_uses()) {
-      RegInterval Interval = getRegInterval(&Inst, MRI, TRI, Op);
-      for (int RegNo = Interval.first; RegNo < Interval.second; ++RegNo) {
-        setRegScore(RegNo, T, CurrScore);
-      }
-    }
+    for (const MachineOperand &Op : Inst.all_uses())
+      setScoreByOperand(&Inst, TRI, MRI, Op, T, CurrScore);
   } else /* LGKM_CNT || EXP_CNT || VS_CNT || NUM_INST_CNTS */ {
     // Match the score to the destination registers.
     //
@@ -1073,15 +1062,15 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
             }
           }
         }
-        if (Slot || LDSDMAStores.size() == NUM_EXTRA_VGPRS - 1)
+        if (Slot || LDSDMAStores.size() == NUM_LDS_VGPRS - 1)
           break;
         LDSDMAStores.push_back(&Inst);
         Slot = LDSDMAStores.size();
         break;
       }
-      setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS + Slot, T, CurrScore);
+      setRegScore(FIRST_LDS_VGPR + Slot, T, CurrScore);
       if (Slot)
-        setRegScore(SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS, T, CurrScore);
+        setRegScore(FIRST_LDS_VGPR, T, CurrScore);
     }
   }
 }
@@ -1133,7 +1122,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
         if (RegScore <= LB)
           continue;
         unsigned RelScore = RegScore - LB - 1;
-        if (J < SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS) {
+        if (J < FIRST_LDS_VGPR) {
           OS << RelScore << ":v" << J << " ";
         } else {
           OS << RelScore << ":ds ";
@@ -1353,7 +1342,13 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;
 
-  LLVM_DEBUG(dbgs() << "PreGFX12::applyPreexistingWaitcnt at: " << *It);
+  LLVM_DEBUG({
+    dbgs() << "PreGFX12::applyPreexistingWaitcnt at: ";
+    if (It == OldWaitcntInstr.getParent()->instr_end())
+      dbgs() << "end of block\n";
+    else
+      dbgs() << *It;
+  });
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
@@ -1507,7 +1502,13 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
   MachineInstr *CombinedStoreDsCntInstr = nullptr;
   MachineInstr *WaitInstrs[NUM_EXTENDED_INST_CNTS] = {};
 
-  LLVM_DEBUG(dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: " << *It);
+  LLVM_DEBUG({
+    dbgs() << "GFX12Plus::applyPreexistingWaitcnt at: ";
+    if (It == OldWaitcntInstr.getParent()->instr_end())
+      dbgs() << "end of block\n";
+    else
+      dbgs() << *It;
+  });
 
   for (auto &II :
        make_early_inc_range(make_range(OldWaitcntInstr.getIterator(), It))) {
@@ -1785,8 +1786,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
                                                  bool FlushVmCnt) {
   setForceEmitWaitcnt();
 
-  if (MI.isMetaInstruction())
-    return false;
+  assert(!MI.isMetaInstruction());
 
   AMDGPU::Waitcnt Wait;
 
@@ -1913,7 +1913,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
           continue;
 
         // LOAD_CNT is only relevant to vgpr or LDS.
-        unsigned RegNo = SQ_MAX_PGM_VGPRS + EXTRA_VGPR_LDS;
+        unsigned RegNo = FIRST_LDS_VGPR;
         // Only objects with alias scope info were added to LDSDMAScopes array.
         // In the absense of the scope info we will not be able to disambiguate
         // aliasing here. There is no need to try searching for a corresponding
@@ -2473,6 +2473,10 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                          E = Block.instr_end();
        Iter != E;) {
     MachineInstr &Inst = *Iter;
+    if (Inst.isMetaInstruction()) {
+      ++Iter;
+      continue;
+    }
 
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.

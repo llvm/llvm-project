@@ -289,8 +289,8 @@ struct LineLocation {
   LLVM_ABI void serialize(raw_ostream &OS);
 
   bool operator<(const LineLocation &O) const {
-    return LineOffset < O.LineOffset ||
-           (LineOffset == O.LineOffset && Discriminator < O.Discriminator);
+    return std::tie(LineOffset, Discriminator) <
+           std::tie(O.LineOffset, O.Discriminator);
   }
 
   bool operator==(const LineLocation &O) const {

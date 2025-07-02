@@ -489,7 +489,7 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
 
   // Allow building a ReturnOp with no return operand.
   let builders = [
-    OpBuilder<(ins), [{ build($_builder, $_state, std::nullopt); }]>
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
   ];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -1737,25 +1737,52 @@ def GetMemberOp : CIR_Op<"get_member"> {
 
 def FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
+  DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   IsolatedFromAbove
 ]> {
   let summary = "Declare or define a function";
   let description = [{
     The `cir.func` operation defines a function, similar to the `mlir::FuncOp`
     built-in.
+
+    The function linkage information is specified by `linkage`, as defined by
+    `GlobalLinkageKind` attribute.
+
+    Example:
+
+    ```mlir
+    // External function definitions.
+    cir.func @abort()
+
+    // A function with internal linkage.
+    cir.func internal @count(%x: i64) -> (i64)
+      return %x : i64
+
+    // Linkage information
+    cir.func linkonce_odr @some_method(...)
+    ```
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       CIR_VisibilityAttr:$global_visibility,
                        TypeAttrOf<CIR_FuncType>:$function_type,
+                       UnitAttr:$dso_local,
+                       DefaultValuedAttr<CIR_GlobalLinkageKind,
+                                         "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       UnitAttr:$comdat,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       OptionalAttr<FlatSymbolRefAttr>:$aliasee);
 
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-                                 "FuncType":$type)>];
+  let builders = [OpBuilder<(ins
+    "llvm::StringRef":$sym_name, "FuncType":$type,
+    CArg<"cir::GlobalLinkageKind", "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)
+  >];
 
   let extraClassDeclaration = [{
     /// Returns the region on the current operation that is callable. This may
@@ -2369,6 +2396,89 @@ def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
 
   let hasVerifier = 1;
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+def ComplexRealOp : CIR_Op<"complex.real", [Pure]> {
+  let summary = "Extract the real part of a complex value";
+  let description = [{
+    `cir.complex.real` operation takes an operand of `!cir.complex` type and
+    yields the real part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.real %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagOp
+//===----------------------------------------------------------------------===//
+
+def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
+  let summary = "Extract the imaginary part of a complex value";
+  let description = [{
+    `cir.complex.imag` operation takes an operand of `!cir.complex` type and
+    yields the imaginary part of it.
+
+    Example:
+
+    ```mlir
+    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    ```
+  }];
+
+  let results = (outs CIR_AnyIntOrFloatType:$result);
+  let arguments = (ins CIR_ComplexType:$operand);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) `->` qualified(type($result))
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexEqualOp
+//===----------------------------------------------------------------------===//
+
+def ComplexEqualOp : CIR_Op<"complex.eq", [Pure, SameTypeOperands]> {
+
+  let summary = "Computes whether two complex values are equal";
+  let description = [{
+   The `complex.equal` op takes two complex numbers and returns whether
+   they are equal.
+
+    ```mlir
+    %r = cir.complex.eq %a, %b : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let results = (outs CIR_BoolType:$result);
+  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs
+    `:` qualified(type($lhs)) attr-dict
+  }];
 }
 
 //===----------------------------------------------------------------------===//

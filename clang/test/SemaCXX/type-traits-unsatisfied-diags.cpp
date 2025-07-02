@@ -559,3 +559,211 @@ static_assert(__is_assignable(C1, C1));
 // expected-note@#ama-C1 {{implicitly declared private here}} \
 // expected-note@#a-C1 {{'C1' defined here}}
 }
+
+namespace is_empty_tests {
+    // Non-static data member.
+    struct A { int x; }; // #e-A
+    static_assert(__is_empty(A));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::A)'}} \
+    // expected-note@-1 {{'A' is not empty}} \
+    // expected-note@-1 {{because it has a non-static data member 'x' of type 'int'}} \
+    // expected-note@#e-A {{'A' defined here}}
+
+    // Reference member.
+    struct R {int &r; }; // #e-R
+    static_assert(__is_empty(R));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::R)'}} \
+    // expected-note@-1 {{'R' is not empty}} \
+    // expected-note@-1 {{because it has a non-static data member 'r' of type 'int &'}} \
+    // expected-note@#e-R {{'R' defined here}}
+
+    // Virtual function.
+    struct VirtualFunc {virtual void f(); }; // #e-VirtualFunc
+    static_assert(__is_empty(VirtualFunc));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::VirtualFunc)'}} \
+    // expected-note@-1 {{'VirtualFunc' is not empty}} \
+    // expected-note@-1 {{because it has a virtual function 'f'}} \
+    // expected-note@#e-VirtualFunc {{'VirtualFunc' defined here}}
+
+    // Virtual base class.
+    struct EB {};
+    struct VB: virtual EB {}; // #e-VB
+    static_assert(__is_empty(VB));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::VB)'}} \
+    // expected-note@-1 {{'VB' is not empty}} \
+    // expected-note@-1 {{because it has a virtual base 'EB'}} \
+    // expected-note@#e-VB {{'VB' defined here}}
+
+    // Non-empty base class.
+    struct Base { int b; }; // #e-Base
+    struct Derived : Base {}; // #e-Derived
+    static_assert(__is_empty(Derived));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::Derived)'}} \
+    // expected-note@-1 {{'Derived' is not empty}} \
+    // expected-note@-1 {{because it has a base class 'Base' that is not empty}} \
+    // expected-note@#e-Derived {{'Derived' defined here}} 
+
+    // Combination of the above.
+    struct Multi : Base, virtual EB { // #e-Multi
+        int z;
+        virtual void g();
+    };
+    static_assert(__is_empty(Multi));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::Multi)'}} \
+    // expected-note@-1 {{'Multi' is not empty}} \
+    // expected-note@-1 {{because it has a non-static data member 'z' of type 'int'}} \
+    // expected-note@-1 {{because it has a virtual function 'g'}} \
+    // expected-note@-1 {{because it has a base class 'Base' that is not empty}} \
+    // expected-note@-1 {{because it has a virtual base 'EB'}} \
+    // expected-note@#e-Multi {{'Multi' defined here}}
+
+    // Zero-width bit-field.
+    struct BitField { int : 0; }; // #e-BitField
+    static_assert(__is_empty(BitField)); // no diagnostics  
+
+    // Dependent bit-field width. 
+    template <int N>
+    struct DependentBitField { int : N; }; // #e-DependentBitField
+
+    static_assert(__is_empty(DependentBitField<0>)); // no diagnostics
+
+    static_assert(__is_empty(DependentBitField<2>)); 
+    // expected-error@-1 {{static assertion failed due to requirement '__is_empty(is_empty_tests::DependentBitField<2>)'}} \
+    // expected-note@-1 {{'DependentBitField<2>' is not empty}} \
+    // expected-note@-1 {{because it field '' is a non-zero-length bit-field}} \
+    // expected-note@#e-DependentBitField {{'DependentBitField<2>' defined here}}
+
+}
+
+namespace standard_layout_tests {
+struct WithVirtual { // #sl-Virtual
+    virtual void foo(); // #sl-Virtual-Foo
+};
+static_assert(__is_standard_layout(WithVirtual));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::WithVirtual)'}} \
+// expected-note@-1 {{'WithVirtual' is not standard-layout}} \
+// expected-note@-1 {{because it has a virtual function 'foo'}} \
+// expected-note@#sl-Virtual-Foo {{'foo' defined here}} \
+// expected-note@#sl-Virtual {{'WithVirtual' defined here}}
+
+struct MixedAccess { // #sl-Mixed
+public:
+    int a; // #sl-MixedF1
+private:
+    int b; // #sl-MixedF2
+};
+static_assert(__is_standard_layout(MixedAccess));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::MixedAccess)'}} \
+// expected-note@-1 {{'MixedAccess' is not standard-layout}} \
+// expected-note@-1 {{because it has mixed access specifiers}} \
+// expected-note@#sl-MixedF1 {{'a' defined here}}
+// expected-note@#sl-MixedF2 {{field 'b' has a different access specifier than field 'a'}}
+// expected-note@#sl-Mixed {{'MixedAccess' defined here}}
+
+struct VirtualBase { virtual ~VirtualBase(); };               // #sl-VirtualBase
+struct VB : virtual VirtualBase {};                            // #sl-VB
+static_assert(__is_standard_layout(VB));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::VB)'}} \
+// expected-note@-1 {{'VB' is not standard-layout}} \
+// expected-note@-1 {{because it has a virtual base 'VirtualBase'}} \
+// expected-note@-1 {{because it has a non-standard-layout base 'VirtualBase'}} \
+// expected-note@-1 {{because it has a virtual function '~VB'}} \
+// expected-note@#sl-VB {{'VB' defined here}}
+// expected-note@#sl-VB {{'~VB' defined here}}
+
+union U {      // #sl-U
+public:
+    int x; // #sl-UF1
+private:
+    int y; // #sl-UF2
+};                                                       
+static_assert(__is_standard_layout(U));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::U)'}} \
+// expected-note@-1 {{'U' is not standard-layout}} \
+// expected-note@-1 {{because it has mixed access specifiers}}
+// expected-note@#sl-UF1 {{'x' defined here}}
+// expected-note@#sl-UF2 {{field 'y' has a different access specifier than field 'x'}}
+// expected-note@#sl-U {{'U' defined here}}
+
+// Single base class is OK
+struct BaseClass{ int a; };                                   // #sl-BaseClass
+struct DerivedOK : BaseClass {};                                // #sl-DerivedOK
+static_assert(__is_standard_layout(DerivedOK));    
+
+// Primitive types should be standard layout
+static_assert(__is_standard_layout(int));                     // #sl-Int
+static_assert(__is_standard_layout(float));                   // #sl-Float
+
+// Multi-level inheritance: Non-standard layout
+struct Base1 { int a; };                                      // #sl-Base1
+struct Base2 { int b; };                                      // #sl-Base2
+struct DerivedClass : Base1, Base2 {};                        // #sl-DerivedClass
+static_assert(__is_standard_layout(DerivedClass));               
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::DerivedClass)'}} \
+// expected-note@-1 {{'DerivedClass' is not standard-layout}} \
+// expected-note@-1 {{because it has multiple base classes with data members}} \
+// expected-note@#sl-DerivedClass {{'DerivedClass' defined here}} 
+
+// Inheritance hierarchy with multiple classes having data members
+struct BaseA { int a; };                                      // #sl-BaseA
+struct BaseB : BaseA {};                                      // inherits BaseA, has no new members
+struct BaseC: BaseB { int c; };                               // #sl-BaseC
+static_assert(__is_standard_layout(BaseC));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::BaseC)'}} \
+// expected-note@-1 {{'BaseC' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'BaseA' with data members}} \
+// expected-note@#sl-BaseC {{'BaseC' defined here}} \
+// Multiple direct base classes with no data members --> standard layout
+struct BaseX {};                                              // #sl-BaseX
+struct BaseY {};                                              // #sl-BaseY
+struct MultiBase : BaseX, BaseY {};                          // #sl-MultiBase
+static_assert(__is_standard_layout(MultiBase));
+
+struct A {
+  int x;
+};
+
+struct B : A {
+};
+// Indirect base with data members
+struct C : B { int y; }; // #sl-C
+static_assert(__is_standard_layout(C));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::C)'}} \
+// expected-note@-1 {{'C' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'A' with data members}} \
+// expected-note@#sl-C {{'C' defined here}}
+
+struct D {
+    union { int a; float b; };
+  }; // #sl-D
+static_assert(__is_standard_layout(D)); // no diagnostics
+
+// E inherits D but adds a new member
+struct E : D { int x; }; // #sl-E
+static_assert(__is_standard_layout(E));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::E)'}} \
+// expected-note@-1 {{'E' is not standard-layout}} \
+// expected-note@-1 {{because it has an indirect base 'D' with data members}} \
+// expected-note@#sl-E {{'E' defined here}}
+
+// F inherits D but only an unnamed bitfield
+// This should still fail because F ends up with a 
+// base class with a data member and its own unnamed bitfield
+// which is not allowed in standard layout
+struct F : D { int : 0; }; // #sl-F
+static_assert(__is_standard_layout(F));
+// expected-error@-1 {{static assertion failed due to requirement '__is_standard_layout(standard_layout_tests::F)'}} \
+// expected-note@-1 {{'F' is not standard-layout}} \
+// expected-note@#sl-F {{'F' defined here}}
+
+struct Empty {};
+struct G { Empty a, b; }; // #sl-G
+static_assert(__is_standard_layout(G)); // no diagnostics
+
+struct H { Empty a; int x; }; // #sl-H
+static_assert(__is_standard_layout(H)); // no diagnostics
+
+ struct I { Empty a; int : 0; int x; }; // #sl-I
+static_assert(__is_standard_layout(I)); // no diagnostics
+}
+
