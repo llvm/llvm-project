@@ -97,3 +97,38 @@ class ProcessSaveCoreMinidump64bTestCase(TestBase):
             self.assertTrue(self.dbg.DeleteTarget(target))
             if os.path.isfile(minidump_path):
                 os.unlink(minidump_path)
+
+    @skipUnlessArch("x86_64")
+    @skipUnlessPlatform(["linux"])
+    def test_minidump_save_style_mixed_memory(self):
+        """Test that a mixed memory minidump is the same byte for byte."""
+
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        minidump_path = self.getBuildArtifact("minidump_mixed_force64b.dmp")
+
+        try:
+            target = self.dbg.CreateTarget(exe)
+            live_process = target.LaunchSimple(
+                None, None, self.get_process_working_directory()
+            )
+            self.assertState(live_process.GetState(), lldb.eStateStopped)
+            options = lldb.SBSaveCoreOptions()
+
+            options.SetOutputFile(lldb.SBFileSpec(minidump_path))
+            options.SetStyle(lldb.eSaveCoreDirtyOnly)
+            options.SetPluginName("minidump")
+            options.SetProcess(live_process)
+            options.AddFlag(FORCE_64B)
+
+            error = live_process.SaveCore(options)
+            self.assertTrue(error.Success(), error.GetCString())
+
+            target = self.dbg.CreateTarget(None)
+            core_proc = target.LoadCore(minidump_path)
+
+            self.verify_minidump(core_proc, live_process, options)
+        finally:
+            self.assertTrue(self.dbg.DeleteTarget(target))
+            if os.path.isfile(minidump_path):
+                os.unlink(minidump_path)
