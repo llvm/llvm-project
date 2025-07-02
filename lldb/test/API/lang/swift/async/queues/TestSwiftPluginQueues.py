@@ -19,7 +19,7 @@ class TestCase(lldbtest.TestBase):
             self, "BREAK HERE", source_file
         )
 
-        self.assertRegex(thread.GetName(), r"^Task [1-9]\d*$")
+        self.assertRegex(thread.GetName(), r"^Task [1-9]$")
 
         queue_plugin = self.get_queue_from_thread_info_command(False)
         queue_backing = self.get_queue_from_thread_info_command(True)

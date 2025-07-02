@@ -13,7 +13,7 @@ class TestCase(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, "break outside", lldb.SBFileSpec("main.swift")
         )
-        self.expect("v task", patterns=[r'"Chore" id:[1-9]\d*'])
+        self.expect("v task", patterns=[r'"Chore" id:[1-9]'])
 
     @swiftTest
     @skipIfLinux  # rdar://151471067
@@ -22,4 +22,4 @@ class TestCase(TestBase):
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "break inside", lldb.SBFileSpec("main.swift")
         )
-        self.assertRegex(thread.name, r"Chore \(Task [1-9]\d*\)")
+        self.assertRegex(thread.name, r"Chore \(Task [1-9]\)")

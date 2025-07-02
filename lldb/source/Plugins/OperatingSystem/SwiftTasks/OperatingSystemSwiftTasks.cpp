@@ -38,6 +38,10 @@ void OperatingSystemSwiftTasks::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
+/// Mask applied to task IDs to generate thread IDs that to don't conflicts with
+/// core thread IDs.
+static constexpr uint64_t TASK_MASK = 0x0000000f00000000ULL;
+
 /// A wrapper around ThreadMemory providing lazy name evaluation, as this is
 /// expensive to compute for Swift Tasks.
 class SwiftTaskThreadMemory : public ThreadMemory {
@@ -61,8 +65,13 @@ public:
   }
 
 private:
+  uint64_t GetTaskID() const {
+    auto thread_id = GetID();
+    return thread_id & ~TASK_MASK;
+  }
+
   std::string GetDefaultTaskName() const {
-    return llvm::formatv("Task {0}", GetID());
+    return llvm::formatv("Task {0}", GetTaskID());
   }
 
   /// If possible, read a user-provided task name from memory, otherwise use a
@@ -80,7 +89,7 @@ private:
 
     if (!task_name->has_value())
       return GetDefaultTaskName();
-    return llvm::formatv("{0} (Task {1})", *task_name, GetID());
+    return llvm::formatv("{0} (Task {1})", *task_name, GetTaskID());
   }
 
   std::string m_task_name = "";
@@ -131,7 +140,7 @@ ThreadSP
 OperatingSystemSwiftTasks::FindOrCreateSwiftThread(ThreadList &old_thread_list,
                                                    uint64_t task_id) {
   // Mask higher bits to avoid conflicts with core thread IDs.
-  uint64_t masked_task_id = 0x0000000f00000000 | task_id;
+  uint64_t masked_task_id = TASK_MASK | task_id;
 
   // If we already had a thread for this Task in the last stop, re-use it.
   if (ThreadSP old_thread = old_thread_list.FindThreadByID(masked_task_id);
