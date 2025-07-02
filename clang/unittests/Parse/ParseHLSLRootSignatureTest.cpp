@@ -204,7 +204,10 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Space, 0u);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Offset,
             DescriptorTableOffsetAppend);
-  auto ValidDescriptorRangeFlags = FlagT(0x1000f);
+  auto ValidDescriptorRangeFlags =
+      FlagT::DescriptorsVolatile | FlagT::DataVolatile |
+      FlagT::DataStaticWhileSetAtExecute | FlagT::DataStatic |
+      FlagT::DescriptorsStaticKeepingBufferBoundsChecks;
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             ValidDescriptorRangeFlags);
 
@@ -415,8 +418,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
   RootElement Elem = Elements[0];
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
-  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
-            llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile);
+  auto ValidSamplerFlags =
+      llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile;
+  ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidSamplerFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
 }
@@ -511,7 +515,14 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
   Elem = Elements[2];
   ASSERT_TRUE(std::holds_alternative<FlagT>(Elem));
-  auto ValidRootFlags = FlagT(0xfff);
+  auto ValidRootFlags =
+      FlagT::AllowInputAssemblerInputLayout |
+      FlagT::DenyVertexShaderRootAccess | FlagT::DenyHullShaderRootAccess |
+      FlagT::DenyDomainShaderRootAccess | FlagT::DenyGeometryShaderRootAccess |
+      FlagT::DenyPixelShaderRootAccess | FlagT::AllowStreamOutput |
+      FlagT::LocalRootSignature | FlagT::DenyAmplificationShaderRootAccess |
+      FlagT::DenyMeshShaderRootAccess | FlagT::CBVSRVUAVHeapDirectlyIndexed |
+      FlagT::SamplerHeapDirectlyIndexed;
   ASSERT_EQ(std::get<FlagT>(Elem), ValidRootFlags);
 
   ASSERT_TRUE(Consumer->isSatisfied());
@@ -562,7 +573,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Space, 4u);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Visibility,
             llvm::dxbc::ShaderVisibility::Geometry);
-  auto ValidRootDescriptorFlags = FlagT(0xe);
+  auto ValidRootDescriptorFlags = FlagT::DataVolatile |
+                                  FlagT::DataStaticWhileSetAtExecute |
+                                  FlagT::DataStatic;
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, ValidRootDescriptorFlags);
 
   Elem = Elements[2];
