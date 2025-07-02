@@ -93,51 +93,61 @@ public:
 };
 
 template <class _Ep>
-_LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
-#  if _LIBCPP_HAS_EXCEPTIONS
-#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201103L
-  // Clang treats throwing ObjC types differently, and we have to preserve original throw-ing behavior
-  // to not break some ObjC invariants. ObjC types are thrown by a pointer, hence the condition;
-  // although it does also trigger for some valid c++ usages, this should be a case rare enough to
-  // not complicate the condition any further
-  if constexpr (is_pointer<_Ep>::value) {
-    try {
-      throw __e;
-    } catch (...) {
-      return current_exception();
-    }
-  } else {
-    using _Ep2 = __decay_t<_Ep>;
+_LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_explicit(_Ep& __e) _NOEXCEPT {
+  using _Ep2 = __decay_t<_Ep>;
+  void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
+#  ifdef __wasm__
+  auto __cleanup = [](void* __p) -> void* {
+    std::__destroy_at(static_cast<_Ep2*>(__p));
+    return __p;
+  };
+#  else
+  auto __cleanup = [](void* __p) { std::__destroy_at(static_cast<_Ep2*>(__p)); };
+#  endif
+  (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), __cleanup);
 
-    void* __ex = __cxxabiv1::__cxa_allocate_exception(sizeof(_Ep));
-#      ifdef __wasm__
-    // In Wasm, a destructor returns its argument
-    (void)__cxxabiv1::__cxa_init_primary_exception(
-        __ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) -> void* {
-#      else
-    (void)__cxxabiv1::__cxa_init_primary_exception(__ex, const_cast<std::type_info*>(&typeid(_Ep)), [](void* __p) {
-#      endif
-          std::__destroy_at(static_cast<_Ep2*>(__p));
-#      ifdef __wasm__
-          return __p;
-#      endif
-        });
-
-    try {
-      ::new (__ex) _Ep2(__e);
-      return exception_ptr::__from_native_exception_pointer(__ex);
-    } catch (...) {
-      __cxxabiv1::__cxa_free_exception(__ex);
-      return current_exception();
-    }
+  try {
+    ::new (__ex) _Ep2(__e);
+    return exception_ptr::__from_native_exception_pointer(__ex);
+  } catch (...) {
+    __cxxabiv1::__cxa_free_exception(__ex);
+    return current_exception();
   }
-#    else // !(_LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201103L)
+}
+
+template <class _Ep>
+_LIBCPP_HIDE_FROM_ABI exception_ptr __make_exception_ptr_via_throw(_Ep& __e) _NOEXCEPT {
   try {
     throw __e;
   } catch (...) {
     return current_exception();
   }
+}
+
+template <class _Ep>
+_LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
+#  if _LIBCPP_HAS_EXCEPTIONS
+  // Objective-C exceptions are thrown via pointer. When throwing an Objective-C exception,
+  // Clang generates a call to `objc_exception_throw` instead of the usual `__cxa_throw`.
+  // That function creates an exception with a special Objective-C typeinfo instead of
+  // the usual C++ typeinfo, since that is needed to implement the behavior documented
+  // at [1]).
+  //
+  // Because of this special behavior, we can't create an exception via `__cxa_init_primary_exception`
+  // for Objective-C exceptions, otherwise we'd bypass `objc_exception_throw`. See https://llvm.org/PR135089.
+  //
+  // [1]:
+  // https://developer.apple.com/library/archive/documentation/Cocoa/Conceptual/Exceptions/Articles/Exceptions64Bit.html
+  if constexpr (is_pointer<_Ep>::value) {
+    return std::__make_exception_ptr_via_throw(__e);
+  }
+
+#    if _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION && __cplusplus >= 201103L
+  return std::__make_exception_ptr_explicit(__e);
+#    else
+  return std::__make_exception_ptr_via_throw(__e);
 #    endif
+
 #  else // !LIBCPP_HAS_EXCEPTIONS
   ((void)__e);
   std::abort();
