@@ -4,7 +4,7 @@ module m
   end type
  contains
   subroutine sub(x) bind(c)
-    !PORTABILITY: The derived type of this interoperable object should be BIND(C)
+    !PORTABILITY: The derived type of this interoperable object should be BIND(C) [-Wportability]
     type(a), pointer, intent(in) :: x
   end
 end
