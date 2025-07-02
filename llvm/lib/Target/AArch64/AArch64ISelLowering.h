@@ -365,6 +365,10 @@ public:
     return true;
   }
 
+  bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
+    return VT.isScalarInteger();
+  }
+
   bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
   bool hasAndNotCompare(SDValue V) const override {
