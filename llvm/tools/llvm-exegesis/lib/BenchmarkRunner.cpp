@@ -31,6 +31,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <memory>
 #include <string>
@@ -593,6 +594,99 @@ private:
   const std::optional<int> BenchmarkProcessCPU;
 };
 #endif // __linux__
+
+// Helper function to print generated assembly snippets
+void printGeneratedAssembly(
+    const std::vector<std::pair<std::string, std::pair<uint64_t, std::string>>>
+        &Instructions,
+    bool Preview, size_t PreviewFirst = 10, size_t PreviewLast = 3) {
+  dbgs() << "```\n";
+  size_t N = Instructions.size();
+  // Print first "PreviewFirst" lines or all if less
+  for (size_t i = 0; i < std::min(size_t(PreviewFirst), N); ++i) {
+    dbgs() << format_hex_no_prefix(Instructions[i].second.first, 0) << ":\t"
+           << Instructions[i].second.second << Instructions[i].first << '\n';
+  }
+  if (N > (PreviewFirst + PreviewLast)) {
+    if (Preview) {
+      dbgs() << "...\t(" << (N - PreviewFirst - PreviewLast)
+             << " more instructions)\n";
+    } else {
+      // Print all middle lines
+      for (size_t i = PreviewFirst; i < N - PreviewLast; ++i) {
+        dbgs() << format_hex_no_prefix(Instructions[i].second.first, 0) << ":\t"
+               << Instructions[i].second.second << Instructions[i].first
+               << '\n';
+      }
+    }
+    // Print last "PreviewLast" lines
+    for (size_t i = N - PreviewLast; i < N; ++i) {
+      dbgs() << format_hex_no_prefix(Instructions[i].second.first, 0) << ":\t"
+             << Instructions[i].second.second << Instructions[i].first << '\n';
+    }
+  }
+  dbgs() << "```\n";
+}
+
+// Function to extract and print assembly from snippet
+void printAssembledSnippet(const LLVMState &State,
+                           const SmallString<0> &Snippet) {
+  // Extract the actual function bytes from the object file
+  std::vector<uint8_t> FunctionBytes;
+  if (auto Err = getBenchmarkFunctionBytes(Snippet, FunctionBytes)) {
+    dbgs() << "Failed to extract function bytes: " << toString(std::move(Err))
+           << "\n";
+    return;
+  }
+
+  DisassemblerHelper DisHelper(State);
+  ArrayRef<uint8_t> Bytes(FunctionBytes);
+
+  // Decode all instructions first
+  std::vector<std::pair<std::string, std::pair<uint64_t, std::string>>>
+      Instructions;
+  uint64_t Address = 0;
+
+  while (!Bytes.empty()) {
+    MCInst Inst;
+    uint64_t Size;
+    if (DisHelper.decodeInst(Inst, Size, Bytes)) {
+      // Format instruction text
+      std::string InstStr;
+      raw_string_ostream OS(InstStr);
+      DisHelper.printInst(&Inst, OS);
+
+      // Create hex string for this instruction (big-endian order)
+      std::string HexStr;
+      raw_string_ostream HexOS(HexStr);
+      for (int i = Size - 1; i >= 0; --i) {
+        HexOS << format_hex_no_prefix(Bytes[i], 2);
+      }
+
+      Instructions.push_back({OS.str(), {Address, HexOS.str()}});
+      Bytes = Bytes.slice(Size);
+      Address += Size;
+    } else {
+      Instructions.push_back({"<decode error>", {Address, ""}});
+      break;
+    }
+  }
+
+  // Preview generated assembly snippet
+  {
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "preview-gen-assembly"
+    LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
+    LLVM_DEBUG(printGeneratedAssembly(Instructions, true));
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "print-gen-assembly"
+  }
+  // Print generated assembly snippet
+  {
+    LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
+    LLVM_DEBUG(printGeneratedAssembly(Instructions, false));
+  }
+}
 } // namespace
 
 Expected<SmallString<0>> BenchmarkRunner::assembleSnippet(
@@ -662,94 +756,7 @@ BenchmarkRunner::getRunnableConfiguration(
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
 
     // Print the assembled snippet by disassembling the binary data
-    // Extract the actual function bytes from the object file
-    std::vector<uint8_t> FunctionBytes;
-    if (auto Err = getBenchmarkFunctionBytes(*Snippet, FunctionBytes)) {
-      dbgs() << "Failed to extract function bytes: " << toString(std::move(Err))
-             << "\n";
-    } else {
-      DisassemblerHelper DisHelper(State);
-      ArrayRef<uint8_t> Bytes(FunctionBytes);
-
-      // Decode all instructions first
-      struct InstructionInfo {
-        std::string Text;
-        uint64_t Address;
-        std::string HexBytes;
-      };
-      std::vector<InstructionInfo> Instructions;
-      uint64_t Address = 0;
-
-      while (!Bytes.empty()) {
-        MCInst Inst;
-        uint64_t Size;
-        if (DisHelper.decodeInst(Inst, Size, Bytes)) {
-          // Format instruction text
-          std::string InstStr;
-          raw_string_ostream OS(InstStr);
-          DisHelper.printInst(&Inst, OS);
-
-          // Create hex string for this instruction (big-endian order)
-          std::string HexStr;
-          raw_string_ostream HexOS(HexStr);
-          for (int i = Size - 1; i >= 0; --i) {
-            HexOS << format_hex_no_prefix(Bytes[i], 2);
-          }
-
-          Instructions.push_back({OS.str(), Address, HexOS.str()});
-          Bytes = Bytes.slice(Size);
-          Address += Size;
-        } else {
-          Instructions.push_back({"<decode error>", Address, ""});
-          break;
-        }
-      }
-
-      auto printSnippet = [&](bool Preview, size_t PreviewFirst = 10,
-                              size_t PreviewLast = 3) {
-        dbgs() << "```\n";
-        size_t N = Instructions.size();
-        // Print first "PreviewFirst" lines or all if less
-        for (size_t i = 0; i < std::min(size_t(PreviewFirst), N); ++i) {
-          dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
-                 << Instructions[i].HexBytes << Instructions[i].Text << '\n';
-        }
-        if (N > (PreviewFirst + PreviewLast)) {
-          if (Preview) {
-            dbgs() << "...\t(" << (N - PreviewFirst - PreviewLast)
-                   << " more instructions)\n";
-          } else {
-            // Print all middle lines
-            for (size_t i = PreviewFirst; i < N - PreviewLast; ++i) {
-              dbgs() << format_hex_no_prefix(Instructions[i].Address, 0)
-                     << ":\t" << Instructions[i].HexBytes
-                     << Instructions[i].Text << '\n';
-            }
-          }
-          // Print last "PreviewLast" lines
-          for (size_t i = N - PreviewLast; i < N; ++i) {
-            dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
-                   << Instructions[i].HexBytes << Instructions[i].Text << '\n';
-          }
-        }
-        dbgs() << "```\n";
-      };
-
-      // Preview generated assembly snippet
-      {
-#undef DEBUG_TYPE
-#define DEBUG_TYPE "preview-gen-assembly"
-        LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
-        LLVM_DEBUG(printSnippet(true));
-#undef DEBUG_TYPE
-#define DEBUG_TYPE "print-gen-assembly"
-      }
-      // Print generated assembly snippet
-      {
-        LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
-        LLVM_DEBUG(printSnippet(false));
-      }
-    }
+    printAssembledSnippet(State, *Snippet);
   }
 
   return std::move(RC);
