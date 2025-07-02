@@ -46,7 +46,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
 
     def test_failing_launch_commands_and_run_in_terminal(self):
         """
-        Tests launching with an invalid program.
+        Tests launching with a launch commands in integrated terminal.
         """
         program = self.getBuildArtifact("a.out")
         self.create_debug_adapter()
@@ -58,6 +58,20 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(
             "'launchCommands' and 'runInTerminal' are mutually exclusive",
             self.get_dict_value(response, ["body", "error", "format"]),
+        )
+
+    def test_failing_run_in_terminal(self):
+        """
+        Tests launching in terminal.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+        response = self.launch(program, runInTerminal="invalid", expectFailure=True)
+        self.assertFalse(response["success"])
+        self.assertTrue(self.get_dict_value(response, ["body", "error", "showUser"]))
+        self.assertRegex(
+            response["body"]["error"]["format"],
+            r"unexpected value, expected 'console', 'integrated' or 'external' at arguments.runInTerminal",
         )
 
     @skipIfWindows

@@ -236,6 +236,7 @@ contain the following key/value pairs:
 | **env**                           | dictionary  |     | Environment variables to set when launching the program. The format of each environment variable string is "VAR=VALUE" for environment variables with values or just "VAR" for environment variables with no values.
 | **stopOnEntry**                   | boolean     |     | Whether to stop program immediately after launching.
 | **runInTerminal**                 | boolean     |     | Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs.
+| **runInTerminal**                 | string      |     | Specifies where program should be launch: `integrated` for an integrated terminal in the IDE, `external` for external terminal window or `console` (default) for IDE debug console.
 | **launchCommands**                | [string]    |     | LLDB commands executed to launch the program.
 
 For JSON configurations of `"type": "attach"`, the JSON configuration can contain

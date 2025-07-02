@@ -890,7 +890,7 @@ class DebugCommunication(object):
         args: Optional[list[str]] = None,
         cwd: Optional[str] = None,
         env: Optional[dict[str, str]] = None,
-        stopOnEntry=False,
+        stopOnEntry: Union[bool, str] = False,
         disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,

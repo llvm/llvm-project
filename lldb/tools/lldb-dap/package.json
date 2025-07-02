@@ -526,9 +526,27 @@
                 "default": []
               },
               "runInTerminal": {
-                "type": "boolean",
-                "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
-                "default": false
+                "anyOf": [
+                  {
+                    "type": "boolean",
+                    "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
+                    "default": false
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "console",
+                      "integrated",
+                      "external"
+                    ],
+                    "enumDescriptions": [
+                      "Launch the program inside an integrated terminal in the IDE.",
+                      "Launch the program inside an external terminal window.",
+                      "Use Debug Console for output (input is not supported)."
+                    ],
+                    "default": "console"
+                  }
+                ]
               },
               "timeout": {
                 "type": "number",
