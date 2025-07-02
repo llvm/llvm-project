@@ -290,12 +290,16 @@ int __tgt_interop_use(ident_t *LocRef, omp_interop_val_t *Interop,
     return OFFLOAD_FAIL;
 
   if (Interop->interop_type == kmp_interop_type_targetsync) {
-    if (Ctx->flags.nowait)
-      DP("Warning: nowait flag on interop use not supported yet. "
-         "Ignored\n");
-    if (Deps)
+    if (Deps) {
+      if (nowait) {
+        DP("Warning: nowait flag on interop use with dependences not supported yet. "
+           "Ignored\n");
+        nowait = false;
+      }
+
       __kmpc_omp_wait_deps(LocRef, Ctx->gtid, Deps->ndeps, Deps->deplist,
                            Deps->ndeps_noalias, Deps->noalias_deplist);
+    }
   }
 
   if (Interop->async_info && Interop->async_info->Queue) {
@@ -333,6 +337,28 @@ int __tgt_interop_release(ident_t *LocRef, omp_interop_val_t *Interop,
 
   return Interop->release();
 }
+
+
+EXTERN int ompx_interop_add_completion_callback(omp_interop_val_t *Interop,
+                                                ompx_interop_cb_t *cb,
+                                                void *data) {
+  DP("Call to %s with interop " DPxMOD ", property callback " DPxMOD
+     "and data " DPxMOD "\n",
+     __func__, DPxPTR(Interop), DPxPTR(cb), DPxPTR(data));
+
+  if (OffloadPolicy::get(*PM).Kind == OffloadPolicy::DISABLED || !Interop)
+    return omp_irc_other;
+
+  if (!Interop) {
+    DP("Call to %s with invalid interop\n", __func__);
+    return omp_irc_empty;
+  }
+
+  Interop->addCompletionCb(cb, data);
+
+  return omp_irc_success;
+}
+
 
 } // extern "C"
 
