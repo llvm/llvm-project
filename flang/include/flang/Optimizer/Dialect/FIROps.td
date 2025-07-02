@@ -3884,9 +3884,17 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    unsigned getNumInductionVars() { return getLowerBound().size(); }
+    unsigned getNumInductionVars() {
+      return getLowerBound().size();
+    }
 
-    unsigned getNumLocalOperands() { return getLocalVars().size(); }
+    unsigned getNumLocalOperands() {
+      return getLocalVars().size();
+    }
+
+    unsigned getNumReduceOperands() {
+      return getReduceVars().size();
+    }
 
     mlir::Block::BlockArgListType getInductionVars() {
       return getBody()->getArguments().slice(0, getNumInductionVars());
@@ -3906,16 +3914,6 @@ def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     /// Number of operands controlling the loop
     unsigned getNumControlOperands() { return getLowerBound().size() * 3; }
 
-    // Get Number of reduction operands
-    unsigned getNumReduceOperands() {
-      return getReduceVars().size();
-    }
-
-    mlir::Operation::operand_range getLocalOperands() {
-      return getOperands()
-          .slice(getNumControlOperands() + getNumReduceOperands(),
-                 getNumLocalOperands());
-    }
   }];
 }
 
