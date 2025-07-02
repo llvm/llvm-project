@@ -694,8 +694,6 @@ public:
       OS << "\t<unknown>";
   }
 
-  virtual std::string getInstructionSeparator() const { return "\n"; }
-
   virtual void emitPostInstructionInfo(formatted_raw_ostream &FOS,
                                        const MCAsmInfo &MAI,
                                        const MCSubtargetInfo &STI,
@@ -715,7 +713,7 @@ public:
         FOS << MAI.getCommentString() << ' ' << Comment;
       }
       LVP.printAfterInst(FOS);
-      FOS << getInstructionSeparator();
+      FOS << "\n";
     } while (!Comments.empty());
     FOS.flush();
   }
@@ -741,7 +739,7 @@ public:
     }
   }
 
-  std::string getInstructionSeparator() const override {
+  std::string getInstructionSeparator() const {
     SmallString<40> Separator;
     raw_svector_ostream OS(Separator);
     if (ShouldClosePacket) {
@@ -760,8 +758,11 @@ public:
   void emitPostInstructionInfo(formatted_raw_ostream &FOS, const MCAsmInfo &MAI,
                                const MCSubtargetInfo &STI, StringRef Comments,
                                LiveVariablePrinter &LVP) override {
-
-    PrettyPrinter::emitPostInstructionInfo(FOS, MAI, STI, Comments, LVP);
+    // Hexagon does not write anything to the comment stream, so we can just
+    // print the separator.
+    LVP.printAfterInst(FOS);
+    FOS << getInstructionSeparator();
+    FOS.flush();
     if (ShouldClosePacket)
       reset();
   }
