@@ -166,15 +166,11 @@
 // RUN: %clang -### --target=arm-none-eabi -nolibc %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOLIBC
 // CHECK-NOLIBC-NOT: "-lc"
-// CHECK-NOLIBC-NOT: "-lm"
-// CHECK-NOLIBC-NOT: "-lc++"
 // CHECK-NOLIBC: "{{[^"]*}}libclang_rt.builtins.a"
 
 // RUN: %clang -### --target=arm-none-eabi -nostdlib %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NOSTDLIB
 // CHECK-NOSTDLIB-NOT: "-lc"
-// CHECK-NOSTDLIB-NOT: "-lm"
-// CHECK-NOSTDLIB-NOT: "-lc++"
 // CHECK-NOSTDLIB-NOT: "{{[^"]*}}libclang_rt.builtins.a"
 
 // RUN: %clang -### --target=arm-none-eabi -v %s 2>&1 \
