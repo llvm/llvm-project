@@ -278,10 +278,14 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
                                  StringRef ModuleFilename,
                                  DiagnosticsEngine *Diags,
                                  bool AllowCompatibleDifferences = true) {
+  // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+  using CK = LangOptions::CompatibilityKind;
+
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  if constexpr (Compatibility != Benign) {                                     \
-    if ((Compatibility == Affecting) ||                                        \
-        (Compatibility == Compatible && !AllowCompatibleDifferences)) {        \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
         if (Diags) {                                                           \
           if (Bits == 1)                                                       \
@@ -298,9 +302,10 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
   }
 
 #define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
-  if constexpr (Compatibility != Benign) {                                     \
-    if ((Compatibility == Affecting) ||                                        \
-        (Compatibility == Compatible && !AllowCompatibleDifferences)) {        \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.Name != LangOpts.Name) {                            \
         if (Diags)                                                             \
           Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
@@ -311,9 +316,10 @@ static bool checkLanguageOptions(const LangOptions &LangOpts,
   }
 
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  if constexpr (Compatibility != Benign) {                                     \
-    if ((Compatibility == Affecting) ||                                        \
-        (Compatibility == Compatible && !AllowCompatibleDifferences)) {        \
+  if constexpr (CK::Compatibility != CK::Benign) {                             \
+    if ((CK::Compatibility == CK::NotCompatible) ||                            \
+        (CK::Compatibility == CK::Compatible &&                                \
+         !AllowCompatibleDifferences)) {                                       \
       if (ExistingLangOpts.get##Name() != LangOpts.get##Name()) {              \
         if (Diags)                                                             \
           Diags->Report(diag::err_ast_file_langopt_value_mismatch)             \
