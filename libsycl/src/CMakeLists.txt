@@ -58,6 +58,8 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
               COMPONENT ${LIB_TARGET_NAME}
               OPTIONAL)
     endif()
+
+    target_compile_options(${LIB_OBJ_NAME} PUBLIC /EHsc)
   else()
     target_compile_options(${LIB_OBJ_NAME} PUBLIC
                            -fvisibility=hidden -fvisibility-inlines-hidden)
