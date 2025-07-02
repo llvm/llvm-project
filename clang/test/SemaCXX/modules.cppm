@@ -41,6 +41,8 @@ struct S {
   export static int n; // expected-error {{expected member name or ';'}}
 };
 
+int main() {} // expected-warning {{'main' should not be attached to a named module; consider adding C++ language linkage}}
+
 // FIXME: Exports of declarations without external linkage are disallowed.
 // Exports of declarations with non-external-linkage types are disallowed.
 
@@ -67,8 +69,6 @@ int n;
 
 //--- test3.cpp
 export module bar;
-
-int main() {} // expected-warning {{'main' should not be attached to a named module; consider adding C++ language linkage}}
 
 extern "C++" int main() {}
 
