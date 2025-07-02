@@ -32,7 +32,7 @@ LLVM_LIBC_FUNCTION(int, fprintf,
 
   write_utils::StreamWriter write_hook = write_utils::get_write_hook(stream);
   if (write_hook == nullptr) {
-    return 0;
+    return -1;
   }
 
   printf_core::WriteBuffer<printf_core::WriteMode::FLUSH_TO_STREAM> wb(
