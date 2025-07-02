@@ -39,7 +39,7 @@ struct PartialReductionChain {
   Instruction *ExtendA;
   Instruction *ExtendB;
 
-  /// The user of the extend that is then reduced.
+  /// The user of the extends that is then reduced.
   Instruction *ExtendUser;
 };
 
