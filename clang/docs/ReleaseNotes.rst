@@ -747,6 +747,10 @@ Bug Fixes in This Version
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
+- In C23, something like [[/*possible attributes*/]]; is an attribute declaration, not a statement. So it is not
+  allowed by the syntax in places where a statement is required, specifically as the secondary block of a
+  selection or iteration statement. This differs from C++, since C++ allows declaration statements. 
+  Clang now warning this patterns. (#GH141659)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -Wno-unreachable-code
+// RUN: %clang_cc1 -std=c23 -fsyntax-only -verify %s -Wno-unreachable-code
 
 void test1(void) {
   { ; {  ;;}} ;;
@@ -77,3 +78,32 @@ int test9(void) {
 
   return 4, // expected-error {{expected ';' after return statement}}
 }
+
+#if __STDC_VERSION__ >= 202311L
+void attr_decl_in_selection_statement(int n) {
+  if (1)
+    [[]]; // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+
+  if (1) {
+
+  } else
+    [[]]; // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+
+
+  switch (n)
+    [[]]; // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+}
+
+void attr_decl_in_iteration_statement(int n) {
+  int i;
+  for (i = 0; i < n; ++i)
+    [[]];     // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+
+  while (i > 0)
+    [[]];     // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+
+  do
+    [[]];     // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
+  while (i > 0);
+}
+#endif // __STDC_VERSION__ >= 202311L

@@ -276,6 +276,10 @@ def err_expected_while : Error<"expected 'while' in do/while loop">;
 
 def err_expected_semi_after_stmt : Error<"expected ';' after %0 statement">;
 def err_expected_semi_after_expr : Error<"expected ';' after expression">;
+def warn_expected_stmt_before_semi_in_secondary_block : Warning<
+  "expected a statement before ';' but got an attribute declaration, "
+  "it is not allowed by the syntax in places where a statement is required">,
+  InGroup<CXXCompat>;
 def err_extraneous_token_before_semi : Error<"extraneous '%0' before ';'">;
 
 def err_expected_semi_after_method_proto : Error<

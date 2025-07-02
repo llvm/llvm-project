@@ -16,17 +16,22 @@ void f(int n) {
     }
   case 2:
     for (int n = 0; n != 10; ++n)
-      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}} \
+                       // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
   case 3:
     while (1)
-      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}} \
+      // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
   case 4:
     while (0)
-      [[fallthrough]]; // expected-error {{does not directly precede switch label}}
+      [[fallthrough]]; // expected-error {{does not directly precede switch label}} \
+      // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
   case 5:
-    do [[fallthrough]]; while (1); // expected-error {{does not directly precede switch label}}
+    do [[fallthrough]]; while (1); // expected-error {{does not directly precede switch label}} \
+    // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
   case 6:
-    do [[fallthrough]]; while (0); // expected-error {{does not directly precede switch label}}
+    do [[fallthrough]]; while (0); // expected-error {{does not directly precede switch label}} \
+    // expected-warning {{expected a statement before ';' but got an attribute declaration, it is not allowed by the syntax in places where a statement is required}}
   case 7:
     switch (n) {
     case 0:
