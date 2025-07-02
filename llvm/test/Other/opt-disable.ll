@@ -1,3 +1,7 @@
+; This test uses the same IR functions of the opt-bisect test
+; but it checks the correctness of the -opt-disable flag.
+; -opt-disable-enable-verbosity is required to have output.
+
 ; RUN: opt -disable-output -disable-verify \
 ; RUN:     -opt-disable-enable-verbosity \
 ; RUN:     -passes=inferattrs -opt-disable=inferfunctionattrspass %s 2>&1 \
@@ -68,8 +72,6 @@ bb.false:
   ret i32 0
 }
 
-; This function is here to verify that opt-bisect can skip all passes for
-; functions that contain lifetime intrinsics.
 define void @f4(i1 %arg) {
 entry:
   %i = alloca i32, align 4
