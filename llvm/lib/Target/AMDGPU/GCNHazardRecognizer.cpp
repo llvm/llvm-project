@@ -47,7 +47,7 @@ static cl::opt<unsigned, false, MFMAPaddingRatioParser>
 // This is intended for debugging purposes only.
 static cl::opt<unsigned>
     NopPadding("amdgpu-snop-padding", cl::init(0), cl::Hidden,
-               cl::desc("Insert a s_nop x between every instruction"));
+               cl::desc("Insert a s_nop x before every instruction"));
 
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
