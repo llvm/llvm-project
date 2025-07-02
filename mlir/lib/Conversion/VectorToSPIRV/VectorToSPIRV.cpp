@@ -1046,7 +1046,9 @@ struct VectorToElementOpConvert final
     Type elementType = getTypeConverter()->convertType(srcElementType);
     if (!elementType)
       return rewriter.notifyMatchFailure(
-          toElementsOp, "unsupported element type in source vector");
+          toElementsOp,
+          llvm::formatv("failed to convert element type '{0}' to SPIR-V",
+                        srcElementType));
 
     for (auto [idx, element] : llvm::enumerate(toElementsOp.getElements())) {
       // Create an CompositeExtract operation only for results that are not
