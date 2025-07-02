@@ -95,6 +95,7 @@ public:
                                        bool &InvokeDetected);
   MCSymbol *getOrCreateWasmSymbol(StringRef Name);
   void emitDecls(const Module &M);
+  void recordBranchHint(const MachineInstr *MI);
 };
 
 } // end namespace llvm

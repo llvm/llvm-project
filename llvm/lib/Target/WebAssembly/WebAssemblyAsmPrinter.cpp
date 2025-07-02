@@ -32,6 +32,7 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -683,6 +684,100 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
   AsmPrinter::emitFunctionBodyStart();
 }
 
+// Try to infer branch target for a BR_IF instruction after MBB targets were
+// stackified by `WebAssemblyCFGStackify` using simple heuristics to avoid
+// having to simulate block-stack.
+const MachineBasicBlock *inferBranchTarget(const MachineInstr *MI,
+                                           const MachineBasicBlock *MBB) {
+  // Since we need to guess branch targets based on MBB successor order,
+  // we need to make sure that the BR_IF is the last terminator to exclude
+  // complicated edge cases.
+  if (const auto Terminators = reverse(MBB->terminators());
+      Terminators.begin() == Terminators.end() || &*Terminators.begin() != MI)
+    return nullptr;
+
+  // Parent mbb might have more than the two successors (true / false) from
+  // br_if due to eh pads / unwinds. We skip those cases.
+  if (MBB->succ_size() != 2)
+    return nullptr;
+
+  const MachineBasicBlock *Succ0 = *MBB->succ_begin();
+  const MachineBasicBlock *Succ1 = *std::next(MBB->succ_begin());
+
+  // Find fallthrough block that is right after MBB and is the target of the
+  // false-edge of the br_if
+  assert(std::next(MBB->getIterator()) != MBB->getParent()->end() &&
+         "MBB with br_if must have a basic block after it");
+  const MachineBasicBlock *Fallthrough = &*std::next(MBB->getIterator());
+
+  // In some corner cases concerning exceptions, earlier optimizations
+  // (`WebAssemblyCFGStackify::removeUnnecessaryInstrs` in particular) obfuscate
+  // fallthrough control flow:
+  //
+  //  bb0:
+  //    ;; successor: if.true, cont
+  //    br_if $if.true
+  //    br $cont
+  //
+  //  ehpad: ...
+  //  cont: ...  <- Continuation BB
+  //
+  // `br $cont` may be optimized away, making the `ehpad` seem like the
+  // fallthrough block instead of `cont`. Give up on that case.
+  if (Fallthrough != Succ0 && Fallthrough != Succ1)
+    return nullptr;
+  // return the true-block (desired branch target) which is !Fallthrough
+  return Fallthrough == Succ0 ? Succ1 : Succ0;
+}
+
+void WebAssemblyAsmPrinter::recordBranchHint(const MachineInstr *MI) {
+  assert(MI->getOpcode() == WebAssembly::BR_IF);
+  const MachineBasicBlock *MBB = MI->getParent();
+  const MachineFunction *MF = MBB->getParent();
+
+  if (!MF->getSubtarget<WebAssemblySubtarget>().hasBranchHinting() ||
+      !MBB->hasSuccessorProbabilities()) {
+    return;
+  }
+  const MachineBranchProbabilityInfo *MBPI =
+      &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  const MachineBasicBlock *TrueBlock = inferBranchTarget(MI, MBB);
+  if (TrueBlock == nullptr) {
+    LLVM_DEBUG(dbgs() << "Could not infer branch target for " << *MI << '\n');
+    return;
+  }
+  const BranchProbability Prob = MBPI->getEdgeProbability(MBB, TrueBlock);
+
+  const float ThresholdProbLow = WasmLowBranchProb.getValue();
+  const float ThresholdProbHigh = WasmHighBranchProb.getValue();
+  assert(ThresholdProbLow >= 0.0f && ThresholdProbLow <= 1.0f &&
+         ThresholdProbHigh >= 0.0f && ThresholdProbHigh <= 1.0f &&
+         "Branch probability thresholds must be in range [0.0-1.0]");
+
+  MCSymbol *BrIfSym = OutContext.createTempSymbol();
+  OutStreamer->emitLabel(BrIfSym);
+  constexpr uint8_t HintLikely = 0x01;
+  constexpr uint8_t HintUnlikely = 0x00;
+  const uint32_t D = BranchProbability::getOne().getDenominator();
+  uint8_t HintValue;
+  if (Prob > BranchProbability::getRaw(ThresholdProbHigh * D))
+    HintValue = HintLikely;
+  else if (Prob <= BranchProbability::getRaw(ThresholdProbLow * D))
+    HintValue = HintUnlikely;
+  else
+    return; // Don't emit branch hint between thresholds
+
+  // we know that we only emit branch hints for internal functions,
+  // therefore we can directly cast and don't need getMCSymbolForFunction
+  MCSymbol *FuncSym = cast<MCSymbolWasm>(getSymbol(&MF->getFunction()));
+  const uint32_t LocalFuncIdx = MF->getFunctionNumber();
+  if (BranchHints.size() <= LocalFuncIdx) {
+    BranchHints.resize(LocalFuncIdx + 1);
+    BranchHints[LocalFuncIdx].FuncSym = FuncSym;
+  }
+  BranchHints[LocalFuncIdx].Hints.emplace_back(BrIfSym, HintValue);
+}
+
 void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
   WebAssembly_MC::verifyInstructionPredicates(MI->getOpcode(),
@@ -742,42 +837,12 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
     WebAssemblyMCInstLower MCInstLowering(OutContext, *this);
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
-    if (Subtarget->hasBranchHinting() && MFI) {
-      if (const auto Prob = MFI->BranchProbabilities.find(MI);
-          Prob != MFI->BranchProbabilities.end()) {
-        const float ThresholdProbLow = WasmLowBranchProb.getValue();
-        const float ThresholdProbHigh = WasmHighBranchProb.getValue();
-        assert(ThresholdProbLow >= 0.0f && ThresholdProbLow <= 1.0f &&
-               ThresholdProbHigh >= 0.0f && ThresholdProbHigh <= 1.0f &&
-               "Branch probability thresholds must be in range [0.0-1.0]");
-
-        MCSymbol *BrIfSym = OutContext.createTempSymbol();
-        OutStreamer->emitLabel(BrIfSym);
-        constexpr uint8_t HintLikely = 0x01;
-        constexpr uint8_t HintUnlikely = 0x00;
-        const uint32_t D = BranchProbability::getOne().getDenominator();
-        uint8_t HintValue;
-        if (Prob->getSecond() >
-            BranchProbability::getRaw(ThresholdProbHigh * D))
-          HintValue = HintLikely;
-        else if (Prob->getSecond() <=
-                 BranchProbability::getRaw(ThresholdProbLow * D))
-          HintValue = HintUnlikely;
-        else
-          goto emit; // Don't emit branch hint between thresholds
-
-        // we know that we only emit branch hints for internal functions,
-        // therefore we can directly cast and don't need getMCSymbolForFunction
-        MCSymbol *FuncSym = cast<MCSymbolWasm>(getSymbol(&MF->getFunction()));
-        const uint32_t LocalFuncIdx = MF->getFunctionNumber();
-        if (BranchHints.size() <= LocalFuncIdx) {
-          BranchHints.resize(LocalFuncIdx + 1);
-          BranchHints[LocalFuncIdx].FuncSym = FuncSym;
-        }
-        BranchHints[LocalFuncIdx].Hints.emplace_back(BrIfSym, HintValue);
-      }
+    if (Subtarget->hasBranchHinting() &&
+        MI->getOpcode() == WebAssembly::BR_IF) {
+      // since we need to emit a label to later recover the instruction's
+      // offset, this has to called before the instruction is emitted
+      recordBranchHint(MI);
     }
-  emit:
     EmitToStreamer(*OutStreamer, TmpInst);
     break;
   }
