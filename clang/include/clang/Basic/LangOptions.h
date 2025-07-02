@@ -66,20 +66,6 @@ enum class PointerAuthenticationMode : unsigned {
   SignAndAuth
 };
 
-enum EffectKind {
-  // Does affect the construction of the AST in a way that does prevent module
-  // interoperability.
-  Affecting,
-  // Does affect the construction of the AST in a way that doesn't prevent
-  // interoperability (that is, the value can be different between an explicit
-  // module and the user of that module).
-  Compatible,
-  // Does not affect the construction of the AST in any way (that is, the
-  // value can be different between an implicit module and the user of that
-  // module).
-  Benign,
-};
-
 /// Bitfields of LangOptions, split out from LangOptions in order to ensure that
 /// this large collection of bitfields is a trivial class type.
 class LangOptionsBase {
@@ -90,6 +76,22 @@ public:
   using Visibility = clang::Visibility;
   using RoundingMode = llvm::RoundingMode;
   using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
+
+  /// For ASTs produced with different value, signifies their level of
+  /// compatibility.
+  enum class CompatibilityKind {
+    /// Does affect the construction of the AST in a way that does prevent
+    /// module interoperability.
+    NotCompatible,
+    /// Does affect the construction of the AST in a way that doesn't prevent
+    /// interoperability (that is, the value can be different between an
+    /// explicit module and the user of that module).
+    Compatible,
+    /// Does not affect the construction of the AST in any way (that is, the
+    /// value can be different between an implicit module and the user of that
+    /// module).
+    Benign,
+  };
 
   enum GCMode { NonGC, GCOnly, HybridGC };
   enum StackProtectorMode { SSPOff, SSPOn, SSPStrong, SSPReq };

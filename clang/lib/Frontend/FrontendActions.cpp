@@ -643,16 +643,19 @@ namespace {
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
                              bool AllowCompatibleDifferences) override {
+      // FIXME: Replace with C++20 `using enum LangOptions::CompatibilityKind`.
+      using CK = LangOptions::CompatibilityKind;
+
       Out.indent(2) << "Language options:\n";
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-    if constexpr (Compatibility != Benign)                                     \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       DUMP_BOOLEAN(LangOpts.Name, Description);
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-    if constexpr (Compatibility != Benign)                                     \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       Out.indent(4) << Description << ": "                                     \
                     << static_cast<unsigned>(LangOpts.get##Name()) << "\n";
 #define VALUE_LANGOPT(Name, Bits, Default, Compatibility, Description)         \
-    if constexpr (Compatibility != Benign)                                     \
+    if constexpr (CK::Compatibility != CK::Benign)                             \
       Out.indent(4) << Description << ": " << LangOpts.Name << "\n";
 #include "clang/Basic/LangOptions.def"
 

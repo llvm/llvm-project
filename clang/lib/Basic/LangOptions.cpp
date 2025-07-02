@@ -24,10 +24,10 @@ LangOptions::LangOptions() : LangStd(LangStandard::lang_unspecified) {
 
 void LangOptions::resetNonModularOptions() {
 #define LANGOPT(Name, Bits, Default, Compatibility, Description)               \
-  if constexpr (Compatibility == Benign)                                       \
+  if constexpr (CompatibilityKind::Compatibility == CompatibilityKind::Benign) \
     Name = Default;
 #define ENUM_LANGOPT(Name, Type, Bits, Default, Compatibility, Description)    \
-  if constexpr (Compatibility == Benign)                                       \
+  if constexpr (CompatibilityKind::Compatibility == CompatibilityKind::Benign) \
     Name = static_cast<unsigned>(Default);
 #include "clang/Basic/LangOptions.def"
 
