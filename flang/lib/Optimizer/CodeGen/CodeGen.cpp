@@ -33,7 +33,7 @@
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
-#include "mlir/Conversion/ComplexToROCDL/ComplexToROCDL.h"
+#include "mlir/Conversion/ComplexToROCDLLibraryCalls/ComplexToROCDLLibraryCalls.h"
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -4155,7 +4155,7 @@ public:
     // not needed since all math operations are handled this way.
     if (isAMDGCN) {
       mathConversionPM.addPass(mlir::createConvertMathToROCDL());
-      mathConversionPM.addPass(mlir::createConvertComplexToROCDL());
+      mathConversionPM.addPass(mlir::createConvertComplexToROCDLLibraryCalls());
     }
 
     // Convert math::FPowI operations to inline implementation

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-complex-to-rocdl | FileCheck %s
+// RUN: mlir-opt %s -convert-complex-to-rocdl-library-calls | FileCheck %s
 
 // CHECK-DAG: @__ocml_cabs_f32(complex<f32>) -> f32
 // CHECK-DAG: @__ocml_cabs_f64(complex<f64>) -> f64
