@@ -199,15 +199,15 @@ namespace UndefinedBehavior {
 
     constexpr A *na = nullptr;
     constexpr B *nb = nullptr;
-    constexpr A &ra = *nb; // expected-error {{constant expression}} expected-note {{cannot access base class of null pointer}}
-    constexpr B &rb = (B&)*na; // expected-error {{constant expression}} expected-note {{cannot access derived class of null pointer}}
+    constexpr A &ra = *nb; // expected-error {{constant expression}} expected-note {{read of dereferenced null pointer}}
+    constexpr B &rb = (B&)*na; // expected-error {{constant expression}} expected-note {{read of dereferenced null pointer}}
     static_assert((A*)nb == 0, "");
     static_assert((B*)na == 0, "");
     constexpr const int &nf = nb->n; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
     constexpr const int &mf = nb->m; // expected-error {{constant expression}} expected-note {{cannot access field of null pointer}}
     constexpr const int *np1 = (int*)nullptr + 0; // ok
-    constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // ok
-    constexpr const int *np3 = &(*(int(*)[4])nullptr)[2]; // expected-error {{constant expression}} expected-note {{cannot perform pointer arithmetic on null pointer}}
+    constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // expected-error {{constant expression}} expected-note {{read of dereferenced null pointer}}
+    constexpr const int *np3 = &(*(int(*)[4])nullptr)[2]; // expected-error {{constant expression}} expected-note {{read of dereferenced null pointer is not allowed in a constant expression}}
 
     struct C {
       constexpr int f() const { return 0; }

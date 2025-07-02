@@ -265,7 +265,7 @@ namespace const_modify {
 
 namespace null {
   constexpr int test(int *p) {
-    return *p = 123; // expected-note {{assignment to dereferenced null pointer}}
+    return *p = 123; // expected-note {{read of dereferenced null pointer}}
   }
   static_assert(test(0), ""); // expected-error {{constant expression}} expected-note {{in call}}
 }
@@ -1335,4 +1335,58 @@ namespace comparison_dead_variable {
   }
   // FIXME: This should fail.
   static_assert(f(),"");
+
+}
+namespace GH48665 {
+constexpr bool foo(int *i) {
+    int &j = *i;
+    // expected-note@-1 {{read of dereferenced null pointer}}
+    return true;
+}
+
+static_assert(foo(nullptr), ""); // expected-note {{in call to 'foo(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+constexpr bool foo_rvalue(int *i) {
+    int &&j = (int&&)*i;
+    // expected-note@-1 {{read of dereferenced null pointer}}
+    return true;
+}
+static_assert(foo_rvalue(nullptr), ""); // expected-note {{in call to 'foo_rvalue(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+int arr[3]; // expected-note {{declared here}}
+constexpr bool f() { // cxx14_20-error {{constexpr function never produces a constant expression}}
+  int &r  = arr[3]; // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                    // cxx14_20-note {{read of dereferenced one-past-the-end pointer}} \
+                    // expected-warning {{array index 3 is past the end of the array}}
+  return true;
+}
+static_assert(f(), ""); // expected-note {{in call to 'f()'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+
+struct Aggregate {
+   int &r;
+};
+constexpr bool test_agg(int *i) {
+   Aggregate a{*i}; //expected-note {{read of dereferenced null pointer}}
+   return true;
+}
+static_assert(test_agg(nullptr), ""); // expected-note {{in call to 'test_agg(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
+struct B {
+  constexpr B(int *p) : r{*p} {}  // expected-note {{read of dereferenced null pointer}}
+  int &r;
+};
+
+constexpr bool test_ctr(int *i) {
+    B b(i); // expected-note {{in call to 'B(nullptr)'}}
+    return true;
+}
+
+static_assert(test_ctr(nullptr), ""); // expected-note {{in call to 'test_ctr(nullptr)'}}
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
+
 }

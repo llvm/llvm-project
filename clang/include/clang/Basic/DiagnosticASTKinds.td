@@ -174,10 +174,11 @@ def note_constexpr_heap_alloc_limit_exceeded : Note<
 def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
-def access_kind : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of|read of}0">;
+def access_kind
+    : TextSubstitution<
+          "%select{read of|read of|assignment to|increment of|decrement of|"
+          "member call on|dynamic_cast of|typeid applied to|construction of|"
+          "destruction of|read of|read of}0">;
 def access_kind_subobject : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "member call on|dynamic_cast of|typeid applied to|"
