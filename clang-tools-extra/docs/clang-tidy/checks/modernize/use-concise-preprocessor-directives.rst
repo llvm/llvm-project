@@ -3,7 +3,9 @@
 modernize-use-concise-preprocessor-directives
 =============================================
 
-Shortens `#if` preprocessor conditions:
+Finds uses of ``#if`` that be simplified to ``#ifdef`` or ``#ifndef`` and,
+since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
+or ``#elifndef``:
 
 .. code-block:: c++
 
@@ -15,7 +17,7 @@ Shortens `#if` preprocessor conditions:
   #ifdef MEOW
   #ifndef MEOW
 
-And, since C23 and C++23, shortens `#elif` conditions too:
+Since C23 and C++23:
 
 .. code-block:: c++
 

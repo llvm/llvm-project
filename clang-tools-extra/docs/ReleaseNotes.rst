@@ -145,8 +145,9 @@ New checks
 - New :doc:`modernize-use-concise-preprocessor-directives
   <clang-tidy/checks/modernize/use-concise-preprocessor-directives>` check.
 
-  Rewrites preprocessor conditions like ``#if defined(MEOW)`` as ``#ifdef MEOW``
-  and ``#elif !defined(MEOW)`` as ``#elifndef MEOW``.
+  Finds uses of ``#if`` that be simplified to ``#ifdef`` or ``#ifndef`` and,
+  since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
+  or ``#elifndef``.
 
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
