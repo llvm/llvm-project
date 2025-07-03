@@ -2234,16 +2234,6 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // situation.
     bool CouldAccessOutOfBound = true;
     if (IsBounded && amountCopied.isUnknown()) {
-      // Get the max number of characters to copy.
-      const Expr *LenExpr = Call.getArgExpr(2);
-      SVal LenVal = state->getSVal(LenExpr, LCtx);
-
-      // Protect against misdeclared strncpy().
-      LenVal =
-          svalBuilder.evalCast(LenVal, sizeTy, LenExpr->getType());
-
-      std::optional<NonLoc> LenValNL = LenVal.getAs<NonLoc>();
-
       auto CouldAccessOutOfBoundForSVal = [&](NonLoc Val) -> bool {
         return !isFirstBufInBound(C, state, C.getSVal(Dst.Expression),
                                   Dst.Expression->getType(), Val,
@@ -2254,33 +2244,21 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*strLengthNL);
       }
 
-      if (CouldAccessOutOfBound && LenValNL) {
-        switch (appendK) {
-        case ConcatFnKind::none:
-        case ConcatFnKind::strcat: {
+      if (CouldAccessOutOfBound) {
+        // Get the max number of characters to copy.
+        const Expr *LenExpr = Call.getArgExpr(2);
+        SVal LenVal = state->getSVal(LenExpr, LCtx);
+
+        // Protect against misdeclared strncpy().
+        LenVal = svalBuilder.evalCast(LenVal, sizeTy, LenExpr->getType());
+
+        std::optional<NonLoc> LenValNL = LenVal.getAs<NonLoc>();
+
+        // Because analyzer doesn't handle expressions like `size -
+        // dstLen - 1` very well, we roughly use `size` for
+        // ConcatFnKind::strlcat here, same with other concat kinds.
+        if (LenValNL)
           CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*LenValNL);
-          break;
-        }
-        case ConcatFnKind::strlcat: {
-          if (!dstStrLengthNL)
-            break;
-
-          SVal FreeSpace = svalBuilder.evalBinOpNN(state, BO_Sub, *LenValNL,
-                                                   *dstStrLengthNL, sizeTy);
-          if (!isa<NonLoc>(FreeSpace))
-            break;
-
-          FreeSpace =
-              svalBuilder.evalBinOp(state, BO_Sub, FreeSpace,
-                                    svalBuilder.makeIntVal(1, sizeTy), sizeTy);
-          std::optional<NonLoc> FreeSpaceNL = FreeSpace.getAs<NonLoc>();
-          if (!FreeSpaceNL)
-            break;
-
-          CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*FreeSpaceNL);
-          break;
-        }
-        }
       }
     }
 
