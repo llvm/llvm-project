@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_dec.h>
+#include <clc/atomic/clc_atomic_compare_exchange.h>
 #include <clc/opencl/clc.h>
 
-#define FUNCTION atomic_dec
-#define __IMPL_FUNCTION __clc_atomic_dec
+#define FUNCTION atomic_compare_exchange_strong
+#define __CLC_COMPARE_EXCHANGE
 
-#define __CLC_BODY <atomic_inc_dec.inc>
+#define __CLC_BODY <atomic_def.inc>
 #include <clc/integer/gentype.inc>
+
+#define __CLC_BODY <atomic_def.inc>
+#include <clc/math/gentype.inc>

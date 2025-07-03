@@ -6,11 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_dec.h>
-#include <clc/opencl/clc.h>
+#ifndef __CLC_ATOMIC_CLC_ATOMIC_FETCH_AND_H__
+#define __CLC_ATOMIC_CLC_ATOMIC_FETCH_AND_H__
 
-#define FUNCTION atomic_dec
-#define __IMPL_FUNCTION __clc_atomic_dec
+#include <clc/internal/clc.h>
 
-#define __CLC_BODY <atomic_inc_dec.inc>
+#define __CLC_FUNCTION __clc_atomic_fetch_and
+
+#define __CLC_BODY <clc/atomic/atomic_decl.inc>
 #include <clc/integer/gentype.inc>
+
+#undef __CLC_FUNCTION
+
+#endif // __CLC_ATOMIC_CLC_ATOMIC_FETCH_AND_H__

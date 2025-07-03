@@ -6,11 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/atomic/clc_atomic_dec.h>
+#include <clc/atomic/clc_atomic_store.h>
 #include <clc/opencl/clc.h>
 
-#define FUNCTION atomic_dec
-#define __IMPL_FUNCTION __clc_atomic_dec
+#define FUNCTION atomic_store
+#define __IMPL_FUNCTION __clc_atomic_store
+#define __CLC_RETURN_VOID
 
-#define __CLC_BODY <atomic_inc_dec.inc>
+#define __CLC_BODY <atomic_def.inc>
 #include <clc/integer/gentype.inc>
+
+#define __CLC_BODY <atomic_def.inc>
+#include <clc/math/gentype.inc>
