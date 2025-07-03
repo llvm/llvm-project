@@ -52,6 +52,7 @@ public:
   mlir::Value VisitParenExpr(ParenExpr *e);
   mlir::Value
   VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e);
+  mlir::Value VisitUnaryDeref(const Expr *e);
 };
 } // namespace
 
@@ -236,6 +237,10 @@ mlir::Value ComplexExprEmitter::VisitParenExpr(ParenExpr *e) {
 mlir::Value ComplexExprEmitter::VisitSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *e) {
   return Visit(e->getReplacement());
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
+  return emitLoadOfLValue(e);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
