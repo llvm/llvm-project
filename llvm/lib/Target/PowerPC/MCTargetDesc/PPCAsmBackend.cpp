@@ -91,48 +91,7 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
-  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
-    const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
-      // name                    offset  bits  flags
-      { "fixup_ppc_br24",        6,      24,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_br24_notoc",  6,      24,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_brcond14",    16,     14,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_br24abs",     6,      24,   0 },
-      { "fixup_ppc_brcond14abs", 16,     14,   0 },
-      { "fixup_ppc_half16",       0,     16,   0 },
-      { "fixup_ppc_half16ds",     0,     14,   0 },
-      { "fixup_ppc_pcrel34",     0,      34,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_imm34",       0,      34,   0 },
-      { "fixup_ppc_nofixup",      0,      0,   0 }
-    };
-    const static MCFixupKindInfo InfosLE[PPC::NumTargetFixupKinds] = {
-      // name                    offset  bits  flags
-      { "fixup_ppc_br24",        2,      24,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_br24_notoc",  2,      24,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_brcond14",    2,      14,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_br24abs",     2,      24,   0 },
-      { "fixup_ppc_brcond14abs", 2,      14,   0 },
-      { "fixup_ppc_half16",      0,      16,   0 },
-      { "fixup_ppc_half16ds",    2,      14,   0 },
-      { "fixup_ppc_pcrel34",     0,      34,   MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_ppc_imm34",       0,      34,   0 },
-      { "fixup_ppc_nofixup",     0,       0,   0 }
-    };
-
-    // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
-    // do not require any extra processing.
-    if (mc::isRelocation(Kind))
-      return MCAsmBackend::getFixupKindInfo(FK_NONE);
-
-    if (Kind < FirstTargetFixupKind)
-      return MCAsmBackend::getFixupKindInfo(Kind);
-
-    assert(Kind - FirstTargetFixupKind < PPC::NumTargetFixupKinds &&
-           "Invalid kind!");
-    return (Endian == llvm::endianness::little
-                ? InfosLE
-                : InfosBE)[Kind - FirstTargetFixupKind];
-  }
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool addReloc(const MCFragment &F, const MCFixup &Fixup,
                 const MCValue &TargetVal, uint64_t &FixedValue,
@@ -147,25 +106,7 @@ public:
 
   void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) override {
-    MCFixupKind Kind = Fixup.getKind();
-    if (mc::isRelocation(Kind))
-      return;
-    Value = adjustFixupValue(Kind, Value);
-    if (!Value) return;           // Doesn't change encoding.
-
-    unsigned Offset = Fixup.getOffset();
-    unsigned NumBytes = getFixupKindNumBytes(Kind);
-
-    // For each byte of the fragment that the fixup touches, mask in the bits
-    // from the fixup value. The Value has been "split up" into the appropriate
-    // bitfields above.
-    for (unsigned i = 0; i != NumBytes; ++i) {
-      unsigned Idx =
-          Endian == llvm::endianness::little ? i : (NumBytes - 1 - i);
-      Data[Offset + i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
-    }
-  }
+                  uint64_t Value, bool IsResolved) override;
 
   bool shouldForceRelocation(const MCFixup &Fixup,
                              const MCValue &Target) override {
@@ -219,6 +160,69 @@ public:
 };
 } // end anonymous namespace
 
+MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
+      // name                    offset  bits  flags
+      {"fixup_ppc_br24", 6, 24, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24_notoc", 6, 24, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_brcond14", 16, 14, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24abs", 6, 24, 0},
+      {"fixup_ppc_brcond14abs", 16, 14, 0},
+      {"fixup_ppc_half16", 0, 16, 0},
+      {"fixup_ppc_half16ds", 0, 14, 0},
+      {"fixup_ppc_pcrel34", 0, 34, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_imm34", 0, 34, 0},
+      {"fixup_ppc_nofixup", 0, 0, 0}};
+  const static MCFixupKindInfo InfosLE[PPC::NumTargetFixupKinds] = {
+      // name                    offset  bits  flags
+      {"fixup_ppc_br24", 2, 24, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24_notoc", 2, 24, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_brcond14", 2, 14, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24abs", 2, 24, 0},
+      {"fixup_ppc_brcond14abs", 2, 14, 0},
+      {"fixup_ppc_half16", 0, 16, 0},
+      {"fixup_ppc_half16ds", 2, 14, 0},
+      {"fixup_ppc_pcrel34", 0, 34, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_imm34", 0, 34, 0},
+      {"fixup_ppc_nofixup", 0, 0, 0}};
+
+  // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
+  // do not require any extra processing.
+  if (mc::isRelocation(Kind))
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(Kind - FirstTargetFixupKind < PPC::NumTargetFixupKinds &&
+         "Invalid kind!");
+  return (Endian == llvm::endianness::little
+              ? InfosLE
+              : InfosBE)[Kind - FirstTargetFixupKind];
+}
+
+void PPCAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsResolved) {
+  MCFixupKind Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
+    return;
+  Value = adjustFixupValue(Kind, Value);
+  if (!Value)
+    return; // Doesn't change encoding.
+
+  unsigned Offset = Fixup.getOffset();
+  unsigned NumBytes = getFixupKindNumBytes(Kind);
+
+  // For each byte of the fragment that the fixup touches, mask in the bits
+  // from the fixup value. The Value has been "split up" into the appropriate
+  // bitfields above.
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1 - i);
+    Data[Offset + i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
+  }
+}
 
 // FIXME: This should be in a separate file.
 namespace {
