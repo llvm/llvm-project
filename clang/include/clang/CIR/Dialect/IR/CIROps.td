@@ -489,7 +489,7 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
 
   // Allow building a ReturnOp with no return operand.
   let builders = [
-    OpBuilder<(ins), [{ build($_builder, $_state, std::nullopt); }]>
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
   ];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -1670,6 +1670,85 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// GetBitfieldOp
+//===----------------------------------------------------------------------===//
+
+def GetBitfieldOp : CIR_Op<"get_bitfield"> {
+  let summary = "Get the information for a bitfield member";
+  let description = [{
+    The `cir.get_bitfield` operation provides a load-like access to
+    a bit field of a record.
+
+    It expects a name if a bit field, a pointer to a storage in the
+    base record, a type of the storage, a name of the bitfield,
+    a size the bit field, an offset of the bit field and a sign.
+
+    A unit attribute `volatile` can be used to indicate a volatile load of the
+    bitfield.
+
+    Example:
+    Suppose we have a struct with multiple bitfields stored in
+    different members. The `cir.get_bitfield` operation gets the value
+    of the bitfield.
+    ```C++
+    typedef struct {
+      int a : 4;
+      int b : 27;
+      int c : 17;
+      int d : 2;
+      int e : 15;
+    } S;
+
+    int load_bitfield(S& s) {
+      return s.e;
+    }
+    ```
+
+    ```mlir
+    // 'e' is in the storage with the index 1
+    !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
+    #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
+                                offset = 0, is_signed = true>
+
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
+    %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
+                                                             -> !cir.ptr<!u16i>
+    %4 = cir.get_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>) -> !s32i
+    ```
+    }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    BitfieldInfoAttr:$bitfield_info,
+    UnitAttr:$is_volatile
+    );
+
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{ `(`$bitfield_info `,` $addr attr-dict `:`
+   qualified(type($addr)) `)` `->` type($result) }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$addr,
+                   "mlir::Type":$storage_type,
+                   "llvm::StringRef":$name,
+                   "unsigned":$size,
+                   "unsigned":$offset,
+                   "bool":$is_signed,
+                   "bool":$is_volatile
+                   ),
+   [{
+      BitfieldInfoAttr info =
+        BitfieldInfoAttr::get($_builder.getContext(),
+                              name, storage_type,
+                              size, offset, is_signed);
+      build($_builder, $_state, type, addr, info, is_volatile);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GetMemberOp
 //===----------------------------------------------------------------------===//
 
@@ -2454,31 +2533,6 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 
   let hasVerifier = 1;
   let hasFolder = 1;
-}
-
-//===----------------------------------------------------------------------===//
-// ComplexEqualOp
-//===----------------------------------------------------------------------===//
-
-def ComplexEqualOp : CIR_Op<"complex.eq", [Pure, SameTypeOperands]> {
-
-  let summary = "Computes whether two complex values are equal";
-  let description = [{
-   The `complex.equal` op takes two complex numbers and returns whether
-   they are equal.
-
-    ```mlir
-    %r = cir.complex.eq %a, %b : !cir.complex<!cir.float>
-    ```
-  }];
-
-  let results = (outs CIR_BoolType:$result);
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
-
-  let assemblyFormat = [{
-    $lhs `,` $rhs
-    `:` qualified(type($lhs)) attr-dict
-  }];
 }
 
 //===----------------------------------------------------------------------===//
