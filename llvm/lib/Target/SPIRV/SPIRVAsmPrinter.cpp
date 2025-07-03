@@ -498,17 +498,20 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
-      // If FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve
-      // execution modes, skip it, it'll be done somewhere else.
-      const auto EM =
-          cast<ConstantInt>(
-              cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
-                  ->getValue())
-              ->getZExtValue();
-      if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
-          EM == SPIRV::ExecutionMode::ContractionOff ||
-          EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
-        continue;
+      // If SPV_KHR_float_controls2 is enabled and we find any of
+      // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
+      // modes, skip it, it'll be done somewhere else.
+      if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+        const auto EM =
+            cast<ConstantInt>(
+                cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                    ->getValue())
+                ->getZExtValue();
+        if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
+            EM == SPIRV::ExecutionMode::ContractionOff ||
+            EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
+          continue;
+      }
 
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
@@ -720,12 +723,31 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
       }
 
       unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
-      if (FPFastMathDefaultInfo.ContractionOff)
-        Flags &= ~SPIRV::FPFastMathMode::AllowContract;
-      if (FPFastMathDefaultInfo.SignedZeroInfNanPreserve)
+      if (FPFastMathDefaultInfo.ContractionOff &&
+          (Flags & SPIRV::FPFastMathMode::AllowContract) &&
+          FPFastMathDefaultInfo.FPFastMathMode)
+        report_fatal_error(
+            "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
+
+      if (FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+          !(Flags &
+            (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+             SPIRV::FPFastMathMode::NSZ))) {
+        if (FPFastMathDefaultInfo.FPFastMathMode)
+          report_fatal_error("Conflicting FPFastMathFlags: "
+                             "SignedZeroInfNanPreserve but at least one of "
+                             "NotNaN/NotInf/NSZ is disabled.");
+
         Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
                  SPIRV::FPFastMathMode::NSZ;
+      }
 
+      // Don't emit if none of the execution modes was used.
+      if (Flags == SPIRV::FPFastMathMode::None &&
+          !FPFastMathDefaultInfo.ContractionOff &&
+          !FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+          !FPFastMathDefaultInfo.FPFastMathMode)
+        continue;
       Inst.addOperand(MCOperand::createImm(Flags));
       outputMCInst(Inst);
     }

@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: OpName %[[#r1:]] "r1"
 ; CHECK-SPIRV: OpName %[[#r2:]] "r2"
@@ -91,82 +91,7 @@
 ; CHECK-SPIRV: OpName %[[#r88:]] "r88"
 ; CHECK-SPIRV: OpName %[[#r89:]] "r89"
 ; CHECK-SPIRV: OpName %[[#r90:]] "r90"
-; CHECK-SPIRV: OpDecorate %[[#r2]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r3]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r4]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r5]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r6]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r7]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r9]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r10]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r11]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r12]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r13]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r14]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r16]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r17]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r18]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r19]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r20]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r21]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r23]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r24]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r25]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r26]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r27]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r28]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r30]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r31]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r32]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r33]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r34]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r35]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r37]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r38]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r39]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r40]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r41]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r42]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r44]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r45]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r47]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r48]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r49]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r50]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r51]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r52]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r54]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r55]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r56]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r57]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r58]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r59]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r61]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r62]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r63]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r64]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r65]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r66]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r68]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r69]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r70]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r71]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r72]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r73]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r75]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r76]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r77]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r78]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r79]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r80]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r82]] FPFastMathMode NotNaN
-; CHECK-SPIRV: OpDecorate %[[#r83]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r84]] FPFastMathMode NSZ
-; CHECK-SPIRV: OpDecorate %[[#r85]] FPFastMathMode AllowRecip
-; CHECK-SPIRV: OpDecorate %[[#r86]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK-SPIRV: OpDecorate %[[#r87]] FPFastMathMode NotNaN|NotInf
-; CHECK-SPIRV: OpDecorate %[[#r89]] FPFastMathMode NotInf
-; CHECK-SPIRV: OpDecorate %[[#r90]] FPFastMathMode NSZ
+; CHECK-SPIRV-NOT: OpDecorate %{{.*}} FPFastMathMode
 ; CHECK-SPIRV: %[[#bool:]] = OpTypeBool
 ; CHECK-SPIRV: %[[#r1]] = OpFOrdEqual %[[#bool]]
 ; CHECK-SPIRV: %[[#r2]] = OpFOrdEqual %[[#bool]]

@@ -240,6 +240,22 @@ static InstrSignature instrToSignature(const MachineInstr &MI,
   Register DefReg;
   InstrSignature Signature{MI.getOpcode()};
   for (unsigned i = 0; i < MI.getNumOperands(); ++i) {
+    // The only decorations that can be applied more than once to a given <id>
+    // or structure member are UserSemantic(5635), CacheControlLoadINTEL (6442),
+    // and CacheControlStoreINTEL (6443). For all the rest of decorations, we
+    // will only add to the signature the Opcode, the id to which it applies,
+    // and the decoration id, disregarding any decoration flags. This will
+    // ensure that any subsequent decoration with the same id will be deemed as
+    // a duplicate. Then, at the call site, we will be able to handle duplicates
+    // in the best way.
+    unsigned Opcode = MI.getOpcode();
+    if ((Opcode == SPIRV::OpDecorate) && i >= 2) {
+      unsigned DecorationID = MI.getOperand(1).getImm();
+      if (DecorationID != SPIRV::Decoration::UserSemantic &&
+          DecorationID != SPIRV::Decoration::CacheControlLoadINTEL &&
+          DecorationID != SPIRV::Decoration::CacheControlStoreINTEL)
+        continue;
+    }
     const MachineOperand &MO = MI.getOperand(i);
     size_t h;
     if (MO.isReg()) {
@@ -551,8 +567,54 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
   MAI.setSkipEmission(&MI);
   InstrSignature MISign = instrToSignature(MI, MAI, true);
   auto FoundMI = IS.insert(MISign);
-  if (!FoundMI.second)
+  if (!FoundMI.second) {
+    if (MI.getOpcode() == SPIRV::OpDecorate) {
+      assert(MI.getNumOperands() >= 2 &&
+             "Decoration instructions must have at least 2 operands");
+      assert(MSType == SPIRV::MB_Annotations &&
+             "Only OpDecorate instructions can be duplicates");
+      // For FPFastMathMode decoration, we need to merge the flags of the
+      // duplicate decoration with the original one, so we need to find the
+      // original instruction that has the same signature. For the rest of
+      // instructions, we will simply skip the duplicate.
+      if (MI.getOperand(1).getImm() != SPIRV::Decoration::FPFastMathMode)
+        return; // Skip duplicates of other decorations.
+
+      const SPIRV::InstrList &Decorations = MAI.MS[MSType];
+      for (const MachineInstr *OrigMI : Decorations) {
+        if (instrToSignature(*OrigMI, MAI, true) == MISign) {
+          assert(OrigMI->getNumOperands() == MI.getNumOperands() &&
+                 "Original instruction must have the same number of operands");
+          assert(
+              OrigMI->getNumOperands() == 3 &&
+              "FPFastMathMode decoration must have 3 operands for OpDecorate");
+          unsigned OrigFlags = OrigMI->getOperand(2).getImm();
+          unsigned NewFlags = MI.getOperand(2).getImm();
+          if (OrigFlags == NewFlags)
+            return; // No need to merge, the flags are the same.
+
+          // Emit warning about possible conflict between flags.
+          unsigned FinalFlags = OrigFlags | NewFlags;
+          llvm::errs()
+              << "Warning: Conflicting FPFastMathMode decoration flags "
+                 "in instruction: "
+              << *OrigMI << "Original flags: " << OrigFlags
+              << ", new flags: " << NewFlags
+              << ". They will be merged on a best effort basis, but not "
+                 "validated. Final flags: "
+              << FinalFlags << "\n";
+          MachineInstr *OrigMINonConst = const_cast<MachineInstr *>(OrigMI);
+          MachineOperand &OrigFlagsOp = OrigMINonConst->getOperand(2);
+          OrigFlagsOp =
+              MachineOperand::CreateImm(static_cast<unsigned>(FinalFlags));
+          return; // Merge done, so we found a duplicate; don't add it to MAI.MS
+        }
+      }
+      assert(false && "No original instruction found for the duplicate "
+                      "OpDecorate, but we found one in IS.");
+    }
     return; // insert failed, so we found a duplicate; don't add it to MAI.MS
+  }
   // No duplicates, so add it.
   if (Append)
     MAI.MS[MSType].push_back(&MI);
@@ -921,8 +983,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
   } else if (Dec == SPIRV::Decoration::FPFastMathMode) {
-    Reqs.addRequirements(SPIRV::Capability::FloatControls2);
-    Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+      Reqs.addRequirements(SPIRV::Capability::FloatControls2);
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_float_controls2);
+    }
   }
 }
 
@@ -1917,8 +1981,6 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
           // ContractionOff and SignedZeroInfNanPreserve are deprecated.
           // FPFastMathDefault with the appropriate flags should be used
           // instead.
-          case SPIRV::ExecutionMode::ContractionOff:
-          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
           case SPIRV::ExecutionMode::FPFastMathDefault: {
             if (HasKHRFloatControls2) {
               RequireKHRFloatControls2 = true;
@@ -1980,7 +2042,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   }
 }
 
-static unsigned getFastMathFlags(const MachineInstr &I) {
+static unsigned getFastMathFlags(const MachineInstr &I,
+                                 const SPIRVSubtarget &ST) {
   unsigned Flags = SPIRV::FPFastMathMode::None;
   if (I.getFlag(MachineInstr::MIFlag::FmNoNans))
     Flags |= SPIRV::FPFastMathMode::NotNaN;
@@ -1992,33 +2055,40 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
     Flags |= SPIRV::FPFastMathMode::AllowRecip;
   if (I.getFlag(MachineInstr::MIFlag::FmContract))
     Flags |= SPIRV::FPFastMathMode::AllowContract;
-  if (I.getFlag(MachineInstr::MIFlag::FmReassoc))
-    // LLVM reassoc maps to SPIRV transform, see
-    // https://github.com/KhronosGroup/SPIRV-Registry/issues/326 for details.
-    // Because we are enabling AllowTransform, we must enable AllowReassoc and
-    // AllowContract too, as required by SPIRV spec. Also, we used to map
-    // MIFlag::FmReassoc to FPFastMathMode::Fast, which now should instead by
-    // replaced by turning all the other bits instead. Therefore, we're enabling
-    // every bit here except None and Fast.
-    Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
-             SPIRV::FPFastMathMode::NSZ | SPIRV::FPFastMathMode::AllowRecip |
-             SPIRV::FPFastMathMode::AllowTransform |
-             SPIRV::FPFastMathMode::AllowReassoc |
-             SPIRV::FPFastMathMode::AllowContract;
+  if (I.getFlag(MachineInstr::MIFlag::FmReassoc)) {
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
+      // LLVM reassoc maps to SPIRV transform, see
+      // https://github.com/KhronosGroup/SPIRV-Registry/issues/326 for details.
+      // Because we are enabling AllowTransform, we must enable AllowReassoc and
+      // AllowContract too, as required by SPIRV spec. Also, we used to map
+      // MIFlag::FmReassoc to FPFastMathMode::Fast, which now should instead by
+      // replaced by turning all the other bits instead. Therefore, we're
+      // enabling every bit here except None and Fast.
+      Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+               SPIRV::FPFastMathMode::NSZ | SPIRV::FPFastMathMode::AllowRecip |
+               SPIRV::FPFastMathMode::AllowTransform |
+               SPIRV::FPFastMathMode::AllowReassoc |
+               SPIRV::FPFastMathMode::AllowContract;
+    else
+      Flags |= SPIRV::FPFastMathMode::Fast;
+  }
 
-  // Error out if SPIRV::FPFastMathMode::Fast is enabled.
-  if (Flags & SPIRV::FPFastMathMode::Fast)
-    report_fatal_error("FPFastMathMode::Fast flag is deprecated and it is not "
-                       "valid to use anymore.");
+  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+    // Error out if SPIRV::FPFastMathMode::Fast is enabled.
+    if (Flags & SPIRV::FPFastMathMode::Fast)
+      report_fatal_error(
+          "FPFastMathMode::Fast flag is deprecated and it is not "
+          "valid to use anymore.");
 
-  // Error out if AllowTransform is enabled without AllowReassoc and
-  // AllowContract.
-  if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
-      !(Flags & SPIRV::FPFastMathMode::AllowReassoc) &&
-      !(Flags & SPIRV::FPFastMathMode::AllowContract))
-    report_fatal_error(
-        "FPFastMathMode::AllowTransform flag requires AllowReassoc and "
-        "AllowContract flags to be enabled as well.");
+    // Error out if AllowTransform is enabled without AllowReassoc and
+    // AllowContract.
+    if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
+        !(Flags & SPIRV::FPFastMathMode::AllowReassoc) &&
+        !(Flags & SPIRV::FPFastMathMode::AllowContract))
+      report_fatal_error(
+          "FPFastMathMode::AllowTransform flag requires AllowReassoc and "
+          "AllowContract flags to be enabled as well.");
+  }
 
   return Flags;
 }
@@ -2026,7 +2096,7 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
 static void handleMIFlagDecoration(
     MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
     SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
-    const SmallVector<SPIRV::FPFastMathDefaultInfo, 4>
+    SmallVector<SPIRV::FPFastMathDefaultInfo, 4>
         &FPFastMathDefaultInfoVec) {
   if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
       getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
@@ -2043,10 +2113,11 @@ static void handleMIFlagDecoration(
     buildOpDecorate(I.getOperand(0).getReg(), I, TII,
                     SPIRV::Decoration::NoUnsignedWrap, {});
   }
-  if (!TII.canUseFastMathFlags(I))
+  if (!TII.canUseFastMathFlags(
+          I, ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)))
     return;
 
-  unsigned FMFlags = getFastMathFlags(I);
+  unsigned FMFlags = getFastMathFlags(I, ST);
   if (FMFlags == SPIRV::FPFastMathMode::None) {
     // We also need to check if any FPFastMathDefault info was set for the types
     // used in this instruction.
@@ -2075,9 +2146,10 @@ static void handleMIFlagDecoration(
     const Type *Ty = GR->getTypeForSPIRVType(ResType);
 
     // Match instruction type with the FPFastMathDefaultInfoVec.
-    for (const auto &Elem : FPFastMathDefaultInfoVec) {
+    for (SPIRV::FPFastMathDefaultInfo &Elem : FPFastMathDefaultInfoVec) {
       if (Ty == Elem.Ty) {
         FMFlags = Elem.FastMathFlags;
+        Elem.FPFastMathMode = true;
         break;
       }
     }
@@ -2184,7 +2256,11 @@ static SPIRV::FPFastMathDefaultInfo &getFPFastMathDefaultInfo(
 }
 
 static void collectFPFastMathDefaults(const Module &M,
-                                      SPIRV::ModuleAnalysisInfo &MAI) {
+                                      SPIRV::ModuleAnalysisInfo &MAI,
+                                      const SPIRVSubtarget &ST) {
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
+    return;
+
   // Store the FPFastMathDefaultInfo in the FPFastMathDefaultInfoMap.
   // We need the entry point (function) as the key, and the target
   // type and flags as the value.
@@ -2270,7 +2346,7 @@ bool SPIRVModuleAnalysis::runOnModule(Module &M) {
   patchPhis(M, GR, *TII, MMI);
 
   addMBBNames(M, *TII, MMI, *ST, MAI);
-  collectFPFastMathDefaults(M, MAI);
+  collectFPFastMathDefaults(M, MAI, *ST);
   addDecorations(M, *TII, MMI, *ST, MAI, GR);
 
   collectReqs(M, MAI, MMI, *ST);

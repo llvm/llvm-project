@@ -130,7 +130,8 @@ bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   }
 }
 
-bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI) const {
+bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI,
+                                         bool KHRFloatControls2) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpFAddS:
   case SPIRV::OpFSubS:
@@ -142,9 +143,10 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI) const {
   case SPIRV::OpFMulV:
   case SPIRV::OpFDivV:
   case SPIRV::OpFRemV:
+  case SPIRV::OpFMod:
+    return true;
   case SPIRV::OpFNegateV:
   case SPIRV::OpFNegate:
-  case SPIRV::OpFMod:
   case SPIRV::OpOrdered:
   case SPIRV::OpUnordered:
   case SPIRV::OpFOrdEqual:
@@ -160,7 +162,7 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI) const {
   case SPIRV::OpFUnordGreaterThan:
   case SPIRV::OpFUnordGreaterThanEqual:
   case SPIRV::OpExtInst:
-    return true;
+    return KHRFloatControls2 ? true : false;
   default:
     return false;
   }

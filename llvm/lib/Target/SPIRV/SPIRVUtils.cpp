@@ -171,7 +171,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 }
 
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
-                             const MDNode *GVarMD) {
+                             const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   bool NoContractionFound = false;
   bool HasFPFastMathMode = false;
   unsigned FPFastMathFlags = SPIRV::FPFastMathMode::None;
@@ -187,14 +187,15 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       report_fatal_error("Expect SPIR-V <Decoration> operand to be the first "
                          "element of the decoration");
 
-    // NoContraction decoration is deprecated, and should be replaced with
-    // FPFastMathMode with appropriate flags. However, a instruction can have
-    // both NoContraction and FPFastMathMode decorations, and there is no
-    // guarantee about the order in which we will encounter them, so we store
-    // the information of both and will handle them separately after the loop so
-    // that we can combine them, if needed.
-    if (DecorationId->getZExtValue() ==
-        static_cast<uint32_t>(SPIRV::Decoration::NoContraction)) {
+    // NoContraction decoration is deprecated by SPV_KHR_float_controls2, and
+    // should be replaced with FPFastMathMode with appropriate flags. However, a
+    // instruction can have both NoContraction and FPFastMathMode decorations,
+    // and there is no guarantee about the order in which we will encounter
+    // them, so we store the information of both and will handle them separately
+    // after the loop so that we can combine them, if needed.
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2) &&
+        DecorationId->getZExtValue() ==
+            static_cast<uint32_t>(SPIRV::Decoration::NoContraction)) {
       NoContractionFound = true;
       continue; // NoContraction is handled separately.
     } else if (DecorationId->getZExtValue() ==
@@ -219,8 +220,10 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
   }
   // If we have NoContraction decoration, we should set the
   // FPFastMathMode::NoContraction flag.
-  if (NoContractionFound)
-    FPFastMathFlags &= ~SPIRV::FPFastMathMode::AllowContract;
+  if (NoContractionFound &&
+      (FPFastMathFlags & SPIRV::FPFastMathMode::AllowContract))
+    report_fatal_error(
+        "Conflicting FPFastMathFlags: NoContraction and AllowContract");
 
   if (NoContractionFound || HasFPFastMathMode) {
     MIRBuilder.buildInstr(SPIRV::OpDecorate)

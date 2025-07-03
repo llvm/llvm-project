@@ -52,12 +52,11 @@ entry:
 ; SPV-DAG: OpExecutionMode %[[#KERNEL1]] DenormFlushToZero 16
 !20 = !{void (i32, i32)* @k_float_controls_1, i32 4460, i32 16}
 
-; SignedZeroInfNanPreserve is deprecated in SPV_KHR_float_controls2, and is replaced with FPFastMathDefault.
-; SPV-DAG: OpExecutionMode %[[#KERNEL2]] FPFastMathDefault %[[#FP16:]] 7
+; SPV-DAG: OpExecutionMode %[[#KERNEL2]] SignedZeroInfNanPreserve 64 
 !21 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 16}
-; SPV-DAG: OpExecutionMode %[[#KERNEL2]] FPFastMathDefault %[[#FP32:]] 7
+; SPV-DAG: OpExecutionMode %[[#KERNEL2]] SignedZeroInfNanPreserve 32 
 !22 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 32}
-; SPV-DAG: OpExecutionMode %[[#KERNEL2]] FPFastMathDefault %[[#FP64:]] 7
+; SPV-DAG: OpExecutionMode %[[#KERNEL2]] SignedZeroInfNanPreserve 16 
 !23 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 64}
 
 ; SPV-DAG: OpExecutionMode %[[#KERNEL3]] RoundingModeRTE 64
@@ -73,7 +72,3 @@ entry:
 !28 = !{void (i32, i32)* @k_float_controls_4, i32 4463, i32 32}
 ; SPV-DAG: OpExecutionMode %[[#KERNEL4]] RoundingModeRTZ 16
 !29 = !{void (i32, i32)* @k_float_controls_4, i32 4463, i32 16}
-
-; SPV-DAG: %[[#FP64]] = OpTypeFloat 64
-; SPV-DAG: %[[#FP32]] = OpTypeFloat 32
-; SPV-DAG: %[[#FP16]] = OpTypeFloat 16
