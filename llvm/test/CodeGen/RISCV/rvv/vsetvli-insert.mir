@@ -68,24 +68,6 @@
     ret <vscale x 1 x i64> %b
   }
 
-  define i64 @vsetvli_vleff() {
-  entry:
-    br label %while.cond
-
-  while.cond:                                       ; preds = %while.body, %entry
-    %new_vl.0 = phi i64 [ 0, %entry ], [ %1, %while.body ]
-    %cmp = icmp eq i64 %new_vl.0, 0
-    br i1 %cmp, label %while.body, label %while.end
-
-  while.body:                                       ; preds = %while.cond
-    %0 = tail call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16> zeroinitializer, ptr null, i64 0)
-    %1 = extractvalue { <vscale x 4 x i16>, i64 } %0, 1
-    br label %while.cond
-
-  while.end:                                        ; preds = %while.cond
-    ret i64 0
-  }
-
   define void @vmv_v_i_different_lmuls() {
     ret void
   }
@@ -116,6 +98,18 @@
 
   define void @coalesce_vl_avl_same_reg() {
     ret void
+  }
+
+  define i64 @vsetvli_vleff() {
+  bb0:
+    br i1 poison, label %bb1, label %bb2
+  bb1:
+    %0 = tail call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16> zeroinitializer, ptr null, i64 0)
+    %1 = extractvalue { <vscale x 4 x i16>, i64 } %0, 1
+    br label %bb2
+  bb2:
+    %x8 = phi i64 [%1, %bb1], [0, %bb0]
+    ret i64 %x8
   }
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
@@ -643,72 +637,41 @@ body: |
 ...
 ---
 name:            vsetvli_vleff
-alignment:       4
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr, preferred-register: '' }
-  - { id: 5, class: vr, preferred-register: '%7' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: vr, preferred-register: '%5' }
-  - { id: 8, class: vr, preferred-register: '' }
-  - { id: 9, class: gpr, preferred-register: '' }
-frameInfo:
-  maxAlignment:    1
-machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: vsetvli_vleff
-  ; CHECK: bb.0.entry:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK: bb.0.bb0:
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x0
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 200 /* e16, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_M1 undef renamable $v8, 0, -1, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.while.cond:
-  ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK-NEXT:   liveins: $v8
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BNE [[COPY]], $x0, %bb.3
-  ; CHECK-NEXT:   PseudoBR %bb.2
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.while.body:
-  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $v8
-  ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x0 = PseudoVSETIVLI 0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v9 = COPY renamable $v8, implicit $vtype
-  ; CHECK-NEXT:   dead renamable $v9, $x0 = PseudoVLE16FF_V_M1 killed renamable $v9, $x0, 0, 4 /* e16 */, 2 /* tu, ma */, implicit-def dead $vl, implicit $vl, implicit $vtype :: (load unknown-size from `ptr null`, align 2)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = PseudoReadVL implicit $vl
+  ; CHECK-NEXT:   BNE $x0, $x0, %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.while.end:
-  ; CHECK-NEXT:   $x10 = COPY $x0
+  ; CHECK-NEXT: bb.1.bb1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 200 /* e16, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_M1 undef renamable $v8, 0, -1, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   dead renamable $v8, $x0 = PseudoVLE16FF_V_M1 killed renamable $v8, $x0, 0, 4 /* e16 */, 2 /* tu, ma */, implicit-def dead $vl, implicit $vl, implicit $vtype :: (load unknown-size from `ptr null`, align 2)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = PseudoReadVL implicit $vl
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2.bb2:
+  ; CHECK-NEXT:   $x10 = COPY [[COPY]]
   ; CHECK-NEXT:   PseudoRET implicit killed $x10
-  bb.0.entry:
-    successors: %bb.1(0x80000000)
+  bb.0.bb0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
 
     %9:gpr = COPY $x0
-    renamable $v8 = PseudoVMV_V_I_M1 undef renamable $v8, 0, -1, 4 /* e16 */, 0 /* tu, mu */
-
-  bb.1.while.cond:
-    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-    liveins: $v8
-
-    BNE %9, $x0, %bb.3
-    PseudoBR %bb.2
-
-  bb.2.while.body:
-    successors: %bb.1(0x80000000)
-    liveins: $v8
-
-    renamable $v9 = COPY renamable $v8
-    dead renamable $v9, %9:gpr = PseudoVLE16FF_V_M1 killed renamable $v9, $x0, 0, 4 /* e16 */, 2 /* tu, ma */, implicit-def dead $vl :: (load unknown-size from `ptr null`, align 2)
+    BNE $x0, $x0, %bb.2
     PseudoBR %bb.1
 
-  bb.3.while.end:
-    $x10 = COPY $x0
+  bb.1.bb1:
+    successors: %bb.2(0x80000000)
+
+    renamable $v8 = PseudoVMV_V_I_M1 undef renamable $v8, 0, -1, 4 /* e16 */, 0 /* tu, mu */
+    dead renamable $v8, %9:gpr = PseudoVLE16FF_V_M1 killed renamable $v8, $x0, 0, 4 /* e16 */, 2 /* tu, ma */, implicit-def dead $vl :: (load unknown-size from `ptr null`, align 2)
+
+  bb.2.bb2:
+    $x10 = COPY %9
     PseudoRET implicit killed $x10
