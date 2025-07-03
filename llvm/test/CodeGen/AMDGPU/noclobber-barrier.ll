@@ -31,7 +31,6 @@ define amdgpu_kernel void @simple_barrier(ptr addrspace(1) %arg) {
 ; GCN-NEXT:    s_load_dword s2, s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_barrier
-; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ; wave barrier
 ; GCN-NEXT:    s_load_dword s3, s[0:1], 0x4
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

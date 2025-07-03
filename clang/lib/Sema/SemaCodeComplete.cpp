@@ -8499,12 +8499,10 @@ void SemaCodeCompletion::CodeCompleteObjCClassMessage(
 }
 
 void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
-    Scope *S, Expr *Receiver, ArrayRef<const IdentifierInfo *> SelIdents,
+    Scope *S, Expr *RecExpr, ArrayRef<const IdentifierInfo *> SelIdents,
     bool AtArgumentExpression, ObjCInterfaceDecl *Super) {
   typedef CodeCompletionResult Result;
   ASTContext &Context = getASTContext();
-
-  Expr *RecExpr = static_cast<Expr *>(Receiver);
 
   // If necessary, apply function/array conversion to the receiver.
   // C99 6.7.5.3p[7,8].
