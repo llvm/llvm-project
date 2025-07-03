@@ -32,20 +32,20 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect_var_path("::globalPtr", type="int *")
         self.expect_var_path("::globalRef", type="int &")
 
-        self.expect(
-            "frame variable 'externGlobalVar'",
-            error=True,
-            substrs=["use of undeclared identifier"],
-        )  # 0x00C0FFEE
-        self.expect(
-            "frame variable '::externGlobalVar'",
-            error=True,
-            substrs=["use of undeclared identifier"],
-        )  # ["12648430"])
-
         self.expect_var_path("ns::globalVar", value="13")
         self.expect_var_path("ns::globalPtr", type="int *")
         self.expect_var_path("ns::globalRef", type="int &")
         self.expect_var_path("::ns::globalVar", value="13")
         self.expect_var_path("::ns::globalPtr", type="int *")
         self.expect_var_path("::ns::globalRef", type="int &")
+
+        self.expect_var_path("externGlobalVar", value="2")
+        self.expect_var_path("::externGlobalVar", value="2")
+        self.expect_var_path("ext::externGlobalVar", value="4")
+        self.expect_var_path("::ext::externGlobalVar", value="4")
+
+        self.expect_var_path("ExtStruct::static_inline", value="16")
+
+        # Test local variable priority over global
+        self.expect_var_path("foo", value="1")
+        self.expect_var_path("::foo", value="2")
