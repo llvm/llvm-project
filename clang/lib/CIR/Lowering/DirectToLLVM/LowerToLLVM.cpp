@@ -1965,6 +1965,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMConstantOpLowering,
                CIRToLLVMExpectOpLowering,
                CIRToLLVMFuncOpLowering,
+               CIRToLLVMGetBitfieldOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
@@ -2300,6 +2301,59 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   mlir::Type resultLLVMTy = getTypeConverter()->convertType(op.getType());
   rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(
       op, resultLLVMTy, adaptor.getOperand(), llvm::ArrayRef<std::int64_t>{1});
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
+    cir::GetBitfieldOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(op);
+
+  cir::BitfieldInfoAttr info = op.getBitfieldInfo();
+  uint64_t size = info.getSize();
+  uint64_t offset = info.getOffset();
+  mlir::Type storageType = info.getStorageType();
+  mlir::MLIRContext *context = storageType.getContext();
+  unsigned storageSize = 0;
+
+  mlir::IntegerType intType =
+      TypeSwitch<mlir::Type, mlir::IntegerType>(storageType)
+          .Case<cir::ArrayType>([&](cir::ArrayType atTy) {
+            storageSize = atTy.getSize() * 8;
+            return mlir::IntegerType::get(context, storageSize);
+          })
+          .Case<cir::IntType>([&](cir::IntType intTy) {
+            storageSize = intTy.getWidth();
+            return mlir::IntegerType::get(context, storageSize);
+          })
+          .Default([](mlir::Type) -> mlir::IntegerType {
+            llvm_unreachable(
+                "Either ArrayType or IntType expected for bitfields storage");
+          });
+
+  mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
+      op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());
+  val = rewriter.create<mlir::LLVM::BitcastOp>(op.getLoc(), intType, val);
+
+  if (info.getIsSigned()) {
+    assert(static_cast<unsigned>(offset + size) <= storageSize);
+    unsigned highBits = storageSize - offset - size;
+    val = createShL(rewriter, val, highBits);
+    val = createAShR(rewriter, val, offset + highBits);
+  } else {
+    val = createLShR(rewriter, val, offset);
+
+    if (static_cast<unsigned>(offset) + size < storageSize)
+      val = createAnd(rewriter, val,
+                      llvm::APInt::getLowBitsSet(storageSize, size));
+  }
+
+  mlir::Type resTy = getTypeConverter()->convertType(op.getType());
+  mlir::Value newOp = createIntCast(
+      rewriter, val, mlir::cast<mlir::IntegerType>(resTy), info.getIsSigned());
+  rewriter.replaceOp(op, newOp);
   return mlir::success();
 }
 
