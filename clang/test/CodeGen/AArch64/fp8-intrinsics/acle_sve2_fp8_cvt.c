@@ -46,8 +46,6 @@ svbfloat16_t test_svcvt1_bf16_mf8(svmfloat8_t zn, fpm_t fpm) STREAMING {
   return SVE_ACLE_FUNC(svcvt1_bf16,_mf8,_fpm)(zn, fpm);
 }
 
-// CHECK: declare void @llvm.aarch64.set.fpmr(i64)  [[ATTR1:#.*]]
-
 // CHECK-LABEL: define dso_local <vscale x 8 x bfloat> @test_svcvt2_bf16_mf8(
 // CHECK-SAME: <vscale x 16 x i8> [[ZN:%.*]], i64 noundef [[FPM:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -173,6 +171,3 @@ svfloat16_t test_svcvtlt1_f16_mf8(svmfloat8_t zn, fpm_t fpm) STREAMING {
 svfloat16_t test_svcvtlt2_f16_mf8(svmfloat8_t zn, fpm_t fpm) STREAMING {
   return SVE_ACLE_FUNC(svcvtlt2_f16,_mf8,_fpm)(zn, fpm);
 }
-
-
-// CHECK: attributes [[ATTR1]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

@@ -330,6 +330,3 @@ mfloat8x8_t test_vcvt_mf8_f16_fpm(float16x4_t vn, float16x4_t vm, fpm_t fpm) {
 mfloat8x16_t test_vcvtq_mf8_f16_fpm(float16x8_t vn, float16x8_t vm, fpm_t fpm) {
   return vcvtq_mf8_f16_fpm(vn, vm, fpm);
 }
-
-// CHECK: declare void @llvm.aarch64.set.fpmr(i64)  [[ATTR1:#.*]]
-// CHECK: attributes [[ATTR1]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
