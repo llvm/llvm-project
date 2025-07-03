@@ -184,7 +184,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         mem_response = self.writeMemory(memref, 50, 0, False)
         self.assertEqual(mem_response["success"], False)
         self.assertRegex(
-            mem_response["message"],
+            mem_response["body"]["error"]["format"],
             r"Memory " + memref + " region is not writable",
         )
 
@@ -192,7 +192,7 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         mem_response = self.writeMemory(memref)
         self.assertEqual(mem_response["success"], False)
         self.assertRegex(
-            mem_response["message"],
+            mem_response["body"]["error"]["format"],
             r"Data cannot be empty value. Provide valid data",
         )
 
@@ -204,6 +204,6 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
         )
         self.assertEqual(mem_response["success"], False)
         self.assertRegex(
-            mem_response["message"],
+            mem_response["body"]["error"]["format"],
             r"Memory " + memref + " region is not writable",
         )

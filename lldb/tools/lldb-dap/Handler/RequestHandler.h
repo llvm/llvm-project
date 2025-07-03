@@ -601,14 +601,17 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class WriteMemoryRequestHandler : public LegacyRequestHandler {
+class WriteMemoryRequestHandler final
+    : public RequestHandler<protocol::WriteMemoryArguments,
+                            llvm::Expected<protocol::WriteMemoryResponseBody>> {
 public:
-  using LegacyRequestHandler::LegacyRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral GetCommand() { return "writeMemory"; }
   FeatureSet GetSupportedFeatures() const override {
     return {protocol::eAdapterFeatureWriteMemoryRequest};
   }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::WriteMemoryResponseBody>
+  Run(const protocol::WriteMemoryArguments &args) const override;
 };
 
 } // namespace lldb_dap

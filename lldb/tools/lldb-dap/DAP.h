@@ -418,14 +418,6 @@ struct DAP {
       const std::optional<std::vector<protocol::SourceBreakpoint>>
           &breakpoints);
 
-  /// Sends an error response in DAP with success=false and an error message.
-  ///
-  /// \param[out] response
-  ///   The response object to update.
-  /// \param[in] message
-  ///   The error message.
-  void SendErrorResponse(llvm::json::Object &response, llvm::StringRef message);
-
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
       const protocol::Source &source,
