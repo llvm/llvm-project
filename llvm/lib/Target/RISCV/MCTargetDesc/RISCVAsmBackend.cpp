@@ -794,8 +794,7 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   // generate a relocation and then append a RELAX.
   if (Fixup.isLinkerRelaxable())
     IsResolved = false;
-  if (IsResolved &&
-      (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
+  if (IsResolved && Fixup.isPCRel())
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
 
   if (!IsResolved) {
