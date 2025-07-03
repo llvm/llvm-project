@@ -460,6 +460,81 @@ mlir::LogicalResult CIRToLLVMAssumeOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMBitClrsbOpLowering::matchAndRewrite(
+    cir::BitClrsbOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto zero = rewriter.create<mlir::LLVM::ConstantOp>(
+      op.getLoc(), adaptor.getInput().getType(), 0);
+  auto isNeg = rewriter.create<mlir::LLVM::ICmpOp>(
+      op.getLoc(),
+      mlir::LLVM::ICmpPredicateAttr::get(rewriter.getContext(),
+                                         mlir::LLVM::ICmpPredicate::slt),
+      adaptor.getInput(), zero);
+
+  auto negOne = rewriter.create<mlir::LLVM::ConstantOp>(
+      op.getLoc(), adaptor.getInput().getType(), -1);
+  auto flipped = rewriter.create<mlir::LLVM::XOrOp>(op.getLoc(),
+                                                    adaptor.getInput(), negOne);
+
+  auto select = rewriter.create<mlir::LLVM::SelectOp>(
+      op.getLoc(), isNeg, flipped, adaptor.getInput());
+
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto clz = rewriter.create<mlir::LLVM::CountLeadingZerosOp>(
+      op.getLoc(), resTy, select, /*is_zero_poison=*/false);
+
+  auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+  auto res = rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), clz, one);
+  rewriter.replaceOp(op, res);
+
+  return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMBitClzOpLowering::matchAndRewrite(
+    cir::BitClzOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto llvmOp = rewriter.create<mlir::LLVM::CountLeadingZerosOp>(
+      op.getLoc(), resTy, adaptor.getInput(), op.getPoisonZero());
+  rewriter.replaceOp(op, llvmOp);
+  return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMBitCtzOpLowering::matchAndRewrite(
+    cir::BitCtzOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto llvmOp = rewriter.create<mlir::LLVM::CountTrailingZerosOp>(
+      op.getLoc(), resTy, adaptor.getInput(), op.getPoisonZero());
+  rewriter.replaceOp(op, llvmOp);
+  return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMBitParityOpLowering::matchAndRewrite(
+    cir::BitParityOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto popcnt = rewriter.create<mlir::LLVM::CtPopOp>(op.getLoc(), resTy,
+                                                     adaptor.getInput());
+
+  auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), resTy, 1);
+  auto popcntMod2 =
+      rewriter.create<mlir::LLVM::AndOp>(op.getLoc(), popcnt, one);
+  rewriter.replaceOp(op, popcntMod2);
+
+  return mlir::LogicalResult::success();
+}
+
+mlir::LogicalResult CIRToLLVMBitPopcountOpLowering::matchAndRewrite(
+    cir::BitPopcountOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto resTy = getTypeConverter()->convertType(op.getType());
+  auto llvmOp = rewriter.create<mlir::LLVM::CtPopOp>(op.getLoc(), resTy,
+                                                     adaptor.getInput());
+  rewriter.replaceOp(op, llvmOp);
+  return mlir::LogicalResult::success();
+}
+
 mlir::LogicalResult CIRToLLVMBrCondOpLowering::matchAndRewrite(
     cir::BrCondOp brOp, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -1955,6 +2030,11 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMAssumeOpLowering,
                CIRToLLVMBaseClassAddrOpLowering,
                CIRToLLVMBinOpLowering,
+               CIRToLLVMBitClrsbOpLowering,
+               CIRToLLVMBitClzOpLowering,
+               CIRToLLVMBitCtzOpLowering,
+               CIRToLLVMBitParityOpLowering,
+               CIRToLLVMBitPopcountOpLowering,
                CIRToLLVMBrCondOpLowering,
                CIRToLLVMBrOpLowering,
                CIRToLLVMCallOpLowering,
