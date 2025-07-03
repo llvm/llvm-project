@@ -784,11 +784,12 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   return nullptr;
 }
 
+/// Get the canonical order of two commutative exprs arguments.
 static std::pair<AffineExpr, AffineExpr>
 orderCommutativeArgs(AffineExpr expr1, AffineExpr expr2) {
   auto sym1 = dyn_cast<AffineSymbolExpr>(expr1);
   auto sym2 = dyn_cast<AffineSymbolExpr>(expr2);
-  // Try to order by symbol/dim position first
+  // Try to order by symbol/dim position first.
   if (sym1 && sym2)
     return sym1.getPosition() < sym2.getPosition() ? std::pair{expr1, expr2}
                                                    : std::pair{expr2, expr1};
@@ -799,18 +800,14 @@ orderCommutativeArgs(AffineExpr expr1, AffineExpr expr2) {
     return dim1.getPosition() < dim2.getPosition() ? std::pair{expr1, expr2}
                                                    : std::pair{expr2, expr1};
 
-  // Put dims before symbols
+  // Put dims before symbols.
   if (dim1 && sym2)
     return {dim1, sym2};
 
   if (sym1 && dim2)
     return {dim2, sym1};
 
-  // Move constants to the right
-  if (isa<AffineConstantExpr>(expr1) && !isa<AffineConstantExpr>(expr2))
-    return {expr2, expr1};
-
-  // Otherwise, keep original order
+  // Otherwise, keep original order.
   return {expr1, expr2};
 }
 
