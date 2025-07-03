@@ -71,6 +71,8 @@ private:
   int getOpaqueValue() const { return ID; }
 };
 
+using FileIDAndOffset = std::pair<FileID, unsigned>;
+
 /// Encodes a location in the source. The SourceManager can decode this
 /// to get at the full include stack, line and column information.
 ///
@@ -224,7 +226,6 @@ inline bool operator<=(const SourceLocation &LHS, const SourceLocation &RHS) {
 inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
   return LHS.getRawEncoding() >= RHS.getRawEncoding();
 }
-using FileIDAndOffset = std::pair<FileID, unsigned>;
 
 /// A trivial tuple used to represent a source range.
 class SourceRange {

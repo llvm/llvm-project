@@ -15,17 +15,20 @@
 // To achieve this, we need to encode the index of the module file into the
 // encoding of the source location. The encoding of the source location may be:
 //
-//      |-----------------------|-----------------------|
-//      |          A            |         B         | C |
+//      |---------------|---------------------------|
+//      |        A      |           B           | C |
 //
-//  * A: 32 bit. The index of the module file in the module manager + 1. The +1
+//  * A: 24 bit. The index of the module file in the module manager + 1. The +1
 //  here is necessary since we wish 0 stands for the current module file.
-//  * B: 31 bit. The offset of the source location to the module file containing
+//  * B: 39 bit. The offset of the source location to the module file containing
 //  it.
 //  * C: The macro bit. We rotate it to the lowest bit so that we can save some
 //  space in case the index of the module file is 0.
 //
+// Together, B and C form SourceLocation::Bits (40 bits total).
 //
+// Currently, only the lower 16 bits of A are used to store the module file
+// index, leaving the upper 8 bits of A unused (reserved for future use).
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_SERIALIZATION_SOURCELOCATIONENCODING_H
@@ -96,7 +99,7 @@ SourceLocationEncoding::decode(RawLocEncoding Encoded) {
     return {SourceLocation::getFromRawEncoding(decodeRaw(Encoded)),
             ModuleFileIndex};
 
-  Encoded &= llvm::maskTrailingOnes<RawLocEncoding>((SourceLocation::Bits));
+  Encoded &= llvm::maskTrailingOnes<RawLocEncoding>(SourceLocation::Bits);
   SourceLocation Loc = SourceLocation::getFromRawEncoding(decodeRaw(Encoded));
 
   return {Loc, ModuleFileIndex};

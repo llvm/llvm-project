@@ -809,7 +809,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t Value : 1;
 
-    /// The location of the boolean ligeral
+    /// The location of the boolean ligeral.
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t Loc : SourceLocation::Bits;
   };
@@ -840,7 +840,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
 
-    /// The location of the "this"
+    /// The location of the "this".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t Loc : SourceLocation::Bits;
   };
@@ -856,7 +856,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsThrownVariableInScope : 1;
 
-    /// The location of the "throw"
+    /// The location of the "throw".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t ThrowLoc : SourceLocation::Bits;
   };
@@ -901,7 +901,6 @@ protected:
     LLVM_PREFERRED_TYPE(ExprBitfields)
     uint64_t : NumExprBits;
 
-    /// The location where the default initializer expression was used.
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t RParenLoc : SourceLocation::Bits;
   };
@@ -978,7 +977,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t UsualArrayDeleteWantsSize : 1;
 
-    /// Location of the expression
+    /// Location of the expression.
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t Loc : SourceLocation::Bits;
   };
@@ -1308,7 +1307,6 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsUnique : 1;
 
-    /// The location of the non-type template parameter reference.
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t Loc : SourceLocation::Bits;
   };
@@ -2182,7 +2180,7 @@ public:
 class LabelStmt : public ValueStmt {
   LabelDecl *TheDecl;
   Stmt *SubStmt;
-  bool SideEntry = false; // FIXME: could improve
+  bool SideEntry = false;
 
 public:
   /// Build a label statement.
@@ -2545,8 +2543,12 @@ public:
 class SwitchStmt final : public Stmt,
                          private llvm::TrailingObjects<SwitchStmt, Stmt *> {
   friend TrailingObjects;
+
   /// Points to a linked list of case and default statements.
   SwitchCase *FirstCase = nullptr;
+  
+  SourceLocation LParenLoc;
+  SourceLocation RParenLoc;
 
   // SwitchStmt is followed by several trailing objects,
   // some of which optional. Note that it would be more convenient to
@@ -2567,8 +2569,6 @@ class SwitchStmt final : public Stmt,
   //    Always present.
   enum { InitOffset = 0, BodyOffsetFromCond = 1 };
   enum { NumMandatoryStmtPtr = 2 };
-  SourceLocation LParenLoc;
-  SourceLocation RParenLoc;
 
   unsigned numTrailingStatements() const {
     return NumMandatoryStmtPtr + hasInitStorage() + hasVarStorage();
@@ -2754,6 +2754,7 @@ class WhileStmt final : public Stmt,
   //
   enum { VarOffset = 0, BodyOffsetFromCond = 1 };
   enum { NumMandatoryStmtPtr = 2 };
+
   SourceLocation LParenLoc, RParenLoc;
 
   unsigned varOffset() const { return VarOffset; }
@@ -2877,6 +2878,7 @@ class DoStmt : public Stmt {
   Stmt *SubExprs[END_EXPR];
   SourceLocation WhileLoc;
   SourceLocation RParenLoc; // Location of final ')' in do stmt condition.
+
 public:
   DoStmt(Stmt *Body, Expr *Cond, SourceLocation DL, SourceLocation WL,
          SourceLocation RP)
@@ -3187,6 +3189,7 @@ class ReturnStmt final
     : public Stmt,
       private llvm::TrailingObjects<ReturnStmt, const VarDecl *> {
   friend TrailingObjects;
+
   /// The return expression.
   Stmt *RetExpr;
 
