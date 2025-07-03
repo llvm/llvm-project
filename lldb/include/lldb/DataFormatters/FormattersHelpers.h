@@ -55,6 +55,12 @@ void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
 
 std::optional<size_t> ExtractIndexFromString(const char *item_name);
 
+/// Returns \c false if the smart pointer formatters shouldn't continue
+/// formatting the rest of the object. Currently this is the case when the
+/// pointer is a nullptr.
+bool DumpCxxSmartPtrPointerSummary(Stream &stream, ValueObject &ptr,
+                                   const TypeSummaryOptions &options);
+
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
 time_t GetOSXEpoch();

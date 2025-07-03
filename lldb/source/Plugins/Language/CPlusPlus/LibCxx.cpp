@@ -166,24 +166,8 @@ bool lldb_private::formatters::LibcxxSmartPointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
+  if (!DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options))
     return true;
-  } else {
-    bool print_pointee = false;
-    Status error;
-    ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-    if (pointee_sp && error.Success()) {
-      if (pointee_sp->DumpPrintableRepresentation(
-              stream, ValueObject::eValueObjectRepresentationStyleSummary,
-              lldb::eFormatInvalid,
-              ValueObject::PrintableRepresentationSpecialCases::eDisable,
-              false))
-        print_pointee = true;
-    }
-    if (!print_pointee)
-      stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
-  }
 
   if (count_sp)
     stream.Printf(" strong=%" PRIu64, 1 + count_sp->GetValueAsUnsigned(0));
@@ -210,24 +194,7 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  if (ptr_sp->GetValueAsUnsigned(0) == 0) {
-    stream.Printf("nullptr");
-    return true;
-  } else {
-    bool print_pointee = false;
-    Status error;
-    ValueObjectSP pointee_sp = ptr_sp->Dereference(error);
-    if (pointee_sp && error.Success()) {
-      if (pointee_sp->DumpPrintableRepresentation(
-              stream, ValueObject::eValueObjectRepresentationStyleSummary,
-              lldb::eFormatInvalid,
-              ValueObject::PrintableRepresentationSpecialCases::eDisable,
-              false))
-        print_pointee = true;
-    }
-    if (!print_pointee)
-      stream.Printf("ptr = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
-  }
+  DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
   return true;
 }
