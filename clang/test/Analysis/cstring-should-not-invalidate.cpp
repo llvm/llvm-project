@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.cstring,alpha.unix.cstring -verify %s
 
 // expected-no-diagnostics
 
@@ -63,7 +63,7 @@ struct strncatTestClass {
 
   void KnownLen(char *src) {
     m_ptr = new int;
-    strncat(m_buff, src, sizeof(m_buff)); // known len but unknown src size
+    strncat(m_buff, src, sizeof(m_buff) - 1); // known len but unknown src size
     delete m_ptr;                         // no warning
   }
 
