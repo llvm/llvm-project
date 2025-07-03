@@ -19,15 +19,16 @@ using namespace llvm;
 
 void CFIFunctionFrameStreamer::updateReceiver(
     const std::optional<MCInst> &NewInst) {
-  assert(!FrameIndices.empty() && hasUnfinishedDwarfFrameInfo() &&
-         "FunctionUnitStreamer frame indices should be synced with "
-         "MCStreamer's"); //! FIXME split this assertions and also check another
-                          //! vectors
-                          //! Add tests for nested frames
+  assert(hasUnfinishedDwarfFrameInfo() &&
+         "should have an unfinished DWARF frame here");
+  assert(!FrameIndices.empty() &&
+         "there should be an index available for the current frame");
+  assert(FrameIndices.size() == LastInstructions.size());
+  assert(LastInstructions.size() == LastDirectiveIndices.size());
 
   auto Frames = getDwarfFrameInfos();
   assert(FrameIndices.back() < Frames.size());
-  unsigned LastDirectiveIndex = FrameLastDirectiveIndices.back();
+  unsigned LastDirectiveIndex = LastDirectiveIndices.back();
   unsigned CurrentDirectiveIndex =
       Frames[FrameIndices.back()].Instructions.size();
   assert(CurrentDirectiveIndex >= LastDirectiveIndex);
@@ -41,41 +42,46 @@ void CFIFunctionFrameStreamer::updateReceiver(
             .drop_back(LastFrame->Instructions.size() - CurrentDirectiveIndex);
   }
 
-  auto MaybeLastInstruction = FrameLastInstructions.back();
+  auto MaybeLastInstruction = LastInstructions.back();
   if (MaybeLastInstruction)
+    // The directives are associated with an instruction.
     Receiver->emitInstructionAndDirectives(*MaybeLastInstruction, Directives);
   else
+    // The directives are the prologue directives.
     Receiver->startFunctionFrame(false /* TODO: should put isEH here */,
                                  Directives);
 
-  FrameLastInstructions.back() = NewInst;
-  FrameLastDirectiveIndices.back() = CurrentDirectiveIndex;
+  // Update the internal state for the top frame.
+  LastInstructions.back() = NewInst;
+  LastDirectiveIndices.back() = CurrentDirectiveIndex;
 }
 
 void CFIFunctionFrameStreamer::emitInstruction(const MCInst &Inst,
                                                const MCSubtargetInfo &STI) {
-  if (hasUnfinishedDwarfFrameInfo()) {
+  if (hasUnfinishedDwarfFrameInfo())
+    // Send the last instruction with the unsent directives already in the frame
+    // to the receiver.
     updateReceiver(Inst);
-  }
 }
 
 void CFIFunctionFrameStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
-  FrameLastInstructions.push_back(std::nullopt);
-  FrameLastDirectiveIndices.push_back(0);
+  LastInstructions.push_back(std::nullopt);
+  LastDirectiveIndices.push_back(0);
   FrameIndices.push_back(getNumFrameInfos());
 
   MCStreamer::emitCFIStartProcImpl(Frame);
 }
 
 void CFIFunctionFrameStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) {
+  // Send the last instruction with the final directives of the current frame to
+  // the receiver.
   updateReceiver(std::nullopt);
 
   assert(!FrameIndices.empty() && "There should be at least one frame to pop");
-  FrameLastDirectiveIndices.pop_back();
-  FrameLastInstructions.pop_back();
+  LastDirectiveIndices.pop_back();
+  LastInstructions.pop_back();
   FrameIndices.pop_back();
 
-  dbgs() << "finishing frame\n";
   Receiver->finishFunctionFrame();
 
   MCStreamer::emitCFIEndProcImpl(CurFrame);

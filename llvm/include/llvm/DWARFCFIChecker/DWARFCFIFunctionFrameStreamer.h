@@ -60,12 +60,27 @@ public:
   void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) override;
 
 private:
+  /// This method sends the last instruction, along with its associated
+  /// directives, to the receiver and then updates the internal state of the
+  /// class. It moves the directive index to after the last directive and sets
+  /// the last instruction to \p NewInst . This method assumes it is called in
+  /// the middle of an unfinished DWARF debug frame; if not, an assertion will
+  /// fail.
   void updateReceiver(const std::optional<MCInst> &NewInst);
 
 private:
-  std::vector<std::optional<MCInst>> FrameLastInstructions; //! FIXME
-  std::vector<unsigned> FrameLastDirectiveIndices;          //! FIXME
+  /// The following fields are stacks that store the state of the stream sent to
+  /// the receiver in each frame. This class, like `MCStreamer`, assumes that
+  /// the debug frames are intertwined with each other only in stack form.
+
+  /// The last instruction that is not sent to the receiver for each frame.
+  std::vector<std::optional<MCInst>> LastInstructions;
+  /// The index of the last directive that is not sent to the receiver for each
+  /// frame.
+  std::vector<unsigned> LastDirectiveIndices;
+  /// The index of each frame in `DwarfFrameInfos` field in `MCStreamer`.
   std::vector<unsigned> FrameIndices;
+
   std::unique_ptr<CFIFunctionFrameReceiver> Receiver;
 };
 
