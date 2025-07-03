@@ -53,4 +53,3 @@ void test_svmopa_za32_mf8_m(svbool_t pn, svbool_t pm, svmfloat8_t zn,
                             svmfloat8_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
   SVE_ACLE_FUNC(svmopa_za32,_mf8,_m_fpm)(3, pn, pm, zn, zm, fpmr);
 }
-

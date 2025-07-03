@@ -268,4 +268,3 @@ float32x4_t test_vdotq_lane_f32(float32x4_t vd, mfloat8x16_t vn, mfloat8x8_t vm,
 float32x4_t test_vdotq_laneq_f32(float32x4_t vd, mfloat8x16_t vn, mfloat8x16_t vm, fpm_t fpmr) {
   return vdotq_laneq_f32_mf8_fpm(vd, vn, vm, 3, fpmr);
 }
-

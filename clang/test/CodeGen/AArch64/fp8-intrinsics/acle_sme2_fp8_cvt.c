@@ -207,4 +207,3 @@ svbfloat16x2_t test_cvtl1_bf16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
 svbfloat16x2_t test_cvtl2_bf16_x2(svmfloat8_t zn, fpm_t fpmr)  __arm_streaming {
   return SVE_ACLE_FUNC(svcvtl2_bf16,_mf8,_x2_fpm)(zn, fpmr);
 }
-
