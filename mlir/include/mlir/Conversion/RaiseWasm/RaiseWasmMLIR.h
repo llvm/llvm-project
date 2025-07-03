@@ -19,8 +19,10 @@ class RewritePatternSet;
 #define GEN_PASS_DECL_RAISEWASMMLIR
 #include "mlir/Conversion/Passes.h.inc"
 
-/// Collect a set of patterns to convert from the Wasm dialect to standard dialects.
-void populateRaiseWasmMLIRConversionPatterns(TypeConverter&, RewritePatternSet &);
+/// Collect a set of patterns to convert from the Wasm dialect to standard
+/// dialects.
+void populateRaiseWasmMLIRConversionPatterns(TypeConverter &,
+                                             RewritePatternSet &);
 
 /// Create a pass to convert ops from WasmDialect to standard dialects.
 std::unique_ptr<Pass> createRaiseWasmMLIRPass();
