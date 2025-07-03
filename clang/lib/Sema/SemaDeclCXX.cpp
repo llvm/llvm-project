@@ -9545,7 +9545,6 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
 
   if (this->S.Context.getLangOpts().CPlusPlus26 && inUnion() &&
       CSM == CXXSpecialMemberKind::Destructor) {
-    // CXXRecordDecl *FieldRecord = Subobj.dyn_cast<CXXRecordDecl*>();
     // [class.dtor]/7 In C++26, a destructor for a union X is only deleted under
     // the additional conditions that:
 
@@ -9556,8 +9555,19 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     // multi-dimensional array thereof) where V has a default member initializer
     // and M has a destructor that is non-trivial,
 
+    RecordDecl *Parent = Field->getParent();
+    while (Parent &&
+           (Parent->isAnonymousStructOrUnion() ||
+            (Parent->isUnion() && Parent->getIdentifier() == nullptr))) {
+      if (auto RD = dyn_cast_or_null<RecordDecl>(Parent->getParent())) {
+        Parent = RD;
+      } else {
+        break;
+      }
+    }
+
     Sema::SpecialMemberOverloadResult SMOR =
-        S.LookupSpecialMember(dyn_cast<CXXRecordDecl>(Field->getParent()),
+        S.LookupSpecialMember(dyn_cast<CXXRecordDecl>(Parent),
                               CXXSpecialMemberKind::DefaultConstructor, false,
                               false, false, false, false);
     if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Success) {

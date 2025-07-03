@@ -52,4 +52,18 @@ union U6 {
 U6 u6;
 
 
-
+struct DeletedDtor {
+  ~DeletedDtor() = delete; // expected-note 2 {{deleted here}}
+};
+union B1 {
+  B1();
+  DeletedDtor a; // expected-note {{because field 'a' has a deleted destructor}}
+};
+B1 b1; // expected-error {{deleted function}}
+union B2 {
+  B2();
+  union {          // expected-note {{deleted destructor}}
+    DeletedDtor a; // expected-note {{because field 'a' has a deleted destructor}}
+  };
+};
+B2 b2; // expected-error {{deleted function}}
