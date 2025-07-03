@@ -873,69 +873,20 @@ void MCAssembler::layout() {
   // Evaluate and apply the fixups, generating relocation entries as necessary.
   for (MCSection &Sec : *this) {
     for (MCFragment &Frag : Sec) {
-      MutableArrayRef<MCFixup> Fixups;
-      MutableArrayRef<char> Contents;
-
-      // Process MCAlignFragment and MCEncodedFragmentWithFixups here.
-      switch (Frag.getKind()) {
-      default:
-        continue;
-      case MCFragment::FT_Align: {
-        MCAlignFragment &AF = cast<MCAlignFragment>(Frag);
-        // Insert fixup type for code alignment if the target define
-        // shouldInsertFixupForCodeAlign target hook.
-        if (Sec.useCodeAlign() && AF.hasEmitNops())
-          getBackend().shouldInsertFixupForCodeAlign(*this, AF);
-        continue;
-      }
-      case MCFragment::FT_Data: {
-        MCDataFragment &DF = cast<MCDataFragment>(Frag);
-        Fixups = DF.getFixups();
-        Contents = DF.getContents();
-        break;
-      }
-      case MCFragment::FT_Relaxable: {
-        MCRelaxableFragment &RF = cast<MCRelaxableFragment>(Frag);
-        Fixups = RF.getFixups();
-        Contents = RF.getContents();
-        break;
-      }
-      case MCFragment::FT_CVDefRange: {
-        MCCVDefRangeFragment &CF = cast<MCCVDefRangeFragment>(Frag);
-        Fixups = CF.getFixups();
-        Contents = CF.getContents();
-        break;
-      }
-      case MCFragment::FT_Dwarf: {
-        MCDwarfLineAddrFragment &DF = cast<MCDwarfLineAddrFragment>(Frag);
-        Fixups = DF.getFixups();
-        Contents = DF.getContents();
-        break;
-      }
-      case MCFragment::FT_DwarfFrame: {
-        MCDwarfCallFrameFragment &DF = cast<MCDwarfCallFrameFragment>(Frag);
-        Fixups = DF.getFixups();
-        Contents = DF.getContents();
-        break;
-      }
-      case MCFragment::FT_LEB: {
-        auto &LF = cast<MCLEBFragment>(Frag);
-        Fixups = LF.getFixups();
-        Contents = LF.getContents();
-        break;
-      }
-      case MCFragment::FT_PseudoProbe: {
-        MCPseudoProbeAddrFragment &PF = cast<MCPseudoProbeAddrFragment>(Frag);
-        Fixups = PF.getFixups();
-        Contents = PF.getContents();
-        break;
-      }
-      }
-      for (const MCFixup &Fixup : Fixups) {
-        uint64_t FixedValue;
-        MCValue Target;
-        evaluateFixup(Frag, Fixup, Target, FixedValue,
-                      /*RecordReloc=*/true, Contents);
+      // Process fragments with fixups here.
+      if (auto *F = dyn_cast<MCEncodedFragment>(&Frag)) {
+        auto Contents = F->getContents();
+        for (const MCFixup &Fixup : F->getFixups()) {
+          uint64_t FixedValue;
+          MCValue Target;
+          evaluateFixup(Frag, Fixup, Target, FixedValue,
+                        /*RecordReloc=*/true, Contents);
+        }
+      } else if (auto *AF = dyn_cast<MCAlignFragment>(&Frag)) {
+        // For RISC-V linker relaxation, an alignment relocation might be
+        // needed.
+        if (AF->hasEmitNops())
+          getBackend().shouldInsertFixupForCodeAlign(*this, *AF);
       }
     }
   }
