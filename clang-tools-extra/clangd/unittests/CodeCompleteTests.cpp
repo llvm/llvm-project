@@ -3271,10 +3271,13 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
   Annotations Code(R"cpp(
     struct A {
       void foo(this auto&& self, int arg); 
+      void bar(this A self, int arg);
     };
     int main() {
       A a {};
-      a.foo(^);
+      a.foo($c1^);
+      (&A::bar)($c2^);
+      // TODO: (&A::foo)(^c3)
     }
   )cpp");
 
@@ -3287,12 +3290,22 @@ TEST(SignatureHelpTest, SkipExplicitObjectParameter) {
   auto Preamble = TU.preamble();
   ASSERT_TRUE(Preamble);
 
-  const auto Result = signatureHelp(testPath(TU.Filename), Code.point(),
-                                    *Preamble, Inputs, MarkupKind::PlainText);
+  {
+    const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c1"),
+                                      *Preamble, Inputs, MarkupKind::PlainText);
 
-  EXPECT_EQ(1, Result.signatures.size());
+    EXPECT_EQ(1, Result.signatures.size());
 
-  EXPECT_THAT(Result.signatures[0], AllOf(sig("foo([[int arg]]) -> void")));
+    EXPECT_THAT(Result.signatures[0], AllOf(sig("foo([[int arg]]) -> void")));
+  }
+  {
+    const auto Result = signatureHelp(testPath(TU.Filename), Code.point("c2"),
+                                      *Preamble, Inputs, MarkupKind::PlainText);
+
+    EXPECT_EQ(1, Result.signatures.size());
+
+    EXPECT_THAT(Result.signatures[0], AllOf(sig("([[A]], [[int]]) -> void")));
+  }
 }
 
 TEST(CompletionTest, IncludedCompletionKinds) {
@@ -4397,11 +4410,14 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
   Annotations Code(R"cpp(
     struct A {
       void foo(this auto&& self, int arg); 
+      void bar(this A self, int arg);
     };
 
     int main() {
       A a {};
-      a.^
+      a.$c1^s
+      (&A::ba$c2^;
+      // TODO: (&A::fo$c3^
     }
   )cpp");
 
@@ -4415,12 +4431,24 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
 
   MockFS FS;
   auto Inputs = TU.inputs(FS);
-  auto Result = codeComplete(testPath(TU.Filename), Code.point(),
-                             Preamble.get(), Inputs, Opts);
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c1"),
+                               Preamble.get(), Inputs, Opts);
 
-  EXPECT_THAT(Result.Completions,
-              ElementsAre(AllOf(named("foo"), signature("(int arg)"),
-                                snippetSuffix("(${1:int arg})"))));
+    EXPECT_THAT(Result.Completions,
+                UnorderedElementsAre(AllOf(named("foo"), signature("(int arg)"),
+                                           snippetSuffix("(${1:int arg})")),
+                                     AllOf(named("bar"), signature("(int arg)"),
+                                           snippetSuffix("(${1:int arg})"))));
+  }
+  {
+    auto Result = codeComplete(testPath(TU.Filename), Code.point("c2"),
+                               Preamble.get(), Inputs, Opts);
+    // TODO: snippet suffix is empty for c2
+    EXPECT_THAT(Result.Completions,
+                ElementsAre(AllOf(named("bar"), signature("(int arg)"),
+                                  snippetSuffix(""))));
+  }
 }
 } // namespace
 } // namespace clangd
