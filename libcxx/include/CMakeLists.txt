@@ -714,7 +714,6 @@ set(files
   __ranges/enable_view.h
   __ranges/filter_view.h
   __ranges/from_range.h
-  __ranges/indices_view.h
   __ranges/iota_view.h
   __ranges/istream_view.h
   __ranges/join_view.h
