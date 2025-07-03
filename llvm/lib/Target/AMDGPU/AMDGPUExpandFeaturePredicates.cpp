@@ -115,9 +115,9 @@ handlePredicate(const GCNSubtarget &ST, FunctionAnalysisManager &FAM,
       continue;
     } else if (I->isTerminator() &&
                ConstantFoldTerminator(I->getParent(), true, nullptr, &DTU)) {
-        Predicated.insert(F);
+      Predicated.insert(F);
 
-        continue;
+      continue;
     }
 
     return unfoldableFound(I->getParent()->getParent(), P, I);
