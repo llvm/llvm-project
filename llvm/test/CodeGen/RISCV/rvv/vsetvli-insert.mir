@@ -100,16 +100,8 @@
     ret void
   }
 
-  define i64 @vsetvli_vleff() {
-  bb0:
-    br i1 poison, label %bb1, label %bb2
-  bb1:
-    %0 = tail call { <vscale x 4 x i16>, i64 } @llvm.riscv.vleff.nxv4i16.i64(<vscale x 4 x i16> zeroinitializer, ptr null, i64 0)
-    %1 = extractvalue { <vscale x 4 x i16>, i64 } %0, 1
-    br label %bb2
-  bb2:
-    %x8 = phi i64 [%1, %bb1], [0, %bb0]
-    ret i64 %x8
+  define void @vsetvli_vleff() {
+    ret void
   }
 
   declare <vscale x 1 x i64> @llvm.riscv.vadd.nxv1i64.nxv1i64.i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>, i64) #1
@@ -640,38 +632,35 @@ name:            vsetvli_vleff
 tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: vsetvli_vleff
-  ; CHECK: bb.0.bb0:
+  ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x0
+  ; CHECK-NEXT:   %vl:gpr = COPY $x0
   ; CHECK-NEXT:   BNE $x0, $x0, %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.bb1:
+  ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead [[PseudoVSETVLIX0_:%[0-9]+]]:gprnox0 = PseudoVSETVLIX0 killed $x0, 200 /* e16, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   renamable $v8 = PseudoVMV_V_I_M1 undef renamable $v8, 0, -1, 4 /* e16 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 0, 136 /* e16, m1, tu, ma */, implicit-def $vl, implicit-def $vtype
-  ; CHECK-NEXT:   dead renamable $v8, $x0 = PseudoVLE16FF_V_M1 killed renamable $v8, $x0, 0, 4 /* e16 */, 2 /* tu, ma */, implicit-def dead $vl, implicit $vl, implicit $vtype :: (load unknown-size from `ptr null`, align 2)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = PseudoReadVL implicit $vl
+  ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 0, 200 /* e16, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
+  ; CHECK-NEXT:   $noreg, $x0 = PseudoVLE16FF_V_M1 $noreg, $noreg, 0, 4 /* e16 */, 2 /* tu, ma */, implicit $vl, implicit $vtype, implicit-def $vl
+  ; CHECK-NEXT:   %vl:gpr = PseudoReadVL implicit $vl
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.bb2:
-  ; CHECK-NEXT:   $x10 = COPY [[COPY]]
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $x10 = COPY %vl
   ; CHECK-NEXT:   PseudoRET implicit killed $x10
-  bb.0.bb0:
+  bb.0:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
 
-    %9:gpr = COPY $x0
+    %vl:gpr = COPY $x0
     BNE $x0, $x0, %bb.2
     PseudoBR %bb.1
 
-  bb.1.bb1:
+  bb.1:
     successors: %bb.2(0x80000000)
 
-    renamable $v8 = PseudoVMV_V_I_M1 undef renamable $v8, 0, -1, 4 /* e16 */, 0 /* tu, mu */
-    dead renamable $v8, %9:gpr = PseudoVLE16FF_V_M1 killed renamable $v8, $x0, 0, 4 /* e16 */, 2 /* tu, ma */, implicit-def dead $vl :: (load unknown-size from `ptr null`, align 2)
+    $noreg, %vl:gpr = PseudoVLE16FF_V_M1 $noreg, $noreg, 0, 4 /* e16 */, 2 /* tu, ma */
 
-  bb.2.bb2:
-    $x10 = COPY %9
+  bb.2:
+    $x10 = COPY %vl
     PseudoRET implicit killed $x10
