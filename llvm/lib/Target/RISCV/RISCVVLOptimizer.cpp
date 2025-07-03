@@ -1040,6 +1040,12 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
+  // Vector Slide Instructions
+  case RISCV::VSLIDEUP_VX:
+  case RISCV::VSLIDEUP_VI:
+  case RISCV::VSLIDEDOWN_VX:
+  case RISCV::VSLIDEDOWN_VI:
+  // TODO: Handle v[f]slide1up, but not v[f]slide1down.
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
@@ -1255,6 +1261,9 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
     return false;
   }
+
+  assert(!RISCVII::elementsDependOnVL(RISCV::getRVVMCOpcode(MI.getOpcode())) &&
+         "Instruction shouldn't be supported if elements depend on VL");
 
   assert(MI.getOperand(0).isReg() &&
          isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
