@@ -5038,12 +5038,8 @@ a functional mechanism for programatically querying:
 
 .. code-block:: c
 
-  // When used as the predicate for a control structure
-  bool __builtin_amdgcn_processor_is(const char*);
-  bool __builtin_amdgcn_is_invocable(builtin_name);
-  // Otherwise
-  void __builtin_amdgcn_processor_is(const char*);
-  void __builtin_amdgcn_is_invocable(void);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_processor_is(const char*);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_is_invocable(builtin_name);
 
 **Example of use**:
 
@@ -5062,7 +5058,7 @@ a functional mechanism for programatically querying:
   while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
 
   do {
-    *p -= x;
+    break;
   } while (__builtin_amdgcn_processor_is("gfx1010"));
 
   for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
@@ -5073,7 +5069,7 @@ a functional mechanism for programatically querying:
     __builtin_amdgcn_s_ttracedata_imm(1);
 
   do {
-    *p -= x;
+    break;
   } while (
       __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
 
@@ -5082,17 +5078,50 @@ a functional mechanism for programatically querying:
 
 **Description**:
 
-When used as the predicate value of the following control structures:
+The builtins return a value of type ``__amdgpu_feature_predicate_t``, which is a
+target specific type that behaves as if its C++ definition was the following:
 
 .. code-block:: c++
 
-  if (...)
-  while (...)
-  do { } while (...)
-  for (...)
+  struct __amdgpu_feature_predicate_t {
+    __amdgpu_feature_predicate_t() = delete;
+    __amdgpu_feature_predicate_t(const __amdgpu_feature_predicate_t&) = delete;
+    __amdgpu_feature_predicate_t(__amdgpu_feature_predicate_t&&) = delete;
 
-be it directly, or as arguments to logical operators such as ``!, ||, &&``, the
-builtins return a boolean value that:
+    explicit
+    operator bool() const noexcept;
+  };
+
+The builtins can be used in C as well, wherein the
+``__amdgpu_feature_predicate_t`` type behaves as an opaque, forward declared
+type with conditional automated conversion to ``_Bool`` when used as the
+predicate argument to a control structure:
+
+.. code-block:: c
+
+  struct __amdgpu_feature_predicate_t ret();     // Error
+  void arg(struct __amdgpu_feature_predicate_t); // Error
+  void local() {
+    struct __amdgpu_feature_predicate_t x;       // Error
+    struct __amdgpu_feature_predicate_t y =
+        __builtin_amdgcn_processor_is("gfx900"); // Error
+  }
+  void valid_use() {
+    _Bool x = (_Bool)__builtin_amdgcn_processor_is("gfx900"); // OK
+    if (__builtin_amdgcn_processor_is("gfx900"))       // Implicit cast to _Bool
+      return;
+    for (; __builtin_amdgcn_processor_is("gfx900");)   // Implicit cast to _Bool
+      break;
+    while (__builtin_amdgcn_processor_is("gfx900"))    // Implicit cast to _Bool
+      break;
+    do {
+      break;
+    } while (__builtin_amdgcn_processor_is("gfx900")); // Implicit cast to _Bool
+
+    __builtin_amdgcn_processor_is("gfx900") ? x : !x;
+  }
+
+The boolean interpretation of the predicate values returned by the builtins:
 
 * indicates whether the current target matches the argument; the argument MUST
   be a string literal and a valid AMDGPU target
@@ -5100,45 +5129,14 @@ builtins return a boolean value that:
   by the current target; the argument MUST be either a generic or AMDGPU
   specific builtin name
 
-Outside of these contexts, the builtins have a ``void`` returning signature
-which prevents their misuse.
-
-**Example of invalid use**:
-
-.. code-block:: c++
-
-  void kernel(int* p, int x, bool (*pfn)(bool), const char* str) {
-    if (__builtin_amdgcn_processor_is("not_an_amdgcn_gfx_id")) return;
-    else if (__builtin_amdgcn_processor_is(str)) __builtin_trap();
-
-    bool a = __builtin_amdgcn_processor_is("gfx906");
-    const bool b = !__builtin_amdgcn_processor_is("gfx906");
-    const bool c = !__builtin_amdgcn_processor_is("gfx906");
-    bool d = __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    bool e = !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    const auto f =
-        !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready)
-        || __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    const auto g =
-        !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready)
-        || !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    __builtin_amdgcn_processor_is("gfx1201")
-      ? __builtin_amdgcn_s_sleep_var(x) : __builtin_amdgcn_s_sleep(42);
-    if (pfn(__builtin_amdgcn_processor_is("gfx1200")))
-      __builtin_amdgcn_s_sleep_var(x);
-
-    if (__builtin_amdgcn_is_invocable("__builtin_amdgcn_s_sleep_var")) return;
-    else if (__builtin_amdgcn_is_invocable(x)) __builtin_trap();
-  }
-
 When invoked while compiling for a concrete target, the builtins are evaluated
 early by Clang, and never produce any CodeGen effects / have no observable
-side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
-which is an abstract target, a series of predicate values are implicitly
-created. These predicates get resolved when finalizing the compilation process
-for a concrete target, and shall reflect the latter's identity and features.
-Thus, it is possible to author high-level code, in e.g. HIP, that is target
-adaptive in a dynamic fashion, contrary to macro based mechanisms.
++side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
++which is an abstract target, a series of predicate values are implicitly
++created. These predicates get resolved when finalizing the compilation process
++for a concrete target, and shall reflect the latter's identity and features.
++Thus, it is possible to author high-level code, in e.g. HIP, that is target
++adaptive in a dynamic fashion, contrary to macro based mechanisms.
 
 ARM/AArch64 Language Extensions
 -------------------------------
