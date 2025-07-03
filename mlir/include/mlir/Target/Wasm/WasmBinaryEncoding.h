@@ -16,6 +16,15 @@
 #include <cstddef>
 namespace mlir {
 struct WasmBinaryEncoding {
+  /// Byte encodings for WASM instructions.
+  struct OpCode {
+    // Locals, globals, constants.
+    static constexpr std::byte constI32{0x41};
+    static constexpr std::byte constI64{0x42};
+    static constexpr std::byte constFP32{0x43};
+    static constexpr std::byte constFP64{0x44};
+  };
+
   /// Byte encodings of types in WASM binaries
   struct Type {
     static constexpr std::byte emptyBlockType{0x40};
