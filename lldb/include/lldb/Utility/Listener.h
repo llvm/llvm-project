@@ -53,6 +53,13 @@ public:
 
   void AddEvent(lldb::EventSP &event);
 
+  /// Transfers all events matching the specified broadcaster and type to the
+  /// destination listener. This can be useful when setting up a hijack listener,
+  /// to ensure that no relevant events are missed.
+  void MoveEvents(lldb::ListenerSP destination,
+                  Broadcaster *broadcaster, // nullptr for any broadcaster
+                  uint32_t event_type_mask);
+
   void Clear();
 
   const char *GetName() { return m_name.c_str(); }
