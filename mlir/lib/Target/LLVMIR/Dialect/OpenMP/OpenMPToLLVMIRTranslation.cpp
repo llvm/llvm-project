@@ -313,10 +313,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         if (!op.getNontemporalVars().empty())
           op.emitWarning()
               << "ignored clause: nontemporal in omp.simd operation";
-
-        if (!op.getReductionVars().empty() || op.getReductionByref() ||
-            op.getReductionSyms())
-          op.emitWarning() << "ignored clause: reduction in omp.simd operation";
       })
       .Case<omp::AtomicReadOp, omp::AtomicWriteOp, omp::AtomicUpdateOp,
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
@@ -2692,15 +2688,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
 
   if (failed(checkImplementationStatus(opInst)))
     return failure();
-
-  // This is needed to make sure that uses of entry block arguments for the
-  // reduction clause, which is not yet being translated, are mapped to the
-  // outside values. This has the effect of ignoring the clause without causing
-  // a compiler crash.
-  auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*simdOp);
-  for (auto [arg, var] : llvm::zip_equal(blockArgIface.getReductionBlockArgs(),
-                                         simdOp.getReductionVars()))
-    moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
 
   PrivateVarsInfo privateVarsInfo(simdOp);
 

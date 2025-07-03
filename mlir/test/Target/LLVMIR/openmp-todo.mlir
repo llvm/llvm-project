@@ -1,5 +1,4 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file -verify-diagnostics %s
-// XFAIL: *
 
 llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
   // expected-warning@below {{hint clause discarded}}
