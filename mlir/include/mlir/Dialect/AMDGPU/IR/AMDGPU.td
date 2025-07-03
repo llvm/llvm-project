@@ -106,6 +106,15 @@ def AMDGPU_ExtPackedFp8Op :
     If the passed-in vector has fewer than four elements, or the input is scalar,
     the remaining values in the <4 x i8> will be filled with
     undefined values as needed.
+    #### Example
+    ```mlir
+    // Extract single FP8 element to scalar f32
+    %element = amdgpu.ext_packed_fp8 %src_vector[0] : vector<4xf8E4M3FNUZ> to f32
+
+    // Extract two FP8 elements to vector<2xf32>
+    %elements = amdgpu.ext_packed_fp8 %src_vector[0] : vector<4xf8E4M3FNUZ> to vector<2xf32>
+    ```
+
   }];
   let assemblyFormat = [{
     attr-dict $source `[` $index `]` `:` type($source) `to` type($res)
@@ -162,6 +171,11 @@ def AMDGPU_PackedTrunc2xFp8Op :
     sub-registers, and so the conversion intrinsics (which are currently the
     only way to work with 8-bit float types) take packed vectors of 4 8-bit
     values.
+    #### Example
+    ```mlir
+    %result = amdgpu.packed_trunc_2xfp8 %src1, %src2 into %dest[word 1] 
+  : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
+    ```
   }];
   let assemblyFormat = [{
     attr-dict $sourceA `,` ($sourceB^):(`undef`)?
@@ -220,6 +234,11 @@ def AMDGPU_PackedStochRoundFp8Op :
     sub-registers, and so the conversion intrinsics (which are currently the
     only way to work with 8-bit float types) take packed vectors of 4 8-bit
     values.
+    #### Example
+    ```mlir
+   %result = amdgpu.packed_stoch_round_fp8 %src + %stoch_seed into %dest[2] 
+  : f32 to vector<4xf8E5M2FNUZ> into vector<4xf8E5M2FNUZ>
+    ```
   }];
   let assemblyFormat = [{
     attr-dict $source `+` $stochiasticParam
@@ -275,6 +294,18 @@ def AMDGPU_FatRawBufferCastOp :
     If the value of the memref's offset is not uniform (independent of the lane/thread ID),
     this will lead to substantially decreased performance due to the need for
     a waterfall loop on the base address of the buffer resource.
+    #### Example
+    ```mlir
+  // Simple cast
+%converted = amdgpu.fat_raw_buffer_cast %src 
+  : memref<8xi32> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+
+// Cast with memory attributes
+%converted = amdgpu.fat_raw_buffer_cast %src validBytes(%valid) 
+  cacheSwizzleStride(%swizzle) boundsCheck(false) resetOffset
+  : memref<8xi32, strided<[1], offset: ?>> 
+    to memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
+    ```
   }];
 
   let extraClassDeclaration = [{
@@ -333,6 +364,18 @@ def AMDGPU_RawBufferLoadOp :
     - If `boundsCheck` is false and the target chipset is RDNA, OOB_SELECT is set
       to 2 to disable bounds checks, otherwise it is 3
     - The cache coherency bits are off
+    #### Example
+    ```mlir
+  // Load scalar f32 from 1D buffer
+%scalar = amdgpu.raw_buffer_load %src[%idx] : memref<128xf32>, i32 -> f32
+
+// Load vector<4xf32> from 4D buffer
+%vector = amdgpu.raw_buffer_load %src[%idx0, %idx1, %idx2, %idx3] 
+  : memref<128x64x32x16xf32>, i32, i32, i32, i32 -> vector<4xf32>
+
+// Load from scalar buffer
+%value = amdgpu.raw_buffer_load %src[] : memref<f32> -> f32
+    ```
   }];
   let assemblyFormat = [{
     attr-dict $memref `[` $indices `]`
@@ -372,6 +415,18 @@ def AMDGPU_RawBufferStoreOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
+    #### Example
+    ```mlir
+  // Store scalar f32 to 1D buffer
+amdgpu.raw_buffer_store %value -> %dst[%idx] : f32 -> memref<128xf32>, i32
+
+// Store vector<4xf32> to 4D buffer
+amdgpu.raw_buffer_store %vec -> %dst[%idx0, %idx1, %idx2, %idx3] 
+  : vector<4xf32> -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+
+// Store to scalar buffer
+amdgpu.raw_buffer_store %value -> %dst[] : f32 -> memref<f32>
+    ```
   }];
   let assemblyFormat = [{
     attr-dict $value `->` $memref `[` $indices `]`
@@ -453,6 +508,16 @@ def AMDGPU_RawBufferAtomicFaddOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
+     #### Example
+    ```mlir
+  // Atomic floating-point add
+amdgpu.raw_buffer_atomic_fadd %value -> %dst[%idx] 
+  : f32 -> memref<128xf32>, i32
+
+// Atomic compare-swap
+amdgpu.raw_buffer_atomic_cmpswap %src, %cmp -> %dst[%idx] 
+  : f32 -> memref<128xf32>, i32
+    ```
   }];
   let assemblyFormat = [{
     attr-dict $value `->` $memref `[` $indices `]`
@@ -651,6 +716,10 @@ def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
   let assemblyFormat = [{
     $src $and_mask $or_mask $xor_mask attr-dict `:` type($result)
+   #### Example
+    ```mlir
+ %result = amdgpu.swizzle_bitmode %src 1 2 4 : f32
+    ```
   }];
 }
 
@@ -673,6 +742,10 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     (those which will implement this barrier by emitting inline assembly),
     use of this operation will impede the usabiliity of memory watches (including
     breakpoints set on variables) when debugging.
+    #### Example
+    ```mlir
+  amdgpu.lds_barrier
+    ```
   }];
   let assemblyFormat = "attr-dict";
 }
@@ -711,6 +784,14 @@ def AMDGPU_SchedBarrierOp :
     `amdgpu.sched_barrier` serves as a barrier that could be
     configured to restrict movements of instructions through it as
     defined by sched_barrier_opts.
+    #### Example
+    ```mlir
+  // Barrier allowing no dependent instructions
+amdgpu.sched_barrier allow = <none>
+
+// Barrier allowing specific execution units
+amdgpu.sched_barrier allow = <valu|all_vmem>
+    ```
   }];
   let assemblyFormat = [{
     `allow` `=` $opts attr-dict
@@ -810,6 +891,12 @@ def AMDGPU_MFMAOp :
 
     The negateA, negateB, and negateC flags are only supported for double-precision
     operations on gfx94x.
+    #### Example
+    ```mlir
+  %result = amdgpu.mfma %a * %b + %c 
+  { abid = 1 : i32, cbsz = 1 : i32, k = 1 : i32, m = 32 : i32, n = 32 : i32, blocks = 2 : i32 } 
+  : f32, f32, vector<32xf32>
+    ```
   }];
   let assemblyFormat = [{
     $sourceA `*` $sourceB `+` $destC
@@ -851,6 +938,11 @@ def AMDGPU_WMMAOp :
 
     The `clamp` flag is used to saturate the output of type T to numeric_limits<T>::max()
     in case of overflow.
+    #### Example
+    ```mlir
+  %result = amdgpu.wmma %a * %b + %c 
+  : vector<16xf16>, vector<16xf16>, vector<8xf16>
+    ```
   }];
   let assemblyFormat = [{
     $sourceA `*` $sourceB `+` $destC
@@ -973,6 +1065,13 @@ def AMDGPU_ScaledMFMAOp :
     are omitted from this wrapper.
     - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for 
     double-precision operations on gfx94x and so are not included here. 
+    #### Example
+    ```mlir
+ %result = amdgpu.scaled_mfma 
+  (%scale_a[0] * %vec_a) * (%scale_b[1] * %vec_b) + %accum
+  { k = 64 : i32, m = 32 : i32, n = 32 : i32 } 
+  : f8E8M0FNU, vector<32xf6E2M3FN>, f8E8M0FNU, vector<32xf6E2M3FN>, vector<16xf32>
+    ```
   }];
   let assemblyFormat = [{
     `(` $scalesA `[` $scalesIdxA `]` `*` $sourceA `)` `*` `(` $scalesB `[` $scalesIdxB `]` `*` $sourceB `)` `+` $destC
