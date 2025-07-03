@@ -4228,6 +4228,9 @@ void AssemblyWriter::printFunction(const Function *F) {
       Out << "; Function Attrs: " << AttrStr << '\n';
   }
 
+  if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::not_intrinsic)
+    Out << "; Unknown intrinsic\n";
+
   Machine.incorporateFunction(F);
 
   if (F->isDeclaration()) {
