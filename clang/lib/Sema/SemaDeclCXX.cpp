@@ -9511,15 +9511,6 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
   CXXMethodDecl *Decl = SMOR.getMethod();
   FieldDecl *Field = Subobj.dyn_cast<FieldDecl*>();
 
-  // P3074: default ctor and dtor for unions are not deleted, regardless of
-  // whether the underlying fields have non-trivial or deleted versions of those
-  // members
-  if (S.Context.getLangOpts().CPlusPlus26)
-    if (Field && Field->getParent()->isUnion() &&
-        (CSM == CXXSpecialMemberKind::DefaultConstructor ||
-         CSM == CXXSpecialMemberKind::Destructor))
-      return false;
-
   int DiagKind = -1;
 
   if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::NoMemberOrDeleted)
@@ -9551,6 +9542,35 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
 
   if (DiagKind == -1)
     return false;
+
+  if (this->S.Context.getLangOpts().CPlusPlus26 && inUnion() &&
+      CSM == CXXSpecialMemberKind::Destructor) {
+    // CXXRecordDecl *FieldRecord = Subobj.dyn_cast<CXXRecordDecl*>();
+    // [class.dtor]/7 In C++26, a destructor for a union X is only deleted under
+    // the additional conditions that:
+
+    // overload resolution to select a constructor to default-initialize an
+    // object of type X either fails or selects a constructor that is either
+    // deleted or not trivial, or
+    // or X has a variant member V of class type M (or possibly
+    // multi-dimensional array thereof) where V has a default member initializer
+    // and M has a destructor that is non-trivial,
+
+    Sema::SpecialMemberOverloadResult SMOR =
+        S.LookupSpecialMember(dyn_cast<CXXRecordDecl>(Field->getParent()),
+                              CXXSpecialMemberKind::DefaultConstructor, false,
+                              false, false, false, false);
+    if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Success) {
+      CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(SMOR.getMethod());
+      if (Ctor->isTrivial()) {
+        return false;
+      }
+
+      if (!Ctor->isUserProvided() && !Field->hasInClassInitializer()) {
+        return false;
+      }
+    }
+  }
 
   if (Diagnose) {
     if (Field) {
@@ -9705,10 +9725,9 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
-  if (S.Context.getLangOpts().CPlusPlus26 && FD->hasInClassInitializer() &&
-      FieldRecord && !FieldRecord->hasTrivialDestructor() &&
-      CSM == CXXSpecialMemberKind::Destructor)
-    return true;
+  if (inUnion() && S.Context.getLangOpts().CPlusPlus26 &&
+      CSM == CXXSpecialMemberKind::DefaultConstructor)
+    return false;
 
   if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
     // For a default constructor, all references must be initialized in-class
