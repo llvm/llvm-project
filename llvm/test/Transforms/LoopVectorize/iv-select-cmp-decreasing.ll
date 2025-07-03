@@ -1140,6 +1140,45 @@ exit:                                             ; preds = %loop
   ret i64 %spec.select
 }
 
+; The unsigned sentinel value for decreasing-IV vectorization is ULONG_MAX,
+; and since the IV hits this value, it is impossible to vectorize this case.
+define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(ptr %a) {
+; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_iv_out_of_bound(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i64 [ 331, %[[ENTRY]] ], [ [[SPEC_SELECT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_A_IV:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[LD_A:%.*]] = load i64, ptr [[GEP_A_IV]], align 8
+; CHECK-NEXT:    [[CMP_A_3:%.*]] = icmp sgt i64 [[LD_A]], 3
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP_A_3]], i64 [[IV]], i64 [[RDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:                                             ; preds = %entry, %loop
+  %iv = phi i64 [ -1, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %loop ]
+  %gep.a.iv = getelementptr inbounds i64, ptr %a, i64 %iv
+  %ld.a = load i64, ptr %gep.a.iv, align 8
+  %cmp.a.3 = icmp sgt i64 %ld.a, 3
+  %spec.select = select i1 %cmp.a.3, i64 %iv, i64 %rdx
+  %iv.next = add nsw i64 %iv, -1
+  %exit.cond = icmp eq i64 %iv, 0
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret i64 %spec.select
+}
+
 define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {
 ; CHECK-LABEL: define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], i64 [[RDX_START:%.*]], i64 [[N:%.*]]) {
