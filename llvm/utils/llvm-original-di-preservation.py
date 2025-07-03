@@ -21,7 +21,7 @@ class DILocBug:
         self.instr = instr
 
     def __str__(self):
-        return self.action + self.bb_name + self.fn_name + self.instr + self.origin
+        return self.action + self.bb_name + self.fn_name + self.instr
 
 
 class DISPBug:
@@ -80,6 +80,15 @@ def generate_html_report(
         table_title_di_loc
     )
 
+    # If any DILocation bug has an origin stack trace, we emit an extra column in the table, which we must therefore
+    # determine up-front.
+    has_origin_col = any(
+        x.origin is not None
+        for per_file_bugs in di_location_bugs.values()
+        for per_pass_bugs in per_file_bugs.values()
+        for x in per_pass_bugs
+    )
+
     header_di_loc = [
         "File",
         "LLVM Pass Name",
@@ -87,8 +96,9 @@ def generate_html_report(
         "Function Name",
         "Basic Block Name",
         "Action",
-        "Origin",
     ]
+    if has_origin_col:
+        header_di_loc.append("Origin")
 
     for column in header_di_loc:
         table_di_loc += "    <th>{0}</th>\n".format(column.strip())
@@ -114,9 +124,13 @@ def generate_html_report(
                 row.append(x.fn_name)
                 row.append(x.bb_name)
                 row.append(x.action)
-                row.append(
-                    f"<details><summary>View Origin StackTrace</summary><pre>{x.origin}</pre></details>"
-                )
+                if has_origin_col:
+                    if x.origin is not None:
+                        row.append(
+                            f"<details><summary>View Origin StackTrace</summary><pre>{x.origin}</pre></details>"
+                        )
+                    else:
+                        row.append("")
                 row.append("    </tr>\n")
             # Dump the bugs info into the table.
             for column in row:
