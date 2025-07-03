@@ -65,6 +65,7 @@
 #include "clang/Sema/Redeclaration.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaBase.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "clang/Sema/Weak.h"
 #include "llvm/ADT/APInt.h"
@@ -14901,8 +14902,6 @@ public:
       const NamedDecl *D1, ArrayRef<AssociatedConstraint> AC1,
       const NamedDecl *D2, ArrayRef<AssociatedConstraint> AC2);
 
-  llvm::DenseMap<unsigned, MutableArrayRef<TemplateArgumentLoc>>
-      ParameterMappingCache;
 private:
   /// Caches pairs of template-like decls whose associated constraints were
   /// checked for subsumption and whether or not the first's constraints did in

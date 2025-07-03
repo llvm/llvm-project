@@ -89,6 +89,9 @@ protected:
 
   struct ConceptIdBits : AtomicBits {
     NormalizedConstraint *Sub;
+
+    // Only used for parameter mapping.
+    const ConceptSpecializationExpr *CSE;
   };
 
   struct CompoundBits {
@@ -138,13 +141,15 @@ protected:
   NormalizedConstraint(const ConceptReference *ConceptId,
                        const NamedDecl *ConstraintDecl,
                        NormalizedConstraint *SubConstraint,
+                       const ConceptSpecializationExpr *CSE,
                        UnsignedOrNone PackIndex)
       : ConceptId{{llvm::to_underlying(ConstraintKind::ConceptId),
                    /*Placeholder=*/0, PackIndex.toInternalRepresentation(),
                    /*Indexes=*/{},
                    /*Args=*/nullptr, /*ParamList=*/nullptr, ConceptId,
                    ConstraintDecl},
-                  SubConstraint} {}
+                  SubConstraint,
+                  CSE} {}
 
   NormalizedConstraint(NormalizedConstraint *LHS, CompoundConstraintKind CCK,
                        NormalizedConstraint *RHS)
@@ -357,9 +362,14 @@ public:
                                      const ConceptReference *ConceptId,
                                      NormalizedConstraint *SubConstraint,
                                      const NamedDecl *ConstraintDecl,
+                                     const ConceptSpecializationExpr *CSE,
                                      UnsignedOrNone PackIndex) {
     return new (Ctx) ConceptIdConstraint(ConceptId, ConstraintDecl,
-                                         SubConstraint, PackIndex);
+                                         SubConstraint, CSE, PackIndex);
+  }
+
+  const ConceptSpecializationExpr *getConceptSpecializationExpr() const {
+    return ConceptId.CSE;
   }
 
   const ConceptReference *getConceptId() const {
