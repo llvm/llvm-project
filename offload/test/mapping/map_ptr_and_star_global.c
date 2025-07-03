@@ -41,7 +41,7 @@ void f1() {
 // For the remaining constructs, p is not firstprivate, so its address will
 // be the same as the mapped address, and changes to p will be visible to any
 // subsequent regions.
-#pragma omp target map(to : *p, p)                                           \
+#pragma omp target map(to : *p, p)                                             \
     map(to : p_mappedptr, x0_mappedptr, x0_hostaddr)
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[0],
@@ -51,7 +51,7 @@ void f1() {
     p++;
   }
 
-#pragma omp target map(to : p, *p)                                           \
+#pragma omp target map(to : p, *p)                                             \
     map(to : p_mappedptr, x0_mappedptr, x0_hostaddr)
   {
     printf("%d %d %d %d\n", p[0], p_mappedptr == &p, x0_mappedptr == &p[-1],
