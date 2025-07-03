@@ -127,7 +127,7 @@ enum class ParenParseOption {
 /// expression, etc.
 enum class ParenExprKind {
   PartOfOperator, // typeof(int)
-  Unknown, // sizeof(int) or sizeof (int)1.0f, or compound literal, etc
+  Unknown,        // sizeof(int) or sizeof (int)1.0f, or compound literal, etc
 };
 
 /// Describes the behavior that should be taken for an __if_exists
