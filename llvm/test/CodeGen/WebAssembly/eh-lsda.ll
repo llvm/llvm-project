@@ -2,7 +2,7 @@
 ; RUN: llc < %s --mtriple=wasm64-unknown-unknown -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
 ; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=32
 ; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling | FileCheck %s -check-prefixes=CHECK,NOPIC -DPTR=64
-; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32 
+; RUN: llc < %s --mtriple=wasm32-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=32
 ; RUN: llc < %s --mtriple=wasm64-unknown-emscripten -wasm-disable-explicit-locals -wasm-keep-registers -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling -relocation-model=pic | FileCheck %s -check-prefixes=CHECK,PIC -DPTR=64
 
 @_ZTIi = external constant ptr
@@ -73,11 +73,11 @@ try.cont:                                         ; preds = %entry, %catch.start
 ; In case of PIC, we make GCC_except_table symbols a relative on based on
 ; __memory_base.
 ; PIC:        global.get  $push[[CONTEXT:.*]]=, __wasm_lpad_context@GOT
-; PIC-NEXT:    local.tee $push{{.*}}=, $[[CONTEXT_LOCAL:.*]]=, $pop[[CONTEXT]]
+; PIC-NEXT:   local.tee  $push{{.*}}=, $[[CONTEXT_LOCAL:.*]]=, $pop[[CONTEXT]]
 ; PIC:        global.get  $push[[MEMORY_BASE:.*]]=, __memory_base
 ; PIC-NEXT:   i[[PTR]].const  $push[[EXCEPT_TABLE_REL:.*]]=, GCC_except_table1@MBREL
 ; PIC-NEXT:   i[[PTR]].add   $push[[EXCEPT_TABLE:.*]]=, $pop[[MEMORY_BASE]], $pop[[EXCEPT_TABLE_REL]]
-; PIC-NEXT:    i[[PTR]].store {{[48]}}($[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
+; PIC-NEXT:   i[[PTR]].store  {{[48]}}($[[CONTEXT_LOCAL]]), $pop[[EXCEPT_TABLE]]
 
 ; CHECK: .section  .rodata.gcc_except_table,"",@
 ; CHECK-NEXT:   .p2align  2
