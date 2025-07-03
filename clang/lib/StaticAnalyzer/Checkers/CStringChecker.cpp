@@ -2234,15 +2234,16 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // situation.
     bool CouldAccessOutOfBound = true;
     if (IsBounded && amountCopied.isUnknown()) {
-      auto CouldAccessOutOfBoundForSVal = [&](NonLoc Val) -> bool {
+      auto CouldAccessOutOfBoundForSVal =
+          [&](std::optional<NonLoc> Val) -> bool {
+        if (!Val)
+          return true;
         return !isFirstBufInBound(C, state, C.getSVal(Dst.Expression),
-                                  Dst.Expression->getType(), Val,
+                                  Dst.Expression->getType(), *Val,
                                   C.getASTContext().getSizeType());
       };
 
-      if (strLengthNL) {
-        CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*strLengthNL);
-      }
+      CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(strLengthNL);
 
       if (CouldAccessOutOfBound) {
         // Get the max number of characters to copy.
@@ -2255,8 +2256,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         // Because analyzer doesn't handle expressions like `size -
         // dstLen - 1` very well, we roughly use `size` for
         // ConcatFnKind::strlcat here, same with other concat kinds.
-        if (std::optional<NonLoc> LenValNL = LenVal.getAs<NonLoc>())
-          CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*LenValNL);
+        CouldAccessOutOfBound =
+            CouldAccessOutOfBoundForSVal(LenVal.getAs<NonLoc>());
       }
     }
 
