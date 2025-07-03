@@ -566,19 +566,6 @@ struct LoopInterchange {
     }
 
     unsigned SelecLoopId = selectLoopForInterchange(LoopList);
-    // Obtain the loop vector returned from loop cache analysis beforehand,
-    // and put each <Loop, index> pair into a map for constant time query
-    // later. Indices in loop vector reprsent the optimal order of the
-    // corresponding loop, e.g., given a loopnest with depth N, index 0
-    // indicates the loop should be placed as the outermost loop and index N
-    // indicates the loop should be placed as the innermost loop.
-    //
-    // For the old pass manager CacheCost would be null.
-    // DenseMap<const Loop *, unsigned> CostMap;
-    // if (CC != nullptr) {
-    //   for (const auto &[Idx, Cost] : enumerate(CC->getLoopCosts()))
-    //     CostMap[Cost.first] = Idx;
-    // }
     LoopInterchangeCacheCostManager LICCM(LoopList[0], AR, DI);
     // We try to achieve the globally optimal memory access for the loopnest,
     // and do interchange based on a bubble-sort fasion. We start from
