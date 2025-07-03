@@ -93,23 +93,11 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool addReloc(const MCFragment &F, const MCFixup &Fixup,
-                const MCValue &TargetVal, uint64_t &FixedValue,
-                bool IsResolved) override {
-    // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
-    // reference the null symbol.
-    auto Target = TargetVal;
-    if (Target.getSpecifier() == PPC::S_TOCBASE)
-      Target.setAddSym(nullptr);
-    return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
-  }
-
   void applyFixup(const MCFragment &, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved) override;
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override {
+  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target) {
     // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
     // force a relocation.
     if (Target.getSpecifier())
@@ -201,10 +189,20 @@ MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
               : InfosBE)[Kind - FirstTargetFixupKind];
 }
 
-void PPCAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
-                               const MCValue &Target,
+void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &TargetVal,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved) {
+  // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
+  // reference the null symbol.
+  auto Target = TargetVal;
+  if (Target.getSpecifier() == PPC::S_TOCBASE)
+    Target.setAddSym(nullptr);
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
