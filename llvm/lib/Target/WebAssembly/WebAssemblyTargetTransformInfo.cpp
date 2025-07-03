@@ -249,8 +249,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
     // A stride of two is commonly supported via dedicated instructions, so it
     // should be relatively cheap for all element sizes. A stride of four is
     // more expensive as it will likely require more shuffles. Using two
-    // simd128 inputs is considered more expensive and we don't currently
-    // account for shuffling than two inputs (32 bytes).
+    // simd128 inputs is considered more expensive and we mainly account for
+    // shuffling two inputs (32 bytes), but we do model 4 x v4i32 to enable
+    // arithmetic kernels.
     static const CostTblEntry ShuffleCostTbl[] = {
         // One reg.
         {2, MVT::v2i8, 1},  // interleave 2 x 2i8 into 4i8
@@ -274,6 +275,9 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
         {4, MVT::v8i8, 16}, // interleave 4 x 8i8 into 32i8
         {4, MVT::v4i16, 8}, // interleave 4 x 4i16 into 16i16
         {4, MVT::v2i32, 4}, // interleave 4 x 2i32 into 8i32
+
+        // Four regs.
+        {4, MVT::v4i32, 16}, // interleave 4 x 4i32 into 16i32
     };
 
     EVT ETy = TLI->getValueType(DL, SubVecTy);

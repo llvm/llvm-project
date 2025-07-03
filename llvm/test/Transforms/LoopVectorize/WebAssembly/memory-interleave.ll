@@ -1061,10 +1061,10 @@ define hidden void @eight_bytes_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK: LV: Found an estimated cost of 14 for VF 2 For instruction: store i32
 ; CHECK: LV: Vector loop of width 2 costs: 44.
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i8
-; CHECK: LV: Found an estimated cost of 36 for VF 4 For instruction: %17 = load i32
-; CHECK: LV: Found an estimated cost of 36 for VF 4 For instruction: store i32
-; CHECK: LV: Vector loop of width 4 costs: 32.
-; CHECK: LV: Selecting VF: 1.
+; CHECK: LV: Found an estimated cost of 24 for VF 4 For instruction: %17 = load i32
+; CHECK: LV: Found an estimated cost of 24 for VF 4 For instruction: store i32
+; CHECK: LV: Vector loop of width 4 costs: 26.
+; CHECK: LV: Selecting VF: 4.
 define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noundef %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
@@ -1123,11 +1123,10 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
   br i1 %50, label %6, label %7
 }
 
-; TODO: Should be able to vectorize?
 ; CHECK-LABEL: four_bytes_into_four_ints_vary_op
 ; CHECK: Cost of 14 for VF 2: INTERLEAVE-GROUP with factor 4
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
-; CHECK: Cost of 36 for VF 4: INTERLEAVE-GROUP with factor 4
+; CHECK: Cost of 24 for VF 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 21.
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction: %11 = zext i8
@@ -1135,9 +1134,9 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
 ; CHECK: LV: Vector loop of width 2 costs: 35.
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:  %11 = zext i8
-; CHECK: LV: Found an estimated cost of 36 for VF 4 For instruction: store i32
-; CHECK: LV: Vector loop of width 4 costs: 23.
-; CHECK: LV: Selecting VF: 1.
+; CHECK: LV: Found an estimated cost of 24 for VF 4 For instruction: store i32
+; CHECK: LV: Vector loop of width 4 costs: 20.
+; CHECK: LV: Selecting VF: 4.
 define hidden void @four_bytes_into_four_ints_vary_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
   br i1 %5, label %6, label %7
