@@ -1531,34 +1531,21 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
-    if (IsArray) {
-      Block *B = Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
-                                    S.Ctx.getEvalID(),
-                                    DynamicAllocator::Form::Operator);
-      assert(B);
-      S.Stk.push<Pointer>(Pointer(B).atIndex(0));
-      return true;
-    }
-
-    const Descriptor *Desc = S.P.createDescriptor(
-        NewCall, *ElemT, ElemType.getTypePtr(), Descriptor::InlineDescMD,
-        /*IsConst=*/false, /*IsTemporary=*/false,
-        /*IsMutable=*/false);
-    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
-                                  DynamicAllocator::Form::Operator);
+    Block *B =
+        Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
+                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
     assert(B);
-
-    S.Stk.push<Pointer>(B);
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
     return true;
   }
 
   assert(!ElemT);
-  // Structs etc.
-  const Descriptor *Desc =
-      S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
-                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
 
+  // Composite arrays
   if (IsArray) {
+    const Descriptor *Desc =
+        S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
+                             IsArray ? std::nullopt : Descriptor::InlineDescMD);
     Block *B =
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
@@ -1567,10 +1554,17 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return true;
   }
 
+  // Records. Still allocate them as single-element arrays.
+  QualType AllocType = S.getASTContext().getConstantArrayType(
+      ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
+
+  const Descriptor *Desc =
+      S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
+                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
-  S.Stk.push<Pointer>(B);
+  S.Stk.push<Pointer>(Pointer(B).atIndex(0));
   return true;
 }
 

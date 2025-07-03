@@ -17,26 +17,26 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:  .LBB0_3: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
 ; CHECK-NEXT:    mov w8, #1132396544 // =0x437f0000
-; CHECK-NEXT:    add x13, x0, #4
+; CHECK-NEXT:    add x12, x0, #4
 ; CHECK-NEXT:    and x10, x11, #0x1fffffff8
 ; CHECK-NEXT:    dup v0.4s, w8
-; CHECK-NEXT:    add x14, x1, #16
+; CHECK-NEXT:    add x13, x1, #16
 ; CHECK-NEXT:    add x8, x1, x10, lsl #2
-; CHECK-NEXT:    mov x12, x10
 ; CHECK-NEXT:    add x9, x0, x10
+; CHECK-NEXT:    mov x14, x10
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q1, q2, [x14, #-16]
-; CHECK-NEXT:    subs x12, x12, #8
-; CHECK-NEXT:    add x14, x14, #32
+; CHECK-NEXT:    ldp q1, q2, [x13, #-16]
+; CHECK-NEXT:    subs x14, x14, #8
+; CHECK-NEXT:    add x13, x13, #32
 ; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-NEXT:    fcmlt v6.4s, v2.4s, #0.0
-; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
-; CHECK-NEXT:    bit v2.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bic v1.16b, v1.16b, v5.16b
-; CHECK-NEXT:    bic v2.16b, v2.16b, v6.16b
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bsl v4.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fcmlt v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmlt v2.4s, v2.4s, #0.0
+; CHECK-NEXT:    bic v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    bic v2.16b, v4.16b, v2.16b
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
@@ -44,8 +44,8 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    uzp1 v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    uzp1 v2.8b, v2.8b, v0.8b
 ; CHECK-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-NEXT:    stur d1, [x13, #-4]
-; CHECK-NEXT:    add x13, x13, #8
+; CHECK-NEXT:    stur d1, [x12, #-4]
+; CHECK-NEXT:    add x12, x12, #8
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
