@@ -28,7 +28,7 @@ class Metadata;
 namespace hlsl {
 namespace rootsig {
 
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags);
+LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags);
 
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
                                  const RootConstants &Constants);
@@ -61,7 +61,7 @@ public:
 
 private:
   /// Define the various builders for the different metadata types
-  MDNode *BuildRootFlags(const RootFlags &Flags);
+  MDNode *BuildRootFlags(const dxbc::RootFlags &Flags);
   MDNode *BuildRootConstants(const RootConstants &Constants);
   MDNode *BuildRootDescriptor(const RootDescriptor &Descriptor);
   MDNode *BuildDescriptorTable(const DescriptorTable &Table);
@@ -83,7 +83,7 @@ struct RangeInfo {
   // Information retained for diagnostics
   llvm::dxil::ResourceClass Class;
   uint32_t Space;
-  ShaderVisibility Visibility;
+  dxbc::ShaderVisibility Visibility;
 };
 
 class ResourceRange {
