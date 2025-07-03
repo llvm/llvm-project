@@ -14,8 +14,6 @@
 
 using namespace mlir;
 
-/// Tune extension of the Transform dialect. This provides "core" transform
-/// operations for loop-like ops.
 class TuneExtension
     : public transform::TransformDialectExtension<TuneExtension> {
 public:

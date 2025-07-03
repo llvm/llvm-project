@@ -23,29 +23,30 @@ using namespace mlir;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 
 //===----------------------------------------------------------------------===//
-// SelectOp
+// KnobOp
 //===----------------------------------------------------------------------===//
 
-void transform::tune::SelectOp::getEffects(
+void transform::tune::KnobOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   producesHandle(getOperation()->getOpResults(), effects);
   onlyReadsPayload(effects);
 }
 
 DiagnosedSilenceableFailure
-transform::tune::SelectOp::apply(transform::TransformRewriter &rewriter,
-                                 transform::TransformResults &results,
-                                 transform::TransformState &state) {
+transform::tune::KnobOp::apply(transform::TransformRewriter &rewriter,
+                               transform::TransformResults &results,
+                               transform::TransformState &state) {
   if (getSelected()) {
     results.setParams(getOperation()->getOpResults()[0], *getSelected());
     return DiagnosedSilenceableFailure::success();
   }
 
-  return emitDefiniteFailure() << "non-deterministic choice is only resolved "
-                                  "through providing a `selected` attr!";
+  return emitDefiniteFailure()
+         << "non-deterministic choice " << getName()
+         << " is only resolved through providing a `selected` attr";
 }
 
-LogicalResult transform::tune::SelectOp::verify() {
+LogicalResult transform::tune::KnobOp::verify() {
   if (auto selected = getSelected()) {
     if (auto optionsArray = dyn_cast<ArrayAttr>(getOptions())) {
       if (!llvm::is_contained(optionsArray, selected))
