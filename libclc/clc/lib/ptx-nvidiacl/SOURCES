@@ -1,5 +1,4 @@
 workitem/clc_get_global_id.cl
-workitem/clc_get_global_size.cl
 workitem/clc_get_group_id.cl
 workitem/clc_get_local_id.cl
 workitem/clc_get_local_size.cl
