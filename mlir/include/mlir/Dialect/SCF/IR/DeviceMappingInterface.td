@@ -60,8 +60,51 @@ def DeviceMappingAttrInterface : AttrInterface<"DeviceMappingAttrInterface"> {
   ];
 }
 
+def DeviceMaskingAttrInterface : AttrInterface<"DeviceMaskingAttrInterface"> {
+  let cppNamespace = "::mlir";
+  let description = [{
+    Attribute interface describing how to filter the processing units that a
+    region is mapped to.
+
+    A popcount can be applied to determine the logical linear index that a
+    physical processing unit is responsible for.
+  }];
+
+ let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the logical active id for a given physical id.
+        Expects a physicalLinearMappingId of I64Type.
+      }],
+      /*retTy=*/"Value",
+      /*methodName=*/"getLogicalLinearMappingId",
+      /*args=*/(ins "OpBuilder&":$builder, "Value":$physicalLinearMappingId)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the dynamic condition determining whether a given physical id is
+        active under the mask.
+        Expects a physicalLinearMappingId of I64Type.
+      }],
+      /*retTy=*/"Value",
+      /*methodName=*/"getIsActiveIdPredicate",
+      /*args=*/(ins "OpBuilder&":$builder, "Value":$physicalLinearMappingId)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the maximal number of pysical ids supported.
+        This is to account for temporary implementation limitations (e.g. i64)
+        and fail gracefully with actionnable error messages.
+      }],
+      /*retTy=*/"int64_t",
+      /*methodName=*/"getMaxNumPhysicalIds",
+      /*args=*/(ins)
+    >,
+  ];
+}
+
 def DeviceMappingArrayAttr :
-  TypedArrayAttrBase<DeviceMappingAttrInterface,
+  TypedArrayAttrBase<AnyAttrOf<[DeviceMappingAttrInterface, DeviceMaskingAttrInterface]>,
   "Device Mapping array attribute"> { }
 
 #endif // MLIR_DEVICEMAPPINGINTERFACE
