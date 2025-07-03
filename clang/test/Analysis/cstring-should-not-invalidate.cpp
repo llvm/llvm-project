@@ -88,6 +88,24 @@ void strncatTest(char *src, size_t n) {
   clang_analyzer_eval(rep.b == initB); // expected-warning{{TRUE}}
 }
 
+struct strncatReportOutOfBoundTestClass: public Base {
+  int *m_ptr;
+  char m_buff[1000];
+
+  void KnownLen(char *src) {
+    m_ptr = new int;
+    // expected-warning@+1{{String concatenation function overflows the destination buffer}}
+    strncat(m_buff, src, sizeof(m_buff)); // known len but unknown src size
+    delete m_ptr;                         // no warning
+  }
+};
+
+void strncatReportOutOfBoundTest(char *src, size_t n) {
+  strncatReportOutOfBoundTestClass rep;
+  rep.KnownLen(src);
+  clang_analyzer_eval(rep.b == initB); // expected-warning{{TRUE}}
+}
+
 size_t strlcat(char *dst, const char *src, size_t size);
 
 struct strlcatTestClass: public Base {
