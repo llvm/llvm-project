@@ -143,10 +143,11 @@ static unsigned getSize(unsigned Kind) {
   }
 }
 
-void XtensaAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void XtensaAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCContext &Ctx = getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 

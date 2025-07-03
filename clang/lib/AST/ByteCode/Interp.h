@@ -552,11 +552,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
 
     // Copy into the result.
-    // Result.atIndex(0).deref<Floating>() = Floating(ResR);
-    // Result.atIndex(0).initialize();
-    // Result.atIndex(1).deref<Floating>() = Floating(ResI);
-    // Result.atIndex(1).initialize();
-
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
@@ -565,6 +560,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.atIndex(1).initialize();
 
     Result.initialize();
   } else {
@@ -1330,20 +1326,6 @@ bool GE(InterpState &S, CodePtr OpPC) {
     return R == ComparisonCategoryResult::Greater ||
            R == ComparisonCategoryResult::Equal;
   });
-}
-
-//===----------------------------------------------------------------------===//
-// InRange
-//===----------------------------------------------------------------------===//
-
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool InRange(InterpState &S, CodePtr OpPC) {
-  const T RHS = S.Stk.pop<T>();
-  const T LHS = S.Stk.pop<T>();
-  const T Value = S.Stk.pop<T>();
-
-  S.Stk.push<bool>(LHS <= Value && Value <= RHS);
-  return true;
 }
 
 //===----------------------------------------------------------------------===//

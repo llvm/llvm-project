@@ -1156,8 +1156,10 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
   assert(ID >= MDStringRef.size() && "Unexpected lazy-loading of MDString");
   // Lookup first if the metadata hasn't already been loaded.
   if (auto *MD = MetadataList.lookup(ID)) {
-    auto *N = cast<MDNode>(MD);
-    if (!N->isTemporary())
+    auto *N = dyn_cast<MDNode>(MD);
+    // If the node is not an MDNode, or if it is not temporary, then
+    // we're done.
+    if (!N || !N->isTemporary())
       return;
   }
   SmallVector<uint64_t, 64> Record;
