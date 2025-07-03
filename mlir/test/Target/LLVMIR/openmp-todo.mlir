@@ -503,26 +503,3 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   }
   llvm.return
 }
-
-// -----
-
-omp.private {type = firstprivate} @_QFEp_firstprivate_i32 : i32 copy {
-^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
-  %0 = llvm.load %arg0 : !llvm.ptr -> i32
-  llvm.store %0, %arg1 : i32, !llvm.ptr
-  omp.yield(%arg1 : !llvm.ptr)
-}
-llvm.func @_QQmain() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
-  %3 = llvm.mlir.constant(10 : i32) : i32
-  %4 = llvm.mlir.constant(1 : i32) : i32
-  // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd private(@_QFEp_firstprivate_i32 %1 -> %arg0 : !llvm.ptr) {
-    omp.loop_nest (%arg2) : i32 = (%4) to (%3) inclusive step (%4) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
