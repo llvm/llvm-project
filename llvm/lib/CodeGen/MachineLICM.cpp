@@ -580,8 +580,6 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
       }
 
       RUDefs.set(Unit);
-      if (MO.isImplicit())
-        RUClobbers.set(Unit);
     }
   }
 
