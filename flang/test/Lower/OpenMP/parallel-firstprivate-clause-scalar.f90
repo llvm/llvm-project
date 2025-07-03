@@ -136,7 +136,7 @@ end subroutine
 !CHECK-KIND10:   %[[ARG1_DECL:.*]]:2 = hlfir.declare %[[ARG1]] dummy_scope %{{[0-9]+}} {uniq_name = "_QFfirstprivate_real10Earg1"} : (!fir.ref<f80>, !fir.dscope) -> (!fir.ref<f80>, !fir.ref<f80>)
 !CHECK-KIND10:  omp.parallel private({{.*firstprivate.*}} {{.*}}#0 -> %[[ARG1_PVT:.*]] : {{.*}}) {
 !CHECK-KIND10:     %[[ARG1_PVT_DECL:.*]]:2 = hlfir.declare %[[ARG1_PVT]] {uniq_name = "_QFfirstprivate_real10Earg1"} : (!fir.ref<f80>) -> (!fir.ref<f80>, !fir.ref<f80>)
-!CHECK-KIND10:     fir.call @_QPqux10(%[[ARG1_PVT_DECL]]#1) {{.*}} : (!fir.ref<f80>) -> ()
+!CHECK-KIND10:     fir.call @_QPqux10(%[[ARG1_PVT_DECL]]#0) {{.*}} : (!fir.ref<f80>) -> ()
 !CHECK-KIND10:     omp.terminator
 !CHECK-KIND10:   }
 subroutine firstprivate_real10(arg1)
