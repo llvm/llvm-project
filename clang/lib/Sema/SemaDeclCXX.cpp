@@ -9567,8 +9567,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
     }
 
     auto ParentDecl = dyn_cast<CXXRecordDecl>(Parent);
-    if (ParentDecl->getDefinition() && !ParentDecl->isDependentContext() &&
-        !ParentDecl->isBeingDefined()) {
+    if (!ParentDecl->isBeingDefined()) {
       Sema::SpecialMemberOverloadResult SMOR = S.LookupSpecialMember(
           ParentDecl, CXXSpecialMemberKind::DefaultConstructor, false, false,
           false, false, false);
