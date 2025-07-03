@@ -64,10 +64,18 @@ DWARFExpressionList::GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
 
   if (func_load_addr == LLDB_INVALID_ADDRESS)
     func_load_addr = m_func_file_addr;
-  
-  // Translate to file-relative PC.
-  lldb::addr_t file_pc = load_addr - func_load_addr + m_func_file_addr;
 
+  // Guard against underflow when translating a load address back into file space.
+  if (load_addr < func_load_addr)
+      return std::nullopt;
+
+  // Guard against overflow.
+  lldb::addr_t delta = load_addr - func_load_addr;
+  if (delta > std::numeric_limits<lldb::addr_t>::max() - m_func_file_addr)
+    return std::nullopt;
+
+  lldb::addr_t file_pc = (load_addr - func_load_addr) + m_func_file_addr;
+  
   if (const auto *entry = m_exprs.FindEntryThatContains(file_pc)) {
     AddressRange range_in_file(entry->GetRangeBase(),
                               entry->GetRangeEnd() - entry->GetRangeBase());
