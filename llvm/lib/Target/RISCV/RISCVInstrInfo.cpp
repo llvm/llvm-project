@@ -1631,12 +1631,12 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   case RISCV::QC_E_BLTI:
   case RISCV::QC_E_BLTUI:
   case RISCV::QC_E_BGEUI:
-    return isIntN(13, BrOffset);
+    return isInt<13>(BrOffset);
   case RISCV::JAL:
   case RISCV::PseudoBR:
-    return isIntN(21, BrOffset);
+    return isInt<21>(BrOffset);
   case RISCV::PseudoJump:
-    return isIntN(32, SignExtend64(BrOffset + 0x800, XLen));
+    return isInt<32>(SignExtend64(BrOffset + 0x800, XLen));
   }
 }
 
