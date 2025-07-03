@@ -1978,9 +1978,6 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
                   SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
             }
             break;
-          // ContractionOff and SignedZeroInfNanPreserve are deprecated.
-          // FPFastMathDefault with the appropriate flags should be used
-          // instead.
           case SPIRV::ExecutionMode::FPFastMathDefault: {
             if (HasKHRFloatControls2) {
               RequireKHRFloatControls2 = true;
@@ -2096,8 +2093,7 @@ static unsigned getFastMathFlags(const MachineInstr &I,
 static void handleMIFlagDecoration(
     MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
     SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
-    SmallVector<SPIRV::FPFastMathDefaultInfo, 4>
-        &FPFastMathDefaultInfoVec) {
+    SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec) {
   if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
       getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
                                      SPIRV::Decoration::NoSignedWrap, ST, Reqs)
