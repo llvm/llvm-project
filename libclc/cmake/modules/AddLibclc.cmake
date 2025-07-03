@@ -123,7 +123,6 @@ function(link_bc)
     OUTPUT ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc
     COMMAND ${llvm-link_exe} ${link_flags} -o ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc ${LINK_INPUT_ARG}
     DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
-    WORKING_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR}
   )
 
   add_custom_target( ${ARG_TARGET} ALL DEPENDS ${LIBCLC_ARCH_OBJFILE_DIR}/${ARG_TARGET}.bc )
@@ -365,7 +364,6 @@ function(add_libclc_builtin_set)
     add_custom_command( OUTPUT ${libclc_builtins_lib}
       COMMAND ${llvm-spirv_exe} ${spvflags} -o ${libclc_builtins_lib} ${builtins_link_lib}
       DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
-      WORKING_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}
     )
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
@@ -375,7 +373,6 @@ function(add_libclc_builtin_set)
       COMMAND ${opt_exe} ${ARG_OPT_FLAGS} -o ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
         ${builtins_link_lib}
       DEPENDS ${opt_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
-      WORKING_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR}
     )
     add_custom_target( ${builtins_opt_lib_tgt}
       ALL DEPENDS ${LIBCLC_ARCH_OBJFILE_DIR}/${builtins_opt_lib_tgt}.bc
@@ -392,7 +389,6 @@ function(add_libclc_builtin_set)
     add_custom_command( OUTPUT ${libclc_builtins_lib}
       COMMAND ${prepare_builtins_exe} -o ${libclc_builtins_lib} ${builtins_opt_lib}
       DEPENDS ${builtins_opt_lib} ${builtins_opt_lib_tgt} ${prepare_builtins_target}
-      WORKING_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}
     )
   endif()
 
@@ -435,7 +431,6 @@ function(add_libclc_builtin_set)
       OUTPUT ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
       COMMAND ${CMAKE_COMMAND} -E create_symlink ${libclc_builtins_lib} ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
       DEPENDS prepare-${obj_suffix}
-      WORKING_DIRECTORY ${LIBCLC_OUTPUT_LIBRARY_DIR}
     )
     add_custom_target( alias-${alias_suffix} ALL
       DEPENDS ${LIBCLC_OUTPUT_LIBRARY_DIR}/${alias_suffix}
