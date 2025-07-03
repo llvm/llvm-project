@@ -151,12 +151,6 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryLoadParam(N))
       return;
     break;
-  case NVPTXISD::StoreRetval:
-  case NVPTXISD::StoreRetvalV2:
-  case NVPTXISD::StoreRetvalV4:
-    if (tryStoreRetval(N))
-      return;
-    break;
   case NVPTXISD::StoreParam:
   case NVPTXISD::StoreParamV2:
   case NVPTXISD::StoreParamV4:
@@ -1504,84 +1498,6 @@ bool NVPTXDAGToDAGISel::tryLoadParam(SDNode *Node) {
   return true;
 }
 
-bool NVPTXDAGToDAGISel::tryStoreRetval(SDNode *N) {
-  SDLoc DL(N);
-  SDValue Chain = N->getOperand(0);
-  SDValue Offset = N->getOperand(1);
-  unsigned OffsetVal = Offset->getAsZExtVal();
-  MemSDNode *Mem = cast<MemSDNode>(N);
-
-  // How many elements do we have?
-  unsigned NumElts = 1;
-  switch (N->getOpcode()) {
-  default:
-    return false;
-  case NVPTXISD::StoreRetval:
-    NumElts = 1;
-    break;
-  case NVPTXISD::StoreRetvalV2:
-    NumElts = 2;
-    break;
-  case NVPTXISD::StoreRetvalV4:
-    NumElts = 4;
-    break;
-  }
-
-  // Build vector of operands
-  SmallVector<SDValue, 6> Ops;
-  for (unsigned i = 0; i < NumElts; ++i)
-    Ops.push_back(N->getOperand(i + 2));
-  Ops.append({CurDAG->getTargetConstant(OffsetVal, DL, MVT::i32), Chain});
-
-  // Determine target opcode
-  // If we have an i1, use an 8-bit store. The lowering code in
-  // NVPTXISelLowering will have already emitted an upcast.
-  std::optional<unsigned> Opcode = 0;
-  switch (NumElts) {
-  default:
-    return false;
-  case 1:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalI8, NVPTX::StoreRetvalI16,
-                             NVPTX::StoreRetvalI32, NVPTX::StoreRetvalI64);
-    if (Opcode == NVPTX::StoreRetvalI8) {
-      // Fine tune the opcode depending on the size of the operand.
-      // This helps to avoid creating redundant COPY instructions in
-      // InstrEmitter::AddRegisterOperand().
-      switch (Ops[0].getSimpleValueType().SimpleTy) {
-      default:
-        break;
-      case MVT::i32:
-        Opcode = NVPTX::StoreRetvalI8TruncI32;
-        break;
-      case MVT::i64:
-        Opcode = NVPTX::StoreRetvalI8TruncI64;
-        break;
-      }
-    }
-    break;
-  case 2:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalV2I8, NVPTX::StoreRetvalV2I16,
-                             NVPTX::StoreRetvalV2I32, NVPTX::StoreRetvalV2I64);
-    break;
-  case 4:
-    Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                             NVPTX::StoreRetvalV4I8, NVPTX::StoreRetvalV4I16,
-                             NVPTX::StoreRetvalV4I32, {/* no v4i64 */});
-    break;
-  }
-  if (!Opcode)
-    return false;
-
-  SDNode *Ret = CurDAG->getMachineNode(*Opcode, DL, MVT::Other, Ops);
-  MachineMemOperand *MemRef = cast<MemSDNode>(N)->getMemOperand();
-  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ret), {MemRef});
-
-  ReplaceNode(N, Ret);
-  return true;
-}
-
 // Helpers for constructing opcode (ex: NVPTX::StoreParamV4F32_iiri)
 #define getOpcV2H(ty, opKind0, opKind1)                                        \
   NVPTX::StoreParamV2##ty##_##opKind0##opKind1
@@ -1713,61 +1629,56 @@ bool NVPTXDAGToDAGISel::tryStoreParam(SDNode *N) {
   // If we have an i1, use an 8-bit store. The lowering code in
   // NVPTXISelLowering will have already emitted an upcast.
   std::optional<unsigned> Opcode;
-  switch (N->getOpcode()) {
+  switch (NumElts) {
   default:
-    switch (NumElts) {
-    default:
-      llvm_unreachable("Unexpected NumElts");
-    case 1: {
-      MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
-      SDValue Imm = Ops[0];
-      if (MemTy != MVT::f16 && MemTy != MVT::bf16 &&
-          (isa<ConstantSDNode>(Imm) || isa<ConstantFPSDNode>(Imm))) {
-        // Convert immediate to target constant
-        if (MemTy == MVT::f32 || MemTy == MVT::f64) {
-          const ConstantFPSDNode *ConstImm = cast<ConstantFPSDNode>(Imm);
-          const ConstantFP *CF = ConstImm->getConstantFPValue();
-          Imm = CurDAG->getTargetConstantFP(*CF, DL, Imm->getValueType(0));
-        } else {
-          const ConstantSDNode *ConstImm = cast<ConstantSDNode>(Imm);
-          const ConstantInt *CI = ConstImm->getConstantIntValue();
-          Imm = CurDAG->getTargetConstant(*CI, DL, Imm->getValueType(0));
-        }
-        Ops[0] = Imm;
-        // Use immediate version of store param
-        Opcode = pickOpcodeForVT(MemTy, NVPTX::StoreParamI8_i,
-                                 NVPTX::StoreParamI16_i, NVPTX::StoreParamI32_i,
-                                 NVPTX::StoreParamI64_i);
-      } else
-        Opcode =
-            pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
-                            NVPTX::StoreParamI8_r, NVPTX::StoreParamI16_r,
-                            NVPTX::StoreParamI32_r, NVPTX::StoreParamI64_r);
-      if (Opcode == NVPTX::StoreParamI8_r) {
-        // Fine tune the opcode depending on the size of the operand.
-        // This helps to avoid creating redundant COPY instructions in
-        // InstrEmitter::AddRegisterOperand().
-        switch (Ops[0].getSimpleValueType().SimpleTy) {
-        default:
-          break;
-        case MVT::i32:
-          Opcode = NVPTX::StoreParamI8TruncI32_r;
-          break;
-        case MVT::i64:
-          Opcode = NVPTX::StoreParamI8TruncI64_r;
-          break;
-        }
+    llvm_unreachable("Unexpected NumElts");
+  case 1: {
+    MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
+    SDValue Imm = Ops[0];
+    if (MemTy != MVT::f16 && MemTy != MVT::bf16 &&
+        (isa<ConstantSDNode>(Imm) || isa<ConstantFPSDNode>(Imm))) {
+      // Convert immediate to target constant
+      if (MemTy == MVT::f32 || MemTy == MVT::f64) {
+        const ConstantFPSDNode *ConstImm = cast<ConstantFPSDNode>(Imm);
+        const ConstantFP *CF = ConstImm->getConstantFPValue();
+        Imm = CurDAG->getTargetConstantFP(*CF, DL, Imm->getValueType(0));
+      } else {
+        const ConstantSDNode *ConstImm = cast<ConstantSDNode>(Imm);
+        const ConstantInt *CI = ConstImm->getConstantIntValue();
+        Imm = CurDAG->getTargetConstant(*CI, DL, Imm->getValueType(0));
       }
-      break;
-    }
-    case 2:
-    case 4: {
-      MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
-      Opcode = pickOpcodeForVectorStParam(Ops, NumElts, MemTy, CurDAG, DL);
-      break;
-    }
+      Ops[0] = Imm;
+      // Use immediate version of store param
+      Opcode =
+          pickOpcodeForVT(MemTy, NVPTX::StoreParamI8_i, NVPTX::StoreParamI16_i,
+                          NVPTX::StoreParamI32_i, NVPTX::StoreParamI64_i);
+    } else
+      Opcode = pickOpcodeForVT(Mem->getMemoryVT().getSimpleVT().SimpleTy,
+                               NVPTX::StoreParamI8_r, NVPTX::StoreParamI16_r,
+                               NVPTX::StoreParamI32_r, NVPTX::StoreParamI64_r);
+    if (Opcode == NVPTX::StoreParamI8_r) {
+      // Fine tune the opcode depending on the size of the operand.
+      // This helps to avoid creating redundant COPY instructions in
+      // InstrEmitter::AddRegisterOperand().
+      switch (Ops[0].getSimpleValueType().SimpleTy) {
+      default:
+        break;
+      case MVT::i32:
+        Opcode = NVPTX::StoreParamI8TruncI32_r;
+        break;
+      case MVT::i64:
+        Opcode = NVPTX::StoreParamI8TruncI64_r;
+        break;
+      }
     }
     break;
+  }
+  case 2:
+  case 4: {
+    MVT::SimpleValueType MemTy = Mem->getMemoryVT().getSimpleVT().SimpleTy;
+    Opcode = pickOpcodeForVectorStParam(Ops, NumElts, MemTy, CurDAG, DL);
+    break;
+  }
   }
 
   SDVTList RetVTs = CurDAG->getVTList(MVT::Other, MVT::Glue);

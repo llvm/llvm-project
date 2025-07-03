@@ -34,11 +34,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <2 x half> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 1073757184;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 1073757184;
 ; CHECK-NEXT:    ret;
   ret <2 x half> <half 1.0, half 2.0>
 }

@@ -1018,7 +1018,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
 ///
 /// This stores the string representation and parses the various pieces into
 /// enum members.
-Triple::Triple(const Twine &Str) : Data(Str.str()) {
+Triple::Triple(std::string &&Str) : Data(std::move(Str)) {
   // Do minimal parsing by hand here.
   SmallVector<StringRef, 4> Components;
   StringRef(Data).split(Components, '-', /*MaxSplit*/ 3);
@@ -1048,6 +1048,8 @@ Triple::Triple(const Twine &Str) : Data(Str.str()) {
   if (ObjectFormat == UnknownObjectFormat)
     ObjectFormat = getDefaultFormat(*this);
 }
+
+Triple::Triple(const Twine &Str) : Triple(Str.str()) {}
 
 /// Construct a triple from string representations of the architecture,
 /// vendor, and OS.

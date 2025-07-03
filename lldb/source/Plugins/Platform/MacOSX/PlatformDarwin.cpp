@@ -1030,6 +1030,40 @@ PlatformDarwin::ExtractAppSpecificInfo(Process &process) {
   return dict_sp;
 }
 
+static llvm::Expected<lldb_private::FileSpec>
+ResolveSDKPathFromDebugInfo(lldb_private::Target *target) {
+
+  ModuleSP exe_module_sp = target->GetExecutableModule();
+  if (!exe_module_sp)
+    return llvm::createStringError("Failed to get module from target");
+
+  SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError("Failed to get symbol file from module");
+
+  XcodeSDK merged_sdk;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
+      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
+      merged_sdk.Merge(cu_sdk);
+    }
+  }
+
+  // TODO: The result of this loop is almost equivalent to deriving the SDK
+  // from the target triple, which would be a lot cheaper.
+  FileSpec sdk_path = merged_sdk.GetSysroot();
+  if (FileSystem::Instance().Exists(sdk_path)) {
+    return sdk_path;
+  }
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
+  if (!path_or_err)
+    return llvm::createStringError(
+        llvm::formatv("Failed to resolve SDK path: {0}",
+                      llvm::toString(path_or_err.takeError())));
+
+  return FileSpec(*path_or_err);
+}
+
 void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     Target *target, std::vector<std::string> &options, XcodeSDK::Type sdk_type) {
   const std::vector<std::string> apple_arguments = {
@@ -1129,35 +1163,13 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   FileSpec sysroot_spec;
 
   if (target) {
-    if (ModuleSP exe_module_sp = target->GetExecutableModule()) {
-      SymbolFile *sym_file = exe_module_sp->GetSymbolFile();
-      if (!sym_file)
-        return;
-
-      XcodeSDK merged_sdk;
-      for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
-        if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
-          auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
-          merged_sdk.Merge(cu_sdk);
-        }
-      }
-
-      // TODO: The result of this loop is almost equivalent to deriving the SDK
-      // from the target triple, which would be a lot cheaper.
-
-      if (FileSystem::Instance().Exists(merged_sdk.GetSysroot())) {
-        sysroot_spec = merged_sdk.GetSysroot();
-      } else {
-        auto path_or_err =
-            HostInfo::GetSDKRoot(HostInfo::SDKOptions{merged_sdk});
-        if (path_or_err) {
-          sysroot_spec = FileSpec(*path_or_err);
-        } else {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
-                         path_or_err.takeError(),
-                         "Failed to resolve SDK path: {0}");
-        }
-      }
+    auto sysroot_spec_or_err = ::ResolveSDKPathFromDebugInfo(target);
+    if (!sysroot_spec_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
+                     sysroot_spec_or_err.takeError(),
+                     "Failed to resolve sysroot: {0}");
+    } else {
+      sysroot_spec = *sysroot_spec_or_err;
     }
   }
 
@@ -1402,6 +1414,31 @@ PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
   const bool found_mismatch = found_internal_sdk && found_public_sdk;
 
   return std::pair{std::move(merged_sdk), found_mismatch};
+}
+
+llvm::Expected<std::string>
+PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
+                      llvm::toString(sdk_or_err.takeError())));
+
+  auto [sdk, _] = std::move(*sdk_or_err);
+
+  if (FileSystem::Instance().Exists(sdk.GetSysroot()))
+    return sdk.GetSysroot().GetPath();
+
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!path_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
+                      sdk.GetString(),
+                      llvm::toString(path_or_err.takeError())));
+
+  return path_or_err->str();
 }
 
 llvm::Expected<XcodeSDK>

@@ -206,6 +206,30 @@ static void skipOverSpaces(const char *&First, const char *const End) {
     ++First;
 }
 
+// Move back by one character, skipping escaped newlines (backslash + \n)
+static char previousChar(const char *First, const char *&Current) {
+  assert(Current > First);
+  --Current;
+  while (Current > First && isVerticalWhitespace(*Current)) {
+    // Check if the previous character is a backslash
+    if (Current > First && *(Current - 1) == '\\') {
+      // Use Lexer's getEscapedNewLineSize to get the size of the escaped
+      // newline
+      unsigned EscapeSize = Lexer::getEscapedNewLineSize(Current);
+      if (EscapeSize > 0) {
+        // Skip back over the entire escaped newline sequence (backslash +
+        // newline)
+        Current -= (1 + EscapeSize);
+      } else {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  return *Current;
+}
+
 [[nodiscard]] static bool isRawStringLiteral(const char *First,
                                              const char *Current) {
   assert(First <= Current);
@@ -215,25 +239,27 @@ static void skipOverSpaces(const char *&First, const char *const End) {
     return false;
 
   // Check for an "R".
-  --Current;
-  if (*Current != 'R')
+  if (previousChar(First, Current) != 'R')
     return false;
-  if (First == Current || !isAsciiIdentifierContinue(*--Current))
+  if (First == Current ||
+      !isAsciiIdentifierContinue(previousChar(First, Current)))
     return true;
 
   // Check for a prefix of "u", "U", or "L".
   if (*Current == 'u' || *Current == 'U' || *Current == 'L')
-    return First == Current || !isAsciiIdentifierContinue(*--Current);
+    return First == Current ||
+           !isAsciiIdentifierContinue(previousChar(First, Current));
 
   // Check for a prefix of "u8".
-  if (*Current != '8' || First == Current || *Current-- != 'u')
+  if (*Current != '8' || First == Current ||
+      previousChar(First, Current) != 'u')
     return false;
-  return First == Current || !isAsciiIdentifierContinue(*--Current);
+  return First == Current ||
+         !isAsciiIdentifierContinue(previousChar(First, Current));
 }
 
 static void skipRawString(const char *&First, const char *const End) {
   assert(First[0] == '"');
-  assert(First[-1] == 'R');
 
   const char *Last = ++First;
   while (Last != End && *Last != '(')
@@ -414,6 +440,14 @@ void Scanner::skipLine(const char *&First, const char *const End) {
         else
           skipString(First, End);
         continue;
+      }
+
+      // Continue on the same line if an EOL is preceded with backslash
+      if (First + 1 < End && *First == '\\') {
+        if (unsigned Len = isEOL(First + 1, End)) {
+          First += 1 + Len;
+          continue;
+        }
       }
 
       // Iterate over comments correctly.

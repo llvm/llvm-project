@@ -53,6 +53,17 @@ def simm20_lsb000 : Operand<XLenVT> {
   let DecoderMethod = "decodeSImmOperandAndLslN<20, 3>";
 }
 
+// Predicate: True if immediate is a power of 2.
+def PowerOf2 : PatLeaf<(imm), [{
+  return isPowerOf2_64(N->getZExtValue());
+}]>;
+
+// Transformation function: Get log2 of immediate.
+def Log2 : SDNodeXForm<imm, [{
+  uint64_t Imm = Log2_64(N->getZExtValue());
+  return CurDAG->getTargetConstant(Imm, SDLoc(N), N->getValueType(0));
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -556,7 +567,43 @@ def NDS_VD4DOTSU_VV : NDSRVInstVD4DOT<0b000101, "nds.vd4dotsu">;
 // Pseudo-instructions and codegen patterns
 //===----------------------------------------------------------------------===//
 
+class NDS_BBPat<CondCode Cond, NDSRVInstBB Inst>
+    : Pat<(riscv_brcc (and(XLenVT GPR:$rs1), PowerOf2:$mask), 0, Cond,
+              bb:$imm10),
+          (Inst GPR:$rs1, (Log2 PowerOf2:$mask), bare_simm11_lsb0:$imm10)>;
+
+class NDS_BCPat<CondCode Cond, NDSRVInstBC Inst>
+    : Pat<(riscv_brcc (XLenVT GPR:$rs1), uimm7:$cimm, Cond, bb:$imm10),
+          (Inst GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10)>;
+
+defm CC_UImmLog2XLen_NDS : SelectCC_GPR_riirr<GPR, uimmlog2xlen>;
+defm CC_UImm7_NDS        : SelectCC_GPR_riirr<GPR, uimm7>;
+
+class SelectNDS_BB<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$cc (and(XLenVT GPR:$lhs), PowerOf2:$mask), 0,
+              Cond, (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_UImmLog2XLen_NDS GPR:$lhs, (Log2 PowerOf2:$mask),
+              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
+class SelectNDS_BC<CondCode Cond>
+    : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), uimm7:$cimm, Cond,
+              (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_UImm7_NDS GPR:$lhs, uimm7:$cimm,
+              (IntCCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
+
 let Predicates = [HasVendorXAndesPerf] in {
+
+def : NDS_BBPat<SETEQ, NDS_BBC>;
+def : NDS_BBPat<SETNE, NDS_BBS>;
+
+def : SelectNDS_BB<SETEQ>;
+def : SelectNDS_BB<SETNE>;
+
+def : NDS_BCPat<SETEQ, NDS_BEQC>;
+def : NDS_BCPat<SETNE, NDS_BNEC>;
+
+def : SelectNDS_BC<SETEQ>;
+def : SelectNDS_BC<SETNE>;
 
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i16), (NDS_BFOS GPR:$rs1, 15, 0)>;
 def : Pat<(sext_inreg (XLenVT GPR:$rs1), i8), (NDS_BFOS GPR:$rs1, 7, 0)>;
@@ -625,3 +672,21 @@ defset list<VTypeInfoToWide> AllQuadWidenableVD4DOTVectors = {
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dots", "PseudoNDS_VD4DOTS", AllQuadWidenableVD4DOTVectors>;
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotu", "PseudoNDS_VD4DOTU", AllQuadWidenableVD4DOTVectors>;
 defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU", AllQuadWidenableVD4DOTVectors>;
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions for SFB (Short Forward Branch)
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasShortForwardBranchOpt], hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
+def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
+                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                               GPR:$falsev, GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+                       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
+                              ReadSFBALU]>;
+def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
+                              (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                               GPR:$falsev, GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+                       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
+                              ReadSFBALU]>;
+}

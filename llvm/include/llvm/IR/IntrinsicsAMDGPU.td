@@ -2996,6 +2996,12 @@ class AMDGPULoadIntrinsic<LLVMType ptr_ty>:
 
 def int_amdgcn_global_load_tr_b64  : AMDGPULoadIntrinsic<global_ptr_ty>;
 def int_amdgcn_global_load_tr_b128 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr4_b64 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_global_load_tr6_b96 : AMDGPULoadIntrinsic<global_ptr_ty>;
+def int_amdgcn_ds_load_tr8_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr16_b128   : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr4_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
+def int_amdgcn_ds_load_tr6_b96     : AMDGPULoadIntrinsic<local_ptr_ty>;
 def int_amdgcn_ds_read_tr4_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
 def int_amdgcn_ds_read_tr6_b96     : AMDGPULoadIntrinsic<local_ptr_ty>;
 def int_amdgcn_ds_read_tr8_b64     : AMDGPULoadIntrinsic<local_ptr_ty>;
@@ -3493,6 +3499,40 @@ def int_amdgcn_ashr_pk_i8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_i8_i32">,
 def int_amdgcn_ashr_pk_u8_i32 : ClangBuiltin<"__builtin_amdgcn_ashr_pk_u8_i32">,
   DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrSpeculatable]>;
+
+//===----------------------------------------------------------------------===//
+// gfx1250 intrinsics
+// ===----------------------------------------------------------------------===//
+
+def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
+  ClangBuiltin<"__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64">,
+  Intrinsic<[], [local_ptr_ty],
+            // Atomically updates LDS and also ASYNC_CNT which is modeled as InaccessibleMem.
+            [IntrConvergent, IntrWillReturn, IntrInaccessibleMemOrArgMemOnly],
+            "", [SDNPMemOperand]>;
+
+def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
+  ClangBuiltin<"__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64">,
+  Intrinsic<[llvm_i64_ty], [local_ptr_ty, llvm_i64_ty],
+            [IntrConvergent, IntrWillReturn, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
+            "", [SDNPMemOperand]>;
+
+def int_amdgcn_s_monitor_sleep :
+  ClangBuiltin<"__builtin_amdgcn_s_monitor_sleep">,
+  DefaultAttrsIntrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
+                                            IntrHasSideEffects]>;
+
+// llvm.amdgcn.cvt.f16.fp8 half vdst, int srcA, imm byte_sel [0..3]
+def int_amdgcn_cvt_f16_fp8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_fp8">,
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
+
+// llvm.amdgcn.cvt.f16.bf8 half vdst, int srcA, imm byte_sel [0..3]
+def int_amdgcn_cvt_f16_bf8 : ClangBuiltin<"__builtin_amdgcn_cvt_f16_bf8">,
+  DefaultAttrsIntrinsic<[llvm_half_ty],
+            [llvm_i32_ty, llvm_i32_ty],
+            [IntrNoMem, ImmArg<ArgIndex<1>>]>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

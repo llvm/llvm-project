@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`modernize-use-scoped-lock
+  <clang-tidy/checks/modernize/use-scoped-lock>` check.
+
+  Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
+  alternative ``std::scoped_lock``.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
@@ -205,6 +211,20 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-avoid-goto
   <clang-tidy/checks/cppcoreguidelines/avoid-goto>` check by adding the option
   `IgnoreMacros` to ignore ``goto`` labels defined in macros.
+
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by adding a
+  flag to specify the function used for forwarding instead of ``std::forward``.
+   
+- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
+  fixing false positives when calling indexing operators that do not perform
+  pointer arithmetic in template, for example ``std::map::operator[]``.
+
+- Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
+  <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
+  by adding a flag to specify the function used for moving instead of
+  ``std::move``.
 
 - Improved :doc:`cppcoreguidelines-special-member-functions
   <clang-tidy/checks/cppcoreguidelines/special-member-functions>` check by
@@ -312,6 +332,10 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `AllowedTypes`, that excludes specified types from adding qualifiers.
+
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check by fixing
+  false positives on out-of-line explicitly defaulted functions.
 
 - Improved :doc:`readability-redundant-smartptr-get
   <clang-tidy/checks/readability/redundant-smartptr-get>` check by fixing
