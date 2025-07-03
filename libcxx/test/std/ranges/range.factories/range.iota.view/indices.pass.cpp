@@ -8,6 +8,10 @@
 
 // REQUIRES: std-at-least-c++26
 
+// ranges
+
+// inline constexpr unspecified indices = unspecified;
+
 #include <cassert>
 #include <cstddef>
 #include <ranges>
