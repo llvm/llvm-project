@@ -603,73 +603,72 @@ void printGeneratedAssembly(
   dbgs() << "```\n";
   size_t N = Instructions.size();
   // Print first "PreviewFirst" lines or all if less
-  for (size_t i = 0; i < std::min(size_t(PreviewFirst), N); ++i) {
+  for (size_t i = 0; i < std::min(size_t(PreviewFirst), N); ++i)
     dbgs() << format_hex_no_prefix(Instructions[i].second.first, 0) << ":\t"
            << Instructions[i].second.second << Instructions[i].first << '\n';
-  }
+
   if (N > (PreviewFirst + PreviewLast)) {
-    if (Preview) {
+    if (Preview)
       dbgs() << "...\t(" << (N - PreviewFirst - PreviewLast)
              << " more instructions)\n";
-    } else {
+    else {
       // Print all middle lines
-      for (size_t i = PreviewFirst; i < N - PreviewLast; ++i) {
+      for (size_t i = PreviewFirst; i < N - PreviewLast; ++i)
         dbgs() << format_hex_no_prefix(Instructions[i].second.first, 0) << ":\t"
                << Instructions[i].second.second << Instructions[i].first
                << '\n';
-      }
     }
     // Print last "PreviewLast" lines
-    for (size_t i = N - PreviewLast; i < N; ++i) {
+    for (size_t i = N - PreviewLast; i < N; ++i)
       dbgs() << format_hex_no_prefix(Instructions[i].second.first, 0) << ":\t"
              << Instructions[i].second.second << Instructions[i].first << '\n';
-    }
   }
   dbgs() << "```\n";
 }
 
 // Function to extract and print assembly from snippet
-void printAssembledSnippet(const LLVMState &State,
-                           const SmallString<0> &Snippet) {
+Error printAssembledSnippet(const LLVMState &State,
+                            const SmallString<0> &Snippet) {
   // Extract the actual function bytes from the object file
   std::vector<uint8_t> FunctionBytes;
-  if (auto Err = getBenchmarkFunctionBytes(Snippet, FunctionBytes)) {
-    dbgs() << "Failed to extract function bytes: " << toString(std::move(Err))
-           << "\n";
-    return;
-  }
+  if (auto Err = getBenchmarkFunctionBytes(Snippet, FunctionBytes))
+    return make_error<Failure>("Failed to extract function bytes: " +
+                               toString(std::move(Err)));
 
   DisassemblerHelper DisHelper(State);
-  ArrayRef<uint8_t> Bytes(FunctionBytes);
+  size_t Offset = 0;
+  const size_t FunctionBytesSize = FunctionBytes.size();
 
   // Decode all instructions first
   std::vector<std::pair<std::string, std::pair<uint64_t, std::string>>>
       Instructions;
   uint64_t Address = 0;
 
-  while (!Bytes.empty()) {
+  while (Offset < FunctionBytesSize) {
     MCInst Inst;
     uint64_t Size;
-    if (DisHelper.decodeInst(Inst, Size, Bytes)) {
-      // Format instruction text
-      std::string InstStr;
-      raw_string_ostream OS(InstStr);
-      DisHelper.printInst(&Inst, OS);
+    ArrayRef<uint8_t> Bytes(FunctionBytes.data() + Offset,
+                            FunctionBytesSize - Offset);
 
-      // Create hex string for this instruction (big-endian order)
-      std::string HexStr;
-      raw_string_ostream HexOS(HexStr);
-      for (int i = Size - 1; i >= 0; --i) {
-        HexOS << format_hex_no_prefix(Bytes[i], 2);
-      }
-
-      Instructions.push_back({OS.str(), {Address, HexOS.str()}});
-      Bytes = Bytes.slice(Size);
-      Address += Size;
-    } else {
+    if (!DisHelper.decodeInst(Inst, Size, Bytes)) {
       Instructions.push_back({"<decode error>", {Address, ""}});
       break;
     }
+
+    // Format instruction text
+    std::string InstStr;
+    raw_string_ostream OS(InstStr);
+    DisHelper.printInst(&Inst, OS);
+
+    // Create hex string for this instruction (big-endian order)
+    std::string HexStr;
+    raw_string_ostream HexOS(HexStr);
+    for (int i = Size - 1; i >= 0; --i)
+      HexOS << format_hex_no_prefix(Bytes[i], 2);
+
+    Instructions.push_back({OS.str(), {Address, HexOS.str()}});
+    Offset += Size;
+    Address += Size;
   }
 
   // Preview generated assembly snippet
@@ -686,6 +685,8 @@ void printAssembledSnippet(const LLVMState &State,
     LLVM_DEBUG(dbgs() << "Generated assembly snippet:\n");
     LLVM_DEBUG(printGeneratedAssembly(Instructions, false));
   }
+
+  return Error::success();
 }
 } // namespace
 
@@ -756,7 +757,8 @@ BenchmarkRunner::getRunnableConfiguration(
     RC.ObjectFile = getObjectFromBuffer(*Snippet);
 
     // Print the assembled snippet by disassembling the binary data
-    printAssembledSnippet(State, *Snippet);
+    if (Error E = printAssembledSnippet(State, *Snippet))
+      return std::move(E);
   }
 
   return std::move(RC);
