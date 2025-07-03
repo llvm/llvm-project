@@ -687,20 +687,16 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
-// Force relocation when there is a specifier. This might be too conservative -
-// GAS doesn't emit a relocation for call local@plt; local:.
-bool X86AsmBackend::shouldForceRelocation(const MCFixup &,
-                                          const MCValue &Target) {
-  return Target.getSpecifier();
-}
-
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
+  // Force relocation when there is a specifier. This might be too conservative
+  // - GAS doesn't emit a relocation for call local@plt; local:.
+  if (Target.getSpecifier())
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
