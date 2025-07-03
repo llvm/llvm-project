@@ -134,7 +134,7 @@ define i32 @ctpop_xor(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[RET:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[XOR]])
+; CHECK-NEXT:    [[RET:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[XOR]])
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       false:
 ; CHECK-NEXT:    ret i32 0
