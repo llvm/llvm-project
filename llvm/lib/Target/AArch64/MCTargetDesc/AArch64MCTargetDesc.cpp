@@ -393,7 +393,7 @@ class AArch64MCInstrAnalysis : public MCInstrAnalysis {
 public:
   AArch64MCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target,
                       const MCSubtargetInfo *STI) const override {
     // Search for a PC-relative argument.

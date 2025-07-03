@@ -412,7 +412,7 @@ public:
     return MCInstrAnalysis::isConditionalBranch(Inst);
   }
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target,
                       const MCSubtargetInfo *STI) const override {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());

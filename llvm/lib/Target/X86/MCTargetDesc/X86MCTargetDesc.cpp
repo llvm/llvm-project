@@ -514,7 +514,7 @@ public:
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
                  const MCSubtargetInfo &STI) const override;
 
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+  bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target,
                       const MCSubtargetInfo *STI) const override;
   std::optional<uint64_t>
@@ -641,7 +641,7 @@ X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
   }
 }
 
-bool X86MCInstrAnalysis::evaluateBranch(
+bool X86MCInstrAnalysis::findTargetAddress(
     const MCInst &Inst, uint64_t Addr, uint64_t Size, uint64_t &Target,
     const MCSubtargetInfo *STI = nullptr) const {
   if (Inst.getNumOperands() == 0 ||

@@ -1520,7 +1520,7 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     if (MIA) {
       if (Disassembled) {
         uint64_t Target;
-        bool BranchTargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
+        bool BranchTargetKnown = MIA->findTargetAddress(Inst, Index, Size, Target);
         if (BranchTargetKnown && (Target >= Start && Target < End) &&
             !Targets.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
@@ -2355,7 +2355,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           if (Disassembled && DT->InstrAnalysis) {
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
-            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
+            bool PrintTarget = DT->InstrAnalysis->findTargetAddress(
                 Inst, SectionAddr + Index, Size, Target,
                 DT->SubtargetInfo.get());
             if (!PrintTarget) {
