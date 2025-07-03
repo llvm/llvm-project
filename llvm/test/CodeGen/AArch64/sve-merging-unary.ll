@@ -1427,6 +1427,36 @@ define <vscale x 2 x i64> @uxtw_nxv2i64(<vscale x 2 x i1> %pg, <vscale x 2 x i64
   ret <vscale x 2 x i64> %res
 }
 
+define <vscale x 16 x i8> @abs_nxv16i8_all_active_predicate(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: abs_nxv16i8_all_active_predicate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i1> splat(i1 true), <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @abs_nxv16i8_same_predicate(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b, <vscale x 16 x i8> %c) {
+; CHECK-LABEL: abs_nxv16i8_same_predicate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> %c, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @abs_nxv16i8_inactive_lanes_are_not_defined(<vscale x 16 x i1> %sel_pg, <vscale x 16 x i1> %op_pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
+; CHECK-LABEL: abs_nxv16i8_inactive_lanes_are_not_defined:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    abs z0.b, p0/m, z1.b
+; CHECK-NEXT:    ret
+  %b.op = call <vscale x 16 x i8> @llvm.aarch64.sve.abs.nxv16i8(<vscale x 16 x i8> poison, <vscale x 16 x i1> %op_pg, <vscale x 16 x i8> %b)
+  %res = select <vscale x 16 x i1> %sel_pg, <vscale x 16 x i8> %b.op, <vscale x 16 x i8> %a
+  ret <vscale x 16 x i8> %res
+}
+
 ; Merging op has multiple users.
 declare void @use(<vscale x 16 x i8>,<vscale x 16 x i8>)
 define void @abs_nxv16i8_multi_use(<vscale x 16 x i1> %pg, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
