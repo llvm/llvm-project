@@ -1887,6 +1887,7 @@ module std [system] {
       export std.functional.bind_back
     }
     module from_range                     { header "__ranges/from_range.h" }
+    module indices_view                   { header "__ranges/indices_view.h" }
     module iota_view                      { header "__ranges/iota_view.h" }
     module istream_view                   { header "__ranges/istream_view.h" }
     module join_view                      { header "__ranges/join_view.h" }
