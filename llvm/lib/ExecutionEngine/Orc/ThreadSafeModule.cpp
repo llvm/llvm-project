@@ -1,5 +1,4 @@
-//===-- ThreadSafeModule.cpp - Thread safe Module, Context, and Utilities
-//h-===//
+//===-- ThreadSafeModule.cpp - Thread safe Module, Context, and Utilities -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
