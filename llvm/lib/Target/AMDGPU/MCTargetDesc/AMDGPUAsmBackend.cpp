@@ -50,7 +50,7 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
-  bool shouldForceRelocation(const MCFixup &, const MCValue &) override;
+  bool shouldForceRelocation(const MCFixup &, const MCValue &);
 };
 
 } //End anonymous namespace
@@ -130,10 +130,13 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-void AMDGPUAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void AMDGPUAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (mc::isRelocation(Fixup.getKind()))
     return;
 

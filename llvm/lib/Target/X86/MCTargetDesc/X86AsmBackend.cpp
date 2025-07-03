@@ -169,7 +169,7 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &) override;
+  bool shouldForceRelocation(const MCFixup &, const MCValue &);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
@@ -694,9 +694,13 @@ bool X86AsmBackend::shouldForceRelocation(const MCFixup &,
   return Target.getSpecifier();
 }
 
-void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
-                               const MCValue &, MutableArrayRef<char> Data,
-                               uint64_t Value, bool IsResolved) {
+void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
