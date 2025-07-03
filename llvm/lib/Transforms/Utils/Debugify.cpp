@@ -92,8 +92,9 @@ std::string symbolizeStackTrace(const Instruction *I) {
       assert(SymbolizedAddrs.contains(StackTrace[Frame]) &&
              "Expected each address to have been symbolized.");
       for (std::string &SymbolizedFrame : SymbolizedAddrs[StackTrace[Frame]]) {
-        OS << right_justify(formatv("#{0}", VirtualFrameNo++).str(), std::log10(Depth) + 2)
-          << ' ' << SymbolizedFrame << '\n';
+        OS << right_justify(formatv("#{0}", VirtualFrameNo++).str(),
+                            std::log10(Depth) + 2)
+           << ' ' << SymbolizedFrame << '\n';
       }
     }
   }
@@ -508,13 +509,10 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
 
     auto CreateJSONBugEntry = [&](const char *Action) {
       Bugs.push_back(llvm::json::Object({
-          {"metadata", "DILocation"},
-          {"fn-name", FnName.str()},
-          {"bb-name", BBName.str()},
-          {"instr", InstName},
-          {"action", Action},
+        {"metadata", "DILocation"}, {"fn-name", FnName.str()},
+            {"bb-name", BBName.str()}, {"instr", InstName}, {"action", Action},
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-          {"origin", symbolizeStackTrace(Instr)},
+            {"origin", symbolizeStackTrace(Instr)},
 #endif
       }));
     };
