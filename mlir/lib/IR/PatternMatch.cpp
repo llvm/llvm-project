@@ -150,11 +150,44 @@ void RewriterBase::replaceOp(Operation *op, Operation *newOp) {
   eraseOp(op);
 }
 
+/// Returns the given block iterator if it lies within the block `b`.
+/// Otherwise, otherwise finds the ancestor of the given block iterator that
+/// lies within `b`. Returns and "empty" iterator if the latter fails.
+///
+/// Note: This is a variant of Block::findAncestorOpInBlock that operates on
+/// block iterators instead of ops.
+static std::pair<Block *, Block::iterator>
+findAncestorIteratorInBlock(Block *b, Block *itBlock, Block::iterator it) {
+  // Case 1: The iterator lies within the block.
+  if (itBlock == b)
+    return std::make_pair(itBlock, it);
+
+  // Otherwise: Find ancestor iterator. Bail if we run out of parent ops.
+  Operation *parentOp = itBlock->getParentOp();
+  if (!parentOp)
+    return std::make_pair(static_cast<Block *>(nullptr), Block::iterator());
+  Operation *op = b->findAncestorOpInBlock(*parentOp);
+  if (!op)
+    return std::make_pair(static_cast<Block *>(nullptr), Block::iterator());
+  return std::make_pair(op->getBlock(), op->getIterator());
+}
+
 /// This method erases an operation that is known to have no uses. The uses of
 /// the given operation *must* be known to be dead.
 void RewriterBase::eraseOp(Operation *op) {
   assert(op->use_empty() && "expected 'op' to have no uses");
   auto *rewriteListener = dyn_cast_if_present<Listener>(listener);
+
+  // If the current insertion point is before/within the erased operation, we
+  // need to adjust the insertion point to be after the operation.
+  if (getInsertionBlock()) {
+    Block *insertionBlock;
+    Block::iterator insertionPoint;
+    std::tie(insertionBlock, insertionPoint) = findAncestorIteratorInBlock(
+        op->getBlock(), getInsertionBlock(), getInsertionPoint());
+    if (insertionBlock && insertionPoint == op->getIterator())
+      setInsertionPointAfter(op);
+  }
 
   // Fast path: If no listener is attached, the op can be dropped in one go.
   if (!rewriteListener) {
@@ -319,6 +352,11 @@ void RewriterBase::inlineBlockBefore(Block *source, Block *dest,
     while (!source->empty())
       moveOpBefore(&source->front(), dest, before);
   }
+
+  // If the current insertion point is within the source block, adjust the
+  // insertion point to the destination block.
+  if (getInsertionBlock() == source)
+    setInsertionPoint(dest, getInsertionPoint());
 
   // Erase the source block.
   assert(source->empty() && "expected 'source' to be empty");
