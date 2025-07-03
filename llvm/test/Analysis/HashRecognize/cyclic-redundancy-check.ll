@@ -723,6 +723,29 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
+define i16 @not.crc.init.arg.excess.tc(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.init.arg.excess.tc'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Loop iterations exceed bitwidth of data
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 31
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
 define i32 @not.crc.unknown.icmp.rhs(i32 %checksum, i32 %msg, i32 %unknown) {
 ; CHECK-LABEL: 'not.crc.unknown.icmp.rhs'
 ; CHECK-NEXT:  Did not find a hash algorithm
