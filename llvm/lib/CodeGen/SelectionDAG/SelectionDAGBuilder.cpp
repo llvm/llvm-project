@@ -4336,7 +4336,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   auto &TLI = DAG.getTargetLoweringInfo();
   GEPNoWrapFlags NW = cast<GEPOperator>(I).getNoWrapFlags();
 
-  // For a vector GEP, keep the prefix scalar as long as possible, than
+  // For a vector GEP, keep the prefix scalar as long as possible, then
   // convert any scalars encountered after the first vector operand to vectors.
   bool IsVectorGEP = I.getType()->isVectorTy();
   ElementCount VectorElementCount =
