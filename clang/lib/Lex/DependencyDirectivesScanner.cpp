@@ -419,7 +419,6 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
 }
 
 void Scanner::skipLine(const char *&First, const char *const End) {
-  const char *const OldFirst = First;
   for (;;) {
     assert(First <= End);
     if (First == End)
@@ -430,6 +429,9 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       return;
     }
     const char *Start = First;
+    // Use `LastNonWhitespace`to track if a line-continuation has ever been seen
+    // before a new-line character:
+    char LastNonWhitespace = ' ';
     while (First != End && !isVerticalWhitespace(*First)) {
       // Iterate over strings correctly to avoid comments and newlines.
       if (*First == '"' ||
@@ -453,6 +455,8 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       // Iterate over comments correctly.
       if (*First != '/' || End - First < 2) {
         LastTokenPtr = First;
+        if (!isWhitespace(*First))
+          LastNonWhitespace = *First;
         ++First;
         continue;
       }
@@ -465,6 +469,8 @@ void Scanner::skipLine(const char *&First, const char *const End) {
 
       if (First[1] != '*') {
         LastTokenPtr = First;
+        if (!isWhitespace(*First))
+          LastNonWhitespace = *First;
         ++First;
         continue;
       }
@@ -476,26 +482,9 @@ void Scanner::skipLine(const char *&First, const char *const End) {
       return;
 
     // Skip over the newline.
-    auto Len = skipNewline(First, End);
-    // Since P2223R2 allows the line-continuation slash \ to be followed by
-    // additional whitespace, we need to check that here if `First`
-    // follows a `\\` and whitespaces.
+    skipNewline(First, End);
 
-    // `LookBack` points to the character before the newline:
-    const char *LookBack = First - Len;
-    bool LineContinuationFound = false;
-
-    // Move `LookBack` backwards to find line-continuation and whitespaces:
-    while (LookBack >= OldFirst) { // bound `LookBack` by `OldFirst`:
-      if (isWhitespace(*LookBack)) {
-        --LookBack; // whitespace before '\\' is ok
-        continue;
-      }
-      if (*LookBack == '\\')
-        LineContinuationFound = true;
-      break; // not a whitespace, end loop
-    }
-    if (!LineContinuationFound)
+    if (LastNonWhitespace != '\\')
       break;
   }
 }
