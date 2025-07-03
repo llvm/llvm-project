@@ -30,7 +30,7 @@ from typing import Union
 class KnobOp(KnobOp):
     def __init__(
         self,
-        result: Type, # !transform.any_param or !transform.param<Type>
+        result: Type,  # !transform.any_param or !transform.param<Type>
         name: Union[StringAttr, str],
         options: Union[
             ArrayAttr, Sequence[Union[Attribute, bool, int, float, str]], Attribute
@@ -69,7 +69,7 @@ class KnobOp(KnobOp):
 
 
 def knob(
-    result: Type, # !transform.any_param or !transform.param<Type>
+    result: Type,  # !transform.any_param or !transform.param<Type>
     name: Union[StringAttr, str],
     options: Union[
         ArrayAttr, Sequence[Union[Attribute, bool, int, float, str]], Attribute
