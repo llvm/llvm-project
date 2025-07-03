@@ -1045,7 +1045,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSLIDEUP_VI:
   case RISCV::VSLIDEDOWN_VX:
   case RISCV::VSLIDEDOWN_VI:
-  // TODO: Handle v[f]slide1up, but not v[f]slide1down.
+  case RISCV::VSLIDE1UP_VX:
+  case RISCV::VFSLIDE1UP_VF:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
