@@ -36,7 +36,9 @@ used as a convenient way to perform bulk removals of transitive includes.
 
 However, libc++ intends not to gratuitously break users on stable versions of
 the Standard. Hence, we intend to maintain backwards compatibility of the
-declarations we provide in a header, within reason. For libc++ developers, this
+declarations we provide in a header, within reason. We reserve the right to
+break such backwards compatibility in the future, however we will strive to
+do it in a user-friendly way, again within reason. For libc++ developers, this
 means that any transitive include removal of a public header must be guarded by
 something of the form:
 
@@ -49,16 +51,17 @@ something of the form:
    #endif
 
 Occasionally, private headers may also be included transitively for backwards
-compatibility in the same manner.
+compatibility in the same manner. We currently strive to provide backwards
+compatibility on the set of declarations provided by a header in all Standard
+modes starting with **C++23**. Note that this is very difficult to actually
+enforce, so this is done only on a best effort basis.
 
 When users define ``_LIBCPP_REMOVE_TRANSITIVE_INCLUDES``, libc++ will not include
 transitive headers, regardless of the language version. This can be useful for users
 to aid the transition to a newer language version, or by users who simply want to
-make sure they include what they use in their code.
-
-We currently strive to provide backwards compatibility on the set of declarations
-provided by a header in all Standard modes starting with C++23. Note that this is
-very difficult to actually enforce, so this is done only on a best effort basis.
+make sure they include what they use in their code. However, note that defining this
+macro means that the set of declarations and transitive includes provided by the library
+may change from release to release, which can break your code.
 
 
 Rationale
