@@ -1451,6 +1451,8 @@ bool getWavegroupEnable(const Function &F);
 
 bool getWavegroupRankFunction(const Function &F);
 
+bool getRankSpecializationEnable(const Function &F);
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F);
 
 bool getSpatialClusterEnable(const Function &F);

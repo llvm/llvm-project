@@ -433,6 +433,10 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   if (FD->hasAttr<AMDGPUSpatialClusterKernelAttr>())
     F->addFnAttr("amdgpu-spatial-cluster");
 
+  if (const auto *Attr = FD->getAttr<AMDGPUNoRankSpecializationAttr>()) {
+    F->addFnAttr("amdgpu-no-rank-specialization");
+  }
+
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {
     uint32_t X =
         Attr->getX()->EvaluateKnownConstInt(M.getContext()).getExtValue();

@@ -920,6 +920,12 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         PM.addPass(createCGSCCToFunctionPassAdaptor(std::move(FPM)));
       });
 
+  PB.registerOptimizerEarlyEPCallback([this](ModulePassManager &MPM,
+                                             OptimizationLevel Level,
+                                             ThinOrFullLTOPhase Phase) {
+    MPM.addPass(AMDGPURankSpecializationPass());
+  });
+
   // FIXME: Why is AMDGPUAttributor not in CGSCC?
   PB.registerOptimizerLastEPCallback([this](ModulePassManager &MPM,
                                             OptimizationLevel Level,

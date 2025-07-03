@@ -2493,6 +2493,10 @@ bool getWavegroupRankFunction(const Function &F) {
   return F.hasFnAttribute("amdgpu-wavegroup-rank-function");
 }
 
+bool getRankSpecializationEnable(const Function &F) {
+  return !F.hasFnAttribute("amdgpu-no-rank-specialization");
+}
+
 std::optional<std::array<uint32_t, 3>> getReqdWorkGroupSize(const Function &F) {
   MDNode *Node = F.getMetadata("reqd_work_group_size");
   if (!Node)

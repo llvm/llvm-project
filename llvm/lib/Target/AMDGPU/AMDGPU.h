@@ -179,6 +179,13 @@ private:
   const TargetMachine &TM;
 };
 
+struct AMDGPURankSpecializationPass
+    : PassInfoMixin<AMDGPURankSpecializationPass> {
+  AMDGPURankSpecializationPass() {}
+
+  PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
+};
+
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
 

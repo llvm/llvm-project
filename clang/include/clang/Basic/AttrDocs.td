@@ -3323,6 +3323,19 @@ and Z dimensions must be 1.
   }];
 }
 
+def AMDGPUNoRankSpecializationDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+This attribute disables the wavegroup rank specialization optimization.
+
+Clang supports the
+``__attribute__((amdgpu_no_rank_specialization()))``
+attribute for the AMDGPU target when compiling for a GFX13 target. This attribute may be attached
+to HIP wavegroup kernel function definitions to disable the specialization of waves by wavegroup 
+rank.
+  }];
+}
+
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
 Clang supports several different calling conventions, depending on the target
