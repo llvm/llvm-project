@@ -226,11 +226,12 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, ptr %addr, <4 x double
 define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, ptr %addr) {
 ; SSE-LABEL: load_v4f64_v4i32_zero:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE-NEXT:    movmskps %xmm1, %eax
 ; SSE-NEXT:    testb $1, %al
-; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    jne LBB3_1
 ; SSE-NEXT:  ## %bb.2: ## %else
 ; SSE-NEXT:    testb $2, %al
@@ -244,7 +245,7 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, ptr %addr) {
 ; SSE-NEXT:  LBB3_8: ## %else8
 ; SSE-NEXT:    retq
 ; SSE-NEXT:  LBB3_1: ## %cond.load
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    testb $2, %al
 ; SSE-NEXT:    je LBB3_4
 ; SSE-NEXT:  LBB3_3: ## %cond.load1
@@ -1095,9 +1096,9 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE2-NEXT:    psllw $15, %xmm0
 ; SSE2-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    jne LBB10_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %al
@@ -1174,9 +1175,9 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE42-NEXT:    psllw $15, %xmm0
 ; SSE42-NEXT:    packsswb %xmm0, %xmm0
 ; SSE42-NEXT:    pmovmskb %xmm0, %eax
-; SSE42-NEXT:    xorps %xmm1, %xmm1
-; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
+; SSE42-NEXT:    testb $1, %al
+; SSE42-NEXT:    xorps %xmm1, %xmm1
 ; SSE42-NEXT:    jne LBB10_1
 ; SSE42-NEXT:  ## %bb.2: ## %else
 ; SSE42-NEXT:    testb $2, %al
@@ -2613,9 +2614,9 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE2-NEXT:    psllw $15, %xmm0
 ; SSE2-NEXT:    packsswb %xmm0, %xmm0
 ; SSE2-NEXT:    pmovmskb %xmm0, %eax
-; SSE2-NEXT:    xorps %xmm1, %xmm1
-; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    testb $1, %al
+; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    jne LBB20_1
 ; SSE2-NEXT:  ## %bb.2: ## %else
 ; SSE2-NEXT:    testb $2, %al
@@ -2692,9 +2693,9 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, ptr %addr) {
 ; SSE42-NEXT:    psllw $15, %xmm0
 ; SSE42-NEXT:    packsswb %xmm0, %xmm0
 ; SSE42-NEXT:    pmovmskb %xmm0, %eax
-; SSE42-NEXT:    pxor %xmm1, %xmm1
-; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
+; SSE42-NEXT:    testb $1, %al
+; SSE42-NEXT:    pxor %xmm1, %xmm1
 ; SSE42-NEXT:    jne LBB20_1
 ; SSE42-NEXT:  ## %bb.2: ## %else
 ; SSE42-NEXT:    testb $2, %al

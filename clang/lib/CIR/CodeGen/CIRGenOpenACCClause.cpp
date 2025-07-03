@@ -75,11 +75,8 @@ class OpenACCClauseCIREmitter final
   void setLastDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
     lastDeviceTypeValues.clear();
 
-    llvm::for_each(clause.getArchitectures(),
-                   [this](const DeviceTypeArgument &arg) {
-                     lastDeviceTypeValues.push_back(
-                         decodeDeviceType(arg.getIdentifierInfo()));
-                   });
+    for (const DeviceTypeArgument &arg : clause.getArchitectures())
+      lastDeviceTypeValues.push_back(decodeDeviceType(arg.getIdentifierInfo()));
   }
 
   mlir::Value emitIntExpr(const Expr *intExpr) {
@@ -511,11 +508,9 @@ public:
 
     if constexpr (isOneOfTypes<OpTy, mlir::acc::InitOp,
                                mlir::acc::ShutdownOp>) {
-      llvm::for_each(
-          clause.getArchitectures(), [this](const DeviceTypeArgument &arg) {
-            operation.addDeviceType(builder.getContext(),
-                                    decodeDeviceType(arg.getIdentifierInfo()));
-          });
+      for (const DeviceTypeArgument &arg : clause.getArchitectures())
+        operation.addDeviceType(builder.getContext(),
+                                decodeDeviceType(arg.getIdentifierInfo()));
     } else if constexpr (isOneOfTypes<OpTy, mlir::acc::SetOp>) {
       assert(!operation.getDeviceTypeAttr() && "already have device-type?");
       assert(clause.getArchitectures().size() <= 1);

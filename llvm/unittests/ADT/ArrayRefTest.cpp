@@ -104,6 +104,48 @@ TEST(ArrayRefTest, DropFront) {
   EXPECT_TRUE(AR1.drop_front(2).equals(AR2));
 }
 
+TEST(ArrayRefTest, ConsumeFront) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[0]);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[1]);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
+TEST(ArrayRefTest, ConsumeBack) {
+  static const int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  ArrayRef<int> AR1(TheNumbers);
+  ArrayRef<int> AR2(TheNumbers, AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[5]);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[4]);
+  EXPECT_TRUE(AR1.equals(AR2));
+}
+
+TEST(ArrayRefTest, MutableArryaRefConsumeFront) {
+  int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  MutableArrayRef<int> AR1(TheNumbers);
+  MutableArrayRef<int> AR2(&TheNumbers[2], AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[0]);
+  EXPECT_EQ(&AR1.consume_front(), &TheNumbers[1]);
+  EXPECT_TRUE(AR1.equals(AR2));
+
+  AR1.consume_front() = 33;
+  EXPECT_EQ(TheNumbers[2], 33);
+}
+
+TEST(ArrayRefTest, MutableArryaRefConsumeBack) {
+  int TheNumbers[] = {4, 8, 15, 16, 23, 42};
+  MutableArrayRef<int> AR1(TheNumbers);
+  MutableArrayRef<int> AR2(TheNumbers, AR1.size() - 2);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[5]);
+  EXPECT_EQ(&AR1.consume_back(), &TheNumbers[4]);
+  EXPECT_TRUE(AR1.equals(AR2));
+
+  AR1.consume_back() = 33;
+  EXPECT_EQ(TheNumbers[3], 33);
+}
+
 TEST(ArrayRefTest, DropWhile) {
   static const int TheNumbers[] = {1, 3, 5, 8, 10, 11};
   ArrayRef<int> AR1(TheNumbers);

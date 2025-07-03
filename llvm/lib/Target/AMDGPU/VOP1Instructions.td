@@ -401,8 +401,8 @@ def VOP_PERMLANE_SWAP : VOPProfile<[i32, i32, untyped, untyped]> {
   let HasExtDPP = 0;
   let HasExtSDWA = 0;
 
-  let Ins32 = (ins Src0RC64:$vdst_in, Src0RC32:$src0);
-  let Ins64 = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
+  let Ins32 = (ins DstRC:$vdst_in, Src0RC32:$src0);
+  let Ins64 = (ins DstRC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let InsVOP3OpSel = (ins Src0RC64:$vdst_in, Src0RC64:$src0, Dpp16FI:$fi, DppBoundCtrl:$bound_ctrl);
   let Asm64 = "$vdst, $src0$bound_ctrl$fi";
 }

@@ -67,14 +67,14 @@ define i32 @select_beqimm_1(i32 %a, i32 %x, i32 %y) {
 ; CHECK_NOPT:       # %bb.0: # %entry
 ; CHECK_NOPT-NEXT:    addi sp, sp, -16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK_NOPT-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    cv.beqimm a0, -16, .LBB2_2
 ; CHECK_NOPT-NEXT:  # %bb.1: # %entry
-; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK_NOPT-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:  .LBB2_2: # %entry
 ; CHECK_NOPT-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK_NOPT-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:  .LBB2_2: # %entry
+; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK_NOPT-NEXT:    addi sp, sp, 16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK_NOPT-NEXT:    ret
@@ -98,14 +98,14 @@ define i32 @select_beqimm_2(i32 %a, i32 %x, i32 %y) {
 ; CHECK_NOPT:       # %bb.0: # %entry
 ; CHECK_NOPT-NEXT:    addi sp, sp, -16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK_NOPT-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    cv.beqimm a0, 0, .LBB3_2
 ; CHECK_NOPT-NEXT:  # %bb.1: # %entry
-; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK_NOPT-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:  .LBB3_2: # %entry
 ; CHECK_NOPT-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK_NOPT-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:  .LBB3_2: # %entry
+; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK_NOPT-NEXT:    addi sp, sp, 16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK_NOPT-NEXT:    ret
@@ -129,14 +129,14 @@ define i32 @select_beqimm_3(i32 %a, i32 %x, i32 %y) {
 ; CHECK_NOPT:       # %bb.0: # %entry
 ; CHECK_NOPT-NEXT:    addi sp, sp, -16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK_NOPT-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    cv.beqimm a0, 15, .LBB4_2
 ; CHECK_NOPT-NEXT:  # %bb.1: # %entry
-; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK_NOPT-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:  .LBB4_2: # %entry
 ; CHECK_NOPT-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK_NOPT-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:  .LBB4_2: # %entry
+; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK_NOPT-NEXT:    addi sp, sp, 16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK_NOPT-NEXT:    ret
@@ -160,15 +160,15 @@ define i32 @select_no_beqimm_1(i32 %a, i32 %x, i32 %y) {
 ; CHECK_NOPT:       # %bb.0: # %entry
 ; CHECK_NOPT-NEXT:    addi sp, sp, -16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK_NOPT-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    li a1, -17
+; CHECK_NOPT-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    beq a0, a1, .LBB5_2
 ; CHECK_NOPT-NEXT:  # %bb.1: # %entry
-; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK_NOPT-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:  .LBB5_2: # %entry
 ; CHECK_NOPT-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK_NOPT-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:  .LBB5_2: # %entry
+; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK_NOPT-NEXT:    addi sp, sp, 16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK_NOPT-NEXT:    ret
@@ -193,15 +193,15 @@ define i32 @select_no_beqimm_2(i32 %a, i32 %x, i32 %y) {
 ; CHECK_NOPT:       # %bb.0: # %entry
 ; CHECK_NOPT-NEXT:    addi sp, sp, -16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK_NOPT-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    li a1, 16
+; CHECK_NOPT-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    beq a0, a1, .LBB6_2
 ; CHECK_NOPT-NEXT:  # %bb.1: # %entry
-; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK_NOPT-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:  .LBB6_2: # %entry
 ; CHECK_NOPT-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK_NOPT-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:  .LBB6_2: # %entry
+; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK_NOPT-NEXT:    addi sp, sp, 16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK_NOPT-NEXT:    ret
@@ -226,14 +226,14 @@ define i32 @select_bneimm_1(i32 %a, i32 %x, i32 %y) {
 ; CHECK_NOPT:       # %bb.0: # %entry
 ; CHECK_NOPT-NEXT:    addi sp, sp, -16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 16
-; CHECK_NOPT-NEXT:    sw a2, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:    sw a1, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a1, 8(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:    sw a2, 12(sp) # 4-byte Folded Spill
 ; CHECK_NOPT-NEXT:    cv.bneimm a0, 0, .LBB7_2
 ; CHECK_NOPT-NEXT:  # %bb.1: # %entry
-; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK_NOPT-NEXT:    sw a0, 8(sp) # 4-byte Folded Spill
-; CHECK_NOPT-NEXT:  .LBB7_2: # %entry
 ; CHECK_NOPT-NEXT:    lw a0, 8(sp) # 4-byte Folded Reload
+; CHECK_NOPT-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
+; CHECK_NOPT-NEXT:  .LBB7_2: # %entry
+; CHECK_NOPT-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
 ; CHECK_NOPT-NEXT:    addi sp, sp, 16
 ; CHECK_NOPT-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK_NOPT-NEXT:    ret

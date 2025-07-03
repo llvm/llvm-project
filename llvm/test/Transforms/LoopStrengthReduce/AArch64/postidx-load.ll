@@ -10,22 +10,23 @@ define i32 @i32_initially_postidx(ptr %p, i64 %n) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    b.lt .LBB0_5
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x8], #4
-; CHECK-NEXT:    add w0, w0, w9
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr w9, [x0], #4
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    b.lo .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %for.inc
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    subs x1, x1, #1
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.4: // %cleanup
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_5:
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp sgt i64 %n, 0
@@ -57,22 +58,23 @@ define i32 @i32_initially_offset(ptr %p, i64 %n) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    b.lt .LBB1_5
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:  .LBB1_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr w9, [x8], #4
-; CHECK-NEXT:    add w0, w0, w9
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ldr w9, [x0], #4
+; CHECK-NEXT:    add w8, w8, w9
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    b.lo .LBB1_5
 ; CHECK-NEXT:  // %bb.3: // %for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    subs x1, x1, #1
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  // %bb.4: // %cleanup
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_5:
-; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 entry:
   %cmp1 = icmp sgt i64 %n, 0

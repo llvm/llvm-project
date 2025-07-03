@@ -904,8 +904,7 @@ Expected<std::vector<BBAddrMap>> static readBBAddrMapImpl(
 
   const auto &Sections = cantFail(EF.sections());
   auto IsMatch = [&](const Elf_Shdr &Sec) -> Expected<bool> {
-    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP &&
-        Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP_V0)
+    if (Sec.sh_type != ELF::SHT_LLVM_BB_ADDR_MAP)
       return false;
     if (!TextSectionIndex)
       return true;

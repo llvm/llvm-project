@@ -30,8 +30,7 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override;
+  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
 
   unsigned adjustFixupValue(const MCAssembler &Asm, const MCFixup &Fixup,
                             const MCValue &Target, uint64_t Value,

@@ -4,6 +4,7 @@
 // RUN:   -o - | FileCheck %s
 
 // CHECK-NOT: __riscv_xandesperf {{.*$}}
+// CHECK-NOT: __riscv_xandesvbfhcvt {{.*$}}
 // CHECK-NOT: __riscv_xandesvpackfph {{.*$}}
 // CHECK-NOT: __riscv_xandesvdot {{.*$}}
 

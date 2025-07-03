@@ -1017,10 +1017,10 @@ struct DSEState {
       }
     }
 
-    // Treat byval or inalloca arguments the same as Allocas, stores to them are
-    // dead at the end of the function.
+    // Treat byval, inalloca or dead on return arguments the same as Allocas,
+    // stores to them are dead at the end of the function.
     for (Argument &AI : F.args())
-      if (AI.hasPassPointeeByValueCopyAttr())
+      if (AI.hasPassPointeeByValueCopyAttr() || AI.hasDeadOnReturnAttr())
         InvisibleToCallerAfterRet.insert({&AI, true});
 
     // Collect whether there is any irreducible control flow in the function.

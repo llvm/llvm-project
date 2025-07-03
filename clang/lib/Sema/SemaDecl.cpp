@@ -12486,6 +12486,15 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
                                 : FixItHint());
       FD->setInvalidDecl(true);
     }
+
+    // [basic.start.main]p3:
+    // A program that declares a function main that belongs to the global scope
+    // and is attached to a named module is ill-formed.
+    if (FD->isInNamedModule()) {
+      const SourceLocation start = FD->getTypeSpecStartLoc();
+      Diag(start, diag::warn_main_in_named_module)
+          << FixItHint::CreateInsertion(start, "extern \"C++\" ", true);
+    }
   }
 
   // Treat protoless main() as nullary.

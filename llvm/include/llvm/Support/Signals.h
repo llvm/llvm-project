@@ -14,9 +14,24 @@
 #ifndef LLVM_SUPPORT_SIGNALS_H
 #define LLVM_SUPPORT_SIGNALS_H
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+namespace llvm {
+// Typedefs that are convenient but only used by the stack-trace-collection code
+// added if DebugLoc origin-tracking is enabled.
+using AddressSet = DenseSet<void *, DenseMapInfo<void *, void>>;
+using SymbolizedAddressMap =
+    DenseMap<void *, SmallVector<std::string, 0>, DenseMapInfo<void *, void>,
+             detail::DenseMapPair<void *, SmallVector<std::string, 0>>>;
+} // namespace llvm
+#endif
 
 namespace llvm {
 class StringRef;
@@ -56,6 +71,28 @@ LLVM_ABI void DisableSystemDialogsOnCrash();
 /// \param Depth refers to the number of stackframes to print. If not
 ///        specified, the entire frame is printed.
 LLVM_ABI void PrintStackTrace(raw_ostream &OS, int Depth = 0);
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#ifdef NDEBUG
+#error DebugLoc origin-tracking should not be enabled in Release builds.
+#endif
+/// Populates the given array with a stack trace of the current program, up to
+/// MaxDepth frames. Returns the number of frames returned, which will be
+/// inserted into \p StackTrace from index 0. All entries after the returned
+/// depth will be unmodified. NB: This is only intended to be used for
+/// introspection of LLVM by Debugify, will not be enabled in release builds,
+/// and should not be relied on for other purposes.
+template <unsigned long MaxDepth>
+int getStackTrace(std::array<void *, MaxDepth> &StackTrace);
+
+/// Takes a set of \p Addresses, symbolizes them and stores the result in the
+/// provided \p SymbolizedAddresses map.
+/// NB: This is only intended to be used for introspection of LLVM by
+/// Debugify, will not be enabled in release builds, and should not be relied
+/// on for other purposes.
+void symbolizeAddresses(AddressSet &Addresses,
+                        SymbolizedAddressMap &SymbolizedAddresses);
+#endif
 
 // Run all registered signal handlers.
 LLVM_ABI void RunSignalHandlers();

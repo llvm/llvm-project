@@ -469,6 +469,12 @@ void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
 }
 
 bool ELFWriter::isInSymtab(const MCSymbolELF &Symbol) {
+  if (Symbol.isUsedInReloc() || Symbol.isSignature())
+    return true;
+
+  if (OWriter.Renames.count(&Symbol))
+    return false;
+
   if (Symbol.isVariable()) {
     const MCExpr *Expr = Symbol.getVariableValue();
     // Target Expressions that are always inlined do not appear in the symtab
@@ -519,9 +525,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
   bool HasLargeSectionIndex = false;
   for (auto It : llvm::enumerate(Asm.symbols())) {
     const auto &Symbol = cast<MCSymbolELF>(It.value());
-    bool Used = Symbol.isUsedInReloc();
-    bool isSignature = Symbol.isSignature();
-    if (!(Used || (!OWriter.Renames.count(&Symbol) && isInSymtab(Symbol))))
+    if (!isInSymtab(Symbol))
       continue;
 
     if (Symbol.isTemporary() && Symbol.isUndefined()) {
@@ -546,7 +550,7 @@ void ELFWriter::computeSymbolTable(const RevGroupMapTy &RevGroupMap) {
         MSD.SectionIndex = ELF::SHN_COMMON;
       }
     } else if (Symbol.isUndefined()) {
-      if (isSignature && !Used) {
+      if (Symbol.isSignature() && !Symbol.isUsedInReloc()) {
         MSD.SectionIndex = RevGroupMap.lookup(&Symbol);
         if (MSD.SectionIndex >= ELF::SHN_LORESERVE)
           HasLargeSectionIndex = true;
@@ -1322,7 +1326,6 @@ bool ELFObjectWriter::checkRelocation(SMLoc Loc, const MCSectionELF *From,
 void ELFObjectWriter::recordRelocation(const MCFragment &F,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
-  MCAsmBackend &Backend = Asm->getBackend();
   const MCSectionELF &Section = cast<MCSectionELF>(*F.getParent());
   MCContext &Ctx = getContext();
 
@@ -1333,8 +1336,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   if (DwoOS && !checkRelocation(Fixup.getLoc(), &Section, SecA))
     return;
 
-  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
+  bool IsPCRel = Fixup.isPCRel();
   uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
   uint64_t Addend = Target.getConstant();
   if (auto *RefB = Target.getSubSym()) {

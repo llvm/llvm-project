@@ -58,7 +58,7 @@ public:
               const SmallVector<int32_t> *Packoffsets = nullptr) const override;
   llvm::Type *getSPIRVImageTypeFromHLSLResource(
       const HLSLAttributedResourceType::Attributes &attributes,
-      llvm::Type *ElementType, llvm::LLVMContext &Ctx) const;
+      QualType SampledType, CodeGenModule &CGM) const;
   void
   setOCLKernelStubCallingConvention(const FunctionType *&FT) const override;
 };
@@ -487,12 +487,12 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
     assert(!ResAttrs.IsROV &&
            "Rasterizer order views not implemented for SPIR-V yet");
 
-    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     if (!ResAttrs.RawBuffer) {
       // convert element type
-      return getSPIRVImageTypeFromHLSLResource(ResAttrs, ElemType, Ctx);
+      return getSPIRVImageTypeFromHLSLResource(ResAttrs, ContainedTy, CGM);
     }
 
+    llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
     llvm::ArrayType *RuntimeArrayType = llvm::ArrayType::get(ElemType, 0);
     uint32_t StorageClass = /* StorageBuffer storage class */ 12;
     bool IsWritable = ResAttrs.ResourceClass == llvm::dxil::ResourceClass::UAV;
@@ -520,13 +520,18 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getHLSLType(
 }
 
 llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
-    const HLSLAttributedResourceType::Attributes &attributes,
-    llvm::Type *ElementType, llvm::LLVMContext &Ctx) const {
+    const HLSLAttributedResourceType::Attributes &attributes, QualType Ty,
+    CodeGenModule &CGM) const {
+  llvm::LLVMContext &Ctx = CGM.getLLVMContext();
 
-  if (ElementType->isVectorTy())
-    ElementType = ElementType->getScalarType();
+  Ty = Ty->getCanonicalTypeUnqualified();
+  if (const VectorType *V = dyn_cast<VectorType>(Ty))
+    Ty = V->getElementType();
+  assert(!Ty->isVectorType() && "We still have a vector type.");
 
-  assert((ElementType->isIntegerTy() || ElementType->isFloatingPointTy()) &&
+  llvm::Type *SampledType = CGM.getTypes().ConvertTypeForMem(Ty);
+
+  assert((SampledType->isIntegerTy() || SampledType->isFloatingPointTy()) &&
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
@@ -534,6 +539,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
   SmallVector<unsigned, 6> IntParams(6, 0);
+
+  const char *Name =
+      Ty->isSignedIntegerType() ? "spirv.SignedImage" : "spirv.Image";
 
   // Dim
   // For now we assume everything is a buffer.
@@ -557,7 +565,9 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   // Setting to unknown for now.
   IntParams[5] = 0;
 
-  return llvm::TargetExtType::get(Ctx, "spirv.Image", {ElementType}, IntParams);
+  llvm::TargetExtType *ImageType =
+      llvm::TargetExtType::get(Ctx, Name, {SampledType}, IntParams);
+  return ImageType;
 }
 
 std::unique_ptr<TargetCodeGenInfo>

@@ -1829,6 +1829,7 @@ cc_library(
         "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
+        "//llvm:config",
     ],
 )
 

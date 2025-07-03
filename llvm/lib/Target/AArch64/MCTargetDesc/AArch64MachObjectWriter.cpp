@@ -147,7 +147,7 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
 void AArch64MachObjectWriter::recordRelocation(
     MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
     const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
 
   // See <reloc.h>.
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment);

@@ -50,6 +50,9 @@ public:
   mlir::Value VisitInitListExpr(const InitListExpr *e);
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
   mlir::Value VisitParenExpr(ParenExpr *e);
+  mlir::Value
+  VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e);
+  mlir::Value VisitUnaryDeref(const Expr *e);
 };
 } // namespace
 
@@ -229,6 +232,15 @@ ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
 
 mlir::Value ComplexExprEmitter::VisitParenExpr(ParenExpr *e) {
   return Visit(e->getSubExpr());
+}
+
+mlir::Value ComplexExprEmitter::VisitSubstNonTypeTemplateParmExpr(
+    SubstNonTypeTemplateParmExpr *e) {
+  return Visit(e->getReplacement());
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
+  return emitLoadOfLValue(e);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {

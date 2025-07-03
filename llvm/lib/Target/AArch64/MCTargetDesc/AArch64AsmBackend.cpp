@@ -93,9 +93,6 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   unsigned getFixupKindContainereSizeInBytes(unsigned Kind) const;
-
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override;
 };
 
 } // end anonymous namespace
@@ -412,10 +409,29 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
   }
 }
 
-void AArch64AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+static bool shouldForceRelocation(const MCFixup &Fixup) {
+  // The ADRP instruction adds some multiple of 0x1000 to the current PC &
+  // ~0xfff. This means that the required offset to reach a symbol can vary by
+  // up to one step depending on where the ADRP is in memory. For example:
+  //
+  //     ADRP x0, there
+  //  there:
+  //
+  // If the ADRP occurs at address 0xffc then "there" will be at 0x1000 and
+  // we'll need that as an offset. At any other address "there" will be in the
+  // same page as the ADRP and the instruction should encode 0x0. Assuming the
+  // section isn't 0x1000-aligned, we therefore need to delegate this decision
+  // to the linker -- a relocation!
+  return Fixup.getTargetKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21;
+}
+
+void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target,
                                    MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsResolved) {
+  if (shouldForceRelocation(Fixup))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -513,23 +529,6 @@ bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   for (uint64_t i = 0; i != Count; ++i)
     OS.write("\x1f\x20\x03\xd5", 4);
   return true;
-}
-
-bool AArch64AsmBackend::shouldForceRelocation(const MCFixup &Fixup,
-                                              const MCValue &Target) {
-  // The ADRP instruction adds some multiple of 0x1000 to the current PC &
-  // ~0xfff. This means that the required offset to reach a symbol can vary by
-  // up to one step depending on where the ADRP is in memory. For example:
-  //
-  //     ADRP x0, there
-  //  there:
-  //
-  // If the ADRP occurs at address 0xffc then "there" will be at 0x1000 and
-  // we'll need that as an offset. At any other address "there" will be in the
-  // same page as the ADRP and the instruction should encode 0x0. Assuming the
-  // section isn't 0x1000-aligned, we therefore need to delegate this decision
-  // to the linker -- a relocation!
-  return Fixup.getTargetKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21;
 }
 
 namespace {
