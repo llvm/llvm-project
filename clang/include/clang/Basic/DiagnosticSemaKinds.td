@@ -1062,6 +1062,9 @@ def err_constexpr_main : Error<
   "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
+def warn_main_in_named_module
+    : ExtWarn<"'main' never has module linkage">,
+      InGroup<DiagGroup<"main-attached-to-named-module">>;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
     InGroup<MainReturnType>;
@@ -13214,8 +13217,12 @@ def err_acc_not_a_var_ref_use_device_declare
     : Error<"OpenACC variable %select{in 'use_device' clause|on 'declare' "
             "construct}0 is not a valid variable name or array name">;
 def err_acc_not_a_var_ref_cache
-    : Error<"OpenACC variable in cache directive is not a valid sub-array or "
+    : Error<"OpenACC variable in 'cache' directive is not a valid sub-array or "
             "array element">;
+def warn_acc_cache_var_not_outside_loop
+    : Warning<"OpenACC variable in 'cache' directive was not declared outside "
+              "of the associated 'loop' directive; directive has no effect">,
+      InGroup<DiagGroup<"openacc-cache-var-inside-loop">>;
 def err_acc_typecheck_subarray_value
     : Error<"OpenACC sub-array subscripted value is not an array or pointer">;
 def err_acc_subarray_function_type

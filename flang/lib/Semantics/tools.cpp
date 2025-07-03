@@ -1081,34 +1081,10 @@ const Scope *FindCUDADeviceContext(const Scope *scope) {
   });
 }
 
-bool IsDeviceAllocatable(const Symbol &symbol) {
-  if (IsAllocatable(symbol)) {
-    if (const auto *details{
-            symbol.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
-      if (details->cudaDataAttr() &&
-          *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
-  const auto *details{
+  const auto *object{
       symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
-  if (details) {
-    const Fortran::semantics::DeclTypeSpec *type{details->type()};
-    const Fortran::semantics::DerivedTypeSpec *derived{
-        type ? type->AsDerived() : nullptr};
-    if (derived) {
-      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
-        return common::CUDADataAttr::Managed;
-      }
-    }
-    return details->cudaDataAttr();
-  }
-  return std::nullopt;
+  return object ? object->cudaDataAttr() : std::nullopt;
 }
 
 bool IsAccessible(const Symbol &original, const Scope &scope) {
@@ -1448,12 +1424,6 @@ FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &derived) {
   PotentialComponentIterator potentials{derived};
   return std::find_if(
       potentials.begin(), potentials.end(), IsPolymorphicAllocatable);
-}
-
-UltimateComponentIterator::const_iterator
-FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
-  UltimateComponentIterator ultimates{derived};
-  return std::find_if(ultimates.begin(), ultimates.end(), IsDeviceAllocatable);
 }
 
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &derived,
