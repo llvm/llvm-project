@@ -91,6 +91,20 @@ class TestCase(TestBase):
         self.expect_var_path("sp_user->id", type="int", value="30")
         self.expect_var_path("sp_user->name", type="std::string", summary='"steph"')
 
+        #valobj = self.expect_var_path(
+        #    "si",
+        #    type="std::shared_ptr<int> &",
+        #    children=[ValueCheck(name="__ptr_")],
+        #)
+        #self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
+
+        #valobj = self.expect_var_path(
+        #    "sie",
+        #    type="std::shared_ptr<int> &",
+        #    children=[ValueCheck(name="__ptr_")],
+        #)
+        #self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
+
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")
         self.expect_var_path("ptr_node->next->value", value="2")
