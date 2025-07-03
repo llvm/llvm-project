@@ -54822,9 +54822,8 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
   return DAG.getBitcast(VT, IntOp);
 }
 
-
 /// Fold a xor(setcc cond, val), 1 --> setcc (inverted(cond), val)
-static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
+static SDValue foldXor1SetCC(SDNode *N, const SDLoc &DL, SelectionDAG &DAG) {
   if (N->getOpcode() != ISD::XOR)
     return SDValue();
 
@@ -54834,7 +54833,6 @@ static SDValue foldXor1SetCC(SDNode *N, SelectionDAG &DAG) {
 
   X86::CondCode NewCC = X86::GetOppositeBranchCondition(
       X86::CondCode(LHS->getConstantOperandVal(0)));
-  SDLoc DL(N);
   return getSETCC(NewCC, LHS->getOperand(1), DL, DAG);
 }
 
@@ -54932,7 +54930,7 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (SDValue SetCC = foldXor1SetCC(N, DAG))
+  if (SDValue SetCC = foldXor1SetCC(N, DL, DAG))
     return SetCC;
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), DL, VT, N0, N1, DAG))
