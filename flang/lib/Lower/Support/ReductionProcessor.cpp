@@ -529,7 +529,9 @@ static void createReductionAllocAndInitRegions(
         converter, loc, type, initValue, initBlock,
         reductionDecl.getInitializerAllocArg(),
         reductionDecl.getInitializerMoldArg(), reductionDecl.getCleanupRegion(),
-        DeclOperationKind::Reduction);
+        DeclOperationKind::Reduction, /*sym=*/nullptr,
+        /*cannotHaveLowerBounds=*/false,
+        /*isDoConcurrent*/ std::is_same_v<OpType, fir::DeclareReductionOp>);
   }
 
   if (fir::isa_trivial(ty)) {
