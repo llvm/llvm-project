@@ -1062,6 +1062,9 @@ def err_constexpr_main : Error<
   "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
+def warn_main_in_named_module
+    : ExtWarn<"'main' never has module linkage">,
+      InGroup<DiagGroup<"main-attached-to-named-module">>;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
     InGroup<MainReturnType>;
@@ -1084,9 +1087,9 @@ def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
     "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
-def ext_main_invalid_linkage_specification : ExtWarn<
-  "'main' should not be "
-  "'extern \"%select{C|C++}0\"'">, InGroup<Main>;
+def ext_main_invalid_linkage_specification : ExtWarn<"'main' should not be "
+                                                     "'extern \"C\"'">,
+                                             InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,

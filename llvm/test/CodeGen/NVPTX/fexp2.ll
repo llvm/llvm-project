@@ -252,8 +252,7 @@ define bfloat @exp2_bf16_test(bfloat %in) {
 ; CHECK-LABEL: exp2_bf16_test(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b16 %rs<2>;
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    ld.param.b16 %r1, [exp2_bf16_test_param_0];
@@ -265,15 +264,14 @@ define bfloat @exp2_bf16_test(bfloat %in) {
 ; CHECK-NEXT:    setp.nan.f32 %p1, %r3, %r3;
 ; CHECK-NEXT:    or.b32 %r7, %r3, 4194304;
 ; CHECK-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r8; }
-; CHECK-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-NEXT:    shr.u32 %r9, %r8, 16;
+; CHECK-NEXT:    st.param.b16 [func_retval0], %r9;
 ; CHECK-NEXT:    ret;
 ;
 ; CHECK-FP16-LABEL: exp2_bf16_test(
 ; CHECK-FP16:       {
 ; CHECK-FP16-NEXT:    .reg .pred %p<2>;
-; CHECK-FP16-NEXT:    .reg .b16 %rs<2>;
-; CHECK-FP16-NEXT:    .reg .b32 %r<9>;
+; CHECK-FP16-NEXT:    .reg .b32 %r<10>;
 ; CHECK-FP16-EMPTY:
 ; CHECK-FP16-NEXT:  // %bb.0: // %entry
 ; CHECK-FP16-NEXT:    ld.param.b16 %r1, [exp2_bf16_test_param_0];
@@ -285,8 +283,8 @@ define bfloat @exp2_bf16_test(bfloat %in) {
 ; CHECK-FP16-NEXT:    setp.nan.f32 %p1, %r3, %r3;
 ; CHECK-FP16-NEXT:    or.b32 %r7, %r3, 4194304;
 ; CHECK-FP16-NEXT:    selp.b32 %r8, %r7, %r6, %p1;
-; CHECK-FP16-NEXT:    { .reg .b16 tmp; mov.b32 {tmp, %rs1}, %r8; }
-; CHECK-FP16-NEXT:    st.param.b16 [func_retval0], %rs1;
+; CHECK-FP16-NEXT:    shr.u32 %r9, %r8, 16;
+; CHECK-FP16-NEXT:    st.param.b16 [func_retval0], %r9;
 ; CHECK-FP16-NEXT:    ret;
 ;
 ; CHECK-BF16-LABEL: exp2_bf16_test(

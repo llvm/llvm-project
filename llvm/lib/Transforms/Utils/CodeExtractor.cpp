@@ -1020,6 +1020,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::EndAttrKinds:
       case Attribute::EmptyKey:
       case Attribute::TombstoneKey:
+      case Attribute::DeadOnReturn:
         llvm_unreachable("Not a function attribute");
       }
 

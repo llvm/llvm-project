@@ -74,7 +74,7 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
 static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
-                             const std::vector<unsigned int> &cutoffs) {
+                             const LowerAllowCheckPass::Options &Opts) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -89,8 +89,10 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       return HotPercentileCutoff;
     else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
-      if (Kind->getZExtValue() < cutoffs.size())
-        return cutoffs[Kind->getZExtValue()];
+      if (Kind->getZExtValue() < Opts.cutoffs.size())
+        return Opts.cutoffs[Kind->getZExtValue()];
+    } else if (II->getIntrinsicID() == Intrinsic::allow_runtime_check) {
+      return Opts.runtime_check;
     }
 
     return 0;
@@ -157,7 +159,7 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
+  return removeUbsanTraps(F, BFI, PSI, ORE, Opts)
              // We do not change the CFG, we only replace the intrinsics with
              // true or false.
              ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
@@ -193,5 +195,11 @@ void LowerAllowCheckPass::printPipeline(
 
     i++;
   }
+  if (Opts.runtime_check) {
+    if (printed)
+      OS << ";";
+    OS << "runtime_check=" << Opts.runtime_check;
+  }
+
   OS << '>';
 }

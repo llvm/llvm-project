@@ -399,6 +399,8 @@ public:
   /// with extra debug info.
   SanitizerSet SanitizeAnnotateDebugInfo;
 
+  std::optional<double> AllowRuntimeCheckSkipHotCutoff;
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
