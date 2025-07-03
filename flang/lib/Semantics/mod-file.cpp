@@ -15,6 +15,7 @@
 #include "flang/Parser/unparse.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Semantics/symbol-dependence.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/FileSystem.h"
@@ -223,72 +224,13 @@ std::string ModFileWriter::GetAsString(const Symbol &symbol) {
 // Collect symbols from constant and specification expressions that are being
 // referenced directly from other modules; they may require new USE
 // associations.
-static void HarvestSymbolsNeededFromOtherModules(
-    SourceOrderedSymbolSet &, const Scope &);
-static void HarvestSymbolsNeededFromOtherModules(
-    SourceOrderedSymbolSet &set, const Symbol &symbol, const Scope &scope) {
-  auto HarvestBound{[&](const Bound &bound) {
-    if (const auto &expr{bound.GetExplicit()}) {
-      for (SymbolRef ref : evaluate::CollectSymbols(*expr)) {
-        set.emplace(*ref);
-      }
-    }
-  }};
-  auto HarvestShapeSpec{[&](const ShapeSpec &shapeSpec) {
-    HarvestBound(shapeSpec.lbound());
-    HarvestBound(shapeSpec.ubound());
-  }};
-  auto HarvestArraySpec{[&](const ArraySpec &arraySpec) {
-    for (const auto &shapeSpec : arraySpec) {
-      HarvestShapeSpec(shapeSpec);
-    }
-  }};
-
-  if (symbol.has<DerivedTypeDetails>()) {
-    if (symbol.scope()) {
-      HarvestSymbolsNeededFromOtherModules(set, *symbol.scope());
-    }
-  } else if (const auto &generic{symbol.detailsIf<GenericDetails>()};
-             generic && generic->derivedType()) {
-    const Symbol &dtSym{*generic->derivedType()};
-    if (dtSym.has<DerivedTypeDetails>()) {
-      if (dtSym.scope()) {
-        HarvestSymbolsNeededFromOtherModules(set, *dtSym.scope());
-      }
-    } else {
-      CHECK(dtSym.has<UseDetails>() || dtSym.has<UseErrorDetails>());
-    }
-  } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-    HarvestArraySpec(object->shape());
-    HarvestArraySpec(object->coshape());
-    if (IsNamedConstant(symbol) || scope.IsDerivedType()) {
-      if (object->init()) {
-        for (SymbolRef ref : evaluate::CollectSymbols(*object->init())) {
-          set.emplace(*ref);
-        }
-      }
-    }
-  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (proc->init() && *proc->init() && scope.IsDerivedType()) {
-      set.emplace(**proc->init());
-    }
-  } else if (const auto *subp{symbol.detailsIf<SubprogramDetails>()}) {
-    for (const Symbol *dummy : subp->dummyArgs()) {
-      if (dummy) {
-        HarvestSymbolsNeededFromOtherModules(set, *dummy, scope);
-      }
-    }
-    if (subp->isFunction()) {
-      HarvestSymbolsNeededFromOtherModules(set, subp->result(), scope);
-    }
+static SourceOrderedSymbolSet HarvestSymbolsNeededFromOtherModules(
+    const Scope &scope) {
+  SourceOrderedSymbolSet set;
+  for (const Symbol &symbol : CollectAllDependences(scope)) {
+    set.insert(symbol);
   }
-}
-
-static void HarvestSymbolsNeededFromOtherModules(
-    SourceOrderedSymbolSet &set, const Scope &scope) {
-  for (const auto &[_, symbol] : scope) {
-    HarvestSymbolsNeededFromOtherModules(set, *symbol, scope);
-  }
+  return set;
 }
 
 void ModFileWriter::PrepareRenamings(const Scope &scope) {
@@ -304,8 +246,8 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
     }
   }
   // Collect symbols needed from other modules
-  SourceOrderedSymbolSet symbolsNeeded;
-  HarvestSymbolsNeededFromOtherModules(symbolsNeeded, scope);
+  SourceOrderedSymbolSet symbolsNeeded{
+      HarvestSymbolsNeededFromOtherModules(scope)};
   // Establish any necessary renamings of symbols in other modules
   // to their names in this scope, creating those new names when needed.
   auto &renamings{context_.moduleFileOutputRenamings()};
