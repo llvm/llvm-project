@@ -123,6 +123,17 @@ class MY_CLASS {
       let dont_find_me = "hello"
     }
   }
+
+  public var class_computed_property_didset: Int = 0 {
+    didSet {
+      let find_me = "hello"
+      let _ = {
+        print("break_class_computed_property_didset")
+        return 10
+      }()
+      let dont_find_me = "hello"
+    }
+  }
 }
 
 struct MY_STRUCT {
@@ -163,6 +174,17 @@ struct MY_STRUCT {
       let dont_find_me = "hello"
     }
   }
+
+  public var struct_computed_property_didset: Int = 0 {
+    didSet {
+      let find_me = "hello"
+      let _ = {
+        print("break_struct_computed_property_didset")
+        return 10
+      }()
+      let dont_find_me = "hello"
+    }
+  }
 }
 
 enum MY_ENUM {
@@ -197,9 +219,11 @@ var my_class = MY_CLASS(input: [1, 2])
 MY_CLASS.static_func(input_static: [42])
 print(my_class.class_computed_property)
 my_class.class_computed_property = 10
+my_class.class_computed_property_didset = 10;
 var my_struct = MY_STRUCT(input: [1, 2])
 MY_STRUCT.static_func(input_static: [42])
 print(my_struct.struct_computed_property)
 my_struct.struct_computed_property = 10
+my_struct.struct_computed_property_didset = 10
 let _ = MY_ENUM(input: [1,2])
 MY_ENUM.static_func(input_static: [42])
