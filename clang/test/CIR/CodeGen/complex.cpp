@@ -626,3 +626,31 @@ void foo25() {
 // OGCG: %[[INIT_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[INIT]], i32 0, i32 1
 // OGCG: store double 1.000000e+00, ptr %[[INIT_REAL_PTR]], align 8
 // OGCG: store double 2.000000e+00, ptr %[[INIT_IMAG_PTR]], align 8
+
+void foo26(int _Complex* a) {
+  int _Complex b = *a;
+}
+
+// CIR: %[[COMPLEX_A_PTR:.*]] = cir.alloca !cir.ptr<!cir.complex<!s32i>>, !cir.ptr<!cir.ptr<!cir.complex<!s32i>>>, ["a", init]
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[COMPLEX_A:.*]] = cir.load deref {{.*}} %[[COMPLEX_A_PTR]] : !cir.ptr<!cir.ptr<!cir.complex<!s32i>>>, !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CIR: cir.store{{.*}} %[[TMP]], %[[COMPLEX_B]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: %[[COMPLEX_A_PTR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, i64 1, align 4
+// LLVM: %[[COMPLEX_A:.*]] = load ptr, ptr %[[COMPLEX_A_PTR]], align 8
+// LLVM: %[[TMP:.*]] = load { i32, i32 }, ptr %[[COMPLEX_A]], align 4
+// LLVM: store { i32, i32 } %[[TMP]], ptr %[[COMPLEX_B]], align 4
+
+// OGCG: %[[COMPLEX_A_PTR:.*]] = alloca ptr, align 8
+// OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
+// OGCG: %[[COMPLEX_A:.*]] = load ptr, ptr %[[COMPLEX_A_PTR]], align 8
+// OGCG: %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 0
+// OGCG: %[[A_REAL:.*]] = load i32, ptr %[[A_REAL_PTR]], align 4
+// OGCG: %[[A_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 1
+// OGCG: %[[A_IMAG:.*]] = load i32, ptr %[[A_IMAG_PTR]], align 4
+// OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 0
+// OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_B]], i32 0, i32 1
+// OGCG: store i32 %[[A_REAL]], ptr %[[B_REAL_PTR]], align 4
+// OGCG: store i32 %[[A_IMAG]], ptr %[[B_IMAG_PTR]], align 4
