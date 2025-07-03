@@ -202,7 +202,6 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, const MCFixup &Fixup,
 
   if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
     IsResolved = false;
-  IsResolved = getBackend().addReloc(F, Fixup, Target, Value, IsResolved);
   getBackend().applyFixup(F, Fixup, Target, Contents, Value, IsResolved);
   return true;
 }
