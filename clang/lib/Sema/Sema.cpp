@@ -2269,7 +2269,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         (LangOpts.VScaleMin != LangOpts.VScaleStreamingMin ||
          LangOpts.VScaleMax != LangOpts.VScaleStreamingMax)) {
       if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true)) {
-        Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function) << Ty << /*Streaming*/ 0;
+        Diag(Loc, diag::err_sve_fixed_vector_in_streaming_function)
+            << Ty << /*Streaming*/ 0;
       } else if (const auto *FTy = FD->getType()->getAs<FunctionProtoType>()) {
         if (FTy->getAArch64SMEAttributes() &
             FunctionType::SME_PStateSMCompatibleMask) {
