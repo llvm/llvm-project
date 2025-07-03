@@ -33,8 +33,7 @@ class CFIFunctionFrameStreamer : public MCStreamer {
 public:
   CFIFunctionFrameStreamer(MCContext &Context,
                            std::unique_ptr<CFIFunctionFrameReceiver> Receiver)
-      : MCStreamer(Context), LastInstruction(std::nullopt),
-        Receiver(std::move(Receiver)), LastDirectiveIndex(0) {
+      : MCStreamer(Context), Receiver(std::move(Receiver)) {
     assert(this->Receiver && "Receiver should not be null");
   }
 
@@ -61,14 +60,13 @@ public:
   void emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) override;
 
 private:
-  std::pair<unsigned, unsigned> updateDirectivesRange();
-  void updateReceiver();
+  void updateReceiver(const std::optional<MCInst> &NewInst);
 
 private:
+  std::vector<std::optional<MCInst>> FrameLastInstructions; //! FIXME
+  std::vector<unsigned> FrameLastDirectiveIndices;          //! FIXME
   std::vector<unsigned> FrameIndices;
-  std::optional<MCInst> LastInstruction;
   std::unique_ptr<CFIFunctionFrameReceiver> Receiver;
-  unsigned LastDirectiveIndex;
 };
 
 } // namespace llvm

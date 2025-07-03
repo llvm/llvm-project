@@ -10,88 +10,73 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include <optional>
 
 using namespace llvm;
 
-std::pair<unsigned, unsigned>
-CFIFunctionFrameStreamer::updateDirectivesRange() {
+void CFIFunctionFrameStreamer::updateReceiver(
+    const std::optional<MCInst> &NewInst) {
+  assert(!FrameIndices.empty() && hasUnfinishedDwarfFrameInfo() &&
+         "FunctionUnitStreamer frame indices should be synced with "
+         "MCStreamer's"); //! FIXME split this assertions and also check another
+                          //! vectors
+                          //! Add tests for nested frames
+
   auto Frames = getDwarfFrameInfos();
-  unsigned CurrentCFIDirectiveIndex = 0;
-  if (hasUnfinishedDwarfFrameInfo()) {
-    assert(!FrameIndices.empty() && "FunctionUnitStreamer frame indices should "
-                                    "be synced with MCStreamer's");
-    assert(FrameIndices.back() < Frames.size());
-    CurrentCFIDirectiveIndex = Frames[FrameIndices.back()].Instructions.size();
-  }
+  assert(FrameIndices.back() < Frames.size());
+  unsigned LastDirectiveIndex = FrameLastDirectiveIndices.back();
+  unsigned CurrentDirectiveIndex =
+      Frames[FrameIndices.back()].Instructions.size();
+  assert(CurrentDirectiveIndex >= LastDirectiveIndex);
 
-  assert(CurrentCFIDirectiveIndex >= LastDirectiveIndex);
-  std::pair<unsigned, unsigned> CFIDirectivesRange(LastDirectiveIndex,
-                                                   CurrentCFIDirectiveIndex);
-  LastDirectiveIndex = CurrentCFIDirectiveIndex;
-  return CFIDirectivesRange;
-}
-
-void CFIFunctionFrameStreamer::updateReceiver() {
-  if (FrameIndices.empty()) {
-    auto CFIDirectivesRange = updateDirectivesRange();
-    assert(CFIDirectivesRange.first == CFIDirectivesRange.second &&
-           "CFI directives should be in some frame");
-    return;
-  }
-
-  const MCDwarfFrameInfo *LastFrame =
-      &getDwarfFrameInfos()[FrameIndices.back()];
-
-  auto DirectivesRange = updateDirectivesRange();
+  const MCDwarfFrameInfo *LastFrame = &Frames[FrameIndices.back()];
   ArrayRef<MCCFIInstruction> Directives;
-  if (DirectivesRange.first < DirectivesRange.second) {
+  if (LastDirectiveIndex < CurrentDirectiveIndex) {
     Directives = ArrayRef<MCCFIInstruction>(LastFrame->Instructions);
     Directives =
-        Directives.drop_front(DirectivesRange.first)
-            .drop_back(LastFrame->Instructions.size() - DirectivesRange.second);
+        Directives.drop_front(LastDirectiveIndex)
+            .drop_back(LastFrame->Instructions.size() - CurrentDirectiveIndex);
   }
 
-  if (LastInstruction) {
-    Receiver->emitInstructionAndDirectives(LastInstruction.value(), Directives);
-  } else {
+  auto MaybeLastInstruction = FrameLastInstructions.back();
+  if (MaybeLastInstruction)
+    Receiver->emitInstructionAndDirectives(*MaybeLastInstruction, Directives);
+  else
     Receiver->startFunctionFrame(false /* TODO: should put isEH here */,
                                  Directives);
-  }
+
+  FrameLastInstructions.back() = NewInst;
+  FrameLastDirectiveIndices.back() = CurrentDirectiveIndex;
 }
 
 void CFIFunctionFrameStreamer::emitInstruction(const MCInst &Inst,
                                                const MCSubtargetInfo &STI) {
-  updateReceiver();
-  LastInstruction = Inst;
+  if (hasUnfinishedDwarfFrameInfo()) {
+    updateReceiver(Inst);
+  }
 }
 
 void CFIFunctionFrameStreamer::emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) {
-  updateReceiver();
+  FrameLastInstructions.push_back(std::nullopt);
+  FrameLastDirectiveIndices.push_back(0);
   FrameIndices.push_back(getNumFrameInfos());
-  LastInstruction = std::nullopt;
-  LastDirectiveIndex = 0;
+
   MCStreamer::emitCFIStartProcImpl(Frame);
 }
 
 void CFIFunctionFrameStreamer::emitCFIEndProcImpl(MCDwarfFrameInfo &CurFrame) {
-  updateReceiver();
+  updateReceiver(std::nullopt);
 
   assert(!FrameIndices.empty() && "There should be at least one frame to pop");
+  FrameLastDirectiveIndices.pop_back();
+  FrameLastInstructions.pop_back();
   FrameIndices.pop_back();
 
+  dbgs() << "finishing frame\n";
   Receiver->finishFunctionFrame();
 
-  LastInstruction = std::nullopt;
-  LastDirectiveIndex = 0;
-  if (!FrameIndices.empty()) {
-    auto DwarfFrameInfos = getDwarfFrameInfos();
-    assert(FrameIndices.back() < DwarfFrameInfos.size());
-
-    LastDirectiveIndex =
-        DwarfFrameInfos[FrameIndices.back()].Instructions.size();
-  }
   MCStreamer::emitCFIEndProcImpl(CurFrame);
 }
