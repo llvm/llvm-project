@@ -5218,6 +5218,14 @@ def msve_vector_bits_EQ : Joined<["-"], "msve-vector-bits=">, Group<m_aarch64_Fe
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify the size in bits of an SVE vector register. Defaults to the"
            " vector length agnostic value of \"scalable\". (AArch64 only)">;
+def msve_streaming_vector_bits_EQ
+    : Joined<["-"], "msve-streaming-vector-bits=">,
+      Group<m_aarch64_Features_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<
+          "Specify the size in bits of an SVE vector register in streaming "
+          "mode. Defaults to the vector length agnostic value of "
+          "\"scalable\". (AArch64 only)">;
 } // let Flags = [TargetSpecific]
 
 def mvscale_min_EQ : Joined<["-"], "mvscale-min=">,
@@ -5229,6 +5237,17 @@ def mvscale_max_EQ : Joined<["-"], "mvscale-max=">,
   HelpText<"Specify the vscale maximum. Defaults to the"
            " vector length agnostic value of \"0\". (AArch64/RISC-V only)">,
   MarshallingInfoInt<LangOpts<"VScaleMax">>;
+def mvscale_streaming_min_EQ
+    : Joined<["-"], "mvscale-streaming-min=">,
+      Visibility<[CC1Option, FC1Option]>,
+      HelpText<"Specify the vscale minimum. Defaults to \"1\". (AArch64 only)">,
+      MarshallingInfoInt<LangOpts<"VScaleStreamingMin">>;
+def mvscale_streaming_max_EQ
+    : Joined<["-"], "mvscale-streaming-max=">,
+      Visibility<[CC1Option, FC1Option]>,
+      HelpText<"Specify the vscale maximum. Defaults to the"
+               " vector length agnostic value of \"0\". (AArch64 only)">,
+      MarshallingInfoInt<LangOpts<"VScaleStreamingMax">>;
 
 def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Visibility<[ClangOption, CC1Option]>,
