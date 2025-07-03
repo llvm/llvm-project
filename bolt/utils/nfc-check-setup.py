@@ -147,7 +147,8 @@ def main():
         try:
             # set up llvm-bolt-wrapper.ini
             ini = subprocess.check_output(
-                shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new") + wrapper_args,
+                shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new")
+                + wrapper_args,
                 text=True,
             )
             with open(f"{args.build_dir}/bin/llvm-bolt-wrapper.ini", "w") as f:
