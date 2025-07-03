@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -verify=expected,until26 -std=c++11 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -verify=expected -std=c++11 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -verify=expected -std=c++26 %s -Wno-defaulted-function-deleted -triple x86_64-linux-gnu
 
 struct NonTrivDtor {
   ~NonTrivDtor();
 };
 struct DeletedDtor {
-  ~DeletedDtor() = delete; // expected-note 4+ {{deleted here}}
+  ~DeletedDtor() = delete; // expected-note 5 {{deleted here}}
 };
 class InaccessibleDtor {
   ~InaccessibleDtor() = default;
