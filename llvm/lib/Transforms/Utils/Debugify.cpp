@@ -19,6 +19,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -66,8 +67,8 @@ cl::opt<Level> DebugifyLevel(
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-// These maps refer to addresses in this instance of LLVM, so we can reuse them
-// everywhere - therefore, we store them at file scope.
+// These maps refer to addresses in the current LLVM process, so we can reuse
+// them everywhere - therefore, we store them at file scope.
 static SymbolizedAddressMap SymbolizedAddrs;
 static AddressSet UnsymbolizedAddrs;
 
@@ -78,7 +79,8 @@ std::string symbolizeStackTrace(const Instruction *I) {
     sys::symbolizeAddresses(UnsymbolizedAddrs, SymbolizedAddrs);
     UnsymbolizedAddrs.clear();
   }
-  auto OriginStackTraces = I->getDebugLoc().getOriginStackTraces();
+  const DbgLocOrigin::StackTracesTy &OriginStackTraces =
+      I->getDebugLoc().getOriginStackTraces();
   std::string Result;
   raw_string_ostream OS(Result);
   for (size_t TraceIdx = 0; TraceIdx < OriginStackTraces.size(); ++TraceIdx) {
