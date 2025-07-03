@@ -1183,10 +1183,6 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   auto srcRank = extractOp.getTensor().getType().getRank();
   SmallVector<bool> inBounds(dstRank, true);
 
-  // Get the value to pad transfer reads with 0.
-  Value padding =
-      arith::getZeroConstant(rewriter, loc, resultType.getElementType());
-
   // 2a. Handle scalar broadcast access.
   if (memAccessKind == VectorMemoryAccessKind::ScalarBroadcast) {
     MLIRContext *ctx = rewriter.getContext();
@@ -1194,8 +1190,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
     auto permutationMap = AffineMap::get(srcRank, 0, exprs, ctx);
 
     auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-        loc, resultType, extractOp.getTensor(), transferReadIdxs, padding,
-        permutationMap, inBounds);
+        loc, resultType, extractOp.getTensor(), transferReadIdxs,
+        /*padding=*/std::nullopt, permutationMap, inBounds);
 
     // Mask this broadcasting xfer_read here rather than relying on the generic
     // path (the generic path assumes identity masking map, which wouldn't be
@@ -1231,8 +1227,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   }
 
   auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc, resultType, extractOp.getTensor(), transferReadIdxs, padding,
-      permutationMap, inBounds);
+      loc, resultType, extractOp.getTensor(), transferReadIdxs,
+      /*padding=*/std::nullopt, permutationMap, inBounds);
 
   LDBG("Vectorised as contiguous load: " << extractOp);
   return VectorizationHookResult{VectorizationHookStatus::NewOp,
@@ -1444,7 +1440,7 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
     Operation *read = rewriter.create<vector::TransferReadOp>(
         loc, readType, opOperand->get(), indices,
-        /*padding=*/arith::getZeroConstant(rewriter, loc, elemType), readMap);
+        /*padding=*/std::nullopt, readMap);
     read = state.maskOperation(rewriter, read, linalgOp, indexingMap);
     Value readValue = read->getResult(0);
 
@@ -2646,7 +2642,7 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
 
   Value readValue = rewriter.create<vector::TransferReadOp>(
       loc, readType, copyOp.getSource(), indices,
-      /*padding=*/arith::getZeroConstant(rewriter, loc, srcElementType),
+      /*padding=*/std::nullopt,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
   if (cast<VectorType>(readValue.getType()).getRank() == 0) {
     readValue =

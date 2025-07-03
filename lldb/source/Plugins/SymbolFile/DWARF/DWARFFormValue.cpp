@@ -77,6 +77,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
     case DW_FORM_strp:
     case DW_FORM_line_strp:
     case DW_FORM_sec_offset:
+      //FIXME: For AIX
       m_value.uval = data.GetMaxU64(offset_ptr, 4);
       break;
     case DW_FORM_addrx1:
@@ -123,6 +124,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
         ref_addr_size = m_unit->GetAddressByteSize();
       else
         ref_addr_size = 4;
+      //FIXME: For AIX
       m_value.uval = data.GetMaxU64(offset_ptr, ref_addr_size);
       break;
     case DW_FORM_indirect:

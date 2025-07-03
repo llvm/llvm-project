@@ -6,8 +6,7 @@
 define void @multiple_extract(ptr %p) {
 ; CHECK-LABEL: @multiple_extract(
 ; CHECK-NEXT:    [[VP:%.*]] = load ptr, ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 0
-; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[E0:%.*]] = load i32, ptr [[VP]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <2 x i32>, ptr [[VP]], i32 0, i64 1
 ; CHECK-NEXT:    [[E1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i32 [[E0]], ptr [[P]], align 4

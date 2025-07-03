@@ -3260,6 +3260,13 @@ static void AddFunctionParameterChunks(Preprocessor &PP,
       break;
     }
 
+    // C++23 introduces an explicit object parameter, a.k.a. "deducing this"
+    // Skip it for autocomplete and treat the next parameter as the first
+    // parameter
+    if (FirstParameter && Param->isExplicitObjectParameter()) {
+      continue;
+    }
+
     if (FirstParameter)
       FirstParameter = false;
     else
@@ -8492,12 +8499,10 @@ void SemaCodeCompletion::CodeCompleteObjCClassMessage(
 }
 
 void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
-    Scope *S, Expr *Receiver, ArrayRef<const IdentifierInfo *> SelIdents,
+    Scope *S, Expr *RecExpr, ArrayRef<const IdentifierInfo *> SelIdents,
     bool AtArgumentExpression, ObjCInterfaceDecl *Super) {
   typedef CodeCompletionResult Result;
   ASTContext &Context = getASTContext();
-
-  Expr *RecExpr = static_cast<Expr *>(Receiver);
 
   // If necessary, apply function/array conversion to the receiver.
   // C99 6.7.5.3p[7,8].
