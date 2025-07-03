@@ -1,13 +1,15 @@
 struct A {
-  void foo(this A self, int arg);
+  void foo(this auto&& self, int arg);
+  void bar(this A self, int arg);
 };
 
-int main() {
+int func1() {
   A a {};
   a.
 }
-// RUN: %clang_cc1 -cc1 -fsyntax-only -code-completion-at=%s:%(line-2):5 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):5 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: COMPLETION: A : A::
+// CHECK-NEXT-CC1: COMPLETION: bar : [#void#]bar(<#int arg#>)
 // CHECK-NEXT-CC1: COMPLETION: foo : [#void#]foo(<#int arg#>)
 // CHECK-NEXT-CC1: COMPLETION: operator= : [#A &#]operator=(<#const A &#>)
 // CHECK-NEXT-CC1: COMPLETION: operator= : [#A &#]operator=(<#A &&#>)
@@ -18,9 +20,23 @@ struct B {
   void foo(this T&& self, int arg);
 };
 
-int main2() {
+int func2() {
   B b {};
   b.foo();
 }
-// RUN: %clang_cc1 -cc1 -fsyntax-only -code-completion-at=%s:%(line-2):9 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC2 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):9 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC2 %s
 // CHECK-CC2: OVERLOAD: [#void#]foo(int arg)
+
+int func3() {
+  // TODO: (&A::foo)
+  (&A::bar)
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC3 %s
+// CHECK-CC3: COMPLETION: bar : [#void#]bar(<#int arg#>)
+
+int func4() {
+  // TODO: (&A::foo)(
+  (&A::bar)(
+}
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):13 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC4 %s
+// CHECK-CC4: OVERLOAD: [#void#](<#A#>, int)
