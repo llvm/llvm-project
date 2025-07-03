@@ -815,6 +815,7 @@ public:
         ValueRange{paddedInput, fakeWindowDims}, filledEmptyTensor, strideAttr,
         dilationAttr);
 
+    rewriter.setInsertionPointAfter(op);
     rewriter.replaceOp(op, resultOp);
 
     // NaN propagation has no meaning for non floating point types.
