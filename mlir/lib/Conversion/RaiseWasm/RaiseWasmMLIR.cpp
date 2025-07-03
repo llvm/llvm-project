@@ -124,6 +124,72 @@ using WasmTruncOpConversion = OpMappingConversion<TruncOp, math::TruncOp>;
 using WasmSqrtOpConversion = OpMappingConversion<SqrtOp, math::SqrtOp>;
 using WasmWrapOpConversion = OpMappingConversion<WrapOp, arith::TruncIOp>;
 
+/// Lower a rotate to a series of bitwise operations. Intended for us
+/// in dialects that do not natively support rotate operations.
+///
+/// Result stays in the wasm dialect. It will then subsequently be lowered to
+/// the target dialect.
+///
+/// The rotate will be lowered to a pattern like so:
+///
+/// (val LHSShiftOp (bits & (width-1))) | (val RHSShiftOp (-bits & (width-1)))
+///
+/// Where LHSShiftOp and RHSShiftOp are shift operations. Concretely,
+///
+/// rotr = (val >> (bits & (width - 1))) | (val << (-bits & (width - 1)))
+/// rotl = (val << (bits & (width - 1))) | (val >> (-bits & (width - 1)))
+///
+/// Using this variant ensures that our rotate is defined in the target dialect.
+///
+/// \p SourceOp - Rotate operation to replace.
+/// \p LHSShiftOp - Shift operation to use on the left-hand side of the OR.
+/// \p RHSShiftOp - Shift operation to use on the right-hand side of the OR.
+template <typename SourceOp, typename LHSShiftOp, typename RHSShiftOp>
+struct RotateOpConversion : OpConversionPattern<SourceOp> {
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const Type ty = srcOp->getResultTypes()[0];
+    const Location loc = srcOp->getLoc();
+    const Value val = adaptor.getVal();
+    const Value bits = adaptor.getBits();
+    const unsigned width = ty.getIntOrFloatBitWidth();
+
+    // Materialize (width - 1) for use in both sides of the expression.
+    auto cstWidthMinusOne =
+        rewriter.create<ConstOp>(loc, IntegerAttr::get(ty, width - 1));
+
+    // Form the left-hand side of the OR:
+    // (val (lhs shift op) (bits & (width - 1)))
+    auto orLHS = rewriter.create<LHSShiftOp>(
+        loc, val, rewriter.create<AndOp>(loc, bits, cstWidthMinusOne));
+
+    // Form the right-hand side of the OR:
+    // (val (rhs shift op) (-bits & (width - 1)))
+    auto orRHS = rewriter.create<RHSShiftOp>(
+        loc, val,
+        // (-bits & (width - 1))
+        rewriter.create<AndOp>(
+            loc,
+            // 0 - bits == -bits
+            rewriter.create<SubOp>(
+                loc,
+                rewriter.create<ConstOp>(loc, IntegerAttr::get(ty, 0)),
+                bits),
+            cstWidthMinusOne));
+
+    // OR together the two shifts and replace the rotate with the new
+    // expression.
+    rewriter.replaceOpWithNewOp<OrOp>(srcOp, orLHS, orRHS);
+    return success();
+  }
+};
+
+using WasmRotrOpConversion = RotateOpConversion<RotrOp, ShRUOp, ShLOp>;
+using WasmRotlOpConversion = RotateOpConversion<RotlOp, ShLOp, ShRUOp>;
+
 template <typename SourceOp, typename TargetOp, typename AttrType,
           typename ValType, ValType flag>
 struct ComparisonOpConversion : OpConversionPattern<SourceOp> {
@@ -268,6 +334,24 @@ struct WasmEqzOpConversion : OpConversionPattern<EqzOp> {
     rewriter.replaceOpWithNewOp<arith::ExtUIOp>(eqzOp, rewriter.getI32Type(),
                                                 cmpRes);
 
+    return success();
+  }
+};
+
+struct WasmExtendLowBitsOpConversion : OpConversionPattern<ExtendLowBitsSOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(ExtendLowBitsSOp extendLowBytesSOp,
+                  ExtendLowBitsSOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto truncWidth = extendLowBytesSOp.getBitsToTake().getInt();
+    auto truncation = rewriter.create<arith::TruncIOp>(
+        extendLowBytesSOp->getLoc(), rewriter.getIntegerType(truncWidth),
+        adaptor.getInput());
+    rewriter.replaceOpWithNewOp<arith::ExtSIOp>(
+        extendLowBytesSOp, extendLowBytesSOp.getResult().getType(),
+        truncation.getResult());
     return success();
   }
 };
@@ -555,6 +639,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmDivUIOpConversion,
            WasmEqOpConversion,
            WasmEqzOpConversion,
+           WasmExtendLowBitsOpConversion,
            WasmExtendSOpConversion,
            WasmExtendUOpConversion,
            WasmFloorOpConversion,
@@ -591,6 +676,8 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmRemSIOpConversion,
            WasmRemUIOpConversion,
            WasmReturnOpConversion,
+           WasmRotlOpConversion,
+           WasmRotrOpConversion,
            WasmShLOpConversion,
            WasmShRSOpConversion,
            WasmShRUOpConversion,
