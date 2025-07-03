@@ -1911,96 +1911,83 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
   return mangled_name;
 }
 
-static std::optional<llvm::StringRef>
+static llvm::Expected<std::pair<llvm::StringRef, DemangledNameInfo>>
+GetAndValidateInfo(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return llvm::createStringError("Function does not have a mangled name.");
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return llvm::createStringError(
+        "Function '%s' does not have a demangled name.",
+        mangled.GetMangledName().AsCString(""));
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return llvm::createStringError(
+        "Function '%s' does not have demangled info.", demangled_name.data());
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return llvm::createStringError(
+        "DemangledInfo for '%s does not have basename range.",
+        demangled_name.data());
+
+  return std::make_pair(demangled_name, *info);
+}
+
+static llvm::Expected<llvm::StringRef>
 GetDemangledBasename(const SymbolContext &sc) {
-  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
-  if (!mangled)
-    return std::nullopt;
+  auto info_or_err = GetAndValidateInfo(sc);
+  if (!info_or_err)
+    return info_or_err.takeError();
 
-  auto demangled_name = mangled.GetDemangledName().GetStringRef();
-  if (demangled_name.empty())
-    return std::nullopt;
+  auto [demangled_name, info] = *info_or_err;
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
-  if (!info)
-    return std::nullopt;
-
-  // Function without a basename is nonsense.
-  if (!info->hasBasename())
-    return std::nullopt;
-
-  return demangled_name.slice(info->BasenameRange.first,
-                              info->BasenameRange.second);
+  return demangled_name.slice(info.BasenameRange.first,
+                              info.BasenameRange.second);
 }
 
-static std::optional<llvm::StringRef>
+static llvm::Expected<llvm::StringRef>
 GetDemangledFunctionPrefix(const SymbolContext &sc) {
-  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
-  if (!mangled)
-    return std::nullopt;
+  auto info_or_err = GetAndValidateInfo(sc);
+  if (!info_or_err)
+    return info_or_err.takeError();
 
-  auto demangled_name = mangled.GetDemangledName().GetStringRef();
-  if (demangled_name.empty())
-    return std::nullopt;
+  auto [demangled_name, info] = *info_or_err;
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
-  if (!info)
-    return std::nullopt;
-
-  // Function without a basename is nonsense.
-  if (!info->hasBasename())
-    return std::nullopt;
-
-  return demangled_name.slice(info->PrefixRange.first,
-                              info->PrefixRange.second);
+  return demangled_name.slice(info.PrefixRange.first, info.PrefixRange.second);
 }
 
-static std::optional<llvm::StringRef>
+static llvm::Expected<llvm::StringRef>
 GetDemangledFunctionSuffix(const SymbolContext &sc) {
-  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
-  if (!mangled)
-    return std::nullopt;
+  auto info_or_err = GetAndValidateInfo(sc);
+  if (!info_or_err)
+    return info_or_err.takeError();
 
-  auto demangled_name = mangled.GetDemangledName().GetStringRef();
-  if (demangled_name.empty())
-    return std::nullopt;
+  auto [demangled_name, info] = *info_or_err;
 
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
-  if (!info)
-    return std::nullopt;
-
-  // Function without a basename is nonsense.
-  if (!info->hasBasename())
-    return std::nullopt;
-
-  return demangled_name.slice(info->SuffixRange.first,
-                              info->SuffixRange.second);
+  return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
 }
 
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   assert(sc.symbol);
 
-  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
-  if (!mangled)
+  auto info_or_err = GetAndValidateInfo(sc);
+  if (!info_or_err) {
+    LLDB_LOG_ERROR(
+        GetLog(LLDBLog::Language), info_or_err.takeError(),
+        "Failed to handle ${{function.basename}} frame-format variable: {0}");
+    return false;
+  }
+  auto [demangled_name, info] = *info_or_err;
+
+  if (!info.hasArguments())
     return false;
 
-  auto demangled_name = mangled.GetDemangledName().GetStringRef();
-  if (demangled_name.empty())
-    return false;
-
-  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
-  if (!info)
-    return false;
-
-  // Function without a basename is nonsense.
-  if (!info->hasBasename())
-    return false;
-
-  if (info->ArgumentsRange.second < info->ArgumentsRange.first)
-    return false;
-
-  s << demangled_name.slice(info->ArgumentsRange.first,
-                            info->ArgumentsRange.second);
+  s << demangled_name.slice(info.ArgumentsRange.first,
+                            info.ArgumentsRange.second);
 
   return true;
 }
@@ -2021,11 +2008,15 @@ bool SwiftLanguage::HandleFrameFormatVariable(const SymbolContext &sc,
                                               Stream &s) {
   switch (type) {
   case FormatEntity::Entry::Type::FunctionBasename: {
-    std::optional<llvm::StringRef> name = GetDemangledBasename(sc);
-    if (!name)
+    auto name_or_err = GetDemangledBasename(sc);
+    if (!name_or_err) {
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), name_or_err.takeError(),
+          "Failed to handle ${{function.basename}} frame-format variable: {0}");
       return false;
+    }
 
-    s << *name;
+    s << *name_or_err;
 
     return true;
   }
@@ -2052,20 +2043,28 @@ bool SwiftLanguage::HandleFrameFormatVariable(const SymbolContext &sc,
     return true;
   }
   case FormatEntity::Entry::Type::FunctionPrefix: {
-    std::optional<llvm::StringRef> prefix = GetDemangledFunctionPrefix(sc);
-    if (!prefix)
+    auto prefix_or_err = GetDemangledFunctionPrefix(sc);
+    if (!prefix_or_err) {
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), prefix_or_err.takeError(),
+          "Failed to handle ${{function.prefix}} frame-format variable: {0}");
       return false;
+    }
 
-    s << *prefix;
+    s << *prefix_or_err;
 
     return true;
   }
   case FormatEntity::Entry::Type::FunctionSuffix: {
-    std::optional<llvm::StringRef> suffix = GetDemangledFunctionSuffix(sc);
-    if (!suffix)
+    auto suffix_or_err = GetDemangledFunctionSuffix(sc);
+    if (!suffix_or_err) {
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Language), suffix_or_err.takeError(),
+          "Failed to handle ${{function.suffix}} frame-format variable: {0}");
       return false;
+    }
 
-    s << *suffix;
+    s << *suffix_or_err;
 
     return true;
   }
