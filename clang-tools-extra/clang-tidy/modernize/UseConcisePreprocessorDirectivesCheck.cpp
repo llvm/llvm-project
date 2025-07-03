@@ -36,11 +36,13 @@ public:
 private:
   void impl(SourceLocation DirectiveLoc, SourceRange ConditionRange,
             const llvm::StringLiteral (&Replacements)[2]) {
-    const StringRef Condition =
+    // Lexer requires its input range to be null-terminated.
+    SmallString<128> Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
                              PP.getSourceManager(), PP.getLangOpts());
+    Condition.push_back('\0');
     Lexer Lex(DirectiveLoc, PP.getLangOpts(), Condition.data(),
-              Condition.data(), Condition.data() + Condition.size());
+              Condition.data(), Condition.data() + Condition.size() - 1);
     Token Tok;
     bool Inverted = false; // The inverted form of #*def is #*ndef.
     std::size_t ParensNestingDepth = 0;
