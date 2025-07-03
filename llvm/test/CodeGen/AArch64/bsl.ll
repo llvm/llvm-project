@@ -323,3 +323,111 @@ define <4 x i32> @nbsl_v4i32(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2) {
   %8 = xor <4 x i32> %7, splat (i32 -1)
   ret <4 x i32> %8
 }
+
+; Test types that need promotion.
+
+define <4 x i8> @bsl_v4i8(<4 x i8> %0, <4 x i8> %1, <4 x i8> %2) {
+; NEON-LABEL: bsl_v4i8:
+; NEON:       // %bb.0:
+; NEON-NEXT:    movi d3, #0xff00ff00ff00ff
+; NEON-NEXT:    and v0.8b, v2.8b, v0.8b
+; NEON-NEXT:    eor v3.8b, v2.8b, v3.8b
+; NEON-NEXT:    and v1.8b, v1.8b, v3.8b
+; NEON-NEXT:    orr v0.8b, v0.8b, v1.8b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: bsl_v4i8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi d3, #0xff00ff00ff00ff
+; SVE2-NEXT:    and v0.8b, v2.8b, v0.8b
+; SVE2-NEXT:    eor v3.8b, v2.8b, v3.8b
+; SVE2-NEXT:    and v1.8b, v1.8b, v3.8b
+; SVE2-NEXT:    orr v0.8b, v0.8b, v1.8b
+; SVE2-NEXT:    ret
+  %4 = and <4 x i8> %2, %0
+  %5 = xor <4 x i8> %2, splat (i8 -1)
+  %6 = and <4 x i8> %1, %5
+  %7 = or <4 x i8> %4, %6
+  ret <4 x i8> %7
+}
+
+define <4 x i8> @nbsl_v4i8(<4 x i8> %0, <4 x i8> %1, <4 x i8> %2) {
+; NEON-LABEL: nbsl_v4i8:
+; NEON:       // %bb.0:
+; NEON-NEXT:    movi d3, #0xff00ff00ff00ff
+; NEON-NEXT:    and v0.8b, v2.8b, v0.8b
+; NEON-NEXT:    eor v4.8b, v2.8b, v3.8b
+; NEON-NEXT:    and v1.8b, v1.8b, v4.8b
+; NEON-NEXT:    orr v0.8b, v0.8b, v1.8b
+; NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: nbsl_v4i8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi d3, #0xff00ff00ff00ff
+; SVE2-NEXT:    and v0.8b, v2.8b, v0.8b
+; SVE2-NEXT:    eor v4.8b, v2.8b, v3.8b
+; SVE2-NEXT:    and v1.8b, v1.8b, v4.8b
+; SVE2-NEXT:    orr v0.8b, v0.8b, v1.8b
+; SVE2-NEXT:    eor v0.8b, v0.8b, v3.8b
+; SVE2-NEXT:    ret
+  %4 = and <4 x i8> %2, %0
+  %5 = xor <4 x i8> %2, splat (i8 -1)
+  %6 = and <4 x i8> %1, %5
+  %7 = or <4 x i8> %4, %6
+  %8 = xor <4 x i8> %7, splat (i8 -1)
+  ret <4 x i8> %8
+}
+
+define <4 x i8> @bsl1n_v4i8(<4 x i8> %0, <4 x i8> %1, <4 x i8> %2) {
+; NEON-LABEL: bsl1n_v4i8:
+; NEON:       // %bb.0:
+; NEON-NEXT:    movi d3, #0xff00ff00ff00ff
+; NEON-NEXT:    eor v0.8b, v0.8b, v3.8b
+; NEON-NEXT:    eor v3.8b, v2.8b, v3.8b
+; NEON-NEXT:    and v0.8b, v2.8b, v0.8b
+; NEON-NEXT:    and v1.8b, v1.8b, v3.8b
+; NEON-NEXT:    orr v0.8b, v0.8b, v1.8b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: bsl1n_v4i8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi d3, #0xff00ff00ff00ff
+; SVE2-NEXT:    eor v0.8b, v0.8b, v3.8b
+; SVE2-NEXT:    eor v3.8b, v2.8b, v3.8b
+; SVE2-NEXT:    and v0.8b, v2.8b, v0.8b
+; SVE2-NEXT:    and v1.8b, v1.8b, v3.8b
+; SVE2-NEXT:    orr v0.8b, v0.8b, v1.8b
+; SVE2-NEXT:    ret
+  %4 = xor <4 x i8> %0, splat (i8 -1)
+  %5 = and <4 x i8> %2, %4
+  %6 = xor <4 x i8> %2, splat (i8 -1)
+  %7 = and <4 x i8> %1, %6
+  %8 = or <4 x i8> %5, %7
+  ret <4 x i8> %8
+}
+
+define <4 x i8> @bsl2n_v4i8(<4 x i8> %0, <4 x i8> %1, <4 x i8> %2) {
+; NEON-LABEL: bsl2n_v4i8:
+; NEON:       // %bb.0:
+; NEON-NEXT:    movi d3, #0xff00ff00ff00ff
+; NEON-NEXT:    orr v1.8b, v2.8b, v1.8b
+; NEON-NEXT:    and v0.8b, v2.8b, v0.8b
+; NEON-NEXT:    eor v1.8b, v1.8b, v3.8b
+; NEON-NEXT:    orr v0.8b, v0.8b, v1.8b
+; NEON-NEXT:    ret
+;
+; SVE2-LABEL: bsl2n_v4i8:
+; SVE2:       // %bb.0:
+; SVE2-NEXT:    movi d3, #0xff00ff00ff00ff
+; SVE2-NEXT:    orr v1.8b, v2.8b, v1.8b
+; SVE2-NEXT:    and v0.8b, v2.8b, v0.8b
+; SVE2-NEXT:    eor v1.8b, v1.8b, v3.8b
+; SVE2-NEXT:    orr v0.8b, v0.8b, v1.8b
+; SVE2-NEXT:    ret
+  %4 = and <4 x i8> %2, %0
+  %5 = or <4 x i8> %2, %1
+  %6 = xor <4 x i8> %5, splat (i8 -1)
+  %7 = or <4 x i8> %4, %6
+  ret <4 x i8> %7
+}
