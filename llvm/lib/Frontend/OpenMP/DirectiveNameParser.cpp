@@ -12,6 +12,7 @@
 #include "llvm/Frontend/OpenMP/OMP.h"
 
 #include <cassert>
+#include <cctype>
 #include <memory>
 
 namespace llvm::omp {
@@ -40,23 +41,24 @@ DirectiveNameParser::consume(const State *Current, StringRef Tok) const {
 SmallVector<StringRef> DirectiveNameParser::tokenize(StringRef Str) {
   SmallVector<StringRef> Tokens;
 
-  auto nextChar = [](StringRef N, size_t I) {
-    while (I < N.size() && N[I] == ' ')
+  auto NextChar = [](StringRef N, size_t I) {
+    while (I < N.size() && isspace(N[I]))
       ++I;
     return I;
   };
-  auto nextSpace = [](StringRef N, size_t I) {
-    size_t S = N.find(' ', I);
-    return S != StringRef::npos ? S : N.size();
+  auto NextSpace = [](StringRef N, size_t I) {
+    while (I < N.size() && !isspace(N[I]))
+      ++I;
+    return I;
   };
 
-  size_t From = nextChar(Str, 0);
+  size_t From = NextChar(Str, 0);
   size_t To = 0;
 
   while (From != Str.size()) {
-    To = nextSpace(Str, From);
+    To = NextSpace(Str, From);
     Tokens.push_back(Str.substr(From, To - From));
-    From = nextChar(Str, To);
+    From = NextChar(Str, To);
   }
 
   return Tokens;
