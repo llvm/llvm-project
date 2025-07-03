@@ -1234,6 +1234,10 @@ bool SemaHLSL::handleRootSignatureElements(
         << OInfo->LowerBound
         << /*unbounded=*/(OInfo->UpperBound == RangeInfo::Unbounded)
         << OInfo->UpperBound << Info->Space << CommonVis;
+
+    const hlsl::RootSignatureElement *OElem = InfoIndexMap.at(OInfo->Index);
+    SourceLocation OInfoLoc = OElem->getLocation();
+    this->Diag(OInfoLoc, diag::note_hlsl_resource_range_here);
   };
 
   // 3: Iterate through collected RangeInfos
