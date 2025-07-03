@@ -6801,7 +6801,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::WAVEGROUP_RANK_CALL: {
     const DebugLoc &DL = MI.getDebugLoc();
-    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     MachineBasicBlock *SplitBB = BB->splitAt(MI, true /*UpdateLiveIns*/);
     MachineBasicBlock *RankCallBB = MF->CreateMachineBasicBlock();
     MachineFunction::iterator MBBI(SplitBB);
@@ -6814,13 +6813,16 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           return SIInstrInfo::isWaveGroupRankCallMarker(DI);
         });
     // Initialize IDX0 before the 1st rank-call.
+    // Also flag that we need to preserve the preloaded SGPRs.
     if (!FoundRankCallMarker) {
       BuildMI(*BB, &MI, DL, TII->get(AMDGPU::S_SET_GPR_IDX_U32), AMDGPU::IDX0)
           .addTargetIndex(AMDGPU::TI_NUM_VGPRS_LANESHARED);
+      MFI->setPreservePreloadedSGPRs();
     }
     int Rank = MI.getOperand(0).getImm();
     assert(Rank < 8);
     // Set up conditional branch.
+    MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
     Register WaveIDInWaveGroup =
         MRI.createVirtualRegister(&AMDGPU::SGPR_32RegClass);
     using namespace AMDGPU::Hwreg;

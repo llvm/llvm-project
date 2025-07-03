@@ -550,6 +550,8 @@ private:
 
   bool HasWMMAorConvolve = false;
 
+  bool PreservePreloadedSGPRs = false;
+
   MCPhysReg getNextUserSGPR() const;
 
   MCPhysReg getNextSystemSGPR() const;
@@ -1257,6 +1259,11 @@ public:
   bool setHasWMMAorConvolve() {
     return HasWMMAorConvolve = true;
   }
+  // This is used in the main wavegroup kernel that calls specialized
+  // rank-functions. Preloaded sgpr needs to be preserved for use in
+  // rank-functions.
+  bool getPreservePreloadedSGPRs() const { return PreservePreloadedSGPRs; }
+  void setPreservePreloadedSGPRs() { PreservePreloadedSGPRs = true; }
 };
 
 } // end namespace llvm
