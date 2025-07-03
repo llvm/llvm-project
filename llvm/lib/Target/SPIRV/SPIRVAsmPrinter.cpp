@@ -738,7 +738,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
       unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
       if (FPFastMathDefaultInfo.ContractionOff &&
           (Flags & SPIRV::FPFastMathMode::AllowContract) &&
-          FPFastMathDefaultInfo.FPFastMathMode)
+          FPFastMathDefaultInfo.FPFastMathDefault)
         report_fatal_error(
             "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
 
@@ -746,7 +746,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
           !(Flags &
             (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
              SPIRV::FPFastMathMode::NSZ))) {
-        if (FPFastMathDefaultInfo.FPFastMathMode)
+        if (FPFastMathDefaultInfo.FPFastMathDefault)
           report_fatal_error("Conflicting FPFastMathFlags: "
                              "SignedZeroInfNanPreserve but at least one of "
                              "NotNaN/NotInf/NSZ is disabled.");
@@ -759,7 +759,7 @@ void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
       if (Flags == SPIRV::FPFastMathMode::None &&
           !FPFastMathDefaultInfo.ContractionOff &&
           !FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
-          !FPFastMathDefaultInfo.FPFastMathMode)
+          !FPFastMathDefaultInfo.FPFastMathDefault)
         continue;
       Inst.addOperand(MCOperand::createImm(Flags));
       outputMCInst(Inst);

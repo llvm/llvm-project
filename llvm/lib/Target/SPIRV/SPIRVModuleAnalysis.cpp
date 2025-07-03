@@ -2082,8 +2082,8 @@ static unsigned getFastMathFlags(const MachineInstr &I,
     // Error out if AllowTransform is enabled without AllowReassoc and
     // AllowContract.
     if ((Flags & SPIRV::FPFastMathMode::AllowTransform) &&
-        !(Flags & SPIRV::FPFastMathMode::AllowReassoc) &&
-        !(Flags & SPIRV::FPFastMathMode::AllowContract))
+        (!(Flags & SPIRV::FPFastMathMode::AllowReassoc) ||
+         !(Flags & SPIRV::FPFastMathMode::AllowContract)))
       report_fatal_error(
           "FPFastMathMode::AllowTransform flag requires AllowReassoc and "
           "AllowContract flags to be enabled as well.");
@@ -2143,15 +2143,16 @@ static void handleMIFlagDecoration(
     const Type *Ty = GR->getTypeForSPIRVType(ResType);
 
     // Match instruction type with the FPFastMathDefaultInfoVec.
+    bool Emit = false;
     for (SPIRV::FPFastMathDefaultInfo &Elem : FPFastMathDefaultInfoVec) {
       if (Ty == Elem.Ty) {
         FMFlags = Elem.FastMathFlags;
-        Elem.FPFastMathMode = true;
+        Emit = Elem.ContractionOff || Elem.SignedZeroInfNanPreserve || Elem.FPFastMathDefault;
         break;
       }
     }
 
-    if (FMFlags == SPIRV::FPFastMathMode::None)
+    if (FMFlags == SPIRV::FPFastMathMode::None && !Emit)
       return;
   }
   Register DstReg = I.getOperand(0).getReg();
@@ -2287,8 +2288,10 @@ static void collectFPFastMathDefaults(const Module &M,
                 ->getZExtValue();
         SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec =
             getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
-        getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T).FastMathFlags =
-            Flags;
+        SPIRV::FPFastMathDefaultInfo &Info =
+            getFPFastMathDefaultInfo(FPFastMathDefaultInfoVec, T);
+        Info.FastMathFlags = Flags;
+        Info.FPFastMathDefault = true;
       } else if (EM == SPIRV::ExecutionMode::ContractionOff) {
         assert(MDN->getNumOperands() == 2 &&
                "Expected no operands for ContractionOff");

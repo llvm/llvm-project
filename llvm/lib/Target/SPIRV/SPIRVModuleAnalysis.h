@@ -145,7 +145,7 @@ struct FPFastMathDefaultInfo {
   // emit OpExecutionMode instructions.
   bool ContractionOff = false;
   bool SignedZeroInfNanPreserve = false;
-  bool FPFastMathMode = false;
+  bool FPFastMathDefault = false;
 
   FPFastMathDefaultInfo() = default;
   FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
