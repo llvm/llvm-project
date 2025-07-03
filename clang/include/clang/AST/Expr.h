@@ -2905,19 +2905,19 @@ class CallExpr : public Expr {
   //
   // * An optional of type FPOptionsOverride.
   //
-  // CallExpr subclasses are asssumed to be 40 bytes or less, and CallExpr
+  // CallExpr subclasses are asssumed to be 32 bytes or less, and CallExpr
   // itself is 24 bytes. To avoid having to recompute or store the offset of the
-  // trailing objects, we put it at 40 bytes (such that it is suitable for all
+  // trailing objects, we put it at 32 bytes (such that it is suitable for all
   // subclasses) We use the 8 bytes gap left for instances of CallExpr to store
   // the begin source location, which has a significant impact on perf as
   // getBeginLoc is assumed to be cheap.
   // The layourt is as follow:
-  // CallExpr | Begin | 8 bytes left | Trailing Objects
+  // CallExpr | Begin  | Trailing Objects
   // CXXMemberCallExpr | Trailing Objects
   // A bit in CallExprBitfields indicates if source locations are present.
 
 protected:
-  static constexpr unsigned OffsetToTrailingObjects = 40;
+  static constexpr unsigned OffsetToTrailingObjects = 32;
   template <typename T>
   static constexpr unsigned
   sizeToAllocateForCallExprSubclass(unsigned SizeOfTrailingObjects) {
