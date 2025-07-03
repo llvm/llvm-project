@@ -56,9 +56,8 @@ void DirectiveNameParser::insertName(StringRef Name, Directive D) {
 DirectiveNameParser::State *
 DirectiveNameParser::insertTransition(State *From, StringRef Tok) {
   assert(From && "Expecting state");
-  if (!From->Transition) {
+  if (!From->Transition)
     From->Transition = std::make_unique<State::TransitionMapTy>();
-  }
   if (State *Next = From->next(Tok))
     return Next;
 
