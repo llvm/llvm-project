@@ -30,7 +30,7 @@ namespace llvm::omp {
 ///
 ///   DirectiveNameParser::State *S = Parser.initial();
 ///   for (StringRef Token : Tokens)
-///     S = Parser.apply(S, Token); // Passing nullptr is ok.
+///     S = Parser.consume(S, Token); // Passing nullptr is ok.
 ///
 ///   if (S == nullptr) {
 ///     // Error: ended up in a state from which there is no possible path
@@ -62,7 +62,7 @@ struct DirectiveNameParser {
   };
 
   const State *initial() const { return &InitialState; }
-  const State *apply(const State *Current, StringRef Tok) const;
+  const State *consume(const State *Current, StringRef Tok) const;
 
   static SmallVector<StringRef> tokenize(StringRef N);
 

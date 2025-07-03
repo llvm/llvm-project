@@ -28,7 +28,7 @@ DirectiveNameParser::DirectiveNameParser(SourceLanguage L) {
 }
 
 const DirectiveNameParser::State *
-DirectiveNameParser::apply(const State *Current, StringRef Tok) const {
+DirectiveNameParser::consume(const State *Current, StringRef Tok) const {
   if (!Current)
     return Current;
   assert(Current->isValid() && "Invalid input state");
