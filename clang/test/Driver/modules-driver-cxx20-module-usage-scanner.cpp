@@ -77,7 +77,7 @@ module/*a comment*/;
 #endif
 #pragma once;
 #include <iostream>
-export module m;
+import m;
 
 //--- multiline-directive.cpp
 // RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver \

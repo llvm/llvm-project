@@ -4519,9 +4519,9 @@ static bool scanBufferForCXXModuleUsage(const llvm::MemoryBuffer &Buffer) {
   const char *Ptr = Buffer.getBufferStart();
   skipToRelevantCXXModuleText(Ptr);
 
-  // Check if buffer has enough bytes left to check for the module-related
-  // declaration fragment we want to check without making potentially
-  // memory-mapped buffer load unnecessary pages.
+  // Check if the buffer has enough remaining bytes left for any of the
+  // module-related declaration fragments we are checking for, without making
+  // the potentially memory-mapped buffer load unnecessary pages.
   constexpr int MinKeywordLength = 6;
   const char *Begin = Ptr;
   for (int i = 0; i < MinKeywordLength; ++i) {
@@ -4592,7 +4592,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   if (Args.hasFlag(options::OPT_fmodules_driver,
                    options::OPT_fno_modules_driver, false)) {
-    Diags.Report(diag::remark_fmodules_driver_enabled);
     // TODO: Move the logic for implicitly enabling explicit-module-builds out
     // of -fmodules-driver once it is no longer experimental.
     // Currently, this serves diagnostic purposes only.
@@ -4611,7 +4610,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     return;
   }
 
-  Driver::BuildDefaultActions(C, Args, Inputs, Actions);
+  BuildDefaultActions(C, Args, Inputs, Actions);
 }
 
 void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,

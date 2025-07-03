@@ -577,9 +577,6 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
-def remark_fmodules_driver_enabled : Remark<
-  "support for explicit module builds enabled (experimental)">,
-  InGroup<ModulesDriver>;
 def remark_found_cxx20_module_usage : Remark<
   "found C++20 module usage in file '%0'">,
   InGroup<ModulesDriver>;
