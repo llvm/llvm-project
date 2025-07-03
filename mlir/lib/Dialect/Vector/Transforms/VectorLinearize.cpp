@@ -640,11 +640,23 @@ struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
   matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType vecTy = loadOp.getType();
-    if (!vecTy || !llvm::all_of(vecTy.getShape().drop_back(1),
-                                [](auto d) { return d == 1; }))
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(loadOp, "expected vector type");
+
+    auto shape = vecTy.getShape();
+    auto scalableDims = vecTy.getScalableDims();
+    // All but the last dim must be 1, and only the last dim may be scalable (if
+    // any).
+    if (!llvm::all_of(shape.drop_back(1), [](auto d) { return d == 1; }))
       return rewriter.notifyMatchFailure(loadOp,
                                          "only vector<1x1x...xN> supported");
-    auto linearTy = typeConverter->convertType<VectorType>(loadOp.getType());
+
+    if (llvm::any_of(scalableDims.drop_back(1), [](bool s) { return s; }))
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "only innermost dim may be scalable");
+
+    auto linearTy = typeConverter->convertType<VectorType>(vecTy);
+
     auto newLoad = rewriter.create<vector::LoadOp>(
         loadOp.getLoc(), linearTy, adaptor.getBase(), adaptor.getIndices());
     rewriter.replaceOp(loadOp, newLoad.getResult());
@@ -672,10 +684,21 @@ struct LinearizeVectorStore final
   matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType vecTy = storeOp.getValueToStore().getType();
-    if (!vecTy || !llvm::all_of(vecTy.getShape().drop_back(1),
-                                [](auto d) { return d == 1; }))
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(storeOp, "expected vector type");
+
+    auto shape = vecTy.getShape();
+    auto scalableDims = vecTy.getScalableDims();
+    // All but the last dim must be 1, and only the last dim may be scalable (if
+    // any).
+    if (!llvm::all_of(shape.drop_back(1), [](auto d) { return d == 1; }))
       return rewriter.notifyMatchFailure(storeOp,
                                          "only vector<1x1x...xN> supported");
+
+    if (llvm::any_of(scalableDims.drop_back(1), [](bool s) { return s; }))
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "only innermost dim may be scalable");
+
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
         storeOp, adaptor.getValueToStore(), adaptor.getBase(),
         adaptor.getIndices());
