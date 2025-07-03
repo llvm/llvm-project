@@ -77,7 +77,8 @@ public:
     do {
       char buf[1];
       DWORD bytes_read = 0;
-      OVERLAPPED ov = {0};
+      OVERLAPPED ov;
+      ZeroMemory(&ov, sizeof(ov));
       // Block on a 0-byte read; this will only resume when data is
       // available in the pipe. The pipe must be PIPE_WAIT or this thread
       // will spin.
@@ -132,14 +133,14 @@ public:
 
   ~SocketEvent() override { WSACloseEvent(m_event); }
 
-  void WillPoll() {
+  void WillPoll() override {
     int result =
         WSAEventSelect(m_socket, m_event, FD_READ | FD_ACCEPT | FD_CLOSE);
     assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);
   }
 
-  void DidPoll() {
+  void DidPoll() override {
     int result = WSAEventSelect(m_socket, WSA_INVALID_EVENT, 0);
     assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);

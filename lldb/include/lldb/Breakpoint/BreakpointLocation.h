@@ -69,7 +69,7 @@ public:
   // The next section deals with various breakpoint options.
 
   /// If \a enabled is \b true, enable the breakpoint, if \b false disable it.
-  void SetEnabled(bool enabled);
+  bool SetEnabled(bool enabled);
 
   /// Check the Enable/Disable state.
   ///
