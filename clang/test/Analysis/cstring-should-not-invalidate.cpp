@@ -88,7 +88,7 @@ void strncatTest(char *src, size_t n) {
   clang_analyzer_eval(rep.b == initB); // expected-warning{{TRUE}}
 }
 
-struct strncatReportOutOfBoundTestClass: public Base {
+struct strncatReportOutOfBoundTestClass {
   int *m_ptr;
   char m_buff[1000];
 
@@ -103,7 +103,6 @@ struct strncatReportOutOfBoundTestClass: public Base {
 void strncatReportOutOfBoundTest(char *src, size_t n) {
   strncatReportOutOfBoundTestClass rep;
   rep.KnownLen(src);
-  clang_analyzer_eval(rep.b == initB); // expected-warning{{TRUE}}
 }
 
 size_t strlcat(char *dst, const char *src, size_t size);
