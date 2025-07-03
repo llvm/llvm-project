@@ -1095,20 +1095,9 @@ bool IsDeviceAllocatable(const Symbol &symbol) {
 }
 
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *symbol) {
-  const auto *details{
+  const auto *object{
       symbol ? symbol->detailsIf<ObjectEntityDetails>() : nullptr};
-  if (details) {
-    const Fortran::semantics::DeclTypeSpec *type{details->type()};
-    const Fortran::semantics::DerivedTypeSpec *derived{
-        type ? type->AsDerived() : nullptr};
-    if (derived) {
-      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
-        return common::CUDADataAttr::Managed;
-      }
-    }
-    return details->cudaDataAttr();
-  }
-  return std::nullopt;
+  return object ? object->cudaDataAttr() : std::nullopt;
 }
 
 bool IsAccessible(const Symbol &original, const Scope &scope) {
