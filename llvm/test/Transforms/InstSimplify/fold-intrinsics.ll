@@ -53,8 +53,8 @@ define i32 @test_ctpop_poison(i32 %a) {
   ret i32 %res
 }
 
-define void @pow_poison_i16(i16 %arg_int,float %arg_flt, ptr %P) {
-; CHECK-LABEL: @pow_poison_i16(
+define void @pow_poison(i16 %arg_int,float %arg_flt, ptr %P) {
+; CHECK-LABEL: @pow_poison(
 ; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
 ; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
@@ -63,19 +63,19 @@ define void @pow_poison_i16(i16 %arg_int,float %arg_flt, ptr %P) {
 ; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %2 = tail call float @llvm.powi.f32.i16(float poison, i16 %arg_int) nounwind
+  %2 = tail call float @llvm.powi(float poison, i16 %arg_int) nounwind
   store volatile float %2, ptr %P
 
   %3 = tail call float @llvm.pow(float poison, float %arg_flt) nounwind
   store volatile float %3, ptr %P
 
-  %4 = tail call float @llvm.powi.f32.i16(float %arg_flt, i16 poison) nounwind
+  %4 = tail call float @llvm.powi(float %arg_flt, i16 poison) nounwind
   store volatile float %4, ptr %P
 
   %5 = tail call float @llvm.pow(float %arg_flt, float poison) nounwind
   store volatile float %5, ptr %P
 
-  %6 = tail call float @llvm.powi.f32.i16(float poison, i16 poison) nounwind
+  %6 = tail call float @llvm.powi(float poison, i16 poison) nounwind
   store volatile float %6, ptr %P
 
   %7 = tail call float @llvm.pow(float poison, float poison) nounwind
