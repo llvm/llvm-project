@@ -42,6 +42,6 @@ target2:
 // CHECK-EMPTY:
 // CHECK-NEXT: 00000024 <target1>:
 // CHECK-NEXT:       24:       00 c0 00 7f     7f00c000 {      nop }
-// CHECK-NEXT:
+// CHECK-EMPTY:
 // CHECK-NEXT: 00000028 <target2>:
 // CHECK-NEXT:       28:       00 c0 00 7f     7f00c000 {      nop }
