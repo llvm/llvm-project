@@ -135,7 +135,7 @@ class IRInterpreterTestCase(TestBase):
         for expression in set_up_expressions:
             self.frame().EvaluateExpression(expression, options)
 
-        func_call = "(int)getpid"
+        func_call = "(int)getpid()"
         if lldbplatformutil.getPlatform() == "windows":
             func_call = "(int)GetCurrentProcessId()"
 
