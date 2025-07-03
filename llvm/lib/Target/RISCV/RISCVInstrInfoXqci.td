@@ -1489,6 +1489,8 @@ let Predicates = [HasVendorXqcics, IsRV32] in {
 def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2),(XLenVT GPRNoX0:$rs3)),
           (QC_SELECTEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs3, GPRNoX0:$rs2)>;
 
+// Below AddedComplexity is added to prefer these conditional select instructions over
+// conditional move instructions
 let AddedComplexity = 1 in {
 def : QCISELECTCCIPat <SETEQ,  QC_SELECTEQI>;
 def : QCISELECTCCIPat <SETNE,  QC_SELECTNEI>;
