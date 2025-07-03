@@ -155,7 +155,7 @@ if(TARGET clang)
   add_lldb_test_dependency(clang)
 
   # TestFullLtoStepping depends on LTO, and only runs when the compiler is clang.
-  add_lldb_test_dependency(LTO)
+  #add_lldb_test_dependency(LTO)
 
   if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
     set(LLDB_HAS_LIBCXX ON)
