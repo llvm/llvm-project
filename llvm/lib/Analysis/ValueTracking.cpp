@@ -7911,7 +7911,52 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::usub_sat:
   case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
+  // case Intrinsic::umul_fix:
+  // case Intrinsic::umul_fix_sat:
   case Intrinsic::smul_fix_sat:
+  // case Intrinsic::asin:
+  // case Intrinsic::acos:
+  // case Intrinsic::atan:
+  // case Intrinsic::atan2:
+  // case Intrinsic::sin:
+  // case Intrinsic::cos:
+  // case Intrinsic::sincos:
+  // case Intrinsic::sincospi:
+  // case Intrinsic::tan:
+  // case Intrinsic::sinh:
+  // case Intrinsic::cosh:
+  // case Intrinsic::tanh:
+  // case Intrinsic::exp:
+  // case Intrinsic::exp10:
+  // case Intrinsic::exp2:
+  // case Intrinsic::log:
+  // case Intrinsic::log10:
+  // case Intrinsic::log2:
+  // case Intrinsic::fabs:
+  // case Intrinsic::minnum:
+  // case Intrinsic::maxnum:
+  // case Intrinsic::minimum:
+  // case Intrinsic::maximum:
+  // case Intrinsic::minimumnum:
+  // case Intrinsic::maximumnum:
+  // case Intrinsic::modf:
+  // case Intrinsic::copysign:
+  // case Intrinsic::floor:
+  // case Intrinsic::ceil:
+  // case Intrinsic::trunc:
+  // case Intrinsic::rint:
+  // case Intrinsic::nearbyint:
+  // case Intrinsic::round:
+  // case Intrinsic::roundeven:
+  case Intrinsic::pow:
+  // case Intrinsic::fma:
+  // case Intrinsic::fmuladd:
+  // case Intrinsic::is_fpclass:
+  case Intrinsic::powi:
+  // case Intrinsic::fptosi_sat:
+  // case Intrinsic::fptoui_sat:
+  // case Intrinsic::lrint:
+  // case Intrinsic::llrint:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
     return true;
