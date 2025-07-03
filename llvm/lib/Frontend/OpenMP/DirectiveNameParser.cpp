@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/DirectiveNameParser.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 
@@ -17,7 +19,7 @@ namespace llvm::omp {
 DirectiveNameParser::DirectiveNameParser(SourceLanguage L) {
   // Take every directive, get its name in every version, break the name up
   // into whitespace-separated tokens, and insert each token.
-  for (size_t I = 0, E = Directive_enumSize; I != E; ++I) {
+  for (size_t I : llvm::seq<size_t>(Directive_enumSize)) {
     auto D = static_cast<Directive>(I);
     if (D == Directive::OMPD_unknown || !(getDirectiveLanguages(D) & L))
       continue;
@@ -27,37 +29,18 @@ DirectiveNameParser::DirectiveNameParser(SourceLanguage L) {
 }
 
 const DirectiveNameParser::State *
-DirectiveNameParser::apply(const State *Current, StringRef Tok) const {
+DirectiveNameParser::consume(const State *Current, StringRef Tok) const {
   if (!Current)
     return Current;
   assert(Current->isValid() && "Invalid input state");
-  if (const State *Next = const_cast<State *>(Current)->next(Tok))
+  if (const State *Next = Current->next(Tok))
     return Next->isValid() ? Next : nullptr;
   return nullptr;
 }
 
 SmallVector<StringRef> DirectiveNameParser::tokenize(StringRef Str) {
   SmallVector<StringRef> Tokens;
-
-  auto nextChar = [](StringRef N, size_t I) {
-    while (I < N.size() && N[I] == ' ')
-      ++I;
-    return I;
-  };
-  auto nextSpace = [](StringRef N, size_t I) {
-    size_t S = N.find(' ', I);
-    return S != StringRef::npos ? S : N.size();
-  };
-
-  size_t From = nextChar(Str, 0);
-  size_t To = 0;
-
-  while (From != Str.size()) {
-    To = nextSpace(Str, From);
-    Tokens.push_back(Str.substr(From, To - From));
-    From = nextChar(Str, To);
-  }
-
+  SplitString(Str, Tokens);
   return Tokens;
 }
 
@@ -73,15 +56,22 @@ void DirectiveNameParser::insertName(StringRef Name, Directive D) {
 DirectiveNameParser::State *
 DirectiveNameParser::insertTransition(State *From, StringRef Tok) {
   assert(From && "Expecting state");
-  if (!From->Transition) {
+  if (!From->Transition)
     From->Transition = std::make_unique<State::TransitionMapTy>();
-  }
   if (State *Next = From->next(Tok))
     return Next;
 
   auto [Where, DidIt] = From->Transition->try_emplace(Tok, State());
   assert(DidIt && "Map insertion failed");
   return &Where->second;
+}
+
+const DirectiveNameParser::State *
+DirectiveNameParser::State::next(StringRef Tok) const {
+  if (!Transition)
+    return nullptr;
+  auto F = Transition->find(Tok);
+  return F != Transition->end() ? &F->second : nullptr;
 }
 
 DirectiveNameParser::State *DirectiveNameParser::State::next(StringRef Tok) {

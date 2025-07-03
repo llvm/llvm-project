@@ -114,7 +114,7 @@ TEST_P(ParseValid, T) {
 
   std::vector<std::string> Tokens = tokenize(Name);
   for (auto &Tok : Tokens) {
-    State = Parser.apply(State, Tok);
+    State = Parser.consume(State, Tok);
     ASSERT_TRUE(State != nullptr);
   }
 
@@ -150,7 +150,7 @@ TEST_P(ParseInvalid, T) {
 
   std::vector<std::string> Tokens = tokenize(Name);
   for (auto &Tok : Tokens)
-    State = Parser.apply(State, Tok);
+    State = Parser.consume(State, Tok);
 
   ASSERT_TRUE(State == nullptr || State->Value == omp::Directive::OMPD_unknown);
 }

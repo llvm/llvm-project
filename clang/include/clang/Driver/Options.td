@@ -1698,6 +1698,8 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
                basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
+def fno_sample_profile_use_profi : Flag<["-"], "fno-sample-profile-use-profi">,
+                                   Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
     Alias<fno_profile_sample_use>;
 def fauto_profile_EQ : Joined<["-"], "fauto-profile=">,
@@ -3487,7 +3489,8 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-    HelpText<"Use the given vector functions library">,
+    HelpText<"Use the given vector functions library.\n"
+             "  Note: -fveclib=libmvec on AArch64 requires GLIBC 2.40 or newer.">,
     HelpTextForVariants<[ClangOption, CC1Option],
       "Use the given vector functions library.\n"
       "  Note: -fveclib={ArmPL,SLEEF,libmvec} implies -fno-math-errno.\n"

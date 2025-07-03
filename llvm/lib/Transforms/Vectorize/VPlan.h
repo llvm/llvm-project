@@ -2346,6 +2346,9 @@ public:
                      DL),
 
         IG(IG), NeedsMaskForGaps(NeedsMaskForGaps) {
+    // TODO: extend the masked interleaved-group support to reversed access.
+    assert((!Mask || !IG->isReverse()) &&
+           "Reversed masked interleave-group not supported.");
     for (unsigned i = 0; i < IG->getFactor(); ++i)
       if (Instruction *I = IG->getMember(i)) {
         if (I->getType()->isVoidTy())

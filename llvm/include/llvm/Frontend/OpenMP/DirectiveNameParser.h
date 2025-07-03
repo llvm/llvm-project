@@ -30,12 +30,12 @@ namespace llvm::omp {
 ///
 ///   DirectiveNameParser::State *S = Parser.initial();
 ///   for (StringRef Token : Tokens)
-///     S = Parser.apply(S, Token); // Passing nullptr is ok.
+///     S = Parser.consume(S, Token); // Passing nullptr is ok.
 ///
 ///   if (S == nullptr) {
 ///     // Error: ended up in a state from which there is no possible path
 ///     // to a successful parse.
-///   } else if (S->Value == OMPD_unknown)
+///   } else if (S->Value == OMPD_unknown) {
 ///     // Parsed a sequence of tokens that are not a complete name, but
 ///     // parsing more tokens could lead to a successful parse.
 ///   } else {
@@ -54,6 +54,7 @@ struct DirectiveNameParser {
     std::unique_ptr<TransitionMapTy> Transition;
 
     State *next(StringRef Tok);
+    const State *next(StringRef Tok) const;
     bool isValid() const {
       return Value != Directive::OMPD_unknown || !Transition->empty();
     }
@@ -61,7 +62,7 @@ struct DirectiveNameParser {
   };
 
   const State *initial() const { return &InitialState; }
-  const State *apply(const State *Current, StringRef Tok) const;
+  const State *consume(const State *Current, StringRef Tok) const;
 
   static SmallVector<StringRef> tokenize(StringRef N);
 

@@ -1040,6 +1040,13 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
+  // Vector Slide Instructions
+  case RISCV::VSLIDEUP_VX:
+  case RISCV::VSLIDEUP_VI:
+  case RISCV::VSLIDEDOWN_VX:
+  case RISCV::VSLIDEDOWN_VI:
+  case RISCV::VSLIDE1UP_VX:
+  case RISCV::VFSLIDE1UP_VF:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
@@ -1119,6 +1126,10 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMFLE_VV:
   case RISCV::VMFGT_VF:
   case RISCV::VMFGE_VF:
+  // Vector Floating-Point Merge Instruction
+  case RISCV::VFMERGE_VFM:
+  // Vector Floating-Point Move Instruction
+  case RISCV::VFMV_V_F:
   // Single-Width Floating-Point/Integer Type-Convert Instructions
   case RISCV::VFCVT_XU_F_V:
   case RISCV::VFCVT_X_F_V:
@@ -1251,6 +1262,9 @@ bool RISCVVLOptimizer::isCandidate(const MachineInstr &MI) const {
     LLVM_DEBUG(dbgs() << "Not a candidate due to unsupported instruction\n");
     return false;
   }
+
+  assert(!RISCVII::elementsDependOnVL(RISCV::getRVVMCOpcode(MI.getOpcode())) &&
+         "Instruction shouldn't be supported if elements depend on VL");
 
   assert(MI.getOperand(0).isReg() &&
          isVectorRegClass(MI.getOperand(0).getReg(), MRI) &&
