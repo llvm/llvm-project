@@ -2206,15 +2206,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
-  /// RdxDesc.
-  VPReductionPHIRecipe(PHINode *Phi, const RecurrenceDescriptor &RdxDesc,
-                       VPValue &Start, bool IsInLoop = false,
-                       bool IsOrdered = false, unsigned VFScaleFactor = 1)
-      : VPHeaderPHIRecipe(VPDef::VPReductionPHISC, Phi, &Start),
-        Kind(RdxDesc.getRecurrenceKind()), IsInLoop(IsInLoop),
-        IsOrdered(IsOrdered), VFScaleFactor(VFScaleFactor) {
-    assert((!IsOrdered || IsInLoop) && "IsOrdered requires IsInLoop");
-  }
+  /// Kind.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        bool IsInLoop = false, bool IsOrdered = false,
                        unsigned VFScaleFactor = 1)

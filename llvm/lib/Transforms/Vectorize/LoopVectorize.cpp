@@ -8307,7 +8307,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
       unsigned ScaleFactor =
           getScalingForReduction(RdxDesc.getLoopExitInstr()).value_or(1);
       PhiRecipe = new VPReductionPHIRecipe(
-          Phi, RdxDesc, *StartV, CM.isInLoopReduction(Phi),
+          Phi, RdxDesc.getRecurrenceKind(), *StartV, CM.isInLoopReduction(Phi),
           CM.useOrderedReductions(RdxDesc), ScaleFactor);
     } else {
       // TODO: Currently fixed-order recurrences are modeled as chains of
@@ -9205,7 +9205,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     if (!PhiR)
       continue;
 
-    const RecurrenceDescriptor &RdxDesc = Legal->getReductionVars().lookup(
+    const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = PhiR->getUnderlyingValue()->getType();
     // If tail is folded by masking, introduce selects between the phi
