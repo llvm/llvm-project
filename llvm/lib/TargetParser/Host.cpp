@@ -212,7 +212,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
 
     // Detect big.LITTLE systems.
     if (MatchBigLittle(Parts, "0xd85", "0xd87"))
-      return "gb10";
+      return "cortex-x925";
 
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
     // values correspond to the "Part number" in the CP15/c0 register. The

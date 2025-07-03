@@ -122,6 +122,14 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd48"),
             "cortex-x2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd85\n"
+                                              "CPU part        : 0xd87"),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd87\n"
+                                              "CPU part        : 0xd85"),
+            "cortex-x925");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc00"),
             "falkor");
@@ -149,14 +157,6 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x61\n"
                                               "CPU part        : 0x039"),
             "apple-m2");
-  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
-                                              "CPU part        : 0xd85\n"
-                                              "CPU part        : 0xd87"),
-            "gb10");
-  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
-                                              "CPU part        : 0xd87\n"
-                                              "CPU part        : 0xd85"),
-            "gb10");
 
   // MSM8992/4 weirdness
   StringRef MSM8992ProcCpuInfo = R"(
