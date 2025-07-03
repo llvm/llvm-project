@@ -964,11 +964,15 @@ RISCVCC::CondCode RISCVInstrInfo::getCondFromBranchOpc(unsigned Opc) {
   case RISCV::CV_BEQIMM:
   case RISCV::QC_BEQI:
   case RISCV::QC_E_BEQI:
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BEQC:
     return RISCVCC::COND_EQ;
   case RISCV::BNE:
   case RISCV::QC_BNEI:
   case RISCV::QC_E_BNEI:
   case RISCV::CV_BNEIMM:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BNEC:
     return RISCVCC::COND_NE;
   case RISCV::BLT:
   case RISCV::QC_BLTI:
@@ -1099,6 +1103,26 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
       return RISCV::QC_E_BLTUI;
     case RISCVCC::COND_GEU:
       return RISCV::QC_E_BGEUI;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_UImmLog2XLen_NDS:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::NDS_BBC;
+    case RISCVCC::COND_NE:
+      return RISCV::NDS_BBS;
+    }
+    break;
+  case RISCV::Select_GPR_Using_CC_UImm7_NDS:
+    switch (CC) {
+    default:
+      llvm_unreachable("Unexpected condition code!");
+    case RISCVCC::COND_EQ:
+      return RISCV::NDS_BEQC;
+    case RISCVCC::COND_NE:
+      return RISCV::NDS_BNEC;
     }
     break;
   }
@@ -1398,6 +1422,18 @@ bool RISCVInstrInfo::reverseBranchCondition(
   case RISCV::QC_E_BLTUI:
     Cond[0].setImm(RISCV::QC_E_BGEUI);
     break;
+  case RISCV::NDS_BBC:
+    Cond[0].setImm(RISCV::NDS_BBS);
+    break;
+  case RISCV::NDS_BBS:
+    Cond[0].setImm(RISCV::NDS_BBC);
+    break;
+  case RISCV::NDS_BEQC:
+    Cond[0].setImm(RISCV::NDS_BNEC);
+    break;
+  case RISCV::NDS_BNEC:
+    Cond[0].setImm(RISCV::NDS_BEQC);
+    break;
   }
 
   return false;
@@ -1570,6 +1606,11 @@ bool RISCVInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
   switch (BranchOp) {
   default:
     llvm_unreachable("Unexpected opcode!");
+  case RISCV::NDS_BBC:
+  case RISCV::NDS_BBS:
+  case RISCV::NDS_BEQC:
+  case RISCV::NDS_BNEC:
+    return isInt<11>(BrOffset);
   case RISCV::BEQ:
   case RISCV::BNE:
   case RISCV::BLT:
