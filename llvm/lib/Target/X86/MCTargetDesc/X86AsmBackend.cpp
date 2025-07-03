@@ -687,20 +687,16 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
-// Force relocation when there is a specifier. This might be too conservative -
-// GAS doesn't emit a relocation for call local@plt; local:.
-bool X86AsmBackend::shouldForceRelocation(const MCFixup &,
-                                          const MCValue &Target) {
-  return Target.getSpecifier();
-}
-
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
+  // Force relocation when there is a specifier. This might be too conservative
+  // - GAS doesn't emit a relocation for call local@plt; local:.
+  if (Target.getSpecifier())
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -709,8 +705,7 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
-  if (IsResolved &&
-      getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
+  if (IsResolved && Fixup.isPCRel()) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
       getContext().reportError(Fixup.getLoc(),

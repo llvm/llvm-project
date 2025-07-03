@@ -113,7 +113,6 @@ public:
   // Override MCAsmBackend
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
-  bool shouldForceRelocation(const MCFixup &, const MCValue &);
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
@@ -153,16 +152,11 @@ MCFixupKindInfo SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return SystemZ::MCFixupKindInfos[Kind - FirstTargetFixupKind];
 }
 
-bool SystemZMCAsmBackend::shouldForceRelocation(const MCFixup &,
-                                                const MCValue &Target) {
-  return Target.getSpecifier();
-}
-
 void SystemZMCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target,
                                      MutableArrayRef<char> Data, uint64_t Value,
                                      bool IsResolved) {
-  if (IsResolved && shouldForceRelocation(Fixup, Target))
+  if (Target.getSpecifier())
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
