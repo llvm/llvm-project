@@ -57,13 +57,12 @@ struct AsanInterceptorContext {
   do {                                                                     \
     uptr __offset = (uptr)(offset);                                        \
     uptr __size = (uptr)(size);                                            \
-    uptr __bad = 0;                                                        \
     if (UNLIKELY(__offset > __offset + __size)) {                          \
       GET_STACK_TRACE_FATAL_HERE;                                          \
       ReportStringFunctionSizeOverflow(__offset, __size, isWrite, &stack); \
     }                                                                      \
     if (UNLIKELY(!QuickCheckForUnpoisonedRegion(__offset, __size)) &&      \
-        (__bad = __asan_region_is_poisoned(__offset, __size))) {           \
+        (__asan_region_is_poisoned(__offset, __size))) {                   \
       AsanInterceptorContext* _ctx = (AsanInterceptorContext*)ctx;         \
       bool suppressed = false;                                             \
       if (_ctx) {                                                          \
