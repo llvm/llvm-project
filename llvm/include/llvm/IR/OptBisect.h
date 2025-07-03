@@ -99,7 +99,7 @@ public:
   /// Most passes should not call this routine directly. Instead, it is called
   /// through helper routines provided by the base classes of the pass. For
   /// instance, function passes should call FunctionPass::skipFunction().
-  bool shouldRunPass(const StringRef PassName,
+  bool shouldRunPass(StringRef PassName,
                      StringRef IRDescription) const override;
 
   /// Parses the command line argument to extract the names of the passes
