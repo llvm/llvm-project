@@ -456,7 +456,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     KernelEnvironment = KernelEnvironmentTy{};
     DP("Failed to read kernel environment for '%s' Using default Bare (0) "
        "execution mode\n",
-       Name);
+       getName());
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;

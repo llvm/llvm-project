@@ -319,6 +319,7 @@ defm SPV_INTEL_ternary_bitwise_function : ExtensionOperand<120>;
 defm SPV_INTEL_subgroup_matrix_multiply_accumulate : ExtensionOperand<121>;
 defm SPV_INTEL_2d_block_io : ExtensionOperand<122>;
 defm SPV_INTEL_int4 : ExtensionOperand<123>;
+defm SPV_KHR_float_controls2 : ExtensionOperand<124>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -489,6 +490,8 @@ defm DotProductInput4x8Bit : CapabilityOperand<6017, 0x10600, 0, [SPV_KHR_intege
 defm DotProductInput4x8BitPacked : CapabilityOperand<6018, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
 defm DotProduct : CapabilityOperand<6019, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
 defm GroupNonUniformRotateKHR : CapabilityOperand<6026, 0, 0, [SPV_KHR_subgroup_rotate], [GroupNonUniform]>;
+defm FloatControls2
+    : CapabilityOperand<6029, 0x10200, 0, [SPV_KHR_float_controls2], []>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
@@ -1239,7 +1242,7 @@ defm XfbBuffer : DecorationOperand<36, 0, 0, [], [TransformFeedback]>;
 defm XfbStride : DecorationOperand<37, 0, 0, [], [TransformFeedback]>;
 defm FuncParamAttr : DecorationOperand<38, 0, 0, [], [Kernel]>;
 defm FPRoundingMode : DecorationOperand<39, 0, 0, [], []>;
-defm FPFastMathMode : DecorationOperand<40, 0, 0, [], [Kernel]>;
+defm FPFastMathMode : DecorationOperand<40, 0, 0, [], [Kernel, FloatControls2]>;
 defm LinkageAttributes : DecorationOperand<41, 0, 0, [], [Linkage]>;
 defm NoContraction : DecorationOperand<42, 0, 0, [], [Shader]>;
 defm InputAttachmentIndex : DecorationOperand<43, 0, 0, [], [InputAttachment]>;

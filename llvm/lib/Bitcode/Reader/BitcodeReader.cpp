@@ -2244,6 +2244,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoExt;
   case bitc::ATTR_KIND_CAPTURES:
     return Attribute::Captures;
+  case bitc::ATTR_KIND_DEAD_ON_RETURN:
+    return Attribute::DeadOnReturn;
   }
 }
 

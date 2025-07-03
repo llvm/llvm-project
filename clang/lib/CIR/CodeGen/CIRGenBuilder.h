@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENBUILDER_H
 
 #include "Address.h"
+#include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -391,6 +392,15 @@ public:
       uniqueName = name.str();
 
     return createGlobal(module, loc, uniqueName, type, linkage);
+  }
+
+  mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
+                                mlir::Value addr, mlir::Type storageType,
+                                const CIRGenBitFieldInfo &info,
+                                bool isLvalueVolatile, bool useVolatile) {
+    return create<cir::GetBitfieldOp>(loc, resultType, addr, storageType,
+                                      info.name, info.size, info.offset,
+                                      info.isSigned, isLvalueVolatile);
   }
 };
 

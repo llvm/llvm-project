@@ -18,11 +18,7 @@ namespace lldb_private {
 namespace formatters {
 bool LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &options); // libcstdc++ c++11 std::string
-
-bool LibStdcppWStringSummaryProvider(
-    ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &options); // libcstdc++ c++11 std::wstring
+    const TypeSummaryOptions &options); // libstdc++ std::string
 
 bool LibStdcppSmartPointerSummaryProvider(
     ValueObject &valobj, Stream &stream,

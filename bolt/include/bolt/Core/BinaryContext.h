@@ -73,14 +73,15 @@ struct SegmentInfo {
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
   bool IsExecutable;          /// Is the executable bit set on the Segment?
+  bool IsWritable;            /// Is the segment writable.
 
   void print(raw_ostream &OS) const {
     OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
        << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
-       << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : "")
+       << (IsWritable ? "w" : "") << " }";
   };
 };
 
@@ -333,8 +334,13 @@ public:
                                   std::optional<StringRef> Source,
                                   unsigned CUID, unsigned DWARFVersion);
 
+  /// Input file segment info
+  ///
   /// [start memory address] -> [segment info] mapping.
   std::map<uint64_t, SegmentInfo> SegmentMapInfo;
+
+  /// Newly created segments.
+  std::vector<SegmentInfo> NewSegments;
 
   /// Symbols that are expected to be undefined in MCContext during emission.
   std::unordered_set<MCSymbol *> UndefinedSymbols;

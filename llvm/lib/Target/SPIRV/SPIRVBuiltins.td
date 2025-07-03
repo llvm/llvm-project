@@ -1634,6 +1634,7 @@ def : BuiltinType<"spirv.Event", OpTypeEvent>;
 def : BuiltinType<"spirv.Sampler", OpTypeSampler>;
 def : BuiltinType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
 def : BuiltinType<"spirv.Image", OpTypeImage>;
+def : BuiltinType<"spirv.SignedImage", OpTypeImage>;
 def : BuiltinType<"spirv.SampledImage", OpTypeSampledImage>;
 def : BuiltinType<"spirv.Pipe", OpTypePipe>;
 def : BuiltinType<"spirv.CooperativeMatrixKHR", OpTypeCooperativeMatrixKHR>;

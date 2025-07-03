@@ -1741,6 +1741,23 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+``dead_on_return``
+    This attribute indicates that the memory pointed to by the argument is dead
+    upon function return, both upon normal return and if the calls unwinds, meaning
+    that the caller will not depend on its contents. Stores that would be observable
+    either on the return path or on the unwind path may be elided.
+
+    Specifically, the behavior is as-if any memory written through the pointer
+    during the execution of the function is overwritten with a poison value
+    upon function return. The caller may access the memory, but any load
+    not preceded by a store will return poison.
+
+    This attribute does not imply aliasing properties. For pointer arguments that
+    do not alias other memory locations, ``noalias`` attribute may be used in
+    conjunction. Conversely, this attribute always implies ``dead_on_unwind``.
+
+    This attribute cannot be applied to return values.
+
 ``range(<ty> <a>, <b>)``
     This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.

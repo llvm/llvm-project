@@ -18,6 +18,7 @@ namespace gpu {
 void *allocate(uint64_t size);
 void deallocate(void *ptr);
 void *reallocate(void *ptr, uint64_t size);
+void *aligned_allocate(uint32_t alignment, uint64_t size);
 
 } // namespace gpu
 } // namespace LIBC_NAMESPACE_DECL

@@ -17,12 +17,10 @@
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
-#include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/pair.h>
-#include <__vector/vector.h>
 #include <array>
 #include <limits>
 #include <unordered_map>
@@ -196,7 +194,7 @@ private:
     if (__count == 0)
       return;
 
-    vector<difference_type> __scratch(__count);
+    auto __scratch = std::make_unique<difference_type[]>(__count);
 
     __compute_bm_prefix(__first, __last, __pred, __scratch);
     for (size_t __i = 0; __i <= __count; ++__i)

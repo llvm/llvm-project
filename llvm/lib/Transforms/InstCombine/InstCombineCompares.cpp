@@ -708,14 +708,14 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
     return I;
   };
 
-  Value *PtrBase = GEPLHS->getOperand(0);
-  if (PtrBase == RHS && CanFold(GEPLHS->getNoWrapFlags())) {
+  CommonPointerBase Base = CommonPointerBase::compute(GEPLHS, RHS);
+  if (Base.Ptr == RHS && CanFold(Base.LHSNW)) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
-    GEPNoWrapFlags NW = GEPLHS->getNoWrapFlags();
-    // Do not access GEPLHS after EmitGEPOffset, as the instruction may be
-    // destroyed.
-    Value *Offset = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
-    return NewICmp(NW, Offset, Constant::getNullValue(Offset->getType()));
+    Type *IdxTy = DL.getIndexType(GEPLHS->getType());
+    Value *Offset =
+        EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, /*RewriteGEPs=*/true);
+    return NewICmp(Base.LHSNW, Offset,
+                   Constant::getNullValue(Offset->getType()));
   }
 
   if (GEPLHS->isInBounds() && ICmpInst::isEquality(Cond) &&
@@ -752,6 +752,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.
+    Value *PtrBase = GEPLHS->getOperand(0);
     if (PtrBase != GEPRHS->getOperand(0)) {
       bool IndicesTheSame =
           GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&

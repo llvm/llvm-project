@@ -45,11 +45,18 @@ enum {
   RET,
   RETW,
 
+  RUR,
+
   // Select with condition operator - This selects between a true value and
   // a false value (ops #2 and #3) based on the boolean result of comparing
   // the lhs and rhs (ops #0 and #1) of a conditional expression with the
   // condition code in op #4
   SELECT_CC,
+  // Select with condition operator - This selects between a true value and
+  // a false value (ops #2 and #3) based on the boolean result of comparing
+  // f32 operands lhs and rhs (ops #0 and #1) of a conditional expression
+  // with the condition code in op #4 and boolean branch kind in op #5
+  SELECT_CC_FP,
 
   // SRCL(R) performs shift left(right) of the concatenation of 2 registers
   // and returns high(low) 32-bit part of 64-bit result
@@ -155,6 +162,8 @@ private:
   SDValue LowerImmediate(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 

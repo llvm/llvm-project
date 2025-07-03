@@ -42,7 +42,8 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
       arraySubscriptExpr(
           hasBase(ignoringImpCasts(
               anyOf(AllPointerTypes,
-                    hasType(decayedType(hasDecayedType(pointerType())))))))
+                    hasType(decayedType(hasDecayedType(pointerType())))))),
+          hasIndex(hasType(isInteger())))
           .bind("expr"),
       this);
 }

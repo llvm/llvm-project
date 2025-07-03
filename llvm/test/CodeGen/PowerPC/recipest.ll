@@ -1024,15 +1024,16 @@ define <4 x float> @hoo3_fmf(<4 x float> %a) #1 {
 ; CHECK-P7-NEXT:    vslw 3, 3, 3
 ; CHECK-P7-NEXT:    lvx 0, 0, 3
 ; CHECK-P7-NEXT:    addis 3, 2, .LCPI25_1@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .LCPI25_1@toc@l
 ; CHECK-P7-NEXT:    vmaddfp 5, 2, 4, 3
-; CHECK-P7-NEXT:    lvx 1, 0, 3
+; CHECK-P7-NEXT:    addi 3, 3, .LCPI25_1@toc@l
 ; CHECK-P7-NEXT:    vmaddfp 4, 5, 4, 0
-; CHECK-P7-NEXT:    vmaddfp 5, 5, 1, 3
+; CHECK-P7-NEXT:    lvx 0, 0, 3
+; CHECK-P7-NEXT:    vmaddfp 5, 5, 0, 3
 ; CHECK-P7-NEXT:    vmaddfp 3, 5, 4, 3
 ; CHECK-P7-NEXT:    vxor 4, 4, 4
 ; CHECK-P7-NEXT:    vcmpeqfp 2, 2, 4
-; CHECK-P7-NEXT:    vsel 2, 3, 4, 2
+; CHECK-P7-NEXT:    vnot 2, 2
+; CHECK-P7-NEXT:    vand 2, 2, 3
 ; CHECK-P7-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: hoo3_fmf:

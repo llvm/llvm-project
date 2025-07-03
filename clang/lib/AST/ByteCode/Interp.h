@@ -552,11 +552,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     HandleComplexComplexDiv(A, B, C, D, ResR, ResI);
 
     // Copy into the result.
-    // Result.atIndex(0).deref<Floating>() = Floating(ResR);
-    // Result.atIndex(0).initialize();
-    // Result.atIndex(1).deref<Floating>() = Floating(ResI);
-    // Result.atIndex(1).initialize();
-
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.atIndex(0).deref<Floating>() = RA; // Floating(ResR);
@@ -565,6 +560,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.atIndex(1).deref<Floating>() = RI; // Floating(ResI);
+    Result.atIndex(1).initialize();
 
     Result.initialize();
   } else {

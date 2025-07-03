@@ -12,10 +12,10 @@ define <16 x i32> @no_existing_zext(<16 x i8> %a, <16 x i32> %op) {
 ; CHECK-NEXT:    sshll.4s v6, v5, #0
 ; CHECK-NEXT:    sshll.4s v7, v0, #0
 ; CHECK-NEXT:    sshll2.4s v5, v5, #0
-; CHECK-NEXT:    and.16b v4, v4, v16
-; CHECK-NEXT:    and.16b v0, v1, v6
-; CHECK-NEXT:    and.16b v1, v2, v5
-; CHECK-NEXT:    and.16b v2, v3, v7
+; CHECK-NEXT:    and.16b v4, v16, v4
+; CHECK-NEXT:    and.16b v0, v6, v1
+; CHECK-NEXT:    and.16b v1, v5, v2
+; CHECK-NEXT:    and.16b v2, v7, v3
 ; CHECK-NEXT:    mov.16b v3, v4
 ; CHECK-NEXT:    ret
 entry:
@@ -40,10 +40,10 @@ define <16 x i32> @second_compare_operand_not_splat(<16 x i8> %a, <16 x i8> %b) 
 ; CHECK-NEXT:    sshll.4s v7, v1, #0
 ; CHECK-NEXT:    sshll2.4s v16, v3, #0
 ; CHECK-NEXT:    sshll2.4s v1, v1, #0
-; CHECK-NEXT:    and.16b v0, v4, v0
-; CHECK-NEXT:    and.16b v3, v6, v1
-; CHECK-NEXT:    and.16b v1, v2, v16
-; CHECK-NEXT:    and.16b v2, v5, v7
+; CHECK-NEXT:    and.16b v0, v0, v4
+; CHECK-NEXT:    and.16b v3, v1, v6
+; CHECK-NEXT:    and.16b v1, v16, v2
+; CHECK-NEXT:    and.16b v2, v7, v5
 ; CHECK-NEXT:    ret
 entry:
   %ext = zext <16 x i8> %a to <16 x i32>
@@ -69,10 +69,10 @@ define <16 x i32> @same_zext_used_in_cmp_signed_pred_and_select(<16 x i8> %a) {
 ; CHECK-NEXT:    sshll.4s v7, v1, #0
 ; CHECK-NEXT:    sshll2.4s v16, v3, #0
 ; CHECK-NEXT:    sshll2.4s v1, v1, #0
-; CHECK-NEXT:    and.16b v0, v4, v0
-; CHECK-NEXT:    and.16b v3, v6, v1
-; CHECK-NEXT:    and.16b v1, v2, v16
-; CHECK-NEXT:    and.16b v2, v5, v7
+; CHECK-NEXT:    and.16b v0, v0, v4
+; CHECK-NEXT:    and.16b v3, v1, v6
+; CHECK-NEXT:    and.16b v1, v16, v2
+; CHECK-NEXT:    and.16b v2, v7, v5
 ; CHECK-NEXT:    ret
 entry:
   %ext = zext <16 x i8> %a to <16 x i32>
@@ -97,10 +97,10 @@ define <8 x i64> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i64(<8 x i8> 
 ; CHECK-NEXT:    cmhi.2d v7, v1, v2
 ; CHECK-NEXT:    cmhi.2d v6, v5, v2
 ; CHECK-NEXT:    cmhi.2d v2, v4, v2
-; CHECK-NEXT:    and.16b v0, v3, v0
-; CHECK-NEXT:    and.16b v1, v1, v7
-; CHECK-NEXT:    and.16b v3, v4, v2
-; CHECK-NEXT:    and.16b v2, v5, v6
+; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v7, v1
+; CHECK-NEXT:    and.16b v3, v2, v4
+; CHECK-NEXT:    and.16b v2, v6, v5
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i8> %a to <8 x i64>
   %cmp = icmp ugt <8 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -123,10 +123,10 @@ define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v16i32(<16 x i
 ; CHECK-NEXT:    cmhi.4s v7, v2, v1
 ; CHECK-NEXT:    cmhi.4s v6, v5, v1
 ; CHECK-NEXT:    cmhi.4s v1, v4, v1
-; CHECK-NEXT:    and.16b v0, v3, v0
-; CHECK-NEXT:    and.16b v3, v4, v1
-; CHECK-NEXT:    and.16b v1, v2, v7
-; CHECK-NEXT:    and.16b v2, v5, v6
+; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v3, v1, v4
+; CHECK-NEXT:    and.16b v1, v7, v2
+; CHECK-NEXT:    and.16b v2, v6, v5
 ; CHECK-NEXT:    ret
   %ext = zext <16 x i8> %a to <16 x i32>
   %cmp = icmp ugt <16 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -143,8 +143,8 @@ define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32(<8 x i8> 
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    cmhi.4s v3, v0, v1
 ; CHECK-NEXT:    cmhi.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i8> %a to <8 x i32>
   %cmp = icmp ugt <8 x i8> %a, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
@@ -160,8 +160,8 @@ define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_2(<8 x i1
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    cmhi.4s v3, v0, v1
 ; CHECK-NEXT:    cmhi.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i16> %a to <8 x i32>
   %cmp = icmp ugt <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -179,8 +179,8 @@ define <8 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v8i32_from_v8i1
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    cmhi.4s v3, v0, v1
 ; CHECK-NEXT:    cmhi.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i15> %a to <8 x i32>
   %cmp = icmp ugt <8 x i15> %a, <i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10>
@@ -197,8 +197,8 @@ define <7 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v7i32(<7 x i16>
 ; CHECK-NEXT:    ushll2.4s v0, v0, #0
 ; CHECK-NEXT:    sshll.4s v3, v1, #0
 ; CHECK-NEXT:    sshll2.4s v1, v1, #0
-; CHECK-NEXT:    and.16b v2, v2, v3
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    and.16b v2, v3, v2
+; CHECK-NEXT:    and.16b v0, v1, v0
 ; CHECK-NEXT:    mov.s w1, v2[1]
 ; CHECK-NEXT:    mov.s w2, v2[2]
 ; CHECK-NEXT:    mov.s w3, v2[3]
@@ -244,7 +244,7 @@ define <4 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v4i32(<4 x i16>
 ; CHECK-NEXT:    movi.4s v1, #10
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    cmhi.4s v1, v0, v1
-; CHECK-NEXT:    and.16b v0, v0, v1
+; CHECK-NEXT:    and.16b v0, v1, v0
 ; CHECK-NEXT:    ret
   %ext = zext <4 x i16> %a to <4 x i32>
   %cmp = icmp ugt <4 x i16> %a, <i16 10, i16 10, i16 10, i16 10>
@@ -259,7 +259,7 @@ define <2 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_v2i32(<2 x i16>
 ; CHECK-NEXT:    movi.2s v2, #10
 ; CHECK-NEXT:    and.8b v0, v0, v1
 ; CHECK-NEXT:    cmhi.2s v1, v0, v2
-; CHECK-NEXT:    and.8b v0, v0, v1
+; CHECK-NEXT:    and.8b v0, v1, v0
 ; CHECK-NEXT:    ret
   %ext = zext <2 x i16> %a to <2 x i32>
   %cmp = icmp ugt <2 x i16> %a, <i16 10, i16 10>
@@ -275,8 +275,8 @@ define <8 x i32> @same_zext_used_in_cmp_eq_and_select_v8i32(<8 x i16> %a) {
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    cmeq.4s v3, v0, v1
 ; CHECK-NEXT:    cmeq.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i16> %a to <8 x i32>
   %cmp = icmp eq <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -293,8 +293,8 @@ define <8 x i32> @same_zext_used_in_cmp_eq_and_select_v8i32_from_v8i13(<8 x i13>
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    cmeq.4s v3, v0, v1
 ; CHECK-NEXT:    cmeq.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
   %ext = zext <8 x i13> %a to <8 x i32>
   %cmp = icmp eq <8 x i13> %a, <i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10>
@@ -358,16 +358,16 @@ define <16 x i32> @same_zext_used_in_cmp_unsigned_pred_and_select_other_use(<16 
 ; CHECK-NEXT:    and.16b v6, v6, v26
 ; CHECK-NEXT:    sshll2.2d v26, v16, #0
 ; CHECK-NEXT:    and.16b v27, v4, v27
-; CHECK-NEXT:    and.16b v4, v0, v18
-; CHECK-NEXT:    and.16b v0, v24, v16
+; CHECK-NEXT:    and.16b v4, v18, v0
+; CHECK-NEXT:    and.16b v0, v16, v24
 ; CHECK-NEXT:    stp q7, q21, [x0, #96]
 ; CHECK-NEXT:    sshll.2d v21, v16, #0
 ; CHECK-NEXT:    and.16b v5, v5, v22
 ; CHECK-NEXT:    and.16b v7, v3, v23
-; CHECK-NEXT:    and.16b v3, v19, v20
+; CHECK-NEXT:    and.16b v3, v20, v19
 ; CHECK-NEXT:    stp q5, q6, [x0, #64]
 ; CHECK-NEXT:    and.16b v6, v2, v26
-; CHECK-NEXT:    and.16b v2, v25, v17
+; CHECK-NEXT:    and.16b v2, v17, v25
 ; CHECK-NEXT:    and.16b v5, v1, v21
 ; CHECK-NEXT:    mov.16b v1, v3
 ; CHECK-NEXT:    mov.16b v3, v4
@@ -397,10 +397,10 @@ define <16 x i32> @same_sext_used_in_cmp_signed_pred_and_select_v16i32(<16 x i8>
 ; CHECK-NEXT:    cmgt.4s v7, v2, v1
 ; CHECK-NEXT:    cmgt.4s v6, v5, v1
 ; CHECK-NEXT:    cmgt.4s v1, v4, v1
-; CHECK-NEXT:    and.16b v0, v3, v0
-; CHECK-NEXT:    and.16b v3, v4, v1
-; CHECK-NEXT:    and.16b v1, v2, v7
-; CHECK-NEXT:    and.16b v2, v5, v6
+; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v3, v1, v4
+; CHECK-NEXT:    and.16b v1, v7, v2
+; CHECK-NEXT:    and.16b v2, v6, v5
 ; CHECK-NEXT:    ret
 entry:
   %ext = sext <16 x i8> %a to <16 x i32>
@@ -417,8 +417,8 @@ define <8 x i32> @same_sext_used_in_cmp_eq_and_select_v8i32(<8 x i16> %a) {
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
 ; CHECK-NEXT:    cmeq.4s v3, v0, v1
 ; CHECK-NEXT:    cmeq.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
   %ext = sext <8 x i16> %a to <8 x i32>
   %cmp = icmp eq <8 x i16> %a, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
@@ -438,8 +438,8 @@ define <8 x i32> @same_sext_used_in_cmp_eq_and_select_v8i32_from_v8i13(<8 x i13>
 ; CHECK-NEXT:    sshr.4s v2, v2, #19
 ; CHECK-NEXT:    cmeq.4s v3, v2, v1
 ; CHECK-NEXT:    cmeq.4s v1, v0, v1
-; CHECK-NEXT:    and.16b v1, v0, v1
-; CHECK-NEXT:    and.16b v0, v2, v3
+; CHECK-NEXT:    and.16b v1, v1, v0
+; CHECK-NEXT:    and.16b v0, v3, v2
 ; CHECK-NEXT:    ret
   %ext = sext <8 x i13> %a to <8 x i32>
   %cmp = icmp eq <8 x i13> %a, <i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10, i13 10>
@@ -480,8 +480,8 @@ define <8 x i32> @same_sext_used_in_cmp_signed_pred_and_select_v8i32(<8 x i16> %
 ; CHECK-NEXT:    sshll.4s v0, v0, #0
 ; CHECK-NEXT:    cmgt.4s v3, v0, v1
 ; CHECK-NEXT:    cmgt.4s v1, v2, v1
-; CHECK-NEXT:    and.16b v1, v2, v1
-; CHECK-NEXT:    and.16b v0, v0, v3
+; CHECK-NEXT:    and.16b v1, v1, v2
+; CHECK-NEXT:    and.16b v0, v3, v0
 ; CHECK-NEXT:    ret
 entry:
   %ext = sext <8 x i16> %a to <8 x i32>
@@ -502,8 +502,8 @@ define <8 x i32> @same_sext_used_in_cmp_unsigned_pred_and_select_v8i32_from_v8i1
 ; CHECK-NEXT:    sshr.4s v2, v2, #17
 ; CHECK-NEXT:    cmge.4s v3, v2, v1
 ; CHECK-NEXT:    cmge.4s v1, v0, v1
-; CHECK-NEXT:    and.16b v1, v0, v1
-; CHECK-NEXT:    and.16b v0, v2, v3
+; CHECK-NEXT:    and.16b v1, v1, v0
+; CHECK-NEXT:    and.16b v0, v3, v2
 ; CHECK-NEXT:    ret
   %ext = sext <8 x i15> %a to <8 x i32>
   %cmp = icmp sge <8 x i15> %a, <i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10, i15 10>
@@ -524,11 +524,11 @@ define <16 x i32> @same_sext_used_in_cmp_unsigned_pred_and_select(<16 x i8> %a) 
 ; CHECK-NEXT:    ext.16b v5, v0, v0, #8
 ; CHECK-NEXT:    ext.16b v6, v3, v3, #8
 ; CHECK-NEXT:    ext.16b v7, v1, v1, #8
-; CHECK-NEXT:    and.8b v2, v2, v3
-; CHECK-NEXT:    and.8b v1, v0, v1
+; CHECK-NEXT:    and.8b v2, v3, v2
+; CHECK-NEXT:    and.8b v1, v1, v0
 ; CHECK-NEXT:    sshll.4s v0, v2, #0
-; CHECK-NEXT:    and.8b v3, v5, v7
-; CHECK-NEXT:    and.8b v4, v4, v6
+; CHECK-NEXT:    and.8b v3, v7, v5
+; CHECK-NEXT:    and.8b v4, v6, v4
 ; CHECK-NEXT:    sshll.4s v2, v1, #0
 ; CHECK-NEXT:    sshll.4s v3, v3, #0
 ; CHECK-NEXT:    sshll.4s v1, v4, #0
@@ -556,10 +556,10 @@ define <16 x i32> @same_zext_used_in_cmp_signed_pred_and_select_can_convert_to_u
 ; CHECK-NEXT:    sshll.4s v7, v1, #0
 ; CHECK-NEXT:    sshll2.4s v16, v3, #0
 ; CHECK-NEXT:    sshll2.4s v1, v1, #0
-; CHECK-NEXT:    and.16b v0, v4, v0
-; CHECK-NEXT:    and.16b v3, v6, v1
-; CHECK-NEXT:    and.16b v1, v2, v16
-; CHECK-NEXT:    and.16b v2, v5, v7
+; CHECK-NEXT:    and.16b v0, v0, v4
+; CHECK-NEXT:    and.16b v3, v1, v6
+; CHECK-NEXT:    and.16b v1, v16, v2
+; CHECK-NEXT:    and.16b v2, v7, v5
 ; CHECK-NEXT:    ret
 entry:
   %ext = zext <16 x i8> %a to <16 x i32>
@@ -604,10 +604,10 @@ define void @extension_in_loop_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    sshll.4s v6, v6, #0
 ; CHECK-NEXT:    sshll2.4s v19, v5, #0
 ; CHECK-NEXT:    sshll.4s v5, v5, #0
-; CHECK-NEXT:    and.16b v7, v7, v17
-; CHECK-NEXT:    and.16b v6, v16, v6
-; CHECK-NEXT:    and.16b v16, v18, v19
-; CHECK-NEXT:    and.16b v4, v4, v5
+; CHECK-NEXT:    and.16b v7, v17, v7
+; CHECK-NEXT:    and.16b v6, v6, v16
+; CHECK-NEXT:    and.16b v16, v19, v18
+; CHECK-NEXT:    and.16b v4, v5, v4
 ; CHECK-NEXT:    stp q6, q7, [x1, #32]
 ; CHECK-NEXT:    stp q4, q16, [x1], #64
 ; CHECK-NEXT:    b.ne LBB24_1
@@ -674,10 +674,10 @@ define void @extension_in_loop_as_shuffle_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    sshll.4s v6, v6, #0
 ; CHECK-NEXT:    sshll2.4s v19, v5, #0
 ; CHECK-NEXT:    sshll.4s v5, v5, #0
-; CHECK-NEXT:    and.16b v7, v7, v17
-; CHECK-NEXT:    and.16b v6, v16, v6
-; CHECK-NEXT:    and.16b v16, v18, v19
-; CHECK-NEXT:    and.16b v4, v4, v5
+; CHECK-NEXT:    and.16b v7, v17, v7
+; CHECK-NEXT:    and.16b v6, v6, v16
+; CHECK-NEXT:    and.16b v16, v19, v18
+; CHECK-NEXT:    and.16b v4, v5, v4
 ; CHECK-NEXT:    stp q6, q7, [x1, #32]
 ; CHECK-NEXT:    stp q4, q16, [x1], #64
 ; CHECK-NEXT:    b.ne LBB25_1
@@ -745,10 +745,10 @@ define void @shuffle_in_loop_is_no_extend_v16i8_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    sshll.4s v6, v6, #0
 ; CHECK-NEXT:    sshll2.4s v19, v5, #0
 ; CHECK-NEXT:    sshll.4s v5, v5, #0
-; CHECK-NEXT:    and.16b v7, v7, v17
-; CHECK-NEXT:    and.16b v6, v16, v6
-; CHECK-NEXT:    and.16b v16, v18, v19
-; CHECK-NEXT:    and.16b v4, v4, v5
+; CHECK-NEXT:    and.16b v7, v17, v7
+; CHECK-NEXT:    and.16b v6, v6, v16
+; CHECK-NEXT:    and.16b v16, v19, v18
+; CHECK-NEXT:    and.16b v4, v5, v4
 ; CHECK-NEXT:    stp q6, q7, [x1, #32]
 ; CHECK-NEXT:    stp q4, q16, [x1], #64
 ; CHECK-NEXT:    b.ne LBB26_1

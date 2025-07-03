@@ -3237,6 +3237,9 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
 
   SDValue Src = Op.getOperand(0);
 
+  // Freeze the source since we are increasing the number of uses.
+  Src = DAG.getFreeze(Src);
+
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
@@ -3253,9 +3256,6 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   } else {
     std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
   }
-
-  // Freeze the source since we are increasing the number of uses.
-  Src = DAG.getFreeze(Src);
 
   // We do the conversion on the absolute value and fix the sign at the end.
   SDValue Abs = DAG.getNode(RISCVISD::FABS_VL, DL, ContainerVT, Src, Mask, VL);

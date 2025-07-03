@@ -1891,11 +1891,8 @@ RISCVSingleStepBreakpointLocationsPredictor::HandleAtomicSequence(
 
   // Set breakpoints at the jump addresses of the forward branches that points
   // after the end of the atomic sequence.
-  bp_addrs.erase(llvm::remove_if(bp_addrs,
-                                 [exit_pc](lldb::addr_t bp_addr) {
-                                   return exit_pc >= bp_addr;
-                                 }),
-                 bp_addrs.end());
+  llvm::erase_if(
+      bp_addrs, [exit_pc](lldb::addr_t bp_addr) { return exit_pc >= bp_addr; });
 
   // Set breakpoint at the end of atomic sequence.
   bp_addrs.push_back(exit_pc);

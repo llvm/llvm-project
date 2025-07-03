@@ -101,6 +101,7 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ConstantPool, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+  setOperationAction(ISD::GlobalTLSAddress, PtrVT, Custom);
   setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::JumpTable, PtrVT, Custom);
 
@@ -110,12 +111,18 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BR_CC, MVT::i32, Legal);
   setOperationAction(ISD::BR_CC, MVT::i64, Expand);
-  setOperationAction(ISD::BR_CC, MVT::f32, Expand);
 
   setOperationAction(ISD::SELECT, MVT::i32, Expand);
   setOperationAction(ISD::SELECT, MVT::f32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
-  setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
+
+  if (Subtarget.hasSingleFloat()) {
+    setOperationAction(ISD::BR_CC, MVT::f32, Legal);
+    setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
+  } else {
+    setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+    setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
+  }
 
   setOperationAction(ISD::SETCC, MVT::i32, Expand);
   setOperationAction(ISD::SETCC, MVT::f32, Expand);
@@ -841,21 +848,68 @@ static unsigned getBranchOpcode(ISD::CondCode Cond) {
   }
 }
 
+static std::pair<unsigned, unsigned> getFPBranchKind(ISD::CondCode Cond) {
+  switch (Cond) {
+  case ISD::SETUNE:
+    return std::make_pair(Xtensa::BF, Xtensa::OEQ_S);
+  case ISD::SETUO:
+    return std::make_pair(Xtensa::BT, Xtensa::UN_S);
+  case ISD::SETO:
+    return std::make_pair(Xtensa::BF, Xtensa::UN_S);
+  case ISD::SETUEQ:
+    return std::make_pair(Xtensa::BT, Xtensa::UEQ_S);
+  case ISD::SETULE:
+    return std::make_pair(Xtensa::BT, Xtensa::ULE_S);
+  case ISD::SETULT:
+    return std::make_pair(Xtensa::BT, Xtensa::ULT_S);
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+    return std::make_pair(Xtensa::BT, Xtensa::OEQ_S);
+  case ISD::SETNE:
+    return std::make_pair(Xtensa::BF, Xtensa::OEQ_S);
+  case ISD::SETLE:
+  case ISD::SETOLE:
+    return std::make_pair(Xtensa::BT, Xtensa::OLE_S);
+  case ISD::SETLT:
+  case ISD::SETOLT:
+    return std::make_pair(Xtensa::BT, Xtensa::OLT_S);
+  case ISD::SETGE:
+    return std::make_pair(Xtensa::BF, Xtensa::OLT_S);
+  case ISD::SETGT:
+    return std::make_pair(Xtensa::BF, Xtensa::OLE_S);
+  default:
+    llvm_unreachable("Invalid condition!");
+  }
+}
+
 SDValue XtensaTargetLowering::LowerSELECT_CC(SDValue Op,
                                              SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  EVT Ty = Op.getOperand(0).getValueType();
+  EVT Ty = Op.getValueType();
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   SDValue TrueValue = Op.getOperand(2);
   SDValue FalseValue = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op->getOperand(4))->get();
 
-  unsigned BrOpcode = getBranchOpcode(CC);
-  SDValue TargetCC = DAG.getConstant(BrOpcode, DL, MVT::i32);
+  if (LHS.getValueType() == MVT::i32) {
+    unsigned BrOpcode = getBranchOpcode(CC);
+    SDValue TargetCC = DAG.getConstant(BrOpcode, DL, MVT::i32);
 
-  return DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
-                     FalseValue, TargetCC);
+    SDValue Res = DAG.getNode(XtensaISD::SELECT_CC, DL, Ty, LHS, RHS, TrueValue,
+                              FalseValue, TargetCC, Op->getFlags());
+    return Res;
+  }
+  assert(LHS.getValueType() == MVT::f32 &&
+         "We expect MVT::f32 type of the LHS Operand in SELECT_CC");
+  unsigned BrOpcode;
+  unsigned CmpOpCode;
+  std::tie(BrOpcode, CmpOpCode) = getFPBranchKind(CC);
+  SDValue TargetCC = DAG.getConstant(CmpOpCode, DL, MVT::i32);
+  SDValue TargetBC = DAG.getConstant(BrOpcode, DL, MVT::i32);
+  return DAG.getNode(XtensaISD::SELECT_CC_FP, DL, Ty,
+                     {LHS, RHS, TrueValue, FalseValue, TargetCC, TargetBC},
+                     Op->getFlags());
 }
 
 SDValue XtensaTargetLowering::LowerRETURNADDR(SDValue Op,
@@ -917,6 +971,58 @@ SDValue XtensaTargetLowering::LowerGlobalAddress(SDValue Op,
       PtrVT, DL, DAG.getEntryNode(), CPWrap,
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
   return Res;
+}
+
+SDValue XtensaTargetLowering::LowerGlobalTLSAddress(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Op);
+  SDLoc DL(Op);
+  EVT PtrVT = Op.getValueType();
+  const GlobalValue *GV = G->getGlobal();
+
+  if (DAG.getTarget().useEmulatedTLS())
+    return LowerToTLSEmulatedModel(G, DAG);
+
+  TLSModel::Model model = getTargetMachine().getTLSModel(GV);
+
+  if (!Subtarget.hasTHREADPTR()) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(), "only emulated TLS supported",
+        DL.getDebugLoc()));
+    return DAG.getPOISON(Op->getValueType(0));
+  }
+
+  if (model == TLSModel::LocalExec || model == TLSModel::InitialExec) {
+    bool Priv = GV->isPrivateLinkage(GV->getLinkage());
+    MachineFunction &MF = DAG.getMachineFunction();
+    XtensaMachineFunctionInfo *XtensaFI =
+        MF.getInfo<XtensaMachineFunctionInfo>();
+    unsigned LabelId = XtensaFI->createCPLabelId();
+
+    // Create a constant pool entry for the callee address
+    XtensaConstantPoolValue *CPV = XtensaConstantPoolSymbol::Create(
+        *DAG.getContext(), GV->getName().str().c_str(), LabelId, Priv,
+        XtensaCP::TPOFF);
+
+    // Get the address of the callee into a register
+    SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVT, Align(4));
+    SDValue CPWrap = getAddrPCRel(CPAddr, DAG);
+    SDValue Addr = DAG.getLoad(
+        PtrVT, DL, DAG.getEntryNode(), CPWrap,
+        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+
+    SDValue TPRegister = DAG.getRegister(Xtensa::THREADPTR, MVT::i32);
+    SDValue ThreadPointer =
+        DAG.getNode(XtensaISD::RUR, DL, MVT::i32, TPRegister);
+
+    return DAG.getNode(ISD::ADD, DL, PtrVT, ThreadPointer, Addr);
+  }
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      DAG.getMachineFunction().getFunction(),
+      "only local-exec and initial-exec TLS mode supported", DL.getDebugLoc()));
+
+  return DAG.getPOISON(Op->getValueType(0));
 }
 
 SDValue XtensaTargetLowering::LowerBlockAddress(SDValue Op,
@@ -1353,6 +1459,8 @@ SDValue XtensaTargetLowering::LowerOperation(SDValue Op,
     return LowerRETURNADDR(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return LowerGlobalTLSAddress(Op, DAG);
   case ISD::BlockAddress:
     return LowerBlockAddress(Op, DAG);
   case ISD::JumpTable:
@@ -1406,8 +1514,12 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "XtensaISD::RET";
   case XtensaISD::RETW:
     return "XtensaISD::RETW";
+  case XtensaISD::RUR:
+    return "XtensaISD::RUR";
   case XtensaISD::SELECT_CC:
     return "XtensaISD::SELECT_CC";
+  case XtensaISD::SELECT_CC_FP:
+    return "XtensaISD::SELECT_CC_FP";
   case XtensaISD::SRCL:
     return "XtensaISD::SRCL";
   case XtensaISD::SRCR:
@@ -1450,7 +1562,6 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
   MachineOperand &RHS = MI.getOperand(2);
   MachineOperand &TrueValue = MI.getOperand(3);
   MachineOperand &FalseValue = MI.getOperand(4);
-  unsigned BrKind = MI.getOperand(5).getImm();
 
   // To "insert" a SELECT_CC instruction, we actually have to insert
   // CopyMBB and SinkMBB  blocks and add branch to MBB. We build phi
@@ -1482,10 +1593,25 @@ XtensaTargetLowering::emitSelectCC(MachineInstr &MI,
   MBB->addSuccessor(CopyMBB);
   MBB->addSuccessor(SinkMBB);
 
-  BuildMI(MBB, DL, TII.get(BrKind))
-      .addReg(LHS.getReg())
-      .addReg(RHS.getReg())
-      .addMBB(SinkMBB);
+  if (MI.getOpcode() == Xtensa::SELECT_CC_FP_FP ||
+      MI.getOpcode() == Xtensa::SELECT_CC_FP_INT) {
+    unsigned CmpKind = MI.getOperand(5).getImm();
+    unsigned BrKind = MI.getOperand(6).getImm();
+    MCPhysReg BReg = Xtensa::B0;
+
+    BuildMI(MBB, DL, TII.get(CmpKind), BReg)
+        .addReg(LHS.getReg())
+        .addReg(RHS.getReg());
+    BuildMI(MBB, DL, TII.get(BrKind))
+        .addReg(BReg, RegState::Kill)
+        .addMBB(SinkMBB);
+  } else {
+    unsigned BrKind = MI.getOperand(5).getImm();
+    BuildMI(MBB, DL, TII.get(BrKind))
+        .addReg(LHS.getReg())
+        .addReg(RHS.getReg())
+        .addMBB(SinkMBB);
+  }
 
   CopyMBB->addSuccessor(SinkMBB);
 
@@ -1510,6 +1636,30 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
   const XtensaInstrInfo &TII = *Subtarget.getInstrInfo();
 
   switch (MI.getOpcode()) {
+  case Xtensa::BRCC_FP: {
+    MachineOperand &Cond = MI.getOperand(0);
+    MachineOperand &LHS = MI.getOperand(1);
+    MachineOperand &RHS = MI.getOperand(2);
+    MachineBasicBlock *TargetBB = MI.getOperand(3).getMBB();
+    unsigned BrKind = 0;
+    unsigned CmpKind = 0;
+    ISD::CondCode CondCode = (ISD::CondCode)Cond.getImm();
+    MCPhysReg BReg = Xtensa::B0;
+
+    std::tie(BrKind, CmpKind) = getFPBranchKind(CondCode);
+    BuildMI(*MBB, MI, DL, TII.get(CmpKind), BReg)
+        .addReg(LHS.getReg())
+        .addReg(RHS.getReg());
+    BuildMI(*MBB, MI, DL, TII.get(BrKind))
+        .addReg(BReg, RegState::Kill)
+        .addMBB(TargetBB);
+
+    MI.eraseFromParent();
+    return MBB;
+  }
+  case Xtensa::SELECT_CC_FP_FP:
+  case Xtensa::SELECT_CC_FP_INT:
+  case Xtensa::SELECT_CC_INT_FP:
   case Xtensa::SELECT:
     return emitSelectCC(MI, MBB);
   case Xtensa::S8I:

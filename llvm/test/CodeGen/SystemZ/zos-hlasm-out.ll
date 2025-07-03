@@ -42,6 +42,7 @@ define void @foo() {
 ; CHECK: DS 0B
 ; CHECK-LABEL: L#.str.1 DS 0H
 ; CHECK: DC XL6'576F726C6400'
+; CHECK: END
 entry:
   %0 = load ptr, ptr @Greeting, align 8
   call void (ptr, ...) @outs(ptr noundef %0, ptr noundef @.str.1)

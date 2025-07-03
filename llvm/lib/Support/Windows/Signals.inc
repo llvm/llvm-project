@@ -9,6 +9,7 @@
 // This file provides the Win32 specific implementation of the Signals class.
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ExitCodes.h"
 #include "llvm/Support/FileSystem.h"
@@ -477,6 +478,10 @@ void sys::PrintStackTraceOnErrorSignal(StringRef Argv0,
   LeaveCriticalSection(&CriticalSection);
 }
 } // namespace llvm
+
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#error DebugLoc origin-tracking currently unimplemented for Windows.
+#endif
 
 static void LocalPrintStackTrace(raw_ostream &OS, PCONTEXT C) {
   STACKFRAME64 StackFrame{};

@@ -2482,23 +2482,23 @@ void VPlanTransforms::createInterleaveGroups(
     auto *InsertPos =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IRInsertPos));
 
+    bool InBounds = false;
+    if (auto *Gep = dyn_cast<GetElementPtrInst>(
+            getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
+      InBounds = Gep->isInBounds();
+
     // Get or create the start address for the interleave group.
     auto *Start =
         cast<VPWidenMemoryRecipe>(RecipeBuilder.getRecipe(IG->getMember(0)));
     VPValue *Addr = Start->getAddr();
     VPRecipeBase *AddrDef = Addr->getDefiningRecipe();
     if (AddrDef && !VPDT.properlyDominates(AddrDef, InsertPos)) {
-      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
-      // InsertPos or sink loads above zero members to join it.
-      bool InBounds = false;
-      if (auto *Gep = dyn_cast<GetElementPtrInst>(
-              getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
-        InBounds = Gep->isInBounds();
-
       // We cannot re-use the address of member zero because it does not
       // dominate the insert position. Instead, use the address of the insert
       // position and create a PtrAdd adjusting it to the address of member
       // zero.
+      // TODO: Hoist Addr's defining recipe (and any operands as needed) to
+      // InsertPos or sink loads above zero members to join it.
       assert(IG->getIndex(IRInsertPos) != 0 &&
              "index of insert position shouldn't be zero");
       auto &DL = IRInsertPos->getDataLayout();
@@ -2511,6 +2511,19 @@ void VPlanTransforms::createInterleaveGroups(
       VPBuilder B(InsertPos);
       Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
+    }
+    // If the group is reverse, adjust the index to refer to the last vector
+    // lane instead of the first. We adjust the index from the first vector
+    // lane, rather than directly getting the pointer for lane VF - 1, because
+    // the pointer operand of the interleaved access is supposed to be uniform.
+    if (IG->isReverse()) {
+      auto *ReversePtr = new VPVectorEndPointerRecipe(
+          Addr, &Plan.getVF(), getLoadStoreType(IRInsertPos),
+          -(int64_t)IG->getFactor(),
+          InBounds ? GEPNoWrapFlags::inBounds() : GEPNoWrapFlags::none(),
+          InsertPos->getDebugLoc());
+      ReversePtr->insertBefore(InsertPos);
+      Addr = ReversePtr;
     }
     auto *VPIG = new VPInterleaveRecipe(IG, Addr, StoredValues,
                                         InsertPos->getMask(), NeedsMaskForGaps, InsertPos->getDebugLoc());

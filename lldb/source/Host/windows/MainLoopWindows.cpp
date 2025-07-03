@@ -9,6 +9,7 @@
 #include "lldb/Host/windows/MainLoopWindows.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
@@ -18,6 +19,8 @@
 #include <cerrno>
 #include <csignal>
 #include <ctime>
+#include <io.h>
+#include <thread>
 #include <vector>
 #include <winsock2.h>
 
@@ -39,9 +42,8 @@ namespace {
 class PipeEvent : public MainLoopWindows::IOEvent {
 public:
   explicit PipeEvent(HANDLE handle)
-      : IOEvent((IOObject::WaitableHandle)CreateEventW(
-            NULL, /*bManualReset=*/FALSE,
-            /*bInitialState=*/FALSE, NULL)),
+      : IOEvent(CreateEventW(NULL, /*bManualReset=*/FALSE,
+                             /*bInitialState=*/FALSE, NULL)),
         m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
                                                /*bInitialState=*/FALSE, NULL)) {
     assert(m_event && m_ready);
@@ -53,12 +55,12 @@ public:
       SetEvent(m_ready);
       // Keep trying to cancel ReadFile() until the thread exits.
       do {
-        CancelIoEx((HANDLE)m_handle, /*lpOverlapped=*/NULL);
+        CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
       } while (WaitForSingleObject(m_monitor_thread.native_handle(), 1) ==
                WAIT_TIMEOUT);
       m_monitor_thread.join();
     }
-    CloseHandle((HANDLE)m_event);
+    CloseHandle(m_event);
     CloseHandle(m_ready);
   }
 
@@ -107,7 +109,7 @@ public:
         continue;
       }
 
-      SetEvent((HANDLE)m_event);
+      SetEvent(m_event);
 
       // Wait until the current read is consumed before doing the next read.
       WaitForSingleObject(m_ready, INFINITE);
@@ -124,15 +126,15 @@ private:
 class SocketEvent : public MainLoopWindows::IOEvent {
 public:
   explicit SocketEvent(SOCKET socket)
-      : IOEvent((IOObject::WaitableHandle)WSACreateEvent()), m_socket(socket) {
+      : IOEvent(WSACreateEvent()), m_socket(socket) {
     assert(m_event != WSA_INVALID_EVENT);
   }
 
-  ~SocketEvent() override { WSACloseEvent((HANDLE)m_event); }
+  ~SocketEvent() override { WSACloseEvent(m_event); }
 
   void WillPoll() {
-    int result = WSAEventSelect(m_socket, (HANDLE)m_event,
-                                FD_READ | FD_ACCEPT | FD_CLOSE);
+    int result =
+        WSAEventSelect(m_socket, m_event, FD_READ | FD_ACCEPT | FD_CLOSE);
     assert(result == 0);
     UNUSED_IF_ASSERT_DISABLED(result);
   }
@@ -143,7 +145,7 @@ public:
     UNUSED_IF_ASSERT_DISABLED(result);
   }
 
-  void Disarm() override { WSAResetEvent((HANDLE)m_event); }
+  void Disarm() override { WSAResetEvent(m_event); }
 
   SOCKET m_socket;
 };
@@ -167,7 +169,7 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
   events.reserve(m_read_fds.size() + 1);
   for (auto &[_, fd_info] : m_read_fds) {
     fd_info.event->WillPoll();
-    events.push_back((HANDLE)fd_info.event->GetHandle());
+    events.push_back(fd_info.event->GetHandle());
   }
   events.push_back(m_interrupt_event);
 
@@ -206,16 +208,21 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
     return nullptr;
   }
 
-  if (object_sp->GetFdType() == IOObject::eFDTypeSocket)
+  if (object_sp->GetFdType() == IOObject::eFDTypeSocket) {
     m_read_fds[waitable_handle] = {
-        std::make_unique<SocketEvent>((SOCKET)waitable_handle), callback};
-  else if (GetFileType(waitable_handle) == FILE_TYPE_PIPE)
-    m_read_fds[waitable_handle] = {
-        std::make_unique<PipeEvent>((HANDLE)waitable_handle), callback};
-  else {
-    error = Status::FromErrorStringWithFormat("Unsupported file type %d",
-                                              GetFileType(waitable_handle));
-    return nullptr;
+        std::make_unique<SocketEvent>(
+            reinterpret_cast<SOCKET>(waitable_handle)),
+        callback};
+  } else {
+    DWORD file_type = GetFileType(waitable_handle);
+    if (file_type != FILE_TYPE_PIPE) {
+      error = Status::FromErrorStringWithFormat("Unsupported file type %d",
+                                                file_type);
+      return nullptr;
+    }
+
+    m_read_fds[waitable_handle] = {std::make_unique<PipeEvent>(waitable_handle),
+                                   callback};
   }
 
   return CreateReadHandle(object_sp);

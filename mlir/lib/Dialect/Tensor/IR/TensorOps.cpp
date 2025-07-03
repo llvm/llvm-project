@@ -1872,9 +1872,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
 
-  // If the source and result are both 1D tensors and have the same type, the
-  // reshape has no effect, even if the tensor is dynamically shaped.
-  if (sourceTy.getRank() == 1)
+  // If the source and result are both 0D or 1D tensors and have the same type,
+  // the reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() <= 1)
     return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {

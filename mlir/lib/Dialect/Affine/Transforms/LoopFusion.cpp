@@ -1002,6 +1002,8 @@ public:
           if (producerConsumerMemrefs.count(
                   cast<AffineWriteOpInterface>(op).getMemRef()))
             dstMemrefOps.push_back(op);
+        if (dstMemrefOps.empty())
+          continue;
         unsigned dstLoopDepthTest =
             getInnermostCommonLoopDepth(dstMemrefOps) - numSurroundingLoops;
 

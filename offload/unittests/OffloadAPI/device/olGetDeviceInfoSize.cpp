@@ -44,6 +44,14 @@ TEST_P(olGetDeviceInfoSizeTest, SuccessDriverVersion) {
   ASSERT_NE(Size, 0ul);
 }
 
+TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSize) {
+  size_t Size = 0;
+  ASSERT_SUCCESS(
+      olGetDeviceInfoSize(Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, &Size));
+  ASSERT_EQ(Size, sizeof(ol_dimensions_t));
+  ASSERT_EQ(Size, sizeof(uint32_t) * 3);
+}
+
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullHandle) {
   size_t Size = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,

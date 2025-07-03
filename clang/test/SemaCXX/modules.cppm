@@ -68,6 +68,8 @@ int n;
 //--- test3.cpp
 export module bar;
 
+extern "C++" int main() {}
+
 static int m;
 
 int n;

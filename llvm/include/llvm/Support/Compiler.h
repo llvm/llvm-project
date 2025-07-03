@@ -133,7 +133,7 @@
 #endif
 
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
-     (defined(__MINGW32__) && defined(__clang__)))
+     ((defined(__MINGW32__) || defined(__CYGWIN__)) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 // Clang compilers older then 15 do not support gnu style attributes on
 // namespaces.

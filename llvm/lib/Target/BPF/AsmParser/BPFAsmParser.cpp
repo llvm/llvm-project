@@ -348,6 +348,9 @@ bool BPFAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm16:
     return Error(Operands[ErrorInfo]->getStartLoc(),
                  "operand is not a 16-bit signed integer");
+  case Match_InvalidTiedOperand:
+    return Error(Operands[ErrorInfo]->getStartLoc(),
+                 "operand is not the same as the dst register");
   }
 
   llvm_unreachable("Unknown match type detected!");

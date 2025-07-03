@@ -197,18 +197,22 @@ static bool isNormalMode(InstCounterType MaxCounter) {
 
 VmemType getVmemType(const MachineInstr &Inst) {
   assert(updateVMCntOnly(Inst));
-  if (!SIInstrInfo::isMIMG(Inst) && !SIInstrInfo::isVIMAGE(Inst) &&
-      !SIInstrInfo::isVSAMPLE(Inst))
+  if (!SIInstrInfo::isImage(Inst))
     return VMEM_NOSAMPLER;
   const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(Inst.getOpcode());
   const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
       AMDGPU::getMIMGBaseOpcodeInfo(Info->BaseOpcode);
+
+  if (BaseInfo->BVH)
+    return VMEM_BVH;
+
   // We have to make an additional check for isVSAMPLE here since some
   // instructions don't have a sampler, but are still classified as sampler
   // instructions for the purposes of e.g. waitcnt.
-  bool HasSampler =
-      BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst);
-  return BaseInfo->BVH ? VMEM_BVH : HasSampler ? VMEM_SAMPLER : VMEM_NOSAMPLER;
+  if (BaseInfo->Sampler || BaseInfo->MSAA || SIInstrInfo::isVSAMPLE(Inst))
+    return VMEM_SAMPLER;
+
+  return VMEM_NOSAMPLER;
 }
 
 unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {

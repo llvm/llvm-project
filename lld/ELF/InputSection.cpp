@@ -830,6 +830,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLT_PC:
     return r.sym->getGotPltVA(ctx) + a - p;
   case RE_LOONGARCH_GOT_PAGE_PC:
+  case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);

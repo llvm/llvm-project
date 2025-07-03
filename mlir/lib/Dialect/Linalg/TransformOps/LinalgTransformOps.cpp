@@ -2408,6 +2408,9 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
   if (getUseFullTilesByDefault())
     promotionOptions = promotionOptions.setUseFullTileBuffersByDefault(
         getUseFullTilesByDefault());
+  if (getUseOriginalSubviewSize())
+    promotionOptions =
+        promotionOptions.setUseOriginalSubviewSize(getUseOriginalSubviewSize());
   if (getUseAlloca())
     promotionOptions = promotionOptions.setUseAlloca(getUseAlloca());
   if (!getUseFullTileBuffers().empty())
