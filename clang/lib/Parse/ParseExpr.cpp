@@ -575,9 +575,13 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
 namespace {
 class CastExpressionIdValidator final : public CorrectionCandidateCallback {
  public:
-  CastExpressionIdValidator(Token Next, bool AllowTypes, bool AllowNonTypes)
-      : NextToken(Next), AllowNonTypes(AllowNonTypes) {
-    WantTypeSpecifiers = WantFunctionLikeCasts = AllowTypes;
+  CastExpressionIdValidator(Token Next,
+                            TypoCorrectionTypeBehavior CorrectionBehavior)
+      : NextToken(Next) {
+    WantTypeSpecifiers = WantFunctionLikeCasts =
+        (CorrectionBehavior != TypoCorrectionTypeBehavior::AllowNonTypes);
+    AllowNonTypes =
+        (CorrectionBehavior != TypoCorrectionTypeBehavior::AllowTypes);
   }
 
   bool ValidateCandidate(const TypoCorrection &candidate) override {
@@ -999,12 +1003,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     CXXScopeSpec ScopeSpec;
     SourceLocation TemplateKWLoc;
     Token Replacement;
-    CastExpressionIdValidator Validator(
-        /*Next=*/Tok,
-        /*AllowTypes=*/CorrectionBehavior !=
-            TypoCorrectionTypeBehavior::AllowNonTypes,
-        /*AllowNonTypes=*/CorrectionBehavior !=
-            TypoCorrectionTypeBehavior::AllowTypes);
+    CastExpressionIdValidator Validator(Tok, CorrectionBehavior);
     Validator.IsAddressOfOperand = isAddressOfOperand;
     if (Tok.isOneOf(tok::periodstar, tok::arrowstar)) {
       Validator.WantExpressionKeywords = false;
