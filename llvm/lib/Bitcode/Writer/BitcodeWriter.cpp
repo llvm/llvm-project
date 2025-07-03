@@ -3971,9 +3971,9 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_STORE));
-    Abbv->Add(ValAbbrevOp); // op1
-    Abbv->Add(ValAbbrevOp); // op0
-    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4)); // align
+    Abbv->Add(ValAbbrevOp);                                // op1
+    Abbv->Add(ValAbbrevOp);                                // op0
+    Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // align
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // volatile
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_INST_STORE_ABBREV)
@@ -4097,8 +4097,8 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_CMP2));
-    Abbv->Add(ValAbbrevOp); // op0
-    Abbv->Add(ValAbbrevOp); // op1
+    Abbv->Add(ValAbbrevOp);                                // op0
+    Abbv->Add(ValAbbrevOp);                                // op1
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 6)); // pred
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
         FUNCTION_INST_CMP_ABBREV)
@@ -4107,8 +4107,8 @@ void ModuleBitcodeWriter::writeBlockInfo() {
   {
     auto Abbv = std::make_shared<BitCodeAbbrev>();
     Abbv->Add(BitCodeAbbrevOp(bitc::FUNC_CODE_INST_CMP2));
-    Abbv->Add(ValAbbrevOp); // op0
-    Abbv->Add(ValAbbrevOp); // op1
+    Abbv->Add(ValAbbrevOp);                                // op0
+    Abbv->Add(ValAbbrevOp);                                // op1
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 6)); // pred
     Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 8)); // flags
     if (Stream.EmitBlockInfoAbbrev(bitc::FUNCTION_BLOCK_ID, Abbv) !=
