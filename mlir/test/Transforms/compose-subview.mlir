@@ -111,7 +111,7 @@ func.func @subview_strided(%input: memref<4x1024xf32>) -> memref<1x64xf32, strid
 func.func @single_dynamic_size_subview(%arg0: memref<256x?xf32, strided<[?, ?], offset: ?>>, %arg1 : index, %arg2 : index) -> memref<8x?xf32, strided<[?, ?], offset: ?>>{
   %subview = memref.subview %arg0[0, 0][8, %arg1][1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<8x?xf32, strided<[?, ?], offset: ?>> 
   %subview_1 = memref.subview %subview[0, 0][8, %arg2][1, 1] : memref<8x?xf32, strided<[?, ?], offset: ?>> to memref<8x?xf32, strided<[?, ?], offset: ?>>
-  // CHECK: %{{.*}} = memref.subview %[[SRC]][0, 0] [8, %[[SIZE]]] [1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<8x?xf32, strided<[?, ?], offset: ?>>
+  // CHECK:  %{{.*}} = memref.subview %[[SRC]][0, 0] [8, %[[SIZE]]] [1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<8x?xf32, strided<[?, ?], offset: ?>>
   return %subview_1 : memref<8x?xf32, strided<[?, ?], offset: ?>>
 }
 
@@ -121,8 +121,9 @@ func.func @single_dynamic_size_subview(%arg0: memref<256x?xf32, strided<[?, ?], 
 // CHECK-SAME:   %[[SRC:.*]]: memref<256x?xf32, strided<[?, ?], offset: ?>>,
 // CHECK-SAME:   %{{.*}}: index,
 // CHECK-SAME:   %[[SIZE:.*]]: index) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
-func.func @all_dynamic_size_subview(%arg0: memref<256x?xf32, strided<[?, ?], offset: ?>>, %arg1: index, %arg2: index) -> memref<?x?xf32, strided<[?, ?], offset: ?>> {
-  %subview = memref.subview %arg0[0, 0] [%arg2, %arg2] [1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  // CHECK: %{{.*}} = memref.subview %[[SRC]][0, 0] {{\[}}%[[SIZE]], %[[SIZE]]] [1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
-  return %subview : memref<?x?xf32, strided<[?, ?], offset: ?>>
+func.func @all_dynamic_size_subview(%arg0: memref<256x?xf32, strided<[?, ?], offset: ?>>, %arg1 : index, %arg2 : index) -> memref<?x?xf32, strided<[?, ?], offset: ?>>{
+  %subview = memref.subview %arg0[0, 0][%arg1, %arg1][1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>> 
+  %subview_1 = memref.subview %subview[0, 0][%arg2, %arg2][1, 1] : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  // CHECK:  {{.*}} = memref.subview %[[SRC]][0, 0] {{\[}}%[[SIZE]], %[[SIZE]]] [1, 1] : memref<256x?xf32, strided<[?, ?], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %subview_1 : memref<?x?xf32, strided<[?, ?], offset: ?>>
 }
