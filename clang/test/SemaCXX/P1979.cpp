@@ -32,8 +32,6 @@ module;
 module A:partition;
 
 //--- interface.cpp
-module;
-// #include "uses_vector.h"
 module A;
 import :partition;
 myV V; // expected-error {{declaration of 'myV' must be imported from module 'V' before it is required}}
