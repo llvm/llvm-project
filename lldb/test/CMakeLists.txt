@@ -132,10 +132,6 @@ if(TARGET lldb-framework)
   add_lldb_test_dependency(lldb-framework)
 endif()
 
-if (LLDB_BUILD_LLDBRPC)
-  add_lldb_test_dependency(lldb-rpc-generate-sources)
-endif()
-
 # Add dependencies that are not exported targets when building standalone.
 if(NOT LLDB_BUILT_STANDALONE)
   add_lldb_test_dependency(
@@ -253,8 +249,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_TEST_SHELL_DISABLE_REMOTE
   LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
-  LLDB_IS_64_BITS
-  LLDB_BUILD_LLDBRPC)
+  LLDB_IS_64_BITS)
 
 # Configure the individual test suites.
 add_subdirectory(API)
