@@ -294,9 +294,9 @@ Error DWARFUnitHeader::extract(DWARFContext &Context,
   // Header fields all parsed, capture the size of this unit header.
   assert(*offset_ptr - Offset <= 255 && "unexpected header size");
   Size = uint8_t(*offset_ptr - Offset);
-  uint64_t NextCUOffset = Offset + getUnitLengthFieldByteSize() + getLength();
+  uint64_t NextCUOffset = getNextUnitOffset();
 
-  if (!debug_info.isValidOffset(getNextUnitOffset() - 1))
+  if (!debug_info.isValidOffset(NextCUOffset - 1))
     return createStringError(errc::invalid_argument,
                              "DWARF unit from offset 0x%8.8" PRIx64 " incl. "
                              "to offset  0x%8.8" PRIx64 " excl. "
