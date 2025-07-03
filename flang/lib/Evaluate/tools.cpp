@@ -2173,6 +2173,25 @@ bool IsAutomatic(const Symbol &original) {
   return false;
 }
 
+bool CanCUDASymbolHaveSaveAttr(const Symbol &sym) {
+  if (const auto *details{
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return false;
+      }
+    }
+    if (details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Unified) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool IsSaved(const Symbol &original) {
   const Symbol &symbol{GetAssociationRoot(original)};
   const Scope &scope{symbol.owner()};
@@ -2195,7 +2214,7 @@ bool IsSaved(const Symbol &original) {
   } else if (scopeKind == Scope::Kind::Module ||
       (scopeKind == Scope::Kind::MainProgram &&
           (symbol.attrs().test(Attr::TARGET) || evaluate::IsCoarray(symbol)) &&
-          Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol))) {
+          CanCUDASymbolHaveSaveAttr(symbol))) {
     // 8.5.16p4
     // In main programs, implied SAVE matters only for pointer
     // initialization targets and coarrays.
@@ -2205,7 +2224,7 @@ bool IsSaved(const Symbol &original) {
           (features.IsEnabled(
                common::LanguageFeature::SaveBigMainProgramVariables) &&
               symbol.size() > 32)) &&
-      Fortran::evaluate::CanCUDASymbolHaveSaveAttr(symbol)) {
+      CanCUDASymbolHaveSaveAttr(symbol)) {
     // With SaveBigMainProgramVariables, keeping all unsaved main program
     // variables of 32 bytes or less on the stack allows keeping numerical and
     // logical scalars, small scalar characters or derived, small arrays, and
@@ -2223,15 +2242,15 @@ bool IsSaved(const Symbol &original) {
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;
   } else if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()};
-             object && object->init()) {
+      object && object->init()) {
     return true;
   } else if (IsProcedurePointer(symbol) && symbol.has<ProcEntityDetails>() &&
       symbol.get<ProcEntityDetails>().init()) {
     return true;
   } else if (scope.hasSAVE()) {
     return true; // bare SAVE statement
-  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
-             block && block->attrs().test(Attr::SAVE)) {
+  } else if (const Symbol *block{FindCommonBlockContaining(symbol)};
+      block && block->attrs().test(Attr::SAVE)) {
     return true; // in COMMON with SAVE
   } else {
     return false;
