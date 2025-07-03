@@ -417,9 +417,9 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   const SmallString<128> SysRootDir(computeSysRoot());
   if (!SysRootDir.empty()) {
     for (const Multilib &M : getOrderedMultilibs()) {
-      // Add include paths specified in multilib.yaml under the 'IncludePath'
-      // field
       if (!M.includePath().empty()) {
+        // Add include paths specified in multilib.yaml under the 'IncludePath'
+        // field
         for (const std::string &Path : M.includePath()) {
           SmallString<128> Dir(SysRoot);
           llvm::sys::path::append(Dir, Path);
