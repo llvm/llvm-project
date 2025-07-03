@@ -18253,7 +18253,7 @@ static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
   if (Func->isImplicitlyInstantiable() || !Func->isUserProvided())
     return true;
 
-  // Lambda conversion operators are never user provided
+  // Lambda conversion operators are never user provided.
   if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(Func))
     return isLambdaConversionOperator(Conv);
 
