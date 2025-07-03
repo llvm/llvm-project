@@ -6673,13 +6673,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       if (auto *C1 = dyn_cast<Constant>(Op1))
         return simplifyRelativeLoad(C0, C1, Q.DL);
     break;
-  case Intrinsic::pow:
-    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-      return PoisonValue::get(ReturnType);
-    break;
   case Intrinsic::powi:
-    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
-      return PoisonValue::get(ReturnType);
     if (auto *Power = dyn_cast<ConstantInt>(Op1)) {
       // powi(x, 0) -> 1.0
       if (Power->isZero())
