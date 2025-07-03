@@ -12,7 +12,6 @@
 
 #include <__config>
 #include <__cstddef/size_t.h>
-#include <__type_traits/is_constant_evaluated.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -28,10 +27,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool is_sufficiently_aligned(_Tp* __ptr) {
 #  ifdef _LIBCPP_COMPILER_CLANG_BASED
   return __builtin_is_aligned(__ptr, _Alignment);
 #  else
-  if constexpr (is_constant_evaluated())
+  if consteval {
     return __builtin_constant_p(__builtin_assume_aligned(__ptr, _Alignment) != nullptr);
-  else
+  } else {
     return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
+  }
 #  endif
 }
 
