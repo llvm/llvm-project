@@ -29,7 +29,7 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
 
 mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
 
-void convertSideEffectForCall(mlir::Operation *callOp,
+void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                               bool &noUnwind, bool &willReturn);

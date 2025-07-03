@@ -232,7 +232,7 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
-void convertSideEffectForCall(mlir::Operation *callOp,
+void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                               bool &noUnwind, bool &willReturn) {
@@ -241,7 +241,7 @@ void convertSideEffectForCall(mlir::Operation *callOp,
   switch (sideEffect) {
   case cir::SideEffect::All:
     memoryEffect = {};
-    noUnwind = false;
+    noUnwind = isNothrow;
     willReturn = false;
     break;
 
@@ -800,8 +800,8 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   mlir::LLVM::MemoryEffectsAttr memoryEffects;
   bool noUnwind = false;
   bool willReturn = false;
-  convertSideEffectForCall(op, call.getSideEffect(), memoryEffects, noUnwind,
-                           willReturn);
+  convertSideEffectForCall(op, call.getNothrow(), call.getSideEffect(),
+                           memoryEffects, noUnwind, willReturn);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
   if (calleeAttr) { // direct call
