@@ -2794,6 +2794,9 @@ PathDiagnosticPieceRef ConditionBRVisitor::VisitTerminator(
   default:
     return nullptr;
   case Stmt::IfStmtClass:
+    // Handle if consteval which doesn't have a traditional condition
+    if (cast<IfStmt>(Term)->isConsteval())
+      return nullptr;
     Cond = cast<IfStmt>(Term)->getCond();
     break;
   case Stmt::ConditionalOperatorClass:
