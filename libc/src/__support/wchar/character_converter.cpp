@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "src/__support/CPP/bit.h"
@@ -25,6 +26,9 @@ constexpr size_t ENCODED_BITS_PER_UTF8 = 6;
 // Information not metadata (# of bits excluding the byte headers)
 constexpr uint32_t MASK_ENCODED_BITS =
     mask_trailing_ones<uint32_t, ENCODED_BITS_PER_UTF8>();
+// Maximum value for utf-32 for a utf-8 sequence of a given length
+constexpr char32_t MAX_VALUE_PER_UTF8_LEN[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
+constexpr int MAX_UTF8_LENGTH = 4;
 
 CharacterConverter::CharacterConverter(mbstate *mbstate) { state = mbstate; }
 
@@ -39,6 +43,17 @@ bool CharacterConverter::isFull() {
 }
 
 bool CharacterConverter::isEmpty() { return state->bytes_stored == 0; }
+
+bool CharacterConverter::isValidState() {
+  if (state->total_bytes > MAX_UTF8_LENGTH)
+    return false;
+
+  const char32_t max_utf32_value =
+      state->total_bytes == 0 ? 0
+                              : MAX_VALUE_PER_UTF8_LEN[state->total_bytes - 1];
+  return state->bytes_stored <= state->total_bytes &&
+         state->partial <= max_utf32_value;
+}
 
 int CharacterConverter::push(char8_t utf8_byte) {
   uint8_t num_ones = static_cast<uint8_t>(cpp::countl_one(utf8_byte));
@@ -62,7 +77,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
     else {
       // bytes_stored and total_bytes will always be 0 here
       state->partial = static_cast<char32_t>(0);
-      return -1;
+      return EILSEQ;
     }
     state->partial = static_cast<char32_t>(utf8_byte);
     state->bytes_stored++;
@@ -79,7 +94,7 @@ int CharacterConverter::push(char8_t utf8_byte) {
   }
   // Invalid byte -> reset the state
   clear();
-  return -1;
+  return EILSEQ;
 }
 
 int CharacterConverter::push(char32_t utf32) {
@@ -90,9 +105,7 @@ int CharacterConverter::push(char32_t utf32) {
   state->partial = utf32;
 
   // determine number of utf-8 bytes needed to represent this utf32 value
-  constexpr char32_t MAX_VALUE_PER_UTF8_LEN[] = {0x7f, 0x7ff, 0xffff, 0x10ffff};
-  constexpr int NUM_RANGES = 4;
-  for (uint8_t i = 0; i < NUM_RANGES; i++) {
+  for (uint8_t i = 0; i < MAX_UTF8_LENGTH; i++) {
     if (state->partial <= MAX_VALUE_PER_UTF8_LEN[i]) {
       state->total_bytes = i + 1;
       state->bytes_stored = i + 1;
@@ -103,7 +116,7 @@ int CharacterConverter::push(char32_t utf32) {
   // `utf32` contains a value that is too large to actually represent a valid
   // unicode character
   clear();
-  return -1;
+  return EILSEQ;
 }
 
 ErrorOr<char32_t> CharacterConverter::pop_utf32() {
