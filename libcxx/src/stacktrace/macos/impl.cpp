@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/macos/impl.h"
-
 #if defined(__APPLE__)
 
 #  include <algorithm>
@@ -18,6 +16,7 @@
 
 #  include <__stacktrace/base.h>
 
+#  include "stacktrace/macos/impl.h"
 #  include "stacktrace/utils/image.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD

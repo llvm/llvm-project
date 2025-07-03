@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/windows/impl.h"
-#include <__config>
-
 #if defined(_LIBCPP_WIN32API)
 // windows.h must be first
 #  include <windows.h>

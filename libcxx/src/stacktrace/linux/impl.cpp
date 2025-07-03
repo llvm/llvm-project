@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "stacktrace/linux/impl.h"
-#include "stacktrace/config.h"
-
 #if defined(__linux__)
 
 #  include <cassert>
@@ -18,6 +15,7 @@
 #  include <unistd.h>
 
 #  include "stacktrace/config.h"
+#  include "stacktrace/linux/impl.h"
 #  include "stacktrace/utils/fd.h"
 #  include "stacktrace/utils/image.h"
 
