@@ -702,30 +702,6 @@ static void forwardArgs(LLVM::ModuleTranslation &moduleTranslation,
     moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
 }
 
-/// Helper function to map block arguments defined by ignored loop wrappers to
-/// LLVM values and prevent any uses of those from triggering null pointer
-/// dereferences.
-///
-/// This must be called after block arguments of parent wrappers have already
-/// been mapped to LLVM IR values.
-static LogicalResult
-convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
-                      LLVM::ModuleTranslation &moduleTranslation) {
-  // Map block arguments directly to the LLVM value associated to the
-  // corresponding operand. This is semantically equivalent to this wrapper not
-  // being present.
-  return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
-      .Case([&](omp::SimdOp op) {
-        forwardArgs(moduleTranslation,
-                    cast<omp::BlockArgOpenMPOpInterface>(*op));
-        op.emitWarning() << "simd information on composite construct discarded";
-        return success();
-      })
-      .Default([&](Operation *op) {
-        return op->emitError() << "cannot ignore wrapper";
-      });
-}
-
 /// Converts an OpenMP 'masked' operation into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpMasked(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -2851,17 +2827,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto simdOp = cast<omp::SimdOp>(opInst);
-
-  // Ignore simd in composite constructs with unsupported clauses
-  // TODO: Replace this once simd + clause combinations are properly supported
-  if (simdOp.isComposite() &&
-      (simdOp.getReductionByref().has_value() || simdOp.getIfExpr())) {
-    if (failed(convertIgnoredWrapper(simdOp, moduleTranslation)))
-      return failure();
-
-    return inlineConvertOmpRegions(simdOp.getRegion(), "omp.simd.region",
-                                   builder, moduleTranslation);
-  }
 
   if (failed(checkImplementationStatus(opInst)))
     return failure();
