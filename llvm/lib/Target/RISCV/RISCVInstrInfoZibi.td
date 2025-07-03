@@ -40,3 +40,12 @@ let Predicates = [HasStdExtZibi] in {
   def BEQI : Branch_imm<0b010, "beqi">;
   def BNEI : Branch_imm<0b011, "bnei">;
 } // Predicates = [HasStdExtZibi]
+
+let Predicates = [HasStdExtZibi] in {
+  multiclass BccImmPat<CondCode Cond, Branch_imm Inst> {
+    def : Pat<(riscv_brcc(XLenVT GPR:$rs1), uimm5_zibi:$cimm, Cond, bb:$imm12),
+              (Inst GPR:$rs1, uimm5_zibi:$cimm, bare_simm13_lsb0_bb:$imm12)>;
+  }
+  defm : BccImmPat<SETEQ, BEQI>;
+  defm : BccImmPat<SETNE, BNEI>;
+} // Predicates = [HasStdExtZibi]
