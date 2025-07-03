@@ -488,11 +488,13 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   if (ULO.Runtime && SE) {
     BasicBlock *OrigHeader = L->getHeader();
     BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
-    // Rotate loop if it makes it countable (for later unrolling)
+    // Rotate loop if it makes the exit count from the latch computable (for
+    // later unrolling).
     if (BI && !BI->isUnconditional() &&
         isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
         !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
-      LLVM_DEBUG(dbgs() << "  Rotating loop to make the loop countable.\n");
+      LLVM_DEBUG(
+          dbgs() << "  Rotating loop to make the exit count computable.\n");
       SimplifyQuery SQ{OrigHeader->getDataLayout()};
       SQ.TLI = nullptr;
       SQ.DT = DT;

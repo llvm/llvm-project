@@ -2,15 +2,15 @@
 ; RUN: opt --passes=loop-unroll -unroll-runtime-other-exit-predictable=1 -S %s | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test(i64 %0) #0 {
+define void @test(i64 %0, ptr %1) #0 {
 ; CHECK-LABEL: define void @test(
-; CHECK-SAME: i64 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i64 [[TMP0:%.*]], ptr [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B1:%.*]] = icmp eq i64 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[B1]], label %[[AFTER:.*]], label %[[BODY_LR_PH:.*]]
 ; CHECK:       [[BODY_LR_PH]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
@@ -21,7 +21,7 @@ define void @test(i64 %0) #0 {
 ; CHECK-NEXT:    [[A2_PROL:%.*]] = phi i64 [ [[TMP0]], %[[BODY_PROL_PREHEADER]] ], [ [[A_PROL:%.*]], %[[HEADER_PROL:.*]] ]
 ; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, %[[BODY_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], %[[HEADER_PROL]] ]
 ; CHECK-NEXT:    [[C_PROL:%.*]] = add i64 [[A2_PROL]], 1
-; CHECK-NEXT:    [[D_PROL:%.*]] = load i32, ptr addrspace(1) null, align 4
+; CHECK-NEXT:    [[D_PROL:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[E_PROL:%.*]] = icmp eq i32 [[D_PROL]], 0
 ; CHECK-NEXT:    br i1 [[E_PROL]], label %[[END_LOOPEXIT3:.*]], label %[[HEADER_PROL]]
 ; CHECK:       [[HEADER_PROL]]:
@@ -51,7 +51,7 @@ define void @test(i64 %0) #0 {
 ; CHECK-NEXT:    br i1 [[B_7]], label %[[HEADER_AFTER_CRIT_EDGE_UNR_LCSSA:.*]], label %[[BODY]]
 ; CHECK:       [[BODY]]:
 ; CHECK-NEXT:    [[A2]] = phi i64 [ [[A2_UNR]], %[[BODY_LR_PH_NEW]] ], [ [[C_7]], %[[HEADER_3]] ]
-; CHECK-NEXT:    [[D:%.*]] = load i32, ptr addrspace(1) null, align 4
+; CHECK-NEXT:    [[D:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[E:%.*]] = icmp eq i32 [[D]], 0
 ; CHECK-NEXT:    br i1 [[E]], label %[[END_LOOPEXIT]], label %[[HEADER]]
 ; CHECK:       [[END_LOOPEXIT]]:
@@ -65,7 +65,7 @@ define void @test(i64 %0) #0 {
 ; CHECK:       [[HEADER_AFTER_CRIT_EDGE]]:
 ; CHECK-NEXT:    br label %[[AFTER]]
 ; CHECK:       [[AFTER]]:
-; CHECK-NEXT:    call void @foo(i32 0)
+; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -78,7 +78,7 @@ header:
 
 body:
   %c = add i64 %a, 1
-  %d = load i32, ptr addrspace(1) null, align 4
+  %d = load i32, ptr %1, align 4
   %e = icmp eq i32 %d, 0
   br i1 %e, label %end, label %header
 
@@ -86,11 +86,11 @@ end:
   ret void
 
 after:
-  call void @foo(i32 0)
+  call void @foo()
   ret void
 }
 
-declare void @foo(i32)
+declare void @foo()
 
 attributes #0 = { "tune-cpu"="generic" }
 ;.
