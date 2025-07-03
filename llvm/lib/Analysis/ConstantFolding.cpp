@@ -3637,7 +3637,7 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
                                         const TargetLibraryInfo *TLI,
                                         const CallBase *Call) {
   if (IntrinsicID != Intrinsic::not_intrinsic &&
-      any_of(Operands, [](Constant *Op) { return isa<PoisonValue>(Op); }) &&
+      any_of(Operands, IsaPred<PoisonValue>) &&
       intrinsicPropagatesPoison(IntrinsicID))
     return PoisonValue::get(Ty);
 
