@@ -173,7 +173,7 @@ void buildOpMemberDecorate(Register Reg, MachineInstr &I,
 void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
                              const MDNode *GVarMD, const SPIRVSubtarget &ST) {
   bool NoContractionFound = false;
-  bool HasFPFastMathMode = false;
+  bool FPFastMathModeFound = false;
   unsigned FPFastMathFlags = SPIRV::FPFastMathMode::None;
   for (unsigned I = 0, E = GVarMD->getNumOperands(); I != E; ++I) {
     auto *OpMD = dyn_cast<MDNode>(GVarMD->getOperand(I));
@@ -200,7 +200,7 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
       continue; // NoContraction is handled separately.
     } else if (DecorationId->getZExtValue() ==
                static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode)) {
-      HasFPFastMathMode = true;
+      FPFastMathModeFound = true;
       FPFastMathFlags = mdconst::dyn_extract<ConstantInt>(OpMD->getOperand(1))
                             ->getZExtValue();
       continue; // FPFastMathMode is handled separately.
@@ -219,13 +219,14 @@ void buildOpSpirvDecorations(Register Reg, MachineIRBuilder &MIRBuilder,
     }
   }
   // If we have NoContraction decoration, we should set the
-  // FPFastMathMode::NoContraction flag.
+  // FPFastMathMode::AllowContract bit to 0. If it has been set to 1 by
+  // FPFastMathMode decoration, we should report an error.
   if (NoContractionFound &&
       (FPFastMathFlags & SPIRV::FPFastMathMode::AllowContract))
     report_fatal_error(
         "Conflicting FPFastMathFlags: NoContraction and AllowContract");
 
-  if (NoContractionFound || HasFPFastMathMode) {
+  if (NoContractionFound || FPFastMathModeFound) {
     MIRBuilder.buildInstr(SPIRV::OpDecorate)
         .addUse(Reg)
         .addImm(static_cast<uint32_t>(SPIRV::Decoration::FPFastMathMode))

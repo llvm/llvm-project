@@ -2268,7 +2268,6 @@ static void collectFPFastMathDefaults(const Module &M,
   auto Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
-
       MDNode *MDN = cast<MDNode>(Node->getOperand(i));
       assert(MDN->getNumOperands() >= 2 && "Expected at least 2 operands");
       const Function *F = cast<Function>(

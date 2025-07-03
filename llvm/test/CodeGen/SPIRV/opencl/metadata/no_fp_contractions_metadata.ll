@@ -2,7 +2,7 @@
 
 ; CHECK: OpEntryPoint Kernel %[[#ENTRY:]] "foo"
 ; CHECK: OpExecutionMode %[[#ENTRY]] ContractionOff 
-define spir_kernel void @foo(half %h, float %f, double %d, fp128 %fp) {
+define spir_kernel void @foo() {
 entry:
   ret void
 }

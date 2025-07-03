@@ -11,6 +11,7 @@
 ; CHECK-DAG: [[F32Ty:%.+]] = OpTypeFloat 32
 ; CHECK-DAG: [[FNTy:%.+]] = OpTypeFunction [[F32Ty]] [[F32Ty]] [[F32Ty]]
 
+
 ; CHECK:      [[FADD]] = OpFunction [[F32Ty]] None [[FNTy]]
 ; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
@@ -42,7 +43,7 @@ define float @test_fsub(float %a, float %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: [[C:%.+]] = OpFMul [[F32Ty]] [[A]] [[B]]
-;; TODO: OpDecorate checks
+;; TODO: OpDecorate checks]
 ; CHECK-NEXT: OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fmul(float %a, float %b) {
@@ -85,6 +86,7 @@ declare float @llvm.fma.f32(float, float, float)
 ; CHECK-NEXT: [[C:%.+]] = OpFunctionParameter [[F32Ty]]
 ; CHECK-NEXT: OpLabel
 ; CHECK-NEXT: [[R:%.+]] = OpExtInst [[F32Ty]] {{%.+}} fma [[A]] [[B]] [[C]]
+;; TODO: OpDecorate checks
 ; CHECK-NEXT: OpReturnValue [[R]]
 ; CHECK-NEXT: OpFunctionEnd
 define float @test_fma(float %a, float %b, float %c) {

@@ -11,7 +11,7 @@ entry:
   ret void
 }
 
-define dso_local dllexport spir_kernel void @k_float_controls_2(half %h, float %f, double %d) local_unnamed_addr {
+define dso_local dllexport spir_kernel void @k_float_controls_2(i32 %ibuf, i32 %obuf) local_unnamed_addr {
 entry:
   ret void
 }
@@ -53,11 +53,11 @@ entry:
 !20 = !{void (i32, i32)* @k_float_controls_1, i32 4460, i32 16}
 
 ; SPV-DAG: OpExecutionMode %[[#KERNEL2]] SignedZeroInfNanPreserve 64 
-!21 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 16}
+!21 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 64}
 ; SPV-DAG: OpExecutionMode %[[#KERNEL2]] SignedZeroInfNanPreserve 32 
 !22 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 32}
 ; SPV-DAG: OpExecutionMode %[[#KERNEL2]] SignedZeroInfNanPreserve 16 
-!23 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 64}
+!23 = !{void (i32, i32)* @k_float_controls_2, i32 4461, i32 16}
 
 ; SPV-DAG: OpExecutionMode %[[#KERNEL3]] RoundingModeRTE 64
 !24 = !{void (i32, i32)* @k_float_controls_3, i32 4462, i32 64}
