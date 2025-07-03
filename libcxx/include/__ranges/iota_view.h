@@ -371,6 +371,7 @@ template <class _Start, class _BoundSentinel>
 inline constexpr bool enable_borrowed_range<iota_view<_Start, _BoundSentinel>> = true;
 
 namespace views {
+
 namespace __iota {
 struct __fn {
   template <class _Start>
@@ -392,6 +393,16 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto iota = __iota::__fn{};
 } // namespace __cpo
+
+
+#  if _LIBCPP_STD_VER >= 26
+
+inline constexpr auto indices = [](__integer_like auto __size) {
+  return ranges::views::iota(decltype(__size){}, __size);
+};
+
+#  endif
+
 } // namespace views
 } // namespace ranges
 
