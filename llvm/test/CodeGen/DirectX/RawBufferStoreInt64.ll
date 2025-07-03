@@ -16,10 +16,8 @@ define void @storei64(i64 %0, i32 %index) {
   ; CHECK: [[C:%.*]] = trunc i64 [[B]] to i32
   ; CHECK: [[Vec1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i32 0
   ; CHECK: [[Vec2:%.*]] = insertelement <2 x i32> [[Vec1]], i32 [[C]], i32 1
-  ; this shufflevector is unnecessary but generated to avoid specalization
-  ; CHECK: [[Vec3:%.*]] = shufflevector <2 x i32> [[Vec2]], <2 x i32> poison, <2 x i32> <i32 0, i32 1>
   ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i64_1_0t.v2i32(
-  ; CHECK-SAME: target("dx.RawBuffer", i64, 1, 0) [[Buf]], i32 %index, i32 0, <2 x i32> [[Vec3]])
+  ; CHECK-SAME: target("dx.RawBuffer", i64, 1, 0) [[Buf]], i32 %index, i32 0, <2 x i32> [[Vec2]])
   call void @llvm.dx.resource.store.rawbuffer(
       target("dx.RawBuffer", i64, 1, 0) %buffer, i32 %index, i32 0,
       i64 %0)
@@ -38,10 +36,8 @@ define void @storev2i64(<2 x i64> %0, i32 %index) {
   ; CHECK: [[B:%.*]] = lshr <2 x i64> %0, splat (i64 32)
   ; CHECK: [[C:%.*]] = trunc <2 x i64> [[B]] to <2 x i32>
   ; CHECK: [[Vec:%.*]] = shufflevector <2 x i32> [[A]], <2 x i32> [[C]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  ; this shufflevector is unnecessary but generated to avoid specalization
-  ; CHECK: [[Vec2:%.*]] = shufflevector <4 x i32> [[Vec]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ; CHECK: call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_v2i64_1_0t.v4i32(
-  ; CHECK-SAME: target("dx.RawBuffer", <2 x i64>, 1, 0) [[Buf]], i32 %index, i32 0, <4 x i32> [[Vec2]])
+  ; CHECK-SAME: target("dx.RawBuffer", <2 x i64>, 1, 0) [[Buf]], i32 %index, i32 0, <4 x i32> [[Vec]])
   call void @llvm.dx.resource.store.rawbuffer(
       target("dx.RawBuffer", <2 x i64>, 1, 0) %buffer, i32 %index, i32 0,
       <2 x i64> %0)

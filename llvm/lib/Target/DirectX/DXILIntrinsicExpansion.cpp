@@ -42,6 +42,15 @@ public:
   static char ID; // Pass identification.
 };
 
+static bool resourceAccessNeeds64BitExpansion(Module *M, Type *OverloadTy,
+                                              bool IsRaw) {
+  if (IsRaw && M->getTargetTriple().getDXILVersion() > VersionTuple(1, 2))
+    return false;
+
+  Type *ScalarTy = OverloadTy->getScalarType();
+  return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
+}
+
 static bool isIntrinsicExpansion(Function &F) {
   switch (F.getIntrinsicID()) {
   case Intrinsic::abs:
@@ -72,27 +81,19 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_fadd:
     return true;
   case Intrinsic::dx_resource_load_rawbuffer:
-    if (F.getParent()->getTargetTriple().getDXILVersion() > VersionTuple(1, 2))
-      return false;
-    // fallthrough to check if double or i64
-    LLVM_FALLTHROUGH;
-  case Intrinsic::dx_resource_load_typedbuffer: {
-    // We need to handle i64, doubles, and vectors of them.
-    Type *ScalarTy =
-        F.getReturnType()->getStructElementType(0)->getScalarType();
-    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
-  }
-  case Intrinsic::dx_resource_store_rawbuffer: {
-    if (F.getParent()->getTargetTriple().getDXILVersion() > VersionTuple(1, 2))
-      return false;
-    Type *ScalarTy = F.getFunctionType()->getParamType(3)->getScalarType();
-    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
-  }
-  case Intrinsic::dx_resource_store_typedbuffer: {
-    // We need to handle i64 and doubles and vectors of i64 and doubles.
-    Type *ScalarTy = F.getFunctionType()->getParamType(2)->getScalarType();
-    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
-  }
+    return resourceAccessNeeds64BitExpansion(
+        F.getParent(), F.getReturnType()->getStructElementType(0),
+        /*IsRaw*/ true);
+  case Intrinsic::dx_resource_load_typedbuffer:
+    return resourceAccessNeeds64BitExpansion(
+        F.getParent(), F.getReturnType()->getStructElementType(0),
+        /*IsRaw*/ false);
+  case Intrinsic::dx_resource_store_rawbuffer:
+    return resourceAccessNeeds64BitExpansion(
+        F.getParent(), F.getFunctionType()->getParamType(3), /*IsRaw*/ true);
+  case Intrinsic::dx_resource_store_typedbuffer:
+    return resourceAccessNeeds64BitExpansion(
+        F.getParent(), F.getFunctionType()->getParamType(2), /*IsRaw*/ false);
   }
   return false;
 }
@@ -563,19 +564,20 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
   bool IsDouble = ScalarTy->isDoubleTy();
   assert(IsDouble || ScalarTy->isIntegerTy(64) &&
                          "Only expand double or int64 scalars or vectors");
-  bool IsVector = isa<FixedVectorType>(BufferTy);
-
+  bool IsVector = false;
   unsigned ExtractNum = 2;
   if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
-    if (!IsRaw)
-      assert(VT->getNumElements() == 2 &&
-             "TypedBufferLoad vector must be size 2");
     ExtractNum = 2 * VT->getNumElements();
+    IsVector = true;
+    assert(IsRaw || ExtractNum == 4 && "TypedBufferLoad vector must be size 2");
   }
 
   SmallVector<Value *, 2> Loads;
   Value *Result = PoisonValue::get(BufferTy);
   unsigned Base = 0;
+  // If we need to extract more than 4 i32; we need to break it up into
+  // more than one load. LoadNum tells us how many i32s we are loading in
+  // each load
   while (ExtractNum > 0) {
     unsigned LoadNum = std::min(ExtractNum, 4u);
     Type *Ty = VectorType::get(Builder.getInt32Ty(), LoadNum, false);
@@ -649,6 +651,8 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
     } else {
       // Use of the check bit
       assert(Indices[0] == 1 && "Unexpected type for typedbufferload");
+      // Note: This does not always match the historical behaviour of DXC.
+      // See https://github.com/microsoft/DirectXShaderCompiler/issues/7622
       if (!CheckBit) {
         SmallVector<Value *, 2> CheckBits;
         for (Value *L : Loads)
@@ -666,22 +670,22 @@ static bool expandBufferLoadIntrinsic(CallInst *Orig, bool IsRaw) {
 static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
   IRBuilder<> Builder(Orig);
 
-  Type *BufferTy = Orig->getFunctionType()->getParamType(IsRaw ? 3 : 2);
+  unsigned ValIndex = IsRaw ? 3 : 2;
+  Type *BufferTy = Orig->getFunctionType()->getParamType(ValIndex);
   Type *ScalarTy = BufferTy->getScalarType();
   bool IsDouble = ScalarTy->isDoubleTy();
   assert((IsDouble || ScalarTy->isIntegerTy(64)) &&
          "Only expand double or int64 scalars or vectors");
 
   // Determine if we're dealing with a vector or scalar
-  bool IsVector = isa<FixedVectorType>(BufferTy);
+  bool IsVector = false;
   unsigned ExtractNum = 2;
   unsigned VecLen = 0;
   if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
-    if (!IsRaw)
-      assert(VT->getNumElements() == 2 &&
-             "TypedBufferStore vector must be size 2");
     VecLen = VT->getNumElements();
+    assert(IsRaw || VecLen == 2 && "TypedBufferStore vector must be size 2");
     ExtractNum = VecLen * 2;
+    IsVector = true;
   }
 
   // Create the appropriate vector type for the result
@@ -699,12 +703,12 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
   if (IsDouble) {
     auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
     Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
-                                           {Orig->getOperand(IsRaw ? 3 : 2)});
+                                           {Orig->getOperand(ValIndex)});
     LowBits = Builder.CreateExtractValue(Split, 0);
     HighBits = Builder.CreateExtractValue(Split, 1);
   } else {
     // Handle int64 type(s)
-    Value *InputVal = Orig->getOperand(IsRaw ? 3 : 2);
+    Value *InputVal = Orig->getOperand(ValIndex);
     Constant *ShiftAmt = Builder.getInt64(32);
     if (IsVector)
       ShiftAmt =
@@ -728,6 +732,9 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
     Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
   }
 
+  // If we need to extract more than 4 i32; we need to break it up into
+  // more than one store. StoreNum tells us how many i32s we are storing in
+  // each store
   unsigned Base = 0;
   while (ExtractNum > 0) {
     unsigned StoreNum = std::min(ExtractNum, 4u);
@@ -744,7 +751,10 @@ static bool expandBufferStoreIntrinsic(CallInst *Orig, bool IsRaw) {
     for (unsigned I = 0; I < StoreNum; ++I) {
       Mask.push_back(Base + I);
     }
-    Value *SubVal = Builder.CreateShuffleVector(Val, Mask);
+
+    Value *SubVal = Val;
+    if (VecLen > 2)
+      SubVal = Builder.CreateShuffleVector(Val, Mask);
 
     Args.push_back(SubVal);
     // Create the final intrinsic call
