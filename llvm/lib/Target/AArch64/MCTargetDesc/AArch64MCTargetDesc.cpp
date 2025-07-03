@@ -394,8 +394,8 @@ public:
   AArch64MCInstrAnalysis(const MCInstrInfo *Info) : MCInstrAnalysis(Info) {}
 
   bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target,
-                      const MCSubtargetInfo *STI) const override {
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override {
     // Search for a PC-relative argument.
     // This will handle instructions like bcc (where the first argument is the
     // condition code) and cbz (where it is a register).

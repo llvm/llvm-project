@@ -413,8 +413,8 @@ public:
   }
 
   bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target,
-                      const MCSubtargetInfo *STI) const override {
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
 
     // Find the PC-relative immediate operand in the instruction.

@@ -515,8 +515,8 @@ public:
                  const MCSubtargetInfo &STI) const override;
 
   bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target,
-                      const MCSubtargetInfo *STI) const override;
+                         uint64_t &Target,
+                         const MCSubtargetInfo *STI) const override;
   std::optional<uint64_t>
   evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
                                uint64_t Addr, uint64_t Size) const override;

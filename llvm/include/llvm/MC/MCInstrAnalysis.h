@@ -181,8 +181,8 @@ public:
   // branches to another address, try to get the address these instructions
   // target. Return true on success, and the address in \p Target.
   virtual bool findTargetAddress(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                              uint64_t &Target,
-                              const MCSubtargetInfo *STI = nullptr) const;
+                                 uint64_t &Target,
+                                 const MCSubtargetInfo *STI = nullptr) const;
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
