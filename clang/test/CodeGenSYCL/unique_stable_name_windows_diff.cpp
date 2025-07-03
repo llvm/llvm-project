@@ -3,7 +3,7 @@
 
 
 template<typename KN, typename Func>
-[[clang::sycl_kernel_entry_point(KN)]] void kernel(Func F){
+[[clang::sycl_external]] void kernel(Func F){
   F();
 }
 
@@ -13,7 +13,7 @@ void kernel_wrapper(Func F) {
 }
 
 template<typename KN, typename Func>
-[[clang::sycl_kernel_entry_point(KN)]] void kernel2(Func F){
+[[clang::sycl_external]] void kernel2(Func F){
   F(1);
 }
 
@@ -23,7 +23,7 @@ void kernel2_wrapper(Func F) {
 }
 
 template<typename KN, typename Func>
-[[clang::sycl_kernel_entry_point(KN)]] void kernel3(Func F){
+[[clang::sycl_external]] void kernel3(Func F){
   F(1.1);
 }
 
