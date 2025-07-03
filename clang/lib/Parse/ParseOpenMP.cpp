@@ -56,6 +56,21 @@ public:
 };
 } // namespace
 
+static OpenMPDirectiveKind checkOpenMPDirectiveName(Parser &P,
+                                                    SourceLocation Loc,
+                                                    OpenMPDirectiveKind Kind,
+                                                    StringRef Name) {
+  unsigned Version = P.getLangOpts().OpenMP;
+  auto [D, VR] = getOpenMPDirectiveKindAndVersions(Name);
+  assert(D == Kind && "Directive kind mismatch");
+  // Ignore the case Version > VR.Max: In OpenMP 6.0 all prior spellings
+  // are explicitly allowed.
+  if (Version < VR.Min)
+    P.Diag(Loc, diag::warn_omp_future_directive_spelling) << Name;
+
+  return Kind;
+}
+
 static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
   static const DirectiveNameParser DirParser;
 
@@ -65,7 +80,10 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
   if (Tok.isAnnotation())
     return OMPD_unknown;
 
-  S = DirParser.consume(S, P.getPreprocessor().getSpelling(Tok));
+  std::string Concat = P.getPreprocessor().getSpelling(Tok);
+  SourceLocation Loc = Tok.getLocation();
+
+  S = DirParser.consume(S, Concat);
   if (S == nullptr)
     return OMPD_unknown;
 
@@ -73,15 +91,17 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
     OpenMPDirectiveKind DKind = S->Value;
     Tok = P.getPreprocessor().LookAhead(0);
     if (!Tok.isAnnotation()) {
-      S = DirParser.consume(S, P.getPreprocessor().getSpelling(Tok));
+      std::string TS = P.getPreprocessor().getSpelling(Tok);
+      S = DirParser.consume(S, TS);
       if (S == nullptr)
-        return DKind;
+        return checkOpenMPDirectiveName(P, Loc, DKind, Concat);
+      Concat += ' ' + TS;
       P.ConsumeToken();
     }
   }
 
   assert(S && "Should have exited early");
-  return S->Value;
+  return checkOpenMPDirectiveName(P, Loc, S->Value, Concat);
 }
 
 static DeclarationName parseOpenMPReductionId(Parser &P) {
