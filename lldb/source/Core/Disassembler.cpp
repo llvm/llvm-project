@@ -26,7 +26,10 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -701,6 +704,52 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   ss.PutCString(opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
   ss.PutCString(mnemonics);
+
+  if (exe_ctx && exe_ctx->GetFramePtr()) {
+    StackFrame *frame = exe_ctx->GetFramePtr();
+    TargetSP target_sp = exe_ctx->GetTargetSP();
+    if (frame && target_sp) {
+      addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
+      addr_t original_pc = frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
+      if (frame->ChangePC(current_pc)) {
+        VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
+        SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
+        addr_t func_load_addr = LLDB_INVALID_ADDRESS;
+        if (sc.function)
+          func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
+
+        if (var_list_sp) {
+          for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
+            VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
+            if (!var_sp)
+              continue;
+
+            const char *name = var_sp->GetName().AsCString();
+            auto &expr_list = var_sp->LocationExpressionList();
+
+            // Handle std::optional<DWARFExpressionEntry>.
+            if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
+              auto entry = *entryOrErr;
+
+              // Translate file-range to load-space start.
+              addr_t file_base = entry.file_range.GetBaseAddress().GetFileAddress();
+              addr_t start_load_addr = file_base + (func_load_addr - expr_list.GetFuncFileAddress());
+
+              if (current_pc == start_load_addr) {
+                StreamString loc_str;
+                ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
+                entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi);
+                ss.FillLastLineToColumn(opcode_pos + opcode_column_width + operand_column_width, ' ');
+                ss.Printf(" ; %s = %s", name, loc_str.GetString().str().c_str());
+              }
+            }
+          }
+        }
+
+        frame->ChangePC(original_pc);
+      }
+    }
+  }
 
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(
