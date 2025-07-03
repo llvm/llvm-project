@@ -832,8 +832,11 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
       DiagID == diag::err_unavailable_message)
     return false;
 
-  // Currently we consider all ARC errors except err_arc_may_not_respond as
-  // recoverable.
+  // All ARC errors are currently considered recoverable, with the exception of
+  // err_arc_may_not_respond. This specific error is treated as unrecoverable
+  // because sending a message with an unknown selector could lead to crashes
+  // within CodeGen if the resulting expression is used to initialize a C++
+  // auto variable, where type deduction is required.
   if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond)
     return false;
 
