@@ -302,7 +302,7 @@ TEST(HLSLRootSignatureTest, AllRootFlagsDump) {
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  OS << ValidFlags;
+  OS << ValidRootFlags;
   OS.flush();
 
   std::string Expected = "RootFlags("
