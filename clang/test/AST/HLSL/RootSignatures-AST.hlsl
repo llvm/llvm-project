@@ -118,9 +118,13 @@ void same_rs_string_main() {}
 // a seperate decl and identifier to reference
 
 // CHECK: -HLSLRootSignatureDecl 0x{{.*}} {{.*}} implicit [[DIFF_RS_DECL:__hlsl_rootsig_decl_\d*]]
+// CHECK-V1_0: version: 1.0,
+// CHECK-V1_1: version: 1.1,
 // CHECK-SAME: RootElements{
-// CHECK-SAME:   Sampler(s0, numDescriptors = 4, space = 1,
-// CHECK-SAME:     offset = DescriptorTableOffsetAppend, flags = None),
+// CHECK-SAME:   Sampler(s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend,
+// CHECK-V1_0-SAME:  flags = DescriptorsVolatile
+// CHECK-V1_1-SAME:  flags = None
+// CHECK-SAME: ),
 // CHECK-SAME:   DescriptorTable(numClauses = 1, visibility = All)
 // CHECK-SAME: }
 
