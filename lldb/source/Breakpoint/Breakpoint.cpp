@@ -15,6 +15,7 @@
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
@@ -26,6 +27,7 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
@@ -345,8 +347,7 @@ void Breakpoint::SetThreadID(lldb::tid_t thread_id) {
 lldb::tid_t Breakpoint::GetThreadID() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return LLDB_INVALID_THREAD_ID;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetTID();
+  return m_options.GetThreadSpecNoCreate()->GetTID();
 }
 
 void Breakpoint::SetThreadIndex(uint32_t index) {
@@ -360,8 +361,7 @@ void Breakpoint::SetThreadIndex(uint32_t index) {
 uint32_t Breakpoint::GetThreadIndex() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return 0;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetIndex();
+  return m_options.GetThreadSpecNoCreate()->GetIndex();
 }
 
 void Breakpoint::SetThreadName(const char *thread_name) {
@@ -376,8 +376,7 @@ void Breakpoint::SetThreadName(const char *thread_name) {
 const char *Breakpoint::GetThreadName() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return nullptr;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetName();
+  return m_options.GetThreadSpecNoCreate()->GetName();
 }
 
 void Breakpoint::SetQueueName(const char *queue_name) {
@@ -392,8 +391,7 @@ void Breakpoint::SetQueueName(const char *queue_name) {
 const char *Breakpoint::GetQueueName() const {
   if (m_options.GetThreadSpecNoCreate() == nullptr)
     return nullptr;
-  else
-    return m_options.GetThreadSpecNoCreate()->GetQueueName();
+  return m_options.GetThreadSpecNoCreate()->GetQueueName();
 }
 
 void Breakpoint::SetCondition(const char *condition) {
@@ -838,12 +836,19 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
                                 bool show_locations) {
   assert(s != nullptr);
 
+  const bool dim_breakpoint_description =
+      !IsEnabled() && s->AsRawOstream().colors_enabled();
+  if (dim_breakpoint_description)
+    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
+                        GetTarget().GetDebugger().GetDisabledAnsiPrefix())
+                        .c_str());
+
   if (!m_kind_description.empty()) {
     if (level == eDescriptionLevelBrief) {
       s->PutCString(GetBreakpointKind());
       return;
-    } else
-      s->Printf("Kind: %s\n", GetBreakpointKind());
+    }
+    s->Printf("Kind: %s\n", GetBreakpointKind());
   }
 
   const size_t num_locations = GetNumLocations();
@@ -934,6 +939,12 @@ void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
     }
     s->IndentLess();
   }
+
+  // Reset the colors back to normal if they were previously greyed out.
+  if (dim_breakpoint_description)
+    s->Printf("%s", ansi::FormatAnsiTerminalCodes(
+                        GetTarget().GetDebugger().GetDisabledAnsiSuffix())
+                        .c_str());
 }
 
 void Breakpoint::GetResolverDescription(Stream *s) {
@@ -1070,8 +1081,7 @@ Breakpoint::BreakpointEventData::GetBreakpointEventTypeFromEvent(
 
   if (data == nullptr)
     return eBreakpointEventTypeInvalidType;
-  else
-    return data->GetBreakpointEventType();
+  return data->GetBreakpointEventType();
 }
 
 BreakpointSP Breakpoint::BreakpointEventData::GetBreakpointFromEvent(

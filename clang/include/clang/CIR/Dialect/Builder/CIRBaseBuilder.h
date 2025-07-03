@@ -63,7 +63,7 @@ public:
 
   mlir::Value getConstAPInt(mlir::Location loc, mlir::Type typ,
                             const llvm::APInt &val) {
-    return create<cir::ConstantOp>(loc, getAttr<cir::IntAttr>(typ, val));
+    return create<cir::ConstantOp>(loc, cir::IntAttr::get(typ, val));
   }
 
   cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
@@ -227,22 +227,26 @@ public:
   //===--------------------------------------------------------------------===//
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
-                           mlir::Type returnType, mlir::ValueRange operands) {
-    return create<cir::CallOp>(loc, callee, returnType, operands);
+                           mlir::Type returnType, mlir::ValueRange operands,
+                           cir::SideEffect sideEffect = cir::SideEffect::All) {
+    return create<cir::CallOp>(loc, callee, returnType, operands, sideEffect);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
-                           mlir::ValueRange operands) {
+                           mlir::ValueRange operands,
+                           cir::SideEffect sideEffect = cir::SideEffect::All) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
-                        callee.getFunctionType().getReturnType(), operands);
+                        callee.getFunctionType().getReturnType(), operands,
+                        sideEffect);
   }
 
   cir::CallOp createIndirectCallOp(mlir::Location loc,
                                    mlir::Value indirectTarget,
                                    cir::FuncType funcType,
-                                   mlir::ValueRange operands) {
+                                   mlir::ValueRange operands,
+                                   cir::SideEffect sideEffect) {
     return create<cir::CallOp>(loc, indirectTarget, funcType.getReturnType(),
-                               operands);
+                               operands, sideEffect);
   }
 
   //===--------------------------------------------------------------------===//

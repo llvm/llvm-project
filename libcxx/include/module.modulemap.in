@@ -934,7 +934,10 @@ module std [system] {
     module chars_format               { header "__charconv/chars_format.h" }
     module from_chars_floating_point  { header "__charconv/from_chars_floating_point.h" }
     module from_chars_integral        { header "__charconv/from_chars_integral.h" }
-    module from_chars_result          { header "__charconv/from_chars_result.h" }
+    module from_chars_result          {
+      header "__charconv/from_chars_result.h"
+      export std.system_error.errc
+    }
     module tables                     { header "__charconv/tables.h" }
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
@@ -1298,6 +1301,9 @@ module std [system] {
 
     header "flat_map"
     export *
+    export std.algorithm.ranges_sort
+    export std.ranges.zip_view
+    export std.tuple
   }
 
   module flat_set {
@@ -1519,6 +1525,7 @@ module std [system] {
     }
     module permutable                 { header "__iterator/permutable.h" }
     module prev                       { header "__iterator/prev.h" }
+    module product_iterator           { header "__iterator/product_iterator.h" }
     module projected                  { header "__iterator/projected.h" }
     module ranges_iterator_traits     { header "__iterator/ranges_iterator_traits.h" }
     module readable_traits            { header "__iterator/readable_traits.h" }
@@ -1865,6 +1872,7 @@ module std [system] {
     module iota_view                      { header "__ranges/iota_view.h" }
     module istream_view                   { header "__ranges/istream_view.h" }
     module join_view                      { header "__ranges/join_view.h" }
+    module join_with_view                 { header "__ranges/join_with_view.h" }
     module lazy_split_view {
       header "__ranges/lazy_split_view.h"
       export std.functional.bind_back

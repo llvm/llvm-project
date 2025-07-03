@@ -164,8 +164,8 @@ CodeGenRegister::CodeGenRegister(const Record *R, unsigned Enum)
     : TheDef(R), EnumValue(Enum),
       CostPerUse(R->getValueAsListOfInts("CostPerUse")),
       CoveredBySubRegs(R->getValueAsBit("CoveredBySubRegs")),
-      HasDisjunctSubRegs(false), Constant(R->getValueAsBit("isConstant")),
-      SubRegsComplete(false), SuperRegsComplete(false), TopoSig(~0u) {
+      Constant(R->getValueAsBit("isConstant")), SubRegsComplete(false),
+      SuperRegsComplete(false), TopoSig(~0u) {
   Artificial = R->getValueAsBit("isArtificial");
 }
 
@@ -881,7 +881,7 @@ bool CodeGenRegisterClass::hasType(const ValueTypeByHwMode &VT) const {
   if (VT.isSimple()) {
     MVT T = VT.getSimple();
     for (const ValueTypeByHwMode &OurVT : VTs) {
-      if (llvm::count_if(OurVT, [T](auto &&P) { return P.second == T; }))
+      if (llvm::is_contained(llvm::make_second_range(OurVT), T))
         return true;
     }
   }
