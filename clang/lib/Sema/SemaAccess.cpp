@@ -1468,32 +1468,12 @@ static Sema::AccessResult CheckAccess(Sema &S, SourceLocation Loc,
   // specifier, like this:
   //   A::private_type A::foo() { ... }
   //
-  // friend declaration should not be delayed because it may lead to incorrect
-  // redeclaration chain, such as:
-  //   class D {
-  //    class E{
-  //     class F{};
-  //     friend  void foo(D::E::F& q);
-  //    };
-  //    friend  void foo(D::E::F& q);
-  //   };
+  // Or we might be parsing something that will turn out to be a friend:
+  //   void foo(A::private_type);
+  //   void B::foo(A::private_type);
   if (S.DelayedDiagnostics.shouldDelayDiagnostics()) {
-    // [class.friend]p9:
-    // A member nominated by a friend declaration shall be accessible in the
-    // class containing the friend declaration. The meaning of the friend
-    // declaration is the same whether the friend declaration appears in the
-    // private, protected, or public ([class.mem]) portion of the class
-    // member-specification.
-    Scope *TS = S.getCurScope();
-    bool IsFriendDeclaration = false;
-    while (TS && !IsFriendDeclaration) {
-      IsFriendDeclaration = TS->isFriendScope();
-      TS = TS->getParent();
-    }
-    if (!IsFriendDeclaration) {
-      S.DelayedDiagnostics.add(DelayedDiagnostic::makeAccess(Loc, Entity));
-      return Sema::AR_delayed;
-    }
+    S.DelayedDiagnostics.add(DelayedDiagnostic::makeAccess(Loc, Entity));
+    return Sema::AR_delayed;
   }
 
   EffectiveContext EC(S.CurContext);
@@ -1516,9 +1496,37 @@ void Sema::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
     DC = D->getLexicalDeclContext();
   } else if (FunctionDecl *FN = dyn_cast<FunctionDecl>(D)) {
     DC = FN;
+    // C++ [class.access.general]p4:
+    //   Access control is applied uniformly to declarations and expressions.
+    // C++ [class.access.general]p6:
+    //   All access controls in [class.access] affect the ability to name a
+    //   class member from the declaration, including parts of the declaration
+    //   preceding the name of the entity being declared [...]
+    //
+    // A friend function declaration might name an entity to which it has access
+    // in the particular context, but it doesn't implicitly grant access
+    // to that entity in other declaration contexts. For example:
+    //
+    //   class A {
+    //     using T = int;
+    //     friend void foo(T);     // #1
+    //   };
+    //   class B {
+    //     friend void foo(A::T);  // #2
+    //   };
+    //
+    // The friend declaration at #1 does not give B access to A::T, nor does it
+    // befriend B. Therefore, the friend declaration should not serve
+    // as an effective context.
+    if (FN->getFriendObjectKind())
+      DC = FN->getLexicalDeclContext();
   } else if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
-    if (auto *D = dyn_cast_if_present<DeclContext>(TD->getTemplatedDecl()))
+    if (auto *D = dyn_cast_if_present<DeclContext>(TD->getTemplatedDecl())) {
       DC = D;
+      if (FunctionDecl *FN = dyn_cast<FunctionDecl>(DC);
+          FN && FN->getFriendObjectKind())
+        DC = FN->getLexicalDeclContext();
+    }
   } else if (auto *RD = dyn_cast<RequiresExprBodyDecl>(D)) {
     DC = RD;
   }
