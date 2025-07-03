@@ -148,9 +148,9 @@ func.func @_QPtest6(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>> {f
 // CHECK:           %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_5]], %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_8:.*]] = arith.muli %[[VAL_6]]#1, %[[VAL_7]]#1 : index
 // CHECK:           %[[VAL_9:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_10:.*]] = fir.rebox %[[VAL_5]](%[[VAL_9]]) : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK:           %[[VAL_10:.*]] = fir.rebox %[[VAL_5]](%[[VAL_9]]) : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_8]] step %[[VAL_1]] unordered {
-// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_11]]) : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_10]] (%[[VAL_11]]) : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             hlfir.assign %[[VAL_3]] to %[[VAL_12]] : i32, !fir.ref<i32>
 // CHECK:           }
 // CHECK:           return

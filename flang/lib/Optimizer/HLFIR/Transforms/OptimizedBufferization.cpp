@@ -759,16 +759,6 @@ public:
                   mlir::PatternRewriter &rewriter) const override;
 };
 
-static bool isAllocatableArray(mlir::Type ty) {
-  auto boxTy = mlir::dyn_cast<fir::BoxType>(ty);
-  if (!boxTy)
-    return false;
-  auto heapTy = mlir::dyn_cast<fir::HeapType>(boxTy.getElementType());
-  if (!heapTy)
-    return false;
-  return mlir::isa<fir::SequenceType>(heapTy.getElementType());
-}
-
 llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
   // Since RHS is a scalar and LHS is an array, LHS must be allocated
@@ -798,10 +788,7 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
-  bool isArrayRef =
-      mlir::isa<fir::SequenceType>(fir::unwrapRefType(lhs.getType()));
-  if (lhs.isSimplyContiguous() && extents.size() > 1 &&
-      (isArrayRef || isAllocatableArray(lhs.getType()))) {
+  if (lhs.isSimplyContiguous() && extents.size() > 1) {
     // Flatten the array to use a single assign loop, that can be better
     // optimized.
     mlir::Value n = extents[0];
@@ -811,7 +798,12 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
 
     mlir::Type flatArrayType;
     mlir::Value flatArray = lhs.getBase();
-    if (isArrayRef) {
+    if (mlir::isa<fir::BoxType>(lhs.getType())) {
+      shape = builder.genShape(loc, flatExtents);
+      flatArrayType = fir::BoxType::get(fir::SequenceType::get(eleTy, 1));
+      flatArray = builder.create<fir::ReboxOp>(loc, flatArrayType, flatArray,
+                                               shape, /*slice=*/mlir::Value{});
+    } else {
       // Array references must have fixed shape, when used in assignments.
       int64_t flatExtent = 1;
       for (const mlir::Value &extent : extents) {
@@ -823,12 +815,6 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
       flatArrayType =
           fir::ReferenceType::get(fir::SequenceType::get({flatExtent}, eleTy));
       flatArray = builder.createConvert(loc, flatArrayType, flatArray);
-    } else {
-      shape = builder.genShape(loc, flatExtents);
-      flatArrayType = fir::BoxType::get(
-          fir::HeapType::get(fir::SequenceType::get(eleTy, 1)));
-      flatArray = builder.create<fir::ReboxOp>(loc, flatArrayType, flatArray,
-                                               shape, /*slice=*/mlir::Value{});
     }
 
     hlfir::LoopNest loopNest =
