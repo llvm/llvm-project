@@ -972,6 +972,8 @@ Arm and AArch64 Support
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
+- Added ``-msve-streaming-vector-bits=`` flag, which allows specifying the
+  SVE vector width in streaming mode.
 
 Android Support
 ^^^^^^^^^^^^^^^
