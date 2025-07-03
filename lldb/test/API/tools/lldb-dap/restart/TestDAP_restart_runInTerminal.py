@@ -5,7 +5,7 @@ Test lldb-dap RestartRequest.
 from typing import Dict, Any, List
 
 import lldbdap_testcase
-from lldbsuite.test.decorators import skipIfWindows, skipIf, skipIfBuildType
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import line_number
 
 
@@ -32,6 +32,7 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
 
         self.assertEqual(seen_stopped_event, 1, "expect only one stopped entry event.")
 
+    @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_basic_functionality(self):
@@ -80,6 +81,7 @@ class TestDAP_restart_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         )
         self.continue_to_exit()
 
+    @skipIfAsan
     @skipIfWindows
     @skipIf(oslist=["linux"], archs=["arm$"])  # Always times out on buildbot
     def test_stopOnEntry(self):

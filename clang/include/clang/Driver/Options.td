@@ -1138,7 +1138,7 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
-def offload_arch_EQ : Joined<["--"], "offload-arch=">,
+def offload_arch_EQ : CommaJoined<["--"], "offload-arch=">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
@@ -1698,6 +1698,8 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
                basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
+def fno_sample_profile_use_profi : Flag<["-"], "fno-sample-profile-use-profi">,
+                                   Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
     Alias<fno_profile_sample_use>;
 def fauto_profile_EQ : Joined<["-"], "fauto-profile=">,
@@ -2668,6 +2670,15 @@ def fsanitize_skip_hot_cutoff_EQ
 
 } // end -f[no-]sanitize* flags
 
+def fallow_runtime_check_skip_hot_cutoff_EQ
+    : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Exclude __builtin_allow_runtime_check for the top hottest "
+               "code responsible for the given fraction of PGO counters "
+               "(0.0 [default] = skip none; 1.0 = skip all). "
+               "Argument format: <value>">;
+
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Allow unsafe floating-point math optimizations which may decrease precision">,
@@ -3478,7 +3489,8 @@ def fno_experimental_isel : Flag<["-"], "fno-experimental-isel">, Group<f_clang_
   Alias<fno_global_isel>;
 def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-    HelpText<"Use the given vector functions library">,
+    HelpText<"Use the given vector functions library.\n"
+             "  Note: -fveclib=libmvec on AArch64 requires GLIBC 2.40 or newer.">,
     HelpTextForVariants<[ClangOption, CC1Option],
       "Use the given vector functions library.\n"
       "  Note: -fveclib={ArmPL,SLEEF,libmvec} implies -fno-math-errno.\n"
@@ -3838,6 +3850,24 @@ def fms_hotpatch : Flag<["-"], "fms-hotpatch">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Ensure that all functions can be hotpatched at runtime">,
   MarshallingInfoFlag<CodeGenOpts<"HotPatch">>;
+
+// See llvm/lib/CodeGen/WindowsSecureHotPatching.cpp
+def fms_secure_hotpatch_functions_file
+    : Joined<["-"], "fms-secure-hotpatch-functions-file=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoString<CodeGenOpts<"MSSecureHotPatchFunctionsFile">>,
+      HelpText<"Path to a file that contains a list of mangled names of "
+               "functions that should be hot-patched for Windows Secure "
+               "Hot-Patching">;
+def fms_secure_hotpatch_functions_list
+    : CommaJoined<["-"], "fms-secure-hotpatch-functions-list=">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CC1Option, CLOption]>,
+      MarshallingInfoStringVector<CodeGenOpts<"MSSecureHotPatchFunctionsList">>,
+      HelpText<"List of mangled symbol names of functions that should be "
+               "hot-patched for Windows Secure Hot-Patching">;
+
 def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Override the default ABI to return all structs on the stack">;
@@ -9294,6 +9324,20 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+def fdx_rootsignature_version :
+  Joined<["-"], "fdx-rootsignature-version=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Root Signature Version">,
+  Values<"rootsig_1_0,rootsig_1_1">,
+  NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
+  NormalizedValues<["V1_0", "V1_1"]>,
+  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
+def dxc_rootsig_ver :
+  Separate<["/", "-"], "force-rootsig-ver">,
+  Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
@@ -9312,6 +9356,8 @@ def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
+def dxc_gis : DXCFlag<"Gis">,
+  HelpText<"Enable IEEE strict mode (equivalent to -ffp-model=strict)">;
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
@@ -9326,6 +9372,16 @@ def fspv_extension_EQ
       Group<dxc_Group>,
       HelpText<"Specify the available SPIR-V extensions. If this option is not "
                "specified, then all extensions are available.">;
+def fvk_use_dx_layout
+    : DXCFlag<"fvk-use-dx-layout">,
+      HelpText<"Use DirectX memory layout for Vulkan resources.">;
+def fvk_use_gl_layout : DXCFlag<"fvk-use-gl-layout">,
+                        HelpText<"Use strict OpenGL std140/std430 memory "
+                                 "layout for Vulkan resources.">;
+def fvk_use_scalar_layout
+    : DXCFlag<"fvk-use-scalar-layout">,
+      HelpText<"Use scalar memory layout for Vulkan resources.">;
+
 def no_wasm_opt : Flag<["--"], "no-wasm-opt">,
   Group<m_Group>,
   HelpText<"Disable the wasm-opt optimizer">,

@@ -247,11 +247,11 @@ define <2 x i1> @test13_vector2(i64 %X, <2 x ptr> %P) nounwind {
 
 define <2 x i1> @test13_fixed_fixed(i64 %X, ptr %P, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: @test13_fixed_fixed(
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i64> [[DOTSPLATINSERT]], <i64 3, i64 0>
-; CHECK-NEXT:    [[A_IDX:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw <2 x i64> [[Y:%.*]], splat (i64 4)
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i64> [[A_IDX]], [[B_IDX]]
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds <2 x i64>, ptr [[P:%.*]], i64 0, i64 [[X:%.*]]
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[A1]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr> [[DOTSPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds <2 x i64>, ptr [[P]], <2 x i64> [[Y:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x ptr> [[DOTSPLAT]], [[B]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %A = getelementptr inbounds <2 x i64>, ptr %P, <2 x i64> zeroinitializer, i64 %X
@@ -688,9 +688,9 @@ define i32 @test28() nounwind  {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[BB10]] ]
 ; CHECK-NEXT:    [[T12_REC:%.*]] = xor i32 [[INDVAR]], -1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[T12_REC]] to i64
-; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds [[STRUCT_X:%.*]], ptr [[T45]], i64 [[TMP0]]
+; CHECK-NEXT:    [[T12:%.*]] = getelementptr inbounds i8, ptr [[T45]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[T16:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str1, ptr nonnull [[T12]]) #[[ATTR0]]
-; CHECK-NEXT:    [[T84:%.*]] = icmp eq ptr [[T12]], [[ORIENTATIONS]]
+; CHECK-NEXT:    [[T84:%.*]] = icmp eq i32 [[INDVAR]], 0
 ; CHECK-NEXT:    [[INDVAR_NEXT]] = add i32 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[T84]], label [[BB17:%.*]], label [[BB10]]
 ; CHECK:       bb17:

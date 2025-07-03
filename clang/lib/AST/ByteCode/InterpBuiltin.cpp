@@ -555,8 +555,8 @@ static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
   APSInt FPClassArg = popToAPSInt(S.Stk, FPClassArgT);
   const Floating &F = S.Stk.pop<Floating>();
 
-  int32_t Result =
-      static_cast<int32_t>((F.classify() & FPClassArg).getZExtValue());
+  int32_t Result = static_cast<int32_t>(
+      (F.classify() & std::move(FPClassArg)).getZExtValue());
   pushInteger(S, Result, Call->getType());
 
   return true;
@@ -856,7 +856,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
     if (!APSInt::isSameValue(Temp, Result))
       Overflow = true;
-    Result = Temp;
+    Result = std::move(Temp);
   }
 
   // Write Result to ResultPtr and put Overflow on the stack.
@@ -1135,17 +1135,17 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
 
   if (isIntegralType(FirstArgT)) {
     const APSInt &Src = popToAPSInt(S.Stk, FirstArgT);
-    APSInt Align = Alignment.extOrTrunc(Src.getBitWidth());
+    APInt AlignMinusOne = Alignment.extOrTrunc(Src.getBitWidth()) - 1;
     if (BuiltinOp == Builtin::BI__builtin_align_up) {
       APSInt AlignedVal =
-          APSInt((Src + (Align - 1)) & ~(Align - 1), Src.isUnsigned());
+          APSInt((Src + AlignMinusOne) & ~AlignMinusOne, Src.isUnsigned());
       pushInteger(S, AlignedVal, Call->getType());
     } else if (BuiltinOp == Builtin::BI__builtin_align_down) {
-      APSInt AlignedVal = APSInt(Src & ~(Align - 1), Src.isUnsigned());
+      APSInt AlignedVal = APSInt(Src & ~AlignMinusOne, Src.isUnsigned());
       pushInteger(S, AlignedVal, Call->getType());
     } else {
       assert(*S.Ctx.classify(Call->getType()) == PT_Bool);
-      S.Stk.push<Boolean>((Src & (Align - 1)) == 0);
+      S.Stk.push<Boolean>((Src & AlignMinusOne) == 0);
     }
     return true;
   }
@@ -1425,7 +1425,7 @@ static bool interp__builtin_ia32_addcarry_subborrow(InterpState &S,
 
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
-  assignInteger(S, CarryOutPtr, CarryOutT, APSInt(Result, true));
+  assignInteger(S, CarryOutPtr, CarryOutT, APSInt(std::move(Result), true));
 
   pushInteger(S, CarryOut, Call->getType());
 
@@ -1489,7 +1489,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     // The std::nothrow_t arg never gets put on the stack.
     if (Call->getArg(NumArgs - 1)->getType()->isNothrowT())
       --NumArgs;
-    auto Args = llvm::ArrayRef(Call->getArgs(), Call->getNumArgs());
+    auto Args = ArrayRef(Call->getArgs(), Call->getNumArgs());
     // First arg is needed.
     Args = Args.drop_front();
 
@@ -1531,34 +1531,21 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   std::optional<PrimType> ElemT = S.getContext().classify(ElemType);
   DynamicAllocator &Allocator = S.getAllocator();
   if (ElemT) {
-    if (IsArray) {
-      Block *B = Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
-                                    S.Ctx.getEvalID(),
-                                    DynamicAllocator::Form::Operator);
-      assert(B);
-      S.Stk.push<Pointer>(Pointer(B).atIndex(0));
-      return true;
-    }
-
-    const Descriptor *Desc = S.P.createDescriptor(
-        NewCall, *ElemT, ElemType.getTypePtr(), Descriptor::InlineDescMD,
-        /*IsConst=*/false, /*IsTemporary=*/false,
-        /*IsMutable=*/false);
-    Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
-                                  DynamicAllocator::Form::Operator);
+    Block *B =
+        Allocator.allocate(NewCall, *ElemT, NumElems.getZExtValue(),
+                           S.Ctx.getEvalID(), DynamicAllocator::Form::Operator);
     assert(B);
-
-    S.Stk.push<Pointer>(B);
+    S.Stk.push<Pointer>(Pointer(B).atIndex(0));
     return true;
   }
 
   assert(!ElemT);
-  // Structs etc.
-  const Descriptor *Desc =
-      S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
-                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
 
+  // Composite arrays
   if (IsArray) {
+    const Descriptor *Desc =
+        S.P.createDescriptor(NewCall, ElemType.getTypePtr(),
+                             IsArray ? std::nullopt : Descriptor::InlineDescMD);
     Block *B =
         Allocator.allocate(Desc, NumElems.getZExtValue(), S.Ctx.getEvalID(),
                            DynamicAllocator::Form::Operator);
@@ -1567,10 +1554,17 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
     return true;
   }
 
+  // Records. Still allocate them as single-element arrays.
+  QualType AllocType = S.getASTContext().getConstantArrayType(
+      ElemType, NumElems, nullptr, ArraySizeModifier::Normal, 0);
+
+  const Descriptor *Desc =
+      S.P.createDescriptor(NewCall, AllocType.getTypePtr(),
+                           IsArray ? std::nullopt : Descriptor::InlineDescMD);
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
-  S.Stk.push<Pointer>(B);
+  S.Stk.push<Pointer>(Pointer(B).atIndex(0));
   return true;
 }
 
@@ -2637,8 +2631,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 }
 
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
-                       llvm::ArrayRef<int64_t> ArrayIndices,
-                       int64_t &IntResult) {
+                       ArrayRef<int64_t> ArrayIndices, int64_t &IntResult) {
   CharUnits Result;
   unsigned N = E->getNumComponents();
   assert(N > 0);

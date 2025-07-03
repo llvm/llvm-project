@@ -36,6 +36,19 @@ template <typename T>
 using remove_cvref_t // NOLINT(readability-identifier-naming)
     = typename llvm::remove_cvref<T>::type;
 
+// TODO: Remove this in favor of std::type_identity<T> once we switch to C++23.
+template <typename T>
+struct type_identity // NOLINT(readability-identifier-naming)
+{
+  using type = T;
+};
+
+// TODO: Remove this in favor of std::type_identity_t<T> once we switch to
+// C++23.
+template <typename T>
+using type_identity_t // NOLINT(readability-identifier-naming)
+    = typename llvm::type_identity<T>::type;
+
 //===----------------------------------------------------------------------===//
 //     Features from C++23
 //===----------------------------------------------------------------------===//
