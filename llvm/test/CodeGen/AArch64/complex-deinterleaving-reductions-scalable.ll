@@ -31,14 +31,14 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr z5, [x1]
 ; CHECK-NEXT:    add x1, x1, x10
 ; CHECK-NEXT:    add x0, x0, x10
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #0
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #0
-; CHECK-NEXT:    fcmla z0.d, p0/m, z5.d, z3.d, #90
-; CHECK-NEXT:    fcmla z1.d, p0/m, z4.d, z2.d, #90
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #0
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #0
+; CHECK-NEXT:    fcmla z1.d, p0/m, z5.d, z3.d, #90
+; CHECK-NEXT:    fcmla z0.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    b.ne .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
-; CHECK-NEXT:    uzp1 z2.d, z0.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z0.d, z1.d
+; CHECK-NEXT:    uzp1 z2.d, z1.d, z0.d
+; CHECK-NEXT:    uzp2 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    faddv d0, p0, z2.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -307,8 +307,8 @@ exit.block:                                     ; preds = %vector.body
 define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalias nocapture noundef readnone %c, [2 x double] %d.coerce, ptr nocapture noundef readonly %s, ptr nocapture noundef writeonly %outs) local_unnamed_addr #0 {
 ; CHECK-LABEL: reduction_mix:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    neg x10, x9
@@ -325,13 +325,13 @@ define dso_local %"class.std::complex" @reduction_mix(ptr %a, ptr %b, ptr noalia
 ; CHECK-NEXT:    ld1w { z5.d }, p0/z, [x3, x8, lsl #2]
 ; CHECK-NEXT:    add x8, x8, x9
 ; CHECK-NEXT:    cmp x10, x8
-; CHECK-NEXT:    fadd z1.d, z4.d, z1.d
-; CHECK-NEXT:    fadd z0.d, z3.d, z0.d
+; CHECK-NEXT:    fadd z0.d, z4.d, z0.d
+; CHECK-NEXT:    fadd z1.d, z3.d, z1.d
 ; CHECK-NEXT:    add z2.d, z5.d, z2.d
 ; CHECK-NEXT:    b.ne .LBB3_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    uzp2 z3.d, z0.d, z1.d
-; CHECK-NEXT:    uzp1 z1.d, z0.d, z1.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
+; CHECK-NEXT:    uzp1 z1.d, z1.d, z0.d
 ; CHECK-NEXT:    uaddv d2, p0, z2.d
 ; CHECK-NEXT:    faddv d0, p0, z3.d
 ; CHECK-NEXT:    faddv d1, p0, z1.d

@@ -442,8 +442,8 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:    cmplwi 4, 7
 ; POWERPC_32-NEXT:    bgt 0, L..BB0_4
 ; POWERPC_32-NEXT:  # %bb.2:
-; POWERPC_32-NEXT:    li 7, 0
 ; POWERPC_32-NEXT:    li 6, 0
+; POWERPC_32-NEXT:    li 7, 0
 ; POWERPC_32-NEXT:    li 5, 0
 ; POWERPC_32-NEXT:    b L..BB0_13
 ; POWERPC_32-NEXT:  L..BB0_3:
@@ -458,13 +458,13 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:    ori 8, 6, 65472
 ; POWERPC_32-NEXT:    bge 0, L..BB0_6
 ; POWERPC_32-NEXT:  # %bb.5:
-; POWERPC_32-NEXT:    li 7, 0
 ; POWERPC_32-NEXT:    li 6, 0
+; POWERPC_32-NEXT:    li 7, 0
 ; POWERPC_32-NEXT:    b L..BB0_10
 ; POWERPC_32-NEXT:  L..BB0_6: # %vector.ph
-; POWERPC_32-NEXT:    and 6, 4, 8
+; POWERPC_32-NEXT:    and 7, 4, 8
 ; POWERPC_32-NEXT:    xxlxor 35, 35, 35
-; POWERPC_32-NEXT:    li 7, 0
+; POWERPC_32-NEXT:    li 6, 0
 ; POWERPC_32-NEXT:    li 9, 0
 ; POWERPC_32-NEXT:    mr 10, 3
 ; POWERPC_32-NEXT:    xxlxor 36, 36, 36
@@ -489,7 +489,7 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:    lxv 50, 0(10)
 ; POWERPC_32-NEXT:    addic 9, 9, 64
 ; POWERPC_32-NEXT:    addze 5, 5
-; POWERPC_32-NEXT:    xor 11, 9, 6
+; POWERPC_32-NEXT:    xor 11, 9, 7
 ; POWERPC_32-NEXT:    or. 11, 11, 5
 ; POWERPC_32-NEXT:    vcmpequh 18, 18, 3
 ; POWERPC_32-NEXT:    xxlnor 50, 50, 50
@@ -567,7 +567,7 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:  # %bb.8: # %middle.block
 ; POWERPC_32-NEXT:    vadduwm 3, 7, 4
 ; POWERPC_32-NEXT:    vadduwm 4, 8, 5
-; POWERPC_32-NEXT:    xor. 9, 6, 4
+; POWERPC_32-NEXT:    xor. 9, 7, 4
 ; POWERPC_32-NEXT:    vadduwm 4, 13, 4
 ; POWERPC_32-NEXT:    vadduwm 3, 0, 3
 ; POWERPC_32-NEXT:    vadduwm 3, 9, 3
@@ -595,23 +595,22 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:    stw 5, -32(1)
 ; POWERPC_32-NEXT:    lwz 5, L..C0(2) # %const.0
 ; POWERPC_32-NEXT:    xxlxor 36, 36, 36
-; POWERPC_32-NEXT:    mr 9, 6
+; POWERPC_32-NEXT:    addi 8, 8, 56
 ; POWERPC_32-NEXT:    lxv 1, -32(1)
-; POWERPC_32-NEXT:    addi 6, 8, 56
-; POWERPC_32-NEXT:    and 6, 4, 6
 ; POWERPC_32-NEXT:    xxlxor 35, 35, 35
 ; POWERPC_32-NEXT:    xxlxor 37, 37, 37
 ; POWERPC_32-NEXT:    lxv 0, 0(5)
+; POWERPC_32-NEXT:    and 8, 4, 8
 ; POWERPC_32-NEXT:    xxperm 36, 1, 0
 ; POWERPC_32-NEXT:    .align 4
 ; POWERPC_32-NEXT:  L..BB0_11: # %vec.epilog.vector.body
 ; POWERPC_32-NEXT:    #
-; POWERPC_32-NEXT:    slwi 5, 9, 1
-; POWERPC_32-NEXT:    addic 9, 9, 8
-; POWERPC_32-NEXT:    addze 7, 7
+; POWERPC_32-NEXT:    slwi 5, 7, 1
+; POWERPC_32-NEXT:    addic 7, 7, 8
+; POWERPC_32-NEXT:    addze 6, 6
 ; POWERPC_32-NEXT:    lxvx 32, 3, 5
-; POWERPC_32-NEXT:    xor 5, 9, 6
-; POWERPC_32-NEXT:    or. 5, 5, 7
+; POWERPC_32-NEXT:    xor 5, 7, 8
+; POWERPC_32-NEXT:    or. 5, 5, 6
 ; POWERPC_32-NEXT:    vcmpequh 0, 0, 3
 ; POWERPC_32-NEXT:    xxlnor 32, 32, 32
 ; POWERPC_32-NEXT:    vmrghh 1, 0, 0
@@ -623,9 +622,10 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:    bne 0, L..BB0_11
 ; POWERPC_32-NEXT:  # %bb.12: # %vec.epilog.middle.block
 ; POWERPC_32-NEXT:    vadduwm 2, 4, 5
-; POWERPC_32-NEXT:    xor. 7, 6, 4
-; POWERPC_32-NEXT:    li 7, 0
+; POWERPC_32-NEXT:    xor. 6, 8, 4
+; POWERPC_32-NEXT:    li 6, 0
 ; POWERPC_32-NEXT:    xxswapd 35, 34
+; POWERPC_32-NEXT:    mr 7, 8
 ; POWERPC_32-NEXT:    vadduwm 2, 2, 3
 ; POWERPC_32-NEXT:    xxspltw 35, 34, 1
 ; POWERPC_32-NEXT:    vadduwm 2, 2, 3
@@ -633,21 +633,21 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-NEXT:    lwz 5, -48(1)
 ; POWERPC_32-NEXT:    beq 0, L..BB0_15
 ; POWERPC_32-NEXT:  L..BB0_13: # %for.body.preheader
-; POWERPC_32-NEXT:    slwi 8, 6, 1
+; POWERPC_32-NEXT:    slwi 8, 7, 1
 ; POWERPC_32-NEXT:    add 3, 8, 3
 ; POWERPC_32-NEXT:    addi 3, 3, -2
 ; POWERPC_32-NEXT:    .align 4
 ; POWERPC_32-NEXT:  L..BB0_14: # %for.body
 ; POWERPC_32-NEXT:    #
 ; POWERPC_32-NEXT:    lhzu 8, 2(3)
-; POWERPC_32-NEXT:    addic 6, 6, 1
-; POWERPC_32-NEXT:    addze 7, 7
+; POWERPC_32-NEXT:    addic 7, 7, 1
+; POWERPC_32-NEXT:    addze 6, 6
 ; POWERPC_32-NEXT:    cntlzw 8, 8
 ; POWERPC_32-NEXT:    not 8, 8
 ; POWERPC_32-NEXT:    rlwinm 8, 8, 27, 31, 31
 ; POWERPC_32-NEXT:    add 5, 5, 8
-; POWERPC_32-NEXT:    xor 8, 6, 4
-; POWERPC_32-NEXT:    or. 8, 8, 7
+; POWERPC_32-NEXT:    xor 8, 7, 4
+; POWERPC_32-NEXT:    or. 8, 8, 6
 ; POWERPC_32-NEXT:    bne 0, L..BB0_14
 ; POWERPC_32-NEXT:  L..BB0_15: # %for.cond.cleanup
 ; POWERPC_32-NEXT:    mr 3, 5

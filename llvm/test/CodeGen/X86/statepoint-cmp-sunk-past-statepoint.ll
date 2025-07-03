@@ -83,15 +83,13 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LV-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY killed $rcx
   ; CHECK-LV-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed $rdx
   ; CHECK-LV-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-LV-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
-  ; CHECK-LV-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY]]
   ; CHECK-LV-NEXT: {{  $}}
   ; CHECK-LV-NEXT: bb.1.loop.head:
   ; CHECK-LV-NEXT:   successors: %bb.6(0x04000000), %bb.2(0x7c000000)
   ; CHECK-LV-NEXT: {{  $}}
-  ; CHECK-LV-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY killed [[COPY3]]
-  ; CHECK-LV-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY killed [[COPY2]]
-  ; CHECK-LV-NEXT:   TEST64rr killed [[COPY5]], [[COPY5]], implicit-def $eflags
+  ; CHECK-LV-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY]]
+  ; CHECK-LV-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
+  ; CHECK-LV-NEXT:   TEST64rr killed [[COPY3]], [[COPY3]], implicit-def $eflags
   ; CHECK-LV-NEXT:   JCC_1 %bb.6, 5, implicit killed $eflags
   ; CHECK-LV-NEXT:   JMP_1 %bb.2
   ; CHECK-LV-NEXT: {{  $}}
@@ -99,12 +97,12 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LV-NEXT:   successors: %bb.3(0x7ffff800), %bb.7(0x00000800)
   ; CHECK-LV-NEXT: {{  $}}
   ; CHECK-LV-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-LV-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LV-NEXT:   [[COPY2:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY2]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LV-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LV-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LV-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[COPY4]]
-  ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY6]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LV-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[COPY2]]
+  ; CHECK-LV-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LV-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LV-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LV-NEXT:   JMP_1 %bb.3
@@ -112,8 +110,8 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LV-NEXT: bb.3.BB2:
   ; CHECK-LV-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; CHECK-LV-NEXT: {{  $}}
-  ; CHECK-LV-NEXT:   [[COPY7:%[0-9]+]]:gr8 = COPY [[MOV32r0_]].sub_8bit
-  ; CHECK-LV-NEXT:   TEST8rr killed [[COPY7]], [[COPY7]], implicit-def $eflags
+  ; CHECK-LV-NEXT:   [[COPY5:%[0-9]+]]:gr8 = COPY [[MOV32r0_]].sub_8bit
+  ; CHECK-LV-NEXT:   TEST8rr killed [[COPY5]], [[COPY5]], implicit-def $eflags
   ; CHECK-LV-NEXT:   JCC_1 %bb.5, 5, implicit killed $eflags
   ; CHECK-LV-NEXT:   JMP_1 %bb.4
   ; CHECK-LV-NEXT: {{  $}}
@@ -123,12 +121,11 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LV-NEXT: bb.5.tail:
   ; CHECK-LV-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; CHECK-LV-NEXT: {{  $}}
-  ; CHECK-LV-NEXT:   [[COPY8:%[0-9]+]]:gr64 = COPY [[COPY6]]
-  ; CHECK-LV-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY killed [[COPY6]]
-  ; CHECK-LV-NEXT:   [[COPY9:%[0-9]+]]:gr64 = nuw ADD64ri32 [[COPY9]], 8, implicit-def dead $eflags
-  ; CHECK-LV-NEXT:   TEST64rr killed [[COPY4]], [[COPY4]], implicit-def $eflags
-  ; CHECK-LV-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY9]]
-  ; CHECK-LV-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY8]]
+  ; CHECK-LV-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY [[COPY4]]
+  ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY killed [[COPY4]]
+  ; CHECK-LV-NEXT:   [[COPY6:%[0-9]+]]:gr64 = nuw ADD64ri32 [[COPY6]], 8, implicit-def dead $eflags
+  ; CHECK-LV-NEXT:   TEST64rr killed [[COPY2]], [[COPY2]], implicit-def $eflags
+  ; CHECK-LV-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed [[COPY6]]
   ; CHECK-LV-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-LV-NEXT:   JMP_1 %bb.6
   ; CHECK-LV-NEXT: {{  $}}
@@ -149,15 +146,13 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LIS-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rcx
   ; CHECK-LIS-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdx
   ; CHECK-LIS-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-LIS-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY1]]
-  ; CHECK-LIS-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-LIS-NEXT: {{  $}}
   ; CHECK-LIS-NEXT: bb.1.loop.head:
   ; CHECK-LIS-NEXT:   successors: %bb.6(0x04000000), %bb.2(0x7c000000)
   ; CHECK-LIS-NEXT: {{  $}}
-  ; CHECK-LIS-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[COPY3]]
-  ; CHECK-LIS-NEXT:   [[COPY5:%[0-9]+]]:gr64 = COPY [[COPY2]]
-  ; CHECK-LIS-NEXT:   TEST64rr [[COPY5]], [[COPY5]], implicit-def $eflags
+  ; CHECK-LIS-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY]]
+  ; CHECK-LIS-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY1]]
+  ; CHECK-LIS-NEXT:   TEST64rr [[COPY3]], [[COPY3]], implicit-def $eflags
   ; CHECK-LIS-NEXT:   JCC_1 %bb.6, 5, implicit killed $eflags
   ; CHECK-LIS-NEXT:   JMP_1 %bb.2
   ; CHECK-LIS-NEXT: {{  $}}
@@ -165,12 +160,12 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LIS-NEXT:   successors: %bb.3(0x7ffff800), %bb.7(0x00000800)
   ; CHECK-LIS-NEXT: {{  $}}
   ; CHECK-LIS-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-LIS-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LIS-NEXT:   [[COPY2:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY2]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LIS-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LIS-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LIS-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY [[COPY4]]
-  ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY6]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+  ; CHECK-LIS-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[COPY2]]
+  ; CHECK-LIS-NEXT:   [[COPY4:%[0-9]+]]:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, [[COPY4]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-LIS-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-LIS-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-LIS-NEXT:   JMP_1 %bb.3
@@ -178,8 +173,8 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LIS-NEXT: bb.3.BB2:
   ; CHECK-LIS-NEXT:   successors: %bb.4(0x40000000), %bb.5(0x40000000)
   ; CHECK-LIS-NEXT: {{  $}}
-  ; CHECK-LIS-NEXT:   [[COPY7:%[0-9]+]]:gr8 = COPY [[MOV32r0_]].sub_8bit
-  ; CHECK-LIS-NEXT:   TEST8rr [[COPY7]], [[COPY7]], implicit-def $eflags
+  ; CHECK-LIS-NEXT:   [[COPY5:%[0-9]+]]:gr8 = COPY [[MOV32r0_]].sub_8bit
+  ; CHECK-LIS-NEXT:   TEST8rr [[COPY5]], [[COPY5]], implicit-def $eflags
   ; CHECK-LIS-NEXT:   JCC_1 %bb.5, 5, implicit killed $eflags
   ; CHECK-LIS-NEXT:   JMP_1 %bb.4
   ; CHECK-LIS-NEXT: {{  $}}
@@ -189,12 +184,11 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LIS-NEXT: bb.5.tail:
   ; CHECK-LIS-NEXT:   successors: %bb.6(0x04000000), %bb.1(0x7c000000)
   ; CHECK-LIS-NEXT: {{  $}}
-  ; CHECK-LIS-NEXT:   [[COPY8:%[0-9]+]]:gr64 = COPY [[COPY6]]
-  ; CHECK-LIS-NEXT:   [[COPY9:%[0-9]+]]:gr64 = COPY killed [[COPY6]]
-  ; CHECK-LIS-NEXT:   [[COPY9:%[0-9]+]]:gr64 = nuw ADD64ri32 [[COPY9]], 8, implicit-def dead $eflags
-  ; CHECK-LIS-NEXT:   TEST64rr killed [[COPY4]], [[COPY4]], implicit-def $eflags
-  ; CHECK-LIS-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY9]]
-  ; CHECK-LIS-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY8]]
+  ; CHECK-LIS-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY [[COPY4]]
+  ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = COPY killed [[COPY4]]
+  ; CHECK-LIS-NEXT:   [[COPY6:%[0-9]+]]:gr64 = nuw ADD64ri32 [[COPY6]], 8, implicit-def dead $eflags
+  ; CHECK-LIS-NEXT:   TEST64rr killed [[COPY2]], [[COPY2]], implicit-def $eflags
+  ; CHECK-LIS-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY [[COPY6]]
   ; CHECK-LIS-NEXT:   JCC_1 %bb.1, 5, implicit killed $eflags
   ; CHECK-LIS-NEXT:   JMP_1 %bb.6
   ; CHECK-LIS-NEXT: {{  $}}
