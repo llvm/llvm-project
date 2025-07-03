@@ -15723,13 +15723,9 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
 
   // FIXME: Sema's lambda-building mechanism expects us to push an expression
   // evaluation context even if we're not transforming the function body.
-  getSema().PushExpressionEvaluationContext(
-      E->getCallOperator()->isConsteval() ?
-      Sema::ExpressionEvaluationContext::ImmediateFunctionContext :
-      Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-  getSema().currentEvaluationContext().InImmediateEscalatingFunctionContext =
-      getSema().getLangOpts().CPlusPlus20 &&
-      E->getCallOperator()->isImmediateEscalating();
+  getSema().PushExpressionEvaluationContextForFunction(
+      Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      E->getCallOperator());
 
   Sema::CodeSynthesisContext C;
   C.Kind = clang::Sema::CodeSynthesisContext::LambdaExpressionSubstitution;
