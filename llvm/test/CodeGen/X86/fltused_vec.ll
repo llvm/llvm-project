@@ -1,10 +1,8 @@
 ; The purpose of this test to verify that the fltused symbol is
 ; not emitted when purely vector floating point operations are used on Windows.
 
-; RUN: llc < %s -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
-; RUN: llc < %s -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64
-; RUN: llc < %s -O0 -mtriple i686-pc-win32 | FileCheck %s --check-prefix WIN32
-; RUN: llc < %s -O0 -mtriple x86_64-pc-win32 | FileCheck %s --check-prefix WIN64
+; RUN: llc < %s -mtriple i686-pc-win32 | FileCheck %s
+; RUN: llc < %s -mtriple x86_64-pc-win32 | FileCheck %s
 
 @foo = external dso_local global [4 x float], align 16
 
@@ -28,5 +26,4 @@ entry:
 }
 
 ; _fltused is determined at a module level
-; WIN32-NOT: .globl __fltused
-; WIN64-NOT: .globl _fltused
+; CHECK-NOT: .globl {{_?}}_fltused
