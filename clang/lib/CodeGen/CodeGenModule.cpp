@@ -4066,7 +4066,6 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     assert(!MayBeEmittedEagerly(Global));
     addDeferredDeclToEmit(GD);
   } else if (!getLangOpts().CPlusPlus && ND &&
-             GetGlobalValue(ND->getName()) != nullptr &&
              MangledName.contains(llvm::FunctionSamples::UniqSuffix)) {
     // Emit static C function that is mangled with
     // -funique-internal-linkage-names.
