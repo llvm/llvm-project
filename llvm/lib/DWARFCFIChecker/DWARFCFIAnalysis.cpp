@@ -47,9 +47,8 @@ static std::optional<CFARegOffsetInfo>
 getCFARegOffsetInfo(const dwarf::UnwindRow &UnwindRow) {
   auto CFALocation = UnwindRow.getCFAValue();
   if (CFALocation.getLocation() !=
-      dwarf::UnwindLocation::Location::RegPlusOffset) {
+      dwarf::UnwindLocation::Location::RegPlusOffset)
     return std::nullopt;
-  }
 
   return CFARegOffsetInfo(CFALocation.getRegister(), CFALocation.getOffset());
 }
@@ -103,9 +102,8 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
       nullptr, MCRI->getDwarfRegNum(MCRI->getProgramCounter(), IsEH)));
 
   for (auto &&InitialFrameStateCFIDirective :
-       Context->getAsmInfo()->getInitialFrameState()) {
+       Context->getAsmInfo()->getInitialFrameState())
     State.update(InitialFrameStateCFIDirective);
-  }
 
   auto MaybeCurrentRow = State.getCurrentUnwindRow();
   assert(MaybeCurrentRow && "there should be at least one row");
@@ -119,9 +117,8 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
   State.update(MCCFIInstruction::createOffset(nullptr, CFA.Reg, 0));
 
   // Applying the prologue after default assumptions to overwrite them.
-  for (auto &&Directive : Prologue) {
+  for (auto &&Directive : Prologue)
     State.update(Directive);
-  }
 }
 
 void DWARFCFIAnalysis::update(const MCInst &Inst,

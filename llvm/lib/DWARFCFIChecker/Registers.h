@@ -30,13 +30,12 @@ inline bool isSuperReg(const MCRegisterInfo *MCRI, MCPhysReg Reg) {
 
 inline SmallVector<MCPhysReg> getSuperRegs(const MCRegisterInfo *MCRI) {
   SmallVector<MCPhysReg> SuperRegs;
-  for (auto &&RegClass : MCRI->regclasses()) {
+  for (auto &&RegClass : MCRI->regclasses())
     for (unsigned I = 0; I < RegClass.getNumRegs(); I++) {
       MCPhysReg Reg = RegClass.getRegister(I);
       if (isSuperReg(MCRI, Reg))
         SuperRegs.push_back(Reg);
     }
-  }
 
   sort(SuperRegs.begin(), SuperRegs.end());
   SuperRegs.resize(std::distance(
@@ -55,10 +54,9 @@ inline SmallVector<MCPhysReg> getTrackingRegs(const MCRegisterInfo *MCRI) {
 inline MCPhysReg getSuperReg(const MCRegisterInfo *MCRI, MCPhysReg Reg) {
   if (isSuperReg(MCRI, Reg))
     return Reg;
-  for (auto SuperReg : MCRI->superregs(Reg)) {
+  for (auto SuperReg : MCRI->superregs(Reg))
     if (isSuperReg(MCRI, SuperReg))
       return SuperReg;
-  }
 
   llvm_unreachable("Should either be a super reg, or have a super reg");
 }
