@@ -72,15 +72,13 @@ bool BreakpointLocation::IsEnabled() const {
   return true;
 }
 
-void BreakpointLocation::SetEnabled(bool enabled) {
+bool BreakpointLocation::SetEnabled(bool enabled) {
   GetLocationOptions().SetEnabled(enabled);
-  if (enabled) {
-    ResolveBreakpointSite();
-  } else {
-    ClearBreakpointSite();
-  }
+  const bool success =
+      enabled ? ResolveBreakpointSite() : ClearBreakpointSite();
   SendBreakpointLocationChangedEvent(enabled ? eBreakpointEventTypeEnabled
                                              : eBreakpointEventTypeDisabled);
+  return success;
 }
 
 bool BreakpointLocation::IsAutoContinue() const {
@@ -436,10 +434,10 @@ bool BreakpointLocation::ResolveBreakpointSite() {
       process->CreateBreakpointSite(shared_from_this(), m_owner.IsHardware());
 
   if (new_id == LLDB_INVALID_BREAK_ID) {
-    Log *log = GetLog(LLDBLog::Breakpoints);
-    if (log)
-      log->Warning("Failed to add breakpoint site at 0x%" PRIx64,
-                   m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()));
+    LLDB_LOGF(GetLog(LLDBLog::Breakpoints),
+              "Failed to add breakpoint site at 0x%" PRIx64 "(resolved=%s)",
+              m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
+              IsResolved() ? "yes" : "no");
   }
 
   return IsResolved();
