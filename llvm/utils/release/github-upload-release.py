@@ -65,13 +65,20 @@ In addition, source archives are available:
 
 ## Verifying Packages
 
-All packages are signed by the release managers using GPG and should be verified before use. To verify a package, first [download](https://releases.llvm.org/release-keys.asc) the keys from the LLVM website, then import them into your keyring:
+All packages come with a matching `.sig` or `.jsonl` file. You should use these to verify the integrity of the packages.
+
+If it has a `.sig` file, it should have been signed by the release managers using GPG. Download the keys from the [LLVM website]((https://releases.llvm.org/release-keys.asc), import them into your keyring and use them to verify the file:
 ```
 $ gpg --import release-keys.asc
-```
-Then verify the package using the matching `.sig` file:
-```
 $ gpg --verify <package file name>.sig <package file name>
+```
+
+If it has a `.jsonl` file, use [gh](https://cli.github.com/manual/gh_attestation_verify) to verify the package:
+```
+gh attestation verify --repo llvm/llvm-project <package file name>
+(if you are able to connect to GitHub)
+gh attestation verify --repo llvm/llvm-project <package file name> --bundle <package file name>.jsonl
+(using attestation file on disk)
 ```"""
         ).format(release=release)
 
