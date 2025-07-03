@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFUnwindTable.h"
-#include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
@@ -20,18 +17,6 @@
 
 using namespace llvm;
 using namespace dwarf;
-
-static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
-                          unsigned RegNum) {
-  if (DumpOpts.GetNameForDWARFReg) {
-    auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
-    if (!RegName.empty()) {
-      OS << RegName;
-      return;
-    }
-  }
-  OS << "reg" << RegNum;
-}
 
 UnwindLocation UnwindLocation::createUnspecified() { return {Unspecified}; }
 
@@ -71,57 +56,6 @@ UnwindLocation UnwindLocation::createAtDWARFExpression(DWARFExpression Expr) {
   return {Expr, true};
 }
 
-void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
-  if (Dereference)
-    OS << '[';
-  switch (Kind) {
-  case Unspecified:
-    OS << "unspecified";
-    break;
-  case Undefined:
-    OS << "undefined";
-    break;
-  case Same:
-    OS << "same";
-    break;
-  case CFAPlusOffset:
-    OS << "CFA";
-    if (Offset == 0)
-      break;
-    if (Offset > 0)
-      OS << "+";
-    OS << Offset;
-    break;
-  case RegPlusOffset:
-    printRegister(OS, DumpOpts, RegNum);
-    if (Offset == 0 && !AddrSpace)
-      break;
-    if (Offset >= 0)
-      OS << "+";
-    OS << Offset;
-    if (AddrSpace)
-      OS << " in addrspace" << *AddrSpace;
-    break;
-  case DWARFExpr: {
-    if (Expr)
-      printDwarfExpression(&(*Expr), OS, DumpOpts, nullptr);
-    break;
-  }
-  case Constant:
-    OS << Offset;
-    break;
-  }
-  if (Dereference)
-    OS << ']';
-}
-
-raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
-                                     const UnwindLocation &UL) {
-  auto DumpOpts = DIDumpOptions();
-  UL.dump(OS, DumpOpts);
-  return OS;
-}
-
 bool UnwindLocation::operator==(const UnwindLocation &RHS) const {
   if (Kind != RHS.Kind)
     return false;
@@ -141,58 +75,6 @@ bool UnwindLocation::operator==(const UnwindLocation &RHS) const {
     return Offset == RHS.Offset;
   }
   return false;
-}
-
-void RegisterLocations::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
-  bool First = true;
-  for (const auto &RegLocPair : Locations) {
-    if (First)
-      First = false;
-    else
-      OS << ", ";
-    printRegister(OS, DumpOpts, RegLocPair.first);
-    OS << '=';
-    RegLocPair.second.dump(OS, DumpOpts);
-  }
-}
-
-raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
-                                     const RegisterLocations &RL) {
-  auto DumpOpts = DIDumpOptions();
-  RL.dump(OS, DumpOpts);
-  return OS;
-}
-
-void UnwindRow::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                     unsigned IndentLevel) const {
-  OS.indent(2 * IndentLevel);
-  if (hasAddress())
-    OS << format("0x%" PRIx64 ": ", *Address);
-  OS << "CFA=";
-  CFAValue.dump(OS, DumpOpts);
-  if (RegLocs.hasLocations()) {
-    OS << ": ";
-    RegLocs.dump(OS, DumpOpts);
-  }
-  OS << "\n";
-}
-
-raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindRow &Row) {
-  auto DumpOpts = DIDumpOptions();
-  Row.dump(OS, DumpOpts, 0);
-  return OS;
-}
-
-void UnwindTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                       unsigned IndentLevel) const {
-  for (const UnwindRow &Row : Rows)
-    Row.dump(OS, DumpOpts, IndentLevel);
-}
-
-raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
-  auto DumpOpts = DIDumpOptions();
-  Rows.dump(OS, DumpOpts, 0);
-  return OS;
 }
 
 Expected<UnwindTable::RowContainer>

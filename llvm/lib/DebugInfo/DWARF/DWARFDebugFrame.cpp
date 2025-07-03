@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFCFIPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnwindTablePrinter.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
@@ -136,7 +137,7 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = createUnwindTable(this))
-    RowsOrErr->dump(OS, DumpOpts, 1);
+    printUnwindTable(*RowsOrErr, OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
         createStringError(errc::invalid_argument,
@@ -164,7 +165,7 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = createUnwindTable(this))
-    RowsOrErr->dump(OS, DumpOpts, 1);
+    printUnwindTable(*RowsOrErr, OS, DumpOpts, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
         createStringError(errc::invalid_argument,

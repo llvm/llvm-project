@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFUNWINDTABLE_H
 #define LLVM_DEBUGINFO_DWARF_DWARFUNWINDTABLE_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
@@ -122,6 +123,11 @@ public:
   Location getLocation() const { return Kind; }
   uint32_t getRegister() const { return RegNum; }
   int32_t getOffset() const { return Offset; }
+  bool hasAddressSpace() const {
+    if(AddrSpace)
+      return true;
+    return false;
+  }
   uint32_t getAddressSpace() const {
     assert(Kind == RegPlusOffset && AddrSpace);
     return *AddrSpace;
@@ -145,24 +151,9 @@ public:
   std::optional<DWARFExpression> getDWARFExpressionBytes() const {
     return Expr;
   }
-  /// Dump a location expression as text and use the register information if
-  /// some is provided.
-  ///
-  /// \param OS the stream to use for output.
-  ///
-  /// \param MRI register information that helps emit register names insteead
-  /// of raw register numbers.
-  ///
-  /// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
-  /// instead of from .debug_frame. This is needed for register number
-  /// conversion because some register numbers differ between the two sections
-  /// for certain architectures like x86.
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
 
   LLVM_ABI bool operator==(const UnwindLocation &RHS) const;
 };
-
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindLocation &R);
 
 /// A class that can track all registers with locations in a UnwindRow object.
 ///
@@ -189,6 +180,13 @@ public:
     return Pos->second;
   }
 
+  SmallVector<uint32_t, 4> getRegisters() const {
+    SmallVector<uint32_t, 4> Registers;
+    for(auto &&[Register, _]: Locations)
+      Registers.push_back(Register);
+    return Registers;
+  }
+
   /// Set the location for the register in \a RegNum to \a Location.
   ///
   /// \param RegNum the register number to set the location for.
@@ -204,19 +202,6 @@ public:
   /// \param RegNum the register number to remove the location for.
   void removeRegisterLocation(uint32_t RegNum) { Locations.erase(RegNum); }
 
-  /// Dump all registers + locations that are currently defined in this object.
-  ///
-  /// \param OS the stream to use for output.
-  ///
-  /// \param MRI register information that helps emit register names insteead
-  /// of raw register numbers.
-  ///
-  /// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
-  /// instead of from .debug_frame. This is needed for register number
-  /// conversion because some register numbers differ between the two sections
-  /// for certain architectures like x86.
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
-
   /// Returns true if we have any register locations in this object.
   bool hasLocations() const { return !Locations.empty(); }
 
@@ -226,8 +211,6 @@ public:
     return Locations == RHS.Locations;
   }
 };
-
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const RegisterLocations &RL);
 
 /// A class that represents a single row in the unwind table that is decoded by
 /// parsing the DWARF Call Frame Information opcodes.
@@ -281,26 +264,7 @@ public:
   const UnwindLocation &getCFAValue() const { return CFAValue; }
   RegisterLocations &getRegisterLocations() { return RegLocs; }
   const RegisterLocations &getRegisterLocations() const { return RegLocs; }
-
-  /// Dump the UnwindRow to the stream.
-  ///
-  /// \param OS the stream to use for output.
-  ///
-  /// \param MRI register information that helps emit register names insteead
-  /// of raw register numbers.
-  ///
-  /// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
-  /// instead of from .debug_frame. This is needed for register number
-  /// conversion because some register numbers differ between the two sections
-  /// for certain architectures like x86.
-  ///
-  /// \param IndentLevel specify the indent level as an integer. The UnwindRow
-  /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                     unsigned IndentLevel = 0) const;
 };
-
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindRow &Row);
 
 /// A class that contains all UnwindRow objects for an FDE or a single unwind
 /// row for a CIE. To unwind an address the rows, which are sorted by start
@@ -324,23 +288,6 @@ public:
     assert(Index < size());
     return Rows[Index];
   }
-
-  /// Dump the UnwindTable to the stream.
-  ///
-  /// \param OS the stream to use for output.
-  ///
-  /// \param MRI register information that helps emit register names instead
-  /// of raw register numbers.
-  ///
-  /// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
-  /// instead of from .debug_frame. This is needed for register number
-  /// conversion because some register numbers differ between the two sections
-  /// for certain architectures like x86.
-  ///
-  /// \param IndentLevel specify the indent level as an integer. The UnwindRow
-  /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  LLVM_ABI void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-                     unsigned IndentLevel = 0) const;
 
 private:
   RowContainer Rows;
@@ -366,8 +313,6 @@ private:
 LLVM_ABI Expected<UnwindTable::RowContainer>
 parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
           const RegisterLocations *InitialLocs);
-
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, const UnwindTable &Rows);
 
 } // end namespace dwarf
 
