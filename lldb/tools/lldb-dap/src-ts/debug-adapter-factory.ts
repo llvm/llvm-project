@@ -5,6 +5,7 @@ import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
+import { Logger } from "./logger";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -157,15 +158,33 @@ async function getDAPArguments(
 }
 
 /**
+ * Formats the given date as a string in the form "YYYYMMdd".
+ *
+ * @param date The date to format as a string.
+ * @returns The formatted date.
+ */
+function formatDate(date: Date): string {
+    const year = date.getFullYear().toString().padStart(4, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0");
+    const day = date.getDate().toString().padStart(2, "0");
+    const hour = date.getHours().toString().padStart(2, "0");
+    const minute = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+    return year + month + day + hour + minute + seconds;
+}
+
+/**
  * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
+ * @param logger The {@link Logger} to get default session log location
  * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
  * @param configuration The {@link vscode.DebugConfiguration} that will be launched
  * @throws An {@link ErrorWithNotification} if something went wrong
  * @returns The {@link vscode.DebugAdapterExecutable} that can be used to launch lldb-dap
  */
 export async function createDebugAdapterExecutable(
+  logger: Logger,
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<vscode.DebugAdapterExecutable> {
@@ -174,6 +193,8 @@ export async function createDebugAdapterExecutable(
   let env: { [key: string]: string } = {};
   if (log_path) {
     env["LLDBDAP_LOG"] = log_path;
+  } else if (vscode.workspace.getConfiguration("lldb-dap").get("verboseLogging", false)) {
+    env["LLDBDAP_LOG"] = logger.logFilePath(`lldb-dap-session-${formatDate(new Date())}.log`);
   }
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
@@ -188,6 +209,11 @@ export async function createDebugAdapterExecutable(
   };
   const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
 
+  logger.info(`lldb-dap path: ${dapPath}`);
+  logger.info(`lldb-dap args: ${dbgArgs}`);
+  logger.info(`cwd: ${dbgOptions.cwd}`);
+  logger.info(`env: ${JSON.stringify(configEnvironment)}`);
+
   return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
 }
 
@@ -198,18 +224,26 @@ export async function createDebugAdapterExecutable(
 export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
+  constructor(private readonly logger: Logger) {}
+
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor | undefined> {
+    this.logger.info(`Creating debug adapter for session "${session.name}"`);
+    this.logger.debug(`Session "${session.name}" debug configuration:`);
+    this.logger.debug(JSON.stringify(session.configuration, undefined, 2));
     if (executable) {
-      throw new Error(
+      const error = new Error(
         "Setting the debug adapter executable in the package.json is not supported.",
       );
+      this.logger.error(error);
+      throw error;
     }
 
     // Use a server connection if the debugAdapterPort is provided
     if (session.configuration.debugAdapterPort) {
+      this.logger.info(`Spawning debug adapter server on port ${session.configuration.debugAdapterPort}`);
       return new vscode.DebugAdapterServer(
         session.configuration.debugAdapterPort,
         session.configuration.debugAdapterHostname,
@@ -217,6 +251,7 @@ export class LLDBDapDescriptorFactory
     }
 
     return createDebugAdapterExecutable(
+      this.logger,
       session.workspaceFolder,
       session.configuration,
     );

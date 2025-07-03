@@ -34,7 +34,9 @@
     "@vscode/vsce": "^3.2.2",
     "prettier": "^3.4.2",
     "prettier-plugin-curly": "^0.3.1",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "winston": "^3.17.0",
+    "winston-transport": "^4.9.0"
   },
   "activationEvents": [
     "onDebug",
@@ -110,6 +112,11 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "lldb-dap.verboseLogging": {
+            "type": "boolean",
+            "description": "Enable verbose logging to the \"LLDB-DAP\" output channel for the running debug session. Also will write LLDB-DAP session logs to the Extension's log folder if the `lldb-dap.log-path` setting is not explicitly set.",
+            "default": false
           }
         }
       },
