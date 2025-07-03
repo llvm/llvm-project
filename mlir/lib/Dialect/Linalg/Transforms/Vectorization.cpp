@@ -1659,9 +1659,9 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
   }
 
   // If missing, initialize the write indices to 0.
-  assert(writeIndices.empty() ||
-         writeIndices.size() == static_cast<size_t>(destRank) &&
-             "Invalid number of write indices!");
+  assert((writeIndices.empty() ||
+          writeIndices.size() == static_cast<size_t>(destRank)) &&
+         "Invalid number of write indices!");
   if (writeIndices.empty()) {
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
     writeIndices.assign(destRank, zero);
