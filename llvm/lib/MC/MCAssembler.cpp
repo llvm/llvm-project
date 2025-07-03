@@ -142,7 +142,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   return true;
 }
 
-bool MCAssembler::evaluateFixup(const MCFragment &F, const MCFixup &Fixup,
+bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
                                 MCValue &Target, uint64_t &Value,
                                 bool RecordReloc,
                                 MutableArrayRef<char> Contents) const {
@@ -163,6 +163,7 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, const MCFixup &Fixup,
 
   bool IsResolved = false;
   unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
+  bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
   if (FixupFlags & MCFixupKindInfo::FKF_IsTarget) {
     IsResolved = getBackend().evaluateTargetFixup(Fixup, Target, Value);
   } else {
@@ -174,7 +175,6 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, const MCFixup &Fixup,
     if (Sub && Sub->isDefined())
       Value -= getSymbolOffset(*Sub);
 
-    bool IsPCRel = FixupFlags & MCFixupKindInfo::FKF_IsPCRel;
     bool ShouldAlignPC =
         FixupFlags & MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
     if (IsPCRel) {
@@ -202,6 +202,8 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, const MCFixup &Fixup,
 
   if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
     IsResolved = false;
+  if (IsPCRel)
+    Fixup.setPCRel();
   getBackend().applyFixup(F, Fixup, Target, Contents, Value, IsResolved);
   return true;
 }
@@ -875,7 +877,7 @@ void MCAssembler::layout() {
       // Process fragments with fixups here.
       if (auto *F = dyn_cast<MCEncodedFragment>(&Frag)) {
         auto Contents = F->getContents();
-        for (const MCFixup &Fixup : F->getFixups()) {
+        for (MCFixup &Fixup : F->getFixups()) {
           uint64_t FixedValue;
           MCValue Target;
           evaluateFixup(Frag, Fixup, Target, FixedValue,
