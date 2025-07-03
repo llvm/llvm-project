@@ -2522,6 +2522,146 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Bit Manipulation Operations
+//===----------------------------------------------------------------------===//
+
+class CIR_BitOpBase<string mnemonic, TypeConstraint operandTy>
+  : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins operandTy:$input);
+  let results = (outs operandTy:$result);
+
+  let assemblyFormat = [{
+    `(` $input `:` type($input) `)` `:` type($result) attr-dict
+  }];
+}
+
+class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
+  : CIR_BitOpBase<mnemonic, operandTy> {
+  let arguments = (ins operandTy:$input, UnitAttr:$poison_zero);
+
+  let assemblyFormat = [{
+    `(` $input `:` type($input) `)` (`poison_zero` $poison_zero^)?
+    `:` type($result) attr-dict
+  }];
+}
+
+def BitClrsbOp : CIR_BitOpBase<"bit.clrsb", CIR_SIntOfWidths<[32, 64]>> {
+  let summary = "Get the number of leading redundant sign bits in the input";
+  let description = [{
+    Compute the number of leading redundant sign bits in the input integer.
+
+    The input integer must be a signed integer. The most significant bit of the
+    input integer is the sign bit. The `cir.bit.clrsb` operation returns the
+    number of consecutive bits following the sign bit that are identical to the
+    sign bit.
+
+    The bit width of the input integer must be either 32 or 64.
+
+    Examples:
+
+    ```mlir
+    // %0 = 0b1101_1110_1010_1101_1011_1110_1110_1111
+    %0 = cir.const #cir.int<3735928559> : !s32i
+    // %1 will be 1 because there is 1 bit following the most significant bit
+    // that is identical to it.
+    %1 = cir.bit.clrsb(%0 : !s32i) : !s32i
+
+    // %2 = 1, 0b0000_0000_0000_0000_0000_0000_0000_0001
+    %2 = cir.const #cir.int<1> : !s32i
+    // %3 will be 30 because there are 30 consecutive bits following the sign
+    // bit that are identical to the sign bit.
+    %3 = cir.bit.clrsb(%2 : !s32i) : !s32i
+    ```
+  }];
+}
+
+def BitClzOp : CIR_BitZeroCountOpBase<"bit.clz",
+                                      CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Get the number of leading 0-bits in the input";
+  let description = [{
+    Compute the number of leading 0-bits in the input.
+
+    The input integer must be an unsigned integer. The `cir.bit.clz` operation
+    returns the number of consecutive 0-bits at the most significant bit
+    position in the input.
+
+    If the `poison_zero` attribute is present, this operation will have
+    undefined behavior if the input value is 0.
+
+    Example:
+
+    ```mlir
+    // %0 = 0b0000_0000_0000_0000_0000_0000_0000_1000
+    %0 = cir.const #cir.int<8> : !u32i
+    // %1 will be 28
+    %1 = cir.bit.clz(%0 : !u32i) poison_zero : !u32i
+    ```
+  }];
+}
+
+def BitCtzOp : CIR_BitZeroCountOpBase<"bit.ctz",
+                                      CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Get the number of trailing 0-bits in the input";
+  let description = [{
+    Compute the number of trailing 0-bits in the input.
+
+    The input integer must be an unsigned integer. The `cir.bit.ctz` operation
+    counts the number of consecutive 0-bits starting from the least significant
+    bit.
+
+    If the `poison_zero` attribute is present, this operation will have
+    undefined behavior if the input value is 0.
+
+    Example:
+
+    ```mlir
+    // %0 = 0b1000
+    %0 = cir.const #cir.int<8> : !u32i
+    // %1 will be 3
+    %1 = cir.bit.ctz(%0 : !u32i) poison_zero : !u32i
+    ```
+  }];
+}
+
+def BitParityOp : CIR_BitOpBase<"bit.parity", CIR_UIntOfWidths<[32, 64]>> {
+  let summary = "Get the parity of input";
+  let description = [{
+    Compute the parity of the input. The parity of an integer is the number of
+    1-bits in it modulo 2.
+
+    The input must be an unsigned integer.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x0110_1000
+    %0 = cir.const #cir.int<104> : !u32i
+    // %1 will be 1 since there are three 1-bits in %0
+    %1 = cir.bit.parity(%0 : !u32i) : !u32i
+    ```
+  }];
+}
+
+def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
+                                  CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Get the number of 1-bits in input";
+  let description = [{
+    Compute the number of 1-bits in the input.
+
+    The input must be an unsigned integer.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x0110_1000
+    %0 = cir.const #cir.int<104> : !u32i
+    // %1 will be 3 since there are 3 1-bits in %0
+    %1 = cir.bit.popcnt(%0 : !u32i) : !u32i
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // Assume Operations
 //===----------------------------------------------------------------------===//
 
