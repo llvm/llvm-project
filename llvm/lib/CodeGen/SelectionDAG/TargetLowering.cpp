@@ -4179,51 +4179,42 @@ SDValue TargetLowering::foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1,
     }
   }
 
-  // Match these patterns in any of their permutations:
   // (X & Y) == Y
   // (X & Y) != Y
-  SDValue X, Y;
-  if (N0.getOperand(0) == N1) {
-    X = N0.getOperand(1);
-    Y = N0.getOperand(0);
-  } else if (N0.getOperand(1) == N1) {
-    X = N0.getOperand(0);
-    Y = N0.getOperand(1);
-  } else {
-    return SDValue();
-  }
+  SDValue X;
+  if (sd_match(N0, m_And(m_Value(X), m_Specific(N1)))) {
+    // TODO: We should invert (X & Y) eq/ne 0 -> (X & Y) ne/eq Y if
+    // `isXAndYEqZeroPreferableToXAndYEqY` is false. This is a bit difficult as
+    // its liable to create and infinite loop.
+    SDValue Zero = DAG.getConstant(0, DL, OpVT);
+    if (isXAndYEqZeroPreferableToXAndYEqY(Cond, OpVT) &&
+        DAG.isKnownToBeAPowerOfTwo(N1)) {
+      // Simplify X & Y == Y to X & Y != 0 if Y has exactly one bit set.
+      // Note that where Y is variable and is known to have at most one bit set
+      // (for example, if it is Z & 1) we cannot do this; the expressions are
+      // not equivalent when Y == 0.
+      assert(OpVT.isInteger());
+      Cond = ISD::getSetCCInverse(Cond, OpVT);
+      if (DCI.isBeforeLegalizeOps() ||
+          isCondCodeLegal(Cond, N0.getSimpleValueType()))
+        return DAG.getSetCC(DL, VT, N0, Zero, Cond);
+    } else if (N0.hasOneUse() && hasAndNotCompare(N1)) {
+      // If the target supports an 'and-not' or 'and-complement' logic
+      // operation, try to use that to make a comparison operation more
+      // efficient. But don't do this transform if the mask is a single bit
+      // because there are more efficient ways to deal with that case (for
+      // example, 'bt' on x86 or 'rlwinm' on PPC).
 
-  // TODO: We should invert (X & Y) eq/ne 0 -> (X & Y) ne/eq Y if
-  // `isXAndYEqZeroPreferableToXAndYEqY` is false. This is a bit difficult as
-  // its liable to create and infinite loop.
-  SDValue Zero = DAG.getConstant(0, DL, OpVT);
-  if (isXAndYEqZeroPreferableToXAndYEqY(Cond, OpVT) &&
-      DAG.isKnownToBeAPowerOfTwo(Y)) {
-    // Simplify X & Y == Y to X & Y != 0 if Y has exactly one bit set.
-    // Note that where Y is variable and is known to have at most one bit set
-    // (for example, if it is Z & 1) we cannot do this; the expressions are not
-    // equivalent when Y == 0.
-    assert(OpVT.isInteger());
-    Cond = ISD::getSetCCInverse(Cond, OpVT);
-    if (DCI.isBeforeLegalizeOps() ||
-        isCondCodeLegal(Cond, N0.getSimpleValueType()))
-      return DAG.getSetCC(DL, VT, N0, Zero, Cond);
-  } else if (N0.hasOneUse() && hasAndNotCompare(Y)) {
-    // If the target supports an 'and-not' or 'and-complement' logic operation,
-    // try to use that to make a comparison operation more efficient.
-    // But don't do this transform if the mask is a single bit because there are
-    // more efficient ways to deal with that case (for example, 'bt' on x86 or
-    // 'rlwinm' on PPC).
+      // Bail out if the compare operand that we want to turn into a zero is
+      // already a zero (otherwise, infinite loop).
+      if (isNullConstant(N1))
+        return SDValue();
 
-    // Bail out if the compare operand that we want to turn into a zero is
-    // already a zero (otherwise, infinite loop).
-    if (isNullConstant(Y))
-      return SDValue();
-
-    // Transform this into: ~X & Y == 0.
-    SDValue NotX = DAG.getNOT(SDLoc(X), X, OpVT);
-    SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, NotX, Y);
-    return DAG.getSetCC(DL, VT, NewAnd, Zero, Cond);
+      // Transform this into: ~X & Y == 0.
+      SDValue NotX = DAG.getNOT(SDLoc(X), X, OpVT);
+      SDValue NewAnd = DAG.getNode(ISD::AND, SDLoc(N0), OpVT, NotX, N1);
+      return DAG.getSetCC(DL, VT, NewAnd, Zero, Cond);
+    }
   }
 
   return SDValue();
