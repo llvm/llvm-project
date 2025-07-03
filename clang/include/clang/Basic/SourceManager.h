@@ -1903,7 +1903,7 @@ private:
 
   FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
     // If our one-entry cache covers this offset, just return it.
-    if (SLocOffset >= LastLookupStartOffset && SLocOffset < LastLookupEndOffset)
+    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
       return LastFileIDLookup;
     return getFileIDSlow(SLocOffset);
   }
@@ -1927,6 +1927,10 @@ private:
   /// specified SourceLocation offset.  This is a very hot method.
   inline bool isOffsetInFileID(FileID FID,
                                SourceLocation::UIntTy SLocOffset) const {
+    if (FID == LastFileIDLookup)
+      return SLocOffset >= LastLookupStartOffset &&
+             SLocOffset < LastLookupEndOffset;
+
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID);
     // If the entry is after the offset, it can't contain it.
     if (SLocOffset < Entry.getOffset()) return false;

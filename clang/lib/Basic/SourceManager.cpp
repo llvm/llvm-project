@@ -814,8 +814,9 @@ FileID SourceManager::getFileIDSlow(SourceLocation::UIntTy SLocOffset) const {
 /// loaded one.
 FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   assert(SLocOffset < NextLocalOffset && "Bad function choice");
-  assert(SLocOffset >= LocalSLocEntryTable[0].getOffset() &&
+  assert(SLocOffset >= LocalSLocEntryTable[0].getOffset() && SLocOffset > 0 &&
          "Invalid SLocOffset");
+  assert(LastFileIDLookup.ID >= 0 && "Only cache local file sloc entry");
 
   // After the first and second level caches, I see two common sorts of
   // behavior: 1) a lot of searched FileID's are "near" the cached file
