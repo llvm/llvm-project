@@ -67,7 +67,7 @@ In addition, source archives are available:
 
 All packages come with a matching `.sig` or `.jsonl` file. You should use these to verify the integrity of the packages.
 
-If it has a `.sig` file, it should have been signed by the release managers using GPG. Download the keys from the [LLVM website]((https://releases.llvm.org/release-keys.asc), import them into your keyring and use them to verify the file:
+If it has a `.sig` file, it should have been signed by the release managers using GPG. Download the keys from the [LLVM website](https://releases.llvm.org/release-keys.asc), import them into your keyring and use them to verify the file:
 ```
 $ gpg --import release-keys.asc
 $ gpg --verify <package file name>.sig <package file name>
