@@ -20628,10 +20628,8 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
     break;
 
   case ConditionKind::ConstexprIf:
+    // Note: this might produce a FullExpr
     Cond = CheckBooleanCondition(Loc, SubExpr, true);
-    assert(isa<FullExpr>(Cond.get()) &&
-           "we should have converted this expression to a FullExpr before "
-           "evaluating it");
     break;
 
   case ConditionKind::Switch:
@@ -20643,9 +20641,11 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
                               {SubExpr}, PreferredConditionType(CK));
     if (!Cond.get())
       return ConditionError();
-  }
-  if (!isa<FullExpr>(Cond.get()))
+  } else if (Cond.isUsable() && !isa<FullExpr>(Cond.get()))
     Cond = ActOnFinishFullExpr(Cond.get(), Loc, /*DiscardedValue*/ false);
+
+  if (Cond.isInvalid())
+    return ConditionError();
 
   return ConditionResult(*this, nullptr, Cond,
                          CK == ConditionKind::ConstexprIf);
