@@ -289,6 +289,38 @@ computeOpenMPScheduleType(ScheduleKind ClauseKind, bool HasChunks,
   return Result;
 }
 
+/// Given a function, if it represents the entry point of a target kernel, this
+/// returns the execution mode flags associated to that kernel.
+static std::optional<omp::OMPTgtExecModeFlags>
+getTargetKernelExecMode(Function &Kernel) {
+  CallInst *TargetInitCall = nullptr;
+  for (Instruction &Inst : Kernel.getEntryBlock()) {
+    if (auto *Call = dyn_cast<CallInst>(&Inst)) {
+      if (Call->getCalledFunction()->getName() == "__kmpc_target_init") {
+        TargetInitCall = Call;
+        break;
+      }
+    }
+  }
+
+  if (!TargetInitCall)
+    return std::nullopt;
+
+  // Get the kernel mode information from the global variable associated to the
+  // first argument to the call to __kmpc_target_init. Refer to
+  // createTargetInit() to see how this is initialized.
+  Value *InitOperand = TargetInitCall->getArgOperand(0);
+  GlobalVariable *KernelEnv = nullptr;
+  if (auto *Cast = dyn_cast<ConstantExpr>(InitOperand))
+    KernelEnv = cast<GlobalVariable>(Cast->getOperand(0));
+  else
+    KernelEnv = cast<GlobalVariable>(InitOperand);
+  auto *KernelEnvInit = cast<ConstantStruct>(KernelEnv->getInitializer());
+  auto *ConfigEnv = cast<ConstantStruct>(KernelEnvInit->getOperand(0));
+  auto *KernelMode = cast<ConstantInt>(ConfigEnv->getOperand(2));
+  return static_cast<OMPTgtExecModeFlags>(KernelMode->getZExtValue());
+}
+
 /// Make \p Source branch to \p Target.
 ///
 /// Handles two situations:
@@ -812,15 +844,19 @@ void OpenMPIRBuilder::finalize(Function *Fn) {
     // CodeExtractor generates correct code for extracted functions
     // which are used by OpenMP runtime.
     bool ArgsInZeroAddressSpace = Config.isTargetDevice();
-    CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
-                            /* AggregateArgs */ true,
-                            /* BlockFrequencyInfo */ nullptr,
-                            /* BranchProbabilityInfo */ nullptr,
-                            /* AssumptionCache */ nullptr,
-                            /* AllowVarArgs */ true,
-                            /* AllowAlloca */ true,
-                            /* AllocaBlock*/ OI.OuterAllocaBB,
-                            /* Suffix */ ".omp_par", ArgsInZeroAddressSpace);
+    CodeExtractor Extractor(
+        Blocks, /* DominatorTree */ nullptr,
+        /* AggregateArgs */ true,
+        /* BlockFrequencyInfo */ nullptr,
+        /* BranchProbabilityInfo */ nullptr,
+        /* AssumptionCache */ nullptr,
+        /* AllowVarArgs */ true,
+        /* AllowAlloca */ true,
+        /* AllocaBlock*/ OI.OuterAllocaBB,
+        /* Suffix */ ".omp_par", ArgsInZeroAddressSpace,
+        OI.CustomArgAllocatorCB ? &OI.CustomArgAllocatorCB : nullptr,
+        /* DeallocationBlock */ OI.ExitBB,
+        OI.CustomArgDeallocatorCB ? &OI.CustomArgDeallocatorCB : nullptr);
 
     LLVM_DEBUG(dbgs() << "Before     outlining: " << *OuterFn << "\n");
     LLVM_DEBUG(dbgs() << "Entry " << OI.EntryBB->getName()
@@ -1726,6 +1762,50 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
                              IfCondition, NumThreads, PrivTID, PrivTIDAddr,
                              ThreadID, ToBeDeletedVec);
     };
+
+    std::optional<omp::OMPTgtExecModeFlags> ExecMode =
+        getTargetKernelExecMode(*OuterFn);
+
+    // If OuterFn is not a Generic kernel, skip custom allocation. This causes
+    // the CodeExtractor to follow its default behavior. Otherwise, we need to
+    // use device shared memory to allocate argument structures.
+    if (ExecMode && *ExecMode & OMP_TGT_EXEC_MODE_GENERIC) {
+      OI.CustomArgAllocatorCB = [this,
+                                 EntryBB](BasicBlock *, BasicBlock::iterator,
+                                          Type *ArgTy, const Twine &Name) {
+        // Instead of using the insertion point provided by the CodeExtractor,
+        // here we need to use the block that eventually calls the outlined
+        // function for the `parallel` construct.
+        //
+        // The reason is that the explicit deallocation call will be inserted
+        // within the outlined function, whereas the alloca insertion point
+        // might actually be located somewhere else in the caller. This becomes
+        // a problem when e.g. `parallel` is inside of a `distribute` construct,
+        // because the deallocation would be executed multiple times and the
+        // allocation just once (outside of the loop).
+        //
+        // TODO: Ideally, we'd want to do the allocation and deallocation
+        // outside of the `parallel` outlined function, hence using here the
+        // insertion point provided by the CodeExtractor. We can't do this at
+        // the moment because there is currently no way of passing an eligible
+        // insertion point for the explicit deallocation to the CodeExtractor,
+        // as that block is created (at least when nested inside of
+        // `distribute`) sometime after createParallel() completed, so it can't
+        // be stored in the OutlineInfo structure here.
+        //
+        // The current approach results in an explicit allocation and
+        // deallocation pair for each `distribute` loop iteration in that case,
+        // which is suboptimal.
+        return createOMPAllocShared(
+            InsertPointTy(EntryBB, EntryBB->getFirstInsertionPt()), ArgTy,
+            Name);
+      };
+      OI.CustomArgDeallocatorCB =
+          [this](BasicBlock *BB, BasicBlock::iterator AllocIP, Value *Arg,
+                 Type *ArgTy) -> Instruction * {
+        return createOMPFreeShared(InsertPointTy(BB, AllocIP), Arg, ArgTy);
+      };
+    }
     OI.FixUpNonEntryAllocas = true;
   } else {
     // Generate OpenMP host runtime call

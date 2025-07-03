@@ -25,7 +25,6 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
-#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -264,12 +263,18 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
                              BasicBlock *AllocationBlock, std::string Suffix,
-                             bool ArgsInZeroAddressSpace)
+                             bool ArgsInZeroAddressSpace,
+                             CustomArgAllocatorCBTy *CustomArgAllocatorCB,
+                             BasicBlock *DeallocationBlock,
+                             CustomArgDeallocatorCBTy *CustomArgDeallocatorCB)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
       AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
-      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace) {}
+      Suffix(Suffix), ArgsInZeroAddressSpace(ArgsInZeroAddressSpace),
+      CustomArgAllocatorCB(CustomArgAllocatorCB),
+      DeallocationBlock(DeallocationBlock),
+      CustomArgDeallocatorCB(CustomArgDeallocatorCB) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -1851,24 +1856,38 @@ CallInst *CodeExtractor::emitReplacerCall(
     if (StructValues.contains(output))
       continue;
 
-    AllocaInst *alloca = new AllocaInst(
-        output->getType(), DL.getAllocaAddrSpace(), nullptr,
-        output->getName() + ".loc", AllocaBlock->getFirstInsertionPt());
-    params.push_back(alloca);
-    ReloadOutputs.push_back(alloca);
+    Value *OutAlloc;
+    if (CustomArgAllocatorCB)
+      OutAlloc = (*CustomArgAllocatorCB)(
+          AllocaBlock, AllocaBlock->getFirstInsertionPt(), output->getType(),
+          output->getName() + ".loc");
+    else
+      OutAlloc = new AllocaInst(output->getType(), DL.getAllocaAddrSpace(),
+                                nullptr, output->getName() + ".loc",
+                                AllocaBlock->getFirstInsertionPt());
+
+    params.push_back(OutAlloc);
+    ReloadOutputs.push_back(OutAlloc);
   }
 
-  AllocaInst *Struct = nullptr;
+  Instruction *Struct = nullptr;
   if (!StructValues.empty()) {
-    Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
-                            "structArg", AllocaBlock->getFirstInsertionPt());
-    if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
-      auto *StructSpaceCast = new AddrSpaceCastInst(
-          Struct, PointerType ::get(Context, 0), "structArg.ascast");
-      StructSpaceCast->insertAfter(Struct->getIterator());
-      params.push_back(StructSpaceCast);
-    } else {
+    BasicBlock::iterator StructArgIP = AllocaBlock->getFirstInsertionPt();
+    if (CustomArgAllocatorCB) {
+      Struct = (*CustomArgAllocatorCB)(AllocaBlock, StructArgIP, StructArgTy,
+                                       "structArg");
       params.push_back(Struct);
+    } else {
+      Struct = new AllocaInst(StructArgTy, DL.getAllocaAddrSpace(), nullptr,
+                              "structArg", StructArgIP);
+      if (ArgsInZeroAddressSpace && DL.getAllocaAddrSpace() != 0) {
+        auto *StructSpaceCast = new AddrSpaceCastInst(
+            Struct, PointerType ::get(Context, 0), "structArg.ascast");
+        StructSpaceCast->insertAfter(Struct->getIterator());
+        params.push_back(StructSpaceCast);
+      } else {
+        params.push_back(Struct);
+      }
     }
 
     unsigned AggIdx = 0;
@@ -2011,6 +2030,26 @@ CallInst *CodeExtractor::emitReplacerCall(
   // input objects in the extraction region by placing markers around the call.
   insertLifetimeMarkersSurroundingCall(oldFunction->getParent(), LifetimesStart,
                                        {}, call);
+
+  // Deallocate variables that used a custom allocator.
+  if (CustomArgAllocatorCB && CustomArgDeallocatorCB) {
+    BasicBlock *DeallocBlock = codeReplacer;
+    BasicBlock::iterator DeallocIP = codeReplacer->end();
+    if (DeallocationBlock) {
+      DeallocBlock = DeallocationBlock;
+      DeallocIP = DeallocationBlock->getFirstInsertionPt();
+    }
+
+    int Index = 0;
+    for (Value *Output : outputs) {
+      if (!StructValues.contains(Output))
+        (*CustomArgDeallocatorCB)(DeallocBlock, DeallocIP,
+                                  ReloadOutputs[Index++], Output->getType());
+    }
+
+    if (Struct)
+      (*CustomArgDeallocatorCB)(DeallocBlock, DeallocIP, Struct, StructArgTy);
+  }
 
   return call;
 }
