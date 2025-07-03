@@ -1062,6 +1062,9 @@ def err_constexpr_main : Error<
   "'main' is not allowed to be declared %select{constexpr|consteval}0">;
 def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
+def warn_main_in_named_module
+    : ExtWarn<"'main' never has module linkage">,
+      InGroup<DiagGroup<"main-attached-to-named-module">>;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
     InGroup<MainReturnType>;
@@ -1084,9 +1087,9 @@ def warn_main_redefined : Warning<"variable named 'main' with external linkage "
     "has undefined behavior">, InGroup<Main>;
 def ext_main_used : Extension<
     "referring to 'main' within an expression is a Clang extension">, InGroup<Main>;
-def ext_main_invalid_linkage_specification : ExtWarn<
-  "'main' should not be "
-  "'extern \"%select{C|C++}0\"'">, InGroup<Main>;
+def ext_main_invalid_linkage_specification : ExtWarn<"'main' should not be "
+                                                     "'extern \"C\"'">,
+                                             InGroup<Main>;
 
 /// parser diagnostics
 def ext_no_declarators : ExtWarn<"declaration does not declare anything">,
@@ -1767,7 +1770,9 @@ def note_unsatisfied_trait
     : Note<"%0 is not %enum_select<TraitName>{"
            "%TriviallyRelocatable{trivially relocatable}|"
            "%Replaceable{replaceable}|"
-           "%TriviallyCopyable{trivially copyable}"
+           "%TriviallyCopyable{trivially copyable}|"
+           "%Empty{empty}|"
+           "%StandardLayout{standard-layout}"
            "}1">;
 
 def note_unsatisfied_trait_reason
@@ -1787,6 +1792,16 @@ def note_unsatisfied_trait_reason
            "%NonReplaceableField{has a non-replaceable member %1 of type %2}|"
            "%NTCBase{has a non-trivially-copyable base %1}|"
            "%NTCField{has a non-trivially-copyable member %1 of type %2}|"
+           "%NonEmptyMember{has a non-static data member %1 of type %2}|"
+           "%VirtualFunction{has a virtual function %1}|"
+           "%NonEmptyBase{has a base class %1 that is not empty}|"
+           "%NonZeroLengthField{field %1 is a non-zero-length bit-field}|"
+           "%NonStandardLayoutBase{has a non-standard-layout base %1}|"
+           "%MixedAccess{has mixed access specifiers}|"
+           "%MixedAccessField{field %1 has a different access specifier than field %2}|"
+           "%MultipleDataBase{has multiple base classes with data members}|"
+           "%NonStandardLayoutMember{has a non-standard-layout member %1 of type %2}|"
+           "%IndirectBaseWithFields{has an indirect base %1 with data members}|"
            "%DeletedDtr{has a %select{deleted|user-provided}1 destructor}|"
            "%UserProvidedCtr{has a user provided %select{copy|move}1 "
            "constructor}|"

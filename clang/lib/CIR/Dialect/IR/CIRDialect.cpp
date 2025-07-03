@@ -65,6 +65,10 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
       os << (boolAttr.getValue() ? "true" : "false");
       return AliasResult::FinalAlias;
     }
+    if (auto bitfield = mlir::dyn_cast<cir::BitfieldInfoAttr>(attr)) {
+      os << "bfi_" << bitfield.getName().str();
+      return AliasResult::FinalAlias;
+    }
     return AliasResult::NoAlias;
   }
 };
@@ -115,8 +119,25 @@ template <typename Ty> struct EnumTraits {};
     static unsigned getMaxEnumVal() { return cir::getMaxEnumValFor##Ty(); }    \
   }
 
+REGISTER_ENUM_TYPE(GlobalLinkageKind);
+REGISTER_ENUM_TYPE(VisibilityKind);
 REGISTER_ENUM_TYPE(SideEffect);
 } // namespace
+
+/// Parse an enum from the keyword, or default to the provided default value.
+/// The return type is the enum type by default, unless overriden with the
+/// second template argument.
+template <typename EnumTy, typename RetTy = EnumTy>
+static RetTy parseOptionalCIRKeyword(AsmParser &parser, EnumTy defaultValue) {
+  llvm::SmallVector<llvm::StringRef, 10> names;
+  for (unsigned i = 0, e = EnumTraits<EnumTy>::getMaxEnumVal(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
+  if (index == -1)
+    return static_cast<RetTy>(defaultValue);
+  return static_cast<RetTy>(index);
+}
 
 /// Parse an enum from the keyword, return failure if the keyword is not found.
 template <typename EnumTy, typename RetTy = EnumTy>
@@ -168,6 +189,26 @@ static bool omitRegionTerm(mlir::Region &r) {
     return y && y.getArgs().empty();
   };
   return singleNonEmptyBlock && yieldsNothing();
+}
+
+void printVisibilityAttr(OpAsmPrinter &printer,
+                         cir::VisibilityAttr &visibility) {
+  switch (visibility.getValue()) {
+  case cir::VisibilityKind::Hidden:
+    printer << "hidden";
+    break;
+  case cir::VisibilityKind::Protected:
+    printer << "protected";
+    break;
+  case cir::VisibilityKind::Default:
+    break;
+  }
+}
+
+void parseVisibilityAttr(OpAsmParser &parser, cir::VisibilityAttr &visibility) {
+  cir::VisibilityKind visibilityKind =
+      parseOptionalCIRKeyword(parser, cir::VisibilityKind::Default);
+  visibility = cir::VisibilityAttr::get(parser.getContext(), visibilityKind);
 }
 
 //===----------------------------------------------------------------------===//
@@ -384,13 +425,13 @@ LogicalResult cir::CastOp::verify() {
     return success();
   }
   case cir::CastKind::floating: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType) ||
-        !mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType) ||
+        !mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for source and result";
     return success();
   }
   case cir::CastKind::float_to_int: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
     if (!mlir::dyn_cast<cir::IntType>(resType))
       return emitOpError() << "requires !cir.int type for result";
@@ -411,7 +452,7 @@ LogicalResult cir::CastOp::verify() {
     return success();
   }
   case cir::CastKind::float_to_bool: {
-    if (!mlir::isa<cir::CIRFPTypeInterface>(srcType))
+    if (!mlir::isa<cir::FPTypeInterface>(srcType))
       return emitOpError() << "requires !cir.float type for source";
     if (!mlir::isa<cir::BoolType>(resType))
       return emitOpError() << "requires !cir.bool type for result";
@@ -427,14 +468,14 @@ LogicalResult cir::CastOp::verify() {
   case cir::CastKind::int_to_float: {
     if (!mlir::isa<cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
-    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
   case cir::CastKind::bool_to_float: {
     if (!mlir::isa<cir::BoolType>(srcType))
       return emitOpError() << "requires !cir.bool type for source";
-    if (!mlir::isa<cir::CIRFPTypeInterface>(resType))
+    if (!mlir::isa<cir::FPTypeInterface>(resType))
       return emitOpError() << "requires !cir.float type for result";
     return success();
   }
@@ -1287,18 +1328,53 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // FuncOp
 //===----------------------------------------------------------------------===//
 
+/// Returns the name used for the linkage attribute. This *must* correspond to
+/// the name of the attribute in ODS.
+static llvm::StringRef getLinkageAttrNameString() { return "linkage"; }
+
 void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name, FuncType type) {
+                        StringRef name, FuncType type,
+                        GlobalLinkageKind linkage) {
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
+  result.addAttribute(
+      getLinkageAttrNameString(),
+      GlobalLinkageKindAttr::get(builder.getContext(), linkage));
+  result.addAttribute(getGlobalVisibilityAttrName(result.name),
+                      cir::VisibilityAttr::get(builder.getContext()));
 }
 
 ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
+
+  mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
+  mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
+  mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+
+  // Default to external linkage if no keyword is provided.
+  state.addAttribute(getLinkageAttrNameString(),
+                     GlobalLinkageKindAttr::get(
+                         parser.getContext(),
+                         parseOptionalCIRKeyword<GlobalLinkageKind>(
+                             parser, GlobalLinkageKind::ExternalLinkage)));
+
+  ::llvm::StringRef visAttrStr;
+  if (parser.parseOptionalKeyword(&visAttrStr, {"private", "public", "nested"})
+          .succeeded()) {
+    state.addAttribute(visNameAttr,
+                       parser.getBuilder().getStringAttr(visAttrStr));
+  }
+
+  cir::VisibilityAttr cirVisibilityAttr;
+  parseVisibilityAttr(parser, cirVisibilityAttr);
+  state.addAttribute(visibilityNameAttr, cirVisibilityAttr);
+
+  if (parser.parseOptionalKeyword(dsoLocalNameAttr).succeeded())
+    state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
   if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
@@ -1331,11 +1407,27 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   state.addAttribute(getFunctionTypeAttrName(state.name),
                      TypeAttr::get(fnType));
 
+  bool hasAlias = false;
+  mlir::StringAttr aliaseeNameAttr = getAliaseeAttrName(state.name);
+  if (parser.parseOptionalKeyword("alias").succeeded()) {
+    if (parser.parseLParen().failed())
+      return failure();
+    mlir::StringAttr aliaseeAttr;
+    if (parser.parseOptionalSymbolName(aliaseeAttr).failed())
+      return failure();
+    state.addAttribute(aliaseeNameAttr, FlatSymbolRefAttr::get(aliaseeAttr));
+    if (parser.parseRParen().failed())
+      return failure();
+    hasAlias = true;
+  }
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
       *body, arguments, /*enableNameShadowing=*/false);
   if (parseResult.has_value()) {
+    if (hasAlias)
+      return parser.emitError(loc, "function alias shall not have a body");
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
@@ -1346,9 +1438,17 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   return success();
 }
 
+// This function corresponds to `llvm::GlobalValue::isDeclaration` and should
+// have a similar implementation. We don't currently ifuncs or materializable
+// functions, but those should be handled here as they are implemented.
 bool cir::FuncOp::isDeclaration() {
-  // TODO(CIR): This function will actually do something once external
-  // function declarations and aliases are upstreamed.
+  assert(!cir::MissingFeatures::supportIFuncAttr());
+
+  std::optional<StringRef> aliasee = getAliasee();
+  if (!aliasee)
+    return getFunctionBody().empty();
+
+  // Aliases are always definitions.
   return false;
 }
 
@@ -1359,11 +1459,36 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getComdat())
+    p << " comdat";
+
+  if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
+    p << ' ' << stringifyGlobalLinkageKind(getLinkage());
+
+  mlir::SymbolTable::Visibility vis = getVisibility();
+  if (vis != mlir::SymbolTable::Visibility::Public)
+    p << ' ' << vis;
+
+  cir::VisibilityAttr cirVisibilityAttr = getGlobalVisibilityAttr();
+  if (!cirVisibilityAttr.isDefault()) {
+    p << ' ';
+    printVisibilityAttr(p, cirVisibilityAttr);
+  }
+
+  if (getDsoLocal())
+    p << " dso_local";
+
   p << ' ';
   p.printSymbolName(getSymName());
   cir::FuncType fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       p, *this, fnType.getInputs(), fnType.isVarArg(), fnType.getReturnTypes());
+
+  if (std::optional<StringRef> aliaseeName = getAliasee()) {
+    p << " alias(";
+    p.printSymbolName(*aliaseeName);
+    p << ")";
+  }
 
   // Print the body if this is not an external function.
   Region &body = getOperation()->getRegion(0);
@@ -1912,6 +2037,42 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
   auto realAttr = mlir::cast<mlir::TypedAttr>(real);
   auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
   return cir::ConstComplexAttr::get(realAttr, imagAttr);
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexRealOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexRealOp::verify() {
+  if (getType() != getOperand().getType().getElementType()) {
+    emitOpError() << ": result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
+  auto complex =
+      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
+  return complex ? complex.getReal() : nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexImagOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ComplexImagOp::verify() {
+  if (getType() != getOperand().getType().getElementType()) {
+    emitOpError() << ": result type does not match operand type";
+    return failure();
+  }
+  return success();
+}
+
+OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
+  auto complex =
+      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
+  return complex ? complex.getImag() : nullptr;
 }
 
 //===----------------------------------------------------------------------===//

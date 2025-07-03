@@ -1138,7 +1138,7 @@ def fno_convergent_functions : Flag<["-"], "fno-convergent-functions">,
 
 // Common offloading options
 let Group = offload_Group in {
-def offload_arch_EQ : Joined<["--"], "offload-arch=">,
+def offload_arch_EQ : CommaJoined<["--"], "offload-arch=">,
   Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
@@ -1698,6 +1698,8 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
                basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
+def fno_sample_profile_use_profi : Flag<["-"], "fno-sample-profile-use-profi">,
+                                   Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
     Alias<fno_profile_sample_use>;
 def fauto_profile_EQ : Joined<["-"], "fauto-profile=">,
@@ -2667,6 +2669,15 @@ def fsanitize_skip_hot_cutoff_EQ
           "Argument format: <sanitizer1>=<value1>,<sanitizer2>=<value2>,...">;
 
 } // end -f[no-]sanitize* flags
+
+def fallow_runtime_check_skip_hot_cutoff_EQ
+    : Joined<["-"], "fallow-runtime-check-skip-hot-cutoff=">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, CC1Option]>,
+      HelpText<"Exclude __builtin_allow_runtime_check for the top hottest "
+               "code responsible for the given fraction of PGO counters "
+               "(0.0 [default] = skip none; 1.0 = skip all). "
+               "Argument format: <value>">;
 
 def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -9312,6 +9323,20 @@ def fcgl : DXCFlag<"fcgl">, Alias<emit_pristine_llvm>;
 def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>,
   HelpText<"Enable 16-bit types and disable min precision types."
            "Available in HLSL 2018 and shader model 6.2.">;
+def fdx_rootsignature_version :
+  Joined<["-"], "fdx-rootsignature-version=">,
+  Group<dxc_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Root Signature Version">,
+  Values<"rootsig_1_0,rootsig_1_1">,
+  NormalizedValuesScope<"llvm::dxbc::RootSignatureVersion">,
+  NormalizedValues<["V1_0", "V1_1"]>,
+  MarshallingInfoEnum<LangOpts<"HLSLRootSigVer">, "V1_1">;
+def dxc_rootsig_ver :
+  Separate<["/", "-"], "force-rootsig-ver">,
+  Alias<fdx_rootsignature_version>,
+  Group<dxc_Group>,
+  Visibility<[DXCOption]>;
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Visibility<[ClangOption, CC1Option]>,
@@ -9330,6 +9355,8 @@ def dxc_validator_path_EQ : Joined<["--"], "dxv-path=">, Group<dxc_Group>,
   HelpText<"DXIL validator installation path">;
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
+def dxc_gis : DXCFlag<"Gis">,
+  HelpText<"Enable IEEE strict mode (equivalent to -ffp-model=strict)">;
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
