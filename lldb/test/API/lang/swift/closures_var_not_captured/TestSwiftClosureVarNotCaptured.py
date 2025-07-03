@@ -149,6 +149,19 @@ class TestSwiftClosureVarNotCaptured(TestBase):
                 f"MY_CLASS.class_computed_property.{kind}",
             )
             check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+        lldbutil.continue_to_source_breakpoint(
+            self,
+            process,
+            f"break_class_computed_property_didset",
+            lldb.SBFileSpec("main.swift"),
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "find_me",
+            f"MY_CLASS.class_computed_property_didset.didset",
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
     def test_ctor_struct_closure(self):
@@ -193,6 +206,19 @@ class TestSwiftClosureVarNotCaptured(TestBase):
                 f"MY_STRUCT.struct_computed_property.{kind}",
             )
             check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+        lldbutil.continue_to_source_breakpoint(
+            self,
+            process,
+            f"break_struct_computed_property_didset",
+            lldb.SBFileSpec("main.swift"),
+        )
+        check_not_captured_error(
+            self,
+            thread.frames[0],
+            "find_me",
+            f"MY_STRUCT.struct_computed_property_didset.didset",
+        )
+        check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
     def test_ctor_enum_closure(self):
