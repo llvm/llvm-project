@@ -1326,7 +1326,6 @@ bool ELFObjectWriter::checkRelocation(SMLoc Loc, const MCSectionELF *From,
 void ELFObjectWriter::recordRelocation(const MCFragment &F,
                                        const MCFixup &Fixup, MCValue Target,
                                        uint64_t &FixedValue) {
-  MCAsmBackend &Backend = Asm->getBackend();
   const MCSectionELF &Section = cast<MCSectionELF>(*F.getParent());
   MCContext &Ctx = getContext();
 
@@ -1337,8 +1336,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   if (DwoOS && !checkRelocation(Fixup.getLoc(), &Section, SecA))
     return;
 
-  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
+  bool IsPCRel = Fixup.isPCRel();
   uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
   uint64_t Addend = Target.getConstant();
   if (auto *RefB = Target.getSubSym()) {
