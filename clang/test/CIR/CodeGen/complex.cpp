@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
 int _Complex ci;
@@ -607,3 +607,22 @@ void foo24() {
 // OGCG: %[[RESULT_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[RESULT]], i32 0, i32 1
 // OGCG: store i32 %[[ELEM_REAL]], ptr %[[RESULT_REAL_PTR]], align 4
 // OGCG: store i32 %[[ELEM_IMAG]], ptr %[[RESULT_IMAG_PTR]], align 4
+
+template <double _Complex N> void template_foo() { double _Complex C = N; }
+
+void foo25() {
+  template_foo<__builtin_complex(1.0, 2.0)>();
+}
+
+// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["C", init]
+// CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.double, #cir.fp<2.000000e+00> : !cir.double> : !cir.complex<!cir.double>
+// CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
+
+// LLVM: %[[INIT:.*]] = alloca { double, double }, i64 1, align 8
+// LLVM: store { double, double } { double 1.000000e+00, double 2.000000e+00 }, ptr %[[INIT]], align 8
+
+// OGCG: %[[INIT:.*]] = alloca { double, double }, align 8
+// OGCG: %[[INIT_REAL_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[INIT]], i32 0, i32 0
+// OGCG: %[[INIT_IMAG_PTR:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[INIT]], i32 0, i32 1
+// OGCG: store double 1.000000e+00, ptr %[[INIT_REAL_PTR]], align 8
+// OGCG: store double 2.000000e+00, ptr %[[INIT_IMAG_PTR]], align 8
