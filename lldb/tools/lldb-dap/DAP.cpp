@@ -44,7 +44,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <Protocol/ProtocolEvents.h>
 #include <algorithm>
 #include <cassert>
 #include <chrono>
@@ -1348,46 +1347,7 @@ void DAP::EventThread() {
           SendStdOutStdErr(*this, process);
         }
       } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
-        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
-          const uint32_t num_modules =
-              lldb::SBTarget::GetNumModulesFromEvent(event);
-          std::lock_guard<std::mutex> guard(modules_mutex);
-          for (uint32_t i = 0; i < num_modules; ++i) {
-            lldb::SBModule module =
-                lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
-
-            const bool remove_module =
-                event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
-            auto p_module = CreateModule(target, module, remove_module);
-            if (!p_module)
-              continue;
-
-            llvm::StringRef module_id = p_module->id;
-
-            if (modules.contains(module_id)) {
-              if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-                modules.erase(module_id);
-                Send(protocol::Event{
-                    "module",
-                    ModuleEventBody{std::move(p_module).value(),
-                                    ModuleEventBody::eReasonRemoved}});
-              } else {
-                Send(protocol::Event{
-                    "module",
-                    ModuleEventBody{std::move(p_module).value(),
-                                    ModuleEventBody::eReasonChanged}});
-              }
-            } else if (!remove_module) {
-              modules.insert(module_id);
-              Send(protocol::Event{
-                  "module", ModuleEventBody{std::move(p_module).value(),
-                                            ModuleEventBody::eReasonNew}});
-            }
-          }
-        }
+        HandleTargetEvent(*this, event);
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =

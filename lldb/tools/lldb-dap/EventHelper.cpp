@@ -13,6 +13,8 @@
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolTypes.h"
+#include "ProtocolUtils.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
 #include "llvm/Support/Error.h"
 
@@ -269,4 +271,48 @@ void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+void HandleTargetEvent(DAP &dap, const lldb::SBEvent &event) {
+  const lldb::SBTarget &target = dap.target;
+  const uint32_t event_mask = event.GetType();
+  if (!(event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded) &&
+      !(event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) &&
+      !(event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded) &&
+      !(event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged))
+    return;
+
+  const uint32_t num_modules = lldb::SBTarget::GetNumModulesFromEvent(event);
+  std::lock_guard<std::mutex> guard(dap.modules_mutex);
+
+  for (uint32_t i = 0; i < num_modules; ++i) {
+    lldb::SBModule module = lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
+
+    const bool remove_module =
+        event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded;
+    auto p_module = lldb_dap::CreateModule(target, module, remove_module);
+    if (!p_module)
+      continue;
+
+    const llvm::StringRef module_id = p_module->id;
+    if (dap.modules.contains(module_id)) {
+      if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
+        dap.modules.erase(module_id);
+        dap.Send(protocol::Event{
+            "module", protocol::ModuleEventBody{
+                          std::move(p_module).value(),
+                          protocol::ModuleEventBody::eReasonRemoved}});
+      } else {
+        dap.Send(protocol::Event{
+            "module", protocol::ModuleEventBody{
+                          std::move(p_module).value(),
+                          protocol::ModuleEventBody::eReasonChanged}});
+      }
+    } else if (!remove_module) {
+      dap.modules.insert(module_id);
+      dap.Send(protocol::Event{
+          "module",
+          protocol::ModuleEventBody{std::move(p_module).value(),
+                                    protocol::ModuleEventBody::eReasonNew}});
+    }
+  }
+}
 } // namespace lldb_dap

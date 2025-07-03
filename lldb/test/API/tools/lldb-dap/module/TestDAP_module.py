@@ -87,7 +87,6 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # symbols got added.
         self.assertNotEqual(len(module_changed_names), 0)
         self.assertIn(program_module["name"], module_changed_names)
-        self.continue_to_exit()
 
         # fetch modules from offset
         if len(active_modules.keys()) > 2:
@@ -100,6 +99,8 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
 
             module_name = resp_modules[0]["name"]
             self.assertIn(module_name, active_modules.keys())
+
+        self.continue_to_exit()
 
     @skipIfWindows
     def test_modules(self):

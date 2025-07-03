@@ -32,6 +32,8 @@ void SendContinuedEvent(DAP &dap);
 
 void SendProcessExitedEvent(DAP &dap, lldb::SBProcess &process);
 
+void HandleTargetEvent(DAP &dap, const lldb::SBEvent &event);
+
 } // namespace lldb_dap
 
 #endif
