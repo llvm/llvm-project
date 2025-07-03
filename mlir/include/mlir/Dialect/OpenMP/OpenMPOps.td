@@ -2115,4 +2115,68 @@ def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// TargetAllocMemOp
+//===----------------------------------------------------------------------===//
+
+def TargetAllocMemOp : OpenMP_Op<"target_allocmem",
+    [MemoryEffects<[MemAlloc<DefaultResource>]>, AttrSizedOperandSegments]> {
+  let summary = "allocate storage on an openmp device for an object of a given type";
+
+  let description = [{
+    Allocates memory on the specified OpenMP device for an object of the given type.
+    Returns an integer value representing the device pointer to the allocated memory.
+    The memory is uninitialized after allocation. Operations must be paired with 
+    `omp.target_freemem` to avoid memory leaks.
+
+    ```mlir
+      %device = arith.constant 0 : i32
+      %ptr = omp.target_allocmem %device : i32, vector<3x3xi32>
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<AnyInteger>:$device,
+    TypeAttr:$in_type,
+    OptionalAttr<StrAttr>:$uniq_name,
+    OptionalAttr<StrAttr>:$bindc_name,
+    Variadic<AnyInteger>:$typeparams,
+    Variadic<AnyInteger>:$shape
+  );
+  let results = (outs I64);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// TargetFreeMemOp
+//===----------------------------------------------------------------------===//
+
+def TargetFreeMemOp : OpenMP_Op<"target_freemem",
+  [MemoryEffects<[MemFree]>]> {
+  let summary = "free memory on an openmp device";
+
+  let description = [{
+    Deallocates memory on the specified OpenMP device that was previously 
+    allocated by an `omp.target_allocmem` operation. The memory is placed 
+    in an undefined state after deallocation.
+    ```
+      %device = arith.constant 0 : i32
+      %ptr = omp.target_allocmem %device : i32, vector<3x3xi32>
+      omp.target_freemem %device, %ptr : i32, i64
+    ```
+  }];
+
+  let arguments = (ins
+  Arg<AnyInteger, "", [MemFree]>:$device,
+  Arg<I64, "", [MemFree]>:$heapref
+  );
+  let assemblyFormat = "$device `,` $heapref attr-dict `:` type($device) `,` qualified(type($heapref))";
+}
+
 #endif // OPENMP_OPS
