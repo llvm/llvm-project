@@ -1607,7 +1607,6 @@ def HasVendorXAndesVBFHCvt
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
 
-
 def FeatureVendorXAndesVPackFPH
     : RISCVExtension<5, 0, "Andes Vector Packed FP16 Extension",
                      [FeatureStdExtZvfhmin]>;

@@ -104,6 +104,8 @@ class IRInterpreterTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+    # Works on Windows on Arm, fails on Windows on x64.
+    @skipIf(oslist=["windows"], archs=no_match(["arm64", "aarch64"]), bugnumber="http://llvm.org/pr21765")
     @add_test_categories(["pyapi"])
     def test_ir_interpreter(self):
         self.build_and_run()
