@@ -59,6 +59,12 @@ def main():
         help="Path to BOLT build directory, default is current " "directory",
     )
     parser.add_argument(
+        "--create-wrapper",
+        default=False,
+        action="store_true",
+        help="Sets up llvm-bolt as a symlink to llvm-bolt-wrapper. Passes the options through to llvm-bolt-wrapper.",
+    )
+    parser.add_argument(
         "--check-bolt-sources",
         default=False,
         action="store_true",
@@ -75,7 +81,12 @@ def main():
         default="HEAD^",
         help="Revision to checkout to compare vs HEAD",
     )
-    args = parser.parse_args()
+
+    # When creating a wrapper, pass any unknown arguments to it. Otherwise, die.
+    args, wrapper_args = parser.parse_known_args()
+    if not args.create_wrapper and len(wrapper_args) > 0:
+        parser.parse_args()
+
     bolt_path = f"{args.build_dir}/bin/llvm-bolt"
 
     source_dir = None
@@ -128,6 +139,24 @@ def main():
     )
     # rename llvm-bolt
     os.replace(bolt_path, f"{bolt_path}.old")
+
+    # symlink llvm-bolt-wrapper
+    if args.create_wrapper:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        wrapper_path = f"{script_dir}/llvm-bolt-wrapper.py"
+        try:
+            # set up llvm-bolt-wrapper.ini
+            ini = subprocess.check_output(
+                shlex.split(f"{wrapper_path} {bolt_path}.old {bolt_path}.new") + wrapper_args,
+                text=True,
+            )
+            with open(f"{args.build_dir}/bin/llvm-bolt-wrapper.ini", "w") as f:
+                f.write(ini)
+            # symlink llvm-bolt-wrapper
+            os.symlink(wrapper_path, bolt_path)
+        except Exception as e:
+            sys.exit("Failed to create a wrapper:\n" + str(e))
+
     if args.switch_back:
         if stash:
             subprocess.run(shlex.split("git stash pop"), cwd=source_dir)
