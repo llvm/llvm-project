@@ -198,8 +198,7 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override {
+  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target) {
     switch(Fixup.getTargetKind()) {
       default:
         llvm_unreachable("Unknown Fixup Kind!");
@@ -653,10 +652,13 @@ public:
 
 } // namespace
 
-void HexagonAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target,
                                    MutableArrayRef<char> Data,
                                    uint64_t FixupValue, bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, FixupValue, IsResolved);
   // When FixupValue is 0 the relocation is external and there
   // is nothing for us to do.
   if (!FixupValue)

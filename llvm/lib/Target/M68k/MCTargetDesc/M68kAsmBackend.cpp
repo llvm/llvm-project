@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -77,11 +78,14 @@ public:
 };
 } // end anonymous namespace
 
-void M68kAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
-                                const MCValue &, MutableArrayRef<char> Data,
-                                uint64_t Value, bool) {
-  unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
+void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                const MCValue &Target,
+                                MutableArrayRef<char> Data, uint64_t Value,
+                                bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
 
+  unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
   // Check that uppper bits are either all zeros or all ones.
   // Specifically ignore overflow/underflow as long as the leakage is
