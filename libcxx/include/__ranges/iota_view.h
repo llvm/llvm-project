@@ -371,7 +371,6 @@ template <class _Start, class _BoundSentinel>
 inline constexpr bool enable_borrowed_range<iota_view<_Start, _BoundSentinel>> = true;
 
 namespace views {
-
 namespace __iota {
 struct __fn {
   template <class _Start>
