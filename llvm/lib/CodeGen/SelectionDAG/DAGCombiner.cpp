@@ -13104,16 +13104,11 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   }
 
   // check select(setgt lhs, -1), 1, -1 --> or (sra lhs, bitwidth - 1), 1
-  APInt TValAPInt;
-  if (Cond.getOpcode() == ISD::SETCC &&
-      Cond.getOperand(2) == DAG.getCondCode(ISD::SETGT) &&
-      Cond.getOperand(0).getValueType() == VT && VT.isSimple() &&
-      ISD::isConstantSplatVector(TVal.getNode(), TValAPInt) &&
-      TValAPInt.isOne() &&
-      ISD::isConstantSplatVectorAllOnes(Cond.getOperand(1).getNode()) &&
-      ISD::isConstantSplatVectorAllOnes(FVal.getNode())) {
+  if (VT.isSimple() && sd_match(TVal, m_One(/*AllowUndefs=*/true)) &&
+      sd_match(FVal, m_AllOnes(/*AllowUndefs=*/true)) &&
+      sd_match(Cond, m_SetCC(m_SpecificVT(VT), m_AllOnes(/*AllowUndefs=*/true),
+                             m_SpecificCondCode(ISD::SETGT))))
     return SDValue();
-  }
 
   // To use the condition operand as a bitwise mask, it must have elements that
   // are the same size as the select elements. i.e, the condition operand must
