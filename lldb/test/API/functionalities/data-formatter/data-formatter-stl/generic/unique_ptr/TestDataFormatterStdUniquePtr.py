@@ -1,7 +1,6 @@
 """
-Test lldb data formatter for libc++ std::unique_ptr.
+Test lldb data formatter for std::unique_ptr.
 """
-
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -32,10 +31,8 @@ class TestCase(TestBase):
                 "std::default_delete<std::basic_string<char, std::char_traits<char>, std::allocator<char> > > >"
             )
 
-    @add_test_categories(["libc++"])
-    def test_unique_ptr_variables(self):
+    def do_test(self):
         """Test `frame variable` output for `std::unique_ptr` types."""
-        self.build()
 
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
@@ -121,3 +118,67 @@ class TestCase(TestBase):
         self.expect_var_path("ptr_node->next->value", value="2")
         self.expect_var_path("(*ptr_node).value", value="1")
         self.expect_var_path("(*(*ptr_node).next).value", value="2")
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    def do_test_recursive_unique_ptr(self):
+        # Tests that LLDB can handle when we have a loop in the unique_ptr
+        # reference chain and that it correctly handles the different options
+        # for the frame variable command in this case.
+        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_source_regexp(self, "Set break point at this line.")
+        self.runCmd("run", RUN_SUCCEEDED)
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+
+        self.expect("frame variable f1->next", substrs=["next = NodeU @"])
+        self.expect(
+            "frame variable --ptr-depth=1 f1->next",
+            substrs=["next = NodeU @", "value = 2"],
+        )
+        self.expect(
+            "frame variable --ptr-depth=2 f1->next",
+            substrs=["next = NodeU @", "value = 1", "value = 2"],
+        )
+
+        frame = self.frame()
+        self.assertTrue(frame.IsValid())
+        self.assertEqual(
+            2,
+            frame.GetValueForVariablePath("f1->next.object.value").GetValueAsUnsigned(),
+        )
+        self.assertEqual(
+            2, frame.GetValueForVariablePath("f1->next->value").GetValueAsUnsigned()
+        )
+        self.assertEqual(
+            1,
+            frame.GetValueForVariablePath(
+                "f1->next.object.next.obj.value"
+            ).GetValueAsUnsigned(),
+        )
+        self.assertEqual(
+            1,
+            frame.GetValueForVariablePath("f1->next->next->value").GetValueAsUnsigned(),
+        )
+
+    @add_test_categories(["libstdcxx"])
+    def test_recursive_unique_ptr_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_recursive_unique_ptr()
+
+    @add_test_categories(["libc++"])
+    def test_recursive_unique_ptr_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_recursive_unique_ptr()
