@@ -333,22 +333,21 @@ ProgramState::assumeInBoundDual(DefinedOrUnknownSVal Idx,
   nonloc::ConcreteInt Min(BVF.getMinValue(indexTy));
 
   // Adjust the index.
-  SVal newIdx = svalBuilder.evalBinOpNN(this, BO_Add,
-                                        Idx.castAs<NonLoc>(), Min, indexTy);
+  SVal newIdx =
+      svalBuilder.evalBinOp(this, BO_Add, Idx.castAs<NonLoc>(), Min, indexTy);
   if (newIdx.isUnknownOrUndef())
     return {this, this};
 
   // Adjust the upper bound.
-  SVal newBound =
-    svalBuilder.evalBinOpNN(this, BO_Add, UpperBound.castAs<NonLoc>(),
-                            Min, indexTy);
+  SVal newBound = svalBuilder.evalBinOp(
+      this, BO_Add, UpperBound.castAs<NonLoc>(), Min, indexTy);
 
   if (newBound.isUnknownOrUndef())
     return {this, this};
 
   // Build the actual comparison.
-  SVal inBound = svalBuilder.evalBinOpNN(this, BO_LT, newIdx.castAs<NonLoc>(),
-                                         newBound.castAs<NonLoc>(), Ctx.IntTy);
+  SVal inBound = svalBuilder.evalBinOp(this, BO_LT, newIdx.castAs<NonLoc>(),
+                                       newBound.castAs<NonLoc>(), Ctx.IntTy);
   if (inBound.isUnknownOrUndef())
     return {this, this};
 

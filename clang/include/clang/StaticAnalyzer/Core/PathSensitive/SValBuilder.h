@@ -91,22 +91,6 @@ public:
   SVal evalMinus(NonLoc val);
   SVal evalComplement(NonLoc val);
 
-  /// Create a new value which represents a binary expression with two non-
-  /// location operands.
-  virtual SVal evalBinOpNN(ProgramStateRef state, BinaryOperator::Opcode op,
-                           NonLoc lhs, NonLoc rhs, QualType resultTy) = 0;
-
-  /// Create a new value which represents a binary expression with two memory
-  /// location operands.
-  virtual SVal evalBinOpLL(ProgramStateRef state, BinaryOperator::Opcode op,
-                           Loc lhs, Loc rhs, QualType resultTy) = 0;
-
-  /// Create a new value which represents a binary expression with a memory
-  /// location and non-location operands. For example, this would be used to
-  /// evaluate a pointer arithmetic operation.
-  virtual SVal evalBinOpLN(ProgramStateRef state, BinaryOperator::Opcode op,
-                           Loc lhs, NonLoc rhs, QualType resultTy) = 0;
-
   /// Evaluates a given SVal. If the SVal has only one possible (integer) value,
   /// that value is returned. Otherwise, returns NULL.
   virtual const llvm::APSInt *getKnownValue(ProgramStateRef state, SVal val) = 0;
@@ -396,6 +380,23 @@ public:
   /// Return a memory region for the 'this' object reference.
   loc::MemRegionVal getCXXThis(const CXXRecordDecl *D,
                                const StackFrameContext *SFC);
+
+protected:
+  /// Create a new value which represents a binary expression with two non-
+  /// location operands.
+  virtual SVal evalBinOpNN(ProgramStateRef state, BinaryOperator::Opcode op,
+                           NonLoc lhs, NonLoc rhs, QualType resultTy) = 0;
+
+  /// Create a new value which represents a binary expression with two memory
+  /// location operands.
+  virtual SVal evalBinOpLL(ProgramStateRef state, BinaryOperator::Opcode op,
+                           Loc lhs, Loc rhs, QualType resultTy) = 0;
+
+  /// Create a new value which represents a binary expression with a memory
+  /// location and non-location operands. For example, this would be used to
+  /// evaluate a pointer arithmetic operation.
+  virtual SVal evalBinOpLN(ProgramStateRef state, BinaryOperator::Opcode op,
+                           Loc lhs, NonLoc rhs, QualType resultTy) = 0;
 };
 
 SValBuilder* createSimpleSValBuilder(llvm::BumpPtrAllocator &alloc,

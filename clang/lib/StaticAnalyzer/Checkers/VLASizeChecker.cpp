@@ -112,7 +112,7 @@ ProgramStateRef VLASizeChecker::checkVLA(CheckerContext &C,
     NonLoc IndexLength =
         SVB.evalCast(SizeD, SizeTy, SizeE->getType()).castAs<NonLoc>();
     // Multiply the array length by the element size.
-    SVal Mul = SVB.evalBinOpNN(State, BO_Mul, ArrSize, IndexLength, SizeTy);
+    SVal Mul = SVB.evalBinOp(State, BO_Mul, ArrSize, IndexLength, SizeTy);
     if (auto MulNonLoc = Mul.getAs<NonLoc>())
       ArrSize = *MulNonLoc;
     else

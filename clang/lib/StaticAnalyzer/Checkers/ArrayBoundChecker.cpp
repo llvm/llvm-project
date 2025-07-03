@@ -188,7 +188,7 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB, SVal Location) {
   QualType T = SVB.getArrayIndexType();
   auto EvalBinOp = [&SVB, State, T](BinaryOperatorKind Op, NonLoc L, NonLoc R) {
     // We will use this utility to add and multiply values.
-    return SVB.evalBinOpNN(State, Op, L, R, T).getAs<NonLoc>();
+    return SVB.evalBinOp(State, Op, L, R, T).getAs<NonLoc>();
   };
 
   const SubRegion *OwnerRegion = nullptr;
@@ -311,12 +311,12 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   }
 
   // We want to perform a _mathematical_ comparison between the numbers `Value`
-  // and `Threshold`; but `evalBinOpNN` evaluates a C/C++ operator that may
+  // and `Threshold`; but `evalBinOp` evaluates a C/C++ operator that may
   // perform automatic conversions. For example the number -1 is less than the
   // number 1000, but -1 < `1000ull` will evaluate to `false` because the `int`
   // -1 is converted to ULONGLONG_MAX.
   // To avoid automatic conversions, we evaluate the "obvious" cases without
-  // calling `evalBinOpNN`:
+  // calling `evalBinOp`:
   if (isNegative(SVB, State, Value) && isUnsigned(SVB, Threshold)) {
     if (CheckEquality) {
       // negative_value == unsigned_threshold is always false
@@ -334,7 +334,7 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
   // comparisons, but in theory there could be contrived situations where
   // automatic conversion of a symbolic value (which can be negative and can be
   // positive) leads to incorrect results.
-  // NOTE: We NEED to use the `evalBinOpNN` call in the "common" case, because
+  // NOTE: We NEED to use the `evalBinOp` call in the "common" case, because
   // we want to ensure that assumptions coming from this precondition and
   // assumptions coming from regular C/C++ operator calls are represented by
   // constraints on the same symbolic expression. A solution that would
@@ -343,7 +343,7 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
 
   const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
   auto BelowThreshold =
-      SVB.evalBinOpNN(State, OpKind, Value, Threshold, SVB.getConditionType())
+      SVB.evalBinOp(State, OpKind, Value, Threshold, SVB.getConditionType())
           .getAs<NonLoc>();
 
   if (BelowThreshold)
@@ -647,7 +647,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
     // Actually update the state. The "if" only fails in the extremely unlikely
     // case when compareValueToThreshold returns {nullptr, nullptr} because
-    // evalBinOpNN fails to evaluate the less-than operator.
+    // evalBinOp fails to evaluate the less-than operator.
     if (WithinLowerBound)
       State = WithinLowerBound;
   }
@@ -708,7 +708,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
 
     // Actually update the state. The "if" only fails in the extremely unlikely
     // case when compareValueToThreshold returns {nullptr, nullptr} because
-    // evalBinOpNN fails to evaluate the less-than operator.
+    // evalBinOp fails to evaluate the less-than operator.
     if (WithinUpperBound)
       State = WithinUpperBound;
   }

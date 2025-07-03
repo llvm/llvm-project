@@ -101,9 +101,9 @@ ProgramStateRef SetgidSetuidOrderChecker::evalAssume(ProgramStateRef State,
   // too. The "invalid failure check" is a different bug that is not the scope
   // of this checker.)
   auto FailComparison =
-      SVB.evalBinOpNN(State, BO_NE, nonloc::SymbolVal(LastSetuidSym),
-                      SVB.makeIntVal(0, /*isUnsigned=*/false),
-                      SVB.getConditionType())
+      SVB.evalBinOp(State, BO_NE, nonloc::SymbolVal(LastSetuidSym),
+                    SVB.makeIntVal(0, /*isUnsigned=*/false),
+                    SVB.getConditionType())
           .getAs<DefinedOrUnknownSVal>();
   if (!FailComparison)
     return State;

@@ -704,10 +704,9 @@ struct StreamOperationEvaluator {
                            C.getSValBuilder().makeNullWithType(CE->getType()));
   }
 
-  ProgramStateRef assumeBinOpNN(ProgramStateRef State,
-                                BinaryOperator::Opcode Op, NonLoc LHS,
-                                NonLoc RHS) {
-    auto Cond = SVB.evalBinOpNN(State, Op, LHS, RHS, SVB.getConditionType())
+  ProgramStateRef assumeBinOp(ProgramStateRef State, BinaryOperator::Opcode Op,
+                              NonLoc LHS, NonLoc RHS) {
+    auto Cond = SVB.evalBinOp(State, Op, LHS, RHS, SVB.getConditionType())
                     .getAs<DefinedOrUnknownSVal>();
     if (!Cond)
       return nullptr;
@@ -1203,7 +1202,7 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   ProgramStateRef StateFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
-  StateFailed = E.assumeBinOpNN(StateFailed, BO_LT, RetVal, *NMembVal);
+  StateFailed = E.assumeBinOp(StateFailed, BO_LT, RetVal, *NMembVal);
   if (!StateFailed)
     return;
 
@@ -1304,7 +1303,7 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
-        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+        E.assumeBinOp(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
       return;
     StateNotFailed =
@@ -1383,7 +1382,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
-        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+        E.assumeBinOp(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
     if (!StateNotFailed)
       return;
 
@@ -1463,7 +1462,7 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
     NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, RetVal);
     StateNotFailed =
-        E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+        E.assumeBinOp(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
 
     // On success, a buffer is allocated.
     auto NewLinePtr = getPointeeVal(Call.getArgSVal(0), State);
@@ -1476,8 +1475,8 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
     SVal SizePtrSval = Call.getArgSVal(1);
     auto NVal = getPointeeVal(SizePtrSval, State);
     if (NVal && isa<NonLoc>(*NVal)) {
-      StateNotFailed = E.assumeBinOpNN(StateNotFailed, BO_GT,
-                                       NVal->castAs<NonLoc>(), RetVal);
+      StateNotFailed =
+          E.assumeBinOp(StateNotFailed, BO_GT, NVal->castAs<NonLoc>(), RetVal);
       StateNotFailed = E.bindReturnValue(StateNotFailed, C, RetVal);
     }
     if (!StateNotFailed)
@@ -1605,7 +1604,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   ProgramStateRef StateNotFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
   StateNotFailed =
-      E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
+      E.assumeBinOp(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
   if (!StateNotFailed)
     return;
 
@@ -1772,7 +1771,7 @@ void StreamChecker::evalFileno(const FnDescription *Desc, const CallEvent &Call,
 
   NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
-  State = E.assumeBinOpNN(State, BO_GE, RetVal, E.getZeroVal(Call));
+  State = E.assumeBinOp(State, BO_GE, RetVal, E.getZeroVal(Call));
   if (!State)
     return;
 

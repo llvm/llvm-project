@@ -1034,16 +1034,18 @@ SymbolRef rebaseSymbol(ProgramStateRef State, SValBuilder &SVB,
                        SymbolRef OrigExpr, SymbolRef OldExpr,
                        SymbolRef NewSym) {
   auto &SymMgr = SVB.getSymbolManager();
-  auto Diff = SVB.evalBinOpNN(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
-                              nonloc::SymbolVal(OldExpr),
-                              SymMgr.getType(OrigExpr));
+  auto Diff =
+      SVB.evalBinOp(State, BO_Sub, nonloc::SymbolVal(OrigExpr),
+                    nonloc::SymbolVal(OldExpr), SymMgr.getType(OrigExpr));
 
   const auto DiffInt = Diff.getAs<nonloc::ConcreteInt>();
   if (!DiffInt)
     return OrigExpr;
 
-  return SVB.evalBinOpNN(State, BO_Add, *DiffInt, nonloc::SymbolVal(NewSym),
-                         SymMgr.getType(OrigExpr)).getAsSymbol();
+  return SVB
+      .evalBinOp(State, BO_Add, *DiffInt, nonloc::SymbolVal(NewSym),
+                 SymMgr.getType(OrigExpr))
+      .getAsSymbol();
 }
 
 bool hasLiveIterators(ProgramStateRef State, const MemRegion *Cont) {

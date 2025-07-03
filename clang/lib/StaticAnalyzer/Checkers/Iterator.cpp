@@ -273,9 +273,9 @@ ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
   ProgramStateRef NewState = State;
 
   llvm::APSInt Max = AT.getMaxValue() / AT.getValue(Scale);
-  SVal IsCappedFromAbove = SVB.evalBinOpNN(
-      State, BO_LE, nonloc::SymbolVal(Sym),
-      nonloc::ConcreteInt(BV.getValue(Max)), SVB.getConditionType());
+  SVal IsCappedFromAbove = SVB.evalBinOp(State, BO_LE, nonloc::SymbolVal(Sym),
+                                         nonloc::ConcreteInt(BV.getValue(Max)),
+                                         SVB.getConditionType());
   if (auto DV = IsCappedFromAbove.getAs<DefinedSVal>()) {
     NewState = NewState->assume(*DV, true);
     if (!NewState)
@@ -283,9 +283,9 @@ ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
   }
 
   llvm::APSInt Min = -Max;
-  SVal IsCappedFromBelow = SVB.evalBinOpNN(
-      State, BO_GE, nonloc::SymbolVal(Sym),
-      nonloc::ConcreteInt(BV.getValue(Min)), SVB.getConditionType());
+  SVal IsCappedFromBelow = SVB.evalBinOp(State, BO_GE, nonloc::SymbolVal(Sym),
+                                         nonloc::ConcreteInt(BV.getValue(Min)),
+                                         SVB.getConditionType());
   if (auto DV = IsCappedFromBelow.getAs<DefinedSVal>()) {
     NewState = NewState->assume(*DV, true);
     if (!NewState)

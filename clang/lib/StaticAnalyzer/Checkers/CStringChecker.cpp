@@ -421,8 +421,7 @@ static std::optional<NonLoc> getIndex(ProgramStateRef State,
       SVB.makeIntVal(Ctx.getTypeSizeInChars(Ctx.WideCharTy).getQuantity(),
                      SizeTy)
           .castAs<NonLoc>();
-  SVal Offset =
-      SVB.evalBinOpNN(State, BO_Mul, ER->getIndex(), WideSize, SizeTy);
+  SVal Offset = SVB.evalBinOp(State, BO_Mul, ER->getIndex(), WideSize, SizeTy);
   if (Offset.isUnknown())
     return {};
   return Offset.castAs<NonLoc>();
@@ -508,13 +507,13 @@ ProgramStateRef CStringChecker::checkInit(CheckerContext &C,
   // type. This value will be size of the array, or the index to the
   // past-the-end element.
   std::optional<NonLoc> Offset =
-      SVB.evalBinOpNN(State, clang::BO_Div, Size.castAs<NonLoc>(), ElemSize,
-                      IdxTy)
+      SVB.evalBinOp(State, clang::BO_Div, Size.castAs<NonLoc>(), ElemSize,
+                    IdxTy)
           .getAs<NonLoc>();
 
   // Retrieve the index of the last element.
   const NonLoc One = SVB.makeIntVal(1, IdxTy).castAs<NonLoc>();
-  SVal LastIdx = SVB.evalBinOpNN(State, BO_Sub, *Offset, One, IdxTy);
+  SVal LastIdx = SVB.evalBinOp(State, BO_Sub, *Offset, One, IdxTy);
 
   if (!Offset)
     return State;
@@ -642,7 +641,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
 
   // Compute the offset of the last element to be accessed: size-1.
   NonLoc One = svalBuilder.makeIntVal(1, SizeTy).castAs<NonLoc>();
-  SVal Offset = svalBuilder.evalBinOpNN(State, BO_Sub, *Length, One, SizeTy);
+  SVal Offset = svalBuilder.evalBinOp(State, BO_Sub, *Length, One, SizeTy);
   if (Offset.isUnknown())
     return nullptr;
   NonLoc LastOffset = Offset.castAs<NonLoc>();
@@ -651,7 +650,7 @@ CStringChecker::CheckBufferAccess(CheckerContext &C, ProgramStateRef State,
   if (std::optional<Loc> BufLoc = BufStart.getAs<Loc>()) {
 
     SVal BufEnd =
-        svalBuilder.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
+        svalBuilder.evalBinOp(State, BO_Add, *BufLoc, LastOffset, PtrTy);
     State = CheckLocation(C, State, Buffer, BufEnd, Access, CK);
     if (Access == AccessKind::read)
       State = checkInit(C, State, Buffer, BufEnd, *Length);
@@ -719,7 +718,7 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
   // Which value comes first?
   QualType cmpTy = svalBuilder.getConditionType();
   SVal reverse =
-      svalBuilder.evalBinOpLL(state, BO_GT, *firstLoc, *secondLoc, cmpTy);
+      svalBuilder.evalBinOp(state, BO_GT, *firstLoc, *secondLoc, cmpTy);
   std::optional<DefinedOrUnknownSVal> reverseTest =
       reverse.getAs<DefinedOrUnknownSVal>();
   if (!reverseTest)
@@ -756,15 +755,15 @@ ProgramStateRef CStringChecker::CheckOverlap(CheckerContext &C,
     return state;
 
   // Compute the end of the first buffer. Bail out if THAT fails.
-  SVal FirstEnd = svalBuilder.evalBinOpLN(state, BO_Add, *FirstStartLoc,
-                                          *Length, CharPtrTy);
+  SVal FirstEnd =
+      svalBuilder.evalBinOp(state, BO_Add, *FirstStartLoc, *Length, CharPtrTy);
   std::optional<Loc> FirstEndLoc = FirstEnd.getAs<Loc>();
   if (!FirstEndLoc)
     return state;
 
   // Is the end of the first buffer past the start of the second buffer?
   SVal Overlap =
-      svalBuilder.evalBinOpLL(state, BO_GT, *FirstEndLoc, *secondLoc, cmpTy);
+      svalBuilder.evalBinOp(state, BO_GT, *FirstEndLoc, *secondLoc, cmpTy);
   std::optional<DefinedOrUnknownSVal> OverlapTest =
       Overlap.getAs<DefinedOrUnknownSVal>();
   if (!OverlapTest)
@@ -925,21 +924,19 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
 
   SVal maxMinusRight;
   if (isa<nonloc::ConcreteInt>(right)) {
-    maxMinusRight = svalBuilder.evalBinOpNN(state, BO_Sub, maxVal, right,
-                                                 sizeTy);
+    maxMinusRight = svalBuilder.evalBinOp(state, BO_Sub, maxVal, right, sizeTy);
   } else {
     // Try switching the operands. (The order of these two assignments is
     // important!)
-    maxMinusRight = svalBuilder.evalBinOpNN(state, BO_Sub, maxVal, left,
-                                            sizeTy);
+    maxMinusRight = svalBuilder.evalBinOp(state, BO_Sub, maxVal, left, sizeTy);
     left = right;
   }
 
   if (std::optional<NonLoc> maxMinusRightNL = maxMinusRight.getAs<NonLoc>()) {
     QualType cmpTy = svalBuilder.getConditionType();
     // If left > max - right, we have an overflow.
-    SVal willOverflow = svalBuilder.evalBinOpNN(state, BO_GT, left,
-                                                *maxMinusRightNL, cmpTy);
+    SVal willOverflow =
+        svalBuilder.evalBinOp(state, BO_GT, left, *maxMinusRightNL, cmpTy);
 
     ProgramStateRef stateOverflow, stateOkay;
     std::tie(stateOverflow, stateOkay) =
@@ -1029,8 +1026,8 @@ SVal CStringChecker::getCStringLengthForRegion(CheckerContext &C,
       std::optional<APSIntPtr> maxLengthInt =
           BVF.evalAPSInt(BO_Div, maxValInt, fourInt);
       NonLoc maxLength = svalBuilder.makeIntVal(*maxLengthInt);
-      SVal evalLength = svalBuilder.evalBinOpNN(state, BO_LE, *strLn, maxLength,
-                                                svalBuilder.getConditionType());
+      SVal evalLength = svalBuilder.evalBinOp(state, BO_LE, *strLn, maxLength,
+                                              svalBuilder.getConditionType());
       state = state->assume(evalLength.castAs<DefinedOrUnknownSVal>(), true);
     }
     state = state->set<CStringLength>(MR, strLength);
@@ -1170,7 +1167,7 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
 
   // Compute the offset of the last element to be accessed: size-1.
   NonLoc One = SB.makeIntVal(1, LengthTy).castAs<NonLoc>();
-  SVal Offset = SB.evalBinOpNN(State, BO_Sub, *Length, One, LengthTy);
+  SVal Offset = SB.evalBinOp(State, BO_Sub, *Length, One, LengthTy);
   if (Offset.isUnknown())
     return true; // cf top comment
   NonLoc LastOffset = Offset.castAs<NonLoc>();
@@ -1181,7 +1178,7 @@ bool CStringChecker::isFirstBufInBound(CheckerContext &C, ProgramStateRef State,
   if (!BufLoc)
     return true; // cf top comment.
 
-  SVal BufEnd = SB.evalBinOpLN(State, BO_Add, *BufLoc, LastOffset, PtrTy);
+  SVal BufEnd = SB.evalBinOp(State, BO_Add, *BufLoc, LastOffset, PtrTy);
 
   // Check for out of bound array element access.
   const MemRegion *R = BufEnd.getAsRegion();
@@ -1749,7 +1746,7 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
       // Check if the strLength is greater than the maxlen.
       std::tie(stateStringTooLong, stateStringNotTooLong) = state->assume(
           C.getSValBuilder()
-              .evalBinOpNN(state, BO_GT, *strLengthNL, *maxlenValNL, cmpTy)
+              .evalBinOp(state, BO_GT, *strLengthNL, *maxlenValNL, cmpTy)
               .castAs<DefinedOrUnknownSVal>());
 
       if (stateStringTooLong && !stateStringNotTooLong) {
@@ -1770,15 +1767,19 @@ void CStringChecker::evalstrLengthCommon(CheckerContext &C,
       NonLoc resultNL = result.castAs<NonLoc>();
 
       if (strLengthNL) {
-        state = state->assume(C.getSValBuilder().evalBinOpNN(
-                                  state, BO_LE, resultNL, *strLengthNL, cmpTy)
-                                  .castAs<DefinedOrUnknownSVal>(), true);
+        state = state->assume(
+            C.getSValBuilder()
+                .evalBinOp(state, BO_LE, resultNL, *strLengthNL, cmpTy)
+                .castAs<DefinedOrUnknownSVal>(),
+            true);
       }
 
       if (maxlenValNL) {
-        state = state->assume(C.getSValBuilder().evalBinOpNN(
-                                  state, BO_LE, resultNL, *maxlenValNL, cmpTy)
-                                  .castAs<DefinedOrUnknownSVal>(), true);
+        state = state->assume(
+            C.getSValBuilder()
+                .evalBinOp(state, BO_LE, resultNL, *maxlenValNL, cmpTy)
+                .castAs<DefinedOrUnknownSVal>(),
+            true);
       }
     }
 
@@ -1950,8 +1951,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         // If the bound is equal to the source length, strncpy won't null-
         // terminate the result!
         std::tie(stateSourceTooLong, stateSourceNotTooLong) = state->assume(
-            svalBuilder
-                .evalBinOpNN(state, BO_GE, *strLengthNL, *lenValNL, cmpTy)
+            svalBuilder.evalBinOp(state, BO_GE, *strLengthNL, *lenValNL, cmpTy)
                 .castAs<DefinedOrUnknownSVal>());
 
         if (stateSourceTooLong && !stateSourceNotTooLong) {
@@ -1972,8 +1972,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
           return;
 
         // amountCopied = min (size - dstLen - 1 , srcLen)
-        SVal freeSpace = svalBuilder.evalBinOpNN(state, BO_Sub, *lenValNL,
-                                                 *dstStrLengthNL, sizeTy);
+        SVal freeSpace = svalBuilder.evalBinOp(state, BO_Sub, *lenValNL,
+                                               *dstStrLengthNL, sizeTy);
         if (!isa<NonLoc>(freeSpace))
           return;
         freeSpace =
@@ -1985,8 +1985,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         // too complex to compute, let's check whether it succeeded.
         if (!freeSpaceNL)
           return;
-        SVal hasEnoughSpace = svalBuilder.evalBinOpNN(
-            state, BO_LE, *strLengthNL, *freeSpaceNL, cmpTy);
+        SVal hasEnoughSpace = svalBuilder.evalBinOp(state, BO_LE, *strLengthNL,
+                                                    *freeSpaceNL, cmpTy);
 
         ProgramStateRef TrueState, FalseState;
         std::tie(TrueState, FalseState) =
@@ -2020,8 +2020,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
           return;
 
         if (dstStrLengthNL) {
-          maxLastElementIndex = svalBuilder.evalBinOpNN(
-              state, BO_Add, *lenValNL, *dstStrLengthNL, sizeTy);
+          maxLastElementIndex = svalBuilder.evalBinOp(state, BO_Add, *lenValNL,
+                                                      *dstStrLengthNL, sizeTy);
 
           boundWarning = "Size argument is greater than the free space in the "
                          "destination buffer";
@@ -2068,7 +2068,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         // be sure. We won't warn on a possible zero.
         NonLoc one = svalBuilder.makeIntVal(1, sizeTy).castAs<NonLoc>();
         maxLastElementIndex =
-            svalBuilder.evalBinOpNN(state, BO_Sub, *lenValNL, one, sizeTy);
+            svalBuilder.evalBinOp(state, BO_Sub, *lenValNL, one, sizeTy);
         boundWarning = "Size argument is greater than the length of the "
                        "destination buffer";
         break;
@@ -2103,8 +2103,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
       return;
 
     if (appendK == ConcatFnKind::strlcat && dstStrLengthNL && strLengthNL) {
-      strlRetVal = svalBuilder.evalBinOpNN(state, BO_Add, *strLengthNL,
-                                           *dstStrLengthNL, sizeTy);
+      strlRetVal = svalBuilder.evalBinOp(state, BO_Add, *strLengthNL,
+                                         *dstStrLengthNL, sizeTy);
     }
 
     std::optional<NonLoc> amountCopiedNL = amountCopied.getAs<NonLoc>();
@@ -2116,8 +2116,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
       if (!state)
         return;
 
-      finalStrLength = svalBuilder.evalBinOpNN(state, BO_Add, *amountCopiedNL,
-                                               *dstStrLengthNL, sizeTy);
+      finalStrLength = svalBuilder.evalBinOp(state, BO_Add, *amountCopiedNL,
+                                             *dstStrLengthNL, sizeTy);
     }
 
     // If we couldn't get a single value for the final string length,
@@ -2134,7 +2134,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         if (amountCopiedNL && appendK == ConcatFnKind::none) {
           // we overwrite dst string with the src
           // finalStrLength >= srcStrLength
-          SVal sourceInResult = svalBuilder.evalBinOpNN(
+          SVal sourceInResult = svalBuilder.evalBinOp(
               state, BO_GE, *finalStrLengthNL, *amountCopiedNL, cmpTy);
           state = state->assume(sourceInResult.castAs<DefinedOrUnknownSVal>(),
                                 true);
@@ -2145,10 +2145,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         if (dstStrLengthNL && appendK != ConcatFnKind::none) {
           // we extend the dst string with the src
           // finalStrLength >= dstStrLength
-          SVal destInResult = svalBuilder.evalBinOpNN(state, BO_GE,
-                                                      *finalStrLengthNL,
-                                                      *dstStrLengthNL,
-                                                      cmpTy);
+          SVal destInResult = svalBuilder.evalBinOp(
+              state, BO_GE, *finalStrLengthNL, *dstStrLengthNL, cmpTy);
           state =
               state->assume(destInResult.castAs<DefinedOrUnknownSVal>(), true);
           if (!state)
@@ -2189,7 +2187,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
     // overflows, rather than our estimate about how much is actually copied.
     if (std::optional<NonLoc> maxLastNL = maxLastElementIndex.getAs<NonLoc>()) {
       SVal maxLastElement =
-          svalBuilder.evalBinOpLN(state, BO_Add, *dstRegVal, *maxLastNL, ptrTy);
+          svalBuilder.evalBinOp(state, BO_Add, *dstRegVal, *maxLastNL, ptrTy);
 
       // Check if the first byte of the destination is writable.
       state = CheckLocation(C, state, Dst, DstVal, AccessKind::write);
@@ -2203,8 +2201,8 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
 
     // Then, if the final length is known...
     if (std::optional<NonLoc> knownStrLength = finalStrLength.getAs<NonLoc>()) {
-      SVal lastElement = svalBuilder.evalBinOpLN(state, BO_Add, *dstRegVal,
-          *knownStrLength, ptrTy);
+      SVal lastElement = svalBuilder.evalBinOp(state, BO_Add, *dstRegVal,
+                                               *knownStrLength, ptrTy);
 
       // ...and we haven't checked the bound, we'll check the actual copy.
       if (!boundWarning) {

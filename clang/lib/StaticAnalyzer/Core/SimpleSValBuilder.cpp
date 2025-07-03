@@ -235,9 +235,9 @@ static bool isInRelation(BinaryOperator::Opcode Rel, SymbolRef Sym,
                          llvm::APSInt Bound, ProgramStateRef State) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   BasicValueFactory &BV = SVB.getBasicValueFactory();
-  SVal Result = SVB.evalBinOpNN(State, Rel, nonloc::SymbolVal(Sym),
-                                nonloc::ConcreteInt(BV.getValue(Bound)),
-                                SVB.getConditionType());
+  SVal Result = SVB.evalBinOp(State, Rel, nonloc::SymbolVal(Sym),
+                              nonloc::ConcreteInt(BV.getValue(Bound)),
+                              SVB.getConditionType());
   if (auto DV = Result.getAs<DefinedSVal>()) {
     return !State->assume(*DV, false);
   }
@@ -316,8 +316,8 @@ static NonLoc doRearrangeUnchecked(ProgramStateRef State,
 
   if (LSym == RSym)
     return SVB
-        .evalBinOpNN(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
-                     nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
+        .evalBinOp(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
+                   nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
         .castAs<NonLoc>();
 
   SymbolRef ResultSym = nullptr;
@@ -487,9 +487,8 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // of modeling "pointers as integers" is not complete.
         if (!BinaryOperator::isComparisonOp(op))
           return UnknownVal();
-        return evalBinOpLL(state, op, lhsL,
-                           rhs.castAs<nonloc::LocAsInteger>().getLoc(),
-                           resultTy);
+        return evalBinOp(state, op, lhsL,
+                         rhs.castAs<nonloc::LocAsInteger>().getLoc(), resultTy);
       case nonloc::ConcreteIntKind: {
         // FIXME: at the moment the implementation
         // of modeling "pointers as integers" is not complete.
@@ -509,7 +508,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
           BasicVals.getAPSIntType(lSym->getType()).apply(i);
         else
           BasicVals.getAPSIntType(Context.VoidPtrTy).apply(i);
-        return evalBinOpLL(state, op, lhsL, makeLoc(i), resultTy);
+        return evalBinOp(state, op, lhsL, makeLoc(i), resultTy);
       }
         default:
           switch (op) {
@@ -802,7 +801,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
   // Only comparisons and subtractions are valid operations on two pointers.
   // See [C99 6.5.5 through 6.5.14] or [C++0x 5.6 through 5.15].
-  // However, if a pointer is casted to an integer, evalBinOpNN may end up
+  // However, if a pointer is casted to an integer, evalBinOp may end up
   // calling this function with another operation (PR7527). We don't attempt to
   // model this for now, but it could be useful, particularly when the
   // "location" is actually an integer value that's been passed through a void*.
@@ -927,7 +926,7 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
           QualType boolType = getContext().BoolTy;
           NonLoc l = evalCast(lhs, boolType, QualType{}).castAs<NonLoc>();
           NonLoc r = makeTruthVal(false, boolType).castAs<NonLoc>();
-          return evalBinOpNN(state, op, l, r, resultTy);
+          return evalBinOp(state, op, l, r, resultTy);
         }
       }
 
@@ -1023,8 +1022,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
           return UnknownVal();
 
         // Actually perform the operation.
-        // evalBinOpNN expects the two indexes to already be the right type.
-        return evalBinOpNN(state, op, *LeftIndex, *RightIndex, resultTy);
+        // evalBinOp expects the two indexes to already be the right type.
+        return evalBinOp(state, op, *LeftIndex, *RightIndex, resultTy);
       }
     }
 
@@ -1166,8 +1165,8 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
     if (const ElementRegion *elemReg = dyn_cast<ElementRegion>(region)) {
       assert(op == BO_Add || op == BO_Sub);
-      index = evalBinOpNN(state, op, elemReg->getIndex(), rhs,
-                          getArrayIndexType());
+      index =
+          evalBinOp(state, op, elemReg->getIndex(), rhs, getArrayIndexType());
       superR = cast<SubRegion>(elemReg->getSuperRegion());
       elementType = elemReg->getElementType();
     }

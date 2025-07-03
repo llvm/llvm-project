@@ -124,7 +124,7 @@ void doubles_cast_to_integer(int *c) {
 
 unsigned int strange_cast(unsigned short sh) {
   // This testcase triggers a bug in the constant folding (it "forgets" the
-  // cast), which is silenced in SimpleSValBuilder::evalBinOpNN() with an ugly
+  // cast), which is silenced in SimpleSValBuilder::evalBinOp() with an ugly
   // workaround, because otherwise it would lead to a false positive from
   // core.UndefinedBinaryOperatorResult.
   unsigned int i;

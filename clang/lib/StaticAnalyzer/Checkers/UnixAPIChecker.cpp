@@ -277,9 +277,8 @@ void UnixAPIMisuseChecker::CheckOpenVariant(CheckerContext &C,
   NonLoc ocreateFlag = C.getSValBuilder()
                            .makeIntVal(Val_O_CREAT.value(), oflagsEx->getType())
                            .castAs<NonLoc>();
-  SVal maskedFlagsUC = C.getSValBuilder().evalBinOpNN(state, BO_And,
-                                                      oflags, ocreateFlag,
-                                                      oflagsEx->getType());
+  SVal maskedFlagsUC = C.getSValBuilder().evalBinOp(
+      state, BO_And, oflags, ocreateFlag, oflagsEx->getType());
   if (maskedFlagsUC.isUnknownOrUndef())
     return;
   DefinedSVal maskedFlags = maskedFlagsUC.castAs<DefinedSVal>();

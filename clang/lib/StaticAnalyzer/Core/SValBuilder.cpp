@@ -612,7 +612,7 @@ SVal SValBuilder::evalIntegralCast(ProgramStateRef state, SVal val,
   // target type.
   QualType CmpTy = getConditionType();
   auto CompVal =
-      evalBinOpNN(state, BO_LE, *AsNonLoc, ToTypeMaxVal, CmpTy).getAs<NonLoc>();
+      evalBinOp(state, BO_LE, *AsNonLoc, ToTypeMaxVal, CmpTy).getAs<NonLoc>();
   if (!CompVal)
     return UnknownVal();
   ProgramStateRef IsNotTruncated, IsTruncated;

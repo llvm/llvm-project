@@ -1222,9 +1222,8 @@ MallocChecker::performKernelMalloc(const CallEvent &Call, CheckerContext &C,
   NonLoc ZeroFlag = C.getSValBuilder()
                         .makeIntVal(*KernelZeroFlagVal, FlagsEx->getType())
                         .castAs<NonLoc>();
-  SVal MaskedFlagsUC = C.getSValBuilder().evalBinOpNN(State, BO_And,
-                                                      Flags, ZeroFlag,
-                                                      FlagsEx->getType());
+  SVal MaskedFlagsUC = C.getSValBuilder().evalBinOp(
+      State, BO_And, Flags, ZeroFlag, FlagsEx->getType());
   if (MaskedFlagsUC.isUnknownOrUndef())
     return std::nullopt;
   DefinedSVal MaskedFlags = MaskedFlagsUC.castAs<DefinedSVal>();
@@ -1917,7 +1916,7 @@ void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
   NonLoc MaxLength =
       SVB.makeIntVal(MaxValInt / APSIntType(MaxValInt).getValue(4));
   std::optional<NonLoc> SizeNL = SizeSVal.getAs<NonLoc>();
-  auto Cmp = SVB.evalBinOpNN(State, BO_GE, *SizeNL, MaxLength, CmpTy)
+  auto Cmp = SVB.evalBinOp(State, BO_GE, *SizeNL, MaxLength, CmpTy)
                  .getAs<DefinedOrUnknownSVal>();
   if (!Cmp)
     return;
