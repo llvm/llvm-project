@@ -416,11 +416,8 @@ void DWARFFormValue::Dump(Stream &s) const {
   case DW_FORM_ref_addr: {
     assert(m_unit); // Unit must be valid for DW_FORM_ref_addr objects or we
                     // will get this wrong
-    if (m_unit->GetVersion() <= 2)
-      DumpAddress(s.AsRawOstream(), uvalue, sizeof(uint64_t) * 2);
-    else
-      DumpAddress(s.AsRawOstream(), uvalue,
-                  m_unit->GetFormParams().getRefAddrByteSize());
+    DumpAddress(s.AsRawOstream(), uvalue,
+                m_unit->GetFormParams().getRefAddrByteSize());
     break;
   }
   case DW_FORM_ref1:
