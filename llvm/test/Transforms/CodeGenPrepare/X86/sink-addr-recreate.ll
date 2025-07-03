@@ -18,11 +18,9 @@ define void @addr_from_invoke() personality ptr null {
 ; CHECK-NEXT:    [[PAD:%.*]] = cleanuppad within none []
 ; CHECK-NEXT:    cleanupret from [[PAD]] unwind to caller
 ; CHECK:       [[BODY_1]]:
-; CHECK-NEXT:    [[GEP1:%.*]] = bitcast ptr [[PTR]] to ptr
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[GEP1]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[PTR]] to ptr
-; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP0]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
+; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -51,8 +49,7 @@ define void @addr_from_arg(ptr %ptr, i1 %p) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[BODY_1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast ptr [[PTR]] to ptr
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP0]], align 4
+; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[UNUSED:%.*]] = load <4 x i32>, ptr [[PTR]], align 4
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret void

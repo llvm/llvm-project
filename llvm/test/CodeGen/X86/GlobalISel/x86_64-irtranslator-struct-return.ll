@@ -18,9 +18,9 @@ define float @test_return_f1(float %f.coerce) {
   ; ALL-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; ALL-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.f
-  ; ALL-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.coerce.dive2)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
-  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.coerce.dive13)
+  ; ALL-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.f)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 4), (load (s8) from %ir.f, align 4)
+  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.retval)
   ; ALL-NEXT:   $xmm0 = COPY [[LOAD]](s32)
   ; ALL-NEXT:   RET 0, implicit $xmm0
 entry:
@@ -47,9 +47,9 @@ define double @test_return_d1(double %d.coerce) {
   ; ALL-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.d
-  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.coerce.dive2)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.0, align 8), (load (s8) from %ir.1, align 8)
-  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.coerce.dive13)
+  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.d)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 8), (load (s8) from %ir.d, align 8)
+  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.retval)
   ; ALL-NEXT:   $xmm0 = COPY [[LOAD]](s64)
   ; ALL-NEXT:   RET 0, implicit $xmm0
 entry:
@@ -75,14 +75,14 @@ define { double, double } @test_return_d2(double %d.coerce0, double %d.coerce1) 
   ; ALL-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; ALL-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.d
-  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.1)
+  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.d)
   ; ALL-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL-NEXT:   %5:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX1]], [[C1]](s64)
-  ; ALL-NEXT:   G_STORE [[COPY1]](s64), %5(p0) :: (store (s64) into %ir.2)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.3, align 8), (load (s8) from %ir.4, align 8)
-  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.5)
+  ; ALL-NEXT:   G_STORE [[COPY1]](s64), %5(p0) :: (store (s64) into %ir.0)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 8), (load (s8) from %ir.d, align 8)
+  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.retval)
   ; ALL-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
-  ; ALL-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.5 + 8)
+  ; ALL-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.retval + 8)
   ; ALL-NEXT:   $xmm0 = COPY [[LOAD]](s64)
   ; ALL-NEXT:   $xmm1 = COPY [[LOAD1]](s64)
   ; ALL-NEXT:   RET 0, implicit $xmm0, implicit $xmm1
@@ -111,9 +111,9 @@ define i32 @test_return_i1(i32 %i.coerce) {
   ; ALL-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; ALL-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
-  ; ALL-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.coerce.dive2)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.0, align 4), (load (s8) from %ir.1, align 4)
-  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.coerce.dive13)
+  ; ALL-NEXT:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store (s32) into %ir.i)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 4), (load (s8) from %ir.i, align 4)
+  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s32) from %ir.retval)
   ; ALL-NEXT:   $eax = COPY [[LOAD]](s32)
   ; ALL-NEXT:   RET 0, implicit $eax
 entry:
@@ -138,9 +138,9 @@ define i64 @test_return_i2(i64 %i.coerce) {
   ; ALL-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
-  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.0, align 4)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.1, align 4), (load (s8) from %ir.2, align 4)
-  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.3, align 4)
+  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.i, align 4)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 4), (load (s8) from %ir.i, align 4)
+  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.retval, align 4)
   ; ALL-NEXT:   $rax = COPY [[LOAD]](s64)
   ; ALL-NEXT:   RET 0, implicit $rax
 entry:
@@ -168,13 +168,13 @@ define { i64, i32 } @test_return_i3(i64 %i.coerce0, i32 %i.coerce1) {
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
   ; ALL-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.2.coerce
   ; ALL-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.3.tmp
-  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %ir.0, align 4)
+  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX2]](p0) :: (store (s64) into %ir.coerce, align 4)
   ; ALL-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL-NEXT:   %7:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX2]], [[C1]](s64)
-  ; ALL-NEXT:   G_STORE [[COPY1]](s32), %7(p0) :: (store (s32) into %ir.1)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX1]](p0), [[FRAME_INDEX2]](p0), [[C]](s64), 0 :: (store (s8) into %ir.2, align 4), (load (s8) from %ir.3, align 4)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.4, align 4), (load (s8) from %ir.5, align 4)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX3]](p0), [[FRAME_INDEX]](p0), [[C]](s64), 0 :: (store (s8) into %ir.6, align 8), (load (s8) from %ir.7, align 4)
+  ; ALL-NEXT:   G_STORE [[COPY1]](s32), %7(p0) :: (store (s32) into %ir.0)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX1]](p0), [[FRAME_INDEX2]](p0), [[C]](s64), 0 :: (store (s8) into %ir.i, align 4), (load (s8) from %ir.coerce, align 4)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 4), (load (s8) from %ir.i, align 4)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX3]](p0), [[FRAME_INDEX]](p0), [[C]](s64), 0 :: (store (s8) into %ir.tmp, align 8), (load (s8) from %ir.retval, align 4)
   ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX3]](p0) :: (dereferenceable load (s64) from %ir.tmp)
   ; ALL-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX3]], [[C1]](s64)
   ; ALL-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s32) from %ir.tmp + 8, align 8)
@@ -213,14 +213,14 @@ define { i64, i64 } @test_return_i4(i64 %i.coerce0, i64 %i.coerce1) {
   ; ALL-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; ALL-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
-  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.1, align 4)
+  ; ALL-NEXT:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store (s64) into %ir.i, align 4)
   ; ALL-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL-NEXT:   %5:_(p0) = nuw nusw G_PTR_ADD [[FRAME_INDEX1]], [[C1]](s64)
-  ; ALL-NEXT:   G_STORE [[COPY1]](s64), %5(p0) :: (store (s64) into %ir.2, align 4)
-  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.3, align 4), (load (s8) from %ir.4, align 4)
-  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.5, align 4)
+  ; ALL-NEXT:   G_STORE [[COPY1]](s64), %5(p0) :: (store (s64) into %ir.0, align 4)
+  ; ALL-NEXT:   G_MEMCPY [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64), 0 :: (store (s8) into %ir.retval, align 4), (load (s8) from %ir.i, align 4)
+  ; ALL-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (s64) from %ir.retval, align 4)
   ; ALL-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[FRAME_INDEX]], [[C1]](s64)
-  ; ALL-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.5 + 8, align 4)
+  ; ALL-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[PTR_ADD]](p0) :: (dereferenceable load (s64) from %ir.retval + 8, align 4)
   ; ALL-NEXT:   $rax = COPY [[LOAD]](s64)
   ; ALL-NEXT:   $rdx = COPY [[LOAD1]](s64)
   ; ALL-NEXT:   RET 0, implicit $rax, implicit $rdx

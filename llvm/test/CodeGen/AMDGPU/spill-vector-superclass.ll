@@ -7,7 +7,7 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   ; GCN: bb.0 (%ir-block.0):
   ; GCN-NEXT:   liveins: $sgpr8_sgpr9
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s128) from %ir.arg.kernarg.offset1, addrspace 4)
+  ; GCN-NEXT:   renamable $sgpr0_sgpr1_sgpr2_sgpr3 = S_LOAD_DWORDX4_IMM killed renamable $sgpr8_sgpr9, 0, 0 :: (dereferenceable invariant load (s128) from %ir.test_spill_av_class.kernarg.segment, addrspace 4)
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:areg_128 = COPY killed renamable $sgpr0_sgpr1_sgpr2_sgpr3
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 2, implicit $exec
