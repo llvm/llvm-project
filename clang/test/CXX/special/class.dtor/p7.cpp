@@ -16,27 +16,27 @@ union U1 {
     U1(int);
     NonTrivial nt;
 };
-U1 u1(1); // expected-error {{deleted destructor}}
+U1 u1(1); // expected-error {{deleted function}}
 
 // or selects a constructor that is either deleted or not trivial, or
 union U2 {
     U2() : nt(2) { }
     NonTrivial nt;
 };
-U2 u2; // expected-error {{deleted destructor}}
+U2 u2; // expected-error {{deleted function}}
 
 union U3 {
     U3() = delete;
     U3(int);
     NonTrivial nt;
 };
-U3 u3(1); // expected-error {{deleted destructor}}
+U3 u3(1); // expected-error {{deleted function}}
 
 // or X has a variant member V of class type M (or possibly multi-dimensional array thereof) where V has a default member initializer and M has a destructor that is non-trivial,
 union U4 {
     NonTrivial nt = 1;
 };
-U4 u4; // expected-error {{deleted destructor}}
+U4 u4; // expected-error {{deleted function}}
 
 union U5 {
   NonTrivial nt;

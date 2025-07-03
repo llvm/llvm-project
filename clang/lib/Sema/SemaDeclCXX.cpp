@@ -9705,6 +9705,11 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
+  if (S.Context.getLangOpts().CPlusPlus26 && FD->hasInClassInitializer() &&
+      FieldRecord && !FieldRecord->hasTrivialDestructor() &&
+      CSM == CXXSpecialMemberKind::Destructor)
+    return true;
+
   if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
     // For a default constructor, all references must be initialized in-class
     // and, if a union, it must have a non-const member.
