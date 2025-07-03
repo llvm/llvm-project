@@ -98,10 +98,8 @@ int *__counted_by(count) cb_in_from_cb(int count, int *__counted_by(count) p) {
 // CHECK-LABEL: define dso_local noundef ptr @cb_in_from_cb2(
 // CHECK-SAME: i32 noundef [[COUNT:%.*]], ptr noundef readnone returned captures(ret: address, provenance) [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[LEN]] to i64
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i32 [[LEN]], 0, !annotation [[META2]]
-// CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[COUNT]] to i64, !annotation [[META2]]
-// CHECK-NEXT:    [[SPEC_SELECT_NOT:%.*]] = icmp ugt i64 [[CONV]], [[IDX_EXT]]
+// CHECK-NEXT:    [[SPEC_SELECT_NOT:%.*]] = icmp ugt i32 [[COUNT]], [[LEN]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[SPEC_SELECT_NOT]], !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF11:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
