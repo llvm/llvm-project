@@ -1135,8 +1135,11 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   // fmax with NotInf and NotNaN flags instead. Keep original number to add
   // later the NoNans and NoInfs flags.
   uint32_t OrigNumber = Number;
-  if (Number == SPIRV::OpenCLExtInst::fmin_common ||
-      Number == SPIRV::OpenCLExtInst::fmax_common) {
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
+  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2) &&
+      (Number == SPIRV::OpenCLExtInst::fmin_common ||
+       Number == SPIRV::OpenCLExtInst::fmax_common)) {
     Number = (Number == SPIRV::OpenCLExtInst::fmin_common)
                  ? SPIRV::OpenCLExtInst::fmin
                  : SPIRV::OpenCLExtInst::fmax;
