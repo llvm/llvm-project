@@ -50,13 +50,20 @@ TEST(HLSLRootSignatureTest, DescriptorSRVClauseDump) {
 }
 
 TEST(HLSLRootSignatureTest, DescriptorUAVClauseDump) {
+  using llvm::dxbc::DescriptorRangeFlags;
   DescriptorTableClause Clause;
   Clause.Type = ClauseType::UAV;
   Clause.Reg = {RegisterType::UReg, 92374};
   Clause.NumDescriptors = 3298;
   Clause.Space = 932847;
   Clause.Offset = 1;
-  Clause.Flags = llvm::dxbc::DescriptorRangeFlags(0x1000f);
+  auto ValidDescriptorRangeFlags =
+      DescriptorRangeFlags::DescriptorsVolatile |
+      DescriptorRangeFlags::DataVolatile |
+      DescriptorRangeFlags::DataStaticWhileSetAtExecute |
+      DescriptorRangeFlags::DataStatic |
+      DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks;
+  Clause.Flags = ValidDescriptorRangeFlags;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -144,12 +151,17 @@ TEST(HLSLRootSignatureTest, RootSRVDump) {
 }
 
 TEST(HLSLRootSignatureTest, RootUAVDump) {
+  using llvm::dxbc::RootDescriptorFlags;
   RootDescriptor Descriptor;
   Descriptor.Type = DescriptorType::UAV;
   Descriptor.Reg = {RegisterType::UReg, 92374};
   Descriptor.Space = 932847;
   Descriptor.Visibility = llvm::dxbc::ShaderVisibility::Hull;
-  Descriptor.Flags = llvm::dxbc::RootDescriptorFlags(0xe);
+  auto ValidRootDescriptorFlags =
+      RootDescriptorFlags::DataVolatile |
+      RootDescriptorFlags::DataStaticWhileSetAtExecute |
+      RootDescriptorFlags::DataStatic;
+  Descriptor.Flags = ValidRootDescriptorFlags;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
@@ -274,11 +286,23 @@ TEST(HLSLRootSignatureTest, NoneRootFlagsDump) {
 }
 
 TEST(HLSLRootSignatureTest, AllRootFlagsDump) {
-  llvm::dxbc::RootFlags Flags = llvm::dxbc::RootFlags(0xfff);
+  using llvm::dxbc::RootFlags;
+  auto ValidRootFlags = RootFlags::AllowInputAssemblerInputLayout |
+                        RootFlags::DenyVertexShaderRootAccess |
+                        RootFlags::DenyHullShaderRootAccess |
+                        RootFlags::DenyDomainShaderRootAccess |
+                        RootFlags::DenyGeometryShaderRootAccess |
+                        RootFlags::DenyPixelShaderRootAccess |
+                        RootFlags::AllowStreamOutput |
+                        RootFlags::LocalRootSignature |
+                        RootFlags::DenyAmplificationShaderRootAccess |
+                        RootFlags::DenyMeshShaderRootAccess |
+                        RootFlags::CBVSRVUAVHeapDirectlyIndexed |
+                        RootFlags::SamplerHeapDirectlyIndexed;
 
   std::string Out;
   llvm::raw_string_ostream OS(Out);
-  OS << Flags;
+  OS << ValidFlags;
   OS.flush();
 
   std::string Expected = "RootFlags("
