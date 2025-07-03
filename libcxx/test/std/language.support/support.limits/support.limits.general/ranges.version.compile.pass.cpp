@@ -48,6 +48,10 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should not be defined before c++23"
 #  endif
@@ -98,6 +102,10 @@
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_ranges_join_with
 #    error "__cpp_lib_ranges_join_with should not be defined before c++23"
 #  endif
@@ -146,6 +154,10 @@
 
 #  ifdef __cpp_lib_ranges_concat
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_join_with
@@ -199,6 +211,10 @@
 
 #  ifdef __cpp_lib_ranges_concat
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_join_with
@@ -276,6 +292,10 @@
 
 #  ifdef __cpp_lib_ranges_concat
 #    error "__cpp_lib_ranges_concat should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_join_with
@@ -398,6 +418,13 @@
 #    ifdef __cpp_lib_ranges_concat
 #      error "__cpp_lib_ranges_concat should not be defined because it is unimplemented in libc++!"
 #    endif
+#  endif
+
+#  ifndef __cpp_lib_ranges_indices
+#    error "__cpp_lib_ranges_indices should be defined in c++26"
+#  endif
+#  if __cpp_lib_ranges_indices != 202506L
+#    error "__cpp_lib_ranges_indices should have the value 202506L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_join_with
