@@ -574,7 +574,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
 
 namespace {
 class CastExpressionIdValidator final : public CorrectionCandidateCallback {
- public:
+public:
   CastExpressionIdValidator(Token Next,
                             TypoCorrectionTypeBehavior CorrectionBehavior)
       : NextToken(Next) {
