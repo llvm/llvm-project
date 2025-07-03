@@ -23754,6 +23754,9 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
 EVT RISCVTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes,
     LLVMContext *Context) const {
+  if (!Context)
+    llvm_unreachable("LLVMContext must not be null here");
+
   if (!Subtarget.hasVInstructions())
     return MVT::Other;
 
