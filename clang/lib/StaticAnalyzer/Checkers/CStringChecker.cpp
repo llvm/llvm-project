@@ -2252,12 +2252,10 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallEvent &Call,
         // Protect against misdeclared strncpy().
         LenVal = svalBuilder.evalCast(LenVal, sizeTy, LenExpr->getType());
 
-        std::optional<NonLoc> LenValNL = LenVal.getAs<NonLoc>();
-
         // Because analyzer doesn't handle expressions like `size -
         // dstLen - 1` very well, we roughly use `size` for
         // ConcatFnKind::strlcat here, same with other concat kinds.
-        if (LenValNL)
+        if (std::optional<NonLoc> LenValNL = LenVal.getAs<NonLoc>())
           CouldAccessOutOfBound = CouldAccessOutOfBoundForSVal(*LenValNL);
       }
     }
