@@ -463,13 +463,13 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
-class CIRToLLVMComplexEqualOpLowering
-    : public mlir::OpConversionPattern<cir::ComplexEqualOp> {
+class CIRToLLVMGetBitfieldOpLowering
+    : public mlir::OpConversionPattern<cir::GetBitfieldOp> {
 public:
-  using mlir::OpConversionPattern<cir::ComplexEqualOp>::OpConversionPattern;
+  using mlir::OpConversionPattern<cir::GetBitfieldOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(cir::ComplexEqualOp op, OpAdaptor,
+  matchAndRewrite(cir::GetBitfieldOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 

@@ -529,12 +529,12 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type srcTy = elementTypeIfVector(castOp.getSrc().getType());
     mlir::Type dstTy = elementTypeIfVector(castOp.getType());
 
-    if (!mlir::isa<cir::CIRFPTypeInterface>(dstTy) ||
-        !mlir::isa<cir::CIRFPTypeInterface>(srcTy))
+    if (!mlir::isa<cir::FPTypeInterface>(dstTy) ||
+        !mlir::isa<cir::FPTypeInterface>(srcTy))
       return castOp.emitError() << "NYI cast from " << srcTy << " to " << dstTy;
 
     auto getFloatWidth = [](mlir::Type ty) -> unsigned {
-      return mlir::cast<cir::CIRFPTypeInterface>(ty).getWidth();
+      return mlir::cast<cir::FPTypeInterface>(ty).getWidth();
     };
 
     if (getFloatWidth(srcTy) > getFloatWidth(dstTy))
@@ -928,7 +928,7 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     attr = rewriter.getIntegerAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::IntAttr>(op.getValue()).getValue());
-  } else if (mlir::isa<cir::CIRFPTypeInterface>(op.getType())) {
+  } else if (mlir::isa<cir::FPTypeInterface>(op.getType())) {
     attr = rewriter.getFloatAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::FPAttr>(op.getValue()).getValue());
@@ -1349,7 +1349,7 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   }
 
   // Floating point unary operations: + - ++ --
-  if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
+  if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     switch (op.getKind()) {
     case cir::UnaryOpKind::Inc: {
       assert(!isVector && "++ not allowed on vector types");
@@ -1438,7 +1438,7 @@ mlir::LogicalResult CIRToLLVMBinOpLowering::matchAndRewrite(
     return op.emitError() << "inconsistent operands' types not supported yet";
 
   mlir::Type type = op.getRhs().getType();
-  if (!mlir::isa<cir::IntType, cir::BoolType, cir::CIRFPTypeInterface,
+  if (!mlir::isa<cir::IntType, cir::BoolType, cir::FPTypeInterface,
                  mlir::IntegerType, cir::VectorType>(type))
     return op.emitError() << "operand type not supported yet";
 
@@ -1586,7 +1586,6 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::dataMemberType());
   assert(!cir::MissingFeatures::methodType());
 
-  // Lower to LLVM comparison op.
   if (mlir::isa<cir::IntType, mlir::IntegerType>(type)) {
     bool isSigned = mlir::isa<cir::IntType>(type)
                         ? mlir::cast<cir::IntType>(type).isSigned()
@@ -1595,22 +1594,82 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
         convertCmpKindToICmpPredicate(cmpOp.getKind(), isSigned);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
+    return mlir::success();
+  }
+
+  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(type)) {
     mlir::LLVM::ICmpPredicate kind =
         convertCmpKindToICmpPredicate(cmpOp.getKind(),
                                       /* isSigned=*/false);
     rewriter.replaceOpWithNewOp<mlir::LLVM::ICmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::CIRFPTypeInterface>(type)) {
+    return mlir::success();
+  }
+
+  if (mlir::isa<cir::FPTypeInterface>(type)) {
     mlir::LLVM::FCmpPredicate kind =
         convertCmpKindToFCmpPredicate(cmpOp.getKind());
     rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
-  } else {
-    return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
+    return mlir::success();
   }
 
-  return mlir::success();
+  if (mlir::isa<cir::ComplexType>(type)) {
+    mlir::Value lhs = adaptor.getLhs();
+    mlir::Value rhs = adaptor.getRhs();
+    mlir::Location loc = cmpOp.getLoc();
+
+    auto complexType = mlir::cast<cir::ComplexType>(cmpOp.getLhs().getType());
+    mlir::Type complexElemTy =
+        getTypeConverter()->convertType(complexType.getElementType());
+
+    auto lhsReal =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 0);
+    auto lhsImag =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 1);
+    auto rhsReal =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 0);
+    auto rhsImag =
+        rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 1);
+
+    if (cmpOp.getKind() == cir::CmpOpKind::eq) {
+      if (complexElemTy.isInteger()) {
+        auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::eq, lhsReal, rhsReal);
+        auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::eq, lhsImag, rhsImag);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmpOp, realCmp, imagCmp);
+        return mlir::success();
+      }
+
+      auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
+      auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(cmpOp, realCmp, imagCmp);
+      return mlir::success();
+    }
+
+    if (cmpOp.getKind() == cir::CmpOpKind::ne) {
+      if (complexElemTy.isInteger()) {
+        auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::ne, lhsReal, rhsReal);
+        auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
+            loc, mlir::LLVM::ICmpPredicate::ne, lhsImag, rhsImag);
+        rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmpOp, realCmp, imagCmp);
+        return mlir::success();
+      }
+
+      auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::une, lhsReal, rhsReal);
+      auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
+          loc, mlir::LLVM::FCmpPredicate::une, lhsImag, rhsImag);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(cmpOp, realCmp, imagCmp);
+      return mlir::success();
+    }
+  }
+
+  return cmpOp.emitError() << "unsupported type for CmpOp: " << type;
 }
 
 mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
@@ -1901,12 +1960,12 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMCallOpLowering,
                CIRToLLVMCmpOpLowering,
                CIRToLLVMComplexCreateOpLowering,
-               CIRToLLVMComplexEqualOpLowering,
                CIRToLLVMComplexImagOpLowering,
                CIRToLLVMComplexRealOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMExpectOpLowering,
                CIRToLLVMFuncOpLowering,
+               CIRToLLVMGetBitfieldOpLowering,
                CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMGetMemberOpLowering,
                CIRToLLVMSelectOpLowering,
@@ -2059,7 +2118,7 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), intType.isSigned()),
         adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
+  } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
     bitResult = rewriter.create<mlir::LLVM::FCmpOp>(
         op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
         adaptor.getLhs(), adaptor.getRhs());
@@ -2245,40 +2304,56 @@ mlir::LogicalResult CIRToLLVMComplexImagOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMComplexEqualOpLowering::matchAndRewrite(
-    cir::ComplexEqualOp op, OpAdaptor adaptor,
+mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
+    cir::GetBitfieldOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  mlir::Value lhs = adaptor.getLhs();
-  mlir::Value rhs = adaptor.getRhs();
 
-  auto complexType = mlir::cast<cir::ComplexType>(op.getLhs().getType());
-  mlir::Type complexElemTy =
-      getTypeConverter()->convertType(complexType.getElementType());
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(op);
 
-  mlir::Location loc = op.getLoc();
-  auto lhsReal =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 0);
-  auto lhsImag =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, lhs, 1);
-  auto rhsReal =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 0);
-  auto rhsImag =
-      rewriter.create<mlir::LLVM::ExtractValueOp>(loc, complexElemTy, rhs, 1);
+  cir::BitfieldInfoAttr info = op.getBitfieldInfo();
+  uint64_t size = info.getSize();
+  uint64_t offset = info.getOffset();
+  mlir::Type storageType = info.getStorageType();
+  mlir::MLIRContext *context = storageType.getContext();
+  unsigned storageSize = 0;
 
-  if (complexElemTy.isInteger()) {
-    auto realCmp = rewriter.create<mlir::LLVM::ICmpOp>(
-        loc, mlir::LLVM::ICmpPredicate::eq, lhsReal, rhsReal);
-    auto imagCmp = rewriter.create<mlir::LLVM::ICmpOp>(
-        loc, mlir::LLVM::ICmpPredicate::eq, lhsImag, rhsImag);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
-    return mlir::success();
+  mlir::IntegerType intType =
+      TypeSwitch<mlir::Type, mlir::IntegerType>(storageType)
+          .Case<cir::ArrayType>([&](cir::ArrayType atTy) {
+            storageSize = atTy.getSize() * 8;
+            return mlir::IntegerType::get(context, storageSize);
+          })
+          .Case<cir::IntType>([&](cir::IntType intTy) {
+            storageSize = intTy.getWidth();
+            return mlir::IntegerType::get(context, storageSize);
+          })
+          .Default([](mlir::Type) -> mlir::IntegerType {
+            llvm_unreachable(
+                "Either ArrayType or IntType expected for bitfields storage");
+          });
+
+  mlir::Value val = rewriter.create<mlir::LLVM::LoadOp>(
+      op.getLoc(), intType, adaptor.getAddr(), 0, op.getIsVolatile());
+  val = rewriter.create<mlir::LLVM::BitcastOp>(op.getLoc(), intType, val);
+
+  if (info.getIsSigned()) {
+    assert(static_cast<unsigned>(offset + size) <= storageSize);
+    unsigned highBits = storageSize - offset - size;
+    val = createShL(rewriter, val, highBits);
+    val = createAShR(rewriter, val, offset + highBits);
+  } else {
+    val = createLShR(rewriter, val, offset);
+
+    if (static_cast<unsigned>(offset) + size < storageSize)
+      val = createAnd(rewriter, val,
+                      llvm::APInt::getLowBitsSet(storageSize, size));
   }
 
-  auto realCmp = rewriter.create<mlir::LLVM::FCmpOp>(
-      loc, mlir::LLVM::FCmpPredicate::oeq, lhsReal, rhsReal);
-  auto imagCmp = rewriter.create<mlir::LLVM::FCmpOp>(
-      loc, mlir::LLVM::FCmpPredicate::oeq, lhsImag, rhsImag);
-  rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, realCmp, imagCmp);
+  mlir::Type resTy = getTypeConverter()->convertType(op.getType());
+  mlir::Value newOp = createIntCast(
+      rewriter, val, mlir::cast<mlir::IntegerType>(resTy), info.getIsSigned());
+  rewriter.replaceOp(op, newOp);
   return mlir::success();
 }
 
