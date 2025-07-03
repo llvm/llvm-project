@@ -879,32 +879,32 @@ void RISCVDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
   auto *LMulSDNode = cast<ConstantSDNode>(Node->getOperand(7));
   switch (LMulSDNode->getSExtValue()) {
   case 5:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF8
-                                                  : RISCV::PseudoVC_I_SE_MF8;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_MF8
+                                                  : RISCV::PseudoSF_VC_I_SE_MF8;
     break;
   case 6:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF4
-                                                  : RISCV::PseudoVC_I_SE_MF4;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_MF4
+                                                  : RISCV::PseudoSF_VC_I_SE_MF4;
     break;
   case 7:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF2
-                                                  : RISCV::PseudoVC_I_SE_MF2;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_MF2
+                                                  : RISCV::PseudoSF_VC_I_SE_MF2;
     break;
   case 0:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M1
-                                                  : RISCV::PseudoVC_I_SE_M1;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M1
+                                                  : RISCV::PseudoSF_VC_I_SE_M1;
     break;
   case 1:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M2
-                                                  : RISCV::PseudoVC_I_SE_M2;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M2
+                                                  : RISCV::PseudoSF_VC_I_SE_M2;
     break;
   case 2:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M4
-                                                  : RISCV::PseudoVC_I_SE_M4;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M4
+                                                  : RISCV::PseudoSF_VC_I_SE_M4;
     break;
   case 3:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M8
-                                                  : RISCV::PseudoVC_I_SE_M8;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M8
+                                                  : RISCV::PseudoSF_VC_I_SE_M8;
     break;
   }
 
