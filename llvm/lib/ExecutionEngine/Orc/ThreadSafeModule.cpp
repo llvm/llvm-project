@@ -1,5 +1,4 @@
-//===-- ThreadSafeModule.cpp - Thread safe Module, Context, and Utilities
-//h-===//
+//===-- ThreadSafeModule.cpp - Thread safe Module, Context, and Utilities -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,9 +52,11 @@ ThreadSafeModule cloneToNewContext(const ThreadSafeModule &TSM,
         "cloned module buffer");
     ThreadSafeContext NewTSCtx(std::make_unique<LLVMContext>());
 
-    auto ClonedModule = cantFail(
-        parseBitcodeFile(ClonedModuleBufferRef, *NewTSCtx.getContext()));
-    ClonedModule->setModuleIdentifier(M.getName());
+    auto ClonedModule = NewTSCtx.withContextDo([&](LLVMContext *Ctx) {
+      auto TmpM = cantFail(parseBitcodeFile(ClonedModuleBufferRef, *Ctx));
+      TmpM->setModuleIdentifier(M.getName());
+      return TmpM;
+    });
     return ThreadSafeModule(std::move(ClonedModule), std::move(NewTSCtx));
   });
 }

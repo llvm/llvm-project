@@ -463,6 +463,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMGetBitfieldOpLowering
+    : public mlir::OpConversionPattern<cir::GetBitfieldOp> {
+public:
+  using mlir::OpConversionPattern<cir::GetBitfieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetBitfieldOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 } // namespace direct
 } // namespace cir
 
