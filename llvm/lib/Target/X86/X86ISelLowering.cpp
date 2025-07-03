@@ -19206,7 +19206,7 @@ SDValue X86TargetLowering::LowerJumpTable(SDValue Op, SelectionDAG &DAG) const {
   // global base reg.
   unsigned char OpFlag = Subtarget.classifyLocalReference(nullptr);
 
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   SDValue Result = DAG.getTargetJumpTable(JT->getIndex(), PtrVT, OpFlag);
   SDLoc DL(JT);
   Result =
@@ -19234,7 +19234,7 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
   int64_t Offset = cast<BlockAddressSDNode>(Op)->getOffset();
   SDLoc dl(Op);
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   SDValue Result = DAG.getTargetBlockAddress(BA, PtrVT, Offset, OpFlags);
   Result =
       DAG.getNode(getGlobalWrapperKind(nullptr, OpFlags), dl, PtrVT, Result);
@@ -19277,7 +19277,7 @@ SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
   bool NeedsLoad = isGlobalStubReference(OpFlags);
 
   CodeModel::Model M = DAG.getTarget().getCodeModel();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   SDValue Result;
 
   if (GV) {
@@ -19536,7 +19536,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     return LowerToTLSEmulatedModel(GA, DAG);
 
   const GlobalValue *GV = GA->getGlobal();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
   bool PositionIndependent = isPositionIndependent();
 
   if (Subtarget.isTargetELF()) {
@@ -25782,7 +25782,7 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   Chain = DAG.getCALLSEQ_START(Chain, 0, 0, dl);
 
   bool Is64Bit = Subtarget.is64Bit();
-  MVT SPTy = getPointerTy(DAG.getDataLayout());
+  MVT SPTy = Op.getValueType().getSimpleVT();
 
   SDValue Result;
   if (!Lower) {
@@ -25850,7 +25850,9 @@ X86TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
 SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  auto PtrVT = getPointerTy(MF.getDataLayout());
+  SDValue Ptr = Op.getOperand(1);
+  EVT PtrVT = Ptr.getValueType();
+
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
 
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
@@ -25861,8 +25863,7 @@ SDValue X86TargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
     // vastart just stores the address of the VarArgsFrameIndex slot into the
     // memory location argument.
     SDValue FR = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(), PtrVT);
-    return DAG.getStore(Op.getOperand(0), DL, FR, Op.getOperand(1),
-                        MachinePointerInfo(SV));
+    return DAG.getStore(Op.getOperand(0), DL, FR, Ptr, MachinePointerInfo(SV));
   }
 
   // __va_list_tag:
@@ -25951,7 +25952,7 @@ SDValue X86TargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
                        DAG.getTargetConstant(ArgSize, dl, MVT::i32),
                        DAG.getTargetConstant(ArgMode, dl, MVT::i8),
                        DAG.getTargetConstant(Align, dl, MVT::i32)};
-  SDVTList VTs = DAG.getVTList(getPointerTy(DAG.getDataLayout()), MVT::Other);
+  SDVTList VTs = DAG.getVTList(SrcPtr.getValueType(), MVT::Other);
   SDValue VAARG = DAG.getMemIntrinsicNode(
       Subtarget.isTarget64BitLP64() ? X86ISD::VAARG_64 : X86ISD::VAARG_X32, dl,
       VTs, InstOps, MVT::i64, MachinePointerInfo(SV),
@@ -26272,9 +26273,6 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   MachineFunction &MF = DAG.getMachineFunction();
   SDLoc dl;
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
-
   // It's possible that the parent function no longer has a personality function
   // if the exceptional code was optimized away, in which case we just return
   // the incoming EBP.
@@ -26285,6 +26283,7 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   // registration, or the .set_setframe offset.
   MCSymbol *OffsetSym = MF.getContext().getOrCreateParentFrameOffsetSymbol(
       GlobalValue::dropLLVMManglingEscape(Fn->getName()));
+  MVT PtrVT = EntryEBP.getValueType().getSimpleVT();
   SDValue OffsetSymVal = DAG.getMCSymbol(OffsetSym, PtrVT);
   SDValue ParentFrameOffset =
       DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT, OffsetSymVal);
@@ -27345,7 +27344,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::thread_pointer: {
     if (Subtarget.isTargetELF()) {
       SDLoc dl(Op);
-      EVT PtrVT = getPointerTy(DAG.getDataLayout());
+      EVT PtrVT = Op.getValueType();
       // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
       Value *Ptr = Constant::getNullValue(PointerType::get(
           *DAG.getContext(), Subtarget.is64Bit() ? X86AS::FS : X86AS::GS));
@@ -28217,7 +28216,7 @@ SDValue X86TargetLowering::LowerRETURNADDR(SDValue Op,
 
   unsigned Depth = Op.getConstantOperandVal(0);
   SDLoc dl(Op);
-  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  EVT PtrVT = Op.getValueType();
 
   if (Depth > 0) {
     SDValue FrameAddr = LowerFRAMEADDR(Op, DAG);
@@ -45043,7 +45042,10 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   unsigned NumElts = DemandedElts.getBitWidth();
 
   switch (Op.getOpcode()) {
+  case X86ISD::BLENDI:
   case X86ISD::PSHUFD:
+  case X86ISD::UNPCKL:
+  case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMV3: {
     SmallVector<int, 8> Mask;
@@ -45087,11 +45089,16 @@ bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
     return false;
+    // SSE blends.
+  case X86ISD::BLENDI:
+  case X86ISD::BLENDV:
+    return false;
+    // SSE target shuffles.
   case X86ISD::PSHUFD:
+  case X86ISD::UNPCKL:
+  case X86ISD::UNPCKH:
   case X86ISD::VPERMILPI:
   case X86ISD::VPERMV3:
-  case X86ISD::UNPCKH:
-  case X86ISD::UNPCKL:
     return false;
     // SSE comparisons handle all icmp/fcmp cases.
     // TODO: Add CMPM/MM with test coverage.
@@ -47255,13 +47262,14 @@ static SDValue combineToExtendBoolVectorInReg(
                      DAG.getConstant(EltSizeInBits - 1, DL, VT));
 }
 
-/// If a vector select has an operand that is -1 or 0, try to simplify the
+/// If a vector select has an left operand that is 0, try to simplify the
 /// select to a bitwise logic operation.
-/// TODO: Move to DAGCombiner, possibly using TargetLowering::hasAndNot()?
-static SDValue
-combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 const X86Subtarget &Subtarget) {
+/// TODO: Move to DAGCombiner.combineVSelectWithAllOnesOrZeros, possibly using
+/// TargetLowering::hasAndNot()?
+static SDValue combineVSelectWithLastZeros(SDNode *N, SelectionDAG &DAG,
+                                           const SDLoc &DL,
+                                           TargetLowering::DAGCombinerInfo &DCI,
+                                           const X86Subtarget &Subtarget) {
   SDValue Cond = N->getOperand(0);
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
@@ -47274,20 +47282,6 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
 
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
-  // TODO: Use isNullOrNullSplat() to distinguish constants with undefs?
-  // TODO: Can we assert that both operands are not zeros (because that should
-  //       get simplified at node creation time)?
-  bool TValIsAllZeros = ISD::isBuildVectorAllZeros(LHS.getNode());
-  bool FValIsAllZeros = ISD::isBuildVectorAllZeros(RHS.getNode());
-
-  // If both inputs are 0/undef, create a complete zero vector.
-  // FIXME: As noted above this should be handled by DAGCombiner/getNode.
-  if (TValIsAllZeros && FValIsAllZeros) {
-    if (VT.isFloatingPoint())
-      return DAG.getConstantFP(0.0, DL, VT);
-    return DAG.getConstant(0, DL, VT);
-  }
-
   // To use the condition operand as a bitwise mask, it must have elements that
   // are the same size as the select elements. Ie, the condition operand must
   // have already been promoted from the IR select condition type <N x i1>.
@@ -47296,56 +47290,15 @@ combineVSelectWithAllOnesOrZeros(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   if (CondVT.getScalarSizeInBits() != VT.getScalarSizeInBits())
     return SDValue();
 
-  // Try to invert the condition if true value is not all 1s and false value is
-  // not all 0s. Only do this if the condition has one use.
-  bool TValIsAllOnes = ISD::isBuildVectorAllOnes(LHS.getNode());
-  if (!TValIsAllOnes && !FValIsAllZeros && Cond.hasOneUse() &&
-      // Check if the selector will be produced by CMPP*/PCMP*.
-      Cond.getOpcode() == ISD::SETCC &&
-      // Check if SETCC has already been promoted.
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT) ==
-          CondVT) {
-    bool FValIsAllOnes = ISD::isBuildVectorAllOnes(RHS.getNode());
-
-    if (TValIsAllZeros || FValIsAllOnes) {
-      SDValue CC = Cond.getOperand(2);
-      ISD::CondCode NewCC = ISD::getSetCCInverse(
-          cast<CondCodeSDNode>(CC)->get(), Cond.getOperand(0).getValueType());
-      Cond = DAG.getSetCC(DL, CondVT, Cond.getOperand(0), Cond.getOperand(1),
-                          NewCC);
-      std::swap(LHS, RHS);
-      TValIsAllOnes = FValIsAllOnes;
-      FValIsAllZeros = TValIsAllZeros;
-    }
-  }
-
   // Cond value must be 'sign splat' to be converted to a logical op.
   if (DAG.ComputeNumSignBits(Cond) != CondVT.getScalarSizeInBits())
     return SDValue();
 
-  // vselect Cond, 111..., 000... -> Cond
-  if (TValIsAllOnes && FValIsAllZeros)
-    return DAG.getBitcast(VT, Cond);
-
   if (!TLI.isTypeLegal(CondVT))
     return SDValue();
 
-  // vselect Cond, 111..., X -> or Cond, X
-  if (TValIsAllOnes) {
-    SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
-    SDValue Or = DAG.getNode(ISD::OR, DL, CondVT, Cond, CastRHS);
-    return DAG.getBitcast(VT, Or);
-  }
-
-  // vselect Cond, X, 000... -> and Cond, X
-  if (FValIsAllZeros) {
-    SDValue CastLHS = DAG.getBitcast(CondVT, LHS);
-    SDValue And = DAG.getNode(ISD::AND, DL, CondVT, Cond, CastLHS);
-    return DAG.getBitcast(VT, And);
-  }
-
   // vselect Cond, 000..., X -> andn Cond, X
-  if (TValIsAllZeros) {
+  if (ISD::isBuildVectorAllZeros(LHS.getNode())) {
     SDValue CastRHS = DAG.getBitcast(CondVT, RHS);
     SDValue AndN;
     // The canonical form differs for i1 vectors - x86andnp is not used
@@ -48106,7 +48059,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(VT) || isSoftF16(VT, Subtarget))
     return SDValue();
 
-  if (SDValue V = combineVSelectWithAllOnesOrZeros(N, DAG, DL, DCI, Subtarget))
+  if (SDValue V = combineVSelectWithLastZeros(N, DAG, DL, DCI, Subtarget))
     return V;
 
   if (SDValue V = combineVSelectToBLENDV(N, DAG, DL, DCI, Subtarget))

@@ -1553,7 +1553,7 @@ static OmpMapperSpecifier ConstructOmpMapperSpecifier(
         std::get<Name>(derived->t).ToString() + llvm::omp::OmpDefaultMapperName,
         std::move(typeSpec), std::move(varName)};
   }
-  return OmpMapperSpecifier{std::string("omp.default.mapper"),
+  return OmpMapperSpecifier{std::string(llvm::omp::OmpDefaultMapperName),
       std::move(typeSpec), std::move(varName)};
 }
 

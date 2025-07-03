@@ -4183,17 +4183,28 @@ defm UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1, int_aarch64_sve_udot_x2
 defm SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0, int_aarch64_sve_sdot_lane_x2>;
 defm UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1, int_aarch64_sve_udot_lane_x2>;
 
-defm CNTP_XCI : sve2p1_pcount_pn<"cntp", 0b000>;
-defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext", int_aarch64_sve_pext>;
-defm PEXT_2PCI : sve2p1_pred_as_ctr_to_mask_pair<"pext">;
-defm PTRUE_C  : sve2p1_ptrue_pn<"ptrue">;
-
 defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00, int_aarch64_sve_sqcvtn_x2>;
 defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01, int_aarch64_sve_uqcvtn_x2>;
 defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10, int_aarch64_sve_sqcvtun_x2>;
 defm SQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"sqrshrn", 0b101, int_aarch64_sve_sqrshrn_x2>;
 defm UQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"uqrshrn", 0b111, int_aarch64_sve_uqrshrn_x2>;
 defm SQRSHRUN_Z2ZI_StoH : sve2p1_multi_vec_shift_narrow<"sqrshrun", 0b001, int_aarch64_sve_sqrshrun_x2>;
+
+defm WHILEGE_2PXX : sve2p1_int_while_rr_pair<"whilege", 0b000>;
+defm WHILEGT_2PXX : sve2p1_int_while_rr_pair<"whilegt", 0b001>;
+defm WHILELT_2PXX : sve2p1_int_while_rr_pair<"whilelt", 0b010>;
+defm WHILELE_2PXX : sve2p1_int_while_rr_pair<"whilele", 0b011>;
+defm WHILEHS_2PXX : sve2p1_int_while_rr_pair<"whilehs", 0b100>;
+defm WHILEHI_2PXX : sve2p1_int_while_rr_pair<"whilehi", 0b101>;
+defm WHILELO_2PXX : sve2p1_int_while_rr_pair<"whilelo", 0b110>;
+defm WHILELS_2PXX : sve2p1_int_while_rr_pair<"whilels", 0b111>;
+} // End HasSVE2p1_or_SME2
+
+let Predicates = [HasSVE2p1_or_StreamingSME2] in {
+defm CNTP_XCI : sve2p1_pcount_pn<"cntp", 0b000>;
+defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext", int_aarch64_sve_pext>;
+defm PEXT_2PCI : sve2p1_pred_as_ctr_to_mask_pair<"pext">;
+defm PTRUE_C  : sve2p1_ptrue_pn<"ptrue">;
 
 // Load to two registers
 defm LD1B_2Z       : sve2p1_mem_cld_ss_2z<"ld1b", 0b00, 0b0, ZZ_b_mul_r, GPR64shifted8, ZZ_b_strided_and_contiguous>;
@@ -4318,14 +4329,6 @@ defm : store_pn_x4<nxv8bf16, int_aarch64_sve_stnt1_pn_x4, STNT1H_4Z_IMM>;
 defm : store_pn_x4<nxv4f32, int_aarch64_sve_stnt1_pn_x4, STNT1W_4Z_IMM>;
 defm : store_pn_x4<nxv2f64, int_aarch64_sve_stnt1_pn_x4, STNT1D_4Z_IMM>;
 
-defm WHILEGE_2PXX : sve2p1_int_while_rr_pair<"whilege", 0b000>;
-defm WHILEGT_2PXX : sve2p1_int_while_rr_pair<"whilegt", 0b001>;
-defm WHILELT_2PXX : sve2p1_int_while_rr_pair<"whilelt", 0b010>;
-defm WHILELE_2PXX : sve2p1_int_while_rr_pair<"whilele", 0b011>;
-defm WHILEHS_2PXX : sve2p1_int_while_rr_pair<"whilehs", 0b100>;
-defm WHILEHI_2PXX : sve2p1_int_while_rr_pair<"whilehi", 0b101>;
-defm WHILELO_2PXX : sve2p1_int_while_rr_pair<"whilelo", 0b110>;
-defm WHILELS_2PXX : sve2p1_int_while_rr_pair<"whilels", 0b111>;
 defm WHILEGE_CXX  : sve2p1_int_while_rr_pn<"whilege", 0b000>;
 defm WHILEGT_CXX  : sve2p1_int_while_rr_pn<"whilegt", 0b001>;
 defm WHILELT_CXX  : sve2p1_int_while_rr_pn<"whilelt", 0b010>;
@@ -4334,7 +4337,7 @@ defm WHILEHS_CXX  : sve2p1_int_while_rr_pn<"whilehs", 0b100>;
 defm WHILEHI_CXX  : sve2p1_int_while_rr_pn<"whilehi", 0b101>;
 defm WHILELO_CXX  : sve2p1_int_while_rr_pn<"whilelo", 0b110>;
 defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
-} // End HasSVE2p1_or_SME2
+} // End HasSVE2p1_or_StreamingSME2
 
 let Predicates = [HasSVE_or_SME] in {
 
@@ -4539,7 +4542,7 @@ let Predicates = [HasNonStreamingSVE2p2_or_SME2p2] in {
 //===----------------------------------------------------------------------===//
 // SVE2 FP8 instructions
 //===----------------------------------------------------------------------===//
-let Predicates = [HasSVE2_or_SME2, HasFP8] in {
+let Predicates = [HasNonStreamingSVE2_or_SME2, HasFP8] in {
 // FP8 upconvert
 defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt",    nxv8f16,  int_aarch64_sve_fp8_cvt1>;
 defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt",    nxv8f16,  int_aarch64_sve_fp8_cvt2>;
@@ -4556,15 +4559,15 @@ defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r, nxv4
 defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r, nxv8bf16, int_aarch64_sve_fp8_cvtn>;
 
 defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single_top<0b11, "fcvtnt", ZZ_s_mul_r, nxv4f32,  int_aarch64_sve_fp8_cvtnt>;
-} // End HasSVE2_or_SME2, HasFP8
+} // End HasNonStreamingSVE2_or_SME2, HasFP8
 
-let Predicates = [HasSVE2_or_SME2, HasFAMINMAX] in {
+let Predicates = [HasNonStreamingSVE2_or_SME2, HasFAMINMAX] in {
 defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "FAMIN_ZPZZ", int_aarch64_sve_famin, DestructiveBinaryComm>;
 defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "FAMAX_ZPZZ", int_aarch64_sve_famax, DestructiveBinaryComm>;
 
 defm FAMAX_ZPZZ : sve_fp_bin_pred_hfd<AArch64famax_p>;
 defm FAMIN_ZPZZ : sve_fp_bin_pred_hfd<AArch64famin_p>;
-} // End HasSVE2_or_SME2, HasFAMINMAX
+} // End HasNonStreamingSVE2_or_SME2, HasFAMINMAX
 
 let Predicates = [HasSSVE_FP8FMA] in {
 // FP8 Widening Multiply-Add Long - Indexed Group
@@ -4608,14 +4611,14 @@ defm FDOT_ZZZI_BtoS : sve2_fp8_dot_indexed_s<"fdot", int_aarch64_sve_fp8_fdot_la
 defm FDOT_ZZZ_BtoS : sve_fp8_dot<0b1, ZPR32, "fdot", nxv4f32, int_aarch64_sve_fp8_fdot>;
 }
 
-let Predicates = [HasSVE2_or_SME2, HasLUT] in {
+let Predicates = [HasNonStreamingSVE2_or_SME2, HasLUT] in {
 // LUTI2
   defm LUTI2_ZZZI : sve2_luti2_vector_index<"luti2">;
 // LUTI4
   defm LUTI4_ZZZI   : sve2_luti4_vector_index<"luti4">;
 // LUTI4 (two contiguous registers)
   defm LUTI4_Z2ZZI  : sve2_luti4_vector_vg2_index<"luti4">;
-} // End HasSVE2_or_SME2, HasLUT
+} // End HasNonStreamingSVE2_or_SME2, HasLUT
 
 //===----------------------------------------------------------------------===//
 // Checked Pointer Arithmetic (FEAT_CPA)

@@ -373,8 +373,11 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> Instance,
   auto LLVMCtx = std::make_unique<llvm::LLVMContext>();
   TSCtx = std::make_unique<llvm::orc::ThreadSafeContext>(std::move(LLVMCtx));
 
-  Act = std::make_unique<IncrementalAction>(*CI, *TSCtx->getContext(), ErrOut,
-                                            *this, std::move(Consumer));
+  Act = TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
+    return std::make_unique<IncrementalAction>(*CI, *Ctx, ErrOut, *this,
+                                               std::move(Consumer));
+  });
+
   if (ErrOut)
     return;
   CI->ExecuteAction(*Act);
@@ -495,10 +498,10 @@ Interpreter::createWithCUDA(std::unique_ptr<CompilerInstance> CI,
   std::unique_ptr<Interpreter> Interp = std::move(*InterpOrErr);
 
   llvm::Error Err = llvm::Error::success();
-  llvm::LLVMContext &LLVMCtx = *Interp->TSCtx->getContext();
 
-  auto DeviceAct =
-      std::make_unique<IncrementalAction>(*DCI, LLVMCtx, Err, *Interp);
+  auto DeviceAct = Interp->TSCtx->withContextDo([&](llvm::LLVMContext *Ctx) {
+    return std::make_unique<IncrementalAction>(*DCI, *Ctx, Err, *Interp);
+  });
 
   if (Err)
     return std::move(Err);

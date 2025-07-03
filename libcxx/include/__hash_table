@@ -1831,9 +1831,9 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _Key>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) {
-  size_t __hash  = hash_function()(__k);
   size_type __bc = bucket_count();
-  if (__bc != 0) {
+  if (__bc != 0 && size() != 0) {
+    size_t __hash       = hash_function()(__k);
     size_t __chash      = std::__constrain_hash(__hash, __bc);
     __next_pointer __nd = __bucket_list_[__chash];
     if (__nd != nullptr) {
@@ -1852,9 +1852,9 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _Key>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::const_iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const {
-  size_t __hash  = hash_function()(__k);
   size_type __bc = bucket_count();
-  if (__bc != 0) {
+  if (__bc != 0 && size() != 0) {
+    size_t __hash       = hash_function()(__k);
     size_t __chash      = std::__constrain_hash(__hash, __bc);
     __next_pointer __nd = __bucket_list_[__chash];
     if (__nd != nullptr) {

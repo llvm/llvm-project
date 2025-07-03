@@ -72,8 +72,7 @@ BreakpointLocationList::FindByID(lldb::break_id_t break_id) const {
       llvm::lower_bound(m_locations, break_id, Compare);
   if (pos != end && (*pos)->GetID() == break_id)
     return *(pos);
-  else
-    return BreakpointLocationSP();
+  return BreakpointLocationSP();
 }
 
 size_t BreakpointLocationList::FindInModule(

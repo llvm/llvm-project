@@ -91,10 +91,10 @@ private:
       ArrayRef<const CodeGenInstruction *> NumberedInstructions);
   void emitOperandNameMappings(
       raw_ostream &OS, const CodeGenTarget &Target,
-      ArrayRef<const CodeGenInstruction *> NumberedInstructions);
+      ArrayRef<const CodeGenInstruction *> TargetInstructions);
   void emitLogicalOperandSizeMappings(
       raw_ostream &OS, StringRef Namespace,
-      ArrayRef<const CodeGenInstruction *> NumberedInstructions);
+      ArrayRef<const CodeGenInstruction *> TargetInstructions);
 
   // Operand information.
   unsigned CollectOperandInfo(OperandInfoListTy &OperandInfoList,
@@ -234,9 +234,12 @@ void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
 /// - A function called getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx)
 ///   for looking up the operand index for an instruction, given a value from
 ///   OpName enum
+///
+/// Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
+/// we can just skip them. Hence accept just the TargetInstructions.
 void InstrInfoEmitter::emitOperandNameMappings(
     raw_ostream &OS, const CodeGenTarget &Target,
-    ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
+    ArrayRef<const CodeGenInstruction *> TargetInstructions) {
   StringRef Namespace = Target.getInstNamespace();
 
   /// To facilitate assigning OpName enum values in the sorted alphabetical
@@ -260,9 +263,7 @@ void InstrInfoEmitter::emitOperandNameMappings(
 
   // Fixed/Predefined instructions do not have UseNamedOperandTable enabled, so
   // we can just skip them.
-  const unsigned NumFixedInsts = Target.getNumFixedInstructions();
-  for (const CodeGenInstruction *Inst :
-       NumberedInstructions.drop_front(NumFixedInsts)) {
+  for (const CodeGenInstruction *Inst : TargetInstructions) {
     if (!Inst->TheDef->getValueAsBit("UseNamedOperandTable"))
       continue;
     std::map<unsigned, unsigned> OpList;
@@ -476,19 +477,18 @@ void InstrInfoEmitter::emitOperandTypeMappings(
   OS << "#endif // GET_INSTRINFO_MEM_OPERAND_SIZE\n\n";
 }
 
+// Fixed/Predefined instructions do not have UseLogicalOperandMappings
+// enabled, so we can just skip them. Hence accept TargetInstructions.
 void InstrInfoEmitter::emitLogicalOperandSizeMappings(
     raw_ostream &OS, StringRef Namespace,
-    ArrayRef<const CodeGenInstruction *> NumberedInstructions) {
+    ArrayRef<const CodeGenInstruction *> TargetInstructions) {
   std::map<std::vector<unsigned>, unsigned> LogicalOpSizeMap;
   std::map<unsigned, std::vector<std::string>> InstMap;
 
   size_t LogicalOpListSize = 0U;
   std::vector<unsigned> LogicalOpList;
 
-  // Fixed/Predefined instructions do not have UseLogicalOperandMappings
-  // enabled, so we can just skip them.
-  const unsigned NumFixedInsts = CDP.getTargetInfo().getNumFixedInstructions();
-  for (const auto *Inst : NumberedInstructions.drop_front(NumFixedInsts)) {
+  for (const auto *Inst : TargetInstructions) {
     if (!Inst->TheDef->getValueAsBit("UseLogicalOperandMappings"))
       continue;
 
@@ -1057,9 +1057,12 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "#endif // GET_INSTRINFO_CTOR_DTOR\n\n";
 
+  ArrayRef<const CodeGenInstruction *> TargetInstructions =
+      Target.getTargetInstructionsByEnumValue();
+
   if (HasUseNamedOperandTable) {
     Timer.startTimer("Emit operand name mappings");
-    emitOperandNameMappings(OS, Target, NumberedInstructions);
+    emitOperandNameMappings(OS, Target, TargetInstructions);
   }
 
   Timer.startTimer("Emit operand type mappings");
@@ -1067,7 +1070,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   if (HasUseLogicalOperandMappings) {
     Timer.startTimer("Emit logical operand size mappings");
-    emitLogicalOperandSizeMappings(OS, TargetName, NumberedInstructions);
+    emitLogicalOperandSizeMappings(OS, TargetName, TargetInstructions);
   }
 
   Timer.startTimer("Emit helper methods");

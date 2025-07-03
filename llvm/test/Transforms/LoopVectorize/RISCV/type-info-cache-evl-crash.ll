@@ -44,7 +44,7 @@ define void @type_info_cache_clobber(ptr %dstv, ptr %src, i64 %wide.trip.count) 
 ; CHECK-NEXT:    [[TMP23:%.*]] = ashr <vscale x 8 x i32> [[TMP15]], zeroinitializer
 ; CHECK-NEXT:    [[VP_OP3:%.*]] = or <vscale x 8 x i32> [[TMP23]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ult <vscale x 8 x i32> [[TMP15]], zeroinitializer
-; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x i32> @llvm.vp.select.nxv8i32(<vscale x 8 x i1> [[TMP16]], <vscale x 8 x i32> [[VP_OP3]], <vscale x 8 x i32> zeroinitializer, i32 [[TMP11]])
+; CHECK-NEXT:    [[TMP17:%.*]] = select <vscale x 8 x i1> [[TMP16]], <vscale x 8 x i32> [[VP_OP3]], <vscale x 8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = trunc <vscale x 8 x i32> [[TMP17]] to <vscale x 8 x i8>
 ; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> [[TMP24]], <vscale x 8 x ptr> align 1 [[BROADCAST_SPLAT]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP11]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = trunc <vscale x 8 x i32> [[VP_OP]] to <vscale x 8 x i16>

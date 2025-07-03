@@ -77,14 +77,12 @@ struct InstRegexOp : public SetTheory::Operator {
 
   void apply(SetTheory &ST, const DagInit *Expr, SetTheory::RecSet &Elts,
              ArrayRef<SMLoc> Loc) override {
-    ArrayRef<const CodeGenInstruction *> Instructions =
-        Target.getInstructionsByEnumValue();
-
-    unsigned NumGeneric = Target.getNumFixedInstructions();
-    unsigned NumPseudos = Target.getNumPseudoInstructions();
-    auto Generics = Instructions.slice(0, NumGeneric);
-    auto Pseudos = Instructions.slice(NumGeneric, NumPseudos);
-    auto NonPseudos = Instructions.slice(NumGeneric + NumPseudos);
+    ArrayRef<const CodeGenInstruction *> Generics =
+        Target.getGenericInstructionsByEnumValue();
+    ArrayRef<const CodeGenInstruction *> Pseudos =
+        Target.getTargetPseudoInstructionsByEnumValue();
+    ArrayRef<const CodeGenInstruction *> NonPseudos =
+        Target.getTargetNonPseudoInstructionsByEnumValue();
 
     for (const Init *Arg : Expr->getArgs()) {
       const StringInit *SI = dyn_cast<StringInit>(Arg);
@@ -145,7 +143,7 @@ struct InstRegexOp : public SetTheory::Operator {
       }
 
       // Target instructions are split into two ranges: pseudo instructions
-      // first, than non-pseudos. Each range is in lexicographical order
+      // first, then non-pseudos. Each range is in lexicographical order
       // sorted by name. Find the sub-ranges that start with our prefix.
       struct Comp {
         bool operator()(const CodeGenInstruction *LHS, StringRef RHS) {

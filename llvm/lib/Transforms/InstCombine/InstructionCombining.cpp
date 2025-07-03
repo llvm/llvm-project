@@ -205,9 +205,8 @@ Value *InstCombinerImpl::EmitGEPOffset(GEPOperator *GEP, bool RewriteGEP) {
     Builder.SetInsertPoint(Inst);
 
   Value *Offset = EmitGEPOffset(GEP);
-  // If a non-trivial GEP has other uses, rewrite it to avoid duplicating
-  // the offset arithmetic.
-  if (Inst && !GEP->hasOneUse() && !GEP->hasAllConstantIndices() &&
+  // Rewrite non-trivial GEPs to avoid duplicating the offset arithmetic.
+  if (Inst && !GEP->hasAllConstantIndices() &&
       !GEP->getSourceElementType()->isIntegerTy(8)) {
     replaceInstUsesWith(
         *Inst, Builder.CreateGEP(Builder.getInt8Ty(), GEP->getPointerOperand(),
