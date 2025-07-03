@@ -30,6 +30,9 @@ public:
   using ClangTidyCheck::ClangTidyCheck;
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
+    return LangOpts.CPlusPlus || LangOpts.C99;
+  }
 };
 
 } // namespace clang::tidy::modernize
