@@ -106,6 +106,7 @@ def AMDGPU_ExtPackedFp8Op :
     If the passed-in vector has fewer than four elements, or the input is scalar,
     the remaining values in the <4 x i8> will be filled with
     undefined values as needed.
+
     #### Example
     ```mlir
     // Extract single FP8 element to scalar f32
@@ -171,6 +172,7 @@ def AMDGPU_PackedTrunc2xFp8Op :
     sub-registers, and so the conversion intrinsics (which are currently the
     only way to work with 8-bit float types) take packed vectors of 4 8-bit
     values.
+
     #### Example
     ```mlir
     %result = amdgpu.packed_trunc_2xfp8 %src1, %src2 into %dest[word 1] 
@@ -234,6 +236,7 @@ def AMDGPU_PackedStochRoundFp8Op :
     sub-registers, and so the conversion intrinsics (which are currently the
     only way to work with 8-bit float types) take packed vectors of 4 8-bit
     values.
+
     #### Example
     ```mlir
    %result = amdgpu.packed_stoch_round_fp8 %src + %stoch_seed into %dest[2] 
@@ -364,6 +367,7 @@ def AMDGPU_RawBufferLoadOp :
     - If `boundsCheck` is false and the target chipset is RDNA, OOB_SELECT is set
       to 2 to disable bounds checks, otherwise it is 3
     - The cache coherency bits are off
+
     #### Example
     ```mlir
     // Load scalar f32 from 1D buffer
@@ -413,6 +417,7 @@ def AMDGPU_RawBufferStoreOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
+
     #### Example
     ```mlir
     // Store scalar f32 to 1D buffer
@@ -465,6 +470,7 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
+
     #### Example
     ```mlir
     // Atomic compare-swap
@@ -510,6 +516,7 @@ def AMDGPU_RawBufferAtomicFaddOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
+
     #### Example
     ```mlir
     // Atomic floating-point add
@@ -710,6 +717,7 @@ def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
 
     Supports arbitrary int/float/vector types, which will be repacked to i32 and
     one or more `rocdl.ds_swizzle` ops during lowering.
+
     #### Example
     ```mlir
  %result = amdgpu.swizzle_bitmode %src 1 2 4 : f32
@@ -740,6 +748,7 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
     (those which will implement this barrier by emitting inline assembly),
     use of this operation will impede the usabiliity of memory watches (including
     breakpoints set on variables) when debugging.
+
     #### Example
     ```mlir
   amdgpu.lds_barrier
@@ -782,6 +791,7 @@ def AMDGPU_SchedBarrierOp :
     `amdgpu.sched_barrier` serves as a barrier that could be
     configured to restrict movements of instructions through it as
     defined by sched_barrier_opts.
+
     #### Example
     ```mlir
     // Barrier allowing no dependent instructions
@@ -888,6 +898,7 @@ def AMDGPU_MFMAOp :
 
     The negateA, negateB, and negateC flags are only supported for double-precision
     operations on gfx94x.
+
     #### Example
     ```mlir
   %result = amdgpu.mfma %a * %b + %c 
@@ -935,6 +946,7 @@ def AMDGPU_WMMAOp :
 
     The `clamp` flag is used to saturate the output of type T to numeric_limits<T>::max()
     in case of overflow.
+
     #### Example
     ```mlir
   %result = amdgpu.wmma %a * %b + %c 
@@ -1062,6 +1074,7 @@ def AMDGPU_ScaledMFMAOp :
     are omitted from this wrapper.
     - The `negateA`, `negateB`, and `negateC` flags in `amdgpu.mfma` are only supported for 
     double-precision operations on gfx94x and so are not included here. 
+
     #### Example
     ```mlir
  %result = amdgpu.scaled_mfma 
