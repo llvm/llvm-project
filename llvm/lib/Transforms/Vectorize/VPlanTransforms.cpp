@@ -2114,21 +2114,19 @@ void VPlanTransforms::addActiveLaneMask(
     HeaderMask->replaceAllUsesWith(LaneMask);
 }
 
-/// Try to convert \p CurRecipe to a corresponding EVL-based recipe. Returns
-/// nullptr if no EVL-based recipe could be created.
+/// Try to optimize a \p CurRecipe masked by \p HeaderMask to a corresponding
+/// EVL-based recipe without the header mask. Returns nullptr if no EVL-based
+/// recipe could be created.
 /// \p HeaderMask  Header Mask.
 /// \p CurRecipe   Recipe to be transform.
 /// \p TypeInfo    VPlan-based type analysis.
 /// \p AllOneMask  The vector mask parameter of vector-predication intrinsics.
 /// \p EVL         The explicit vector length parameter of vector-predication
 /// intrinsics.
-/// \p PrevEVL     The explicit vector length of the previous iteration. Only
-/// required if \p CurRecipe is a VPInstruction::FirstOrderRecurrenceSplice.
-static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
-                                     VPRecipeBase &CurRecipe,
-                                     VPTypeAnalysis &TypeInfo,
-                                     VPValue &AllOneMask, VPValue &EVL,
-                                     VPValue *PrevEVL) {
+static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
+                                       VPRecipeBase &CurRecipe,
+                                       VPTypeAnalysis &TypeInfo,
+                                       VPValue &AllOneMask, VPValue &EVL) {
   using namespace llvm::VPlanPatternMatch;
   auto GetNewMask = [&](VPValue *OrigMask) -> VPValue * {
     assert(OrigMask && "Unmasked recipe when folding tail");
@@ -2153,18 +2151,6 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
-        if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
-          assert(PrevEVL && "Fixed-order recurrences require previous EVL");
-          VPValue *MinusOneVPV = VPI->getParent()->getPlan()->getOrAddLiveIn(
-              ConstantInt::getSigned(Type::getInt32Ty(TypeInfo.getContext()),
-                                     -1));
-          SmallVector<VPValue *> Ops(VPI->operands());
-          Ops.append({MinusOneVPV, &AllOneMask, PrevEVL, &EVL});
-          return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splice,
-                                            Ops, TypeInfo.inferScalarType(VPI),
-                                            VPI->getDebugLoc());
-        }
-
         VPValue *LHS, *RHS;
         // Transform select with a header mask condition
         //   select(header_mask, LHS, RHS)
@@ -2197,9 +2183,12 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceAllUsesWith(&EVL);
 
+  // Defer erasing recipes till the end so that we don't invalidate the
+  // VPTypeAnalysis cache.
+  SmallVector<VPRecipeBase *> ToErase;
+
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
-  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -2212,16 +2201,37 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                                              DebugLoc());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    PrevEVL = Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    VPValue *PrevEVL =
+        Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+      for (VPRecipeBase &R : *VPBB) {
+        using namespace VPlanPatternMatch;
+        VPValue *V1, *V2;
+        if (!match(&R,
+                   m_VPInstruction<VPInstruction::FirstOrderRecurrenceSplice>(
+                       m_VPValue(V1), m_VPValue(V2))))
+          continue;
+        VPValue *Imm = Plan.getOrAddLiveIn(
+            ConstantInt::getSigned(Type::getInt32Ty(Ctx), -1));
+        VPWidenIntrinsicRecipe *VPSplice = new VPWidenIntrinsicRecipe(
+            Intrinsic::experimental_vp_splice,
+            {V1, V2, Imm, AllOneMask, PrevEVL, &EVL},
+            TypeInfo.inferScalarType(R.getVPSingleValue()), R.getDebugLoc());
+        VPSplice->insertBefore(&R);
+        R.getVPSingleValue()->replaceAllUsesWith(VPSplice);
+        ToErase.push_back(&R);
+      }
+    }
   }
 
-  SmallVector<VPRecipeBase *> ToErase;
-
+  // Try to optimize header mask recipes away to their EVL variants.
   for (VPValue *HeaderMask : collectAllHeaderMasks(Plan)) {
     for (VPUser *U : collectUsersRecursively(HeaderMask)) {
       auto *CurRecipe = cast<VPRecipeBase>(U);
-      VPRecipeBase *EVLRecipe = createEVLRecipe(
-          HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL, PrevEVL);
+      VPRecipeBase *EVLRecipe =
+          optimizeMaskToEVL(HeaderMask, *CurRecipe, TypeInfo, *AllOneMask, EVL);
       if (!EVLRecipe)
         continue;
 
@@ -2237,8 +2247,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         VPValue *CurVPV = CurRecipe->getVPSingleValue();
         CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
       }
-      // Defer erasing recipes till the end so that we don't invalidate the
-      // VPTypeAnalysis cache.
       ToErase.push_back(CurRecipe);
     }
   }
