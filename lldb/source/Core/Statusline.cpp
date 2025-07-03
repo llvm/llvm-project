@@ -118,6 +118,7 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
     break;
   case ResizeStatusline:
     // Clear the screen and update the scroll window.
+    // FIXME: Find a better solution (#146919).
     locked_stream << ANSI_CLEAR_SCREEN;
     locked_stream.Printf(ANSI_SET_SCROLL_ROWS, reduced_scroll_window);
     break;
