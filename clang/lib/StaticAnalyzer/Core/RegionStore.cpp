@@ -2187,10 +2187,12 @@ std::optional<SVal> RegionStoreManager::getBindingForDerivedDefaultValue(
 
     // Lazy bindings are usually handled through getExistingLazyBinding().
     // We should unify these two code paths at some point.
-    // 'nonloc::ConcreteInt' values can arise from compound literals in
+    if (isa<nonloc::LazyCompoundVal, nonloc::CompoundVal>(val))
+      return val;
+
+    // 'nonloc::ConcreteInt' values can arise from e.g. compound literals in
     // designated initializers for bitfields in unions.
-    if (isa<nonloc::LazyCompoundVal, nonloc::CompoundVal, nonloc::ConcreteInt>(
-            val))
+    if (isa<nonloc::ConcreteInt>(val))
       return val;
 
     llvm_unreachable("Unknown default value");
