@@ -6817,18 +6817,17 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
             return ConstantVector::getSplat(VTy->getElementCount(),
                                             OptSplatVal.value().NewConstVal);
           }
-        }
-
-        // Check elementwise whether we can optimize to either a constant value
-        // or return the LHS value. We cannot mix and match LHS + constant
-        // elements, as this would require inserting a new VectorShuffle
-        // instruction, which is not allowed in simplifyBinOp, so bail early if
-        // any element cannot be optimized, or if lhs vs const optimizations
-        // start to mismatch. However, we can turn undef/poison into the LHS
-        // value, so only bail if we need at least 1 non undef/poison RHS const.
-        bool CanOptimize = true;
-        bool AllConstValsAreUndef = true;
-        if (auto *FVty = dyn_cast<FixedVectorType>(VTy)) {
+        } else if (auto *FVty = dyn_cast<FixedVectorType>(VTy)) {
+          // Check elementwise whether we can optimize to either a constant
+          // value or return the LHS value. We cannot mix and match LHS +
+          // constant elements, as this would require inserting a new
+          // VectorShuffle instruction, which is not allowed in simplifyBinOp,
+          // so bail early if any element cannot be optimized, or if lhs vs
+          // const optimizations start to mismatch. However, we can turn
+          // undef/poison into the LHS value, so only bail if we need at least 1
+          // non undef/poison RHS const.
+          bool CanOptimize = true;
+          bool AllConstValsAreUndef = true;
           unsigned NumElts = FVty->getNumElements();
           // Storage to build up the constant return value (possible altered
           // from the input RHS value by quieting NaNs)
