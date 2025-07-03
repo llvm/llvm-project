@@ -444,21 +444,11 @@ define dso_local void @t15(ptr noalias sret(%struct.foo) %agg.result) nounwind  
 ;
 ; X64-LABEL: t15:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    callq f
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp f # TAILCALL
 ;
 ; X32-LABEL: t15:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    callq f
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp f # TAILCALL
   tail call fastcc void @f(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
@@ -607,32 +597,15 @@ declare dso_local fastcc double @foo20(double) nounwind
 define fastcc void @t21_sret_to_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_sret:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    calll t21_f_sret
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; X86-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X64-LABEL: t21_sret_to_sret:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    callq t21_f_sret
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    callq t21_f_sret
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp t21_f_sret # TAILCALL
   tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
   ret void
 }
@@ -640,34 +613,15 @@ define fastcc void @t21_sret_to_sret(ptr noalias sret(%struct.foo) %agg.result) 
 define fastcc void @t21_sret_to_sret_more_args(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_more_args:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl %ecx, %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll f_sret@PLT
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; X86-NEXT:    jmp f_sret@PLT # TAILCALL
 ;
 ; X64-LABEL: t21_sret_to_sret_more_args:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rdi, %rbx
-; X64-NEXT:    callq f_sret@PLT
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp f_sret@PLT # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret_more_args:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rdi, %rbx
-; X32-NEXT:    callq f_sret@PLT
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp f_sret@PLT # TAILCALL
   tail call fastcc void @f_sret(ptr noalias sret(%struct.foo) %agg.result, i32 %a, i32 %b) nounwind
   ret void
 }
@@ -675,35 +629,18 @@ define fastcc void @t21_sret_to_sret_more_args(ptr noalias sret(%struct.foo) %ag
 define fastcc void @t21_sret_to_sret_second_arg_sret(ptr noalias %agg.result, ptr noalias sret(%struct.foo) %ret) nounwind  {
 ; X86-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    calll t21_f_sret
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
+; X86-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X64-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %rsi, %rbx
 ; X64-NEXT:    movq %rsi, %rdi
-; X64-NEXT:    callq t21_f_sret
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp t21_f_sret # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret_second_arg_sret:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
-; X32-NEXT:    movq %rsi, %rbx
 ; X32-NEXT:    movq %rsi, %rdi
-; X32-NEXT:    callq t21_f_sret
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp t21_f_sret # TAILCALL
   tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %ret) nounwind
   ret void
 }
@@ -725,27 +662,17 @@ define fastcc void @t21_sret_to_sret_more_args2(ptr noalias sret(%struct.foo) %a
 ;
 ; X64-LABEL: t21_sret_to_sret_more_args2:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    movq %rdi, %rbx
 ; X64-NEXT:    movl %edx, %esi
 ; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    callq f_sret@PLT
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    popq %rbx
-; X64-NEXT:    retq
+; X64-NEXT:    jmp f_sret@PLT # TAILCALL
 ;
 ; X32-LABEL: t21_sret_to_sret_more_args2:
 ; X32:       # %bb.0:
-; X32-NEXT:    pushq %rbx
 ; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    movq %rdi, %rbx
 ; X32-NEXT:    movl %edx, %esi
 ; X32-NEXT:    movl %eax, %edx
-; X32-NEXT:    callq f_sret@PLT
-; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    popq %rbx
-; X32-NEXT:    retq
+; X32-NEXT:    jmp f_sret@PLT # TAILCALL
   tail call fastcc void @f_sret(ptr noalias sret(%struct.foo) %agg.result, i32 %b, i32 %a) nounwind
   ret void
 }
