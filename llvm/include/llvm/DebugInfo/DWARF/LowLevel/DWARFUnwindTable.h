@@ -124,7 +124,7 @@ public:
   uint32_t getRegister() const { return RegNum; }
   int32_t getOffset() const { return Offset; }
   bool hasAddressSpace() const {
-    if(AddrSpace)
+    if (AddrSpace)
       return true;
     return false;
   }
@@ -182,7 +182,7 @@ public:
 
   SmallVector<uint32_t, 4> getRegisters() const {
     SmallVector<uint32_t, 4> Registers;
-    for(auto &&[Register, _]: Locations)
+    for (auto &&[Register, _] : Locations)
       Registers.push_back(Register);
     return Registers;
   }
