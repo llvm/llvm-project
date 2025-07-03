@@ -307,9 +307,8 @@ define <vscale x 1 x double> @test16(i64 %avl, double %a, <vscale x 1 x double> 
 ; CHECK-LABEL: test16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, a0, e64, mf2, ta, ma
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vfmv.v.f v9, fa0
 ; CHECK-NEXT:    vfadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 entry:
