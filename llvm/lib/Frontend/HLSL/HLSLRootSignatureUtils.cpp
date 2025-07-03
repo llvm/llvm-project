@@ -80,123 +80,37 @@ static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
   return OS;
 }
 
-static const EnumEntry<ShaderVisibility> VisibilityNames[] = {
-    {"All", ShaderVisibility::All},
-    {"Vertex", ShaderVisibility::Vertex},
-    {"Hull", ShaderVisibility::Hull},
-    {"Domain", ShaderVisibility::Domain},
-    {"Geometry", ShaderVisibility::Geometry},
-    {"Pixel", ShaderVisibility::Pixel},
-    {"Amplification", ShaderVisibility::Amplification},
-    {"Mesh", ShaderVisibility::Mesh},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const ShaderVisibility &Visibility) {
-  printEnum(OS, Visibility, ArrayRef(VisibilityNames));
+                               const llvm::dxbc::ShaderVisibility &Visibility) {
+  printEnum(OS, Visibility, dxbc::getShaderVisibility());
 
   return OS;
 }
 
-static const EnumEntry<SamplerFilter> SamplerFilterNames[] = {
-    {"MinMagMipPoint", SamplerFilter::MinMagMipPoint},
-    {"MinMagPointMipLinear", SamplerFilter::MinMagPointMipLinear},
-    {"MinPointMagLinearMipPoint", SamplerFilter::MinPointMagLinearMipPoint},
-    {"MinPointMagMipLinear", SamplerFilter::MinPointMagMipLinear},
-    {"MinLinearMagMipPoint", SamplerFilter::MinLinearMagMipPoint},
-    {"MinLinearMagPointMipLinear", SamplerFilter::MinLinearMagPointMipLinear},
-    {"MinMagLinearMipPoint", SamplerFilter::MinMagLinearMipPoint},
-    {"MinMagMipLinear", SamplerFilter::MinMagMipLinear},
-    {"Anisotropic", SamplerFilter::Anisotropic},
-    {"ComparisonMinMagMipPoint", SamplerFilter::ComparisonMinMagMipPoint},
-    {"ComparisonMinMagPointMipLinear",
-     SamplerFilter::ComparisonMinMagPointMipLinear},
-    {"ComparisonMinPointMagLinearMipPoint",
-     SamplerFilter::ComparisonMinPointMagLinearMipPoint},
-    {"ComparisonMinPointMagMipLinear",
-     SamplerFilter::ComparisonMinPointMagMipLinear},
-    {"ComparisonMinLinearMagMipPoint",
-     SamplerFilter::ComparisonMinLinearMagMipPoint},
-    {"ComparisonMinLinearMagPointMipLinear",
-     SamplerFilter::ComparisonMinLinearMagPointMipLinear},
-    {"ComparisonMinMagLinearMipPoint",
-     SamplerFilter::ComparisonMinMagLinearMipPoint},
-    {"ComparisonMinMagMipLinear", SamplerFilter::ComparisonMinMagMipLinear},
-    {"ComparisonAnisotropic", SamplerFilter::ComparisonAnisotropic},
-    {"MinimumMinMagMipPoint", SamplerFilter::MinimumMinMagMipPoint},
-    {"MinimumMinMagPointMipLinear", SamplerFilter::MinimumMinMagPointMipLinear},
-    {"MinimumMinPointMagLinearMipPoint",
-     SamplerFilter::MinimumMinPointMagLinearMipPoint},
-    {"MinimumMinPointMagMipLinear", SamplerFilter::MinimumMinPointMagMipLinear},
-    {"MinimumMinLinearMagMipPoint", SamplerFilter::MinimumMinLinearMagMipPoint},
-    {"MinimumMinLinearMagPointMipLinear",
-     SamplerFilter::MinimumMinLinearMagPointMipLinear},
-    {"MinimumMinMagLinearMipPoint", SamplerFilter::MinimumMinMagLinearMipPoint},
-    {"MinimumMinMagMipLinear", SamplerFilter::MinimumMinMagMipLinear},
-    {"MinimumAnisotropic", SamplerFilter::MinimumAnisotropic},
-    {"MaximumMinMagMipPoint", SamplerFilter::MaximumMinMagMipPoint},
-    {"MaximumMinMagPointMipLinear", SamplerFilter::MaximumMinMagPointMipLinear},
-    {"MaximumMinPointMagLinearMipPoint",
-     SamplerFilter::MaximumMinPointMagLinearMipPoint},
-    {"MaximumMinPointMagMipLinear", SamplerFilter::MaximumMinPointMagMipLinear},
-    {"MaximumMinLinearMagMipPoint", SamplerFilter::MaximumMinLinearMagMipPoint},
-    {"MaximumMinLinearMagPointMipLinear",
-     SamplerFilter::MaximumMinLinearMagPointMipLinear},
-    {"MaximumMinMagLinearMipPoint", SamplerFilter::MaximumMinMagLinearMipPoint},
-    {"MaximumMinMagMipLinear", SamplerFilter::MaximumMinMagMipLinear},
-    {"MaximumAnisotropic", SamplerFilter::MaximumAnisotropic},
-};
-
-static raw_ostream &operator<<(raw_ostream &OS, const SamplerFilter &Filter) {
-  printEnum(OS, Filter, ArrayRef(SamplerFilterNames));
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const llvm::dxbc::SamplerFilter &Filter) {
+  printEnum(OS, Filter, dxbc::getSamplerFilters());
 
   return OS;
 }
 
-static const EnumEntry<TextureAddressMode> TextureAddressModeNames[] = {
-    {"Wrap", TextureAddressMode::Wrap},
-    {"Mirror", TextureAddressMode::Mirror},
-    {"Clamp", TextureAddressMode::Clamp},
-    {"Border", TextureAddressMode::Border},
-    {"MirrorOnce", TextureAddressMode::MirrorOnce},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const TextureAddressMode &Address) {
-  printEnum(OS, Address, ArrayRef(TextureAddressModeNames));
+                               const dxbc::TextureAddressMode &Address) {
+  printEnum(OS, Address, dxbc::getTextureAddressModes());
 
   return OS;
 }
 
-static const EnumEntry<ComparisonFunc> ComparisonFuncNames[] = {
-    {"Never", ComparisonFunc::Never},
-    {"Less", ComparisonFunc::Less},
-    {"Equal", ComparisonFunc::Equal},
-    {"LessEqual", ComparisonFunc::LessEqual},
-    {"Greater", ComparisonFunc::Greater},
-    {"NotEqual", ComparisonFunc::NotEqual},
-    {"GreaterEqual", ComparisonFunc::GreaterEqual},
-    {"Always", ComparisonFunc::Always},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const ComparisonFunc &CompFunc) {
-  printEnum(OS, CompFunc, ArrayRef(ComparisonFuncNames));
+                               const dxbc::ComparisonFunc &CompFunc) {
+  printEnum(OS, CompFunc, dxbc::getComparisonFuncs());
 
   return OS;
 }
 
-static const EnumEntry<StaticBorderColor> StaticBorderColorNames[] = {
-    {"TransparentBlack", StaticBorderColor::TransparentBlack},
-    {"OpaqueBlack", StaticBorderColor::OpaqueBlack},
-    {"OpaqueWhite", StaticBorderColor::OpaqueWhite},
-    {"OpaqueBlackUint", StaticBorderColor::OpaqueBlackUint},
-    {"OpaqueWhiteUint", StaticBorderColor::OpaqueWhiteUint},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const StaticBorderColor &BorderColor) {
-  printEnum(OS, BorderColor, ArrayRef(StaticBorderColorNames));
+                               const dxbc::StaticBorderColor &BorderColor) {
+  printEnum(OS, BorderColor, dxbc::getStaticBorderColors());
 
   return OS;
 }
@@ -215,57 +129,23 @@ static raw_ostream &operator<<(raw_ostream &OS, const ClauseType &Type) {
   return OS;
 }
 
-static const EnumEntry<RootDescriptorFlags> RootDescriptorFlagNames[] = {
-    {"DataVolatile", RootDescriptorFlags::DataVolatile},
-    {"DataStaticWhileSetAtExecute",
-     RootDescriptorFlags::DataStaticWhileSetAtExecute},
-    {"DataStatic", RootDescriptorFlags::DataStatic},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const RootDescriptorFlags &Flags) {
-  printFlags(OS, Flags, ArrayRef(RootDescriptorFlagNames));
+                               const dxbc::RootDescriptorFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getRootDescriptorFlags());
 
   return OS;
 }
 
-static const EnumEntry<DescriptorRangeFlags> DescriptorRangeFlagNames[] = {
-    {"DescriptorsVolatile", DescriptorRangeFlags::DescriptorsVolatile},
-    {"DataVolatile", DescriptorRangeFlags::DataVolatile},
-    {"DataStaticWhileSetAtExecute",
-     DescriptorRangeFlags::DataStaticWhileSetAtExecute},
-    {"DataStatic", DescriptorRangeFlags::DataStatic},
-    {"DescriptorsStaticKeepingBufferBoundsChecks",
-     DescriptorRangeFlags::DescriptorsStaticKeepingBufferBoundsChecks},
-};
-
 static raw_ostream &operator<<(raw_ostream &OS,
-                               const DescriptorRangeFlags &Flags) {
-  printFlags(OS, Flags, ArrayRef(DescriptorRangeFlagNames));
+                               const llvm::dxbc::DescriptorRangeFlags &Flags) {
+  printFlags(OS, Flags, dxbc::getDescriptorRangeFlags());
 
   return OS;
 }
 
-static const EnumEntry<RootFlags> RootFlagNames[] = {
-    {"AllowInputAssemblerInputLayout",
-     RootFlags::AllowInputAssemblerInputLayout},
-    {"DenyVertexShaderRootAccess", RootFlags::DenyVertexShaderRootAccess},
-    {"DenyHullShaderRootAccess", RootFlags::DenyHullShaderRootAccess},
-    {"DenyDomainShaderRootAccess", RootFlags::DenyDomainShaderRootAccess},
-    {"DenyGeometryShaderRootAccess", RootFlags::DenyGeometryShaderRootAccess},
-    {"DenyPixelShaderRootAccess", RootFlags::DenyPixelShaderRootAccess},
-    {"AllowStreamOutput", RootFlags::AllowStreamOutput},
-    {"LocalRootSignature", RootFlags::LocalRootSignature},
-    {"DenyAmplificationShaderRootAccess",
-     RootFlags::DenyAmplificationShaderRootAccess},
-    {"DenyMeshShaderRootAccess", RootFlags::DenyMeshShaderRootAccess},
-    {"CBVSRVUAVHeapDirectlyIndexed", RootFlags::CBVSRVUAVHeapDirectlyIndexed},
-    {"SamplerHeapDirectlyIndexed", RootFlags::SamplerHeapDirectlyIndexed},
-};
-
-raw_ostream &operator<<(raw_ostream &OS, const RootFlags &Flags) {
+raw_ostream &operator<<(raw_ostream &OS, const dxbc::RootFlags &Flags) {
   OS << "RootFlags(";
-  printFlags(OS, Flags, ArrayRef(RootFlagNames));
+  printFlags(OS, Flags, dxbc::getRootFlags());
   OS << ")";
 
   return OS;
@@ -341,7 +221,7 @@ template <class... Ts> OverloadedVisit(Ts...) -> OverloadedVisit<Ts...>;
 
 raw_ostream &operator<<(raw_ostream &OS, const RootElement &Element) {
   const auto Visitor = OverloadedVisit{
-      [&OS](const RootFlags &Flags) { OS << Flags; },
+      [&OS](const dxbc::RootFlags &Flags) { OS << Flags; },
       [&OS](const RootConstants &Constants) { OS << Constants; },
       [&OS](const RootDescriptor &Descriptor) { OS << Descriptor; },
       [&OS](const DescriptorTableClause &Clause) { OS << Clause; },
@@ -366,7 +246,7 @@ void dumpRootElements(raw_ostream &OS, ArrayRef<RootElement> Elements) {
 
 MDNode *MetadataBuilder::BuildRootSignature() {
   const auto Visitor = OverloadedVisit{
-      [this](const RootFlags &Flags) -> MDNode * {
+      [this](const dxbc::RootFlags &Flags) -> MDNode * {
         return BuildRootFlags(Flags);
       },
       [this](const RootConstants &Constants) -> MDNode * {
@@ -396,7 +276,7 @@ MDNode *MetadataBuilder::BuildRootSignature() {
   return MDNode::get(Ctx, GeneratedMetadata);
 }
 
-MDNode *MetadataBuilder::BuildRootFlags(const RootFlags &Flags) {
+MDNode *MetadataBuilder::BuildRootFlags(const dxbc::RootFlags &Flags) {
   IRBuilder<> Builder(Ctx);
   Metadata *Operands[] = {
       MDString::get(Ctx, "RootFlags"),

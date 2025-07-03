@@ -18273,6 +18273,11 @@ static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
 
   if (Func->isImplicitlyInstantiable() || !Func->isUserProvided())
     return true;
+
+  // Lambda conversion operators are never user provided.
+  if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(Func))
+    return isLambdaConversionOperator(Conv);
+
   auto *CCD = dyn_cast<CXXConstructorDecl>(Func);
   return CCD && CCD->getInheritedConstructor();
 }
@@ -20189,6 +20194,9 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
                    llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
   if (SemaRef.OpenMP().isInOpenMPDeclareTargetContext())
     SemaRef.OpenMP().checkDeclIsAllowedInOpenMPTarget(E, D);
+
+  if (SemaRef.getLangOpts().OpenACC)
+    SemaRef.OpenACC().CheckDeclReference(Loc, E, D);
 
   if (VarDecl *Var = dyn_cast<VarDecl>(D)) {
     DoMarkVarDeclReferenced(SemaRef, Loc, Var, E, RefsMinusAssignments);

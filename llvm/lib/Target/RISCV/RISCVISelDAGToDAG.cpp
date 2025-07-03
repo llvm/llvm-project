@@ -879,32 +879,32 @@ void RISCVDAGToDAGISel::selectSF_VC_X_SE(SDNode *Node) {
   auto *LMulSDNode = cast<ConstantSDNode>(Node->getOperand(7));
   switch (LMulSDNode->getSExtValue()) {
   case 5:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF8
-                                                  : RISCV::PseudoVC_I_SE_MF8;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_MF8
+                                                  : RISCV::PseudoSF_VC_I_SE_MF8;
     break;
   case 6:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF4
-                                                  : RISCV::PseudoVC_I_SE_MF4;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_MF4
+                                                  : RISCV::PseudoSF_VC_I_SE_MF4;
     break;
   case 7:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_MF2
-                                                  : RISCV::PseudoVC_I_SE_MF2;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_MF2
+                                                  : RISCV::PseudoSF_VC_I_SE_MF2;
     break;
   case 0:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M1
-                                                  : RISCV::PseudoVC_I_SE_M1;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M1
+                                                  : RISCV::PseudoSF_VC_I_SE_M1;
     break;
   case 1:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M2
-                                                  : RISCV::PseudoVC_I_SE_M2;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M2
+                                                  : RISCV::PseudoSF_VC_I_SE_M2;
     break;
   case 2:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M4
-                                                  : RISCV::PseudoVC_I_SE_M4;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M4
+                                                  : RISCV::PseudoSF_VC_I_SE_M4;
     break;
   case 3:
-    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoVC_X_SE_M8
-                                                  : RISCV::PseudoVC_I_SE_M8;
+    Opcode = IntNo == Intrinsic::riscv_sf_vc_x_se ? RISCV::PseudoSF_VC_X_SE_M8
+                                                  : RISCV::PseudoSF_VC_I_SE_M8;
     break;
   }
 
@@ -2915,6 +2915,33 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset,
                          /*IsPrefetch=*/false))
     return true;
+
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
+/// Similar to SelectAddrRegImm, except that the offset restricted for
+/// unsinged nine bits.
+bool RISCVDAGToDAGISel::SelectAddrRegImm9(SDValue Addr, SDValue &Base,
+                                          SDValue &Offset) {
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isUInt<9>(CVal)) {
+      Base = Addr.getOperand(0);
+
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      Offset = CurDAG->getSignedTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
 
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, VT);
