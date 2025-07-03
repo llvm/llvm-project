@@ -614,8 +614,8 @@ public:
   using value_type = _Tp;
 
 #    if _LIBCPP_STD_VER >= 26
-  using iterator       = __wrap_iter<_Tp>;
-  using const_iterator = __wrap_iter<const _Tp>;
+  using iterator       = __wrap_iter<_Tp*>;
+  using const_iterator = __wrap_iter<const _Tp*>;
 #    endif // _LIBCPP_STD_VER >= 26
 
   using __trivially_relocatable _LIBCPP_NODEBUG =
@@ -1012,18 +1012,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iterator begin() {
     if (!this->has_value())
       return end();
-    return iterator(static_cast<_Tp>(this->__get()));
+    return iterator(static_cast<_Tp*>(this->__get()));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const_iterator begin() const {
     if (!this->has_value())
       return end();
-    return const_iterator(static_cast<const _Tp>(this->__get()));
+    return const_iterator(static_cast<const _Tp*>(this->__get()));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() { return iterator(static_cast<_Tp>(nullptr)); }
+  _LIBCPP_HIDE_FROM_ABI constexpr iterator end() { return iterator(static_cast<_Tp*>(nullptr)); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const { return const_iterator(static_cast<const _Tp>(nullptr)); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const_iterator end() const { return const_iterator(static_cast<const _Tp*>(nullptr)); }
 
 #    endif // _LIBCPP_STD_VER >= 26
 
