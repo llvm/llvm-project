@@ -104,9 +104,9 @@ class IRInterpreterTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+    # Works on Windows on Arm, fails on Windows on x64.
+    @skipIf(oslist=["windows"], archs=no_match(["arm64", "aarch64"]), bugnumber="http://llvm.org/pr21765")
     @add_test_categories(["pyapi"])
-    # getpid() is POSIX, among other problems, see bug
-    @expectedFailureAll(oslist=["windows"], bugnumber="http://llvm.org/pr21765")
     def test_ir_interpreter(self):
         self.build_and_run()
 
@@ -136,6 +136,14 @@ class IRInterpreterTestCase(TestBase):
 
         for expression in set_up_expressions:
             self.frame().EvaluateExpression(expression, options)
+
+        func_call = "(int)getpid()"
+        if lldbplatformutil.getPlatform() == "windows":
+            func_call = "(int)GetCurrentProcessId()"
+
+        for expression in expressions:
+            interp_expression = expression
+            jit_expression = func_call + "; " + expression
 
         for expression in expressions:
             interp_expression = expression

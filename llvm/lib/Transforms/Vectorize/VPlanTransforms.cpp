@@ -2152,13 +2152,6 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         VPValue *NewMask = GetNewMask(Red->getCondOp());
         return new VPReductionEVLRecipe(*Red, EVL, NewMask);
       })
-      .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
-        SmallVector<VPValue *> Ops(Sel->operands());
-        Ops.push_back(&EVL);
-        return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
-                                          TypeInfo.inferScalarType(Sel),
-                                          Sel->getDebugLoc());
-      })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
         if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
           assert(PrevEVL && "Fixed-order recurrences require previous EVL");

@@ -85,12 +85,6 @@ MachSymbolData::operator<(const MachSymbolData &RHS) const {
   return Symbol->getName() < RHS.Symbol->getName();
 }
 
-bool MachObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  MCFixupKindInfo FKI = Asm.getBackend().getFixupKindInfo((MCFixupKind)Kind);
-
-  return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
-}
-
 uint64_t
 MachObjectWriter::getFragmentAddress(const MCAssembler &Asm,
                                      const MCFragment *Fragment) const {
