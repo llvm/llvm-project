@@ -9566,18 +9566,22 @@ bool SpecialMemberDeletionInfo::shouldDeleteForSubobjectCall(
       }
     }
 
-    Sema::SpecialMemberOverloadResult SMOR =
-        S.LookupSpecialMember(dyn_cast<CXXRecordDecl>(Parent),
-                              CXXSpecialMemberKind::DefaultConstructor, false,
-                              false, false, false, false);
-    if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Success) {
-      CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(SMOR.getMethod());
-      if (Ctor->isTrivial()) {
-        return false;
-      }
+    auto ParentDecl = dyn_cast<CXXRecordDecl>(Parent);
+    if (ParentDecl->getDefinition() && !ParentDecl->isDependentContext() &&
+        !ParentDecl->isBeingDefined()) {
+      Sema::SpecialMemberOverloadResult SMOR = S.LookupSpecialMember(
+          ParentDecl, CXXSpecialMemberKind::DefaultConstructor, false, false,
+          false, false, false);
+      if (SMOR.getKind() == Sema::SpecialMemberOverloadResult::Success) {
+        CXXConstructorDecl *Ctor =
+            dyn_cast<CXXConstructorDecl>(SMOR.getMethod());
+        if (Ctor->isTrivial()) {
+          return false;
+        }
 
-      if (!Ctor->isUserProvided() && !Field->hasInClassInitializer()) {
-        return false;
+        if (!Ctor->isUserProvided() && !Field->hasInClassInitializer()) {
+          return false;
+        }
       }
     }
   }
