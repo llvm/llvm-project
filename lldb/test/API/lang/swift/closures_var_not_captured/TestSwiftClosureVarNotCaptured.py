@@ -135,6 +135,21 @@ class TestSwiftClosureVarNotCaptured(TestBase):
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me_static")
 
+        for kind in ["getter", "setter"]:
+            lldbutil.continue_to_source_breakpoint(
+                self,
+                process,
+                f"break_class_computed_property_{kind}",
+                lldb.SBFileSpec("main.swift"),
+            )
+            check_not_captured_error(
+                self,
+                thread.frames[0],
+                "find_me",
+                f"MY_CLASS.class_computed_property.{kind}",
+            )
+            check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
+
     @swiftTest
     def test_ctor_struct_closure(self):
         self.build()
@@ -163,6 +178,21 @@ class TestSwiftClosureVarNotCaptured(TestBase):
             "static MY_STRUCT.static_func(input_static:)",
         )
         check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me_static")
+
+        for kind in ["getter", "setter"]:
+            lldbutil.continue_to_source_breakpoint(
+                self,
+                process,
+                f"break_struct_computed_property_{kind}",
+                lldb.SBFileSpec("main.swift"),
+            )
+            check_not_captured_error(
+                self,
+                thread.frames[0],
+                "find_me",
+                f"MY_STRUCT.struct_computed_property.{kind}",
+            )
+            check_no_enhanced_diagnostic(self, thread.frames[0], "dont_find_me")
 
     @swiftTest
     def test_ctor_enum_closure(self):
