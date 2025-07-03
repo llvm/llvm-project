@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This file provides the interface for LLVM's Packed Integer Combine pass.
+/// This file implements the interface for LLVM's Packed Integer Combine pass.
 /// This pass tries to treat integers as packed chunks of individual bytes,
 /// and leverage this to coalesce needlessly fragmented
 /// computations.
@@ -24,21 +24,11 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Scalar.h"
+#include <variant>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "packedintcombine"
-
-static cl::opt<unsigned> MaxCollectionIterations(
-    "packedint-max-iterations",
-    cl::desc("Maximum number of iterations to isolate final packed "
-             "instructions. Set to 0 to iterate until convergence."),
-    cl::init(2), cl::Hidden);
-
-static cl::opt<bool>
-    AggressiveRewriting("packedint-aggressive-rewriter",
-                        cl::desc("Aggressively rewrite packed instructions."),
-                        cl::init(false), cl::Hidden);
+#define DEBUG_TYPE "packed-integer-combine"
 
 namespace {
 
@@ -101,10 +91,10 @@ public:
     else
       Base->printAsOperand(ROS, false);
 
-    ROS << "[" << Integer << "]";
+    ROS << '[' << Integer << ']';
 
     if (NewLine)
-      ROS << "\n";
+      ROS << '\n';
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs(), true); }
@@ -128,7 +118,7 @@ struct ByteLayout {
 };
 
 /// Interpret the given type as a number of packed bytes, if possible.
-static std::optional<ByteLayout> tryGetByteLayout(const Type *Ty) {
+static std::optional<ByteLayout> getByteLayout(const Type *Ty) {
   unsigned IntBitWidth, NumElts;
   if (const auto *IntTy = dyn_cast<IntegerType>(Ty)) {
     IntBitWidth = IntTy->getBitWidth();
@@ -148,13 +138,6 @@ static std::optional<ByteLayout> tryGetByteLayout(const Type *Ty) {
   return ByteLayout{IntBitWidth / Byte::BitWidth, NumElts};
 }
 
-/// Interpret the given type as a number of backed bytes (aborts if impossible).
-static ByteLayout getByteLayout(const Type *Ty) {
-  const std::optional<ByteLayout> Layout = tryGetByteLayout(Ty);
-  assert(Layout);
-  return *Layout;
-}
-
 /// A convenience class for combining Byte instances obtained from the same base
 /// value, and with a common relative offset, which can hence be obtained
 /// simultaneously.
@@ -167,7 +150,7 @@ struct CoalescedBytes {
   ///
   /// For instance, if bytes 3, 4, 5 of some value %val are coalesced to provide
   /// bytes 0, 1, 2 of the target %tgt, then ShrByteOffset = 3.
-  signed SignedShrByteOffset;
+  int SignedShrByteOffset;
   /// The bitmask identifying which bytes of the target value are covered by
   /// these coalesced bytes.
   ///
@@ -176,12 +159,12 @@ struct CoalescedBytes {
   /// be set, corresponding to the first three bits of %tgt.
   SmallBitVector Mask;
 
-  explicit CoalescedBytes(Value &Base, signed Offset, SmallBitVector Mask)
+  explicit CoalescedBytes(Value &Base, int Offset, SmallBitVector Mask)
       : Base(&Base), SignedShrByteOffset(Offset), Mask(Mask) {}
-  explicit CoalescedBytes(Value &Base, signed Offset, unsigned NumBytes)
+  explicit CoalescedBytes(Value &Base, int Offset, unsigned NumBytes)
       : Base(&Base), SignedShrByteOffset(Offset), Mask(NumBytes) {}
 
-  bool alignsWith(Value *V, signed VOffset) const {
+  bool alignsWith(Value *V, int VOffset) const {
     return Base == V && SignedShrByteOffset == VOffset;
   }
 
@@ -206,16 +189,16 @@ struct CoalescedBytes {
     for (unsigned Idx = 0; Idx < Mask.size(); ++Idx) {
       if (Mask.test(Idx)) {
         Base->printAsOperand(ROS, false);
-        ROS << "[" << (static_cast<int>(Idx) + SignedShrByteOffset) << "]";
+        ROS << '[' << (static_cast<int>(Idx) + SignedShrByteOffset) << ']';
       } else
         ROS << 0;
 
       ROS << "; ";
     }
-    ROS << "}";
+    ROS << '}';
 
     if (NewLine)
-      ROS << "\n";
+      ROS << '\n';
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs(), true); }
@@ -254,67 +237,23 @@ using ByteVector = SmallVector<ByteUse, 8>;
 
 /// The decomposition of an IR value into its individual bytes, tracking where
 /// each byte is obtained.
-class ByteDefinition {
-  /// Enum classifying what Ptr points to.
-  enum ByteType : uint8_t {
-    /// Ptr's value is undefined.
-    INVALID,
-    /// The byte definition is given by a ByteVector, which is referenced (but
-    /// not captured) by Ptr.
-    VECTOR,
-    /// The bytes are obtained from a (currently opaque) IR value, held by Ptr.
-    VALUE,
-    /// The bytes are obtained from a constant integer, held by Ptr.
-    CONST_INT,
-    /// The bytes are obtained from a constant vector of integers, held by Ptr.
-    CONST_VEC,
-  };
-
-  ByteType DefType;
-  void *Ptr;
+struct ByteDefinition {
+  std::variant<std::nullopt_t, ByteVector *, Value *> Ptr;
   ByteLayout Layout;
-  ByteDefinition(ByteType DefType, void *Ptr, ByteLayout Layout)
-      : DefType(DefType), Ptr(Ptr), Layout(Layout) {}
 
 public:
   /// Indicate that a value cannot be decomposed into bytes in a known way.
-  static ByteDefinition invalid() { return {INVALID, nullptr, {0, 0}}; }
+  static ByteDefinition invalid() { return {std::nullopt, {0, 0}}; }
   /// Indicate that a value's bytes are known, and track their producers.
   static ByteDefinition vector(ByteVector &Ref, ByteLayout Layout) {
-    return {VECTOR, &Ref, Layout};
+    return {&Ref, Layout};
   }
   /// Indicate that a value's bytes are opaque.
   static ByteDefinition value(Value &V) {
-    return {VALUE, &V, getByteLayout(V.getType())};
-  }
-  /// Indicate that the bytes come from a constant integer.
-  static ByteDefinition constInt(ConstantInt &Int) {
-    return {CONST_INT, &Int, getByteLayout(Int.getType())};
-  }
-  /// Indicate that the bytes come from a constant vector of integers.
-  static ByteDefinition constVec(Constant &Vec) {
-    assert(Vec.getType()->isVectorTy());
-    return {CONST_VEC, &Vec, getByteLayout(Vec.getType())};
+    return {&V, *getByteLayout(V.getType())};
   }
 
-  ByteVector &getVector() const {
-    assert(DefType == VECTOR);
-    return *static_cast<ByteVector *>(Ptr);
-  }
-  Value &getValue() const {
-    assert(DefType == VALUE);
-    return *static_cast<Value *>(Ptr);
-  }
-  ConstantInt &getConstInt() const {
-    assert(DefType == CONST_INT);
-    return *static_cast<ConstantInt *>(Ptr);
-  }
-  Constant &getConstVec() const {
-    assert(DefType == CONST_VEC);
-    return *static_cast<Constant *>(Ptr);
-  }
-
-  bool isValid() const { return DefType != INVALID; }
+  bool isValid() const { return !std::holds_alternative<std::nullopt_t>(Ptr); }
 
   /// Return true iff the byte definition is valid.
   operator bool() const { return isValid(); }
@@ -322,62 +261,65 @@ public:
   /// Get the definition of the byte at the specified byte offset, where 0 is
   /// the least significant byte.
   Byte getByte(unsigned Idx) const {
-    switch (DefType) {
-    default:
-      llvm_unreachable("Invalid byte definition");
-    case VECTOR:
-      return getVector()[Idx].getByte();
-    case VALUE:
-      return Byte(getValue(), Idx);
-    case CONST_INT:
-      return Byte(getConstInt().getValue().extractBitsAsZExtValue(
-          Byte::BitWidth, Idx * Byte::BitWidth));
-    case CONST_VEC: {
-      const auto &Vec = getConstVec();
-      const ByteLayout Layout = getByteLayout(Vec.getType());
-      const unsigned VecIdx = Idx / Layout.NumBytesPerElement;
-      const unsigned EltIdx = Idx % Layout.NumBytesPerElement;
+    struct Visitor {
+      unsigned Idx;
 
-      Constant *Elt = Vec.getAggregateElement(VecIdx);
-      if (const auto *Int = dyn_cast<ConstantInt>(Elt))
-        return Byte(Int->getValue().extractBitsAsZExtValue(
-            Byte::BitWidth, EltIdx * Byte::BitWidth));
+      Byte operator()(std::nullopt_t) {
+        llvm_unreachable("Invalid byte definition");
+      }
+      Byte operator()(ByteVector *BV) { return (*BV)[Idx].getByte(); }
+      Byte operator()(Value *V) {
+        if (auto *Int = dyn_cast<ConstantInt>(V))
+          return Byte(Int->getValue().extractBitsAsZExtValue(
+              Byte::BitWidth, Idx * Byte::BitWidth));
 
-      return Byte(*Elt, EltIdx);
-    }
-    }
+        if (V->getType()->isVectorTy()) {
+          if (auto *Vec = dyn_cast<Constant>(V)) {
+            const ByteLayout Layout = *getByteLayout(Vec->getType());
+            const unsigned VecIdx = Idx / Layout.NumBytesPerElement;
+            const unsigned EltIdx = Idx % Layout.NumBytesPerElement;
+
+            if (Constant *Elt = Vec->getAggregateElement(VecIdx)) {
+              if (const auto *Int = dyn_cast<ConstantInt>(Elt))
+                return Byte(Int->getValue().extractBitsAsZExtValue(
+                    Byte::BitWidth, EltIdx * Byte::BitWidth));
+
+              return Byte(*Elt, EltIdx);
+            }
+          }
+        }
+
+        return Byte(*V, Idx);
+      }
+    };
+
+    return std::visit(Visitor{Idx}, Ptr);
   }
 
   const ByteLayout &getLayout() const { return Layout; }
 
   void print(raw_ostream &ROS, bool NewLine = true) const {
-    switch (DefType) {
-    default:
-      ROS << "[INVALID]";
-      break;
-    case VECTOR: {
-      ByteVector &BV = getVector();
-      ROS << "{ ";
-      for (unsigned ByteIdx = 0; ByteIdx < BV.size(); ++ByteIdx)
-        ROS << ByteIdx << ": " << BV[ByteIdx].getByte() << "; ";
-      ROS << "}";
-      break;
-    }
-    case VALUE:
-      ROS << "(";
-      getValue().printAsOperand(ROS);
-      ROS << ")[0:" << Layout.getNumBytes() << "]";
-      break;
-    case CONST_INT:
-      ROS << getConstInt();
-      break;
-    case CONST_VEC:
-      ROS << getConstVec();
-      break;
-    }
+    struct Visitor {
+      raw_ostream &ROS;
+      const ByteLayout &Layout;
 
+      void operator()(std::nullopt_t) { ROS << "[INVALID]"; }
+      void operator()(ByteVector *BV) {
+        ROS << "{ ";
+        for (unsigned ByteIdx = 0; ByteIdx < BV->size(); ++ByteIdx)
+          ROS << ByteIdx << ": " << (*BV)[ByteIdx].getByte() << "; ";
+        ROS << '}';
+      }
+      void operator()(Value *V) {
+        ROS << '(';
+        V->printAsOperand(ROS);
+        ROS << ")[0:" << Layout.getNumBytes() << ']';
+      }
+    };
+
+    std::visit(Visitor{ROS, Layout}, Ptr);
     if (NewLine)
-      ROS << "\n";
+      ROS << '\n';
   }
 
   LLVM_DUMP_METHOD void dump() const { print(errs(), true); }
@@ -415,7 +357,6 @@ public:
   // Visitation implementations return `true` iff a new byte definition was
   // successfully constructed.
 
-  ByteVector visitAdd(BinaryOperator &I);
   ByteVector visitAnd(BinaryOperator &I);
   ByteVector visitOr(BinaryOperator &I);
   ByteVector visitXor(BinaryOperator &I);
@@ -455,47 +396,18 @@ public:
 
   /// Iterate over all instructions in a function over several passes to
   /// identify all final values and their byte definitions.
-  std::vector<Instruction *> collectPIICandidates(Function &F);
+  std::vector<Instruction *>
+  collectPIICandidates(Function &F, unsigned MaxCollectionIterations);
 };
 
-ByteVector ByteExpander::visitAdd(BinaryOperator &I) {
-  const ByteDefinition LhsDef =
-      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
-  const ByteDefinition RhsDef =
-      getByteDefinitionIfIntermediateOperand(I.getOperand(1));
-  if (!LhsDef || !RhsDef)
-    return {};
-
-  const ByteLayout &Layout = LhsDef.getLayout();
-  const unsigned NumBytes = Layout.getNumBytes();
-
-  ByteVector BV;
-  BV.reserve(NumBytes);
-
-  for (unsigned ByteIdx = 0; ByteIdx < NumBytes; ++ByteIdx) {
-    const Byte Lhs = LhsDef.getByte(ByteIdx);
-    const Byte Rhs = RhsDef.getByte(ByteIdx);
-
-    const bool LhsIsZero = Lhs.isConstant() && Lhs.getConstant() == 0;
-    const bool RhsIsZero = Rhs.isConstant() && Rhs.getConstant() == 0;
-    if (LhsIsZero)
-      BV.emplace_back(Rhs, RhsIsZero ? ByteUse::AllOperands : 1);
-    else if (RhsIsZero)
-      BV.emplace_back(Lhs, 0);
-    else
-      return {};
-  }
-
-  assert(BV.size() == NumBytes);
-  return BV;
-}
-
 ByteVector ByteExpander::visitAnd(BinaryOperator &I) {
-  const ByteDefinition LhsDef =
-      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
   const ByteDefinition RhsDef =
       getByteDefinitionIfIntermediateOperand(I.getOperand(1));
-  if (!LhsDef || !RhsDef)
+  if (!RhsDef)
+    return {};
+  const ByteDefinition LhsDef =
+      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
+  if (!LhsDef)
     return {};
 
   const ByteLayout &Layout = LhsDef.getLayout();
@@ -546,11 +458,13 @@ ByteVector ByteExpander::visitAnd(BinaryOperator &I) {
 }
 
 ByteVector ByteExpander::visitOr(BinaryOperator &I) {
-  const ByteDefinition LhsDef =
-      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
   const ByteDefinition RhsDef =
       getByteDefinitionIfIntermediateOperand(I.getOperand(1));
-  if (!LhsDef || !RhsDef)
+  if (!RhsDef)
+    return {};
+  const ByteDefinition LhsDef =
+      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
+  if (!LhsDef)
     return {};
 
   const ByteLayout &Layout = LhsDef.getLayout();
@@ -598,11 +512,13 @@ ByteVector ByteExpander::visitOr(BinaryOperator &I) {
 }
 
 ByteVector ByteExpander::visitXor(BinaryOperator &I) {
-  const ByteDefinition LhsDef =
-      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
   const ByteDefinition RhsDef =
       getByteDefinitionIfIntermediateOperand(I.getOperand(1));
-  if (!LhsDef || !RhsDef)
+  if (!RhsDef)
+    return {};
+  const ByteDefinition LhsDef =
+      getByteDefinitionIfIntermediateOperand(I.getOperand(0));
+  if (!LhsDef)
     return {};
 
   const ByteLayout &Layout = LhsDef.getLayout();
@@ -629,16 +545,16 @@ ByteVector ByteExpander::visitXor(BinaryOperator &I) {
 }
 
 ByteVector ByteExpander::visitShl(BinaryOperator &I) {
+  const auto *Const = dyn_cast<Constant>(I.getOperand(1));
+  if (!Const)
+    return {};
+
   const ByteDefinition BaseDef =
       getByteDefinitionIfIntermediateOperand(I.getOperand(0));
   if (!BaseDef)
     return {};
 
   const unsigned NumBytes = BaseDef.getLayout().getNumBytes();
-
-  const auto *Const = dyn_cast<Constant>(I.getOperand(1));
-  if (!Const)
-    return {};
 
   if (isa<ConstantInt>(Const)) {
     const unsigned ShAmt = Const->getUniqueInteger().getLimitedValue();
@@ -683,16 +599,16 @@ ByteVector ByteExpander::visitShl(BinaryOperator &I) {
 }
 
 ByteVector ByteExpander::visitLShr(BinaryOperator &I) {
+  const auto *Const = dyn_cast<Constant>(I.getOperand(1));
+  if (!Const)
+    return {};
+
   const ByteDefinition BaseDef =
       getByteDefinitionIfIntermediateOperand(I.getOperand(0));
   if (!BaseDef)
     return {};
 
   const unsigned NumBytes = BaseDef.getLayout().getNumBytes();
-
-  const auto *Const = dyn_cast<Constant>(I.getOperand(1));
-  if (!Const)
-    return {};
 
   if (isa<ConstantInt>(Const)) {
     const unsigned ShAmt = Const->getUniqueInteger().getLimitedValue();
@@ -739,12 +655,12 @@ ByteVector ByteExpander::visitLShr(BinaryOperator &I) {
 }
 
 ByteVector ByteExpander::visitTruncInst(TruncInst &I) {
-  const std::optional<ByteLayout> Layout = tryGetByteLayout(I.getType());
+  const std::optional<ByteLayout> Layout = getByteLayout(I.getType());
   if (!Layout)
     return {};
 
   const std::optional<ByteLayout> SrcLayout =
-      tryGetByteLayout(I.getOperand(0)->getType());
+      getByteLayout(I.getOperand(0)->getType());
   if (!SrcLayout)
     return {};
 
@@ -768,7 +684,7 @@ ByteVector ByteExpander::visitTruncInst(TruncInst &I) {
 }
 
 ByteVector ByteExpander::visitZExtInst(ZExtInst &I) {
-  const std::optional<ByteLayout> Layout = tryGetByteLayout(I.getType());
+  const std::optional<ByteLayout> Layout = getByteLayout(I.getType());
   if (!Layout)
     return {};
 
@@ -798,7 +714,7 @@ ByteVector ByteExpander::visitZExtInst(ZExtInst &I) {
 }
 
 ByteVector ByteExpander::visitBitCastInst(BitCastInst &I) {
-  const std::optional<ByteLayout> Layout = tryGetByteLayout(I.getType());
+  const std::optional<ByteLayout> Layout = getByteLayout(I.getType());
   if (!Layout)
     return {};
 
@@ -875,7 +791,7 @@ ByteVector ByteExpander::visitInsertElementInst(InsertElementInst &I) {
 }
 
 ByteVector ByteExpander::visitShuffleVectorInst(ShuffleVectorInst &I) {
-  const std::optional<ByteLayout> Layout = tryGetByteLayout(I.getType());
+  const std::optional<ByteLayout> Layout = getByteLayout(I.getType());
   if (!Layout)
     return {};
 
@@ -961,15 +877,9 @@ ByteVector *ByteExpander::expandByteDefinition(Value *V) {
 }
 
 ByteDefinition ByteExpander::getByteDefinition(Value *V, bool ExpandDef) {
-  const std::optional<ByteLayout> Layout = tryGetByteLayout(V->getType());
+  const std::optional<ByteLayout> Layout = getByteLayout(V->getType());
   if (!Layout)
     return ByteDefinition::invalid();
-
-  if (auto *ConstInt = dyn_cast<ConstantInt>(V))
-    return ByteDefinition::constInt(*ConstInt);
-  if (auto *Const = dyn_cast<Constant>(V))
-    if (Const->getType()->isVectorTy())
-      return ByteDefinition::constVec(*Const);
 
   if (ExpandDef)
     if (ByteVector *BV = expandByteDefinition(V))
@@ -986,7 +896,7 @@ bool ByteExpander::checkIfIntermediate(Value *V, bool IsOperand) {
   if (isa<Constant>(V))
     return true;
 
-  /// Short-circuit check.
+  // Short-circuit check.
   if (IsOperand && V->hasOneUse())
     return true;
 
@@ -997,13 +907,14 @@ bool ByteExpander::checkIfIntermediate(Value *V, bool IsOperand) {
   return Definitions.contains(*FU.begin());
 }
 
-std::vector<Instruction *> ByteExpander::collectPIICandidates(Function &F) {
+std::vector<Instruction *>
+ByteExpander::collectPIICandidates(Function &F,
+                                   unsigned MaxCollectionIterations) {
   std::vector<Instruction *> PackedIntInsts;
-  LLVM_DEBUG(dbgs() << "PICP: Entering function " << F.getName() << "\n");
 
   unsigned NumIterations = 1;
   for (;;) {
-    LLVM_DEBUG(dbgs() << "PICP: Iteration " << NumIterations << "\n");
+    LLVM_DEBUG(dbgs() << "PICP: Iteration " << NumIterations << '\n');
     bool Converged = true;
 
     std::vector<Instruction *> CollectedInsts;
@@ -1034,7 +945,7 @@ std::vector<Instruction *> ByteExpander::collectPIICandidates(Function &F) {
         LLVM_DEBUG({
           dbgs() << "PICP: Updating definition: ";
           I.printAsOperand(dbgs());
-          dbgs() << " = " << getByteDefinition(&I) << "\n";
+          dbgs() << " = " << getByteDefinition(&I) << '\n';
         });
       }
     }
@@ -1056,7 +967,7 @@ std::vector<Instruction *> ByteExpander::collectPIICandidates(Function &F) {
     ++NumIterations;
   }
 
-  LLVM_DEBUG(dbgs() << "PICP: Total iterations: " << NumIterations << "\n");
+  LLVM_DEBUG(dbgs() << "PICP: Total iterations: " << NumIterations << '\n');
   return PackedIntInsts;
 }
 
@@ -1203,7 +1114,7 @@ class BytePackFolder {
     LLVM_DEBUG({
       dbgs() << "PICP [";
       TargetInst->printAsOperand(dbgs());
-      dbgs() << "]: Queuing cast " << *CI << "\n";
+      dbgs() << "]: Queuing cast " << *CI << '\n';
     });
     return CI;
   }
@@ -1216,7 +1127,7 @@ class BytePackFolder {
     LLVM_DEBUG({
       dbgs() << "PICP [";
       TargetInst->printAsOperand(dbgs());
-      dbgs() << "]: Queuing inst " << *I << "\n";
+      dbgs() << "]: Queuing inst " << *I << '\n';
     });
     return I;
   }
@@ -1346,7 +1257,7 @@ class BytePackFolder {
 
     const unsigned NumTargetBytes = Layout.getNumBytes();
     Value *V = CB.Base;
-    const unsigned NumSrcBytes = getByteLayout(V->getType()).getNumBytes();
+    const unsigned NumSrcBytes = getByteLayout(V->getType())->getNumBytes();
     const StringRef &Name = V->getName();
 
     // Transformation: shr -> trunc -> mask -> zext -> shl
@@ -1418,7 +1329,7 @@ class BytePackFolder {
     const unsigned NumTargetBytes = Layout.getNumBytes();
     Value *V = CB.Base;
     const StringRef &Name = V->getName();
-    ByteLayout VecLayout = getByteLayout(V->getType());
+    ByteLayout VecLayout = *getByteLayout(V->getType());
 
     // For sub-element accesses, try to subdivide the vector into smaller
     // elements.
@@ -1431,7 +1342,7 @@ class BytePackFolder {
       auto *NewTy = FixedVectorType::get(TargetIntTy, VecLayout.NumVecElements *
                                                           SplitFactor);
       V = pushCast(Instruction::BitCast, V, NewTy);
-      VecLayout = getByteLayout(V->getType());
+      VecLayout = *getByteLayout(V->getType());
     }
 
     // Give up if bytes are obtained from a strange offset.
@@ -1526,7 +1437,7 @@ class BytePackFolder {
     auto *TargetVecTy = cast<FixedVectorType>(TargetInst->getType());
     Type *TargetEltTy = TargetVecTy->getElementType();
 
-    const ByteLayout SrcLayout = getByteLayout(CB.Base->getType());
+    const ByteLayout SrcLayout = *getByteLayout(CB.Base->getType());
     Value *V = CB.Base;
     const StringRef &Name = V->getName();
 
@@ -1602,7 +1513,7 @@ class BytePackFolder {
 
 public:
   BytePackFolder(Instruction *TargetV)
-      : TargetInst(TargetV), Layout(getByteLayout(TargetV->getType())),
+      : TargetInst(TargetV), Layout(*getByteLayout(TargetV->getType())),
         VectorAlignedPack(PartialBytePack::invalid()) {}
 
   ~BytePackFolder() {
@@ -1612,7 +1523,7 @@ public:
       LLVM_DEBUG({
         dbgs() << "PICP [";
         TargetInst->printAsOperand(dbgs());
-        dbgs() << "]: Dequeuing cast " << *I << "\n";
+        dbgs() << "]: Dequeuing cast " << *I << '\n';
       });
       I->replaceAllUsesWith(PoisonValue::get(I->getType()));
       I->deleteValue();
@@ -1622,7 +1533,7 @@ public:
       LLVM_DEBUG({
         dbgs() << "PICP [";
         TargetInst->printAsOperand(dbgs());
-        dbgs() << "]: Dequeuing inst " << *Insts.back() << "\n";
+        dbgs() << "]: Dequeuing inst " << *Insts.back() << '\n';
       });
       Insts.back()->deleteValue();
       Insts.pop_back();
@@ -1632,15 +1543,17 @@ public:
   /// Try to generate instructions for coalescing the given bytes and aligning
   /// them to the target value. Returns true iff this is successful.
   bool pushCoalescedBytes(CoalescedBytes CB) {
-    if (isa<Constant>(CB.Base) && CB.SignedShrByteOffset == 0) {
-      WorkList.emplace_back(CB.Base, CB.Mask);
-      return true;
-    }
+    if (CB.SignedShrByteOffset == 0)
+      if (auto *Const = dyn_cast<Constant>(CB.Base)) {
+        WorkList.emplace_back(
+            ConstantExpr::getBitCast(Const, TargetInst->getType()), CB.Mask);
+        return true;
+      }
 
     LLVM_DEBUG({
       dbgs() << "PICP [";
       TargetInst->printAsOperand(dbgs());
-      dbgs() << "]: Preparing bytes " << CB << "\n";
+      dbgs() << "]: Preparing bytes " << CB << '\n';
     });
     if (isa<FixedVectorType>(TargetInst->getType())) {
       if (isa<FixedVectorType>(CB.Base->getType()))
@@ -1735,8 +1648,9 @@ struct PackedIntInstruction {
 /// If the rewriter is non-aggressive, return nullopt if the rewriting is
 /// determined to be unnecessary.
 static std::optional<SmallVector<CoalescedBytes, 8>>
-getCoalescingOpportunity(Type *Ty, const ByteVector &BV) {
-  const ByteLayout Layout = getByteLayout(Ty);
+getCoalescingOpportunity(Type *Ty, const ByteVector &BV,
+                         bool AggressiveRewriting) {
+  const ByteLayout Layout = *getByteLayout(Ty);
   assert(Layout.getNumBytes() == BV.size() &&
          "Byte definition has unexpected width.");
 
@@ -1761,8 +1675,8 @@ getCoalescingOpportunity(Type *Ty, const ByteVector &BV) {
     } else {
       CoalescedBytes *CB = nullptr;
       Value *Base = B.getBase();
-      const signed Offset =
-          static_cast<signed>(B.getIndex()) - static_cast<signed>(ByteIdx);
+      const int Offset =
+          static_cast<int>(B.getIndex()) - static_cast<int>(ByteIdx);
       for (unsigned CBIdx = 0; CBIdx < CBV.size(); ++CBIdx) {
         if (CBV[CBIdx].alignsWith(Base, Offset)) {
           CB = &CBV[CBIdx];
@@ -1773,7 +1687,7 @@ getCoalescingOpportunity(Type *Ty, const ByteVector &BV) {
             LLVM_DEBUG(dbgs()
                        << "PICP: Bytes " << *CB << " from operand " << OpIdx
                        << " can be coalesced with byte " << B
-                       << " from operand " << BU.getOperandIndex() << "\n");
+                       << " from operand " << BU.getOperandIndex() << '\n');
             OperandsAlreadyCoalesced = false;
           }
         }
@@ -1831,7 +1745,8 @@ getCoalescingOpportunity(Type *Ty, const ByteVector &BV) {
 /// Queue into \p PIIV the set of final values (or operands thereof, if the
 /// rewriter is non-aggressive) which are deemed beneficial to rewrite.
 static void queueRewriting(std::vector<PackedIntInstruction> &PIIV,
-                           Instruction &FinalInst, ByteExpander &BE) {
+                           Instruction &FinalInst, ByteExpander &BE,
+                           bool AggressiveRewriting) {
   SmallVector<Instruction *, 8> WorkList{&FinalInst};
   SmallPtrSet<Instruction *, 8> Seen{&FinalInst};
 
@@ -1844,15 +1759,15 @@ static void queueRewriting(std::vector<PackedIntInstruction> &PIIV,
       // This instruction is beyond the analysis scope of PICP.
       continue;
 
-    LLVM_DEBUG(dbgs() << "PICP rewrite candidate: " << *I << "\n"
+    LLVM_DEBUG(dbgs() << "PICP rewrite candidate: " << *I << '\n'
                       << "             byte pack: " << BE.getByteDefinition(I)
-                      << "\n");
+                      << '\n');
     auto CBV = [&]() -> std::optional<SmallVector<CoalescedBytes, 8>> {
       // Short-circuit check for casts.
       if (!AggressiveRewriting && I->getNumOperands() == 1)
         return std::nullopt;
 
-      return getCoalescingOpportunity(I->getType(), *BV);
+      return getCoalescingOpportunity(I->getType(), *BV, AggressiveRewriting);
     }();
 
     if (!CBV) {
@@ -1868,19 +1783,20 @@ static void queueRewriting(std::vector<PackedIntInstruction> &PIIV,
   } while (!WorkList.empty());
 }
 
-static bool runImpl(Function &F) {
+static bool runImpl(Function &F, PackedIntegerCombineOptions Options) {
   ByteExpander BE;
 
-  std::vector<Instruction *> PIICandidates = BE.collectPIICandidates(F);
+  std::vector<Instruction *> PIICandidates =
+      BE.collectPIICandidates(F, Options.MaxCollectionIterations);
   std::vector<PackedIntInstruction> PIIV;
 
   for (Instruction *I : PIICandidates) {
     if (!BE.checkIfIntermediate(I))
-      queueRewriting(PIIV, *I, BE);
+      queueRewriting(PIIV, *I, BE, Options.AggressiveRewriting);
     else
-      LLVM_DEBUG(dbgs() << "PICP intermediate inst: " << *I << "\n"
+      LLVM_DEBUG(dbgs() << "PICP intermediate inst: " << *I << '\n'
                         << "            final user: "
-                        << **BE.getFinalUsers(I).begin() << "\n");
+                        << **BE.getFinalUsers(I).begin() << '\n');
   }
 
   DenseMap<Instruction *, Value *> InstSubs;
@@ -1888,7 +1804,7 @@ static bool runImpl(Function &F) {
   for (const PackedIntInstruction &PII : PIIV)
     if (Value *V = PII.rewrite(IRB)) {
       LLVM_DEBUG(dbgs() << "PICP rewrite successful for " << *PII.TargetInst
-                        << "\n");
+                        << '\n');
       InstSubs[PII.TargetInst] = V;
     }
 
@@ -1907,12 +1823,15 @@ static bool runImpl(Function &F) {
 }
 
 class PackedIntegerCombineLegacyPass : public FunctionPass {
+  PackedIntegerCombineOptions Options;
+
 public:
   static char ID;
 
-  PackedIntegerCombineLegacyPass() : FunctionPass(ID) {}
+  PackedIntegerCombineLegacyPass(PackedIntegerCombineOptions Options)
+      : FunctionPass(ID), Options(Options) {}
 
-  bool runOnFunction(Function &F) override { return runImpl(F); }
+  bool runOnFunction(Function &F) override { return runImpl(F, Options); }
 };
 char PackedIntegerCombineLegacyPass::ID = 0;
 
@@ -1920,7 +1839,7 @@ char PackedIntegerCombineLegacyPass::ID = 0;
 
 PreservedAnalyses PackedIntegerCombinePass::run(Function &F,
                                                 FunctionAnalysisManager &AM) {
-  if (!runImpl(F))
+  if (!runImpl(F, Options))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -1928,9 +1847,22 @@ PreservedAnalyses PackedIntegerCombinePass::run(Function &F,
   return PA;
 }
 
+void PackedIntegerCombinePass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<PackedIntegerCombinePass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  if (Options.AggressiveRewriting)
+    OS << "aggressive;";
+  OS << "max-iterations=" << Options.MaxCollectionIterations << '>';
+}
+
 INITIALIZE_PASS(PackedIntegerCombineLegacyPass, DEBUG_TYPE,
                 "Packed Integer Combine", false, false)
 
-FunctionPass *llvm::createPackedIntegerCombinePass() {
-  return new PackedIntegerCombineLegacyPass();
+FunctionPass *
+llvm::createPackedIntegerCombinePass(unsigned MaxCollectionIterations,
+                                     bool AggressiveRewriting) {
+  return new PackedIntegerCombineLegacyPass(
+      {MaxCollectionIterations, AggressiveRewriting});
 }

@@ -476,7 +476,6 @@ FUNCTION_PASS("objc-arc", ObjCARCOptPass())
 FUNCTION_PASS("objc-arc-contract", ObjCARCContractPass())
 FUNCTION_PASS("objc-arc-expand", ObjCARCExpandPass())
 FUNCTION_PASS("pa-eval", PAEvalPass())
-FUNCTION_PASS("packedintcombine", PackedIntegerCombinePass())
 FUNCTION_PASS("partially-inline-libcalls", PartiallyInlineLibCallsPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
@@ -628,6 +627,12 @@ FUNCTION_PASS_WITH_PARAMS(
       return MergedLoadStoreMotionPass(Opts);
     },
     parseMergedLoadStoreMotionOptions, "no-split-footer-bb;split-footer-bb")
+FUNCTION_PASS_WITH_PARAMS(
+  "packed-integer-combine", "PackedIntegerCombinePass",
+  [](PackedIntegerCombineOptions Options) {
+    return PackedIntegerCombinePass(Options);
+  },
+  parsePackedIntegerCombineOptions, "max-iterations=N;aggressive")
 FUNCTION_PASS_WITH_PARAMS(
     "print<access-info>", "LoopAccessInfoPrinterPass",
     [](bool AllowPartial) {

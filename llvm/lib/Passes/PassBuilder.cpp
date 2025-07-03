@@ -1170,6 +1170,35 @@ Expected<bool> parseMergedLoadStoreMotionOptions(StringRef Params) {
   return Result;
 }
 
+Expected<PackedIntegerCombineOptions>
+parsePackedIntegerCombineOptions(StringRef Params) {
+  PackedIntegerCombineOptions Options;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("max-iterations=")) {
+      if (ParamName.getAsInteger(0, Options.MaxCollectionIterations))
+        return make_error<StringError>(
+            formatv("invalid max iteration count for PackedIntegerCombine "
+                    "pass: '{}'",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    } else if (ParamName == "aggressive") {
+      Options.AggressiveRewriting = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid argument for PackedIntegerCombinePass: '{}'",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Options;
+}
+
 Expected<GVNOptions> parseGVNOptions(StringRef Params) {
   GVNOptions Result;
   while (!Params.empty()) {

@@ -21,10 +21,26 @@
 
 namespace llvm {
 
+struct PackedIntegerCombineOptions {
+  /// Maximum number of iterations to isolate final packed instructions.
+  unsigned MaxCollectionIterations = 2;
+  /// Aggressively rewrite packed instructions.
+  bool AggressiveRewriting = false;
+};
+
 class PackedIntegerCombinePass
     : public PassInfoMixin<PackedIntegerCombinePass> {
+
+  PackedIntegerCombineOptions Options;
+
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PackedIntegerCombinePass(PackedIntegerCombineOptions Options = {})
+      : Options(Options) {}
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm
