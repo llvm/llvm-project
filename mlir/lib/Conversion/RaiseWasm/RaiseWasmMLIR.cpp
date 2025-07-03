@@ -677,6 +677,46 @@ struct WasmGlobalWithGetGlobalInitConversion
   }
 };
 
+struct WasmMemoryOpConversion : OpConversionPattern<MemOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(MemOp memOp, MemOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = memOp.getLoc();
+    auto bufferType =
+        MemRefType::get({ShapedType::kDynamic}, rewriter.getI8Type());
+    auto bufferPtrType = MemRefType::get({1}, bufferType);
+    auto memPtr = rewriter.replaceOpWithNewOp<memref::GlobalOp>(
+        memOp, memOp.getSymNameAttr(), memOp.getSymVisibilityAttr(),
+        TypeAttr::get(bufferPtrType), /*initialValue*/ rewriter.getUnitAttr(),
+        /*constant*/ UnitAttr{}, /*alignment*/ IntegerAttr{});
+    auto initializerName = (memPtr.getSymName() + "::initializer").str();
+    auto memInitializer = rewriter.create<func::FuncOp>(
+        loc, initializerName, FunctionType::get(getContext(), {}, {}));
+    memInitializer->setAttr(rewriter.getStringAttr("initializer"),
+                            rewriter.getUnitAttr());
+    auto *initializerBody = memInitializer.addEntryBlock();
+    auto sip = rewriter.saveInsertionPoint();
+    rewriter.setInsertionPointToStart(initializerBody);
+    auto memRefPtr = rewriter.create<memref::GetGlobalOp>(
+        loc, MemRefType::get({1}, bufferType), memPtr.getSymName());
+    auto alloc = rewriter.create<memref::AllocOp>(
+        loc,
+        MemRefType::get({memOp.getLimits().getMin()}, rewriter.getI8Type()));
+    auto castOp =
+        rewriter.create<memref::CastOp>(loc, bufferType, alloc.getResult());
+    auto idx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    rewriter.create<memref::StoreOp>(loc, castOp.getResult(),
+                                     memRefPtr.getResult(),
+                                     ValueRange{idx.getResult()});
+    rewriter.create<func::ReturnOp>(loc);
+    rewriter.restoreInsertionPoint(sip);
+    rewriter.create<func::CallOp>(loc, memInitializer);
+    return success();
+  }
+};
+
 inline TypedAttr getInitializerAttr(Type t) {
   assert(t.isIntOrFloat() &&
          "This helper is intended to use with int and float types");
@@ -847,6 +887,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmLtSIOpConversion,
            WasmLtUIOpConversion,
            WasmMaxOpConversion,
+           WasmMemoryOpConversion,
            WasmMinOpConversion,
            WasmMulOpConversion,
            WasmNeOpConversion,
