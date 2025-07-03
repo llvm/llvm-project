@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
+// FIXME: RUN: %clang_cc1 -std=c++2c -x c++ -verify %s
 
 template<typename T> concept True = true;
 template<typename T> concept Foo = True<T*>;
 template<typename T> concept Bar = Foo<T&>;
 template<typename T> requires Bar<T> struct S { };
+// FIXME: GCC rejects: https://gcc.godbolt.org/z/c9G7G6PTx if the specialization is present.
 template<typename T> requires Bar<T> && true struct S<T> { };
 
 template<typename T> concept True2 = sizeof(T) >= 0;
