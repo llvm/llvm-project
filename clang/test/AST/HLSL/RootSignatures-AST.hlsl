@@ -60,7 +60,7 @@
 // CHECK-SAME: ),
 // CHECK-SAME: Sampler(
 // CHECK-SAME:   s0, numDescriptors = 4, space = 1, offset = DescriptorTableOffsetAppend,
-// CHECK-V1_1-SAME:  flags = DescriptorsVolatile
+// CHECK-V1_0-SAME:  flags = DescriptorsVolatile
 // CHECK-V1_1-SAME:  flags = None
 // CHECK-SAME: ),
 // CHECK-SAME: DescriptorTable(
