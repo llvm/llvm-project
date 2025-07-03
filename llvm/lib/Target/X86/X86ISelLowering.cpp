@@ -54801,11 +54801,7 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   SDLoc dl(N);
-
-  unsigned IntBits = VT.getScalarSizeInBits();
-  MVT IntSVT = MVT::getIntegerVT(IntBits);
-  MVT IntVT = MVT::getVectorVT(IntSVT, VT.getSizeInBits() / IntBits);
-
+  MVT IntVT = VT.changeVectorElementTypeToInteger();
   SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
   SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
   unsigned IntOpcode;
