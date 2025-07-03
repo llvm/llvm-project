@@ -142,6 +142,12 @@ New checks
   Finds unscoped (non-class) ``enum`` declarations and suggests using
   ``enum class`` instead.
 
+- New :doc:`modernize-use-concise-preprocessor-directives
+  <clang-tidy/checks/modernize/use-concise-preprocessor-directives>` check.
+
+  Rewrites preprocessor conditions like ``#if defined(MEOW)`` as ``#ifdef MEOW``
+  and ``#elif !defined(MEOW)`` as ``#elifndef MEOW``.
+
 - New :doc:`modernize-use-scoped-lock
   <clang-tidy/checks/modernize/use-scoped-lock>` check.
 

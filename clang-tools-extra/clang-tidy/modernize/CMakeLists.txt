@@ -30,6 +30,7 @@ add_clang_library(clangTidyModernizeModule STATIC
   UnaryStaticAssertCheck.cpp
   UseAutoCheck.cpp
   UseBoolLiteralsCheck.cpp
+  UseConcisePreprocessorDirectivesCheck.cpp
   UseConstraintsCheck.cpp
   UseDefaultMemberInitCheck.cpp
   UseDesignatedInitializersCheck.cpp
