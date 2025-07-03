@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -39,7 +38,8 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
             "frame variable idp", substrs=["idp = 456", "deleter = ", "a = 1", "b = 2"]
         )
         self.expect(
-            "frame variable sdp", substrs=['sdp = "baz"', "deleter = ", "a = 3", "b = 4"]
+            "frame variable sdp",
+            substrs=['sdp = "baz"', "deleter = ", "a = 3", "b = 4"],
         )
 
         self.assertEqual(
