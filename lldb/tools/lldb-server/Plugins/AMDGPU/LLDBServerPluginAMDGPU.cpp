@@ -584,10 +584,5 @@ GPUActions LLDBServerPluginAMDGPU::GetInitializeActions() {
   GPUActions init_actions;
   init_actions.plugin_name = GetPluginName();
 
-  GPUBreakpointInfo bp1;
-  bp1.identifier = "gpu_initialize";
-  bp1.name_info = {"a.out", "gpu_initialize"};
-  bp1.symbol_names.push_back("gpu_shlib_load");
-  init_actions.breakpoints.emplace_back(std::move(bp1));
   return init_actions;
 }
