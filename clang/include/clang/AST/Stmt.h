@@ -202,7 +202,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasInit : 1;
 
-    /// The location of the "if"
+    /// The location of the "if".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t IfLoc : SourceLocation::Bits;
   };
@@ -243,7 +243,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasVar : 1;
 
-    /// The location of the "while"
+    /// The location of the "while".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t WhileLoc : SourceLocation::Bits;
   };
@@ -265,7 +265,7 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     uint64_t : NumStmtBits;
 
-    /// The location of the "for"
+    /// The location of the "for".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t ForLoc : SourceLocation::Bits;
   };
@@ -277,7 +277,7 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     uint64_t : NumStmtBits;
 
-    /// The location of the "goto"
+    /// The location of the "goto".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t GotoLoc : SourceLocation::Bits;
   };
@@ -288,7 +288,7 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     uint64_t : NumStmtBits;
 
-    /// The location of the "continue"
+    /// The location of the "continue".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t ContinueLoc : SourceLocation::Bits;
   };
@@ -299,7 +299,7 @@ protected:
     LLVM_PREFERRED_TYPE(StmtBitfields)
     uint64_t : NumStmtBits;
 
-    /// The location of the "break"
+    /// The location of the "break".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t BreakLoc : SourceLocation::Bits;
   };
@@ -314,7 +314,7 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasNRVOCandidate : 1;
 
-    /// The location of the "return"
+    /// The location of the "return".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t RetLoc : SourceLocation::Bits;
   };
@@ -626,7 +626,6 @@ protected:
     // SourceLocation OperatorLoc;
   };
 
-  // 8 bytes
   class CastExprBitfields {
     friend class CastExpr;
     friend class ImplicitCastExpr;
@@ -699,7 +698,7 @@ protected:
     LLVM_PREFERRED_TYPE(ExprBitfields)
     uint64_t : NumExprBits;
 
-    /// The location of the "_Generic"
+    /// The location of the "_Generic".
     LLVM_PREFERRED_TYPE(SourceLocation)
     uint64_t GenericLoc : SourceLocation::Bits;
   };
@@ -2546,7 +2545,7 @@ class SwitchStmt final : public Stmt,
 
   /// Points to a linked list of case and default statements.
   SwitchCase *FirstCase = nullptr;
-  
+
   SourceLocation LParenLoc;
   SourceLocation RParenLoc;
 

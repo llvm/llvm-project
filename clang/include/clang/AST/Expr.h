@@ -2008,8 +2008,10 @@ class PredefinedExpr final
       private llvm::TrailingObjects<PredefinedExpr, Stmt *> {
   friend class ASTStmtReader;
   friend TrailingObjects;
+
   /// The location of this PredefinedExpr.
   SourceLocation Loc;
+
   // PredefinedExpr is optionally followed by a single trailing
   // "Stmt *" for the predefined identifier. It is present if and only if
   // hasFunctionName() is true and is always a "StringLiteral *".
@@ -6110,6 +6112,7 @@ class GenericSelectionExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
+
   /// The number of association expressions and the index of the result
   /// expression in the case where the generic selection expression is not
   /// result-dependent. The result index is equal to ResultDependentIndex

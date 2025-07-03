@@ -1160,7 +1160,6 @@ public:
 /// };
 /// \endcode
 class CXXThisExpr : public Expr {
-
   CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
       : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
@@ -1573,6 +1572,7 @@ class CXXConstructExpr : public Expr {
 
   /// The number of arguments.
   unsigned NumArgs;
+
   SourceLocation Loc;
   // We would like to stash the arguments of the constructor call after
   // CXXConstructExpr. However CXXConstructExpr is used as a base class of
