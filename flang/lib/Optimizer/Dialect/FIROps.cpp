@@ -106,38 +106,24 @@ static bool verifyTypeParamCount(mlir::Type inType, unsigned numParams) {
   return false;
 }
 
-/// Parser shared by Alloca, Allocmem and OmpTargetAllocmem
+/// Parser shared by Alloca and Allocmem
 /// boolean flag isTargetOp is used to identify omp_target_allocmem
 /// operation ::= %res = (`fir.alloca` | `fir.allocmem`) $in_type
 ///                      ( `(` $typeparams `)` )? ( `,` $shape )?
 ///                      attr-dict-without-keyword
-/// operation ::= %res = (`fir.omp_target_alloca`) $device : devicetype,
-///                      $in_type ( `(` $typeparams `)` )? ( `,` $shape )?
-///                      attr-dict-without-keyword
 template <typename FN>
-static mlir::ParseResult
-parseAllocatableOp(FN wrapResultType, mlir::OpAsmParser &parser,
-                   mlir::OperationState &result, bool isTargetOp = false) {
-  auto &builder = parser.getBuilder();
-  bool hasOperands = false;
-  std::int32_t typeparamsSize = 0;
-  // Parse device number as a new operand
-  if (isTargetOp) {
-    mlir::OpAsmParser::UnresolvedOperand deviceOperand;
-    mlir::Type deviceType;
-    if (parser.parseOperand(deviceOperand) || parser.parseColonType(deviceType))
-      return mlir::failure();
-    if (parser.resolveOperand(deviceOperand, deviceType, result.operands))
-      return mlir::failure();
-    if (parser.parseComma())
-      return mlir::failure();
-  }
+static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
+                                            mlir::OpAsmParser &parser,
+                                            mlir::OperationState &result) {
   mlir::Type intype;
   if (parser.parseType(intype))
     return mlir::failure();
+  auto &builder = parser.getBuilder();
   result.addAttribute("in_type", mlir::TypeAttr::get(intype));
   llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
   llvm::SmallVector<mlir::Type> typeVec;
+  bool hasOperands = false;
+  std::int32_t typeparamsSize = 0;
   if (!parser.parseOptionalLParen()) {
     // parse the LEN params of the derived type. (<params> : <types>)
     if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
@@ -161,19 +147,13 @@ parseAllocatableOp(FN wrapResultType, mlir::OpAsmParser &parser,
       parser.resolveOperands(operands, typeVec, parser.getNameLoc(),
                              result.operands))
     return mlir::failure();
-
   mlir::Type restype = wrapResultType(intype);
   if (!restype) {
     parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
     return mlir::failure();
   }
-  llvm::SmallVector<std::int32_t> segmentSizes;
-  if (isTargetOp)
-    segmentSizes.push_back(1);
-  segmentSizes.push_back(typeparamsSize);
-  segmentSizes.push_back(shapeSize);
-  result.addAttribute("operandSegmentSizes",
-                      builder.getDenseI32ArrayAttr(segmentSizes));
+  result.addAttribute("operandSegmentSizes", builder.getDenseI32ArrayAttr(
+                                                 {typeparamsSize, shapeSize}));
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.addTypeToList(restype, result.types))
     return mlir::failure();
@@ -392,56 +372,6 @@ void fir::AllocMemOp::print(mlir::OpAsmPrinter &p) {
 }
 
 llvm::LogicalResult fir::AllocMemOp::verify() {
-  llvm::SmallVector<llvm::StringRef> visited;
-  if (verifyInType(getInType(), visited, numShapeOperands()))
-    return emitOpError("invalid type for allocation");
-  if (verifyTypeParamCount(getInType(), numLenParams()))
-    return emitOpError("LEN params do not correspond to type");
-  mlir::Type outType = getType();
-  if (!mlir::dyn_cast<fir::HeapType>(outType))
-    return emitOpError("must be a !fir.heap type");
-  if (fir::isa_unknown_size_box(fir::dyn_cast_ptrEleTy(outType)))
-    return emitOpError("cannot allocate !fir.box of unknown rank or type");
-  return mlir::success();
-}
-
-//===----------------------------------------------------------------------===//
-// OmpTargetAllocMemOp
-//===----------------------------------------------------------------------===//
-
-mlir::Type fir::OmpTargetAllocMemOp::getAllocatedType() {
-  return mlir::cast<fir::HeapType>(getType()).getEleTy();
-}
-
-mlir::Type fir::OmpTargetAllocMemOp::getRefTy(mlir::Type ty) {
-  return fir::HeapType::get(ty);
-}
-
-mlir::ParseResult
-fir::OmpTargetAllocMemOp::parse(mlir::OpAsmParser &parser,
-                                mlir::OperationState &result) {
-  return parseAllocatableOp(wrapAllocMemResultType, parser, result, true);
-}
-
-void fir::OmpTargetAllocMemOp::print(mlir::OpAsmPrinter &p) {
-  p << " ";
-  p.printOperand(getDevice());
-  p << " : ";
-  p << getDevice().getType();
-  p << ", ";
-  p << getInType();
-  if (!getTypeparams().empty()) {
-    p << '(' << getTypeparams() << " : " << getTypeparams().getTypes() << ')';
-  }
-  for (auto sh : getShape()) {
-    p << ", ";
-    p.printOperand(sh);
-  }
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {"in_type", "operandSegmentSizes"});
-}
-
-llvm::LogicalResult fir::OmpTargetAllocMemOp::verify() {
   llvm::SmallVector<llvm::StringRef> visited;
   if (verifyInType(getInType(), visited, numShapeOperands()))
     return emitOpError("invalid type for allocation");
