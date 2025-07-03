@@ -294,18 +294,18 @@ def AMDGPU_FatRawBufferCastOp :
     If the value of the memref's offset is not uniform (independent of the lane/thread ID),
     this will lead to substantially decreased performance due to the need for
     a waterfall loop on the base address of the buffer resource.
-    #### Example
-    ```mlir
+
+   #### Example
+   ```mlir
   // Simple cast
 %converted = amdgpu.fat_raw_buffer_cast %src 
   : memref<8xi32> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
-
 // Cast with memory attributes
 %converted = amdgpu.fat_raw_buffer_cast %src validBytes(%valid) 
   cacheSwizzleStride(%swizzle) boundsCheck(false) resetOffset
   : memref<8xi32, strided<[1], offset: ?>> 
     to memref<8xi32, strided<[1]>, #amdgpu.address_space<fat_raw_buffer>>
-    ```
+   ```
   }];
 
   let extraClassDeclaration = [{
@@ -366,15 +366,13 @@ def AMDGPU_RawBufferLoadOp :
     - The cache coherency bits are off
     #### Example
     ```mlir
-  // Load scalar f32 from 1D buffer
-%scalar = amdgpu.raw_buffer_load %src[%idx] : memref<128xf32>, i32 -> f32
-
-// Load vector<4xf32> from 4D buffer
-%vector = amdgpu.raw_buffer_load %src[%idx0, %idx1, %idx2, %idx3] 
-  : memref<128x64x32x16xf32>, i32, i32, i32, i32 -> vector<4xf32>
-
-// Load from scalar buffer
-%value = amdgpu.raw_buffer_load %src[] : memref<f32> -> f32
+    // Load scalar f32 from 1D buffer
+    %scalar = amdgpu.raw_buffer_load %src[%idx] : memref<128xf32>, i32 -> f32
+    // Load vector<4xf32> from 4D buffer
+    %vector = amdgpu.raw_buffer_load %src[%idx0, %idx1, %idx2, %idx3] 
+    : memref<128x64x32x16xf32>, i32, i32, i32, i32 -> vector<4xf32>
+    // Load from scalar buffer
+    %value = amdgpu.raw_buffer_load %src[] : memref<f32> -> f32
     ```
   }];
   let assemblyFormat = [{
@@ -417,15 +415,13 @@ def AMDGPU_RawBufferStoreOp :
     instruction is constructed.
     #### Example
     ```mlir
-  // Store scalar f32 to 1D buffer
-amdgpu.raw_buffer_store %value -> %dst[%idx] : f32 -> memref<128xf32>, i32
-
-// Store vector<4xf32> to 4D buffer
-amdgpu.raw_buffer_store %vec -> %dst[%idx0, %idx1, %idx2, %idx3] 
-  : vector<4xf32> -> memref<128x64x32x16xf32>, i32, i32, i32, i32
-
-// Store to scalar buffer
-amdgpu.raw_buffer_store %value -> %dst[] : f32 -> memref<f32>
+    // Store scalar f32 to 1D buffer
+    amdgpu.raw_buffer_store %value -> %dst[%idx] : f32 -> memref<128xf32>, i32
+    // Store vector<4xf32> to 4D buffer
+    amdgpu.raw_buffer_store %vec -> %dst[%idx0, %idx1, %idx2, %idx3] 
+    : vector<4xf32> -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+    // Store to scalar buffer
+    amdgpu.raw_buffer_store %value -> %dst[] : f32 -> memref<f32>
     ```
   }];
   let assemblyFormat = [{
@@ -469,6 +465,12 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
+    #### Example
+    ```mlir
+    // Atomic compare-swap
+    amdgpu.raw_buffer_atomic_cmpswap %src, %cmp -> %dst[%idx] 
+    : f32 -> memref<128xf32>, i32
+    ```
   }];
   let assemblyFormat = [{
     attr-dict $src `,` $cmp `->` $memref `[` $indices `]`
@@ -508,15 +510,11 @@ def AMDGPU_RawBufferAtomicFaddOp :
 
     See `amdgpu.raw_buffer_load` for a description of how the underlying
     instruction is constructed.
-     #### Example
+    #### Example
     ```mlir
-  // Atomic floating-point add
-amdgpu.raw_buffer_atomic_fadd %value -> %dst[%idx] 
-  : f32 -> memref<128xf32>, i32
-
-// Atomic compare-swap
-amdgpu.raw_buffer_atomic_cmpswap %src, %cmp -> %dst[%idx] 
-  : f32 -> memref<128xf32>, i32
+    // Atomic floating-point add
+    amdgpu.raw_buffer_atomic_fadd %value -> %dst[%idx] 
+    : f32 -> memref<128xf32>, i32
     ```
   }];
   let assemblyFormat = [{
@@ -712,15 +710,15 @@ def AMDGPU_SwizzleBitModeOp : AMDGPU_Op<"swizzle_bitmode",
 
     Supports arbitrary int/float/vector types, which will be repacked to i32 and
     one or more `rocdl.ds_swizzle` ops during lowering.
-  }];
-  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
-  let assemblyFormat = [{
-    $src $and_mask $or_mask $xor_mask attr-dict `:` type($result)
-   #### Example
+    #### Example
     ```mlir
  %result = amdgpu.swizzle_bitmode %src 1 2 4 : f32
     ```
   }];
+  let results = (outs AnyIntegerOrFloatOr1DVector:$result);
+  let assemblyFormat = [{
+    $src $and_mask $or_mask $xor_mask attr-dict `:` type($result)
+    }];
 }
 
 def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
@@ -786,11 +784,10 @@ def AMDGPU_SchedBarrierOp :
     defined by sched_barrier_opts.
     #### Example
     ```mlir
-  // Barrier allowing no dependent instructions
-amdgpu.sched_barrier allow = <none>
-
-// Barrier allowing specific execution units
-amdgpu.sched_barrier allow = <valu|all_vmem>
+    // Barrier allowing no dependent instructions
+    amdgpu.sched_barrier allow = <none>
+    // Barrier allowing specific execution units
+    amdgpu.sched_barrier allow = <valu|all_vmem>
     ```
   }];
   let assemblyFormat = [{
