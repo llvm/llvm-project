@@ -22,9 +22,9 @@ static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
                            ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
-  return Operation::create(
-      UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
-      operands, std::nullopt, nullptr, std::nullopt, numRegions);
+  return Operation::create(UnknownLoc::get(context),
+                           OperationName("foo.bar", context), resultTypes,
+                           operands, std::nullopt, nullptr, {}, numRegions);
 }
 
 namespace {
@@ -33,7 +33,7 @@ TEST(OperandStorageTest, NonResizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a non-resizable operation with one operand.
@@ -57,7 +57,7 @@ TEST(OperandStorageTest, Resizable) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -85,7 +85,7 @@ TEST(OperandStorageTest, RangeReplace) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -121,7 +121,7 @@ TEST(OperandStorageTest, MutableRange) {
   Builder builder(&context);
 
   Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value operand = useOp->getResult(0);
 
   // Create a resizable operation with one operand.
@@ -158,8 +158,7 @@ TEST(OperandStorageTest, RangeErase) {
   Builder builder(&context);
 
   Type type = builder.getNoneType();
-  Operation *useOp =
-      createOp(&context, /*operands=*/std::nullopt, {type, type});
+  Operation *useOp = createOp(&context, /*operands=*/{}, {type, type});
   Value operand1 = useOp->getResult(0);
   Value operand2 = useOp->getResult(1);
 
@@ -189,8 +188,8 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   MLIRContext context;
   Builder builder(&context);
 
-  Operation *containerOp = createOp(&context, /*operands=*/std::nullopt,
-                                    /*resultTypes=*/std::nullopt,
+  Operation *containerOp = createOp(&context, /*operands=*/{},
+                                    /*resultTypes=*/{},
                                     /*numRegions=*/1);
   Region &region = containerOp->getRegion(0);
   Block *block = new Block();
@@ -237,7 +236,7 @@ TEST(OperationFormatPrintTest, CanPrintNameAsPrefix) {
   Operation *op = Operation::create(
       NameLoc::get(StringAttr::get(&context, "my_named_loc")),
       OperationName("t.op", &context), builder.getIntegerType(16), {},
-      std::nullopt, nullptr, std::nullopt, 0);
+      std::nullopt, nullptr, {}, 0);
 
   std::string str;
   OpPrintingFlags flags;
