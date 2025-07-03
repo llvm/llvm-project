@@ -537,7 +537,7 @@ We define two modes in which runtime execution can occur:
    directly accessible to the accelerator and it follows the C++ memory model;
 2. **Interposition Mode** - this is a fallback mode for cases where transparent
    on-demand paging is unavailable (e.g. in the Windows OS), which means that
-   memory must be allocated via an accelerator aware mechanism, and some system
+   memory must be allocated via an accelerator aware mechanism, and system
    allocated memory is inaccessible for the accelerator.
 
 The following restrictions imposed on user code apply to both modes:
@@ -545,18 +545,22 @@ The following restrictions imposed on user code apply to both modes:
 1. Pointers to function, and all associated features, such as e.g. dynamic
    polymorphism, cannot be used (directly or transitively) by the user provided
    callable passed to an algorithm invocation;
-2. ``static`` / ``thread`` storage duration variables cannot be used (directly
-   or transitively) in name by the user provided callable;
-3. Only algorithms that are invoked with the ``parallel_unsequenced_policy`` are
+2. ``static`` (except for program-wide unique ones) / ``thread`` storage
+   duration variables cannot be used (directly or transitively) in name by the
+   user provided callable;
+3. User code must be compiled in ``-fgpu-rdc`` mode in order for global /
+   namespace scope variables / program-wide unique ``static`` storage duration
+   variables to be usable in name by the user provided callable;
+4. Only algorithms that are invoked with the ``parallel_unsequenced_policy`` are
    candidates for offload;
-4. Only algorithms that are invoked with iterator arguments that model
+5. Only algorithms that are invoked with iterator arguments that model
    `random_access_iterator <https://en.cppreference.com/w/cpp/iterator/random_access_iterator>`_
    are candidates for offload;
-5. `Exceptions <https://en.cppreference.com/w/cpp/language/exceptions>`_ cannot
+6. `Exceptions <https://en.cppreference.com/w/cpp/language/exceptions>`_ cannot
    be used by the user provided callable;
-6. Dynamic memory allocation (e.g. ``operator new``) cannot be used by the user
+7. Dynamic memory allocation (e.g. ``operator new``) cannot be used by the user
    provided callable;
-7. Selective offload is not possible i.e. it is not possible to indicate that
+8. Selective offload is not possible i.e. it is not possible to indicate that
    only some algorithms invoked with the ``parallel_unsequenced_policy`` are to
    be executed on the accelerator.
 
@@ -602,8 +606,8 @@ The forwarding header is packaged by
 `ROCm <https://rocm.docs.amd.com/en/latest/>`_, and is obtainable by installing
 the `hipstdpar` packege. The list algorithms that can be offloaded is available
 `here <https://github.com/ROCm/roc-stdpar#algorithm-support-status>`_. More
-details are available
-`here <https://rocm.blogs.amd.com/software-tools-optimization/hipstdpar/README.html>`_.
+details are available via the dedicated blog
+`<https://rocm.blogs.amd.com/software-tools-optimization/hipstdpar/README.html>`_.
 
 HIP Specific Elements
 ---------------------
