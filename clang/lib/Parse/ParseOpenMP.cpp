@@ -65,7 +65,7 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
   if (Tok.isAnnotation())
     return OMPD_unknown;
 
-  S = DNP.apply(S, P.getPreprocessor().getSpelling(Tok));
+  S = DNP.consume(S, P.getPreprocessor().getSpelling(Tok));
   if (S == nullptr)
     return OMPD_unknown;
 
@@ -73,7 +73,7 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
     OpenMPDirectiveKind DKind = S->Value;
     Tok = P.getPreprocessor().LookAhead(0);
     if (!Tok.isAnnotation()) {
-      S = DNP.apply(S, P.getPreprocessor().getSpelling(Tok));
+      S = DNP.consume(S, P.getPreprocessor().getSpelling(Tok));
       if (S == nullptr)
         return DKind;
       P.ConsumeToken();
