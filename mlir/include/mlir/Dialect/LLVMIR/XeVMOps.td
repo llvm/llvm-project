@@ -45,7 +45,7 @@ class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 }
 
 class XeVM_Op<string mnemonic, list<Trait> traits = []>
-    : Op<XeVM_Dialect, mnemonic, traits> {
+    : LLVM_OpBase<XeVM_Dialect, mnemonic, traits> {
 
   code extraBaseClassDeclaration = [{
     void printProperties(::mlir::MLIRContext *ctx,

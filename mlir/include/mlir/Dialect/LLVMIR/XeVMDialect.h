@@ -15,14 +15,14 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
-#include <mlir/Dialect/LLVMIR/XeVMOpsEnums.h.inc>
+#include "mlir/Dialect/LLVMIR/XeVMOpsEnums.h.inc"
 
 #define GET_ATTRDEF_CLASSES
-#include <mlir/Dialect/LLVMIR/XeVMOpsAttributes.h.inc>
+#include "mlir/Dialect/LLVMIR/XeVMOpsAttributes.h.inc"
 
 #define GET_OP_CLASSES
-#include <mlir/Dialect/LLVMIR/XeVMOps.h.inc>
+#include "mlir/Dialect/LLVMIR/XeVMOps.h.inc"
 
-#include <mlir/Dialect/LLVMIR/XeVMOpsDialect.h.inc>
+#include "mlir/Dialect/LLVMIR/XeVMOpsDialect.h.inc"
 
 #endif /* MLIR_DIALECT_LLVMIR_XEVMDIALECT_H_ */
