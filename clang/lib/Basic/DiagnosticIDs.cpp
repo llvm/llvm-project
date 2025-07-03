@@ -834,10 +834,7 @@ bool DiagnosticIDs::isUnrecoverable(unsigned DiagID) const {
 
   // Currently we consider all ARC errors except err_arc_may_not_respond as
   // recoverable.
-  if (DiagID == diag::err_arc_may_not_respond)
-    return true;
-
-  if (isARCDiagnostic(DiagID))
+  if (isARCDiagnostic(DiagID) && DiagID != diag::err_arc_may_not_respond)
     return false;
 
   if (isCodegenABICheckDiagnostic(DiagID))
