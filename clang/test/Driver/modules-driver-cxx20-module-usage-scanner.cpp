@@ -105,14 +105,14 @@ module;
 export module A;
 
 //--- comment-line-splice.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver \
 // RUN: %t/comment-line-splice.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK13
 // CHECK13-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 // My comment continues next-line!\
 import A;
 
 //--- comment-line-splice-trailing-whitespace.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver \
 // RUN: %t/comment-line-splice-trailing-whitespace.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK14
 // CHECK14-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 // My comment continues next-line! This backslash has trailing whitespace. -> \   
@@ -136,31 +136,31 @@ export\
   A;
 
 //--- no-module-usage1.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
 // RUN: %t/no-module-usage1.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK17
 // CHECK17-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 auto main() -> int {}
 
 //--- no-module-usage2.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
 // RUN: %t/no-module-usage2.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK18
 // CHECK18-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 moduleStruct{};
 
 //--- no-module-usage3.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
 // RUN: %t/no-module-usage3.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK19
 // CHECK19-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 export_struct{};
 
 //--- no-module-usage-namespace-import.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
 // RUN: %t/no-module-usage-namespace-import.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK20
 // CHECK20-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 import::inner xi = {};
 
 //--- no-module-usage-namespace-module.cpp
-// RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
+// RUN: %clang -std=c++23 -v -ccc-print-phases -fmodules-driver -Rmodules-driver -ccc-print-phases \
 // RUN: %t/no-module-usage-namespace-module.cpp %t/empty.cpp 2>&1 | FileCheck %s --check-prefix=CHECK21
 // CHECK21-NOT: remark: found C++20 module usage in file '{{.*}}' [-Rmodules-driver]
 module::inner yi = {};
