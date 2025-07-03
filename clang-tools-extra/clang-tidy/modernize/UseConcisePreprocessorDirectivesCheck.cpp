@@ -18,7 +18,7 @@ namespace {
 
 class IfPreprocessorCallbacks final : public PPCallbacks {
 public:
-  IfPreprocessorCallbacks(ClangTidyCheck &Check, Preprocessor &PP)
+  IfPreprocessorCallbacks(ClangTidyCheck &Check, const Preprocessor &PP)
       : Check(Check), PP(PP) {}
 
   void If(SourceLocation Loc, SourceRange ConditionRange,
@@ -36,7 +36,7 @@ public:
 private:
   void impl(SourceLocation DirectiveLoc, SourceRange ConditionRange,
             const llvm::StringLiteral (&Replacements)[2]) {
-    StringRef Condition =
+    const StringRef Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
                              PP.getSourceManager(), PP.getLangOpts());
     Lexer Lex(DirectiveLoc, PP.getLangOpts(), Condition.data(),
@@ -73,7 +73,7 @@ private:
 
     if (Tok.isNot(tok::TokenKind::raw_identifier))
       return;
-    StringRef Macro = Tok.getRawIdentifier();
+    const StringRef Macro = Tok.getRawIdentifier();
 
     while (!NoMoreTokens) {
       NoMoreTokens = Lex.LexFromRawLexer(Tok);
