@@ -124,6 +124,104 @@ using WasmTruncOpConversion = OpMappingConversion<TruncOp, math::TruncOp>;
 using WasmSqrtOpConversion = OpMappingConversion<SqrtOp, math::SqrtOp>;
 using WasmWrapOpConversion = OpMappingConversion<WrapOp, arith::TruncIOp>;
 
+template <typename SourceOp, typename TargetOp, typename AttrType,
+          typename ValType, ValType flag>
+struct ComparisonOpConversion : OpConversionPattern<SourceOp> {
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto cmpRes =
+        rewriter
+            .create<TargetOp>(srcOp.getLoc(), rewriter.getI1Type(),
+                              AttrType::get(rewriter.getContext(), flag),
+                              adaptor.getLhs(), adaptor.getRhs())
+            .getResult();
+    rewriter.replaceOpWithNewOp<arith::ExtUIOp>(srcOp, rewriter.getI32Type(),
+                                                cmpRes);
+
+    return success();
+  }
+};
+
+template <typename SourceOp, arith::CmpFPredicate compFlag>
+using FPComparisonConversion =
+    ComparisonOpConversion<SourceOp, arith::CmpFOp, arith::CmpFPredicateAttr,
+                           arith::CmpFPredicate, compFlag>;
+
+template <typename SourceOp, arith::CmpIPredicate compFlag>
+using IntComparisonConversion =
+    ComparisonOpConversion<SourceOp, arith::CmpIOp, arith::CmpIPredicateAttr,
+                           arith::CmpIPredicate, compFlag>;
+
+using WasmLtSIOpConversion =
+    IntComparisonConversion<LtSIOp, arith::CmpIPredicate::slt>;
+using WasmLeSIOpConversion =
+    IntComparisonConversion<LeSIOp, arith::CmpIPredicate::sle>;
+using WasmGtSIOpConversion =
+    IntComparisonConversion<GtSIOp, arith::CmpIPredicate::sgt>;
+using WasmGeSIOpConversion =
+    IntComparisonConversion<GeSIOp, arith::CmpIPredicate::sge>;
+using WasmLtUIOpConversion =
+    IntComparisonConversion<LtUIOp, arith::CmpIPredicate::ult>;
+using WasmLeUIOpConversion =
+    IntComparisonConversion<LeUIOp, arith::CmpIPredicate::ule>;
+using WasmGtUIOpConversion =
+    IntComparisonConversion<GtUIOp, arith::CmpIPredicate::ugt>;
+using WasmGeUIOpConversion =
+    IntComparisonConversion<GeUIOp, arith::CmpIPredicate::uge>;
+using WasmLtOpConversion =
+    FPComparisonConversion<LtOp, arith::CmpFPredicate::OLT>;
+using WasmLeOpConversion =
+    FPComparisonConversion<LeOp, arith::CmpFPredicate::OLE>;
+using WasmGtOpConversion =
+    FPComparisonConversion<GtOp, arith::CmpFPredicate::OGT>;
+using WasmGeOpConversion =
+    FPComparisonConversion<GeOp, arith::CmpFPredicate::OGE>;
+
+template <typename SourceOp, arith::CmpIPredicate IntFlag,
+          arith::CmpFPredicate FloatFlag>
+struct IntFpComparisonOpConversion : OpConversionPattern<SourceOp> {
+  using OpConversionPattern<SourceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value comparisonResult;
+    if (srcOp.getLhs().getType().isInteger())
+      comparisonResult =
+          rewriter
+              .create<arith::CmpIOp>(
+                  srcOp.getLoc(), rewriter.getI1Type(),
+                  arith::CmpIPredicateAttr::get(rewriter.getContext(), IntFlag),
+                  adaptor.getLhs(), adaptor.getRhs())
+              .getResult();
+    else if (srcOp.getLhs().getType().isFloat())
+      comparisonResult =
+          rewriter
+              .create<arith::CmpFOp>(srcOp.getLoc(), rewriter.getI1Type(),
+                                     arith::CmpFPredicateAttr::get(
+                                         rewriter.getContext(), FloatFlag),
+                                     adaptor.getLhs(), adaptor.getRhs())
+              .getResult();
+    else
+      return rewriter.notifyMatchFailure(
+          srcOp.getLoc(), "Unsupported datatype for comparison OP.");
+
+    rewriter.replaceOpWithNewOp<arith::ExtUIOp>(srcOp, rewriter.getI32Type(),
+                                                comparisonResult);
+    return success();
+  }
+};
+
+using WasmEqOpConversion =
+    IntFpComparisonOpConversion<EqOp, arith::CmpIPredicate::eq,
+                                arith::CmpFPredicate::OEQ>;
+using WasmNeOpConversion =
+    IntFpComparisonOpConversion<NeOp, arith::CmpIPredicate::ne,
+                                arith::CmpFPredicate::ONE>;
+
 struct WasmCallOpConversion : OpConversionPattern<FuncCallOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -144,6 +242,32 @@ struct WasmConstOpConversion : OpConversionPattern<ConstOp> {
   matchAndRewrite(ConstOp constOp, ConstOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(constOp, constOp.getValue());
+    return success();
+  }
+};
+
+struct WasmEqzOpConversion : OpConversionPattern<EqzOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(EqzOp eqzOp, EqzOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = eqzOp->getLoc();
+    auto zero =
+        rewriter
+            .create<arith::ConstantOp>(
+                loc, rewriter.getIntegerAttr(adaptor.getInput().getType(), 0))
+            .getResult();
+    auto cmpRes = rewriter
+                      .create<arith::CmpIOp>(
+                          loc, rewriter.getI1Type(),
+                          arith::CmpIPredicateAttr::get(
+                              rewriter.getContext(), arith::CmpIPredicate::eq),
+                          adaptor.getInput(), zero)
+                      .getResult();
+    rewriter.replaceOpWithNewOp<arith::ExtUIOp>(eqzOp, rewriter.getI32Type(),
+                                                cmpRes);
+
     return success();
   }
 };
@@ -429,21 +553,36 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmDivFPOpConversion,
            WasmDivSIOpConversion,
            WasmDivUIOpConversion,
+           WasmEqOpConversion,
+           WasmEqzOpConversion,
            WasmExtendSOpConversion,
            WasmExtendUOpConversion,
            WasmFloorOpConversion,
            WasmFuncImportOpConversion,
            WasmFuncOpConversion,
+           WasmGeOpConversion,
+           WasmGeSIOpConversion,
+           WasmGeUIOpConversion,
            WasmGlobalImportOpConverter,
            WasmGlobalWithConstInitConversion,
            WasmGlobalWithGetGlobalInitConversion,
+           WasmGtOpConversion,
+           WasmGtSIOpConversion,
+           WasmGtUIOpConversion,
+           WasmLeOpConversion,
+           WasmLeSIOpConversion,
+           WasmLeUIOpConversion,
            WasmLocalConversion,
            WasmLocalGetConversion,
            WasmLocalSetConversion,
            WasmLocalTeeConversion,
+           WasmLtOpConversion,
+           WasmLtSIOpConversion,
+           WasmLtUIOpConversion,
            WasmMaxOpConversion,
            WasmMinOpConversion,
            WasmMulOpConversion,
+           WasmNeOpConversion,
            WasmNegOpConversion,
            WasmOrOpConversion,
            WasmPopCntOpConversion,
