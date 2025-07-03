@@ -52,10 +52,10 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
@@ -9414,8 +9414,8 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
     // Allow assignments between fixed-length and sizeless SVE vectors.
     if ((LHSType->isSVESizelessBuiltinType() && RHSType->isVectorType()) ||
         (LHSType->isVectorType() && RHSType->isSVESizelessBuiltinType()))
-      if (Context.areCompatibleSveTypes(LHSType, RHSType) ||
-          Context.areLaxCompatibleSveTypes(LHSType, RHSType)) {
+      if (ARM().areCompatibleSveTypes(LHSType, RHSType) ||
+          ARM().areLaxCompatibleSveTypes(LHSType, RHSType)) {
         Kind = CK_BitCast;
         return AssignConvertType::Compatible;
       }

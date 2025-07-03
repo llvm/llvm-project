@@ -518,6 +518,27 @@ bool AArch64FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return false;
 }
 
+/// Should the Frame Pointer be reserved for the current function?
+bool AArch64FrameLowering::isFPReserved(const MachineFunction &MF) const {
+  const TargetMachine &TM = MF.getTarget();
+  const Triple &TT = TM.getTargetTriple();
+
+  // These OSes require the frame chain is valid, even if the current frame does
+  // not use a frame pointer.
+  if (TT.isOSDarwin() || TT.isOSWindows())
+    return true;
+
+  // If the function has a frame pointer, it is reserved.
+  if (hasFP(MF))
+    return true;
+
+  // Frontend has requested to preserve the frame pointer.
+  if (TM.Options.FramePointerIsReserved(MF))
+    return true;
+
+  return false;
+}
+
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
 /// not required, we reserve argument space for call sites in the function
 /// immediately on entry to the current function.  This eliminates the need for
@@ -3934,6 +3955,11 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
       CSStackSize += SpillSize;
   }
 
+  // Save number of saved regs, so we can easily update CSStackSize later to
+  // account for any additional 64-bit GPR saves. Note: After this point
+  // only 64-bit GPRs can be added to SavedRegs.
+  unsigned NumSavedRegs = SavedRegs.count();
+
   // Increase the callee-saved stack size if the function has streaming mode
   // changes, as we will need to spill the value of the VG register.
   // For locally streaming functions, we spill both the streaming and
@@ -3952,8 +3978,9 @@ void AArch64FrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (AFI->hasStackHazardSlotIndex())
     CSStackSize += getStackHazardSize(MF);
 
-  // Save number of saved regs, so we can easily update CSStackSize later.
-  unsigned NumSavedRegs = SavedRegs.count();
+  // If we must call __arm_get_current_vg in the prologue preserve the LR.
+  if (requiresSaveVG(MF) && !Subtarget.hasSVE())
+    SavedRegs.set(AArch64::LR);
 
   // The frame record needs to be created by saving the appropriate registers
   uint64_t EstimatedStackSize = MFI.estimateStackSize(MF);

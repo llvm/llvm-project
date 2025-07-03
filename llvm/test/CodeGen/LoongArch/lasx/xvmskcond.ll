@@ -383,8 +383,7 @@ define i8 @xvmsk_eq_vsel_slt_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) 
 ; CHECK-LABEL: xvmsk_eq_vsel_slt_v8i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvbitsel.v $xr0, $xr2, $xr1, $xr0
+; CHECK-NEXT:    xvor.v $xr0, $xr0, $xr2
 ; CHECK-NEXT:    xvmskltz.w $xr0, $xr0
 ; CHECK-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; CHECK-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
