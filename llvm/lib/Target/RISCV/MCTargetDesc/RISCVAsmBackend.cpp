@@ -815,10 +815,11 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   return false;
 }
 
-void RISCVAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void RISCVAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
                                  bool IsResolved) {
+  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -885,7 +886,6 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  // Create fixup_riscv_align fixup.
   MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN, SMLoc());
 
   uint64_t FixedValue = 0;

@@ -169,7 +169,7 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &) override;
+  bool shouldForceRelocation(const MCFixup &, const MCValue &);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
@@ -687,16 +687,16 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
-// Force relocation when there is a specifier. This might be too conservative -
-// GAS doesn't emit a relocation for call local@plt; local:.
-bool X86AsmBackend::shouldForceRelocation(const MCFixup &,
-                                          const MCValue &Target) {
-  return Target.getSpecifier();
-}
+void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsResolved) {
+  // Force relocation when there is a specifier. This might be too conservative
+  // - GAS doesn't emit a relocation for call local@plt; local:.
+  if (Target.getSpecifier())
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
 
-void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
-                               const MCValue &, MutableArrayRef<char> Data,
-                               uint64_t Value, bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
