@@ -10,6 +10,7 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/LogicalResult.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -124,6 +126,42 @@ void transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 
 LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
     verifyTypeConverter(transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  populateGpuMemorySpaceAttributeConversions(
+      llvmTypeConverter, [](AddressSpace space) {
+        switch (space) {
+        case AddressSpace::Global:
+          return 1;
+        case AddressSpace::Workgroup:
+          return 3;
+        case AddressSpace::Private:
+          return 5;
+        }
+        llvm_unreachable("unknown address space enum value");
+        return 0;
+      });
+  FailureOr<amdgpu::Chipset> maybeChipset =
+      amdgpu::Chipset::parse(getChipset());
+  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  populateGpuToROCDLConversionPatterns(
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+}
+
+LogicalResult
+transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  FailureOr<amdgpu::Chipset> maybeChipset =
+      amdgpu::Chipset::parse(getChipset());
+  if (failed(maybeChipset)) {
+    return emitOpError("Invalid chipset name: " + getChipset());
+  }
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
