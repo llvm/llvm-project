@@ -115,8 +115,8 @@ static inline void clearModule(Module &M) { // TODO: simplify.
     eraseFromModule(*M.ifuncs().begin());
 }
 
-static inline SmallVector<std::reference_wrapper<Use>> collectIndirectableUses(
-  GlobalVariable *G) {
+static inline SmallVector<std::reference_wrapper<Use>>
+collectIndirectableUses(GlobalVariable *G) {
   // We are interested only in use chains that end in an Instruction.
   SmallVector<std::reference_wrapper<Use>> Uses;
 
@@ -127,9 +127,8 @@ static inline SmallVector<std::reference_wrapper<Use>> collectIndirectableUses(
     if (isa<Instruction>(U.getUser()))
       Uses.emplace_back(U);
     else
-      transform(U.getUser()->uses(), std::back_inserter(Tmp), [](auto &&U) {
-        return std::ref(U);
-      });
+      transform(U.getUser()->uses(), std::back_inserter(Tmp),
+                [](auto &&U) { return std::ref(U); });
   }
 
   return Uses;
@@ -153,9 +152,8 @@ static inline GlobalVariable *getIndirectionGlobal(Module *M) {
   // Create an anonymous global which stores a pointer to a pointer, which will
   // be externally initialised by the HIPSTDPAR runtime with the address of the
   // program-wide symbol.
-  Type *PtrTy =
-      PointerType::get(M->getContext(),
-                       M->getDataLayout().getDefaultGlobalsAddressSpace());
+  Type *PtrTy = PointerType::get(
+      M->getContext(), M->getDataLayout().getDefaultGlobalsAddressSpace());
   GlobalVariable *NewG = M->getOrInsertGlobal("", PtrTy);
 
   NewG->setInitializer(PoisonValue::get(NewG->getValueType()));
@@ -166,10 +164,10 @@ static inline GlobalVariable *getIndirectionGlobal(Module *M) {
   return NewG;
 }
 
-static inline Constant *appendIndirectedGlobal(
-    const GlobalVariable *IndirectionTable,
-    SmallVector<Constant *> &SymbolIndirections,
-    GlobalVariable *ToIndirect) {
+static inline Constant *
+appendIndirectedGlobal(const GlobalVariable *IndirectionTable,
+                       SmallVector<Constant *> &SymbolIndirections,
+                       GlobalVariable *ToIndirect) {
   Module *M = ToIndirect->getParent();
 
   auto *InitTy = cast<StructType>(IndirectionTable->getValueType());
@@ -201,8 +199,8 @@ static void fillIndirectionTable(GlobalVariable *IndirectionTable,
   GlobalVariable *Symbols =
       M->getOrInsertGlobal("", ArrayType::get(SymbolTy, SymCnt));
   Symbols->setLinkage(GlobalValue::LinkageTypes::PrivateLinkage);
-  Symbols->setInitializer(ConstantArray::get(ArrayType::get(SymbolTy, SymCnt),
-                                             {Indirections}));
+  Symbols->setInitializer(
+      ConstantArray::get(ArrayType::get(SymbolTy, SymCnt), {Indirections}));
   Symbols->setConstant(true);
 
   Constant *ASCSymbols = ConstantExpr::getAddrSpaceCast(Symbols, SymbolListTy);
@@ -226,7 +224,7 @@ static void replaceWithIndirectUse(const Use &U, const GlobalVariable *G,
     assert((CE->getOpcode() == Instruction::GetElementPtr ||
             CE->getOpcode() == Instruction::AddrSpaceCast ||
             CE->getOpcode() == Instruction::PtrToInt) &&
-            "Only GEP, ASCAST or PTRTOINT constant uses supported!");
+           "Only GEP, ASCAST or PTRTOINT constant uses supported!");
 
     Instruction *NewI = Builder.Insert(CE->getAsInstruction());
     I->replaceUsesOfWith(Op, NewI);
@@ -237,8 +235,8 @@ static void replaceWithIndirectUse(const Use &U, const GlobalVariable *G,
 
   assert(Op == G && "Must reach indirected global!");
 
-  Builder.GetInsertPoint()->setOperand(0, Builder.CreateLoad(G->getType(),
-                                                             IndirectedG));
+  Builder.GetInsertPoint()->setOperand(
+      0, Builder.CreateLoad(G->getType(), IndirectedG));
 }
 
 static inline bool isValidIndirectionTable(GlobalVariable *IndirectionTable) {
@@ -254,7 +252,7 @@ static inline bool isValidIndirectionTable(GlobalVariable *IndirectionTable) {
     OS << " is incorrect.\n";
   } else if (cast<StructType>(Ty)->getNumElements() != 3u) {
     OS << "The Indirection Table must have 3 elements; "
-      << cast<StructType>(Ty)->getNumElements() << " is incorrect.\n";
+       << cast<StructType>(Ty)->getNumElements() << " is incorrect.\n";
   } else if (!isa<IntegerType>(cast<StructType>(Ty)->getStructElementType(0))) {
     OS << "The first element in the Indirection Table must be an integer; ";
     cast<StructType>(Ty)->getStructElementType(0)->print(OS);
@@ -289,8 +287,8 @@ static void indirectGlobals(GlobalVariable *IndirectionTable,
     if (Uses.empty())
       continue;
 
-    Constant *IndirectedGlobal = appendIndirectedGlobal(IndirectionTable,
-                                                        SymbolIndirections, G);
+    Constant *IndirectedGlobal =
+        appendIndirectedGlobal(IndirectionTable, SymbolIndirections, G);
 
     for_each(Uses,
              [=](auto &&U) { replaceWithIndirectUse(U, G, IndirectedGlobal); });
