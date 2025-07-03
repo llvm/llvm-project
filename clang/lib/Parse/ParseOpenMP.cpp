@@ -57,15 +57,15 @@ public:
 } // namespace
 
 static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
-  static const DirectiveNameParser DNP;
+  static const DirectiveNameParser DirParser;
 
-  const DirectiveNameParser::State *S = DNP.initial();
+  const DirectiveNameParser::State *S = DirParser.initial();
 
   Token Tok = P.getCurToken();
   if (Tok.isAnnotation())
     return OMPD_unknown;
 
-  S = DNP.consume(S, P.getPreprocessor().getSpelling(Tok));
+  S = DirParser.consume(S, P.getPreprocessor().getSpelling(Tok));
   if (S == nullptr)
     return OMPD_unknown;
 
@@ -73,7 +73,7 @@ static OpenMPDirectiveKind parseOpenMPDirectiveKind(Parser &P) {
     OpenMPDirectiveKind DKind = S->Value;
     Tok = P.getPreprocessor().LookAhead(0);
     if (!Tok.isAnnotation()) {
-      S = DNP.consume(S, P.getPreprocessor().getSpelling(Tok));
+      S = DirParser.consume(S, P.getPreprocessor().getSpelling(Tok));
       if (S == nullptr)
         return DKind;
       P.ConsumeToken();
