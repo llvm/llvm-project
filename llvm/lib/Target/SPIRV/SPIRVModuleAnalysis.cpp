@@ -2042,6 +2042,8 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
 static unsigned getFastMathFlags(const MachineInstr &I,
                                  const SPIRVSubtarget &ST) {
   unsigned Flags = SPIRV::FPFastMathMode::None;
+  bool CanUseKHRFloatControls2 =
+      ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2);
   if (I.getFlag(MachineInstr::MIFlag::FmNoNans))
     Flags |= SPIRV::FPFastMathMode::NotNaN;
   if (I.getFlag(MachineInstr::MIFlag::FmNoInfs))
@@ -2050,10 +2052,10 @@ static unsigned getFastMathFlags(const MachineInstr &I,
     Flags |= SPIRV::FPFastMathMode::NSZ;
   if (I.getFlag(MachineInstr::MIFlag::FmArcp))
     Flags |= SPIRV::FPFastMathMode::AllowRecip;
-  if (I.getFlag(MachineInstr::MIFlag::FmContract))
+  if (I.getFlag(MachineInstr::MIFlag::FmContract) && CanUseKHRFloatControls2)
     Flags |= SPIRV::FPFastMathMode::AllowContract;
   if (I.getFlag(MachineInstr::MIFlag::FmReassoc)) {
-    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2))
+    if (CanUseKHRFloatControls2)
       // LLVM reassoc maps to SPIRV transform, see
       // https://github.com/KhronosGroup/SPIRV-Registry/issues/326 for details.
       // Because we are enabling AllowTransform, we must enable AllowReassoc and
@@ -2070,7 +2072,7 @@ static unsigned getFastMathFlags(const MachineInstr &I,
       Flags |= SPIRV::FPFastMathMode::Fast;
   }
 
-  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+  if (CanUseKHRFloatControls2) {
     // Error out if SPIRV::FPFastMathMode::Fast is enabled.
     if (Flags & SPIRV::FPFastMathMode::Fast)
       report_fatal_error(
@@ -2115,8 +2117,8 @@ static void handleMIFlagDecoration(
 
   unsigned FMFlags = getFastMathFlags(I, ST);
   if (FMFlags == SPIRV::FPFastMathMode::None) {
-    // We also need to check if any FPFastMathDefault info was set for the types
-    // used in this instruction.
+    // We also need to check if any FPFastMathDefault info was set for the
+    // types used in this instruction.
     if (FPFastMathDefaultInfoVec.empty())
       return;
 
@@ -2126,14 +2128,13 @@ static void handleMIFlagDecoration(
     // 3. Extended instructions (ExtInst)
     // For arithmetic instructions, the floating point type can be in the
     // result type or in the operands, but they all must be the same.
-    // For the relational and logical instructions, the floating point type can
-    // only be in the operands 1 and 2, not the result type. Also, the operands
-    // must have the same type.
-    // For the extended instructions, the floating point type can be in the
-    // result type or in the operands. It's unclear if the operands
-    // and the result type must be the same. Let's assume they must be.
-    // Therefore, for 1. and 2., we can check the first operand type,
-    // and for 3. we can check the result type.
+    // For the relational and logical instructions, the floating point type
+    // can only be in the operands 1 and 2, not the result type. Also, the
+    // operands must have the same type. For the extended instructions, the
+    // floating point type can be in the result type or in the operands. It's
+    // unclear if the operands and the result type must be the same. Let's
+    // assume they must be. Therefore, for 1. and 2., we can check the first
+    // operand type, and for 3. we can check the result type.
     assert(I.getNumOperands() >= 3 && "Expected at least 3 operands");
     Register ResReg = I.getOpcode() == SPIRV::OpExtInst
                           ? I.getOperand(1).getReg()
@@ -2310,9 +2311,9 @@ static void collectFPFastMathDefaults(const Module &M,
         SmallVector<SPIRV::FPFastMathDefaultInfo, 4> &FPFastMathDefaultInfoVec =
             getOrCreateFPFastMathDefaultInfoVec(M, MAI, F);
         int Index = computeFPFastMathDefaultInfoVecIndex(TargetWidth);
-        assert(
-            Index >= 0 && Index < 4 &&
-            "Expected FPFastMathDefaultInfo for half, float, double, or fp128");
+        assert(Index >= 0 && Index < 4 &&
+               "Expected FPFastMathDefaultInfo for half, float, double, or "
+               "fp128");
         assert(FPFastMathDefaultInfoVec.size() == 4 &&
                "Expected FPFastMathDefaultInfoVec to have exactly 4 elements");
         FPFastMathDefaultInfoVec[Index].SignedZeroInfNanPreserve = true;
