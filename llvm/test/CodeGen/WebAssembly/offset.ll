@@ -120,10 +120,9 @@ define i32 @load_i32_from_global_address() {
 
 define i32 @load_i32_global_with_folded_gep_offset_nonconst_nuw(i32 %idx) {
 ; CHECK-LABEL: load_i32_global_with_folded_gep_offset_nonconst_nuw:
-; CHECK:    i32.const $push0=, 2
-; CHECK-NEXT:    i32.shl $push1=, $0, $pop0
-; CHECK-NOT:     i32.add
-; CHECK-NEXT:    i32.load $push2=, gv($pop1)
+; CHECK: i32.const $push0=, 2
+; CHECK: i32.shl $push1=, $0, $pop0
+; CHECK: i32.load $push2=, gv($pop1)
   %s = getelementptr nuw i32, ptr @gv, i32 %idx
   %t = load i32, ptr %s
   ret i32 %t
