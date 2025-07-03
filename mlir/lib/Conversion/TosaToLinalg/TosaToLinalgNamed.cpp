@@ -398,6 +398,11 @@ public:
     Value broadcastBias =
         linalgBroadcastAndMaybeExt(rewriter, loc, bias, biasEmptyTensor);
 
+    bool localBound = false;
+    if (auto localBoundAttr =
+            op->template getAttrOfType<BoolAttr>("local_bound"))
+      localBound = localBoundAttr.getValue();
+
     if (hasZp) {
       auto iZp = rewriter.getI32IntegerAttr(inputZpVal);
       auto kZp = rewriter.getI32IntegerAttr(weightZpVal);
@@ -405,29 +410,31 @@ public:
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, kZp);
 
-      Value conv =
-          rewriter
-              .create<LinalgConvQOp>(
-                  loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
-                  ValueRange{broadcastBias}, strideAttr, dilationAttr)
-              ->getResult(0);
+      auto conv = rewriter.create<LinalgConvQOp>(
+          loc, resultTy, ValueRange{input, weight, iZpVal, kZpVal},
+          ValueRange{broadcastBias}, strideAttr, dilationAttr);
 
-      rewriter.replaceOp(op, conv);
+      if (localBound)
+        conv->setAttr("local_bound", rewriter.getBoolAttr(true));
+
+      rewriter.replaceOp(op, conv->getResult(0));
       return success();
     }
 
-    Value conv = rewriter
-                     .create<LinalgConvOp>(
-                         loc, accTy, ValueRange{input, weight},
-                         ValueRange{broadcastBias}, strideAttr, dilationAttr)
-                     ->getResult(0);
+    auto conv = rewriter.create<LinalgConvOp>(
+        loc, accTy, ValueRange{input, weight}, ValueRange{broadcastBias},
+        strideAttr, dilationAttr);
+    Value convVal = conv.getResult(0);
+
+    if (localBound)
+      conv->setAttr("local_bound", rewriter.getBoolAttr(true));
 
     // We may need to truncate back to the result type if the accumulator was
     // wider than the result.
     if (resultTy != accTy)
-      conv = rewriter.create<tosa::CastOp>(loc, resultTy, conv);
+      convVal = rewriter.create<tosa::CastOp>(loc, resultTy, convVal);
 
-    rewriter.replaceOp(op, conv);
+    rewriter.replaceOp(op, convVal);
     return success();
   }
 };
@@ -551,26 +558,32 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
+    bool localBound = false;
+    if (auto localBoundAttr = op->getAttrOfType<BoolAttr>("local_bound"))
+      localBound = localBoundAttr.getValue();
+
     if (hasNullZps) {
-      Value conv = rewriter
-                       .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
-                           loc, linalgConvTy, ValueRange{input, weight},
-                           ValueRange{zeroTensor}, strideAttr, dilationAttr)
-                       .getResult(0);
+      auto conv = rewriter.create<linalg::DepthwiseConv2DNhwcHwcmOp>(
+          loc, linalgConvTy, ValueRange{input, weight}, ValueRange{zeroTensor},
+          strideAttr, dilationAttr);
+      Value convVal = conv.getResult(0);
+
+      if (localBound)
+        conv->setAttr("local_bound", rewriter.getBoolAttr(true));
 
       // We may need to truncate back to the result type if the accumulator was
       // wider than the result.
       if (accETy != resultETy)
-        conv = rewriter.create<tosa::CastOp>(
+        convVal = rewriter.create<tosa::CastOp>(
             loc,
-            RankedTensorType::get(cast<ShapedType>(conv.getType()).getShape(),
-                                  resultETy),
-            conv);
+            RankedTensorType::get(
+                cast<ShapedType>(convVal.getType()).getShape(), resultETy),
+            convVal);
 
       SmallVector<ReassociationExprs, 4> reassociationMap;
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
       Value convReshape = rewriter.create<tensor::CollapseShapeOp>(
-          loc, resultTy, conv, reassociationMap);
+          loc, resultTy, convVal, reassociationMap);
 
       Value result =
           rewriter
@@ -596,16 +609,17 @@ public:
       IntegerAttr wZp = rewriter.getI32IntegerAttr(weightZpVal);
       auto iZpVal = rewriter.create<arith::ConstantOp>(loc, iZp);
       auto kZpVal = rewriter.create<arith::ConstantOp>(loc, wZp);
-      Value conv =
-          rewriter
-              .create<linalg::DepthwiseConv2DNhwcHwcmQOp>(
-                  loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
-                  ValueRange{zeroTensor}, strideAttr, dilationAttr)
-              .getResult(0);
+      auto conv = rewriter.create<linalg::DepthwiseConv2DNhwcHwcmQOp>(
+          loc, linalgConvTy, ValueRange{input, weight, iZpVal, kZpVal},
+          ValueRange{zeroTensor}, strideAttr, dilationAttr);
+
+      if (localBound)
+        conv->setAttr("local_bound", rewriter.getBoolAttr(true));
+
       SmallVector<ReassociationExprs, 4> reassociationMap;
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
       Value convReshape = rewriter.create<tensor::CollapseShapeOp>(
-          loc, resultTy, conv, reassociationMap);
+          loc, resultTy, conv.getResult(0), reassociationMap);
       Value result = linalgIntBroadcastExtSIAdd(
           rewriter, loc, bias, convReshape, biasEmptyTensor, indexingMaps);
       rewriter.replaceOp(op, result);
