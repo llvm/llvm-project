@@ -2,14 +2,13 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxVectorDataFormatterTestCase(TestBase):
+class StdVectorDataFormatterTestCase(TestBase):
     def check_numbers(self, var_name, show_ptr=False):
         patterns = []
         substrs = [
@@ -52,10 +51,8 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.expect("frame variable " + var_name + "[2]", substrs=["123"])
         self.expect("frame variable " + var_name + "[3]", substrs=["1234"])
 
-    @add_test_categories(["libc++"])
-    def test_with_run_command(self):
+    def do_test(self):
         """Test that that file and class static variables display correctly."""
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -170,10 +167,25 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
 
         self.expect("frame variable strings", substrs=["vector has 0 items"])
 
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx_debug(self):
+        self.build(
+            dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
+        )
+        self.do_test()
+
     @add_test_categories(["libc++"])
-    def test_ref_and_ptr(self):
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    def do_test_ref_and_ptr(self):
         """Test that that file and class static variables display correctly."""
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Stop here to check by ref", lldb.SBFileSpec("main.cpp", False)
         )
@@ -186,3 +198,20 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
         self.expect("frame variable ptr", substrs=["ptr =", " size=7"])
 
         self.expect("expression ptr", substrs=["$", "size=7"])
+
+    @add_test_categories(["libstdcxx"])
+    def test_ref_and_ptr_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_ref_and_ptr()
+
+    @add_test_categories(["libstdcxx"])
+    def test_ref_and_ptr_libstdcxx_debug(self):
+        self.build(
+            dictionary={"USE_LIBSTDCPP": 1, "CXXFLAGS_EXTRAS": "-D_GLIBCXX_DEBUG"}
+        )
+        self.do_test_ref_and_ptr()
+
+    @add_test_categories(["libc++"])
+    def test_ref_and_ptr_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_ref_and_ptr()
