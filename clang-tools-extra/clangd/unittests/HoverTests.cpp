@@ -3765,24 +3765,29 @@ provides Foo, Bar, Baz, Foobar, Qux and 1 more)"}};
 TEST(Hover, ParseDocumentation) {
   struct Case {
     llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
     llvm::StringRef ExpectedRenderMarkdown;
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
+                   "foo\nbar",
                    "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
                    "foo\nbar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
                    "foo  \nbar",
                    "foo  \nbar",
+                   "foo  \nbar",
                    "foo\nbar",
                },
                {
+                   "foo    \nbar",
                    "foo    \nbar",
                    "foo    \nbar",
                    "foo\nbar",
@@ -3791,24 +3796,29 @@ TEST(Hover, ParseDocumentation) {
                    "foo\n\n\nbar",
                    "foo\n\nbar",
                    "foo\n\nbar",
+                   "foo\n\nbar",
                },
                {
                    "foo\n\n\n\tbar",
+                   "foo\n\n\tbar",
                    "foo\n\n\tbar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n    bar",
                    "foo\n\n    bar",
+                   "foo\n\n    bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n   bar",
                    "foo\n\n   bar",
+                   "foo\n\n   bar",
                    "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
+                   "foo\n\n bar",
                    "foo\n\n bar",
                    "foo\n\nbar",
                },
@@ -3816,18 +3826,22 @@ TEST(Hover, ParseDocumentation) {
                    "foo.\nbar",
                    "foo.\nbar",
                    "foo.\nbar",
+                   "foo.\nbar",
                },
                {
+                   "foo. \nbar",
                    "foo. \nbar",
                    "foo. \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
+                   "foo\n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
                {
+                   "foo\nbar",
                    "foo\nbar",
                    "foo\nbar",
                    "foo bar",
@@ -3836,15 +3850,18 @@ TEST(Hover, ParseDocumentation) {
                    "Tests primality of `p`.",
                    "Tests primality of `p`.",
                    "Tests primality of `p`.",
+                   "Tests primality of `p`.",
                },
                {
                    "'`' should not occur in `Code`",
+                   "'\\`' should not occur in `Code`",
                    "'`' should not occur in `Code`",
                    "'`' should not occur in `Code`",
                },
                {
                    "`not\nparsed`",
-                   "`not parsed`",
+                   "\\`not\nparsed\\`",
+                   "`not\nparsed`",
                    "`not parsed`",
                }};
 
@@ -3852,6 +3869,7 @@ TEST(Hover, ParseDocumentation) {
     markup::Document Output;
     parseDocumentation(C.Documentation, Output);
 
+    EXPECT_EQ(Output.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
     EXPECT_EQ(Output.asMarkdown(), C.ExpectedRenderMarkdown);
     EXPECT_EQ(Output.asPlainText(), C.ExpectedRenderPlainText);
   }

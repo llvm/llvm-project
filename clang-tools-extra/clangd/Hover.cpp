@@ -1569,9 +1569,14 @@ std::optional<llvm::StringRef> getBacktickQuoteRange(llvm::StringRef Line,
     return std::nullopt;
 
   // The quoted string must be nonempty and usually has no leading/trailing ws.
-  auto Next = Line.find('`', Offset + 1);
+  auto Next = Line.find_first_of("`\n", Offset + 1);
   if (Next == llvm::StringRef::npos)
     return std::nullopt;
+
+  // There should be no newline in the quoted string.
+  if (Line[Next] == '\n')
+    return std::nullopt;
+
   llvm::StringRef Contents = Line.slice(Offset + 1, Next);
   if (Contents.empty() || isWhitespace(Contents.front()) ||
       isWhitespace(Contents.back()))

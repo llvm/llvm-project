@@ -203,14 +203,39 @@ bool needsLeadingEscape(char C, llvm::StringRef Before, llvm::StringRef After,
 std::string renderText(llvm::StringRef Input, bool StartsLine,
                        bool EscapeMarkdown = false) {
   std::string R;
-  for (unsigned I = 0; I < Input.size(); ++I) {
-    if (Input.substr(0, I).take_while(llvm::isSpace).empty() &&
-        !isWhitespace(Input[I]) &&
-        needsLeadingEscape(Input[I], Input.substr(0, I), Input.substr(I + 1),
-                           StartsLine, EscapeMarkdown))
-      R.push_back('\\');
-    R.push_back(Input[I]);
+
+  // split the input into lines, and escape each line separately.
+  llvm::StringRef Line, Rest;
+
+  bool StartsLineIntern = StartsLine;
+  bool IsFirstLine = true;
+
+  for (std::tie(Line, Rest) = Input.split('\n');
+       !(Line.empty() && Rest.empty());
+       std::tie(Line, Rest) = Rest.split('\n')) {
+
+    StartsLineIntern = IsFirstLine ? StartsLine : true;
+
+    // Ignore leading spaces for the escape logic, but preserve them in the
+    // output.
+    StringRef LeadingSpaces = Line.take_while(llvm::isSpace);
+    if (!LeadingSpaces.empty()) {
+      R.append(LeadingSpaces);
+    }
+
+    for (unsigned I = LeadingSpaces.size(); I < Line.size(); ++I) {
+      if (needsLeadingEscape(Line[I], Line.substr(LeadingSpaces.size(), I),
+                             Line.substr(I + 1), StartsLineIntern,
+                             EscapeMarkdown))
+        R.push_back('\\');
+      R.push_back(Line[I]);
+    }
+
+    IsFirstLine = false;
+    if (!Rest.empty())
+      R.push_back('\n');
   }
+
   return R;
 }
 

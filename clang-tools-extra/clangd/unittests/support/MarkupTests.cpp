@@ -371,17 +371,17 @@ TEST(Paragraph, SeparationOfChunks3) {
   EXPECT_EQ(P.asPlainText(), "after\nfoobar");
 
   P.appendText("- bat\n");
-  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n- bat");
+  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n\\- bat");
   EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat");
   EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat");
 
   P.appendText("- baz");
-  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n- bat\n- baz");
+  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n\\- bat\n\\- baz");
   EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat\n- baz");
   EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat\n- baz");
 
   P.appendText(" faz ");
-  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n- bat\n- baz faz");
+  EXPECT_EQ(P.asEscapedMarkdown(), "after  \n  foobar\n\\- bat\n\\- baz faz");
   EXPECT_EQ(P.asMarkdown(), "after  \n  foobar\n- bat\n- baz faz");
   EXPECT_EQ(P.asPlainText(), "after\nfoobar\n- bat\n- baz faz");
 }
