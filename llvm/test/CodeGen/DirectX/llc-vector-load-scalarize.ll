@@ -8,7 +8,18 @@
 @staticArrayOfVecData = internal global [3 x <4 x i32>] [<4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>, <4 x i32> <i32 9, i32 10, i32 11, i32 12>], align 4
 @"groupshared2dArrayofVectors" = local_unnamed_addr addrspace(3) global [3 x [3 x <4 x i32>]] zeroinitializer, align 16
 
+; CHECK: @arrayofVecData.scalarized.1dim = local_unnamed_addr addrspace(3) global [8 x i32] zeroinitializer, align 16
+; CHECK: @vecData.scalarized = external addrspace(3) global [4 x i32], align 4
+; CHECK: @staticArrayOfVecData.scalarized.1dim = internal global [12 x i32] [i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12], align 4
+; CHECK: @groupshared2dArrayofVectors.scalarized.1dim = local_unnamed_addr addrspace(3) global [36 x i32] zeroinitializer, align 16
 
+; CHECK-NOT: @arrayofVecData
+; CHECK-NOT: @arrayofVecData.scalarized
+; CHECK-NOT: @vecData
+; CHECK-NOT: @staticArrayOfVecData
+; CHECK-NOT: @staticArrayOfVecData.scalarized
+; CHECK-NOT: @groupshared2dArrayofVectors
+; CHECK-NOT: @groupshared2dArrayofVectors.scalarized
 
 define <4 x i32> @load_array_vec_test() #0 {
 ; CHECK-LABEL: define <4 x i32> @load_array_vec_test(
