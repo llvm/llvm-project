@@ -209,8 +209,6 @@ public:
   /// \name Utility Methods
   /// @{
 
-  bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
-
   std::vector<IndirectSymbolData> &getIndirectSymbols() {
     return IndirectSymbols;
   }
