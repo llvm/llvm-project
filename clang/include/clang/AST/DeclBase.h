@@ -1954,7 +1954,7 @@ protected:
     LLVM_PREFERRED_TYPE(DeclContextBitfields)
     uint64_t : NumDeclContextBits;
 
-    uint64_t AtStart: SourceLocation::Bits;
+    uint64_t AtStart : SourceLocation::Bits;
   };
 
   /// Number of inherited and non-inherited bits in ObjCContainerDeclBitfields.

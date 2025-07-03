@@ -175,10 +175,9 @@ CXSourceRange cxloc::translateSourceRange(const SourceManager &SM,
 }
 
 CharSourceRange cxloc::translateCXRangeToCharRange(CXSourceRange R) {
-   if (!R.ptr_data[0])
-     return CharSourceRange();
-   const SourceManager &SM =
-      *static_cast<const SourceManager *>(R.ptr_data[0]);
+  if (!R.ptr_data[0])
+    return CharSourceRange();
+  const SourceManager &SM = *static_cast<const SourceManager *>(R.ptr_data[0]);
   return CharSourceRange::getCharRange(
       SourceLocation::getFromRawEncoding32(SM, R.begin_int_data),
       SourceLocation::getFromRawEncoding32(SM, R.end_int_data));
@@ -7643,7 +7642,8 @@ CXString clang_getTokenSpelling(CXTranslationUnit TU, CXToken CXTok) {
   if (!CXXUnit)
     return cxstring::createEmpty();
 
-  SourceLocation Loc = SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]);
+  SourceLocation Loc = SourceLocation::getFromRawEncoding32(
+      CXXUnit->getSourceManager(), CXTok.int_data[1]);
   auto LocInfo = CXXUnit->getSourceManager().getDecomposedSpellingLoc(Loc);
   bool Invalid = false;
   StringRef Buffer =
@@ -7666,7 +7666,8 @@ CXSourceLocation clang_getTokenLocation(CXTranslationUnit TU, CXToken CXTok) {
 
   return cxloc::translateSourceLocation(
       CXXUnit->getASTContext(),
-      SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]));
+      SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(),
+                                           CXTok.int_data[1]));
 }
 
 CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
@@ -7681,7 +7682,8 @@ CXSourceRange clang_getTokenExtent(CXTranslationUnit TU, CXToken CXTok) {
 
   return cxloc::translateSourceRange(
       CXXUnit->getASTContext(),
-      SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(), CXTok.int_data[1]));
+      SourceLocation::getFromRawEncoding32(CXXUnit->getSourceManager(),
+                                           CXTok.int_data[1]));
 }
 
 static bool getTokens(ASTUnit *CXXUnit, SourceRange Range,
@@ -7726,7 +7728,7 @@ static bool getTokens(ASTUnit *CXXUnit, SourceRange Range,
     if (!Tok.getLocation().getRawEncoding32(TokLocRaw))
       return false; // location is too big for libclang ABI
     CXTok.int_data[1] = TokLocRaw;
-    
+
     CXTok.int_data[2] = Tok.getLength();
     CXTok.int_data[3] = 0;
 

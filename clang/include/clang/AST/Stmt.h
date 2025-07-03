@@ -455,8 +455,6 @@ protected:
     unsigned NonOdrUseReason : 2;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImmediateEscalating : 1;
-
-
   };
 
 
@@ -526,8 +524,6 @@ protected:
     /// It is 0 otherwise.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasFPFeatures : 1;
-
-
   };
 
   class UnaryExprOrTypeTraitExprBitfields {
@@ -582,8 +578,8 @@ protected:
     /// Trailing objects. See the definition of CallExpr.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingSourceLoc : 1;
-    
-    unsigned NumArgs:20;
+
+    unsigned NumArgs : 20;
   };
   enum { NumCallExprBits = 52 };
 
@@ -629,7 +625,7 @@ protected:
     /// This is the location of the -> or . in the expression.
     // SourceLocation OperatorLoc;
   };
-  
+
   // 8 bytes
   class CastExprBitfields {
     friend class CastExpr;
@@ -1047,8 +1043,6 @@ protected:
     unsigned ConstructionKind : 3;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsImmediateEscalating : 1;
-
-
   };
 
   class ExprWithCleanupsBitfields {
@@ -1978,8 +1972,8 @@ class CaseStmt final
   //   with a range. Present if and only if caseStmtIsGNURange() is true.
   enum { LhsOffset = 0, SubStmtOffsetFromRhs = 1 };
   enum { NumMandatoryStmtPtr = 2 };
-      /// The location of the "case" or "default" keyword.
-      SourceLocation KeywordLoc;
+  /// The location of the "case" or "default" keyword.
+  SourceLocation KeywordLoc;
   unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
     return NumMandatoryStmtPtr + caseStmtIsGNURange();
   }
@@ -2241,8 +2235,8 @@ class AttributedStmt final
       private llvm::TrailingObjects<AttributedStmt, const Attr *> {
   friend class ASTStmtReader;
   friend TrailingObjects;
-    /// The location of the attribute.
-    SourceLocation AttrLoc;
+  /// The location of the attribute.
+  SourceLocation AttrLoc;
   Stmt *SubStmt;
 
   AttributedStmt(SourceLocation Loc, ArrayRef<const Attr *> Attrs,
@@ -3116,7 +3110,6 @@ public:
 /// ContinueStmt - This represents a continue.
 class ContinueStmt : public Stmt {
 public:
-
   ContinueStmt(SourceLocation CL) : Stmt(ContinueStmtClass) {
     setContinueLoc(CL);
   }

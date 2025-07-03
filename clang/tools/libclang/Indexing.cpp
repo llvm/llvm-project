@@ -995,7 +995,7 @@ void clang_indexLoc_getFileLocation(CXIdxLoc location,
 
 CXSourceLocation clang_indexLoc_getCXSourceLocation(CXIdxLoc location) {
   if (!location.ptr_data[0])
-  return clang_getNullLocation();
+    return clang_getNullLocation();
 
   CXIndexDataConsumer &DataConsumer =
       *static_cast<CXIndexDataConsumer *>(location.ptr_data[0]);

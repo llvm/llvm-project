@@ -216,7 +216,7 @@ int clang_Location_isInSystemHeader(CXSourceLocation location) {
   const SourceManager &SM =
       *static_cast<const SourceManager *>(location.ptr_data[0]);
   const SourceLocation Loc =
-    SourceLocation::getFromRawEncoding32(SM, location.int_data);
+      SourceLocation::getFromRawEncoding32(SM, location.int_data);
   if (Loc.isInvalid())
     return 0;
 

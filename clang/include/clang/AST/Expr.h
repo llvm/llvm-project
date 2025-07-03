@@ -1271,9 +1271,9 @@ class DeclRefExpr final
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
-  
-      /// The location of the declaration name itself.
-      SourceLocation Loc;
+
+  /// The location of the declaration name itself.
+  SourceLocation Loc;
 
   /// The declaration that we are referencing.
   ValueDecl *D;
@@ -2008,8 +2008,8 @@ class PredefinedExpr final
       private llvm::TrailingObjects<PredefinedExpr, Stmt *> {
   friend class ASTStmtReader;
   friend TrailingObjects;
-   /// The location of this PredefinedExpr.
-   SourceLocation Loc;
+  /// The location of this PredefinedExpr.
+  SourceLocation Loc;
   // PredefinedExpr is optionally followed by a single trailing
   // "Stmt *" for the predefined identifier. It is present if and only if
   // hasFunctionName() is true and is always a "StringLiteral *".
@@ -3123,7 +3123,9 @@ public:
   /// Bluntly set a new number of arguments without doing any checks whatsoever.
   /// Only used during construction of a CallExpr in a few places in Sema.
   /// FIXME: Find a way to remove it.
-  void setNumArgsUnsafe(unsigned NewNumArgs) { CallExprBits.NumArgs = NewNumArgs; }
+  void setNumArgsUnsafe(unsigned NewNumArgs) {
+    CallExprBits.NumArgs = NewNumArgs;
+  }
 
   typedef ExprIterator arg_iterator;
   typedef ConstExprIterator const_arg_iterator;
@@ -3308,7 +3310,7 @@ class MemberExpr final
 
   /// MemberLoc - This is the location of the member name.
   SourceLocation MemberLoc;
-  
+
   SourceLocation OperatorLoc;
 
   size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {

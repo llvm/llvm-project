@@ -69,11 +69,10 @@ static inline CXSourceRange translateSourceRange(ASTContext &Context,
 }
 
 static inline SourceLocation translateSourceLocation(CXSourceLocation L) {
-   if (!L.ptr_data[0]) {
+  if (!L.ptr_data[0]) {
     return SourceLocation();
   }
-  const SourceManager &SM =
-      *static_cast<const SourceManager *>(L.ptr_data[0]);
+  const SourceManager &SM = *static_cast<const SourceManager *>(L.ptr_data[0]);
   return SourceLocation::getFromRawEncoding32(SM, L.int_data);
 }
 
