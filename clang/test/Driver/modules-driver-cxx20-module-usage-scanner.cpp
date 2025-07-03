@@ -87,7 +87,7 @@ import m;
               b)  \
         call((a), \
              (b)
-module;
+import a;
 
 //--- leading-line-splice.cpp
 // RUN: %clang -std=c++23 -ccc-print-phases -fmodules-driver -Rmodules-driver \
