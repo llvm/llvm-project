@@ -249,6 +249,7 @@ struct S {
     constexpr ~S() {
         delete c;
     }
+    int i = 0;
 };
 
 int f() {
@@ -259,6 +260,9 @@ int f() {
         return 1;
     }
     if constexpr(S s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = S{}.i; true) {
         return 1;
     }
     return 0;
