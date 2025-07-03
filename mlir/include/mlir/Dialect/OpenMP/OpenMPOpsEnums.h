@@ -9,6 +9,11 @@
 #ifndef MLIR_DIALECT_OPENMP_OPENMPOPSENUMS_H_
 #define MLIR_DIALECT_OPENMP_OPENMPOPSENUMS_H_
 
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h.inc"
 
 #endif // MLIR_DIALECT_OPENMP_OPENMPOPSENUMS_H_
