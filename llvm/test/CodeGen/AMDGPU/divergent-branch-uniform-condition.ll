@@ -30,8 +30,8 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:  .LBB0_1: ; %Flow1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_or_b64 exec, exec, s[4:5]
-; ISA-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; ISA-NEXT:    s_mov_b64 s[8:9], 0
+; ISA-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; ISA-NEXT:  .LBB0_2: ; %Flow
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; ISA-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
