@@ -29,8 +29,7 @@ using namespace llvm::hlsl::rootsig;
 
 namespace {
 
-static const llvm::dxbc::RootSignatureVersion DefVersion =
-    llvm::dxbc::RootSignatureVersion::V1_1;
+using llvm::dxbc::RootSignatureVersion;
 
 // Diagnostic helper for helper tests
 class ExpectedDiagConsumer : public DiagnosticConsumer {
@@ -118,7 +117,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -152,7 +152,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -255,7 +256,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -340,7 +342,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -415,7 +418,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -446,7 +450,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -503,7 +508,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -556,7 +562,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -630,7 +637,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -661,8 +669,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  auto Version = llvm::dxbc::RootSignatureVersion::V1_0;
-  hlsl::RootSignatureParser Parser(Version, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_0, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -733,8 +741,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  auto Version = llvm::dxbc::RootSignatureVersion::V1_1;
-  hlsl::RootSignatureParser Parser(Version, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -800,7 +808,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
@@ -820,7 +829,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced - invalid token
   Consumer->setExpected(diag::err_hlsl_unexpected_end_of_params);
@@ -840,7 +850,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced - end of stream
   Consumer->setExpected(diag::err_expected_after);
@@ -865,7 +876,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
@@ -887,7 +899,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
@@ -909,7 +922,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_missing_param);
@@ -933,7 +947,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -955,7 +970,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -979,7 +995,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -1005,7 +1022,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_repeat_param);
@@ -1028,7 +1046,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1050,7 +1069,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1071,7 +1091,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1092,7 +1113,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexNegOverflowedFloatTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1113,7 +1135,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedDoubleTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_overflow);
@@ -1134,7 +1157,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexUnderflowFloatTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_number_literal_underflow);
@@ -1158,7 +1182,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
 
   hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(DefVersion, Elements, Lexer, *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
+                                   *PP);
 
   // Test correct diagnostic produced
   Consumer->setExpected(diag::err_hlsl_rootsig_non_zero_flag);
