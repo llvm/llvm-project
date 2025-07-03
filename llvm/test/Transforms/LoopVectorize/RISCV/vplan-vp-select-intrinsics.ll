@@ -42,7 +42,8 @@
  ; IF-EVL-NEXT:   vp<[[PTR2:%[0-9]+]]> = vector-pointer ir<[[GEP2]]>
  ; IF-EVL-NEXT:   WIDEN ir<[[LD2:%.+]]> = vp.load vp<[[PTR2]]>, vp<[[EVL]]>
  ; IF-EVL-NEXT:   WIDEN ir<[[CMP:%.+]]> = icmp sgt ir<[[LD1]]>, ir<[[LD2]]>
- ; IF-EVL-NEXT:   WIDEN ir<[[SUB:%.+]]> = sub ir<0>, ir<[[LD2]]>
+ ; IF-EVL-NEXT:   EMIT vp<[[BROADCAST:%.+]]> = broadcast ir<0>
+ ; IF-EVL-NEXT:   WIDEN ir<[[SUB:%.+]]> = sub vp<[[BROADCAST]]>, ir<[[LD2]]>
  ; IF-EVL-NEXT:   WIDEN-INTRINSIC vp<[[SELECT:%.+]]> = call llvm.vp.select(ir<[[CMP]]>, ir<[[LD2]]>, ir<[[SUB]]>, vp<[[EVL]]>)
  ; IF-EVL-NEXT:   WIDEN ir<[[ADD:%.+]]> = add vp<[[SELECT]]>, ir<[[LD1]]>
  ; IF-EVL-NEXT:   CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[EVL_PHI]]>
