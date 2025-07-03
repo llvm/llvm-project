@@ -33,13 +33,7 @@ AST_MATCHER_P(clang::TypeLoc, hasType,
 
 AvoidFundamentalIntegerTypesCheck::AvoidFundamentalIntegerTypesCheck(
     StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      IgnoreTypedefs(Options.get("IgnoreTypedefs", false)) {}
-
-void AvoidFundamentalIntegerTypesCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "IgnoreTypedefs", IgnoreTypedefs);
-}
+    : ClangTidyCheck(Name, Context) {}
 
 bool AvoidFundamentalIntegerTypesCheck::isFundamentalIntegerType(
     const Type *T) const {
@@ -111,16 +105,14 @@ void AvoidFundamentalIntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
       fieldDecl().bind("field_decl"),
       this);
 
-  // Match typedef declarations if not ignoring them
-  if (!IgnoreTypedefs) {
-    Finder->addMatcher(
-        typedefDecl().bind("typedef_decl"),
-        this);
+  // Match typedef declarations to check their underlying types
+  Finder->addMatcher(
+      typedefDecl().bind("typedef_decl"),
+      this);
 
-    Finder->addMatcher(
-        typeAliasDecl().bind("alias_decl"),
-        this);
-  }
+  Finder->addMatcher(
+      typeAliasDecl().bind("alias_decl"),
+      this);
 }
 
 void AvoidFundamentalIntegerTypesCheck::check(
@@ -159,6 +151,12 @@ void AvoidFundamentalIntegerTypesCheck::check(
 
   if (Loc.isInvalid() || QT.isNull())
     return;
+
+  // Check if the type is already a typedef - if so, don't warn
+  // since the user is already using a typedef (which is what we want)
+  if (QT->getAs<TypedefType>()) {
+    return;
+  }
 
   const Type *T = QT.getCanonicalType().getTypePtr();
   if (!T)

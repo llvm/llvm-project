@@ -27,7 +27,6 @@ public:
   AvoidFundamentalIntegerTypesCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
@@ -36,7 +35,6 @@ public:
   }
 
 private:
-  const bool IgnoreTypedefs;
   bool isFundamentalIntegerType(const Type *T) const;
   bool isSemanticType(const Type *T) const;
 };

@@ -1,5 +1,17 @@
 // RUN: %check_clang_tidy %s modernize-avoid-fundamental-integer-types %t
 
+// Mock fixed-width integer types
+// NOLINTBEGIN(modernize-avoid-fundamental-integer-types)
+typedef unsigned int uint32_t;
+typedef int int32_t;
+typedef unsigned long long uint64_t;
+typedef long long int64_t;
+
+// Mock standard library semantic types
+typedef unsigned long size_t;
+typedef long ptrdiff_t;
+// NOLINTEND(modernize-avoid-fundamental-integer-types)
+
 // Test fundamental integer types that should trigger warnings
 int global_int = 42;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'int'; consider using a typedef or fixed-width type instead [modernize-avoid-fundamental-integer-types]
@@ -31,6 +43,16 @@ signed char global_signed_char = 'b';
 unsigned char global_unsigned_char = 'c';
 bool global_bool = true;
 wchar_t global_wchar = L'w';
+
+// Test fixed-width types that should NOT trigger warnings
+uint32_t global_uint32 = 42U;
+int32_t global_int32 = 42;
+uint64_t global_uint64 = 100ULL;
+int64_t global_int64 = 100LL;
+
+// Test semantic standard library types that should NOT trigger warnings
+size_t global_size = 100;
+ptrdiff_t global_ptrdiff = 50;
 
 // Test function parameters
 void function_with_int_param(int param) {
@@ -66,6 +88,14 @@ void test_local_variables() {
     // These should not trigger warnings
     char local_char = 'x';
     bool local_bool = false;
+    
+    // Fixed-width types should not trigger warnings
+    uint32_t local_uint32 = 42U;
+    int64_t local_int64 = 100LL;
+    
+    // Standard library semantic types should not trigger warnings
+    size_t local_size = 200;
+    ptrdiff_t local_ptrdiff = 10;
 }
 
 // Test struct/class members
@@ -97,6 +127,9 @@ typedef int MyInt;
 
 using MyLong = long;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: avoid using platform-dependent fundamental integer type 'long'; consider using a typedef or fixed-width type instead [modernize-avoid-fundamental-integer-types]
+
+typedef long long customType;
+// CHECK-MESSAGES: :[[@LINE-1]]:19: warning: avoid using platform-dependent fundamental integer type 'long long'; consider using a typedef or fixed-width type instead [modernize-avoid-fundamental-integer-types]
 
 // Test template parameters
 template<typename T>
