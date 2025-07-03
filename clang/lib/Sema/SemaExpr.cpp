@@ -20629,6 +20629,9 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
 
   case ConditionKind::ConstexprIf:
     Cond = CheckBooleanCondition(Loc, SubExpr, true);
+    assert(isa<FullExpr>(Cond.get()) &&
+           "we should have converted this expression to a FullExpr before "
+           "evaluating it");
     break;
 
   case ConditionKind::Switch:
@@ -20641,12 +20644,10 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
     if (!Cond.get())
       return ConditionError();
   }
-  // FIXME: FullExprArg doesn't have an invalid bit, so check nullness instead.
-  FullExprArg FullExpr = MakeFullExpr(Cond.get(), Loc);
-  if (!FullExpr.get())
-    return ConditionError();
+  if (!isa<FullExpr>(Cond.get()))
+    Cond = ActOnFinishFullExpr(Cond.get(), Loc, /*DiscardedValue*/ false);
 
-  return ConditionResult(*this, nullptr, FullExpr,
+  return ConditionResult(*this, nullptr, Cond,
                          CK == ConditionKind::ConstexprIf);
 }
 

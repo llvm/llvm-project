@@ -242,3 +242,36 @@ void f() {
 }
 
 }
+
+namespace GH134820 {
+struct S {
+    char* c = new char;
+    constexpr ~S() {
+        delete c;
+    }
+};
+
+int f() {
+    if constexpr((S{}, true)) {
+        return 1;
+    }
+    return 0;
+}
+}
+
+namespace GH120197{
+struct NonTrivialDtor {
+  NonTrivialDtor() = default;
+  NonTrivialDtor(const NonTrivialDtor&) = default;
+  NonTrivialDtor(NonTrivialDtor&&) = default;
+  NonTrivialDtor& operator=(const NonTrivialDtor&)  = default;
+  NonTrivialDtor& operator=(NonTrivialDtor&&) = default;
+  constexpr ~NonTrivialDtor() noexcept {}
+};
+
+static_assert(((void)NonTrivialDtor{}, true)); // passes
+
+void f() {
+  if constexpr ((void)NonTrivialDtor{}, true) {}
+}
+}
