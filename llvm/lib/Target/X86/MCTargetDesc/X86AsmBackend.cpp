@@ -705,8 +705,7 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
-  if (IsResolved &&
-      getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
+  if (IsResolved && Fixup.isPCRel()) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
       getContext().reportError(Fixup.getLoc(),
