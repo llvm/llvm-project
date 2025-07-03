@@ -331,6 +331,10 @@ private:
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;
+  /// Tracks whether we're currently inside a
+  /// `BeginSourceFile()/EndSourceFile()` pair. Outside of a source file, we
+  /// should only receive diagnostics that have to source location, such as
+  /// command-line warnings.
   bool InSourceFile = false;
 };
 
