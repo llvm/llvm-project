@@ -5,6 +5,7 @@ import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
+import { Logger } from "./logger";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -71,13 +72,16 @@ const configurations: Record<string, DefaultConfig> = {
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
-  constructor(private readonly server: LLDBDapServer) {}
+  constructor(private readonly server: LLDBDapServer, private readonly logger: Logger) {}
 
   async resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration> {
+    this.logger.info(`Resolving debug configuration for "${debugConfiguration.name}"`);
+    this.logger.debug("Initial debug configuration:");
+    this.logger.debug(JSON.stringify(debugConfiguration, undefined, 2));
     let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
       if (Reflect.has(debugConfiguration, key)) {
@@ -152,6 +156,7 @@ export class LLDBDapConfigurationProvider
         // Always try to create the debug adapter executable as this will show the user errors
         // if there are any.
         const executable = await createDebugAdapterExecutable(
+          this.logger,
           folder,
           debugConfiguration,
         );
@@ -184,8 +189,12 @@ export class LLDBDapConfigurationProvider
         }
       }
 
+      this.logger.debug("Resolved debug configuration:");
+      this.logger.debug(JSON.stringify(debugConfiguration, undefined, 2));
+
       return debugConfiguration;
     } catch (error) {
+      this.logger.error(error);
       // Show a better error message to the user if possible
       if (!(error instanceof ErrorWithNotification)) {
         throw error;
