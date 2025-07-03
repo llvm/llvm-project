@@ -13158,6 +13158,15 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
     return DAG.getBitcast(VT, And);
   }
 
+  // select Cond, 0, x -> and not(Cond), x
+  if (IsTAllZero &&
+      (isBitwiseNot(peekThroughBitcasts(Cond)) || TLI.hasAndNot(Cond))) {
+    SDValue X = DAG.getBitcast(CondVT, FVal);
+    SDValue And =
+        DAG.getNode(ISD::AND, DL, CondVT, DAG.getNOT(DL, Cond, CondVT), X);
+    return DAG.getBitcast(VT, And);
+  }
+
   return SDValue();
 }
 
