@@ -1,7 +1,7 @@
 .. title:: clang-tidy - portability-avoid-platform-specific-fundamental-types
 
 portability-avoid-platform-specific-fundamental-types
-==========================================
+=====================================================
 
 Finds fundamental types and recommends using typedefs or fixed-width types instead.
 
