@@ -148,7 +148,7 @@ public:
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   /// Return the Xcode SDK comp_unit was compiled against.
-  virtual XcodeSDK ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
+  virtual XcodeSDKPath ParseXcodeSDK(CompileUnit &comp_unit) { return {}; }
 
   /// This function exists because SymbolFileDWARFDebugMap may extra compile
   /// units which aren't exposed as "real" compile units. In every other

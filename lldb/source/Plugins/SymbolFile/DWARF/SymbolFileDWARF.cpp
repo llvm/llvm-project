@@ -982,7 +982,7 @@ lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
     return eLanguageTypeUnknown;
 }
 
-XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
+XcodeSDKPath SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
   if (!dwarf_cu)
@@ -1012,7 +1012,7 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
       local_module_sp->RegisterXcodeSDK(sdk, sysroot);
   }
 
-  return {sdk, FileSpec{std::move(sysroot)}};
+  return {XcodeSDK(sdk), FileSpec{std::move(sysroot)}};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
