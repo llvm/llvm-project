@@ -116,6 +116,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
+  // Relax conditions for unrolling when user requests unrolling via pragma.
+  UP.RelaxPragmaUnrollThresholds = true;
+
   // Conditional branch in a loop back edge needs 3 additional exec
   // manipulations in average.
   UP.BEInsns += 3;
