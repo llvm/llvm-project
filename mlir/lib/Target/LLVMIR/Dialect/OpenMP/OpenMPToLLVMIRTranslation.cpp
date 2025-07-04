@@ -2895,7 +2895,7 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   // No call to copyFirstPrivateVars because FIRSTPRIVATE is not allowed for
-  // SIMD
+  // SIMD.
 
   assert(afterAllocas.get()->getSinglePredecessor());
   if (failed(initReductionVars(simdOp, reductionArgs, builder,
