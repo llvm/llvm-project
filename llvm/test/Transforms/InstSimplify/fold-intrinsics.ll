@@ -44,3 +44,11 @@ define void @powi_i16(float %V, ptr%P) {
 
   ret void
 }
+
+define i32 @test_ctpop_poison(i32 %a) {
+; CHECK-LABEL: @test_ctpop_poison(
+; CHECK-NEXT:    ret i32 poison
+;
+  %res = tail call i32 @llvm.ctpop.i32(i32 poison)
+  ret i32 %res
+}

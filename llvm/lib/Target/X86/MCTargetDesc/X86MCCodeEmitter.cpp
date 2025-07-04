@@ -603,7 +603,7 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
 
   if (ImmOffset)
     Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(ImmOffset, Ctx),
-                                   Ctx);
+                                   Ctx, Expr->getLoc());
 
   // Emit a symbolic constant as a fixup and 4 zeros.
   Fixups.push_back(MCFixup::create(static_cast<uint32_t>(CB.size() - StartByte),
