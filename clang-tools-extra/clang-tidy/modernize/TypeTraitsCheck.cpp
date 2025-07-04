@@ -149,12 +149,12 @@ static const llvm::StringSet<> TypeTraits = {
     "result_of",
     "invoke_result",
     "type_identity",
-	"tuple_element",
-	"variant_alternative",
-	"compare_three_way_result",
-	"common_comparison_category",
-	"unwrap_ref_decay",
-	"unwrap_reference",
+    "tuple_element",
+    "variant_alternative",
+    "compare_three_way_result",
+    "common_comparison_category",
+    "unwrap_ref_decay",
+    "unwrap_reference",
 };
 
 static DeclarationName getName(const DependentScopeDeclRefExpr &D) {
