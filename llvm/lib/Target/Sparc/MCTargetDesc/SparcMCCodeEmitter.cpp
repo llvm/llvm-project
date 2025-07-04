@@ -101,6 +101,7 @@ static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
   case ELF::R_SPARC_WDISP16:
   case ELF::R_SPARC_WDISP19:
   case ELF::R_SPARC_WDISP22:
+  case Sparc::fixup_sparc_call30:
     PCRel = true;
   }
   Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
