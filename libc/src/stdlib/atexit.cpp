@@ -24,9 +24,17 @@ int __cxa_atexit(AtExitCallback *callback, void *payload, void *) {
   return add_atexit_unit(atexit_callbacks, {callback, payload});
 }
 
+#ifdef LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
+extern "C" [[gnu::weak]] void _malloc_thread_cleanup();
+#endif // LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
+
 void __cxa_finalize(void *dso) {
   if (!dso) {
     call_exit_callbacks(atexit_callbacks);
+#ifdef LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
+    if (_malloc_thread_cleanup)
+      _malloc_thread_cleanup();
+#endif // LIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP
     if (teardown_main_tls)
       teardown_main_tls();
   }
