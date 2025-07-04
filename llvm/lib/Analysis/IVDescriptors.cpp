@@ -51,6 +51,7 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
     return true;
@@ -741,10 +742,9 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
                                   : APInt::getMinValue(NumBits);
         ValidRange = ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
       } else {
-        assert(IsSigned && "Only FindFirstIV with SMax is supported currently");
-        ValidRange =
-            ConstantRange::getNonEmpty(APInt::getSignedMinValue(NumBits),
-                                       APInt::getSignedMaxValue(NumBits) - 1);
+        APInt Sentinel = IsSigned ? APInt::getSignedMaxValue(NumBits)
+                                  : APInt::getMaxValue(NumBits);
+        ValidRange = ConstantRange::getNonEmpty(Sentinel, Sentinel - 1);
       }
 
       LLVM_DEBUG(dbgs() << "LV: "
@@ -770,6 +770,8 @@ RecurrenceDescriptor::isFindIVPattern(RecurKind Kind, Loop *TheLoop,
 
     if (CheckRange(true))
       return RecurKind::FindFirstIVSMin;
+    if (CheckRange(false))
+      return RecurKind::FindFirstIVUMin;
     return std::nullopt;
   };
 
@@ -815,7 +817,8 @@ RecurrenceDescriptor::isMinMaxPattern(Instruction *I, RecurKind Kind,
   if (match(I, m_OrdOrUnordFMin(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_OrdOrUnordFMax(m_Value(), m_Value())))
-    return InstDesc(Kind == RecurKind::FMax, I);
+    return InstDesc(Kind == RecurKind::FMax || Kind == RecurKind::FMaxNoFMFs,
+                    I);
   if (match(I, m_FMinNum(m_Value(), m_Value())))
     return InstDesc(Kind == RecurKind::FMin, I);
   if (match(I, m_FMaxNum(m_Value(), m_Value())))
@@ -937,10 +940,15 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
                   m_Intrinsic<Intrinsic::minimumnum>(m_Value(), m_Value())) ||
             match(I, m_Intrinsic<Intrinsic::maximumnum>(m_Value(), m_Value()));
     };
-    if (isIntMinMaxRecurrenceKind(Kind) ||
-        (HasRequiredFMF() && isFPMinMaxRecurrenceKind(Kind)))
+    if (isIntMinMaxRecurrenceKind(Kind))
       return isMinMaxPattern(I, Kind, Prev);
-    else if (isFMulAddIntrinsic(I))
+    if (isFPMinMaxRecurrenceKind(Kind)) {
+      if (HasRequiredFMF())
+        return isMinMaxPattern(I, Kind, Prev);
+      if ((Kind == RecurKind::FMax || Kind == RecurKind::FMaxNoFMFs) &&
+          isMinMaxPattern(I, Kind, Prev).isRecurrence())
+        return InstDesc(I, RecurKind::FMaxNoFMFs);
+    } else if (isFMulAddIntrinsic(I))
       return InstDesc(Kind == RecurKind::FMulAdd, I,
                       I->hasAllowReassoc() ? nullptr : I);
     return InstDesc(false, I);
@@ -1183,6 +1191,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
     return Instruction::Mul;
   case RecurKind::AnyOf:
   case RecurKind::FindFirstIVSMin:
+  case RecurKind::FindFirstIVUMin:
   case RecurKind::FindLastIVSMax:
   case RecurKind::FindLastIVUMax:
   case RecurKind::Or:
@@ -1202,6 +1211,7 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::UMin:
     return Instruction::ICmp;
   case RecurKind::FMax:
+  case RecurKind::FMaxNoFMFs:
   case RecurKind::FMin:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
