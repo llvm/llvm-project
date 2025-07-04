@@ -39,6 +39,8 @@ public:
   static llvm::VersionTuple GetOSVersion();
   static std::optional<std::string> GetOSBuildString();
 
+  static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options);
+
 #ifdef LLDB_ENABLE_SWIFT
   static FileSpec GetSwiftResourceDir();
   static std::string GetSwiftResourceDir(llvm::Triple triple,
