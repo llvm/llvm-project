@@ -409,6 +409,7 @@ uptr TagFromShadowStackFrame(uptr pc);
 
 class ScopedReportBase {
  public:
+  void SetKindAndTag(ReportType typ, uptr tag);
   void AddMemoryAccess(uptr addr, uptr external_tag, Shadow s, Tid tid,
                        StackTrace stack, const MutexSet *mset);
   void AddStack(StackTrace stack, bool suppressable = false);
@@ -421,17 +422,16 @@ class ScopedReportBase {
   void SetCount(int count);
   void SetSigNum(int sig);
 
+  void SymbolizeReport();
   const ReportDesc *GetReport() const;
 
  protected:
+  ScopedReportBase();
   ScopedReportBase(ReportType typ, uptr tag);
   ~ScopedReportBase();
 
  private:
   ReportDesc *rep_;
-  // Symbolizer makes lots of intercepted calls. If we try to process them,
-  // at best it will cause deadlocks on internal mutexes.
-  ScopedIgnoreInterceptors ignore_interceptors_;
 
   ScopedReportBase(const ScopedReportBase &) = delete;
   void operator=(const ScopedReportBase &) = delete;
@@ -439,11 +439,9 @@ class ScopedReportBase {
 
 class ScopedReport : public ScopedReportBase {
  public:
+  explicit ScopedReport();
   explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
   ~ScopedReport();
-
- private:
-  ScopedErrorReportLock lock_;
 };
 
 bool ShouldReport(ThreadState *thr, ReportType typ);
