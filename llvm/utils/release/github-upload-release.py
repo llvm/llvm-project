@@ -60,7 +60,7 @@ If you do not find a release package for your platform, you may be able to find 
 If you rely on a platform or configuration that is not one of the defaults, we suggest you use the binaries that your platform provides, or build your own release packages.
 
 In addition, source archives are available:
-* `<sub-project>*.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
+* `<sub-project>-{release}.src.tar.xz` are archives of the sources of specific sub-projects of `llvm-project` (except for `test-suite` which is an archive of the [LLVM Test Suite](https://github.com/llvm/llvm-test-suite)).
 * To get all the `llvm-project` source code for this release, choose `llvm-project-{release}.src.tar.xz`.
 
 ## Verifying Packages
