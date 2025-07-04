@@ -45,9 +45,7 @@ SuffixTree::SuffixTree(const ArrayRef<unsigned> &Str,
     SuffixesToAdd = extend(PfxEndIdx, SuffixesToAdd);
   }
 
-  // Set the suffix indices of each leaf.
   assert(Root && "Root node can't be nullptr!");
-  setSuffixIndices();
 
   // Collect all leaf nodes of the suffix tree. And for each internal node,
   // record the range of leaf nodes that are descendants of it.
@@ -60,6 +58,9 @@ SuffixTreeNode *SuffixTree::insertLeaf(SuffixTreeInternalNode &Parent,
   assert(StartIdx <= LeafEndIdx && "String can't start after it ends!");
   auto *N = new (LeafNodeAllocator.Allocate())
       SuffixTreeLeafNode(StartIdx, &LeafEndIdx);
+  // Since the suffix indices are already determined,
+  // they can be set directly.
+  N->setSuffixIdx(StartIdx - Parent.getConcatLen());
   Parent.Children[Edge] = N;
   return N;
 }
@@ -73,42 +74,18 @@ SuffixTree::insertInternalNode(SuffixTreeInternalNode *Parent,
          "Non-root internal nodes must have parents!");
   auto *N = new (InternalNodeAllocator.Allocate())
       SuffixTreeInternalNode(StartIdx, EndIdx, Root);
-  if (Parent)
+  if (Parent) {
+    // Since the concatLens are already determined,
+    // they can be set directly.
+    N->setConcatLen(Parent->getConcatLen() + numElementsInSubstring(N));
     Parent->Children[Edge] = N;
+  }
   return N;
 }
 
 SuffixTreeInternalNode *SuffixTree::insertRoot() {
   return insertInternalNode(/*Parent = */ nullptr, SuffixTreeNode::EmptyIdx,
                             SuffixTreeNode::EmptyIdx, /*Edge = */ 0);
-}
-
-void SuffixTree::setSuffixIndices() {
-  // List of nodes we need to visit along with the current length of the
-  // string.
-  SmallVector<std::pair<SuffixTreeNode *, unsigned>> ToVisit;
-
-  // Current node being visited.
-  SuffixTreeNode *CurrNode = Root;
-
-  // Sum of the lengths of the nodes down the path to the current one.
-  unsigned CurrNodeLen = 0;
-  ToVisit.push_back({CurrNode, CurrNodeLen});
-  while (!ToVisit.empty()) {
-    std::tie(CurrNode, CurrNodeLen) = ToVisit.pop_back_val();
-    // Length of the current node from the root down to here.
-    CurrNode->setConcatLen(CurrNodeLen);
-    if (auto *InternalNode = dyn_cast<SuffixTreeInternalNode>(CurrNode))
-      for (auto &ChildPair : InternalNode->Children) {
-        assert(ChildPair.second && "Node had a null child!");
-        ToVisit.push_back(
-            {ChildPair.second,
-             CurrNodeLen + numElementsInSubstring(ChildPair.second)});
-      }
-    // No children, so we are at the end of the string.
-    if (auto *LeafNode = dyn_cast<SuffixTreeLeafNode>(CurrNode))
-      LeafNode->setSuffixIdx(Str.size() - CurrNodeLen);
-  }
 }
 
 void SuffixTree::setLeafNodes() {
