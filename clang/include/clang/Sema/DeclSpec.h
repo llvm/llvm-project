@@ -76,6 +76,10 @@ class CXXScopeSpec {
   NestedNameSpecifierLocBuilder Builder;
   ArrayRef<TemplateParameterList *> TemplateParamLists;
 
+  /// Flag indicating whether an incomplete-type diagnostic
+  /// has already been emitted for this scope specifier.
+  bool HadIncompleteTypeError = false;
+
 public:
   SourceRange getRange() const { return Range; }
   void setRange(SourceRange R) { Range = R; }
@@ -83,6 +87,12 @@ public:
   void setEndLoc(SourceLocation Loc) { Range.setEnd(Loc); }
   SourceLocation getBeginLoc() const { return Range.getBegin(); }
   SourceLocation getEndLoc() const { return Range.getEnd(); }
+  
+  /// Return true if an incomplete-type diagnostic has already been emitted.
+  bool hasIncompleteTypeError() const { return HadIncompleteTypeError; }
+
+  /// Mark that an incomplete-type error was emitted for this scope.
+  void setIncompleteTypeError(bool v = true) { HadIncompleteTypeError = v; }
 
   void setTemplateParamLists(ArrayRef<TemplateParameterList *> L) {
     TemplateParamLists = L;
