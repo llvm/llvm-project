@@ -1199,13 +1199,13 @@ define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-SAME: i16 [[N:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i16 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i16 [[N]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 32764
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw nsw i32 [[N_VEC]] to i16
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], -4
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nsw i32 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[IND_END:%.*]] = or disjoint i16 [[DOTCAST]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1222,7 +1222,7 @@ define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[TMP1]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
@@ -1277,13 +1277,13 @@ define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-SAME: i16 [[N:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i16 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[TMP0]], -1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp slt i16 [[N]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], 32764
-; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nuw nsw i32 [[N_VEC]] to i16
+; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[TMP1]], -4
+; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc nsw i32 [[N_VEC]] to i16
 ; CHECK-NEXT:    [[IND_END:%.*]] = or disjoint i16 [[DOTCAST]], 1
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -1300,7 +1300,7 @@ define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N_VEC]], [[TMP1]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i16 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ 1, [[ENTRY:%.*]] ]
