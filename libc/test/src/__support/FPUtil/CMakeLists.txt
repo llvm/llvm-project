@@ -46,8 +46,8 @@ add_fp_unittest(
   SRCS
     comparison_operations_test.cpp
   DEPENDS
-    libc.src.__support.FPUtil.fp_bits
   libc.src.__support.FPUtil.comparison_operations
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.properties.types
     libc.src.__support.sign
 )
