@@ -15,6 +15,9 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+// FIXME: Add chrono::treat_as_floating_point_v and chrono::is_clock_v.
+// This will require restructuring the code to handle type traits not
+// defined directly in std.
 static const llvm::StringSet<> ValueTraits = {
     "alignment_of",
     "conjunction",
@@ -121,6 +124,8 @@ static const llvm::StringSet<> ValueTraits = {
     "variant_size",
 };
 
+// FIXME: Add tuple_element_t. This is a recursively-defined type trait, so
+// you'll have to ensure the check doesn't fire within the trait's definition.
 static const llvm::StringSet<> TypeTraits = {
     "remove_cv",
     "remove_const",
@@ -149,7 +154,6 @@ static const llvm::StringSet<> TypeTraits = {
     "result_of",
     "invoke_result",
     "type_identity",
-    "tuple_element",
     "variant_alternative",
     "compare_three_way_result",
     "common_comparison_category",

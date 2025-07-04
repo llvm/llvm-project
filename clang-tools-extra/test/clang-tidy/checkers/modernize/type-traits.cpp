@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++14 %s modernize-type-traits %t -check-suffixes=',MACRO'
 // RUN: %check_clang_tidy -std=c++14 %s modernize-type-traits %t -- \
 // RUN:   -config='{CheckOptions: {modernize-type-traits.IgnoreMacros: true}}'
-// RUN: %check_clang_tidy -std=c++17 %s modernize-type-traits %t -check-suffixes=',CXX17,MACRO,CXX17MACRO'
+// RUN: %check_clang_tidy -std=c++17-or-later %s modernize-type-traits %t -check-suffixes=',CXX17,MACRO,CXX17MACRO'
 
 namespace std {
   template <typename>
