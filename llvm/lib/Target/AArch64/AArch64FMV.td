@@ -83,3 +83,8 @@ def : FMVExtension<"sve2-sha3", "SVE_SHA3">;
 def : FMVExtension<"sve2-sm4", "SVE_SM4">;
 def : FMVExtension<"wfxt", "WFXT">;
 def : FMVExtension<"cssc", "CSSC">;
+let FeatureBit = "FEAT_MAX" in def : FMVExtension<"priority1", "1">;
+let FeatureBit = "FEAT_MAX" in def : FMVExtension<"priority2", "2">;
+let FeatureBit = "FEAT_MAX" in def : FMVExtension<"priority3", "3">;
+let FeatureBit = "FEAT_MAX" in def : FMVExtension<"priority4", "4">;
+let FeatureBit = "FEAT_MAX" in def : FMVExtension<"priority5", "5">;

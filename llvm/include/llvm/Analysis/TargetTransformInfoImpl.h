@@ -1126,6 +1126,7 @@ public:
   virtual bool hasArmWideBranch(bool) const { return false; }
 
   virtual uint64_t getFeatureMask(const Function &F) const { return 0; }
+  virtual uint64_t getPriorityMask(const Function &F) const { return 0; }
 
   virtual bool isMultiversionedFunction(const Function &F) const {
     return false;
