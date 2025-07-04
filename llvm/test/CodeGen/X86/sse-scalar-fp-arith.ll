@@ -1266,12 +1266,13 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; X86-SSE-LABEL: add_ss_mask:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    je .LBB70_2
-; X86-SSE-NEXT:  # %bb.1:
-; X86-SSE-NEXT:    addss %xmm0, %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm2
-; X86-SSE-NEXT:  .LBB70_2:
+; X86-SSE-NEXT:    jne .LBB70_1
+; X86-SSE-NEXT:  # %bb.2:
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; X86-SSE-NEXT:    retl
+; X86-SSE-NEXT:  .LBB70_1:
+; X86-SSE-NEXT:    addss %xmm0, %xmm1
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: add_ss_mask:
@@ -1295,12 +1296,13 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; X64-SSE-LABEL: add_ss_mask:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    testb $1, %dil
-; X64-SSE-NEXT:    je .LBB70_2
-; X64-SSE-NEXT:  # %bb.1:
-; X64-SSE-NEXT:    addss %xmm0, %xmm1
-; X64-SSE-NEXT:    movaps %xmm1, %xmm2
-; X64-SSE-NEXT:  .LBB70_2:
+; X64-SSE-NEXT:    jne .LBB70_1
+; X64-SSE-NEXT:  # %bb.2:
 ; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; X64-SSE-NEXT:    retq
+; X64-SSE-NEXT:  .LBB70_1:
+; X64-SSE-NEXT:    addss %xmm0, %xmm1
+; X64-SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: add_ss_mask:
@@ -1334,12 +1336,13 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; X86-SSE-LABEL: add_sd_mask:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    je .LBB71_2
-; X86-SSE-NEXT:  # %bb.1:
-; X86-SSE-NEXT:    addsd %xmm0, %xmm1
-; X86-SSE-NEXT:    movapd %xmm1, %xmm2
-; X86-SSE-NEXT:  .LBB71_2:
+; X86-SSE-NEXT:    jne .LBB71_1
+; X86-SSE-NEXT:  # %bb.2:
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; X86-SSE-NEXT:    retl
+; X86-SSE-NEXT:  .LBB71_1:
+; X86-SSE-NEXT:    addsd %xmm0, %xmm1
+; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: add_sd_mask:
@@ -1363,12 +1366,13 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; X64-SSE-LABEL: add_sd_mask:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    testb $1, %dil
-; X64-SSE-NEXT:    je .LBB71_2
-; X64-SSE-NEXT:  # %bb.1:
-; X64-SSE-NEXT:    addsd %xmm0, %xmm1
-; X64-SSE-NEXT:    movapd %xmm1, %xmm2
-; X64-SSE-NEXT:  .LBB71_2:
+; X64-SSE-NEXT:    jne .LBB71_1
+; X64-SSE-NEXT:  # %bb.2:
 ; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
+; X64-SSE-NEXT:    retq
+; X64-SSE-NEXT:  .LBB71_1:
+; X64-SSE-NEXT:    addsd %xmm0, %xmm1
+; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: add_sd_mask:

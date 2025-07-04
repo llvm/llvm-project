@@ -9,18 +9,15 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibCxxAtomicTestCase(TestBase):
+class StdAtomicTestCase(TestBase):
     def get_variable(self, name):
         var = self.frame().FindVariable(name)
         var.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
         var.SetPreferSyntheticValue(True)
         return var
 
-    @skipIf(compiler=["gcc"])
-    @add_test_categories(["libc++"])
-    def test(self):
-        """Test that std::atomic as defined by libc++ is correctly printed by LLDB"""
-        self.build()
+    def do_test(self):
+        """Test that std::atomic is correctly printed by LLDB"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
         bkpt = self.target().FindBreakpointByID(
@@ -30,8 +27,6 @@ class LibCxxAtomicTestCase(TestBase):
         )
 
         self.runCmd("run", RUN_SUCCEEDED)
-
-        lldbutil.skip_if_library_missing(self, self.target(), re.compile(r"libc\+\+"))
 
         # The stop reason of the thread should be breakpoint.
         self.expect(
@@ -66,3 +61,9 @@ class LibCxxAtomicTestCase(TestBase):
         self.expect(
             "frame var p.child.parent", substrs=["p.child.parent = {\n  Value = 0x"]
         )
+
+    @skipIf(compiler=["gcc"])
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()

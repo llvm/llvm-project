@@ -441,7 +441,7 @@ AArch64RegisterInfo::getStrictlyReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, AArch64::WSP);
   markSuperRegs(Reserved, AArch64::WZR);
 
-  if (TFI->isFPReserved(MF))
+  if (TFI->hasFP(MF) || TT.isOSDarwin())
     markSuperRegs(Reserved, AArch64::W29);
 
   if (MF.getSubtarget<AArch64Subtarget>().isWindowsArm64EC()) {

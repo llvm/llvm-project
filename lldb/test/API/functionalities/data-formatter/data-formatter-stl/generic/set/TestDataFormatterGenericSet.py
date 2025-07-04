@@ -137,7 +137,7 @@ class GenericSetDataFormatterTestCase(TestBase):
 
     def do_test_ref_and_ptr(self, stdlib_type):
         """Test that the data formatters work on ref and ptr."""
-        self.build()
+        self.build(dictionary={stdlib_type: "1"})
         (self.target, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self,
             "Stop here to check by ref and ptr.",

@@ -40,7 +40,7 @@ public:
                       const MCTargetOptions &Options);
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
-                uint64_t &FixedValue, bool IsResolved) override;
+                uint64_t &FixedValue, bool IsResolved);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
@@ -54,8 +54,7 @@ public:
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                      MCAlignFragment &AF) override;
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override;
+  bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target);
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 

@@ -1128,6 +1128,9 @@ void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;

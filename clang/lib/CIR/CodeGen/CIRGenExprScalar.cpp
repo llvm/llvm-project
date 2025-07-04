@@ -371,6 +371,11 @@ public:
     return builder.create<cir::CastOp>(src.getLoc(), fullDstTy, *castKind, src);
   }
 
+  mlir::Value
+  VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e) {
+    return Visit(e->getReplacement());
+  }
+
   mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
   mlir::Value
   VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);

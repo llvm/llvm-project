@@ -1,6 +1,6 @@
 # Model Context Protocol (MCP)
 
-LLDB supports the [Model Context Protocol][https://modelcontextprotocol.io]
+LLDB supports the [Model Context Protocol](https://modelcontextprotocol.io)
 (MCP). This structured, machine-friendly protocol allows AI models to access
 and interact with external tools, for example debuggers. Using MCP, an AI agent
 can execute LLDB commands to control the debugger: set breakpoints, inspect

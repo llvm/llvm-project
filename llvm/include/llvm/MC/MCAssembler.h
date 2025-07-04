@@ -101,7 +101,7 @@ private:
   /// out.
   /// \param RecordReloc Record relocation if needed.
   /// relocation.
-  bool evaluateFixup(const MCFragment &F, const MCFixup &Fixup, MCValue &Target,
+  bool evaluateFixup(const MCFragment &F, MCFixup &Fixup, MCValue &Target,
                      uint64_t &Value, bool RecordReloc,
                      MutableArrayRef<char> Contents) const;
 

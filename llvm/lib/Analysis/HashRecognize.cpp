@@ -247,16 +247,10 @@ KnownBits ValueEvolution::compute(const Value *V) {
 }
 
 bool ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
-  for (unsigned I = 0; I < TripCount; ++I) {
-    for (auto [Phi, Step] : PhiEvolutions) {
-      KnownBits KnownAtIter = computeInstr(Step);
-      if (KnownAtIter.getBitWidth() < I + 1) {
-        ErrStr = "Loop iterations exceed bitwidth of result";
-        return false;
-      }
-      KnownPhis.emplace_or_assign(Phi, KnownAtIter);
-    }
-  }
+  for (unsigned I = 0; I < TripCount; ++I)
+    for (auto [Phi, Step] : PhiEvolutions)
+      KnownPhis.emplace_or_assign(Phi, computeInstr(Step));
+
   return ErrStr.empty();
 }
 
@@ -605,6 +599,13 @@ HashRecognize::recognizeCRC() const {
       return "Recurrences not intertwined with XOR";
   }
 
+  // Make sure that the TC doesn't exceed the bitwidth of LHSAux, or LHS.
+  Value *LHS = ConditionalRecurrence.Start;
+  Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
+  if (TC > (LHSAux ? LHSAux->getType()->getIntegerBitWidth()
+                   : LHS->getType()->getIntegerBitWidth()))
+    return "Loop iterations exceed bitwidth of data";
+
   // Make sure that the computed value is used in the exit block: this should be
   // true even if it is only really used in an outer loop's exit block, since
   // the loop is in LCSSA form.
@@ -633,13 +634,13 @@ HashRecognize::recognizeCRC() const {
     return VE.getError();
   KnownBits ResultBits = VE.KnownPhis.at(ConditionalRecurrence.Phi);
 
+  unsigned N = std::min(TC, ResultBits.getBitWidth());
   auto IsZero = [](const KnownBits &K) { return K.isZero(); };
-  if (!checkExtractBits(ResultBits, TC, IsZero, *ByteOrderSwapped))
+  if (!checkExtractBits(ResultBits, N, IsZero, *ByteOrderSwapped))
     return ErrBits(ResultBits, TC, *ByteOrderSwapped);
 
-  Value *LHSAux = SimpleRecurrence ? SimpleRecurrence.Start : nullptr;
-  return PolynomialInfo(TC, ConditionalRecurrence.Start, GenPoly, ComputedValue,
-                        *ByteOrderSwapped, LHSAux);
+  return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *ByteOrderSwapped,
+                        LHSAux);
 }
 
 void CRCTable::print(raw_ostream &OS) const {

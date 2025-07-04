@@ -73,6 +73,8 @@ class MCFixup {
   /// determine how the operand value should be encoded into the instruction.
   MCFixupKind Kind = FK_NONE;
 
+  bool PCRel = false;
+
   /// Used by RISC-V style linker relaxation. Whether the fixup is
   /// linker-relaxable.
   bool LinkerRelaxable = false;
@@ -105,6 +107,8 @@ public:
 
   const MCExpr *getValue() const { return Value; }
 
+  bool isPCRel() const { return PCRel; }
+  void setPCRel() { PCRel = true; }
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 

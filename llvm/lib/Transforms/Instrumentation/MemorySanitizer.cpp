@@ -2512,20 +2512,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //    S = S | (V1 & V2)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
-    Value *V1 = IRB.CreateNot(I.getOperand(0));
-    Value *V2 = IRB.CreateNot(I.getOperand(1));
+    Value *V1 = I.getOperand(0);
+    Value *V2 = I.getOperand(1);
     if (V1->getType() != S1->getType()) {
       V1 = IRB.CreateIntCast(V1, S1->getType(), false);
       V2 = IRB.CreateIntCast(V2, S2->getType(), false);
     }
-    Value *S1S2 = IRB.CreateAnd(S1, S2);
-    Value *V1S2 = IRB.CreateAnd(V1, S2);
-    Value *S1V2 = IRB.CreateAnd(S1, V2);
 
-    Value *S = IRB.CreateOr({S1S2, V1S2, S1V2});
+    Value *NotV1 = IRB.CreateNot(V1);
+    Value *NotV2 = IRB.CreateNot(V2);
+
+    Value *S1S2 = IRB.CreateAnd(S1, S2);
+    Value *S2NotV1 = IRB.CreateAnd(NotV1, S2);
+    Value *S1NotV2 = IRB.CreateAnd(S1, NotV2);
+
+    Value *S = IRB.CreateOr({S1S2, S2NotV1, S1NotV2});
+
     if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
       Value *V1V2 = IRB.CreateAnd(V1, V2);
-      S = IRB.CreateOr({S, V1V2});
+      S = IRB.CreateOr(S, V1V2, "_ms_disjoint");
     }
 
     setShadow(&I, S);

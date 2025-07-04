@@ -20,7 +20,8 @@ public:
   std::__lldb::__compressed_pair<pointer, deleter_type> __ptr_;
   explicit unique_ptr(pointer __p) noexcept
       : __ptr_(__p, std::__lldb::__value_init_tag()) {}
-#elif COMPRESSED_PAIR_REV == 1 || COMPRESSED_PAIR_REV == 2
+#elif COMPRESSED_PAIR_REV == 1 || COMPRESSED_PAIR_REV == 2 ||                  \
+    COMPRESSED_PAIR_REV == 3
   _LLDB_COMPRESSED_PAIR(pointer, __ptr_, deleter_type, __deleter_);
   explicit unique_ptr(pointer __p) noexcept : __ptr_(__p), __deleter_() {}
 #endif

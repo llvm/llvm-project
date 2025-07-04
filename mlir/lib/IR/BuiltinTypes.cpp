@@ -17,9 +17,7 @@
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;

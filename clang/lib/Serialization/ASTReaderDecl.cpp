@@ -1628,9 +1628,6 @@ RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->NonParmVarDeclBits.PreviousDeclInSameBlockScope =
         VarDeclBits.getNextBit();
 
-    if (VarDeclBits.getNextBit())
-      Reader.InitSideEffectVars.insert(VD);
-
     VD->NonParmVarDeclBits.EscapingByref = VarDeclBits.getNextBit();
     HasDeducedType = VarDeclBits.getNextBit();
     VD->NonParmVarDeclBits.ImplicitParamKind =
@@ -1701,6 +1698,8 @@ void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
     Eval->HasConstantInitialization = (Val & 2) != 0;
     Eval->HasConstantDestruction = (Val & 4) != 0;
     Eval->WasEvaluated = (Val & 8) != 0;
+    Eval->HasSideEffects = (Val & 16) != 0;
+    Eval->CheckedForSideEffects = true;
     if (Eval->WasEvaluated) {
       Eval->Evaluated = Record.readAPValue();
       if (Eval->Evaluated.needsCleanup())

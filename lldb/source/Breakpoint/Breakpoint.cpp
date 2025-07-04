@@ -61,7 +61,7 @@ Breakpoint::Breakpoint(Target &new_target, const Breakpoint &source_bp)
 Breakpoint::~Breakpoint() = default;
 
 BreakpointSP Breakpoint::CopyFromBreakpoint(TargetSP new_target,
-    const Breakpoint& bp_to_copy_from) {
+                                            const Breakpoint &bp_to_copy_from) {
   if (!new_target)
     return BreakpointSP();
 
@@ -163,7 +163,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
         std::make_shared<SearchFilterForUnconstrainedSearches>(target_sp);
   else {
     filter_sp = SearchFilter::CreateFromStructuredData(target_sp, *filter_dict,
-        create_error);
+                                                       create_error);
     if (create_error.Fail()) {
       error = Status::FromErrorStringWithFormat(
           "Error creating breakpoint filter from data: %s.",
@@ -174,7 +174,7 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
 
   std::unique_ptr<BreakpointOptions> options_up;
   StructuredData::Dictionary *options_dict;
-  Target& target = *target_sp;
+  Target &target = *target_sp;
   success = breakpoint_dict->GetValueForKeyAsDictionary(
       BreakpointOptions::GetSerializationKey(), options_dict);
   if (success) {
@@ -192,8 +192,8 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   success = breakpoint_dict->GetValueForKeyAsBoolean(
       Breakpoint::GetKey(OptionNames::Hardware), hardware);
 
-  result_sp = target.CreateBreakpoint(filter_sp, resolver_sp, false,
-                                      hardware, true);
+  result_sp =
+      target.CreateBreakpoint(filter_sp, resolver_sp, false, hardware, true);
 
   if (result_sp && options_up) {
     result_sp->m_options = *options_up;
@@ -250,6 +250,45 @@ const lldb::TargetSP Breakpoint::GetTargetSP() {
 }
 
 bool Breakpoint::IsInternal() const { return LLDB_BREAK_ID_IS_INTERNAL(m_bid); }
+
+llvm::Error Breakpoint::SetIsHardware(bool is_hardware) {
+  if (is_hardware == m_hardware)
+    return llvm::Error::success();
+
+  // Disable all non-hardware breakpoint locations.
+  std::vector<BreakpointLocationSP> locations;
+  for (BreakpointLocationSP location_sp : m_locations.BreakpointLocations()) {
+    if (!location_sp || !location_sp->IsEnabled())
+      continue;
+
+    lldb::BreakpointSiteSP breakpoint_site_sp =
+        location_sp->GetBreakpointSite();
+    if (!breakpoint_site_sp ||
+        breakpoint_site_sp->GetType() == BreakpointSite::eHardware)
+      continue;
+
+    locations.push_back(location_sp);
+    location_sp->SetEnabled(false);
+  }
+
+  // Toggle the hardware mode.
+  m_hardware = is_hardware;
+
+  // Re-enable all breakpoint locations.
+  size_t num_failures = 0;
+  for (BreakpointLocationSP location_sp : locations) {
+    if (!location_sp->SetEnabled(true))
+      num_failures++;
+  }
+
+  if (num_failures != 0)
+    return llvm::createStringError(
+        "%ull out of %ull breakpoint locations left disabled because they "
+        "couldn't be converted to hardware",
+        num_failures, locations.size());
+
+  return llvm::Error::success();
+}
 
 BreakpointLocationSP Breakpoint::AddLocation(const Address &addr,
                                              bool *new_location) {
@@ -952,8 +991,7 @@ void Breakpoint::GetResolverDescription(Stream *s) {
     m_resolver_sp->GetDescription(s);
 }
 
-bool Breakpoint::GetMatchingFileLine(ConstString filename,
-                                     uint32_t line_number,
+bool Breakpoint::GetMatchingFileLine(ConstString filename, uint32_t line_number,
                                      BreakpointLocationCollection &loc_coll) {
   // TODO: To be correct, this method needs to fill the breakpoint location
   // collection
@@ -1010,19 +1048,32 @@ void Breakpoint::SendBreakpointChangedEvent(
 
 const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {
   switch (type) {
-    case eBreakpointEventTypeInvalidType: return "invalid";
-    case eBreakpointEventTypeAdded: return "breakpoint added";
-    case eBreakpointEventTypeRemoved: return "breakpoint removed";
-    case eBreakpointEventTypeLocationsAdded: return "locations added";
-    case eBreakpointEventTypeLocationsRemoved: return "locations removed";
-    case eBreakpointEventTypeLocationsResolved: return "locations resolved";
-    case eBreakpointEventTypeEnabled: return "breakpoint enabled";
-    case eBreakpointEventTypeDisabled: return "breakpoint disabled";
-    case eBreakpointEventTypeCommandChanged: return "command changed";
-    case eBreakpointEventTypeConditionChanged: return "condition changed";
-    case eBreakpointEventTypeIgnoreChanged: return "ignore count changed";
-    case eBreakpointEventTypeThreadChanged: return "thread changed";
-    case eBreakpointEventTypeAutoContinueChanged: return "autocontinue changed";
+  case eBreakpointEventTypeInvalidType:
+    return "invalid";
+  case eBreakpointEventTypeAdded:
+    return "breakpoint added";
+  case eBreakpointEventTypeRemoved:
+    return "breakpoint removed";
+  case eBreakpointEventTypeLocationsAdded:
+    return "locations added";
+  case eBreakpointEventTypeLocationsRemoved:
+    return "locations removed";
+  case eBreakpointEventTypeLocationsResolved:
+    return "locations resolved";
+  case eBreakpointEventTypeEnabled:
+    return "breakpoint enabled";
+  case eBreakpointEventTypeDisabled:
+    return "breakpoint disabled";
+  case eBreakpointEventTypeCommandChanged:
+    return "command changed";
+  case eBreakpointEventTypeConditionChanged:
+    return "condition changed";
+  case eBreakpointEventTypeIgnoreChanged:
+    return "ignore count changed";
+  case eBreakpointEventTypeThreadChanged:
+    return "thread changed";
+  case eBreakpointEventTypeAutoContinueChanged:
+    return "autocontinue changed";
   };
   llvm_unreachable("Fully covered switch above!");
 }
@@ -1060,7 +1111,7 @@ void Breakpoint::BreakpointEventData::Dump(Stream *s) const {
   BreakpointEventType event_type = GetBreakpointEventType();
   break_id_t bkpt_id = GetBreakpoint()->GetID();
   s->Format("bkpt: {0} type: {1}", bkpt_id,
-      BreakpointEventTypeAsCString(event_type));
+            BreakpointEventTypeAsCString(event_type));
 }
 
 const Breakpoint::BreakpointEventData *

@@ -5,19 +5,18 @@
 define i32 @PR15705(i32 %x, i32 %a, i32 %b, i32 %c) #0 {
 ; X86-LABEL: PR15705:
 ; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    cmpl %eax, %edx
-; X86-NEXT:    jne .LBB0_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_2: # %if.end
 ; X86-NEXT:    cmpl %ecx, %edx
-; X86-NEXT:    jne .LBB0_4
-; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    je .LBB0_4
+; X86-NEXT:  # %bb.1: # %if.end
+; X86-NEXT:    cmpl %eax, %edx
+; X86-NEXT:    jne .LBB0_3
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:  .LBB0_3: # %if.end
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB0_4: # %return
 ; X86-NEXT:    retl
 ;

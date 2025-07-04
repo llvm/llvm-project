@@ -2556,32 +2556,32 @@ define amdgpu_kernel void @mul64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; EG-NEXT:    Fetch clause starting at 12:
 ; EG-NEXT:     VTX_READ_64 T0.XY, T0.X, 0, #1
 ; EG-NEXT:    ALU clause starting at 14:
-; EG-NEXT:     OR_INT T1.W, KC0[2].W, KC0[3].X,
-; EG-NEXT:     MOV * T0.W, literal.x,
+; EG-NEXT:     OR_INT T0.W, KC0[2].W, KC0[3].X,
+; EG-NEXT:     MOV * T1.W, literal.x,
 ; EG-NEXT:    1(1.401298e-45), 0(0.000000e+00)
-; EG-NEXT:     SETNE_INT * T1.W, PV.W, 0.0,
+; EG-NEXT:     SETNE_INT * T0.W, PV.W, 0.0,
 ; EG-NEXT:     PRED_SETNE_INT * ExecMask,PredicateBit (MASKED), PV.W, 0.0,
 ; EG-NEXT:    ALU clause starting at 19:
-; EG-NEXT:     MOV T1.W, KC0[2].W,
-; EG-NEXT:     MOV * T0.W, KC0[3].Z,
+; EG-NEXT:     MOV T0.W, KC0[2].W,
+; EG-NEXT:     MOV * T1.W, KC0[3].Z,
 ; EG-NEXT:     MOV T2.W, KC0[3].Y,
 ; EG-NEXT:     MULLO_INT * T0.X, PV.W, PS,
-; EG-NEXT:     MOV T0.W, KC0[3].X,
-; EG-NEXT:     MULHI * T0.Y, T1.W, PV.W,
+; EG-NEXT:     MOV T1.W, KC0[3].X,
+; EG-NEXT:     MULHI * T0.Y, T0.W, PV.W,
 ; EG-NEXT:     ADD_INT T3.W, PS, T0.X,
 ; EG-NEXT:     MULLO_INT * T0.X, PV.W, T2.W,
 ; EG-NEXT:     ADD_INT T0.Y, PV.W, PS,
-; EG-NEXT:     MOV T0.W, literal.x,
-; EG-NEXT:     MULLO_INT * T0.X, T1.W, T2.W,
+; EG-NEXT:     MOV T1.W, literal.x,
+; EG-NEXT:     MULLO_INT * T0.X, T0.W, T2.W,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
 ; EG-NEXT:    ALU clause starting at 31:
-; EG-NEXT:     MOV T1.W, KC0[2].Y,
-; EG-NEXT:     SETE_INT * T0.W, T0.W, 0.0,
+; EG-NEXT:     MOV T0.W, KC0[2].Y,
+; EG-NEXT:     SETE_INT * T1.W, T1.W, 0.0,
 ; EG-NEXT:     PRED_SETE_INT * ExecMask,PredicateBit (MASKED), PS, 0.0,
 ; EG-NEXT:    ALU clause starting at 34:
 ; EG-NEXT:     MOV * T0.X, KC0[2].Z,
 ; EG-NEXT:    ALU clause starting at 35:
-; EG-NEXT:     LSHR * T1.X, T1.W, literal.x,
+; EG-NEXT:     LSHR * T1.X, T0.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 entry:
   %0 = icmp eq i64 %a, 0

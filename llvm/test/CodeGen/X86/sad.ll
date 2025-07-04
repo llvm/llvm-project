@@ -151,27 +151,27 @@ define dso_local i32 @sad_32i8() nounwind {
 ; SSE2-LABEL: sad_32i8:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    .p2align 4
 ; SSE2-NEXT:  .LBB1_1: # %vector.body
 ; SSE2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; SSE2-NEXT:    movdqa a+1024(%rax), %xmm3
 ; SSE2-NEXT:    psadbw b+1024(%rax), %xmm3
-; SSE2-NEXT:    paddd %xmm3, %xmm2
+; SSE2-NEXT:    paddd %xmm3, %xmm1
 ; SSE2-NEXT:    movdqa a+1040(%rax), %xmm3
 ; SSE2-NEXT:    psadbw b+1040(%rax), %xmm3
-; SSE2-NEXT:    paddd %xmm3, %xmm1
+; SSE2-NEXT:    paddd %xmm3, %xmm2
 ; SSE2-NEXT:    addq $32, %rax
 ; SSE2-NEXT:    jne .LBB1_1
 ; SSE2-NEXT:  # %bb.2: # %middle.block
+; SSE2-NEXT:    paddd %xmm0, %xmm2
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    paddd %xmm0, %xmm2
 ; SSE2-NEXT:    paddd %xmm0, %xmm0
-; SSE2-NEXT:    paddd %xmm0, %xmm2
-; SSE2-NEXT:    paddd %xmm1, %xmm0
+; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
@@ -356,9 +356,9 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX1-LABEL: sad_avx64i8:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    movq $-1024, %rax # imm = 0xFC00
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    .p2align 4
 ; AVX1-NEXT:  .LBB2_1: # %vector.body
 ; AVX1-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -408,26 +408,26 @@ define dso_local i32 @sad_avx64i8() nounwind {
 ; AVX2-LABEL: sad_avx64i8:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    movq $-1024, %rax # imm = 0xFC00
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB2_1: # %vector.body
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vmovdqa a+1024(%rax), %ymm3
 ; AVX2-NEXT:    vpsadbw b+1024(%rax), %ymm3, %ymm3
-; AVX2-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
 ; AVX2-NEXT:    vmovdqa a+1056(%rax), %ymm3
 ; AVX2-NEXT:    vpsadbw b+1056(%rax), %ymm3, %ymm3
-; AVX2-NEXT:    vpaddd %ymm1, %ymm3, %ymm1
+; AVX2-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    addq $64, %rax
 ; AVX2-NEXT:    jne .LBB2_1
 ; AVX2-NEXT:  # %bb.2: # %middle.block
-; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm2
 ; AVX2-NEXT:    vpaddd %ymm0, %ymm0, %ymm3
-; AVX2-NEXT:    vpaddd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpaddd %ymm0, %ymm1, %ymm0
 ; AVX2-NEXT:    vpaddd %ymm3, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddd %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vpaddd %ymm3, %ymm2, %ymm1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0

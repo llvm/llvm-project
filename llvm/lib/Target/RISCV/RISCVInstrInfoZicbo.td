@@ -57,7 +57,7 @@ let Predicates = [HasStdExtZicboz] in {
 def CBO_ZERO : CBO_r<0b000000000100, "cbo.zero">, Sched<[]>;
 } // Predicates = [HasStdExtZicboz]
 
-let Predicates = [HasStdExtZicbop] in {
+let Predicates = [HasStdExtZicbop, NotHasVendorXMIPSCBOP] in {
 def PREFETCH_I : Prefetch_ri<0b00000, "prefetch.i">, Sched<[]>;
 def PREFETCH_R : Prefetch_ri<0b00001, "prefetch.r">, Sched<[]>;
 def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
@@ -69,7 +69,7 @@ def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
 
 def AddrRegImmLsb00000 : ComplexPattern<iPTR, 2, "SelectAddrRegImmLsb00000">;
 
-let Predicates = [HasStdExtZicbop] in {
+let Predicates = [HasStdExtZicbop, NotHasVendorXMIPSCBOP] in {
   def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),
                       timm, timm, (i32 0)),
             (PREFETCH_I GPR:$rs1, simm12_lsb00000:$imm12)>;

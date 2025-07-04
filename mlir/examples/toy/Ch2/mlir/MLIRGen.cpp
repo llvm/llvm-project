@@ -120,7 +120,7 @@ private:
     // Arguments type are uniformly unranked tensors.
     llvm::SmallVector<mlir::Type, 4> argTypes(proto.getArgs().size(),
                                               getType(VarType{}));
-    auto funcType = builder.getFunctionType(argTypes, std::nullopt);
+    auto funcType = builder.getFunctionType(argTypes, {});
     return builder.create<mlir::toy::FuncOp>(location, proto.getName(),
                                              funcType);
   }

@@ -102,7 +102,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
 void X86MachObjectWriter::RecordX86_64Relocation(
     MachObjectWriter *Writer, MCAssembler &Asm, const MCFragment *Fragment,
     const MCFixup &Fixup, MCValue Target, uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned IsRIPRel = isFixupKindRIPRel(Fixup.getKind());
   unsigned Log2Size = getFixupKindLog2Size(Fixup.getKind());
 
@@ -353,7 +353,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
                                                     uint64_t &FixedValue) {
   uint64_t OriginalFixedValue = FixedValue;
   uint32_t FixupOffset = Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned Type = MachO::GENERIC_RELOC_VANILLA;
 
   // See <reloc.h>.
@@ -483,7 +483,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
                                               const MCFixup &Fixup,
                                               MCValue Target,
                                               uint64_t &FixedValue) {
-  unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
+  unsigned IsPCRel = Fixup.isPCRel();
   unsigned Log2Size = getFixupKindLog2Size(Fixup.getKind());
   const MCSymbol *A = Target.getAddSym();
 

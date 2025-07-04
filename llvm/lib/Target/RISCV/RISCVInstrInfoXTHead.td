@@ -476,10 +476,10 @@ def TH_FSURD : THStoreIndexed<FPR64, 0b01110, "th.fsurd">,
 } // DecoderNamespace = "XTHead"
 
 let Predicates = [HasVendorXTHeadVdot] in {
-defm THVdotVMAQA      : THVdotVMAQA<"th.vmaqa",     0b100000>;
-defm THVdotVMAQAU     : THVdotVMAQA<"th.vmaqau",    0b100010>;
-defm THVdotVMAQASU    : THVdotVMAQA<"th.vmaqasu",   0b100100>;
-defm THVdotVMAQAUS    : THVdotVMAQA_VX<"th.vmaqaus",0b100110>;
+defm TH_VMAQA      : THVdotVMAQA<"th.vmaqa",     0b100000>;
+defm TH_VMAQAU     : THVdotVMAQA<"th.vmaqau",    0b100010>;
+defm TH_VMAQASU    : THVdotVMAQA<"th.vmaqasu",   0b100100>;
+defm TH_VMAQAUS    : THVdotVMAQA_VX<"th.vmaqaus",0b100110>;
 }
 
 // Associate LMUL with tablegen records of register classes.
@@ -661,20 +661,20 @@ def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
 let Predicates = [HasVendorXTHeadVdot] in {
-defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
-defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
-defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
-defm PseudoTHVdotVMAQAUS    : VPseudoVMAQA_VX;
+defm PseudoTH_VMAQA      : VPseudoVMAQA_VV_VX;
+defm PseudoTH_VMAQAU     : VPseudoVMAQA_VV_VX;
+defm PseudoTH_VMAQASU    : VPseudoVMAQA_VV_VX;
+defm PseudoTH_VMAQAUS    : VPseudoVMAQA_VX;
 }
 
 let Predicates = [HasVendorXTHeadVdot] in {
-defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTH_VMAQA",
                               AllQuadWidenableInt8NoVLMulVectors>;
-defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTHVdotVMAQAU",
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTH_VMAQAU",
                               AllQuadWidenableInt8NoVLMulVectors>;
-defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTHVdotVMAQASU",
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTH_VMAQASU",
                               AllQuadWidenableInt8NoVLMulVectors>;
-defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTHVdotVMAQAUS",
+defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTH_VMAQAUS",
                            AllQuadWidenableInt8NoVLMulVectors>;
 }
 

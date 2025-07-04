@@ -66,10 +66,11 @@ bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-void BPFAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void BPFAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target,
                                MutableArrayRef<char> Data, uint64_t Value,
                                bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (Fixup.getKind() == FK_SecRel_8) {
     // The Value is 0 for global variables, and the in-section offset
     // for static variables. Write to the immediate field of the inst.

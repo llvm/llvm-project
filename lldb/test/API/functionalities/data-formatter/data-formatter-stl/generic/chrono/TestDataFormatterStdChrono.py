@@ -2,20 +2,16 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxChronoDataFormatterTestCase(TestBase):
-    @add_test_categories(["libc++"])
-    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
-    def test_with_run_command(self):
+class StdChronoDataFormatterTestCase(TestBase):
+    def do_test(self):
         """Test that that file and class static variables display correctly."""
         isNotWindowsHost = lldbplatformutil.getHostPlatform() != "windows"
-        self.build()
         (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.cpp", False)
         )
@@ -433,3 +429,9 @@ class LibcxxChronoDataFormatterTestCase(TestBase):
                 "ymwdl_2024_last_tuesday_january = year=2024 month=January weekday=Tuesday index=last"
             ],
         )
+
+    @skipIf(compiler="clang", compiler_version=["<", "17.0"])
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()

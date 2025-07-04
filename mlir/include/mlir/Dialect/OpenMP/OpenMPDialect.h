@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/OpenACCMPOpsInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -32,8 +33,6 @@
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.h.inc"
-
-#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenMP/OpenMPOps.h.inc"

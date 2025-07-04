@@ -2535,3 +2535,57 @@ define <4 x i32> @reassociate_with_constant_splat(ptr %base, i32 %index, <4 x i3
   ret <4 x i32> %res
 }
 
+define <4 x i32> @diagonal(ptr %base, <4 x i64> %vecidx) {
+; RV32-LABEL: diagonal:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vnsrl.wi v10, v8, 0
+; RV32-NEXT:    vsll.vi v8, v10, 10
+; RV32-NEXT:    vadd.vx v8, v8, a0
+; RV32-NEXT:    vsll.vi v9, v10, 2
+; RV32-NEXT:    vadd.vv v8, v8, v9
+; RV32-NEXT:    vluxei32.v v8, (zero), v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: diagonal:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsll.vi v10, v8, 10
+; RV64-NEXT:    vadd.vx v10, v10, a0
+; RV64-NEXT:    vsll.vi v8, v8, 2
+; RV64-NEXT:    vadd.vv v10, v10, v8
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vluxei64.v v8, (zero), v10
+; RV64-NEXT:    ret
+  %gep = getelementptr inbounds nuw [256 x [256 x float]], ptr %base, i64 0, <4 x i64> %vecidx, <4 x i64> %vecidx
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @diagonal_i32(ptr %base, <4 x i32> %vecidx) {
+; RV32-LABEL: diagonal_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsll.vi v9, v8, 10
+; RV32-NEXT:    vadd.vx v9, v9, a0
+; RV32-NEXT:    vsll.vi v8, v8, 2
+; RV32-NEXT:    vadd.vv v8, v9, v8
+; RV32-NEXT:    vluxei32.v v8, (zero), v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: diagonal_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vsext.vf2 v10, v8
+; RV64-NEXT:    vsll.vi v8, v10, 10
+; RV64-NEXT:    vadd.vx v8, v8, a0
+; RV64-NEXT:    vsll.vi v10, v10, 2
+; RV64-NEXT:    vadd.vv v10, v8, v10
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vluxei64.v v8, (zero), v10
+; RV64-NEXT:    ret
+  %gep = getelementptr inbounds nuw [256 x [256 x float]], ptr %base, i64 0, <4 x i32> %vecidx, <4 x i32> %vecidx
+  %res = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %res
+}
+

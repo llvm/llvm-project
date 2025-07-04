@@ -3,7 +3,7 @@
 ; From coremark. Test that we pipeline the matrix multiplication bitextract
 ; function. The pipelined code should have two packets.
 
-; CHECK: loop0(.LBB0_[[LOOP:[0-9]+]],
+; CHECK: loop0(.LBB0_[[LOOP:.]],
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: [[REG0:(r[0-9]+)]] = mpyi([[REG1:(r[0-9]+)]],[[REG2:(r[0-9]+)]])
 ; CHECK: += mpyi

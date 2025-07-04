@@ -583,8 +583,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    mov w10, w2
 ; CHECK-SD-NEXT:    b.hi .LBB5_4
 ; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w8, wzr
 ; CHECK-SD-NEXT:    mov x11, xzr
+; CHECK-SD-NEXT:    mov w8, wzr
 ; CHECK-SD-NEXT:    b .LBB5_7
 ; CHECK-SD-NEXT:  .LBB5_3:
 ; CHECK-SD-NEXT:    mov w8, wzr

@@ -67,9 +67,7 @@ class TestStatusline(PExpectTest):
         self.expect('set set separator "| "')
 
         # Hide the statusline and check or the control character.
-        self.expect(
-            "set set show-statusline false", ["\x1b[1;{}r".format(self.TERMINAL_HEIGHT)]
-        )
+        self.expect("set set show-statusline false", ["\x1b[1;0r"])
 
     def test_no_color(self):
         """Basic test for the statusline with colors disabled."""
@@ -114,6 +112,6 @@ class TestStatusline(PExpectTest):
         self.resize()
         self.expect("set set show-statusline true", ["no target"])
         self.resize(20, 60)
-        # Check for the escape code to resize the scroll window, followed by
-        # the prompt.
-        self.child.expect(re.escape("\x1b[1;19r\x1b8(lldb)"))
+        # Check for the escape code to resize the scroll window.
+        self.child.expect(re.escape("\x1b[1;19r"))
+        self.child.expect("(lldb)")

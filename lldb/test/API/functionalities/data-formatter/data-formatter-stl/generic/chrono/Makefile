@@ -1,6 +1,4 @@
 CXX_SOURCES := main.cpp
+CXXFLAGS_EXTRAS := -std=c++20
 
-USE_LIBCPP := 1
-
-CXXFLAGS_EXTRAS := -O0
 include Makefile.rules

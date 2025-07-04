@@ -552,10 +552,10 @@ void sinkSpillUsesAfterCoroBegin(const DominatorTree &Dom,
         Worklist.push_back(Inst);
     }
   };
-  std::for_each(Spills.begin(), Spills.end(),
-                [&](auto &I) { collectUsers(I.first); });
-  std::for_each(Allocas.begin(), Allocas.end(),
-                [&](auto &I) { collectUsers(I.Alloca); });
+  for (auto &I : Spills)
+    collectUsers(I.first);
+  for (auto &I : Allocas)
+    collectUsers(I.Alloca);
 
   // Recursively collect users before coro.begin.
   while (!Worklist.empty()) {

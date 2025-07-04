@@ -13,13 +13,13 @@ define void @test_80() {
 ; CHECK-NEXT:    .pad #152
 ; CHECK-NEXT:    sub sp, sp, #152
 ; CHECK-NEXT:    add r0, sp, #72
-; CHECK-NEXT:    ldr r2, .LCPI0_0
+; CHECK-NEXT:    ldr r1, .LCPI0_0
 ; CHECK-NEXT:    add r0, r0, #12
-; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    mov r2, sp
 ; CHECK-NEXT:  .LBB0_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r3, [r0], #4
-; CHECK-NEXT:    subs r2, r2, #4
-; CHECK-NEXT:    str r3, [r1], #4
+; CHECK-NEXT:    subs r1, r1, #4
+; CHECK-NEXT:    str r3, [r2], #4
 ; CHECK-NEXT:    bne .LBB0_1
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    add r3, sp, #72
@@ -52,14 +52,14 @@ define void @test_4000() {
 ; CHECK-NEXT:    sub sp, sp, #920
 ; CHECK-NEXT:    sub sp, sp, #3072
 ; CHECK-NEXT:    add lr, sp, #3072
-; CHECK-NEXT:    ldr r2, .LCPI1_0
+; CHECK-NEXT:    ldr r1, .LCPI1_0
 ; CHECK-NEXT:    add r0, lr, #920
-; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    mov r2, sp
 ; CHECK-NEXT:    add r0, r0, #12
 ; CHECK-NEXT:  .LBB1_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr r3, [r0], #4
-; CHECK-NEXT:    subs r2, r2, #4
-; CHECK-NEXT:    str r3, [r1], #4
+; CHECK-NEXT:    subs r1, r1, #4
+; CHECK-NEXT:    str r3, [r2], #4
 ; CHECK-NEXT:    bne .LBB1_1
 ; CHECK-NEXT:  @ %bb.2:
 ; CHECK-NEXT:    ldr r1, [sp, #3992]

@@ -897,54 +897,55 @@ define void @strided_load_startval_add_with_splat(ptr noalias nocapture %arg, pt
 ; CHECK-NEXT:    beq a2, a3, .LBB14_7
 ; CHECK-NEXT:  # %bb.1: # %bb3
 ; CHECK-NEXT:    li a3, 1023
-; CHECK-NEXT:    subw a4, a3, a2
-; CHECK-NEXT:    li a5, 31
-; CHECK-NEXT:    bltu a4, a5, .LBB14_5
+; CHECK-NEXT:    subw a5, a3, a2
+; CHECK-NEXT:    li a6, 31
+; CHECK-NEXT:    mv a4, a2
+; CHECK-NEXT:    bltu a5, a6, .LBB14_5
 ; CHECK-NEXT:  # %bb.2: # %bb9
-; CHECK-NEXT:    slli a5, a4, 32
-; CHECK-NEXT:    slli a7, a2, 2
-; CHECK-NEXT:    add a4, a0, a2
+; CHECK-NEXT:    slli a4, a5, 32
+; CHECK-NEXT:    slli t0, a2, 2
+; CHECK-NEXT:    add a5, a0, a2
 ; CHECK-NEXT:    add a6, a1, a2
 ; CHECK-NEXT:    li t2, 32
-; CHECK-NEXT:    srli a5, a5, 32
-; CHECK-NEXT:    add a7, a6, a7
-; CHECK-NEXT:    addi a5, a5, 1
-; CHECK-NEXT:    andi a6, a5, -32
-; CHECK-NEXT:    add a2, a6, a2
-; CHECK-NEXT:    add t0, a2, a0
+; CHECK-NEXT:    srli a4, a4, 32
+; CHECK-NEXT:    add t0, a6, t0
+; CHECK-NEXT:    addi a6, a4, 1
+; CHECK-NEXT:    andi a7, a6, -32
+; CHECK-NEXT:    add a4, a7, a2
+; CHECK-NEXT:    add a2, a4, a0
 ; CHECK-NEXT:    li t1, 5
 ; CHECK-NEXT:    vsetvli zero, t2, e8, m1, ta, ma
 ; CHECK-NEXT:  .LBB14_3: # %bb15
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vlse8.v v8, (a7), t1
-; CHECK-NEXT:    vle8.v v9, (a4)
+; CHECK-NEXT:    vlse8.v v8, (t0), t1
+; CHECK-NEXT:    vle8.v v9, (a5)
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
-; CHECK-NEXT:    vse8.v v8, (a4)
-; CHECK-NEXT:    addi a4, a4, 32
-; CHECK-NEXT:    addi a7, a7, 160
-; CHECK-NEXT:    bne a4, t0, .LBB14_3
+; CHECK-NEXT:    vse8.v v8, (a5)
+; CHECK-NEXT:    addi a5, a5, 32
+; CHECK-NEXT:    addi t0, t0, 160
+; CHECK-NEXT:    bne a5, a2, .LBB14_3
 ; CHECK-NEXT:  # %bb.4: # %bb30
-; CHECK-NEXT:    beq a5, a6, .LBB14_7
+; CHECK-NEXT:    beq a6, a7, .LBB14_7
 ; CHECK-NEXT:  .LBB14_5: # %bb32
-; CHECK-NEXT:    add a4, a0, a2
-; CHECK-NEXT:    slli a5, a2, 2
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    subw a3, a3, a2
+; CHECK-NEXT:    add a2, a0, a4
+; CHECK-NEXT:    slli a5, a4, 2
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    subw a3, a3, a4
 ; CHECK-NEXT:    add a1, a1, a5
 ; CHECK-NEXT:    slli a3, a3, 32
 ; CHECK-NEXT:    srli a3, a3, 32
-; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    add a0, a4, a0
 ; CHECK-NEXT:    add a0, a0, a3
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:  .LBB14_6: # %bb35
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lbu a2, 0(a1)
-; CHECK-NEXT:    lbu a3, 0(a4)
-; CHECK-NEXT:    add a2, a3, a2
-; CHECK-NEXT:    sb a2, 0(a4)
-; CHECK-NEXT:    addi a4, a4, 1
+; CHECK-NEXT:    lbu a3, 0(a1)
+; CHECK-NEXT:    lbu a4, 0(a2)
+; CHECK-NEXT:    add a3, a4, a3
+; CHECK-NEXT:    sb a3, 0(a2)
+; CHECK-NEXT:    addi a2, a2, 1
 ; CHECK-NEXT:    addi a1, a1, 5
-; CHECK-NEXT:    bne a4, a0, .LBB14_6
+; CHECK-NEXT:    bne a2, a0, .LBB14_6
 ; CHECK-NEXT:  .LBB14_7: # %bb34
 ; CHECK-NEXT:    ret
 bb:

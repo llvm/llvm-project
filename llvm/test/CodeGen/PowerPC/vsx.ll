@@ -2488,8 +2488,8 @@ define double @test82(double %a, double %b, double %c, double %d) {
 ; CHECK-FISL:       # %bb.0: # %entry
 ; CHECK-FISL-NEXT:    stfd f2, -16(r1) # 8-byte Folded Spill
 ; CHECK-FISL-NEXT:    fmr f2, f1
-; CHECK-FISL-NEXT:    stfd f2, -8(r1) # 8-byte Folded Spill
 ; CHECK-FISL-NEXT:    xscmpudp cr0, f3, f4
+; CHECK-FISL-NEXT:    stfd f2, -8(r1) # 8-byte Folded Spill
 ; CHECK-FISL-NEXT:    beq cr0, .LBB67_2
 ; CHECK-FISL-NEXT:  # %bb.1: # %entry
 ; CHECK-FISL-NEXT:    lfd f0, -16(r1) # 8-byte Folded Reload

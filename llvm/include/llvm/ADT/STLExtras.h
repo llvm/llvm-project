@@ -1759,6 +1759,12 @@ bool none_of(R &&Range, UnaryPredicate P) {
   return std::none_of(adl_begin(Range), adl_end(Range), P);
 }
 
+/// Provide wrappers to std::fill which take ranges instead of having to pass
+/// begin/end explicitly.
+template <typename R, typename T> void fill(R &&Range, T &&Value) {
+  std::fill(adl_begin(Range), adl_end(Range), std::forward<T>(Value));
+}
+
 /// Provide wrappers to std::find which take ranges instead of having to pass
 /// begin/end explicitly.
 template <typename R, typename T> auto find(R &&Range, const T &Val) {

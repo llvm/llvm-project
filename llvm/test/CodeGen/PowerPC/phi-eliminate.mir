@@ -195,9 +195,12 @@ body:             |
   ; CHECK: bb.4:
   ; CHECK:   successors: %bb.5(0x80000000)
   ; CHECK:   %44:g8rc_and_g8rc_nox0 = COPY killed %59
-  ; CHECK:   %63:gprc = COPY killed %57
-  ; CHECK:   %61:gprc = COPY killed %60
-  ; CHECK:   %62:g8rc_and_g8rc_nox0 = COPY killed %44
+  ; CHECK:   %43:gprc = COPY killed %57
+  ; CHECK:   %41:gprc = COPY killed %60
+  ; CHECK:   %39:g8rc = COPY killed %44
+  ; CHECK:   %61:gprc = COPY killed %41
+  ; CHECK:   %62:g8rc_and_g8rc_nox0 = COPY killed %39
+  ; CHECK:   %63:gprc = COPY killed %43
 
   ; CHECK: bb.5:
   ; CHECK:   successors: %bb.6(0x80000000)

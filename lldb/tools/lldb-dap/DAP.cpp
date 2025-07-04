@@ -623,6 +623,17 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
   llvm_unreachable("enum cases exhausted.");
 }
 
+std::optional<protocol::Source> DAP::ResolveSource(const lldb::SBFrame &frame) {
+  if (!frame.IsValid())
+    return std::nullopt;
+
+  const lldb::SBAddress frame_pc = frame.GetPCAddress();
+  if (DisplayAssemblySource(debugger, frame_pc))
+    return ResolveAssemblySource(frame_pc);
+
+  return CreateSource(frame.GetLineEntry().GetFileSpec());
+}
+
 std::optional<protocol::Source> DAP::ResolveSource(lldb::SBAddress address) {
   if (DisplayAssemblySource(debugger, address))
     return ResolveAssemblySource(address);

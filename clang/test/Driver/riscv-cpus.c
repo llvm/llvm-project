@@ -186,6 +186,9 @@
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zalrsc"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zba"
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipscbop"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipscmov"
+// MCPU-MIPS-P8700-SAME: "-target-feature" "+xmipslsp"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=syntacore-scr1-base | FileCheck -check-prefix=MTUNE-SYNTACORE-SCR1-BASE %s
 // MTUNE-SYNTACORE-SCR1-BASE: "-tune-cpu" "syntacore-scr1-base"

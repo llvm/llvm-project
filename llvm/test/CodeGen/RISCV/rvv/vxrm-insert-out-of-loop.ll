@@ -29,20 +29,6 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:  # %bb.3: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    li t0, 32
 ; RV32-NEXT:  # %bb.4: # %for.cond1.preheader.us.preheader
-; RV32-NEXT:    add t3, a0, t3
-; RV32-NEXT:    add t4, a2, t4
-; RV32-NEXT:    add t5, a4, t5
-; RV32-NEXT:    bltu t6, t1, .LBB0_6
-; RV32-NEXT:  # %bb.5: # %for.cond1.preheader.us.preheader
-; RV32-NEXT:    li t1, 32
-; RV32-NEXT:  .LBB0_6: # %for.cond1.preheader.us.preheader
-; RV32-NEXT:    add t3, t3, a6
-; RV32-NEXT:    add t6, t4, a6
-; RV32-NEXT:    add t4, t5, a6
-; RV32-NEXT:    j .LBB0_8
-; RV32-NEXT:  # %bb.7: # %for.cond1.preheader.us.preheader
-; RV32-NEXT:    mv t1, t0
-; RV32-NEXT:  .LBB0_8: # %for.cond1.preheader.us.preheader
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
@@ -51,8 +37,24 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    .cfi_offset s2, -12
+; RV32-NEXT:    .cfi_remember_state
+; RV32-NEXT:    add t3, a0, t3
+; RV32-NEXT:    add t4, a2, t4
+; RV32-NEXT:    add s0, a4, t5
+; RV32-NEXT:    bltu t6, t1, .LBB0_6
+; RV32-NEXT:  # %bb.5: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:    li t1, 32
+; RV32-NEXT:  .LBB0_6: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:    add t3, t3, a6
+; RV32-NEXT:    add t5, t4, a6
+; RV32-NEXT:    add t4, s0, a6
+; RV32-NEXT:    j .LBB0_8
+; RV32-NEXT:  # %bb.7: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:    mv t1, t0
+; RV32-NEXT:  .LBB0_8: # %for.cond1.preheader.us.preheader
+; RV32-NEXT:    .cfi_restore_state
 ; RV32-NEXT:    li t0, 0
-; RV32-NEXT:    sltu t5, a0, t6
+; RV32-NEXT:    sltu t5, a0, t5
 ; RV32-NEXT:    sltu t6, a2, t3
 ; RV32-NEXT:    and t5, t5, t6
 ; RV32-NEXT:    sltu t4, a0, t4

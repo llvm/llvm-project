@@ -1234,8 +1234,7 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type, and
-    must be the same as the pointee type of the argument.
+    The byval type argument indicates the in-memory value type.
 
     The byval attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1283,8 +1282,7 @@ Currently, only the following parameter attributes are defined:
     any parameter must have a ``"preallocated"`` operand bundle. A ``musttail``
     function call cannot have a ``"preallocated"`` operand bundle.
 
-    The preallocated attribute requires a type argument, which must be
-    the same as the pointee type of the argument.
+    The preallocated attribute requires a type argument.
 
     The preallocated attribute also supports specifying an alignment with the
     align attribute. It indicates the alignment of the stack slot to
@@ -1318,8 +1316,7 @@ Currently, only the following parameter attributes are defined:
     must be cleared off with :ref:`llvm.stackrestore
     <int_stackrestore>`.
 
-    The inalloca attribute requires a type argument, which must be the
-    same as the pointee type of the argument.
+    The inalloca attribute requires a type argument.
 
     See :doc:`InAlloca` for more information on how to use this
     attribute.
@@ -1331,8 +1328,7 @@ Currently, only the following parameter attributes are defined:
     loads and stores to the structure may be assumed by the callee not
     to trap and to be properly aligned.
 
-    The sret type argument specifies the in memory type, which must be
-    the same as the pointee type of the argument.
+    The sret type argument specifies the in memory type.
 
     A function that accepts an ``sret`` argument must return ``void``.
     A return value may not be ``sret``.
@@ -13178,7 +13174,7 @@ This instruction requires several arguments:
    -  All ABI-impacting function attributes, such as sret, byval, inreg,
       returned, and inalloca, must match.
    -  The caller and callee prototypes must match. Pointer types of parameters
-      or return types may differ in pointee type, but not in address space.
+      or return types do not differ in address space.
 
    On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
 

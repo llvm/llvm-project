@@ -1768,8 +1768,9 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
           SlotIndex NewDefSI =
               LIS->InsertMachineInstrInMaps(*ReadVLMI).getRegSlot();
           LiveInterval &DefLI = LIS->getInterval(VLOutput);
-          VNInfo *DefVNI = DefLI.getVNInfoAt(DefLI.beginIndex());
-          DefLI.removeSegment(DefLI.beginIndex(), NewDefSI);
+          LiveRange::Segment *DefSeg = DefLI.getSegmentContaining(NewDefSI);
+          VNInfo *DefVNI = DefLI.getVNInfoAt(DefSeg->start);
+          DefLI.removeSegment(DefSeg->start, NewDefSI);
           DefVNI->def = NewDefSI;
         }
       }

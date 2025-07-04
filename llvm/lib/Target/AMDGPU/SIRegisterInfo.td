@@ -236,6 +236,7 @@ def MODE : SIReg <"mode", 0>;
 
 // Not addressable, used to model dependencies.
 def ASYNCcnt : SIReg <"ASYNCcnt", 0>;
+def TENSORcnt : SIReg <"TENSORcnt", 0>;
 
 def LDS_DIRECT : SIReg <"src_lds_direct", 254> {
   // There is no physical register corresponding to this. This is an

@@ -35,10 +35,10 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK-LABEL: check_deinterleaving_has_deinterleave:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    add x8, x0, #16
 ; CHECK-NEXT:    movi v3.2d, #0000000000000000
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
 ; CHECK-NEXT:    mov w9, #32 // =0x20
 ; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    movi v5.2d, #0000000000000000
@@ -64,16 +64,16 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK-NEXT:    ushll v24.4s, v18.4h, #0
 ; CHECK-NEXT:    ushll2 v18.4s, v18.8h, #0
 ; CHECK-NEXT:    ushll v20.4s, v20.4h, #0
-; CHECK-NEXT:    and v21.16b, v21.16b, v2.16b
-; CHECK-NEXT:    and v19.16b, v19.16b, v2.16b
-; CHECK-NEXT:    and v22.16b, v22.16b, v2.16b
-; CHECK-NEXT:    and v17.16b, v17.16b, v2.16b
-; CHECK-NEXT:    and v23.16b, v23.16b, v2.16b
-; CHECK-NEXT:    and v24.16b, v24.16b, v2.16b
-; CHECK-NEXT:    and v18.16b, v18.16b, v2.16b
-; CHECK-NEXT:    and v20.16b, v20.16b, v2.16b
+; CHECK-NEXT:    and v21.16b, v21.16b, v1.16b
+; CHECK-NEXT:    and v19.16b, v19.16b, v1.16b
+; CHECK-NEXT:    and v22.16b, v22.16b, v1.16b
+; CHECK-NEXT:    and v17.16b, v17.16b, v1.16b
+; CHECK-NEXT:    and v23.16b, v23.16b, v1.16b
+; CHECK-NEXT:    and v24.16b, v24.16b, v1.16b
+; CHECK-NEXT:    and v18.16b, v18.16b, v1.16b
+; CHECK-NEXT:    and v20.16b, v20.16b, v1.16b
 ; CHECK-NEXT:    add v4.4s, v4.4s, v19.4s
-; CHECK-NEXT:    add v1.4s, v1.4s, v21.4s
+; CHECK-NEXT:    add v2.4s, v2.4s, v21.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v22.4s
 ; CHECK-NEXT:    add v3.4s, v3.4s, v17.4s
 ; CHECK-NEXT:    add v16.4s, v16.4s, v23.4s
@@ -82,12 +82,12 @@ define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
 ; CHECK-NEXT:    add v7.4s, v7.4s, v18.4s
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %middle.block
-; CHECK-NEXT:    add v2.4s, v7.4s, v3.4s
+; CHECK-NEXT:    add v1.4s, v7.4s, v3.4s
 ; CHECK-NEXT:    add v3.4s, v16.4s, v4.4s
 ; CHECK-NEXT:    add v0.4s, v5.4s, v0.4s
-; CHECK-NEXT:    add v1.4s, v6.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    add v1.4s, v2.4s, v3.4s
+; CHECK-NEXT:    add v2.4s, v6.4s, v2.4s
+; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0

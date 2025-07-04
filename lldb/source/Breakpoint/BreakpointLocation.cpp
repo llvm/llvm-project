@@ -31,7 +31,7 @@ using namespace lldb_private;
 
 BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
                                        const Address &addr, lldb::tid_t tid,
-                                       bool hardware, bool check_for_resolver)
+                                       bool check_for_resolver)
     : m_should_resolve_indirect_functions(false), m_is_reexported(false),
       m_is_indirect(false), m_address(addr), m_owner(owner),
       m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
@@ -72,15 +72,13 @@ bool BreakpointLocation::IsEnabled() const {
   return true;
 }
 
-void BreakpointLocation::SetEnabled(bool enabled) {
+bool BreakpointLocation::SetEnabled(bool enabled) {
   GetLocationOptions().SetEnabled(enabled);
-  if (enabled) {
-    ResolveBreakpointSite();
-  } else {
-    ClearBreakpointSite();
-  }
+  const bool success =
+      enabled ? ResolveBreakpointSite() : ClearBreakpointSite();
   SendBreakpointLocationChangedEvent(enabled ? eBreakpointEventTypeEnabled
                                              : eBreakpointEventTypeDisabled);
+  return success;
 }
 
 bool BreakpointLocation::IsAutoContinue() const {
@@ -436,10 +434,10 @@ bool BreakpointLocation::ResolveBreakpointSite() {
       process->CreateBreakpointSite(shared_from_this(), m_owner.IsHardware());
 
   if (new_id == LLDB_INVALID_BREAK_ID) {
-    Log *log = GetLog(LLDBLog::Breakpoints);
-    if (log)
-      log->Warning("Failed to add breakpoint site at 0x%" PRIx64,
-                   m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()));
+    LLDB_LOGF(GetLog(LLDBLog::Breakpoints),
+              "Failed to add breakpoint site at 0x%" PRIx64 "(resolved=%s)",
+              m_address.GetOpcodeLoadAddress(&m_owner.GetTarget()),
+              IsResolved() ? "yes" : "no");
   }
 
   return IsResolved();

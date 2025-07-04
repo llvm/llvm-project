@@ -188,10 +188,14 @@ bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   }
 }
 
-void CSKYAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void CSKYAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                 const MCValue &Target,
                                 MutableArrayRef<char> Data, uint64_t Value,
                                 bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;

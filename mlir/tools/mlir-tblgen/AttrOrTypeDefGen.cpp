@@ -245,9 +245,8 @@ void DefGen::createParentWithTraits() {
                    ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
                    : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName();
       }));
-  llvm::for_each(traitNames, [&](auto &traitName) {
+  for (auto &traitName : traitNames)
     defParent.addTemplateParam(traitName);
-  });
 
   // Add OpAsmInterface::Trait if we automatically generate mnemonic alias
   // method.

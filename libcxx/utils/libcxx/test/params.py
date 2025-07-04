@@ -170,7 +170,6 @@ DEFAULT_PARAMETERS = [
             [
                 AddFeature("target={}".format(triple)),
                 AddFlagIfSupported("--target={}".format(triple)),
-                AddSubstitution("%{triple}", triple),
             ],
         ),
     ),

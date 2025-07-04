@@ -242,25 +242,25 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; CHECK-NEXT:    jne .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %loop.header.preheader
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:    movl $32, %r15d
+; CHECK-NEXT:    movl $32, %r14d
+; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r15)
+; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r14)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    tilezero %tmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm0
-; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm1
-; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm2
+; CHECK-NEXT:    tileloadd (%rbx,%r14), %tmm1
+; CHECK-NEXT:    tileloadd (%rbx,%r14), %tmm2
 ; CHECK-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
-; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r15)
+; CHECK-NEXT:    tilestored %tmm0, (%rbx,%r14)
 ; CHECK-NEXT:    tilezero %tmm0
-; CHECK-NEXT:    incl %r14d
-; CHECK-NEXT:    cmpw $100, %r14w
+; CHECK-NEXT:    incl %r15d
+; CHECK-NEXT:    cmpw $100, %r15w
 ; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %exit
 ; CHECK-NEXT:    addq $72, %rsp
@@ -297,12 +297,12 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB1_3-1, kind: FK_PCRel_1
 ; EGPR-NEXT:  # %bb.1: # %loop.header.preheader
 ; EGPR-NEXT:    movq %rdi, %rbx # encoding: [0x48,0x89,0xfb]
-; EGPR-NEXT:    xorl %r14d, %r14d # encoding: [0x45,0x31,0xf6]
-; EGPR-NEXT:    movl $32, %r15d # encoding: [0x41,0xbf,0x20,0x00,0x00,0x00]
+; EGPR-NEXT:    movl $32, %r14d # encoding: [0x41,0xbe,0x20,0x00,0x00,0x00]
+; EGPR-NEXT:    xorl %r15d, %r15d # encoding: [0x45,0x31,0xff]
 ; EGPR-NEXT:    .p2align 4
 ; EGPR-NEXT:  .LBB1_2: # %loop.header
 ; EGPR-NEXT:    # =>This Inner Loop Header: Depth=1
-; EGPR-NEXT:    tilestored %tmm0, (%rbx,%r15) # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7a,0x4b,0x04,0x3b]
+; EGPR-NEXT:    tilestored %tmm0, (%rbx,%r14) # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7a,0x4b,0x04,0x33]
 ; EGPR-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; EGPR-NEXT:    tilezero %tmm0 # encoding: [0xc4,0xe2,0x7b,0x49,0xc0]
 ; EGPR-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
@@ -310,13 +310,13 @@ define dso_local void @test3(ptr%buf) nounwind {
 ; EGPR-NEXT:    # fixup A - offset: 1, value: foo-4, kind: reloc_branch_4byte_pcrel
 ; EGPR-NEXT:    ldtilecfg {{[0-9]+}}(%rsp) # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0x49,0x44,0x24,0x08]
 ; EGPR-NEXT:    tilezero %tmm0 # encoding: [0xc4,0xe2,0x7b,0x49,0xc0]
-; EGPR-NEXT:    tileloadd (%rbx,%r15), %tmm1 # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7b,0x4b,0x0c,0x3b]
-; EGPR-NEXT:    tileloadd (%rbx,%r15), %tmm2 # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7b,0x4b,0x14,0x3b]
+; EGPR-NEXT:    tileloadd (%rbx,%r14), %tmm1 # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7b,0x4b,0x0c,0x33]
+; EGPR-NEXT:    tileloadd (%rbx,%r14), %tmm2 # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7b,0x4b,0x14,0x33]
 ; EGPR-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0 # encoding: [0xc4,0xe2,0x6b,0x5e,0xc1]
-; EGPR-NEXT:    tilestored %tmm0, (%rbx,%r15) # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7a,0x4b,0x04,0x3b]
+; EGPR-NEXT:    tilestored %tmm0, (%rbx,%r14) # EVEX TO VEX Compression encoding: [0xc4,0xa2,0x7a,0x4b,0x04,0x33]
 ; EGPR-NEXT:    tilezero %tmm0 # encoding: [0xc4,0xe2,0x7b,0x49,0xc0]
-; EGPR-NEXT:    incl %r14d # encoding: [0x41,0xff,0xc6]
-; EGPR-NEXT:    cmpw $100, %r14w # encoding: [0x66,0x41,0x83,0xfe,0x64]
+; EGPR-NEXT:    incl %r15d # encoding: [0x41,0xff,0xc7]
+; EGPR-NEXT:    cmpw $100, %r15w # encoding: [0x66,0x41,0x83,0xff,0x64]
 ; EGPR-NEXT:    jl .LBB1_2 # encoding: [0x7c,A]
 ; EGPR-NEXT:    # fixup A - offset: 1, value: .LBB1_2-1, kind: FK_PCRel_1
 ; EGPR-NEXT:  .LBB1_3: # %exit

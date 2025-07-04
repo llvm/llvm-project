@@ -65,18 +65,14 @@ define i32 @f(<vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    mov w0, #3 // =0x3
 ; CHECK-NEXT:    .seh_startepilogue
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
+; CHECK-NEXT:    ldp x29, x30, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
@@ -369,10 +365,8 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    .seh_endprologue
@@ -382,10 +376,8 @@ define void @f3(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
+; CHECK-NEXT:    ldp x29, x30, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
@@ -519,10 +511,8 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_save_zreg z22, 16
 ; CHECK-NEXT:    str z23, [sp, #17, mul vl] // 16-byte Folded Spill
 ; CHECK-NEXT:    .seh_save_zreg z23, 17
-; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    addvl sp, sp, #-1
@@ -536,10 +526,8 @@ define void @f4(i64 %n, <vscale x 2 x i64> %x) {
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x28, 0
+; CHECK-NEXT:    ldp x29, x30, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr 0
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    .seh_stackalloc 16
 ; CHECK-NEXT:    ldr z8, [sp, #2, mul vl] // 16-byte Folded Reload
@@ -1105,10 +1093,8 @@ define void @f7(i64 %n) {
 ; CHECK-LABEL: f7:
 ; CHECK:       .seh_proc f7
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    str x28, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg_x x28, 16
-; CHECK-NEXT:    str x30, [sp, #8] // 8-byte Folded Spill
-; CHECK-NEXT:    .seh_save_reg x30, 8
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    .seh_endprologue
@@ -1117,10 +1103,8 @@ define void @f7(i64 %n) {
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    .seh_allocz 1
-; CHECK-NEXT:    ldr x30, [sp, #8] // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg x30, 8
-; CHECK-NEXT:    ldr x28, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:    .seh_save_reg_x x28, 16
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .seh_endfunclet

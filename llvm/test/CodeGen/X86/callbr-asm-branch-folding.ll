@@ -17,7 +17,7 @@ define dso_local void @n(ptr %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %edx, %ebp
-; CHECK-NEXT:    movl %esi, %r13d
+; CHECK-NEXT:    movl %esi, %r12d
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    callq c
 ; CHECK-NEXT:    movl %eax, %r14d
@@ -28,17 +28,17 @@ define dso_local void @n(ptr %o, i32 %p, i32 %u) nounwind {
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    cmpl $0, e(%rip)
 ; CHECK-NEXT:    # implicit-def: $r15d
-; CHECK-NEXT:    # implicit-def: $r12d
+; CHECK-NEXT:    # implicit-def: $r13d
 ; CHECK-NEXT:    je .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %if.then4
-; CHECK-NEXT:    movslq %r13d, %rdi
+; CHECK-NEXT:    movslq %r12d, %rdi
 ; CHECK-NEXT:    callq m
 ; CHECK-NEXT:    # implicit-def: $r15d
 ; CHECK-NEXT:    # implicit-def: $r12d
 ; CHECK-NEXT:  .LBB0_3: # %r
 ; CHECK-NEXT:    callq c
-; CHECK-NEXT:  .LBB0_4: # %if.end8
 ; CHECK-NEXT:    movl %r12d, %r13d
+; CHECK-NEXT:  .LBB0_4: # %if.end8
 ; CHECK-NEXT:    movl %r15d, %edi
 ; CHECK-NEXT:    callq i
 ; CHECK-NEXT:    movl %eax, %r12d

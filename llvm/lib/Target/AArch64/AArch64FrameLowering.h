@@ -126,8 +126,6 @@ public:
   orderFrameObjects(const MachineFunction &MF,
                     SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
-  bool isFPReserved(const MachineFunction &MF) const;
-
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 

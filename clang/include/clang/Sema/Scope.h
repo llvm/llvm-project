@@ -158,11 +158,15 @@ public:
     /// constructs, since they have the same behavior.
     OpenACCComputeConstructScope = 0x10000000,
 
+    /// This is the scope of an OpenACC Loop/Combined construct, which is used
+    /// to determine whether a 'cache' construct variable reference is legal.
+    OpenACCLoopConstructScope = 0x20000000,
+
     /// This is a scope of type alias declaration.
-    TypeAliasScope = 0x20000000,
+    TypeAliasScope = 0x40000000,
 
     /// This is a scope of friend declaration.
-    FriendScope = 0x40000000,
+    FriendScope = 0x80000000,
   };
 
 private:
@@ -547,6 +551,10 @@ public:
   /// Compute construct directive.
   bool isOpenACCComputeConstructScope() const {
     return getFlags() & Scope::OpenACCComputeConstructScope;
+  }
+
+  bool isOpenACCLoopConstructScope() const {
+    return getFlags() & Scope::OpenACCLoopConstructScope;
   }
 
   /// Determine if this scope (or its parents) are a compute construct. If the

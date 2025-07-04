@@ -13074,12 +13074,11 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
                                                 const TargetLowering &TLI,
                                                 SelectionDAG &DAG,
                                                 const SDLoc &DL) {
-  if (!TLI.isTypeLegal(TVal.getValueType()))
+  EVT VT = TVal.getValueType();
+  if (!TLI.isTypeLegal(VT))
     return SDValue();
 
-  EVT VT = TVal.getValueType();
   EVT CondVT = Cond.getValueType();
-
   assert(CondVT.isVector() && "Vector select expects a vector selector!");
 
   bool IsTAllZero = ISD::isBuildVectorAllZeros(TVal.getNode());
@@ -13110,7 +13109,7 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
   }
 
   // To use the condition operand as a bitwise mask, it must have elements that
-  // are the same size as the select elements. Ie, the condition operand must
+  // are the same size as the select elements. i.e, the condition operand must
   // have already been promoted from the IR select condition type <N x i1>.
   // Don't check if the types themselves are equal because that excludes
   // vector floating-point selects.

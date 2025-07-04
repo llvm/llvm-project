@@ -4620,6 +4620,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
       Diags.Report(diag::err_cc1_unbounded_vscale_min);
   }
+  if (Arg *A = Args.getLastArg(options::OPT_mvscale_streaming_min_EQ)) {
+    unsigned VScaleMin;
+    if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
+      Diags.Report(diag::err_cc1_unbounded_vscale_min);
+  }
 
   if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_file_EQ)) {
     std::ifstream SeedFile(A->getValue(0));
