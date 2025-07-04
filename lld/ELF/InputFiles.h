@@ -244,11 +244,6 @@ public:
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
 };
 
-struct GnuPropertiesInfo {
-  uint32_t andFeatures = 0;
-  std::optional<AArch64PauthAbiCoreInfo> pauthAbiCoreInfo;
-};
-
 // .o file.
 template <class ELFT> class ObjFile : public ELFFileBase {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)

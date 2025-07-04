@@ -540,49 +540,43 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
 
 template <class ELFT>
 static void
-handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx, bool hasGP,
-                                const AArch64BuildAttrSubsections &baInfo,
-                                const GnuPropertiesInfo &gpInfo) {
-  if (hasGP) {
+handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
+                                const AArch64BuildAttrSubsections &baInfo) {
+  if (file->aarch64PauthAbiCoreInfo) {
     // Check for data mismatch
-    if (gpInfo.pauthAbiCoreInfo) {
-      if (baInfo.Pauth.TagPlatform != gpInfo.pauthAbiCoreInfo->platform ||
-          baInfo.Pauth.TagSchema != gpInfo.pauthAbiCoreInfo->version)
+    if (file->aarch64PauthAbiCoreInfo) {
+      if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+          baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
         Err(ctx)
             << file
             << " Pauth Data mismatch: file contains both GNU properties and "
                "AArch64 build attributes sections with different Pauth data";
     }
-    if (baInfo.AndFeatures != gpInfo.andFeatures)
+    if (baInfo.AndFeatures != file->andFeatures)
       Err(ctx) << file
                << " Features Data mismatch: file contains both GNU "
                   "properties and AArch64 build attributes sections with "
                   "different And Features data";
   } else {
-    // Write missing data
-    // We can only know when Pauth is missing.
-    // Unlike AArch64 Build Attributes, GNU properties does not give a way to
-    // distinguish between no-value given to value of '0' given.
+    // When BuildAttributes are missing, PauthABI value default to (TagPlatform
+    // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
+    // property is not present. To match this behaviour, we only write
+    // PAuthAbiCoreInfo when there is at least one non-zero value. The
+    // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
+    // 'Invalid' GNU property section with platform = 0, version = 0.
     if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
-      // According to the BuildAttributes specification Build Attributes
-      // default to a value of 0 when not present. A (TagPlatform, TagSchema) of
-      // (0, 0) maps to 'no PAuth property present'. A (TagPlatform, TagSchema)
-      // of (0, 1) maps to an explicit PAuth property of platform = 0, version =
-      // 0 ('Invalid').
-      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1) {
+      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
         file->aarch64PauthAbiCoreInfo = {0, 0};
-      } else {
+      else
         file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
                                          baInfo.Pauth.TagSchema};
-      }
     }
     file->andFeatures = baInfo.AndFeatures;
   }
 }
 
 template <typename ELFT>
-static GnuPropertiesInfo readGnuProperty(Ctx &, const InputSection &,
-                                         ObjFile<ELFT> &);
+static void readGnuProperty(Ctx &, const InputSection &, ObjFile<ELFT> &);
 
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
@@ -600,27 +594,19 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   uint64_t size = objSections.size();
   sections.resize(size);
 
-  // For handling AArch64 Build attributes and GNU properties
   AArch64BuildAttrSubsections aarch64BAsubSections;
-  GnuPropertiesInfo gnuProperty;
   bool hasAArch64BuildAttributes = false;
-  bool hasGNUProperties = false;
 
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
-    // Object files that use processor features such as Intel Control-Flow
-    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-    // .note.gnu.property section containing a bitfield of feature bits like the
-    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    // Read GNU property section into a per-InputFile structure that will be
+    // merged at a later stage. A synthetic section will be created for the
+    // merged contents.
     if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
-      gnuProperty = readGnuProperty(
+      readGnuProperty(
           ctx,
           InputSection(*this, sec, check(obj.getSectionName(sec, shstrtab))),
           *this);
-      hasGNUProperties = true;
-      // Since we merge bitmaps from multiple object files to create a new
-      // .note.gnu.property containing a single AND'ed bitmap, we discard an
-      // input file's .note.gnu.property section.
       sections[i] = &InputSection::discarded;
     }
 
@@ -707,20 +693,16 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
-      // At this stage AArch64 Build Attributes does not replace GNU Properties.
-      // When both exists, their values must match.
-      // When both exists and contain different attributes, they complement each
-      // other. Currently attributes are represented in the linked object file
-      // as GNU properties, which are already supported by the Linux kernel and
-      // the dynamic loader. In the future, when relocatable linking (`-r` flag)
-      // is performed, a single merged AArch64 Build Attributes section will be
-      // emitted.
+      // Extract Build Attributes section contents into aarch64BAsubSections.
+      // Input objects may contain both build Build Attributes and GNU
+      // properties. We delay processing Build Attributes until we have finished
+      // reading all sections so that we can check that these are consistent.
       if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
         AArch64AttributeParser attributes;
-        StringRef name = check(obj.getSectionName(sec, shstrtab));
-        InputSection isec(*this, sec, name);
         if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+          StringRef name = check(obj.getSectionName(sec, shstrtab));
+          InputSection isec(*this, sec, name);
           Warn(ctx) << &isec << ": " << std::move(e);
         } else {
           aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
@@ -743,8 +725,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // Handle AArch64 Build Attributes and GNU properties:
     // - Err on mismatched values.
     // - Store missing values as GNU properties.
-    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, hasGNUProperties,
-                                          aarch64BAsubSections, gnuProperty);
+    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
   }
 
   // Read a symbol table.
@@ -1066,8 +1047,8 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
 //   hardware-assisted call flow control;
 // - AArch64 PAuth ABI core info (16 bytes).
 template <class ELFT>
-static GnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
-                                         ObjFile<ELFT> &f) {
+static void readGnuProperty(Ctx &ctx, const InputSection &sec,
+                            ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
@@ -1084,7 +1065,7 @@ static GnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
     featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
     break;
   default:
-    return GnuPropertiesInfo{};
+    return;
   }
 
   ArrayRef<uint8_t> data = sec.content();
@@ -1099,7 +1080,7 @@ static GnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
     auto *nhdr = reinterpret_cast<const Elf_Nhdr *>(data.data());
     if (data.size() < sizeof(Elf_Nhdr) ||
         data.size() < nhdr->getSize(sec.addralign))
-      return (err(data.data()) << "data is too short", GnuPropertiesInfo{});
+      return void(err(data.data()) << "data is too short");
 
     Elf_Note note(*nhdr);
     if (nhdr->n_type != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU") {
@@ -1115,7 +1096,6 @@ static GnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
   }
-  return GnuPropertiesInfo{f.andFeatures, f.aarch64PauthAbiCoreInfo};
 }
 
 template <class ELFT>
