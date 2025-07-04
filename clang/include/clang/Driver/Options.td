@@ -1025,7 +1025,8 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   Values<"full,improved,promoted,basic">, NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>;
+  NormalizedValues<["CX_Full", "CX_Improved", "CX_Promoted", "CX_Basic"]>,
+  HelpText<"Controls the calculation methods of complex number multiplication and division.">;
 
 def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
   Visibility<[CC1Option, FC1Option]>,
