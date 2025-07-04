@@ -1082,7 +1082,7 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
 }
 
 bool SemaHLSL::handleRootSignatureElements(
-    ArrayRef<hlsl::RootSignatureElement> Elements, SourceLocation Loc) {
+    ArrayRef<hlsl::RootSignatureElement> Elements) {
   // The following conducts analysis on resource ranges to detect and report
   // any overlaps in resource ranges.
   //
