@@ -647,8 +647,8 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-- Improved the performance of static assertions envolving large integers by
-  using hex format instead of string.
+- Improved the performance of static assertions involving large integers by
+  using hex format instead of string for particularly large values.
 
   Fixes #GH71675
 

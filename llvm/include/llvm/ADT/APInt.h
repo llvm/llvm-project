@@ -1686,6 +1686,17 @@ public:
                          bool UpperCase = true,
                          bool InsertSeparators = false) const;
 
+  /// Converts an APInt to a string and append it to Str.  Str is commonly a
+  /// SmallString. If Radix > 10, UpperCase determine the case of letter
+  /// digits.
+  /// Very large numbers ar truncated and only the first and last 20 digits will
+  /// be added with an elipsis separating them.
+  LLVM_ABI void toStringTruncated(SmallVectorImpl<char> &Str, unsigned Radix,
+                                  bool Signed, bool truncate = true,
+                                  bool formatAsCLiteral = false,
+                                  bool UpperCase = true,
+                                  bool InsertSeparators = false) const;
+
   /// Considers the APInt to be unsigned and converts it into a string in the
   /// radix given. The radix can be 2, 8, 10 16, or 36.
   void toStringUnsigned(SmallVectorImpl<char> &Str, unsigned Radix = 10) const {

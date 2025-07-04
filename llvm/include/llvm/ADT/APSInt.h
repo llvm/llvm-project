@@ -86,6 +86,12 @@ public:
   }
   using APInt::toString;
 
+  void toStringTruncated(SmallVectorImpl<char> &Str,
+                         unsigned Radix = 10) const {
+    APInt::toStringTruncated(Str, Radix, isSigned());
+  }
+  using APInt::toStringTruncated;
+
   /// If this int is representable using an int64_t.
   bool isRepresentableByInt64() const {
     // For unsigned values with 64 active bits, they technically fit into a

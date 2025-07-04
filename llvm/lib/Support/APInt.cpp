@@ -2164,6 +2164,13 @@ void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {
 void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
                      bool formatAsCLiteral, bool UpperCase,
                      bool InsertSeparators) const {
+  toStringTruncated(Str, Radix, Signed, false, formatAsCLiteral, UpperCase,
+                    InsertSeparators);
+}
+
+void APInt::toStringTruncated(SmallVectorImpl<char> &Str, unsigned Radix,
+                              bool Signed, bool truncate, bool formatAsCLiteral,
+                              bool UpperCase, bool InsertSeparators) const {
   assert((Radix == 10 || Radix == 8 || Radix == 16 || Radix == 2 ||
           Radix == 36) &&
          "Radix should be 2, 8, 10, 16, or 36!");
@@ -2278,8 +2285,28 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
     }
   } else {
     int Pos = 0;
+    // The value of cutOffSize is not special, it is just a number of
+    // characters that gives us enough info without losing readability.
+    constexpr int cutOffSize = 20;
     while (Tmp.getBoolValue()) {
       uint64_t Digit;
+      if (truncate && Pos == cutOffSize) {
+        unsigned numDigits = (int32_t)(Tmp.logBase2()/log2(Radix))+1;
+        if(numDigits-cutOffSize > 0) {
+          // Calculating pow of exponents over 300000 takes a long time.
+          // To keep note printing time short(under 3s), values with more digits
+          // will only return the last 20 digits.
+          if(numDigits < 300000) {
+            APInt divider = APIntOps::pow(APInt(Tmp.getBitWidth(),Radix),numDigits-cutOffSize);
+            Tmp = Tmp.udiv(divider);
+            Str.append(3,'.');
+          }
+          else {
+            Str.append(3,'.');
+            break;
+          }
+        }
+      }
       udivrem(Tmp, Radix, Tmp, Digit);
       assert(Digit < Radix && "divide failed");
       if (InsertSeparators && Pos % Grouping == 0 && Pos > 0)
