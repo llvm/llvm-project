@@ -521,6 +521,32 @@ public:
           Partition = -1;
       }
       assert(Partition != -2 && "Pointer not belonging to any partition");
+      // All the store context uses of our address were processed,
+      // Now make sure we don't have cross partition loads.
+      if (RtPtrCheck->Pointers[I].IsWritePtr) {
+        if (Ptr->hasOneUse() || Partition == -1)
+          continue;
+
+        bool ProcessLoads = false;
+        for (User *U : Ptr->users())
+          if (auto *CurLoad = dyn_cast<LoadInst>(U))
+            if (L->contains(CurLoad->getParent())) {
+              ProcessLoads = true;
+              break;
+            }
+
+        if (!ProcessLoads)
+          continue;
+
+        const bool IsWritePtr = false;
+        auto Instructions = LAI.getInstructionsForAccess(Ptr, IsWritePtr);
+        for (Instruction *Inst : Instructions)
+          if (Partition != (int)this->InstToPartitionId[Inst]) {
+            // -1 means belonging to multiple partitions.
+            Partition = -1;
+            break;
+          }
+      }
     }
 
     return PtrToPartitions;
