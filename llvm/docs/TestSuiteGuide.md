@@ -360,6 +360,47 @@ performance. You can find more information at
 of the LLVM project is hosted at [http://lnt.llvm.org](http://lnt.llvm.org).
 
 
+Included Test Suites
+--------------------
+
+The LLVM Test Suite repository includes a number of test suites that we have
+copied into the repository from external sources, and written our own CMake
+configuration to hook into the LLVM Test Suite system.
+
+In some cases, these external tests have a different license to other code in
+the llvm-test-suite repository, which must be documented in `LICENSE.TXT` in the
+root of the test suite repository, under the heading "Software from third
+parties included in the LLVM Project".
+
+When there are problems with a test suite that require changes to the code,
+there are different approaches (given here in order of preference):
+
+1. Attempt to contribute the changes back to the external source and then update
+   the test suite to bring it in line with the external source again. This is
+   the best approach as we interact with other open source projects, but there
+   might be circumstances where it does not work (the external source may not
+   accept modifications, or may take a long time to accept them).
+
+2. We can update the CMake to either disable the test, or to provide additional
+   compiler options to work around the problem.
+
+3. We can commit changes to the tests' sources. This is acceptable for almost
+   all external sources in the LLVM Test Suite repository, but notable
+   exceptions are the GCC and GFortran test suites, which we do not accept
+   changes for.
+
+Even when deciding to follow options 2 and 3, the problem should be reported
+back to the external source if it is relevant to them, so they have the
+opportunity to fix it.
+
+When updating external sources, the PR should audit any changes to the tests'
+source code that we have made within the llvm-test-suite repository, and only
+reapply the changes that are still required. This is also a good moment to
+review any tests that have been disabled with CMake or that are configured to
+use additional compiler options.
+
+
+
 External Suites
 ---------------
 
