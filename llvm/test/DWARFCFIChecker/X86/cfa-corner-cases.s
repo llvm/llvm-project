@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s --validate-cfi --filetype=null 2>&1 \
+# RUN: not llvm-mc -triple x86_64-pc-linux-gnu %s --validate-cfi --filetype=null 2>&1 \
 # RUN:   | FileCheck %s --allow-empty
 .text
         .globl  f
