@@ -772,6 +772,8 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// LastFileIDLookup records the last FileID looked up or created, because it
   /// is very common to look up many tokens from the same file.
   mutable FileID LastFileIDLookup;
+  mutable SourceLocation::UIntTy LastLookupStartOffset;
+  mutable SourceLocation::UIntTy LastLookupEndOffset; // exclude
 
   /// Holds information for \#line directives.
   ///
@@ -1906,9 +1908,8 @@ private:
 
   FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
     // If our one-entry cache covers this offset, just return it.
-    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
+    if (SLocOffset >= LastLookupStartOffset && SLocOffset < LastLookupEndOffset)
       return LastFileIDLookup;
-
     return getFileIDSlow(SLocOffset);
   }
 
