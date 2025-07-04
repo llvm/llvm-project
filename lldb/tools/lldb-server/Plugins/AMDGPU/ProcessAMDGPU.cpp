@@ -141,44 +141,74 @@ bool ProcessAMDGPU::GetProcessInfo(ProcessInstanceInfo &proc_info) {
   return true;
 }
 
-static std::pair<std::string, std::pair<uint64_t, uint64_t>>
-ParsePathname(const std::string &pathname) {
-  std::string file_path;
-  uint64_t offset = 0;
-  uint64_t size = 0;
+std::optional<lldb_private::GPUDynamicLoaderLibraryInfo> 
+ParseLibraryInfo(llvm::StringRef lib_spec) {
+  // This function will parse the shared library string that AMDs GPU driver
+  // sends to the debugger. The format is one of:
+  //  file://<path>#offset=<file-offset>&size=<file-size>
+  //  memory://<name>#offset=<image-addr>&size=<image-size>
+  lldb_private::GPUDynamicLoaderLibraryInfo lib_info;
+  lib_info.load = true;
 
-  // Find the position of #offset=
-  size_t offset_pos = pathname.find("#offset=");
-  if (offset_pos != std::string::npos) {
-    // Extract the file path (remove file:// prefix if present)
-    std::string path = pathname.substr(0, offset_pos);
-    if (path.find("file://") == 0) {
-      file_path = path.substr(7); // Remove "file://"
-    } else {
-      file_path = path;
+  auto get_offset_and_size = [](llvm::StringRef &values, 
+                                std::optional<uint64_t> &offset, 
+                                std::optional<uint64_t> &size) {
+    offset = std::nullopt;
+    size = std::nullopt;
+    llvm::StringRef value;
+    uint64_t uint_value;
+    std::tie(value, values) = values.split('&');
+    while (!value.empty()) {
+      if (value.consume_front("offset=")) {
+        if (!value.getAsInteger(0, uint_value))
+          offset = uint_value;
+      } else if (value.consume_front("size=")) {
+        if (!value.getAsInteger(0, uint_value))
+          size = uint_value;
+      }
+      std::tie(value, values) = values.split('&');
     }
+  };
 
-    // Extract offset
-    size_t size_pos = pathname.find("&size=", offset_pos);
-    if (size_pos != std::string::npos) {
-      std::string offset_str =
-          pathname.substr(offset_pos + 8, size_pos - (offset_pos + 8));
-      std::string size_str = pathname.substr(size_pos + 6);
-
-      offset = std::stoull(offset_str);
-      size = std::stoull(size_str);
-    }
+  if (lib_spec.consume_front("file://")) {
+    llvm::StringRef path, values;
+    std::tie(path, values) = lib_spec.split('#');
+    if (path.empty())
+      return std::nullopt;
+    get_offset_and_size(values, lib_info.file_offset, lib_info.file_size);
+  } else if (lib_spec.consume_front("memory://")) {
+    llvm::StringRef name, values;
+    std::tie(name, values) = lib_spec.split('#');
+    if (name.empty())
+      return std::nullopt;
+    lib_info.pathname = name.str();
+    get_offset_and_size(values, lib_info.native_memory_address, 
+                        lib_info.native_memory_size);
+    // We must have a valid address and size for memory objects.
+    if (!(lib_info.native_memory_address.has_value() &&
+          lib_info.native_memory_size.has_value()))
+      return std::nullopt;
   } else {
-    // No offset/size parameters, just return the path
-    if (pathname.find("file://") == 0) {
-      file_path = pathname.substr(7);
-    } else {
-      file_path = pathname;
-    }
+    return std::nullopt;
+  }
+  // TODO: do we need this expanding into a URL or is this for JSON? 
+  lib_info.pathname.clear();
+  for (char c : path) {
+    if (c == '#')
+      lib_info.pathname += "%23";
+    else if (c == '$')
+      lib_info.pathname += "%24";
+    else if (c == '}')
+      lib_info.pathname += "%7D";
+    else if (c == '&')
+      lib_info.pathname += "&amp;";
+    else
+      lib_info.pathname += c;
   }
 
-  return {file_path, {offset, size}};
+  return lib_info;
 }
+
 
 std::optional<GPUDynamicLoaderResponse>
 ProcessAMDGPU::GetGPUDynamicLoaderLibraryInfos(
@@ -196,36 +226,19 @@ ProcessAMDGPU::GetGPUDynamicLoaderLibraryInfos(
   // Convert each GPU module to an SVR4LibraryInfo object
   for (const auto &[addr, module] : gpu_modules) {
     if (module.is_loaded) {
-      auto file_components = ParsePathname(module.path);
-      std::string path;
-      for (char c : file_components.first) {
-        if (c == '#')
-          path += "%23";
-        else if (c == '$')
-          path += "%24";
-        else if (c == '}')
-          path += "%7D";
-        else if (c == '&')
-          path += "&amp;";
-        else
-          path += c;
+      if (auto lib_info = ParseLibraryInfo(module.path)) {
+        LLDB_LOGF(log,
+                  "ProcessAMDGPU::%s() adding library: path=%s, addr=0x%" PRIx64
+                  ", offset=%" PRIu64 ", size=%" PRIu64,
+                  __FUNCTION__, lib_info->pathname.c_str(),
+                  lib_info->load_address.value(), lib_info->file_offset.value(),
+                  lib_info->file_size.value());
+        response.library_infos.push_back(*lib_info);
+      } else {
+        LLDB_LOGF(log,
+                  "ProcessAMDGPU::%s() failed to parse module path \"%s\"", 
+                  __FUNCTION__, module.path.c_str());
       }
-
-      GPUDynamicLoaderLibraryInfo lib_info;
-      lib_info.pathname = path;
-      lib_info.load = true;
-      lib_info.load_address = module.base_address;
-      lib_info.file_offset = file_components.second.first;
-      lib_info.file_size = file_components.second.second;
-
-      LLDB_LOGF(log,
-                "ProcessAMDGPU::%s() adding library: path=%s, addr=0x%" PRIx64
-                ", offset=%" PRIu64 ", size=%" PRIu64,
-                __FUNCTION__, lib_info.pathname.c_str(),
-                lib_info.load_address.value(), lib_info.file_offset.value(),
-                lib_info.file_size.value());
-
-      response.library_infos.push_back(lib_info);
     }
   }
 
