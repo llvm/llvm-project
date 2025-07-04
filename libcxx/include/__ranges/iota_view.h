@@ -395,7 +395,7 @@ inline constexpr auto iota = __iota::__fn{};
 
 #  if _LIBCPP_STD_VER >= 26
 
-inline constexpr auto indices = [](__integer_like auto __size) {
+inline constexpr auto indices = [](__integer_like auto __size) static {
   return ranges::views::iota(decltype(__size){}, __size);
 };
 
