@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/RuntimeDyldChecker.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -549,20 +550,30 @@ static int executeInput() {
 
   // Instantiate a dynamic linker.
   TrivialMemoryManager MemMgr;
-  doPreallocation(MemMgr);
   RuntimeDyld Dyld(MemMgr, MemMgr);
 
+  uint64_t TotalCodeSize = 0;
+  uint64_t TotalRODataSize = 0;
+  uint64_t TotalRWDataSize = 0;
+
+
   // If we don't have any input files, read from stdin.
-  if (!InputFileList.size())
+  if (!InputFileList.size()) {
     InputFileList.push_back("-");
+  }
+
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
+    // First, iterate over the list of objects to calculate the object sizes
+    // before we actually allocate the memory.
     for (auto &File : InputFileList) {
       // Load the input memory buffer.
       ErrorOr<std::unique_ptr<MemoryBuffer>> InputBuffer =
           MemoryBuffer::getFileOrSTDIN(File);
+
       if (std::error_code EC = InputBuffer.getError())
         ErrorAndExit("unable to read input: '" + EC.message() + "'");
+
       Expected<std::unique_ptr<ObjectFile>> MaybeObj(
           ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
 
@@ -576,11 +587,34 @@ static int executeInput() {
 
       ObjectFile &Obj = **MaybeObj;
 
-      // Load the object file
-      Dyld.loadObject(Obj);
-      if (Dyld.hasError()) {
+      uint64_t CodeSize, RODataSize, RWDataSize;
+      Align CodeAlign, RODataAlign, RWDataAlign;
+
+      Error Err = Dyld.precalculateMemorySize(Obj, CodeSize, CodeAlign,
+		      RODataSize, RODataAlign, RWDataSize, RWDataAlign);
+      if (Err)
+        ErrorAndExit("Can't compute total size");
+
+      TotalCodeSize += CodeSize;
+      TotalRODataSize += RODataSize;
+      TotalRWDataSize += RWDataSize;
+    }
+
+    if  (!PreallocMemory)
+      PreallocMemory = TotalCodeSize + TotalRODataSize + TotalRWDataSize;
+    doPreallocation(MemMgr);
+
+    // Now, iterate over the list again to actually load the objects.
+    for (auto &File : InputFileList) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> InputBuffer =
+          MemoryBuffer::getFileOrSTDIN(File);
+      Expected<std::unique_ptr<ObjectFile>> MaybeObj(
+          ObjectFile::createObjectFile((*InputBuffer)->getMemBufferRef()));
+      assert(MaybeObj);
+
+      Dyld.loadObject(**MaybeObj);
+      if (Dyld.hasError())
         ErrorAndExit(Dyld.getErrorString());
-      }
     }
   }
 
