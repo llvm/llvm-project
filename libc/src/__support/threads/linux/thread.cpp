@@ -482,6 +482,11 @@ int Thread::get_name(cpp::StringStream &name) const {
   return 0;
 }
 
+#ifdef LIBC_USE_MALLOC_THREAD_CLEANUP
+// This symbol may not be defined if libc is not built with allocator
+extern "C" [[gnu::weak]] void _malloc_thread_cleanup();
+#endif
+
 void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   auto attrib = self.attrib;
 
@@ -494,6 +499,11 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
   // different thread. The destructors of thread local and TSS objects should
   // be called by the thread which owns them.
   internal::call_atexit_callbacks(attrib);
+#ifdef LIBC_USE_MALLOC_THREAD_CLEANUP
+  // teardown TLS heap
+  if (_malloc_thread_cleanup)
+    _malloc_thread_cleanup();
+#endif
 
   uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
   if (!attrib->detach_state.compare_exchange_strong(
