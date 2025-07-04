@@ -31,7 +31,8 @@ namespace {
 
 class AArch64AsmBackend : public MCAsmBackend {
   static const unsigned PCRelFlagVal =
-      MCFixupKindInfo::FKF_IsAlignedDownTo32Bits | MCFixupKindInfo::FKF_IsPCRel;
+      MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
+
 protected:
   Triple TheTriple;
 
