@@ -26,7 +26,8 @@ void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
 #define CODEGENOPT(Name, Bits, Default) Name = Default;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
 // Do not reset AST affecting code generation options.
-#define AFFECTING_VALUE_CODEGENOPT(Name, Bits, Default)
+#define COMPATIBLE_VALUE_CODEGENOPT(Name, Bits, Default, Description)
+#define COMPATIBLE_ENUM_CODEGENOPT(Name, Type, Bits, Default, Description)
 #include "clang/Basic/CodeGenOptions.def"
 
   // Next reset all debug options that can always be reset, because they never
