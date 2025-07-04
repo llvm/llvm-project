@@ -1693,6 +1693,7 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":BinaryFormat",
         ":Core",
         ":Support",
     ],
