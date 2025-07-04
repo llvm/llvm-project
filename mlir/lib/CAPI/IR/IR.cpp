@@ -101,6 +101,10 @@ bool mlirContextIsRegisteredOperation(MlirContext context, MlirStringRef name) {
   return unwrap(context)->isOperationRegistered(unwrap(name));
 }
 
+bool mlirContextIsMultithreadingEnabled(MlirContext context) {
+  return unwrap(context)->isMultithreadingEnabled();
+}
+
 void mlirContextEnableMultithreading(MlirContext context, bool enable) {
   return unwrap(context)->enableMultithreading(enable);
 }

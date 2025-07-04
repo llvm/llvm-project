@@ -143,6 +143,10 @@ MLIR_CAPI_EXPORTED MlirDialect mlirContextGetOrLoadDialect(MlirContext context,
 MLIR_CAPI_EXPORTED void mlirContextEnableMultithreading(MlirContext context,
                                                         bool enable);
 
+/// Retrieve threading mode current value as controlled by
+/// mlirContextEnableMultithreading.
+MLIR_CAPI_EXPORTED bool mlirContextIsMultithreadingEnabled(MlirContext context);
+
 /// Eagerly loads all available dialects registered with a context, making
 /// them available for use for IR construction.
 MLIR_CAPI_EXPORTED void

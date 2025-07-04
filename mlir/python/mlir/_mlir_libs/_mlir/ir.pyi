@@ -986,6 +986,7 @@ class ComplexType(Type):
 class Context:
     current: ClassVar[Context] = ...  # read-only
     allow_unregistered_dialects: bool
+    is_multithreading_enabled: bool
     @staticmethod
     def _get_live_count() -> int: ...
     def _CAPICreate(self) -> object: ...

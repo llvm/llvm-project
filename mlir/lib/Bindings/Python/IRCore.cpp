@@ -2939,6 +2939,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
              ss << pool.ptr;
              return ss.str();
            })
+      .def_prop_ro(
+          "is_multithreading_enabled",
+          [](PyMlirContext &self) {
+            return mlirContextIsMultithreadingEnabled(self.get());
+          },
+          "Returns true if multithreading is enabled for this context.")
       .def(
           "is_registered_operation",
           [](PyMlirContext &self, std::string &name) {
