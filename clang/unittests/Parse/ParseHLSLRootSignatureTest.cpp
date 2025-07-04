@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Expr.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -93,6 +95,22 @@ protected:
     return PP;
   }
 
+  std::unique_ptr<ASTContext> createMinimalASTContext() {
+    IdentifierTable Idents(LangOpts);
+    SelectorTable Selectors;
+    Builtin::Context Builtins;
+
+    return std::make_unique<ASTContext>(LangOpts, SourceMgr, Idents, Selectors,
+                                        Builtins, TU_Complete);
+  }
+
+  StringLiteral *wrapSource(std::unique_ptr<ASTContext> &Ctx,
+                            StringRef Source) {
+    SourceLocation Locs[1] = {SourceLocation()};
+    return StringLiteral::Create(*Ctx, Source, StringLiteralKind::Unevaluated,
+                                 false, Ctx->VoidTy, Locs);
+  }
+
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
@@ -110,6 +128,9 @@ protected:
 
 TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
   const llvm::StringLiteral Source = R"cc()cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -145,6 +166,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
     ),
     DescriptorTable()
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -250,6 +274,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -336,6 +363,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
     StaticSampler(s0, mipLODBias = 2147483648),
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -412,6 +442,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
     DescriptorTable(Sampler(s0, flags = DESCRIPTORS_VOLATILE))
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -443,6 +476,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
       visibility = SHADER_VISIBILITY_HULL
     )
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -502,6 +538,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -555,6 +594,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
     UAV(visibility = SHADER_VISIBILITY_HULL, u34893247),
     CBV(b0, flags = 0),
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -630,6 +672,9 @@ TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
       SRV(t42),
     )
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -802,6 +847,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
     space
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -823,6 +871,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
     notAnIdentifier
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -843,6 +894,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
   const llvm::StringLiteral Source = R"cc(
     DescriptorTable
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -870,6 +924,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -893,6 +950,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
     SRV()
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -915,6 +975,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
   const llvm::StringLiteral Source = R"cc(
     RootConstants(b0)
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -941,6 +1004,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -963,6 +1029,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
   const llvm::StringLiteral Source = R"cc(
     RootConstants(num32BitConstants = 32, num32BitConstants = 24)
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -988,6 +1057,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
       CBV(space = 2, space = 0)
     )
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -1016,6 +1088,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -1040,6 +1115,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -1063,6 +1141,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
     StaticSampler(s0, mipLODBias = -4294967295)
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -1084,6 +1165,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
   const llvm::StringLiteral Source = R"cc(
     StaticSampler(s0, mipLODBias = 3.402823467e+38F)
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -1107,6 +1191,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexNegOverflowedFloatTest) {
     StaticSampler(s0, mipLODBias = -3.402823467e+38F)
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -1129,6 +1216,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedDoubleTest) {
     StaticSampler(s0, mipLODBias = 1.e+500)
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
   auto TokLoc = SourceLocation();
@@ -1150,6 +1240,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexUnderflowFloatTest) {
   const llvm::StringLiteral Source = R"cc(
     StaticSampler(s0, mipLODBias = 10e-309)
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
@@ -1175,6 +1268,9 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
       CBV(b0, flags = 3)
     )
   )cc";
+
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
