@@ -142,7 +142,7 @@ static inline SmallVector<Function *> collectUsedFunctions(Module &M) {
   return Ret;
 }
 
-template<typename Container0, typename Container1, typename Container2>
+template <typename Container0, typename Container1, typename Container2>
 static inline void removeUnreachable(const Container0 &Predicates,
                                      const Container1 &PredicatedFns,
                                      const Container2 &UnreachableFns) {
