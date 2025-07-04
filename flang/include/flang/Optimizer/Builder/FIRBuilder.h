@@ -609,8 +609,8 @@ public:
     return integerOverflowFlags;
   }
 
-  /// Set ComplexDivisionToRuntimeFlag value for whether complex number division
-  /// is lowered to a runtime function by this builder.
+  /// Set ComplexDivisionToRuntimeFlag value. If set to true, complex number
+  /// division is lowered to a runtime function by this builder.
   void setComplexDivisionToRuntimeFlag(bool flag) {
     complexDivisionToRuntimeFlag = flag;
   }
