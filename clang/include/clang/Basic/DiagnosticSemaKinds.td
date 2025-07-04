@@ -13167,9 +13167,9 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
 def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
-    : Error<"__builtin_wasm_test_function_pointer_signature not supported for "
-            "function pointers with reference types in their "
-            "%select{return|parameter}0 type">;
+    : Error<"not supported for "
+            "function pointers with a reference type %select{return "
+            "value|parameter}0">;
 
 // OpenACC diagnostics.
 def warn_acc_routine_unimplemented
