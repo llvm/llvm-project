@@ -2985,7 +2985,8 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
                 Lang + HeaderUnit + Header + ModuleMap + Preprocessed);
   }
 
-  GenerateArg(Consumer, OPT_summary_format_EQ, Opts.SummaryFormat);
+  if (!Opts.EmitSummaryDir.empty() || !Opts.ReadSummaryDir.empty())
+    GenerateArg(Consumer, OPT_summary_format_EQ, Opts.SummaryFormat);
 
   // OPT_INPUT has a unique class, generate it directly.
   for (const auto &Input : Opts.Inputs)
