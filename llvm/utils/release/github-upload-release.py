@@ -45,9 +45,24 @@ def create_release(repo, release, tag=None, name=None, message=None):
         # Note that these lines are not length limited because if we do so, GitHub
         # assumes that should be how it is laid out on the page. We want GitHub to
         # do the reflowing for us instead.
+        #
+        # In the first section, only links to automatically built files are
+        # included because we know the links will become valid.
         message = dedent(
             """\
-LLVM {release} Release
+## LLVM {release} Release
+
+Note: Immediately after a release some of these links may not be valid yet.
+
+**Linux:**
+* [x86_64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz.jsonl))
+* [Arm64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz.jsonl))
+
+**Mac:**
+* [Apple Silicon](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz) (ARM64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz.jsonl))
+* [Intel](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz) (x86-64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz.jsonl))
+
+For Windows, and any other variants of platform and architecture, check the full list of release packages at the bottom of this release page.
 
 ## Package Types
 
