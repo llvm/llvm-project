@@ -5473,15 +5473,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_summaries_dir_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
 
-  if (Arg *A = Args.getLastArg(options::OPT_summary_format_EQ))
+  if (Args.getLastArg(options::OPT_summary_format_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_summary_format_EQ);
 
   if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
     std::string EmitSummaryDir = ".";
 
     if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
-        A->containsValue("obj") && FinalOutput)
-      EmitSummaryDir = llvm::sys::path::parent_path(FinalOutput->getValue());
+        A->containsValue("obj") && FinalOutput) {
+      StringRef ObjDir = llvm::sys::path::parent_path(FinalOutput->getValue());
+      if (!ObjDir.empty())
+        EmitSummaryDir = ObjDir;
+    }
 
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-emit-summary-dir=") + EmitSummaryDir));
