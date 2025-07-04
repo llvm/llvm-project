@@ -35,6 +35,13 @@
 #define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE, FEATURE)               \
   CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE, FEATURE)
 
+#define UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(ID, TYPES, FEATURE) \
+  UNALIASED_CUSTOM_BUILTIN(ID, TYPES, false, FEATURE)  \
+  UNALIASED_CUSTOM_BUILTIN(ID##nn, TYPES, true, FEATURE)  \
+  UNALIASED_CUSTOM_BUILTIN(ID##np, TYPES, true, FEATURE)  \
+  UNALIASED_CUSTOM_BUILTIN(ID##pn, TYPES, true, FEATURE)  \
+  UNALIASED_CUSTOM_BUILTIN(ID##pp, TYPES, true, FEATURE)
+
 // GCC predefined macros to rename builtins, undef them to keep original names.
 #if defined(__GNUC__) && !defined(__clang__)
 #undef __builtin_vsx_xvnmaddadp
@@ -1032,12 +1039,6 @@ UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2, "vW512*VV", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_xvi16ger2s, "vW512*VV", false,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2, "vW512*VV", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32ger, "vW512*VV", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64ger, "vW512*W256V", false,
-                         "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi4ger8, "vW512*VVi15i15i255", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4, "vW512*VVi15i15i15", false,
@@ -1045,12 +1046,6 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvi8ger4, "vW512*VVi15i15i15", false,
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2, "vW512*VVi15i15i3", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2s, "vW512*VVi15i15i3", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_xvi4ger8pp, "vW512*VV", true,
                          "mma,paired-vector-memops")
@@ -1072,74 +1067,6 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2pp, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmxvi16ger2spp, "vW512*VVi15i15i3", true,
                          "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2pp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2pn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2np, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf16ger2nn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2pp, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2pn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2np, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf16ger2nn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gerpp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gerpn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gernp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf32gernn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gerpp, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gerpn, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gernp, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf32gernn, "vW512*VVi15i15", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gerpp, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gerpn, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gernp, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvf64gernn, "vW512*W256V", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gerpp, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gerpn, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gernp, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvf64gernn, "vW512*W256Vi15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2, "vW512*VV", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3", false,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2pp, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2pn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2np, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_xvbf16ger2nn, "vW512*VV", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pp, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2pn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2np, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
-UNALIASED_CUSTOM_BUILTIN(mma_pmxvbf16ger2nn, "vW512*VVi15i15i3", true,
-                         "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4, "vW1024*W256V", false,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4, "vW1024*W256Vi255i15i15", false,
@@ -1151,6 +1078,22 @@ UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4pp, "vW1024*W256Vi255i15i15", true,
 UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp,  "vW1024*W256V", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_xvf16ger2, "vW512*VV",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_xvf32ger, "vW512*VV",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_xvf64ger, "vW512*W256V",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_xvbf16ger2, "vW512*VV",
+                         "mma,paired-vector-memops")
+UNALIASED_CUSTOM_ACCUMULATE_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3",
                          "mma,paired-vector-memops")
 
 // FIXME: Obviously incomplete.
