@@ -108,6 +108,10 @@ bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
   return (Flags & ~Mask) == FlagT::None;
 }
 
+bool verifyNumDescriptors(uint32_t NumDescriptors) {
+  return NumDescriptors > 0;
+}
+
 bool verifySamplerFilter(uint32_t Value) {
   switch (Value) {
 #define FILTER(Num, Val) case llvm::to_underlying(dxbc::SamplerFilter::Val):

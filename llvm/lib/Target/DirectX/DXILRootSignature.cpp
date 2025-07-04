@@ -447,6 +447,9 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
         if (!llvm::hlsl::rootsig::verifyRegisterSpace(Range.RegisterSpace))
           return reportValueError(Ctx, "RegisterSpace", Range.RegisterSpace);
 
+        if (!llvm::hlsl::rootsig::verifyNumDescriptors(Range.NumDescriptors))
+          return reportValueError(Ctx, "NumDescriptors", Range.NumDescriptors);
+
         if (!llvm::hlsl::rootsig::verifyDescriptorRangeFlag(
                 RSD.Version, Range.RangeType, Range.Flags))
           return reportValueError(Ctx, "DescriptorFlag", Range.Flags);
