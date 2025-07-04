@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/Language/Swift/SwiftMangled.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "TestingSupport/TestUtilities.h"
 
