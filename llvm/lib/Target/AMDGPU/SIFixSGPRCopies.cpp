@@ -125,12 +125,11 @@ class SIFixSGPRCopies {
   SmallVector<MachineInstr*, 4> PHINodes;
   SmallVector<MachineInstr*, 4> S2VCopies;
   struct V2PysSCopyInfo {
-    bool CanConvert;
     SmallVector<MachineOperand *> MOs;
     SmallVector<Register> SGPRs;
   };
   DenseMap<MachineInstr *, struct V2PysSCopyInfo> WaterFalls;
-  DenseMap<MachineInstr *, bool> V2SCanErase;
+  DenseSet<MachineInstr *> V2PhySCopies;
   unsigned NextVGPRToSGPRCopyID = 0;
   MapVector<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
@@ -822,7 +821,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
   S2VCopies.clear();
   PHISources.clear();
   WaterFalls.clear();
-  V2SCanErase.clear();
+  V2PhySCopies.clear();
 
   return true;
 }
@@ -926,35 +925,32 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
       MI.eraseFromParent();
     } else if (SrcReg.isVirtual() && TRI->getRegSizeInBits(SrcReg, *MRI) ==
                                          TRI->getRegSizeInBits(DstReg, *MRI)) {
+      auto I = MI.getIterator();
+      auto E = MI.getParent()->end();
       // COPY can be erased if all its uses can be converted to waterfall.
-      if (V2SCanErase.count(&MI) == 0)
-        V2SCanErase[&MI] = true;
-      for (auto UseMI : TRI->findRegUsesFrom(&MI, DstReg, {DstReg}, {})) {
+      bool CanErase = true;
+      // Only search current block since phyreg's def & use cannot cross
+      // blocks when MF.NoPhi = false.
+      while (++I != E) {
         // Currently, we only support waterfall on SI_CALL_ISEL.
-        if (UseMI->getOpcode() != AMDGPU::SI_CALL_ISEL) {
-          V2SCanErase[&MI] = false;
-          continue;
-        }
-        // If CALL has one pysical reg used which is not dominated by its COPY
-        // def, we cannot create waterfall on UseMI.
-        // If we cannot create waterfall on UseMI, we cannot erase COPY.
-        if (!MDT->dominates(&MI, UseMI)) {
-          WaterFalls[UseMI].CanConvert = false;
-          V2SCanErase[&MI] = false;
-          continue;
-        }
-        for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
-          if (UseMI->getOperand(i).isReg() &&
-              UseMI->getOperand(i).getReg() == DstReg) {
-            MachineOperand *MO = &UseMI->getOperand(i);
-            MO->setReg(SrcReg);
-            if (WaterFalls.count(UseMI) == 0)
-              WaterFalls[UseMI].CanConvert = true;
-            WaterFalls[UseMI].MOs.push_back(MO);
-            WaterFalls[UseMI].SGPRs.push_back(DstReg);
+        if (I->getOpcode() == AMDGPU::SI_CALL_ISEL) {
+          MachineInstr *UseMI = &*I;
+          for (unsigned i = 0; i < UseMI->getNumOperands(); ++i) {
+            if (UseMI->getOperand(i).isReg() &&
+                UseMI->getOperand(i).getReg() == DstReg) {
+              MachineOperand *MO = &UseMI->getOperand(i);
+              MO->setReg(SrcReg);
+              WaterFalls[UseMI].MOs.push_back(MO);
+              WaterFalls[UseMI].SGPRs.push_back(DstReg);
+            }
           }
-        }
+        } else if (I->readsRegister(DstReg, TRI))
+          CanErase = false;
+        if (I->findRegisterDefOperand(DstReg, TRI))
+          break;
       }
+      if (CanErase)
+        V2PhySCopies.insert(&MI);
     }
     return true;
   }
@@ -1190,8 +1186,7 @@ void SIFixSGPRCopies::lowerPysicalSGPRInsts(MachineFunction &MF) {
   for (auto &Entry : WaterFalls) {
     MachineInstr *MI = Entry.first;
     struct V2PysSCopyInfo Info = Entry.second;
-    if (!Info.CanConvert || Info.MOs.size() == 0 ||
-        Info.SGPRs.size() != Info.MOs.size())
+    if (Info.MOs.size() == 0 || Info.SGPRs.size() != Info.MOs.size())
       continue;
 
     if (MI->getOpcode() == AMDGPU::SI_CALL_ISEL) {
@@ -1219,11 +1214,11 @@ void SIFixSGPRCopies::lowerPysicalSGPRInsts(MachineFunction &MF) {
       llvm::loadMBUFScalarOperandsFromVGPR(*TII, *MI, Info.MOs, MDT, Start, End,
                                            Info.SGPRs);
     }
-
-    for (auto &Entry : V2SCanErase)
-      if (Entry.second)
-        Entry.first->eraseFromParent();
   }
+  // Avoid some O0 tests where no use of COPY to SGPR
+  if (!WaterFalls.empty())
+    for (auto &Entry : V2PhySCopies)
+      Entry->eraseFromParent();
 }
 
 void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
