@@ -12,10 +12,10 @@
 
 #include "FuzzerExtFunctions.h"
 #include "FuzzerIO.h"
+#include <cerrno>
 #include <cstdarg>
 #include <cstdio>
 #include <dirent.h>
-#include <cerrno>
 #include <fstream>
 #include <iterator>
 #include <libgen.h>
