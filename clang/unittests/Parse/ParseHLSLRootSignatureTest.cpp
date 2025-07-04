@@ -690,14 +690,15 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_0, Elements, Lexer,
-                                   *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_0, Elements,
+                                   Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
@@ -762,14 +763,15 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
     )
   )cc";
 
+  auto Ctx = createMinimalASTContext();
+  StringLiteral *Signature = wrapSource(Ctx, Source);
+
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
   SmallVector<RootElement> Elements;
-  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
-                                   *PP);
+  hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
+                                   Signature, *PP);
 
   // Test no diagnostics produced
   Consumer->setNoDiag();
