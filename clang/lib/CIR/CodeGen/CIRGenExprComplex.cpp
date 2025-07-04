@@ -39,6 +39,8 @@ public:
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
 
+  mlir::Value
+  VisitAbstractConditionalOperator(const AbstractConditionalOperator *e);
   mlir::Value VisitArraySubscriptExpr(Expr *e);
   mlir::Value VisitBinAssign(const BinaryOperator *e);
   mlir::Value VisitBinComma(const BinaryOperator *e);
@@ -125,6 +127,27 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 
   const Address destAddr = lv.getAddress();
   builder.createStore(loc, val, destAddr);
+}
+
+mlir::Value ComplexExprEmitter::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *e) {
+  mlir::Value condValue = Visit(e->getCond());
+  mlir::Location loc = cgf.getLoc(e->getSourceRange());
+
+  return builder
+      .create<cir::TernaryOp>(
+          loc, condValue,
+          /*thenBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            mlir::Value trueValue = Visit(e->getTrueExpr());
+            b.create<cir::YieldOp>(loc, trueValue);
+          },
+          /*elseBuilder=*/
+          [&](mlir::OpBuilder &b, mlir::Location loc) {
+            mlir::Value falseValue = Visit(e->getFalseExpr());
+            b.create<cir::YieldOp>(loc, falseValue);
+          })
+      .getResult();
 }
 
 mlir::Value ComplexExprEmitter::VisitArraySubscriptExpr(Expr *e) {
