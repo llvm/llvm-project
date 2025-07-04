@@ -2146,6 +2146,7 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
     // | ptr  |      n.a.     |  -  |   x   |       -       |     -    | bycopy|
     // | ptr  |      n.a.     |  x  |   -   |       -       |     -    | null  |
     // | ptr  |      n.a.     |  -  |   -   |       -       |     x    | byref |
+    // | ptr  |      n.a.     |  -  |   -   |       -       |   x, x[] | bycopy|
     // | ptr  |      n.a.     |  -  |   -   |       -       |    x[]   | bycopy|
     // | ptr  |      n.a.     |  -  |   -   |       x       |          | bycopy|
     // | ptr  |      n.a.     |  -  |   -   |       x       |     x    | bycopy|
@@ -2171,18 +2172,22 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
     //  - For pointers mapped by value that have either an implicit map or an
     //    array section, the runtime library may pass the NULL value to the
     //    device instead of the value passed to it by the compiler.
+    //  - If both a pointer an a dereference of it are mapped, then the pointer
+    //    should be passed by reference.
 
     if (Ty->isReferenceType())
       Ty = Ty->castAs<ReferenceType>()->getPointeeType();
 
-    // Locate map clauses and see if the variable being captured is referred to
-    // in any of those clauses. Here we only care about variables, not fields,
-    // because fields are part of aggregates.
+    // Locate map clauses and see if the variable being captured is mapped by
+    // itself, or referred to, in any of those clauses. Here we only care about
+    // variables, not fields, because fields are part of aggregates.
     bool IsVariableAssociatedWithSection = false;
+    bool IsVariableItselfMapped = false;
 
     DSAStack->checkMappableExprComponentListsForDeclAtLevel(
         D, Level,
         [&IsVariableUsedInMapClause, &IsVariableAssociatedWithSection,
+         &IsVariableItselfMapped,
          D](OMPClauseMappableExprCommon::MappableExprComponentListRef
                 MapExprComponents,
             OpenMPClauseKind WhereFoundClauseKind) {
@@ -2198,8 +2203,19 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
 
           assert(EI != EE && "Invalid map expression!");
 
-          if (isa<DeclRefExpr>(EI->getAssociatedExpression()))
-            IsVariableUsedInMapClause |= EI->getAssociatedDeclaration() == D;
+          if (isa<DeclRefExpr>(EI->getAssociatedExpression()) &&
+              EI->getAssociatedDeclaration() == D) {
+            IsVariableUsedInMapClause = true;
+
+            // If the component list has only one element, it's for mapping the
+            // variable itself, like map(p). This takes precedence in
+            // determining how it's captured, so we don't need to look further
+            // for any other maps that use the variable (like map(p[0]) etc.)
+            if (MapExprComponents.size() == 1) {
+              IsVariableItselfMapped = true;
+              return true;
+            }
+          }
 
           ++EI;
           if (EI == EE)
@@ -2213,8 +2229,10 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
               isa<MemberExpr>(EI->getAssociatedExpression()) ||
               isa<OMPArrayShapingExpr>(Last->getAssociatedExpression())) {
             IsVariableAssociatedWithSection = true;
-            // There is nothing more we need to know about this variable.
-            return true;
+            // We've found a case like map(p[0]) or map(p->a) or map(*p),
+            // so we are done with this particular map, but we need to keep
+            // looking in case we find a map(p).
+            return false;
           }
 
           // Keep looking for more map info.
@@ -2223,8 +2241,23 @@ bool SemaOpenMP::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level,
 
     if (IsVariableUsedInMapClause) {
       // If variable is identified in a map clause it is always captured by
-      // reference except if it is a pointer that is dereferenced somehow.
-      IsByRef = !(Ty->isPointerType() && IsVariableAssociatedWithSection);
+      // reference except if it is a pointer that is dereferenced somehow, but
+      // not itself mapped.
+      //
+      // OpenMP 6.0, 7.1.1: Data sharing attribute rules, variables referenced
+      // in a construct::
+      // If a list item in a has_device_addr clause or in a map clause on the
+      // target construct has a base pointer, and the base pointer is a scalar
+      // variable *that is not a list item in a map clause on the construct*,
+      // the base pointer is firstprivate.
+      //
+      // OpenMP 4.5, 2.15.1.1: Data-sharing Attribute Rules for Variables
+      // Referenced in a Construct:
+      // If an array section is a list item in a map clause on the target
+      // construct and the array section is derived from a variable for which
+      // the type is pointer then that variable is firstprivate.
+      IsByRef = IsVariableItselfMapped ||
+                !(Ty->isPointerType() && IsVariableAssociatedWithSection);
     } else {
       // By default, all the data that has a scalar type is mapped by copy
       // (except for reduction variables).
