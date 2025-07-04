@@ -607,7 +607,7 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
 
   // Emit a symbolic constant as a fixup and 4 zeros.
   Fixups.push_back(MCFixup::create(static_cast<uint32_t>(CB.size() - StartByte),
-                                   Expr, FixupKind, Loc));
+                                   Expr, FixupKind));
   emitConstant(0, Size, CB);
 }
 
@@ -812,7 +812,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
         if (Sym && Sym->getSpecifier() == X86::S_TLSCALL) {
           // This is exclusively used by call *a@tlscall(base). The relocation
           // (R_386_TLSCALL or R_X86_64_TLSCALL) applies to the beginning.
-          Fixups.push_back(MCFixup::create(0, Sym, FK_NONE, MI.getLoc()));
+          Fixups.push_back(MCFixup::create(0, Sym, FK_NONE));
           emitByte(modRMByte(0, RegOpcodeField, BaseRegNo), CB);
           return;
         }

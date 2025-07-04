@@ -885,7 +885,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN, SMLoc());
+  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN);
 
   uint64_t FixedValue = 0;
   MCValue NopBytes = MCValue::get(Count);

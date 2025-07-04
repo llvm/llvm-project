@@ -195,8 +195,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   assert(FixupKind != LoongArch::fixup_loongarch_invalid &&
          "Unhandled expression!");
 
-  Fixups.push_back(
-      MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, Expr, MCFixupKind(FixupKind)));
   // If linker relaxation is enabled and supported by this relocation, set
   // a bit so that if fixup is unresolved, a R_LARCH_RELAX relocation will be
   // appended.
@@ -249,8 +248,7 @@ void LoongArchMCCodeEmitter::expandAddTPRel(const MCInst &MI,
          "Expected %le_add_r relocation on TP-relative symbol");
 
   // Emit the correct %le_add_r relocation for the symbol.
-  Fixups.push_back(
-      MCFixup::create(0, Expr, ELF::R_LARCH_TLS_LE_ADD_R, MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, Expr, ELF::R_LARCH_TLS_LE_ADD_R));
   if (STI.hasFeature(LoongArch::FeatureRelax))
     Fixups.back().setLinkerRelaxable();
 

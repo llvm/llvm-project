@@ -111,8 +111,8 @@ unsigned MSP430MCCodeEmitter::getMachineOpValue(const MCInst &MI,
   }
 
   assert(MO.isExpr() && "Expected expr operand");
-  Fixups.push_back(MCFixup::create(Offset, MO.getExpr(),
-      static_cast<MCFixupKind>(MSP430::fixup_16_byte), MI.getLoc()));
+  Fixups.push_back(MCFixup::create(
+      Offset, MO.getExpr(), static_cast<MCFixupKind>(MSP430::fixup_16_byte)));
   Offset += 2;
   return 0;
 }
@@ -144,7 +144,7 @@ unsigned MSP430MCCodeEmitter::getMemOpValue(const MCInst &MI, unsigned Op,
     break;
   }
   Fixups.push_back(MCFixup::create(Offset, MO2.getExpr(),
-    static_cast<MCFixupKind>(FixupKind), MI.getLoc()));
+                                   static_cast<MCFixupKind>(FixupKind)));
   Offset += 2;
   return Reg;
 }
@@ -157,8 +157,8 @@ unsigned MSP430MCCodeEmitter::getPCRelImmOpValue(const MCInst &MI, unsigned Op,
     return MO.getImm();
 
   assert(MO.isExpr() && "Expr operand expected");
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-    static_cast<MCFixupKind>(MSP430::fixup_10_pcrel), MI.getLoc()));
+  Fixups.push_back(MCFixup::create(
+      0, MO.getExpr(), static_cast<MCFixupKind>(MSP430::fixup_10_pcrel)));
   return 0;
 }
 
