@@ -128,6 +128,7 @@ add_mlir_dialect_library(MLIRXeVMDialect
   Core
 
   LINK_LIBS PUBLIC
+  MLIRDialectUtils
   MLIRIR
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
