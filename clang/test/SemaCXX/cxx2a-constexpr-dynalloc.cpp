@@ -256,7 +256,7 @@ int f() {
     if constexpr((S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
         return 1;
     }
-    if constexpr(S s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+    if constexpr(S s; (S{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
         return 1;
     }
     if constexpr(S s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
@@ -267,8 +267,29 @@ int f() {
     }
     return 0;
 }
+
+template <typename T>
+int f2() {
+    if constexpr((T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (T{}, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(T s; (s, true)) { // expected-warning{{left operand of comma operator has no effect}}
+        return 1;
+    }
+    if constexpr(constexpr int _ = T{}.i; true) {
+        return 1;
+    }
+    return 0;
 }
 
+void test() {
+  f2<S>(); // expected-note {{in instantiation}}
+}
+
+}
 namespace GH120197{
 struct NonTrivialDtor {
   NonTrivialDtor() = default;

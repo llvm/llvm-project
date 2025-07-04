@@ -20644,7 +20644,7 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
   } else if (Cond.isUsable() && !isa<FullExpr>(Cond.get()))
     Cond = ActOnFinishFullExpr(Cond.get(), Loc, /*DiscardedValue*/ false);
 
-  if (Cond.isInvalid())
+  if (!Cond.isUsable())
     return ConditionError();
 
   return ConditionResult(*this, nullptr, Cond,
