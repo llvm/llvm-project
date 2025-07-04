@@ -8887,14 +8887,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
-  DenseMap<VPValue *, VPWidenInductionRecipe *> MapIVs;
+  SmallDenseMap<VPValue *, VPWidenInductionRecipe *> MapIVs;
   for (const auto &[Phi, ID] : Legal->getInductionVars()) {
     auto *IVInc = cast<Instruction>(
         Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
     VPWidenInductionRecipe *WideIV =
         cast<VPWidenInductionRecipe>(RecipeBuilder.getRecipe(Phi));
     VPValue *V = RecipeBuilder.getVPValueOrAddLiveIn(IVInc);
-    if (!dyn_cast<PHINode>(IVInc))
+    if (!isa<PHINode>(IVInc))
       MapIVs[V] = WideIV;
     if (IVInc->getOperand(0) != Phi || IVInc->getOpcode() != Instruction::Add)
       continue;

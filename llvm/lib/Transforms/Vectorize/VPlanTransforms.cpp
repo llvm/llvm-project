@@ -826,7 +826,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues,
-    DenseMap<VPValue *, VPWidenInductionRecipe *> MapIVs) {
+    DenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs) {
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
