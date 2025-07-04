@@ -16,22 +16,6 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::portability {
 
-namespace {
-
-AST_MATCHER(clang::TypeLoc, hasValidBeginLoc) {
-  return Node.getBeginLoc().isValid();
-}
-
-AST_MATCHER_P(clang::TypeLoc, hasType,
-              clang::ast_matchers::internal::Matcher<clang::Type>,
-              InnerMatcher) {
-  const clang::Type *TypeNode = Node.getTypePtr();
-  return TypeNode != nullptr &&
-         InnerMatcher.matches(*TypeNode, Finder, Builder);
-}
-
-} // namespace
-
 AvoidPlatformSpecificFundamentalTypesCheck::
     AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
                                                ClangTidyContext *Context)
@@ -89,22 +73,55 @@ bool AvoidPlatformSpecificFundamentalTypesCheck::isSemanticType(
 
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
-  // Match variable declarations with fundamental integer types
-  Finder->addMatcher(varDecl().bind("var_decl"), this);
+  // Create a matcher for platform-specific fundamental integer types
+  // This should only match direct uses of builtin types, not typedefs
+  auto PlatformSpecificFundamentalType = qualType(
+      allOf(
+          // Must be a builtin type directly (not through typedef)
+          builtinType(),
+          // Only match the specific fundamental integer types we care about
+          anyOf(
+              asString("int"),
+              asString("unsigned int"),
+              asString("short"),
+              asString("unsigned short"),
+              asString("long"),
+              asString("unsigned long"),
+              asString("long long"),
+              asString("unsigned long long")
+          )
+      )
+  );
 
-  // Match function declarations with fundamental integer return types
-  Finder->addMatcher(functionDecl().bind("func_decl"), this);
+  // Match variable declarations with platform-specific fundamental integer types
+  Finder->addMatcher(
+      varDecl(hasType(PlatformSpecificFundamentalType)).bind("var_decl"),
+      this);
 
-  // Match function parameters with fundamental integer types
-  Finder->addMatcher(parmVarDecl().bind("param_decl"), this);
+  // Match function declarations with platform-specific fundamental integer return types
+  Finder->addMatcher(
+      functionDecl(returns(PlatformSpecificFundamentalType)).bind("func_decl"),
+      this);
 
-  // Match field declarations with fundamental integer types
-  Finder->addMatcher(fieldDecl().bind("field_decl"), this);
+  // Match function parameters with platform-specific fundamental integer types
+  Finder->addMatcher(
+      parmVarDecl(hasType(PlatformSpecificFundamentalType)).bind("param_decl"),
+      this);
 
-  // Match typedef declarations to check their underlying types
-  Finder->addMatcher(typedefDecl().bind("typedef_decl"), this);
+  // Match field declarations with platform-specific fundamental integer types
+  Finder->addMatcher(
+      fieldDecl(hasType(PlatformSpecificFundamentalType)).bind("field_decl"),
+      this);
 
-  Finder->addMatcher(typeAliasDecl().bind("alias_decl"), this);
+  // Match typedef declarations with platform-specific fundamental underlying types
+  Finder->addMatcher(
+      typedefDecl(hasUnderlyingType(PlatformSpecificFundamentalType)).bind("typedef_decl"),
+      this);
+
+  // Match type alias declarations with platform-specific fundamental underlying types
+  Finder->addMatcher(
+      typeAliasDecl(hasType(PlatformSpecificFundamentalType)).bind("alias_decl"),
+      this);
 }
 
 void AvoidPlatformSpecificFundamentalTypesCheck::check(
@@ -146,24 +163,6 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   }
 
   if (Loc.isInvalid() || QT.isNull())
-    return;
-
-  // Check if the type is already a typedef - if so, don't warn
-  // since the user is already using a typedef (which is what we want)
-  if (QT->getAs<TypedefType>()) {
-    return;
-  }
-
-  const Type *T = QT.getCanonicalType().getTypePtr();
-  if (!T)
-    return;
-
-  // Skip if not a fundamental integer type
-  if (!isFundamentalIntegerType(T))
-    return;
-
-  // Skip semantic types
-  if (isSemanticType(T))
     return;
 
   // Get the type name for the diagnostic
