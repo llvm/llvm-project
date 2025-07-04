@@ -315,6 +315,7 @@ module LLVM_ProfileData {
 
   textual header "llvm/ProfileData/InstrProfData.inc"
   textual header "llvm/ProfileData/MemProfData.inc"
+  textual header "llvm/ProfileData/MemProfBinaryAccessData.inc"
   textual header "llvm/ProfileData/MIBEntryDef.inc"
 }
 
