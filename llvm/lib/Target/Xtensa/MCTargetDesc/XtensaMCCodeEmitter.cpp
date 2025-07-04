@@ -195,8 +195,8 @@ XtensaMCCodeEmitter::getJumpTargetEncoding(const MCInst &MI, unsigned int OpNum,
     return MO.getImm();
 
   const MCExpr *Expr = MO.getExpr();
-  Fixups.push_back(MCFixup::create(
-      0, Expr, MCFixupKind(Xtensa::fixup_xtensa_jump_18), MI.getLoc()));
+  Fixups.push_back(
+      MCFixup::create(0, Expr, MCFixupKind(Xtensa::fixup_xtensa_jump_18)));
   return 0;
 }
 
@@ -213,17 +213,17 @@ uint32_t XtensaMCCodeEmitter::getBranchTargetEncoding(
   case Xtensa::BGEZ:
   case Xtensa::BLTZ:
   case Xtensa::BNEZ:
-    Fixups.push_back(MCFixup::create(
-        0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_12), MI.getLoc()));
+    Fixups.push_back(
+        MCFixup::create(0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_12)));
     return 0;
   case Xtensa::BEQZ_N:
   case Xtensa::BNEZ_N:
-    Fixups.push_back(MCFixup::create(
-        0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_6), MI.getLoc()));
+    Fixups.push_back(
+        MCFixup::create(0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_6)));
     return 0;
   default:
-    Fixups.push_back(MCFixup::create(
-        0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_8), MI.getLoc()));
+    Fixups.push_back(
+        MCFixup::create(0, Expr, MCFixupKind(Xtensa::fixup_xtensa_branch_8)));
     return 0;
   }
 }
@@ -240,8 +240,8 @@ XtensaMCCodeEmitter::getLoopTargetEncoding(const MCInst &MI, unsigned int OpNum,
 
   const MCExpr *Expr = MO.getExpr();
 
-  Fixups.push_back(MCFixup::create(
-      0, Expr, MCFixupKind(Xtensa::fixup_xtensa_loop_8), MI.getLoc()));
+  Fixups.push_back(
+      MCFixup::create(0, Expr, MCFixupKind(Xtensa::fixup_xtensa_loop_8)));
   return 0;
 }
 
@@ -261,8 +261,8 @@ XtensaMCCodeEmitter::getCallEncoding(const MCInst &MI, unsigned int OpNum,
 
   assert((MO.isExpr()) && "Unexpected operand value!");
   const MCExpr *Expr = MO.getExpr();
-  Fixups.push_back(MCFixup::create(
-      0, Expr, MCFixupKind(Xtensa::fixup_xtensa_call_18), MI.getLoc()));
+  Fixups.push_back(
+      MCFixup::create(0, Expr, MCFixupKind(Xtensa::fixup_xtensa_call_18)));
   return 0;
 }
 
@@ -281,8 +281,8 @@ XtensaMCCodeEmitter::getL32RTargetEncoding(const MCInst &MI, unsigned OpNum,
 
   assert((MO.isExpr()) && "Unexpected operand value!");
 
-  Fixups.push_back(MCFixup::create(
-      0, MO.getExpr(), MCFixupKind(Xtensa::fixup_xtensa_l32r_16), MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
+                                   MCFixupKind(Xtensa::fixup_xtensa_l32r_16)));
   return 0;
 }
 
