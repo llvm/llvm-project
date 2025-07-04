@@ -174,7 +174,14 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                   : 2 * Kind);
     };
 
-    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
+    auto LHSKindKey = getKindKey(LHS.Kind);
+    auto RHSKindKey = getKindKey(RHS.Kind);
+    if (LHSKindKey != RHSKindKey)
+      return LHSKindKey < RHSKindKey;
+
+    // Compares endLoc in descending order,
+    // to prioritize wider Regions with the same startLoc.
+    return LHS.endLoc() > RHS.endLoc();
   });
 
   // Write out the fileid -> filename mapping.
