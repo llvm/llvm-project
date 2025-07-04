@@ -783,9 +783,10 @@ private:
       print(&b);
   }
 
-  void printRegionArgument(BlockArgument arg, ArrayRef<NamedAttribute> argAttrs,
-                           bool omitType) override {
-    printType(arg.getType());
+  void printRegionArgument(
+      BlockArgument arg, ArrayRef<NamedAttribute> argAttrs, bool omitType,
+      function_ref<void(OpAsmPrinter &, Type)> typePrinter = nullptr) override {
+    typePrinter ? typePrinter(*this, arg.getType()) : printType(arg.getType());
     // Visit the argument location.
     if (printerFlags.shouldPrintDebugInfo())
       // TODO: Allow deferring argument locations.
@@ -3295,9 +3296,10 @@ public:
   /// where location printing is controlled by the standard internal option.
   /// You may pass omitType=true to not print a type, and pass an empty
   /// attribute list if you don't care for attributes.
-  void printRegionArgument(BlockArgument arg,
-                           ArrayRef<NamedAttribute> argAttrs = {},
-                           bool omitType = false) override;
+  void printRegionArgument(
+      BlockArgument arg, ArrayRef<NamedAttribute> argAttrs = {},
+      bool omitType = false,
+      function_ref<void(OpAsmPrinter &, Type)> typePrinter = nullptr) override;
 
   /// Print the ID for the given value.
   void printOperand(Value value) override { printValueID(value); }
@@ -3545,13 +3547,13 @@ void OperationPrinter::printResourceFileMetadata(
 /// where location printing is controlled by the standard internal option.
 /// You may pass omitType=true to not print a type, and pass an empty
 /// attribute list if you don't care for attributes.
-void OperationPrinter::printRegionArgument(BlockArgument arg,
-                                           ArrayRef<NamedAttribute> argAttrs,
-                                           bool omitType) {
+void OperationPrinter::printRegionArgument(
+    BlockArgument arg, ArrayRef<NamedAttribute> argAttrs, bool omitType,
+    function_ref<void(OpAsmPrinter &, Type)> typePrinter) {
   printOperand(arg);
   if (!omitType) {
     os << ": ";
-    printType(arg.getType());
+    typePrinter ? typePrinter(*this, arg.getType()) : printType(arg.getType());
   }
   printOptionalAttrDict(argAttrs);
   // TODO: We should allow location aliases on block arguments.
