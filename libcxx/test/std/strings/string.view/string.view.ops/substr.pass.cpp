@@ -34,17 +34,16 @@ struct Test {
       typename std::basic_string_view<CharT>::size_type, typename std::basic_string_view<CharT>::size_type) const;
 };
 
-template <typename CharT>
-void testDetail(std::basic_string_view<CharT> sv, typename Test<CharT>::Sub testSub, std::size_t n, size_t pos) {
-  (void)testSub; // Avoid unused parameter warning
+template <typename CharT, typename Test<CharT>::Sub TestSub>
+void testDetail(std::basic_string_view<CharT> sv, std::size_t n, size_t pos) {
   std::basic_string_view<CharT> sv1;
 #ifdef TEST_HAS_NO_EXCEPTIONS
   if (pos > sv.size())
     return; // would throw if exceptions were enabled
-  sv1 = (sv.*testSub)(pos, n);
+  sv1 = (sv.*TestSub)(pos, n);
 #else
   try {
-    sv1 = (sv.*testSub)(pos, n);
+    sv1 = (sv.*TestSub)(pos, n);
     assert(pos <= sv.size());
   } catch (const std::out_of_range&) {
     assert(pos > sv.size());
@@ -57,31 +56,31 @@ void testDetail(std::basic_string_view<CharT> sv, typename Test<CharT>::Sub test
     assert(sv[pos + i] == sv1[i]);
 }
 
-template <typename CharT>
-void testCases(std::basic_string_view<CharT> sv, typename Test<CharT>::Sub testSub) {
-  testDetail(sv, testSub, 0, 0);
-  testDetail(sv, testSub, 1, 0);
-  testDetail(sv, testSub, 20, 0);
-  testDetail(sv, testSub, sv.size(), 0);
+template <typename CharT, typename Test<CharT>::Sub TestSub>
+void testCases(const CharT* s) {
+  std::basic_string_view<CharT> sv(s);
 
-  testDetail(sv, testSub, 100, 3);
+  testDetail<CharT, TestSub>(sv, 0, 0);
+  testDetail<CharT, TestSub>(sv, 1, 0);
+  testDetail<CharT, TestSub>(sv, 20, 0);
+  testDetail<CharT, TestSub>(sv, sv.size(), 0);
 
-  testDetail(sv, testSub, 0, std::basic_string_view<CharT>::npos);
-  testDetail(sv, testSub, 2, std::basic_string_view<CharT>::npos);
-  testDetail(sv, testSub, sv.size(), std::basic_string_view<CharT>::npos);
+  testDetail<CharT, TestSub>(sv, 100, 3);
 
-  testDetail(sv, testSub, sv.size() + 1, 0);
-  testDetail(sv, testSub, sv.size() + 1, 1);
-  testDetail(sv, testSub, sv.size() + 1, std::basic_string_view<CharT>::npos);
+  testDetail<CharT, TestSub>(sv, 0, std::basic_string_view<CharT>::npos);
+  testDetail<CharT, TestSub>(sv, 2, std::basic_string_view<CharT>::npos);
+  testDetail<CharT, TestSub>(sv, sv.size(), std::basic_string_view<CharT>::npos);
+
+  testDetail<CharT, TestSub>(sv, sv.size() + 1, 0);
+  testDetail<CharT, TestSub>(sv, sv.size() + 1, 1);
+  testDetail<CharT, TestSub>(sv, sv.size() + 1, std::basic_string_view<CharT>::npos);
 }
 
 template <typename CharT>
 void testSubs(const CharT* s) {
-  std::basic_string_view<CharT> sv(s);
-
-  testCases(sv, &std::basic_string_view<CharT>::substr);
+  testCases<CharT, &std::basic_string_view<CharT>::substr>(s);
 #if TEST_STD_VER >= 26
-  testCases(sv, &std::basic_string_view<CharT>::subview);
+  testCases<CharT, &std::basic_string_view<CharT>::subview>(s);
 #endif // TEST_STD_VER >= 26
 }
 
