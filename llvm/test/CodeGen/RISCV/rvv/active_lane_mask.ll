@@ -106,13 +106,13 @@ define <32 x i1> @fv32(ptr %p, i64 %index, i64 %tc) {
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vadd.vx v16, v8, a0
+; CHECK-NEXT:    vsaddu.vx v16, v8, a1
+; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    vmsltu.vx v0, v16, a2
 ; CHECK-NEXT:    vsaddu.vx v8, v8, a1
-; CHECK-NEXT:    vsaddu.vx v16, v16, a1
-; CHECK-NEXT:    vmsltu.vx v24, v16, a2
-; CHECK-NEXT:    vmsltu.vx v0, v8, a2
+; CHECK-NEXT:    vmsltu.vx v16, v8, a2
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vslideup.vi v0, v24, 2
+; CHECK-NEXT:    vslideup.vi v0, v16, 2
 ; CHECK-NEXT:    ret
   %mask = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 %index, i64 %tc)
   ret <32 x i1> %mask

@@ -783,18 +783,32 @@ define void @insertelt_c6_v8i64_store(ptr %x, i32 %idx) {
 ; Test that using a insertelement at element 0 by a later operation doesn't
 ; crash the compiler.
 define void @insertelt_c6_v8i64_0_add(ptr %x, ptr %y) {
-; CHECK-LABEL: insertelt_c6_v8i64_0_add:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vle64.v v12, (a1)
-; CHECK-NEXT:    li a1, 6
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v12
-; CHECK-NEXT:    vse64.v v8, (a0)
-; CHECK-NEXT:    ret
+; RV32-LABEL: insertelt_c6_v8i64_0_add:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV32-NEXT:    vle64.v v8, (a0)
+; RV32-NEXT:    vle64.v v12, (a1)
+; RV32-NEXT:    vmv.v.v v8, v8
+; RV32-NEXT:    li a1, 6
+; RV32-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; RV32-NEXT:    vmv.s.x v8, a1
+; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; RV32-NEXT:    vadd.vv v8, v8, v12
+; RV32-NEXT:    vse64.v v8, (a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: insertelt_c6_v8i64_0_add:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
+; RV64-NEXT:    vle64.v v12, (a1)
+; RV64-NEXT:    li a1, 6
+; RV64-NEXT:    vsetvli zero, zero, e64, m4, tu, ma
+; RV64-NEXT:    vmv.s.x v8, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
+; RV64-NEXT:    vadd.vv v8, v8, v12
+; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    ret
 ;
 ; VISNI-LABEL: insertelt_c6_v8i64_0_add:
 ; VISNI:       # %bb.0:

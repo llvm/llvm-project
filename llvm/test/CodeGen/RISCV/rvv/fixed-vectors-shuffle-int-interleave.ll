@@ -967,17 +967,19 @@ define <4 x i8> @unary_interleave_10uu_v4i8(<4 x i8> %x) {
 ; CHECK-LABEL: unary_interleave_10uu_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vsrl.vi v9, v8, 8
-; CHECK-NEXT:    vsll.vi v8, v8, 8
-; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vmv.v.i v9, 8
+; CHECK-NEXT:    vsrl.vv v10, v8, v9
+; CHECK-NEXT:    vsll.vv v8, v8, v9
+; CHECK-NEXT:    vor.vv v8, v8, v10
 ; CHECK-NEXT:    ret
 ;
 ; ZIP-LABEL: unary_interleave_10uu_v4i8:
 ; ZIP:       # %bb.0:
 ; ZIP-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZIP-NEXT:    vsrl.vi v9, v8, 8
-; ZIP-NEXT:    vsll.vi v8, v8, 8
-; ZIP-NEXT:    vor.vv v8, v8, v9
+; ZIP-NEXT:    vmv.v.i v9, 8
+; ZIP-NEXT:    vsrl.vv v10, v8, v9
+; ZIP-NEXT:    vsll.vv v8, v8, v9
+; ZIP-NEXT:    vor.vv v8, v8, v10
 ; ZIP-NEXT:    ret
   %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
   ret <4 x i8> %a

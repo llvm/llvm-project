@@ -216,7 +216,9 @@ define void @trn_v32i8(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.b, z0.b, z1.b
 ; VBITS_EQ_512-NEXT:    trn2 z0.b, z0.b, z1.b
-; VBITS_EQ_512-NEXT:    add z0.b, z2.b, z0.b
+; VBITS_EQ_512-NEXT:    sel z1.b, p0, z2.b, z0.b
+; VBITS_EQ_512-NEXT:    mov z0.b, p0/m, z0.b
+; VBITS_EQ_512-NEXT:    add z0.b, z1.b, z0.b
 ; VBITS_EQ_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <32 x i8>, ptr %a
@@ -281,7 +283,9 @@ define void @trn_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.h, z0.h, z1.h
 ; VBITS_EQ_512-NEXT:    trn2 z0.h, z0.h, z1.h
-; VBITS_EQ_512-NEXT:    add z0.h, z2.h, z0.h
+; VBITS_EQ_512-NEXT:    sel z1.h, p0, z2.h, z0.h
+; VBITS_EQ_512-NEXT:    mov z0.h, p0/m, z0.h
+; VBITS_EQ_512-NEXT:    add z0.h, z1.h, z0.h
 ; VBITS_EQ_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <16 x i16>, ptr %a
@@ -311,7 +315,9 @@ define void @trn_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_EQ_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; VBITS_EQ_512-NEXT:    trn1 z2.s, z0.s, z1.s
 ; VBITS_EQ_512-NEXT:    trn2 z0.s, z0.s, z1.s
-; VBITS_EQ_512-NEXT:    add z0.s, z2.s, z0.s
+; VBITS_EQ_512-NEXT:    sel z1.s, p0, z2.s, z0.s
+; VBITS_EQ_512-NEXT:    mov z0.s, p0/m, z0.s
+; VBITS_EQ_512-NEXT:    add z0.s, z1.s, z0.s
 ; VBITS_EQ_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret
   %tmp1 = load <8 x i32>, ptr %a
@@ -389,6 +395,8 @@ define void @trn_v8i32_undef(ptr %a) #0 {
 ; VBITS_EQ_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_EQ_512-NEXT:    trn1 z1.s, z0.s, z0.s
 ; VBITS_EQ_512-NEXT:    trn2 z0.s, z0.s, z0.s
+; VBITS_EQ_512-NEXT:    sel z1.s, p0, z1.s, z0.s
+; VBITS_EQ_512-NEXT:    mov z0.s, p0/m, z0.s
 ; VBITS_EQ_512-NEXT:    add z0.s, z1.s, z0.s
 ; VBITS_EQ_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_EQ_512-NEXT:    ret

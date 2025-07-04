@@ -35,7 +35,8 @@ define void @trunc_v32i16_v32i8(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.b, z1.b, z1.b
 ; VBITS_GE_256-NEXT:    splice z1.b, p0, z1.b, z0.b
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
-; VBITS_GE_256-NEXT:    add z0.b, z1.b, z1.b
+; VBITS_GE_256-NEXT:    mov z0.b, p0/m, z1.b
+; VBITS_GE_256-NEXT:    add z0.b, z0.b, z0.b
 ; VBITS_GE_256-NEXT:    st1b { z0.b }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -205,7 +206,8 @@ define void @trunc_v16i32_v16i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    splice z1.h, p0, z1.h, z0.h
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
-; VBITS_GE_256-NEXT:    add z0.h, z1.h, z1.h
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z1.h
+; VBITS_GE_256-NEXT:    add z0.h, z0.h, z0.h
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
@@ -459,7 +461,8 @@ define void @trunc_v8i64_v8i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p0, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    add z0.s, z1.s, z1.s
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z1.s
+; VBITS_GE_256-NEXT:    add z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;

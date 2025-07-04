@@ -374,7 +374,9 @@ define void @fcvtzu_v16f32_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvtzu z0.s, p0/m, z0.s
-; VBITS_GE_512-NEXT:    st1h { z0.s }, p0, [x1]
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x float>, ptr %a
   %res = fptoui <16 x float> %op1 to <16 x i16>
@@ -388,7 +390,9 @@ define void @fcvtzu_v32f32_v32i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
-; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x float>, ptr %a
   %res = fptoui <32 x float> %op1 to <32 x i16>
@@ -402,7 +406,9 @@ define void @fcvtzu_v64f32_v64i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.s
-; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x float>, ptr %a
   %res = fptoui <64 x float> %op1 to <64 x i16>
@@ -684,7 +690,10 @@ define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x double>, ptr %a
   %res = fptoui <16 x double> %op1 to <16 x i16>
@@ -698,7 +707,10 @@ define void @fcvtzu_v32f64_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x double>, ptr %a
   %res = fptoui <32 x double> %op1 to <32 x i16>
@@ -769,7 +781,9 @@ define void @fcvtzu_v8f64_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvtzu z0.d, p0/m, z0.d
-; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [x1]
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x double>, ptr %a
   %res = fptoui <8 x double> %op1 to <8 x i32>
@@ -783,7 +797,9 @@ define void @fcvtzu_v16f64_v16i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl16
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x double>, ptr %a
   %res = fptoui <16 x double> %op1 to <16 x i32>
@@ -797,7 +813,9 @@ define void @fcvtzu_v32f64_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x double>, ptr %a
   %res = fptoui <32 x double> %op1 to <32 x i32>
@@ -1267,7 +1285,9 @@ define void @fcvtzs_v16f32_v16i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; VBITS_GE_512-NEXT:    st1h { z0.s }, p0, [x1]
+; VBITS_GE_512-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_512-NEXT:    uzp1 z0.h, z0.h, z0.h
+; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <16 x float>, ptr %a
   %res = fptosi <16 x float> %op1 to <16 x i16>
@@ -1281,7 +1301,9 @@ define void @fcvtzs_v32f32_v32i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x float>, ptr %a
   %res = fptosi <32 x float> %op1 to <32 x i16>
@@ -1295,7 +1317,9 @@ define void @fcvtzs_v64f32_v64i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.s
-; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl64
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <64 x float>, ptr %a
   %res = fptosi <64 x float> %op1 to <64 x i16>
@@ -1577,7 +1601,10 @@ define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x double>, ptr %a
   %res = fptosi <16 x double> %op1 to <16 x i16>
@@ -1591,7 +1618,10 @@ define void @fcvtzs_v32f64_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1h { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x double>, ptr %a
   %res = fptosi <32 x double> %op1 to <32 x i16>
@@ -1662,7 +1692,9 @@ define void @fcvtzs_v8f64_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    fcvtzs z0.d, p0/m, z0.d
-; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [x1]
+; VBITS_GE_512-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_512-NEXT:    uzp1 z0.s, z0.s, z0.s
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x1]
 ; VBITS_GE_512-NEXT:    ret
   %op1 = load <8 x double>, ptr %a
   %res = fptosi <8 x double> %op1 to <8 x i32>
@@ -1676,7 +1708,9 @@ define void @fcvtzs_v16f64_v16i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl16
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x double>, ptr %a
   %res = fptosi <16 x double> %op1 to <16 x i32>
@@ -1690,7 +1724,9 @@ define void @fcvtzs_v32f64_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
-; CHECK-NEXT:    st1w { z0.d }, p0, [x1]
+; CHECK-NEXT:    ptrue p0.s, vl32
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x double>, ptr %a
   %res = fptosi <32 x double> %op1 to <32 x i32>

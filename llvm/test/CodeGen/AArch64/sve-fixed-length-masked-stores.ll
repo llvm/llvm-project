@@ -71,7 +71,8 @@ define void @masked_store_v8f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %a = load <8 x float>, ptr %ap
@@ -91,7 +92,9 @@ define void @masked_store_v16f32(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
 ; VBITS_GE_256-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
-; VBITS_GE_256-NEXT:    fcmeq p0.s, p0/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    fcmeq p2.s, p0/z, z2.s, z3.s
+; VBITS_GE_256-NEXT:    and p1.b, p1/z, p1.b, p0.b
+; VBITS_GE_256-NEXT:    and p0.b, p2/z, p2.b, p0.b
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p1, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z2.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
@@ -101,7 +104,8 @@ define void @masked_store_v16f32(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <16 x float>, ptr %ap
@@ -117,7 +121,8 @@ define void @masked_store_v32f32(ptr %ap, ptr %bp) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a = load <32 x float>, ptr %ap
@@ -133,7 +138,8 @@ define void @masked_store_v64f32(ptr %ap, ptr %bp) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, z1.s
+; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %a = load <64 x float>, ptr %ap
@@ -173,7 +179,8 @@ define void @masked_store_trunc_v8i64i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1b { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <8 x i64>, ptr %ap
@@ -217,7 +224,8 @@ define void @masked_store_trunc_v8i64i16(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1h { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <8 x i64>, ptr %ap
@@ -258,7 +266,8 @@ define void @masked_store_trunc_v8i64i32(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    cmpeq p1.d, p0/z, z0.d, z1.d
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <8 x i64>, ptr %ap
@@ -302,7 +311,8 @@ define void @masked_store_trunc_v16i32i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1b { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <16 x i32>, ptr %ap
@@ -346,7 +356,8 @@ define void @masked_store_trunc_v16i32i16(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    cmpeq p1.s, p0/z, z0.s, z1.s
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1h { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <16 x i32>, ptr %ap
@@ -387,7 +398,8 @@ define void @masked_store_trunc_v32i16i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
+; VBITS_GE_512-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; VBITS_GE_512-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; VBITS_GE_512-NEXT:    st1b { z0.h }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
   %a = load <32 x i16>, ptr %ap

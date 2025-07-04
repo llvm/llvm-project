@@ -14,8 +14,9 @@ define <1 x i1> @select_v1i1(<1 x i1> %a, <1 x i1> %b, <1 x i1> %c, i32 zeroext 
 ; CHECK-LABEL: select_v1i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmandn.mm v9, v9, v0
 ; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmnot.m v10, v0
+; CHECK-NEXT:    vmand.mm v9, v9, v10
 ; CHECK-NEXT:    vmor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <1 x i1> @llvm.vp.select.v1i1(<1 x i1> %a, <1 x i1> %b, <1 x i1> %c, i32 %evl)
@@ -28,8 +29,9 @@ define <2 x i1> @select_v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %c, i32 zeroext 
 ; CHECK-LABEL: select_v2i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
-; CHECK-NEXT:    vmandn.mm v9, v9, v0
 ; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmnot.m v10, v0
+; CHECK-NEXT:    vmand.mm v9, v9, v10
 ; CHECK-NEXT:    vmor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.select.v2i1(<2 x i1> %a, <2 x i1> %b, <2 x i1> %c, i32 %evl)
@@ -42,8 +44,9 @@ define <4 x i1> @select_v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c, i32 zeroext 
 ; CHECK-LABEL: select_v4i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
-; CHECK-NEXT:    vmandn.mm v9, v9, v0
 ; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmnot.m v10, v0
+; CHECK-NEXT:    vmand.mm v9, v9, v10
 ; CHECK-NEXT:    vmor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.select.v4i1(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c, i32 %evl)
@@ -56,8 +59,9 @@ define <8 x i1> @select_v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, i32 zeroext 
 ; CHECK-LABEL: select_v8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
-; CHECK-NEXT:    vmandn.mm v9, v9, v0
 ; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmnot.m v10, v0
+; CHECK-NEXT:    vmand.mm v9, v9, v10
 ; CHECK-NEXT:    vmor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.select.v8i1(<8 x i1> %a, <8 x i1> %b, <8 x i1> %c, i32 %evl)
@@ -70,8 +74,9 @@ define <16 x i1> @select_v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %c, i32 zer
 ; CHECK-LABEL: select_v16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
-; CHECK-NEXT:    vmandn.mm v9, v9, v0
 ; CHECK-NEXT:    vmand.mm v8, v8, v0
+; CHECK-NEXT:    vmnot.m v10, v0
+; CHECK-NEXT:    vmand.mm v9, v9, v10
 ; CHECK-NEXT:    vmor.mm v0, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.select.v16i1(<16 x i1> %a, <16 x i1> %b, <16 x i1> %c, i32 %evl)

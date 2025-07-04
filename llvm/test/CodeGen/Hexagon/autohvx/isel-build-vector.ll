@@ -6,32 +6,38 @@ define <32 x i32> @fred(i32 %a0) #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r3:2 = combine(#20,#9)
-; CHECK-NEXT:     v0 = vxor(v0,v0)
+; CHECK-NEXT:     r7 = #64
 ; CHECK-NEXT:     r1 = #24
-; CHECK-NEXT:     r4 = #12
+; CHECK-NEXT:     r3:2 = combine(#12,#9)
+; CHECK-NEXT:     v0 = vxor(v0,v0)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r4 = #20
+; CHECK-NEXT:     r5 = #7
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     v0 = valign(v0,v0,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1 = vror(v0,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1.w = vinsert(r2)
-; CHECK-NEXT:     r4 = #7
-; CHECK-NEXT:     r2 = #116
-; CHECK-NEXT:     v0 = vror(v0,r4)
+; CHECK-NEXT:     r3 = #116
+; CHECK-NEXT:     v0 = vror(v0,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.w = vinsert(r4)
+; CHECK-NEXT:     v0.w = vinsert(r5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vror(v1,r3)
+; CHECK-NEXT:     v1 = vror(v1,r4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1.w = vinsert(r0)
-; CHECK-NEXT:     v0 = vror(v0,r2)
+; CHECK-NEXT:     v0 = vror(v0,r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vror(v1,r3)
+; CHECK-NEXT:     v1 = vror(v1,r4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v0 = vor(v0,v1)

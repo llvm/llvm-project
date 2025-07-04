@@ -47,8 +47,10 @@ define void @test_copysign_v16f16_v16f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 
 ; CHECK-NEXT:    ptrue p0.h, vl16
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; CHECK-NEXT:    and z1.h, z1.h, #0x8000
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-NEXT:    and z1.h, z1.h, #0x8000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -68,10 +70,14 @@ define void @test_copysign_v32f16_v32f16(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z3.h }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    and z1.h, z1.h, #0x8000
+; VBITS_GE_256-NEXT:    mov z0.h, p0/m, z0.h
+; VBITS_GE_256-NEXT:    sel z1.h, p0, z1.h, z0.h
+; VBITS_GE_256-NEXT:    sel z2.h, p0, z2.h, z0.h
+; VBITS_GE_256-NEXT:    sel z3.h, p0, z3.h, z0.h
 ; VBITS_GE_256-NEXT:    and z0.h, z0.h, #0x7fff
-; VBITS_GE_256-NEXT:    and z2.h, z2.h, #0x7fff
+; VBITS_GE_256-NEXT:    and z1.h, z1.h, #0x8000
 ; VBITS_GE_256-NEXT:    and z3.h, z3.h, #0x8000
+; VBITS_GE_256-NEXT:    and z2.h, z2.h, #0x7fff
 ; VBITS_GE_256-NEXT:    orr z0.d, z0.d, z1.d
 ; VBITS_GE_256-NEXT:    orr z1.d, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
@@ -83,8 +89,10 @@ define void @test_copysign_v32f16_v32f16(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.h, vl32
 ; VBITS_GE_512-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    and z1.h, z1.h, #0x8000
+; VBITS_GE_512-NEXT:    mov z0.h, p0/m, z0.h
+; VBITS_GE_512-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; VBITS_GE_512-NEXT:    and z0.h, z0.h, #0x7fff
+; VBITS_GE_512-NEXT:    and z1.h, z1.h, #0x8000
 ; VBITS_GE_512-NEXT:    orr z0.d, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
@@ -101,8 +109,10 @@ define void @test_copysign_v64f16_v64f16(ptr %ap, ptr %bp) vscale_range(8,0) #0 
 ; CHECK-NEXT:    ptrue p0.h, vl64
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; CHECK-NEXT:    and z1.h, z1.h, #0x8000
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-NEXT:    and z1.h, z1.h, #0x8000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -119,8 +129,10 @@ define void @test_copysign_v128f16_v128f16(ptr %ap, ptr %bp) vscale_range(16,0) 
 ; CHECK-NEXT:    ptrue p0.h, vl128
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
-; CHECK-NEXT:    and z1.h, z1.h, #0x8000
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
 ; CHECK-NEXT:    and z0.h, z0.h, #0x7fff
+; CHECK-NEXT:    and z1.h, z1.h, #0x8000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -171,8 +183,10 @@ define void @test_copysign_v8f32_v8f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
+; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -192,10 +206,14 @@ define void @test_copysign_v16f32_v16f32(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z3.s }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    and z1.s, z1.s, #0x80000000
+; VBITS_GE_256-NEXT:    mov z0.s, p0/m, z0.s
+; VBITS_GE_256-NEXT:    sel z1.s, p0, z1.s, z0.s
+; VBITS_GE_256-NEXT:    sel z2.s, p0, z2.s, z0.s
+; VBITS_GE_256-NEXT:    sel z3.s, p0, z3.s, z0.s
 ; VBITS_GE_256-NEXT:    and z0.s, z0.s, #0x7fffffff
-; VBITS_GE_256-NEXT:    and z2.s, z2.s, #0x7fffffff
+; VBITS_GE_256-NEXT:    and z1.s, z1.s, #0x80000000
 ; VBITS_GE_256-NEXT:    and z3.s, z3.s, #0x80000000
+; VBITS_GE_256-NEXT:    and z2.s, z2.s, #0x7fffffff
 ; VBITS_GE_256-NEXT:    orr z0.d, z0.d, z1.d
 ; VBITS_GE_256-NEXT:    orr z1.d, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
@@ -207,8 +225,10 @@ define void @test_copysign_v16f32_v16f32(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    and z1.s, z1.s, #0x80000000
+; VBITS_GE_512-NEXT:    mov z0.s, p0/m, z0.s
+; VBITS_GE_512-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; VBITS_GE_512-NEXT:    and z0.s, z0.s, #0x7fffffff
+; VBITS_GE_512-NEXT:    and z1.s, z1.s, #0x80000000
 ; VBITS_GE_512-NEXT:    orr z0.d, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
@@ -225,8 +245,10 @@ define void @test_copysign_v32f32_v32f32(ptr %ap, ptr %bp) vscale_range(8,0) #0 
 ; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
+; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -243,8 +265,10 @@ define void @test_copysign_v64f32_v64f32(ptr %ap, ptr %bp) vscale_range(16,0) #0
 ; CHECK-NEXT:    ptrue p0.s, vl64
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
-; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
 ; CHECK-NEXT:    and z0.s, z0.s, #0x7fffffff
+; CHECK-NEXT:    and z1.s, z1.s, #0x80000000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -280,8 +304,10 @@ define void @test_copysign_v4f64_v4f64(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -301,10 +327,14 @@ define void @test_copysign_v8f64_v8f64(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z3.d }, p0/z, [x1]
-; VBITS_GE_256-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; VBITS_GE_256-NEXT:    mov z0.d, p0/m, z0.d
+; VBITS_GE_256-NEXT:    sel z1.d, p0, z1.d, z0.d
+; VBITS_GE_256-NEXT:    sel z2.d, p0, z2.d, z0.d
+; VBITS_GE_256-NEXT:    sel z3.d, p0, z3.d, z0.d
 ; VBITS_GE_256-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
-; VBITS_GE_256-NEXT:    and z2.d, z2.d, #0x7fffffffffffffff
+; VBITS_GE_256-NEXT:    and z1.d, z1.d, #0x8000000000000000
 ; VBITS_GE_256-NEXT:    and z3.d, z3.d, #0x8000000000000000
+; VBITS_GE_256-NEXT:    and z2.d, z2.d, #0x7fffffffffffffff
 ; VBITS_GE_256-NEXT:    orr z0.d, z0.d, z1.d
 ; VBITS_GE_256-NEXT:    orr z1.d, z2.d, z3.d
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0, x8, lsl #3]
@@ -316,8 +346,10 @@ define void @test_copysign_v8f64_v8f64(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_512-NEXT:    ptrue p0.d, vl8
 ; VBITS_GE_512-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; VBITS_GE_512-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; VBITS_GE_512-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; VBITS_GE_512-NEXT:    mov z0.d, p0/m, z0.d
+; VBITS_GE_512-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; VBITS_GE_512-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; VBITS_GE_512-NEXT:    and z1.d, z1.d, #0x8000000000000000
 ; VBITS_GE_512-NEXT:    orr z0.d, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
@@ -334,8 +366,10 @@ define void @test_copysign_v16f64_v16f64(ptr %ap, ptr %bp) vscale_range(8,0) #0 
 ; CHECK-NEXT:    ptrue p0.d, vl16
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -352,8 +386,10 @@ define void @test_copysign_v32f64_v32f64(ptr %ap, ptr %bp) vscale_range(16,0) #0
 ; CHECK-NEXT:    ptrue p0.d, vl32
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
-; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
+; CHECK-NEXT:    mov z0.d, p0/m, z0.d
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0x7fffffffffffffff
+; CHECK-NEXT:    and z1.d, z1.d, #0x8000000000000000
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
@@ -439,8 +475,9 @@ define void @test_copysign_v4f64_v4f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; CHECK-NEXT:    fcvt z0.d, p0/m, z0.s
-; CHECK-NEXT:    and z1.d, z1.d, #0x7fffffffffffffff
+; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
 ; CHECK-NEXT:    and z0.d, z0.d, #0x8000000000000000
+; CHECK-NEXT:    and z1.d, z1.d, #0x7fffffffffffffff
 ; CHECK-NEXT:    orr z0.d, z1.d, z0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret

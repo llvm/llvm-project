@@ -216,14 +216,16 @@ define void @t9(ptr %r, ptr %A) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movaps (%ecx), %xmm0
-; X86-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X86-NEXT:    movaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t9:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movaps (%rdi), %xmm0
-; X64-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X64-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%tmp = load <4 x float>, ptr %r

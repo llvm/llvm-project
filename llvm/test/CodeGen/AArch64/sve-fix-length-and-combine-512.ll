@@ -9,6 +9,8 @@ define void @vls_sve_and_64xi8(ptr %ap, ptr %out) nounwind {
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI0_0
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x8]
+; CHECK-NEXT:    mov z0.b, p0/m, z0.b
+; CHECK-NEXT:    sel z1.b, p0, z1.b, z0.b
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x1]
 ; CHECK-NEXT:    ret

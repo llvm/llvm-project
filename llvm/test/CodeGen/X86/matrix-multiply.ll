@@ -658,12 +658,12 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX1-NEXT:    vaddsd %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm9, %ymm0, %ymm0
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm4[0],ymm0[1],ymm4[2],ymm0[2]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm7, %ymm3
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm9, %ymm1
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1],ymm3[0],ymm1[2],ymm3[3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm9, %ymm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm7, %ymm1
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm1 = ymm3[1],ymm1[0],ymm3[2],ymm1[3]
 ; AVX1-NEXT:    vmovsd %xmm2, 64(%rdi)
-; AVX1-NEXT:    vmovapd %ymm1, 32(%rdi)
 ; AVX1-NEXT:    vmovapd %ymm0, (%rdi)
+; AVX1-NEXT:    vmovapd %ymm1, 32(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -716,12 +716,12 @@ define <9 x double> @test_mul3x3_f64(<9 x double> %a0, <9 x double> %a1) nounwin
 ; AVX2-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
 ; AVX2-NEXT:    vbroadcastsd %xmm7, %ymm2
 ; AVX2-NEXT:    vblendpd {{.*#+}} ymm2 = ymm3[0,1,2],ymm2[3]
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm3
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm7, %ymm0
-; AVX2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm3[0],ymm0[2],ymm3[3]
+; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm7, %ymm3
+; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm0
+; AVX2-NEXT:    vshufpd {{.*#+}} ymm0 = ymm3[1],ymm0[0],ymm3[2],ymm0[3]
 ; AVX2-NEXT:    vmovsd %xmm1, 64(%rdi)
-; AVX2-NEXT:    vmovapd %ymm0, 32(%rdi)
 ; AVX2-NEXT:    vmovapd %ymm2, (%rdi)
+; AVX2-NEXT:    vmovapd %ymm0, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

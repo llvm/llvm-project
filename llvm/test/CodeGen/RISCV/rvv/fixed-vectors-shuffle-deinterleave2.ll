@@ -1379,17 +1379,17 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; V-LABEL: unzip2a_dual_v16i64:
 ; V:       # %bb.0: # %entry
 ; V-NEXT:    lui a0, 5
-; V-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
-; V-NEXT:    vid.v v16
 ; V-NEXT:    addi a0, a0, 1365
+; V-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
 ; V-NEXT:    vmv.s.x v20, a0
 ; V-NEXT:    li a0, -256
-; V-NEXT:    vadd.vv v21, v16, v16
+; V-NEXT:    vid.v v21
 ; V-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; V-NEXT:    vcompress.vm v16, v8, v20
 ; V-NEXT:    vmv.s.x v0, a0
 ; V-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; V-NEXT:    vadd.vi v8, v21, -16
+; V-NEXT:    vadd.vv v8, v21, v21
+; V-NEXT:    vadd.vi v8, v8, -16
 ; V-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
 ; V-NEXT:    vrgatherei16.vv v16, v12, v8, v0.t
 ; V-NEXT:    vmv.v.v v8, v16

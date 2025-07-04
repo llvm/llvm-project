@@ -426,6 +426,8 @@ define void @no_subvector_binop_hang(ptr %in, ptr %out, i1 %cond) #0 {
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
 ; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:  .LBB23_2: // %bb.2

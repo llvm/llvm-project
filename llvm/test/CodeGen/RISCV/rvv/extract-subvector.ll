@@ -486,10 +486,9 @@ define <vscale x 6 x half> @extract_nxv6f16_nxv12f16_6(<vscale x 12 x half> %in)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v13, v10, a0
-; CHECK-NEXT:    vslidedown.vx v12, v9, a0
-; CHECK-NEXT:    vslideup.vx v12, v10, a0
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vslidedown.vx v8, v9, a0
+; CHECK-NEXT:    vslideup.vx v8, v10, a0
+; CHECK-NEXT:    vslidedown.vx v9, v10, a0
 ; CHECK-NEXT:    ret
   %res = call <vscale x 6 x half> @llvm.vector.extract.nxv6f16.nxv12f16(<vscale x 12 x half> %in, i64 6)
   ret <vscale x 6 x half> %res
@@ -539,10 +538,9 @@ define <vscale x 6 x bfloat> @extract_nxv6bf16_nxv12bf16_6(<vscale x 12 x bfloat
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 2
 ; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v13, v10, a0
-; CHECK-NEXT:    vslidedown.vx v12, v9, a0
-; CHECK-NEXT:    vslideup.vx v12, v10, a0
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vslidedown.vx v8, v9, a0
+; CHECK-NEXT:    vslideup.vx v8, v10, a0
+; CHECK-NEXT:    vslidedown.vx v9, v10, a0
 ; CHECK-NEXT:    ret
   %res = call <vscale x 6 x bfloat> @llvm.vector.extract.nxv6bf16.nxv12bf16(<vscale x 12 x bfloat> %in, i64 6)
   ret <vscale x 6 x bfloat> %res

@@ -7962,7 +7962,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
 
     // If the inserted element is an UNDEF, just use the input vector.
     if (N2.isUndef())
-      return N1;
+      return getFreeze(N1);
 
     break;
   }
@@ -8001,7 +8001,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     // can just use the input to the extract.
     if (N1.isUndef() && N2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         N2.getOperand(1) == N3 && N2.getOperand(0).getValueType() == VT)
-      return N2.getOperand(0);
+      return getFreeze(N2.getOperand(0));
     break;
   }
   case ISD::BITCAST:
@@ -8028,7 +8028,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Vector and mask must have same number of elements.");
 
     if (N1.isUndef() || N2.isUndef())
-      return N3;
+      return getFreeze(N3);
 
     break;
   }

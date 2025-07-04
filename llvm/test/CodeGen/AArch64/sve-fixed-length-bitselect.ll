@@ -13,15 +13,22 @@ define void @fixed_bitselect_v8i32(ptr %pre_cond_ptr, ptr %left_ptr, ptr %right_
 ; CHECK-LABEL: fixed_bitselect_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    mov z1.s, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x1]
-; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x2]
-; CHECK-NEXT:    add z1.s, z0.s, z1.s
-; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x2]
+; CHECK-NEXT:    mov z3.s, p0/m, #0 // =0x0
+; CHECK-NEXT:    mov z4.s, p0/m, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    mov z0.s, p0/m, z0.s
+; CHECK-NEXT:    sel z2.s, p0, z2.s, z0.s
+; CHECK-NEXT:    sel z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    sub z3.s, z3.s, z0.s
+; CHECK-NEXT:    sel z2.s, p0, z2.s, z0.s
+; CHECK-NEXT:    add z0.s, z0.s, z4.s
+; CHECK-NEXT:    and z1.d, z3.d, z1.d
 ; CHECK-NEXT:    and z0.d, z0.d, z2.d
-; CHECK-NEXT:    and z1.d, z1.d, z3.d
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    orr z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x3]
 ; CHECK-NEXT:    ret
   %pre_cond = load <8 x i32>, ptr %pre_cond_ptr

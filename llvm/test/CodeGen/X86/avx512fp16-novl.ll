@@ -133,6 +133,14 @@ define <8 x half> @select(<8 x half> %x) {
 ; CHECK-NEXT:    seta %al
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    kmovw %eax, %k0
+; CHECK-NEXT:    kshiftrw $1, %k0, %k1
+; CHECK-NEXT:    kshiftlw $1, %k1, %k1
+; CHECK-NEXT:    korw %k0, %k1, %k0
+; CHECK-NEXT:    kshiftrw $8, %k0, %k1
+; CHECK-NEXT:    kunpckbw %k0, %k1, %k0
+; CHECK-NEXT:    movw $-3, %ax
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    kandw %k1, %k0, %k0
 ; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm2
 ; CHECK-NEXT:    vucomish %xmm1, %xmm2
 ; CHECK-NEXT:    seta %al
@@ -187,7 +195,8 @@ define <8 x half> @select(<8 x half> %x) {
 ; CHECK-NEXT:    vucomish %xmm1, %xmm2
 ; CHECK-NEXT:    seta %al
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    kshiftlw $6, %k1, %k1
+; CHECK-NEXT:    kshiftlw $15, %k1, %k1
+; CHECK-NEXT:    kshiftrw $9, %k1, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    kshiftlw $9, %k0, %k0
 ; CHECK-NEXT:    kshiftrw $9, %k0, %k0

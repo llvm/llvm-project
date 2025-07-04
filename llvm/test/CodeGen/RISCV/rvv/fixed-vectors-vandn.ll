@@ -17,7 +17,8 @@ define <8 x i8> @not_signbit_mask_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-ZVKB:       # %bb.0:
 ; CHECK-ZVKB-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vi v8, v8, 7
-; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
+; CHECK-ZVKB-NEXT:    vnot.v v8, v8
+; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <8 x i8> %a, splat (i8 -1)
   %r = select <8 x i1> %cond, <8 x i8> %b, <8 x i8> zeroinitializer
@@ -37,7 +38,8 @@ define <4 x i16> @not_signbit_mask_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-ZVKB:       # %bb.0:
 ; CHECK-ZVKB-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vi v8, v8, 15
-; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
+; CHECK-ZVKB-NEXT:    vnot.v v8, v8
+; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <4 x i16> %a, splat (i16 -1)
   %r = select <4 x i1> %cond, <4 x i16> %b, <4 x i16> zeroinitializer
@@ -57,7 +59,8 @@ define <2 x i32> @not_signbit_mask_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-ZVKB:       # %bb.0:
 ; CHECK-ZVKB-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vi v8, v8, 31
-; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
+; CHECK-ZVKB-NEXT:    vnot.v v8, v8
+; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <2 x i32> %a, splat (i32 -1)
   %r = select <2 x i1> %cond, <2 x i32> %b, <2 x i32> zeroinitializer
@@ -78,7 +81,8 @@ define <2 x i64> @not_signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-ZVKB-NEXT:    li a0, 63
 ; CHECK-ZVKB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-ZVKB-NEXT:    vsra.vx v8, v8, a0
-; CHECK-ZVKB-NEXT:    vandn.vv v8, v9, v8
+; CHECK-ZVKB-NEXT:    vnot.v v8, v8
+; CHECK-ZVKB-NEXT:    vand.vv v8, v8, v9
 ; CHECK-ZVKB-NEXT:    ret
   %cond = icmp sgt <2 x i64> %a, splat (i64 -1)
   %r = select <2 x i1> %cond, <2 x i64> %b, <2 x i64> zeroinitializer

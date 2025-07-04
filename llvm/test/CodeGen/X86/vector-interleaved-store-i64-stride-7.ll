@@ -51,22 +51,22 @@ define void @store_i64_stride7_vf2(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vmovaps (%rsi), %xmm1
 ; AVX-NEXT:    vmovaps (%rdx), %xmm2
-; AVX-NEXT:    vmovaps (%r9), %xmm3
-; AVX-NEXT:    vmovaps (%r10), %xmm4
+; AVX-NEXT:    vmovaps (%r8), %xmm3
+; AVX-NEXT:    vmovaps (%r9), %xmm4
+; AVX-NEXT:    vmovaps (%r10), %xmm5
+; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm4, %ymm6
+; AVX-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm7
+; AVX-NEXT:    vshufpd {{.*#+}} ymm6 = ymm7[0],ymm6[0],ymm7[2],ymm6[3]
 ; AVX-NEXT:    vinsertf128 $1, (%rcx), %ymm1, %ymm1
-; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm5
-; AVX-NEXT:    vunpcklpd {{.*#+}} ymm5 = ymm5[0],ymm1[0],ymm5[2],ymm1[2]
-; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
-; AVX-NEXT:    vmovaps (%r8), %xmm6
-; AVX-NEXT:    vinsertf128 $1, %xmm4, %ymm6, %ymm7
-; AVX-NEXT:    vshufpd {{.*#+}} ymm0 = ymm7[0],ymm0[0],ymm7[2],ymm0[3]
-; AVX-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
-; AVX-NEXT:    vunpckhpd {{.*#+}} ymm1 = ymm1[1],ymm2[1],ymm1[3],ymm2[3]
-; AVX-NEXT:    vunpckhpd {{.*#+}} xmm2 = xmm3[1],xmm4[1]
-; AVX-NEXT:    vmovaps %xmm2, 96(%rax)
-; AVX-NEXT:    vmovaps %ymm1, 64(%rax)
-; AVX-NEXT:    vmovapd %ymm0, 32(%rax)
-; AVX-NEXT:    vmovaps %ymm5, (%rax)
+; AVX-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm3
+; AVX-NEXT:    vunpckhpd {{.*#+}} ymm3 = ymm1[1],ymm3[1],ymm1[3],ymm3[3]
+; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
+; AVX-NEXT:    vunpckhpd {{.*#+}} xmm1 = xmm4[1],xmm5[1]
+; AVX-NEXT:    vmovaps %xmm1, 96(%rax)
+; AVX-NEXT:    vmovaps %ymm0, (%rax)
+; AVX-NEXT:    vmovaps %ymm3, 64(%rax)
+; AVX-NEXT:    vmovapd %ymm6, 32(%rax)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;

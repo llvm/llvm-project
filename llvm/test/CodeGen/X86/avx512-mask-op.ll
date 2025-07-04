@@ -1381,10 +1381,13 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; KNL-NEXT:    kmovw %esi, %k1
 ; KNL-NEXT:    kshiftrw $8, %k1, %k2
 ; KNL-NEXT:    kshiftrw $9, %k1, %k1
+; KNL-NEXT:    kshiftrw $8, %k0, %k3
+; KNL-NEXT:    kunpckbw %k0, %k3, %k0
 ; KNL-NEXT:    movw $-65, %ax
 ; KNL-NEXT:    kmovw %eax, %k3
 ; KNL-NEXT:    kandw %k3, %k0, %k0
-; KNL-NEXT:    kshiftlw $6, %k1, %k1
+; KNL-NEXT:    kshiftlw $15, %k1, %k1
+; KNL-NEXT:    kshiftrw $9, %k1, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kshiftlw $9, %k0, %k0
 ; KNL-NEXT:    kshiftrw $9, %k0, %k0
@@ -1420,10 +1423,13 @@ define <8 x i1> @test18(i8 %a, i16 %y) {
 ; AVX512BW-NEXT:    kmovd %esi, %k1
 ; AVX512BW-NEXT:    kshiftrw $8, %k1, %k2
 ; AVX512BW-NEXT:    kshiftrw $9, %k1, %k1
+; AVX512BW-NEXT:    kshiftrw $8, %k0, %k3
+; AVX512BW-NEXT:    kunpckbw %k0, %k3, %k0
 ; AVX512BW-NEXT:    movw $-65, %ax
 ; AVX512BW-NEXT:    kmovd %eax, %k3
 ; AVX512BW-NEXT:    kandw %k3, %k0, %k0
-; AVX512BW-NEXT:    kshiftlw $6, %k1, %k1
+; AVX512BW-NEXT:    kshiftlw $15, %k1, %k1
+; AVX512BW-NEXT:    kshiftrw $9, %k1, %k1
 ; AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; AVX512BW-NEXT:    kshiftlw $9, %k0, %k0
 ; AVX512BW-NEXT:    kshiftrw $9, %k0, %k0

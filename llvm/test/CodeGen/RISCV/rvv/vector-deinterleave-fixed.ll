@@ -142,18 +142,18 @@ define {<8 x i64>, <8 x i64>} @vector_deinterleave_v8i64_v16i64(<16 x i64> %vec)
 ; V-LABEL: vector_deinterleave_v8i64_v16i64:
 ; V:       # %bb.0:
 ; V-NEXT:    li a0, 85
-; V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; V-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; V-NEXT:    vmv.v.i v0, -16
-; V-NEXT:    vid.v v16
 ; V-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
 ; V-NEXT:    vslidedown.vi v24, v8, 8
-; V-NEXT:    vmv.s.x v12, a0
-; V-NEXT:    li a0, 170
 ; V-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; V-NEXT:    vadd.vv v20, v16, v16
+; V-NEXT:    vid.v v12
+; V-NEXT:    vmv.s.x v13, a0
+; V-NEXT:    li a0, 170
+; V-NEXT:    vadd.vv v20, v12, v12
 ; V-NEXT:    vmv.s.x v21, a0
 ; V-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
-; V-NEXT:    vcompress.vm v16, v8, v12
+; V-NEXT:    vcompress.vm v16, v8, v13
 ; V-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; V-NEXT:    vadd.vi v22, v20, -8
 ; V-NEXT:    vsetvli zero, zero, e64, m4, ta, ma

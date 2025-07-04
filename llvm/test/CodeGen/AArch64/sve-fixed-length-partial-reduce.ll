@@ -93,13 +93,15 @@ define <16 x i16> @two_way_i8_i16_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    ldr z0, [x1]
 ; SVE-NEXT:    ldr z1, [x2]
 ; SVE-NEXT:    ptrue p0.h
-; SVE-NEXT:    ldr z4, [x0]
 ; SVE-NEXT:    uunpklo z2.h, z0.b
 ; SVE-NEXT:    uunpklo z3.h, z1.b
 ; SVE-NEXT:    uunpkhi z0.h, z0.b
 ; SVE-NEXT:    uunpkhi z1.h, z1.b
-; SVE-NEXT:    mad z2.h, p0/m, z3.h, z4.h
-; SVE-NEXT:    mad z0.h, p0/m, z1.h, z2.h
+; SVE-NEXT:    mul z2.h, p0/m, z2.h, z3.h
+; SVE-NEXT:    ldr z3, [x0]
+; SVE-NEXT:    mul z0.h, p0/m, z0.h, z1.h
+; SVE-NEXT:    add z1.h, z3.h, z2.h
+; SVE-NEXT:    add z0.h, z0.h, z1.h
 ; SVE-NEXT:    mov z1.d, z0.d
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -216,13 +218,15 @@ define <8 x i32> @two_way_i16_i32_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    ldr z0, [x1]
 ; SVE-NEXT:    ldr z1, [x2]
 ; SVE-NEXT:    ptrue p0.s
-; SVE-NEXT:    ldr z4, [x0]
 ; SVE-NEXT:    uunpklo z2.s, z0.h
 ; SVE-NEXT:    uunpklo z3.s, z1.h
 ; SVE-NEXT:    uunpkhi z0.s, z0.h
 ; SVE-NEXT:    uunpkhi z1.s, z1.h
-; SVE-NEXT:    mad z2.s, p0/m, z3.s, z4.s
-; SVE-NEXT:    mad z0.s, p0/m, z1.s, z2.s
+; SVE-NEXT:    mul z2.s, p0/m, z2.s, z3.s
+; SVE-NEXT:    ldr z3, [x0]
+; SVE-NEXT:    mul z0.s, p0/m, z0.s, z1.s
+; SVE-NEXT:    add z1.s, z3.s, z2.s
+; SVE-NEXT:    add z0.s, z0.s, z1.s
 ; SVE-NEXT:    mov z1.d, z0.d
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -339,13 +343,15 @@ define <4 x i64> @two_way_i32_i64_vl256(ptr %accptr, ptr %uptr, ptr %sptr) vscal
 ; SVE-NEXT:    ldr z0, [x1]
 ; SVE-NEXT:    ldr z1, [x2]
 ; SVE-NEXT:    ptrue p0.d
-; SVE-NEXT:    ldr z4, [x0]
 ; SVE-NEXT:    uunpklo z2.d, z0.s
 ; SVE-NEXT:    uunpklo z3.d, z1.s
 ; SVE-NEXT:    uunpkhi z0.d, z0.s
 ; SVE-NEXT:    uunpkhi z1.d, z1.s
-; SVE-NEXT:    mad z2.d, p0/m, z3.d, z4.d
-; SVE-NEXT:    mad z0.d, p0/m, z1.d, z2.d
+; SVE-NEXT:    mul z2.d, p0/m, z2.d, z3.d
+; SVE-NEXT:    ldr z3, [x0]
+; SVE-NEXT:    mul z0.d, p0/m, z0.d, z1.d
+; SVE-NEXT:    add z1.d, z3.d, z2.d
+; SVE-NEXT:    add z0.d, z0.d, z1.d
 ; SVE-NEXT:    mov z1.d, z0.d
 ; SVE-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; SVE-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -527,22 +533,27 @@ define <2 x i64> @four_way_i16_i64_vl128_usdot(ptr %accptr, ptr %uptr, ptr %sptr
 ; SME-LABEL: four_way_i16_i64_vl128_usdot:
 ; SME:       // %bb.0:
 ; SME-NEXT:    ptrue p0.d, vl2
-; SME-NEXT:    ldr q2, [x0]
 ; SME-NEXT:    mov x8, #2 // =0x2
-; SME-NEXT:    ld1h { z0.d }, p0/z, [x1]
-; SME-NEXT:    ld1sh { z1.d }, p0/z, [x2]
-; SME-NEXT:    mad z0.d, p0/m, z1.d, z2.d
-; SME-NEXT:    ld1h { z1.d }, p0/z, [x1, x8, lsl #1]
-; SME-NEXT:    ld1sh { z2.d }, p0/z, [x2, x8, lsl #1]
-; SME-NEXT:    mov x8, #4 // =0x4
-; SME-NEXT:    mla z0.d, p0/m, z2.d, z1.d
-; SME-NEXT:    ld1h { z1.d }, p0/z, [x1, x8, lsl #1]
-; SME-NEXT:    ld1sh { z2.d }, p0/z, [x2, x8, lsl #1]
+; SME-NEXT:    mov x9, #4 // =0x4
+; SME-NEXT:    ldr q6, [x0]
+; SME-NEXT:    ld1h { z0.d }, p0/z, [x1, x8, lsl #1]
+; SME-NEXT:    ld1sh { z4.d }, p0/z, [x2, x8, lsl #1]
+; SME-NEXT:    ld1h { z1.d }, p0/z, [x1, x9, lsl #1]
+; SME-NEXT:    ld1sh { z2.d }, p0/z, [x2, x9, lsl #1]
+; SME-NEXT:    ld1h { z3.d }, p0/z, [x1]
+; SME-NEXT:    ld1sh { z5.d }, p0/z, [x2]
 ; SME-NEXT:    mov x8, #6 // =0x6
-; SME-NEXT:    mla z0.d, p0/m, z2.d, z1.d
-; SME-NEXT:    ld1h { z1.d }, p0/z, [x1, x8, lsl #1]
-; SME-NEXT:    ld1sh { z2.d }, p0/z, [x2, x8, lsl #1]
-; SME-NEXT:    mla z0.d, p0/m, z2.d, z1.d
+; SME-NEXT:    mul z0.d, z4.d, z0.d
+; SME-NEXT:    ld1h { z4.d }, p0/z, [x1, x8, lsl #1]
+; SME-NEXT:    mul z1.d, z2.d, z1.d
+; SME-NEXT:    mul z2.d, z5.d, z3.d
+; SME-NEXT:    ld1sh { z5.d }, p0/z, [x2, x8, lsl #1]
+; SME-NEXT:    sel z3.d, p0, z6.d, z0.d
+; SME-NEXT:    add z0.d, z0.d, z1.d
+; SME-NEXT:    mul z1.d, z5.d, z4.d
+; SME-NEXT:    add z2.d, z3.d, z2.d
+; SME-NEXT:    add z0.d, z2.d, z0.d
+; SME-NEXT:    add z0.d, z0.d, z1.d
 ; SME-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; SME-NEXT:    ret
   %acc = load <2 x i64>, ptr %accptr

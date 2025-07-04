@@ -62,10 +62,10 @@ define void @gather_masked(ptr noalias nocapture %A, ptr noalias nocapture reado
 ; CHECK-NEXT:    li a4, 5
 ; CHECK-NEXT:  .LBB1_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
-; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
 ; CHECK-NEXT:    vlse8.v v9, (a1), a4, v0.t
 ; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vmerge.vvm v9, v8, v9, v0
 ; CHECK-NEXT:    vadd.vv v9, v10, v9
 ; CHECK-NEXT:    vse8.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 32
@@ -137,22 +137,58 @@ for.cond.cleanup:                                 ; preds = %vector.body
 }
 
 define void @gather_zero_stride(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
-; CHECK-LABEL: gather_zero_stride:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a2, a0, 1024
-; CHECK-NEXT:    li a3, 32
-; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
-; CHECK-NEXT:  .LBB3_1: # %vector.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lbu a3, 0(a1)
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vadd.vx v8, v8, a3
-; CHECK-NEXT:    vse8.v v8, (a0)
-; CHECK-NEXT:    addi a0, a0, 32
-; CHECK-NEXT:    addi a1, a1, 160
-; CHECK-NEXT:    bne a0, a2, .LBB3_1
-; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    ret
+; V-LABEL: gather_zero_stride:
+; V:       # %bb.0: # %entry
+; V-NEXT:    addi a2, a0, 1024
+; V-NEXT:    li a3, 32
+; V-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; V-NEXT:  .LBB3_1: # %vector.body
+; V-NEXT:    # =>This Inner Loop Header: Depth=1
+; V-NEXT:    lbu a3, 0(a1)
+; V-NEXT:    vle8.v v8, (a0)
+; V-NEXT:    vmv.v.x v9, a3
+; V-NEXT:    vadd.vv v8, v8, v9
+; V-NEXT:    vse8.v v8, (a0)
+; V-NEXT:    addi a0, a0, 32
+; V-NEXT:    addi a1, a1, 160
+; V-NEXT:    bne a0, a2, .LBB3_1
+; V-NEXT:  # %bb.2: # %for.cond.cleanup
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: gather_zero_stride:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    addi a2, a0, 1024
+; ZVE32F-NEXT:    li a3, 32
+; ZVE32F-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; ZVE32F-NEXT:  .LBB3_1: # %vector.body
+; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
+; ZVE32F-NEXT:    lbu a3, 0(a1)
+; ZVE32F-NEXT:    vle8.v v8, (a0)
+; ZVE32F-NEXT:    vmv.v.x v9, a3
+; ZVE32F-NEXT:    vadd.vv v8, v8, v9
+; ZVE32F-NEXT:    vse8.v v8, (a0)
+; ZVE32F-NEXT:    addi a0, a0, 32
+; ZVE32F-NEXT:    addi a1, a1, 160
+; ZVE32F-NEXT:    bne a0, a2, .LBB3_1
+; ZVE32F-NEXT:  # %bb.2: # %for.cond.cleanup
+; ZVE32F-NEXT:    ret
+;
+; OPTIMIZED-LABEL: gather_zero_stride:
+; OPTIMIZED:       # %bb.0: # %entry
+; OPTIMIZED-NEXT:    addi a2, a0, 1024
+; OPTIMIZED-NEXT:    li a3, 32
+; OPTIMIZED-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; OPTIMIZED-NEXT:  .LBB3_1: # %vector.body
+; OPTIMIZED-NEXT:    # =>This Inner Loop Header: Depth=1
+; OPTIMIZED-NEXT:    vlse8.v v8, (a1), zero
+; OPTIMIZED-NEXT:    vle8.v v9, (a0)
+; OPTIMIZED-NEXT:    vadd.vv v8, v9, v8
+; OPTIMIZED-NEXT:    vse8.v v8, (a0)
+; OPTIMIZED-NEXT:    addi a0, a0, 32
+; OPTIMIZED-NEXT:    addi a1, a1, 160
+; OPTIMIZED-NEXT:    bne a0, a2, .LBB3_1
+; OPTIMIZED-NEXT:  # %bb.2: # %for.cond.cleanup
+; OPTIMIZED-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -176,21 +212,55 @@ for.cond.cleanup:                                 ; preds = %vector.body
 }
 
 define void @gather_zero_stride_i32(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
-; CHECK-LABEL: gather_zero_stride_i32:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi a2, a0, 1024
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:  .LBB4_1: # %vector.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a3, 0(a1)
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vadd.vx v8, v8, a3
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a0, a0, 8
-; CHECK-NEXT:    addi a1, a1, 160
-; CHECK-NEXT:    bne a0, a2, .LBB4_1
-; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    ret
+; V-LABEL: gather_zero_stride_i32:
+; V:       # %bb.0: # %entry
+; V-NEXT:    addi a2, a0, 1024
+; V-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; V-NEXT:  .LBB4_1: # %vector.body
+; V-NEXT:    # =>This Inner Loop Header: Depth=1
+; V-NEXT:    lw a3, 0(a1)
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    vmv.v.x v9, a3
+; V-NEXT:    vadd.vv v8, v8, v9
+; V-NEXT:    vse32.v v8, (a0)
+; V-NEXT:    addi a0, a0, 8
+; V-NEXT:    addi a1, a1, 160
+; V-NEXT:    bne a0, a2, .LBB4_1
+; V-NEXT:  # %bb.2: # %for.cond.cleanup
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: gather_zero_stride_i32:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    addi a2, a0, 1024
+; ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; ZVE32F-NEXT:  .LBB4_1: # %vector.body
+; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
+; ZVE32F-NEXT:    lw a3, 0(a1)
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vmv.v.x v9, a3
+; ZVE32F-NEXT:    vadd.vv v8, v8, v9
+; ZVE32F-NEXT:    vse32.v v8, (a0)
+; ZVE32F-NEXT:    addi a0, a0, 8
+; ZVE32F-NEXT:    addi a1, a1, 160
+; ZVE32F-NEXT:    bne a0, a2, .LBB4_1
+; ZVE32F-NEXT:  # %bb.2: # %for.cond.cleanup
+; ZVE32F-NEXT:    ret
+;
+; OPTIMIZED-LABEL: gather_zero_stride_i32:
+; OPTIMIZED:       # %bb.0: # %entry
+; OPTIMIZED-NEXT:    addi a2, a0, 1024
+; OPTIMIZED-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; OPTIMIZED-NEXT:  .LBB4_1: # %vector.body
+; OPTIMIZED-NEXT:    # =>This Inner Loop Header: Depth=1
+; OPTIMIZED-NEXT:    vlse32.v v8, (a1), zero
+; OPTIMIZED-NEXT:    vle32.v v9, (a0)
+; OPTIMIZED-NEXT:    vadd.vv v8, v9, v8
+; OPTIMIZED-NEXT:    vse32.v v8, (a0)
+; OPTIMIZED-NEXT:    addi a0, a0, 8
+; OPTIMIZED-NEXT:    addi a1, a1, 160
+; OPTIMIZED-NEXT:    bne a0, a2, .LBB4_1
+; OPTIMIZED-NEXT:  # %bb.2: # %for.cond.cleanup
+; OPTIMIZED-NEXT:    ret
 entry:
   br label %vector.body
 
@@ -344,12 +414,12 @@ define void @scatter_masked(ptr noalias nocapture %A, ptr noalias nocapture read
 ; CHECK-NEXT:    li a4, 5
 ; CHECK-NEXT:  .LBB7_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, mu
-; CHECK-NEXT:    vle8.v v9, (a1)
-; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vlse8.v v10, (a0), a4, v0.t
+; CHECK-NEXT:    vsetvli zero, a3, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v9, (a0), a4, v0.t
+; CHECK-NEXT:    vle8.v v10, (a1)
 ; CHECK-NEXT:    addi a1, a1, 32
-; CHECK-NEXT:    vadd.vv v9, v10, v9
+; CHECK-NEXT:    vmerge.vvm v9, v8, v9, v0
+; CHECK-NEXT:    vadd.vv v9, v9, v10
 ; CHECK-NEXT:    vsse8.v v9, (a0), a4, v0.t
 ; CHECK-NEXT:    addi a0, a0, 160
 ; CHECK-NEXT:    bne a1, a2, .LBB7_1
@@ -1064,22 +1134,58 @@ bb16:                                             ; preds = %bb4, %bb
 }
 
 define void @gather_zero_stride_fp(ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
-; CHECK-LABEL: gather_zero_stride_fp:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a2, 1
-; CHECK-NEXT:    add a2, a0, a2
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:  .LBB16_1: # %vector.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    flw fa5, 0(a1)
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfadd.vf v8, v8, fa5
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    addi a1, a1, 640
-; CHECK-NEXT:    bne a0, a2, .LBB16_1
-; CHECK-NEXT:  # %bb.2: # %for.cond.cleanup
-; CHECK-NEXT:    ret
+; V-LABEL: gather_zero_stride_fp:
+; V:       # %bb.0: # %entry
+; V-NEXT:    lui a2, 1
+; V-NEXT:    add a2, a0, a2
+; V-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; V-NEXT:  .LBB16_1: # %vector.body
+; V-NEXT:    # =>This Inner Loop Header: Depth=1
+; V-NEXT:    flw fa5, 0(a1)
+; V-NEXT:    vle32.v v8, (a0)
+; V-NEXT:    vfmv.v.f v9, fa5
+; V-NEXT:    vfadd.vv v8, v8, v9
+; V-NEXT:    vse32.v v8, (a0)
+; V-NEXT:    addi a0, a0, 128
+; V-NEXT:    addi a1, a1, 640
+; V-NEXT:    bne a0, a2, .LBB16_1
+; V-NEXT:  # %bb.2: # %for.cond.cleanup
+; V-NEXT:    ret
+;
+; ZVE32F-LABEL: gather_zero_stride_fp:
+; ZVE32F:       # %bb.0: # %entry
+; ZVE32F-NEXT:    lui a2, 1
+; ZVE32F-NEXT:    add a2, a0, a2
+; ZVE32F-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; ZVE32F-NEXT:  .LBB16_1: # %vector.body
+; ZVE32F-NEXT:    # =>This Inner Loop Header: Depth=1
+; ZVE32F-NEXT:    flw fa5, 0(a1)
+; ZVE32F-NEXT:    vle32.v v8, (a0)
+; ZVE32F-NEXT:    vfmv.v.f v9, fa5
+; ZVE32F-NEXT:    vfadd.vv v8, v8, v9
+; ZVE32F-NEXT:    vse32.v v8, (a0)
+; ZVE32F-NEXT:    addi a0, a0, 128
+; ZVE32F-NEXT:    addi a1, a1, 640
+; ZVE32F-NEXT:    bne a0, a2, .LBB16_1
+; ZVE32F-NEXT:  # %bb.2: # %for.cond.cleanup
+; ZVE32F-NEXT:    ret
+;
+; OPTIMIZED-LABEL: gather_zero_stride_fp:
+; OPTIMIZED:       # %bb.0: # %entry
+; OPTIMIZED-NEXT:    lui a2, 1
+; OPTIMIZED-NEXT:    add a2, a0, a2
+; OPTIMIZED-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
+; OPTIMIZED-NEXT:  .LBB16_1: # %vector.body
+; OPTIMIZED-NEXT:    # =>This Inner Loop Header: Depth=1
+; OPTIMIZED-NEXT:    vlse32.v v8, (a1), zero
+; OPTIMIZED-NEXT:    vle32.v v9, (a0)
+; OPTIMIZED-NEXT:    vfadd.vv v8, v9, v8
+; OPTIMIZED-NEXT:    vse32.v v8, (a0)
+; OPTIMIZED-NEXT:    addi a0, a0, 128
+; OPTIMIZED-NEXT:    addi a1, a1, 640
+; OPTIMIZED-NEXT:    bne a0, a2, .LBB16_1
+; OPTIMIZED-NEXT:  # %bb.2: # %for.cond.cleanup
+; OPTIMIZED-NEXT:    ret
 entry:
   br label %vector.body
 

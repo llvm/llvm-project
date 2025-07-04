@@ -1319,9 +1319,9 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-NEXT:    vmv.s.x v9, a0
 ; RV32NOM-NEXT:    vsext.vf4 v11, v9
 ; RV32NOM-NEXT:    vadd.vv v8, v8, v10
-; RV32NOM-NEXT:    vsra.vv v9, v8, v11
-; RV32NOM-NEXT:    vsrl.vi v8, v8, 31
-; RV32NOM-NEXT:    vadd.vv v8, v9, v8
+; RV32NOM-NEXT:    vsrl.vi v9, v8, 31
+; RV32NOM-NEXT:    vsra.vv v8, v8, v11
+; RV32NOM-NEXT:    vadd.vv v8, v8, v9
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32NOM-NEXT:    vmv.x.s a0, v8
 ; RV32NOM-NEXT:    ret

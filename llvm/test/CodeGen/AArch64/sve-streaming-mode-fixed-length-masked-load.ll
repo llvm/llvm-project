@@ -2669,11 +2669,15 @@ define <3 x i32> @masked_load_zext_v3i32(ptr %load_ptr, <3 x i1> %pm) {
 ; CHECK-NEXT:    fmov s0, w2
 ; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    adrp x8, .LCPI13_0
-; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fmov s2, w3
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fmov s1, w3
+; CHECK-NEXT:    zip1 z1.h, z2.h, z0.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI13_0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
@@ -2742,11 +2746,15 @@ define <3 x i32> @masked_load_sext_v3i32(ptr %load_ptr, <3 x i1> %pm) {
 ; CHECK-NEXT:    fmov s0, w2
 ; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    adrp x8, .LCPI14_0
-; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    fmov s2, w3
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    zip1 z0.h, z1.h, z0.h
-; CHECK-NEXT:    fmov s1, w3
+; CHECK-NEXT:    zip1 z1.h, z2.h, z0.h
 ; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    mov z0.h, p0/m, z0.h
+; CHECK-NEXT:    sel z1.h, p0, z1.h, z0.h
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    and z0.d, z0.d, z1.d
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15

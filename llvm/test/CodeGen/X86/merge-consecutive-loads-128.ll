@@ -262,37 +262,54 @@ define <4 x float> @merge_4f32_f32_45zz(ptr %ptr) nounwind uwtable noinline ssp 
 define <4 x float> @merge_4f32_f32_012u(ptr %ptr) nounwind uwtable noinline ssp {
 ; SSE2-LABEL: merge_4f32_f32_012u:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: merge_4f32_f32_012u:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: merge_4f32_f32_012u:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; AVX-NEXT:    retq
 ;
 ; X86-SSE1-LABEL: merge_4f32_f32_012u:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X86-SSE1-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: merge_4f32_f32_012u:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; X86-SSE41-NEXT:    retl
   %ptr1 = getelementptr inbounds float, ptr %ptr, i64 1
   %ptr2 = getelementptr inbounds float, ptr %ptr, i64 2
@@ -309,37 +326,54 @@ define <4 x float> @merge_4f32_f32_012u(ptr %ptr) nounwind uwtable noinline ssp 
 define <4 x float> @merge_4f32_f32_019u(ptr %ptr) nounwind uwtable noinline ssp {
 ; SSE2-LABEL: merge_4f32_f32_019u:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: merge_4f32_f32_019u:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: merge_4f32_f32_019u:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; AVX-NEXT:    retq
 ;
 ; X86-SSE1-LABEL: merge_4f32_f32_019u:
 ; X86-SSE1:       # %bb.0:
 ; X86-SSE1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE1-NEXT:    xorps %xmm0, %xmm0
-; X86-SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE1-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X86-SSE1-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; X86-SSE1-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: merge_4f32_f32_019u:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE41-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2,0]
 ; X86-SSE41-NEXT:    retl
   %ptr1 = getelementptr inbounds float, ptr %ptr, i64 1
   %ptr2 = getelementptr inbounds float, ptr %ptr, i64 9

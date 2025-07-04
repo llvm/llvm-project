@@ -235,19 +235,34 @@ define <4 x i32> @test_buildvector_v4i32_partial(i32 %a0, i32 %a3) {
 ; SSE2-NEXT:    movd %esi, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[1,2]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2,3,1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v4i32_partial:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movd %edi, %xmm0
-; SSE41-NEXT:    pinsrd $3, %esi, %xmm0
+; SSE41-NEXT:    movd %edi, %xmm1
+; SSE41-NEXT:    pinsrd $3, %esi, %xmm1
+; SSE41-NEXT:    pxor %xmm0, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3,4,5],xmm1[6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: test_buildvector_v4i32_partial:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd %edi, %xmm0
-; AVX-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_buildvector_v4i32_partial:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3,4,5],xmm0[6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_buildvector_v4i32_partial:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd %edi, %xmm0
+; AVX2-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2],xmm0[3]
+; AVX2-NEXT:    retq
   %ins0 = insertelement <4 x i32> undef, i32   %a0, i32 0
   %ins1 = insertelement <4 x i32> %ins0, i32 undef, i32 1
   %ins2 = insertelement <4 x i32> %ins1, i32 undef, i32 2
@@ -360,22 +375,34 @@ define <8 x i16> @test_buildvector_v8i16_register(i16 %a0, i16 %a1, i16 %a2, i16
 }
 
 define <8 x i16> @test_buildvector_v8i16_partial(i16 %a1, i16 %a3, i16 %a4, i16 %a5) {
-; SSE-LABEL: test_buildvector_v8i16_partial:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pinsrw $1, %edi, %xmm0
-; SSE-NEXT:    pinsrw $3, %esi, %xmm0
-; SSE-NEXT:    pinsrw $4, %edx, %xmm0
-; SSE-NEXT:    pinsrw $5, %ecx, %xmm0
-; SSE-NEXT:    retq
+; SSE2-LABEL: test_buildvector_v8i16_partial:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pinsrw $1, %edi, %xmm0
+; SSE2-NEXT:    pinsrw $3, %esi, %xmm0
+; SSE2-NEXT:    pinsrw $4, %edx, %xmm0
+; SSE2-NEXT:    pinsrw $5, %ecx, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: test_buildvector_v8i16_partial:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pxor %xmm0, %xmm0
+; SSE41-NEXT:    pinsrw $1, %edi, %xmm0
+; SSE41-NEXT:    pinsrw $3, %esi, %xmm0
+; SSE41-NEXT:    pinsrw $4, %edx, %xmm0
+; SSE41-NEXT:    pinsrw $5, %ecx, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3,4,5],xmm1[6,7]
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_buildvector_v8i16_partial:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $3, %esi, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $4, %edx, %xmm0, %xmm0
-; AVX-NEXT:    vpinsrw $5, %ecx, %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm1
+; AVX-NEXT:    vpinsrw $3, %esi, %xmm1, %xmm1
+; AVX-NEXT:    vpinsrw $4, %edx, %xmm1, %xmm1
+; AVX-NEXT:    vpinsrw $5, %ecx, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3,4,5],xmm0[6,7]
 ; AVX-NEXT:    retq
   %ins0 = insertelement <8 x i16> undef, i16 undef, i32 0
   %ins1 = insertelement <8 x i16> %ins0, i16   %a1, i32 1
@@ -552,28 +579,29 @@ define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11
 ; SSE2-NEXT:    pinsrw $6, %r8d, %xmm0
 ; SSE2-NEXT:    shll $8, %r9d
 ; SSE2-NEXT:    pinsrw $7, %r9d, %xmm0
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_buildvector_v16i8_partial:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pinsrb $2, %edi, %xmm0
 ; SSE41-NEXT:    pinsrb $6, %esi, %xmm0
 ; SSE41-NEXT:    pinsrb $8, %edx, %xmm0
 ; SSE41-NEXT:    pinsrb $11, %ecx, %xmm0
 ; SSE41-NEXT:    pinsrb $12, %r8d, %xmm0
 ; SSE41-NEXT:    pinsrb $15, %r9d, %xmm0
+; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: test_buildvector_v16i8_partial:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $2, %edi, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $6, %esi, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $8, %edx, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $11, %ecx, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $12, %r8d, %xmm0, %xmm0
 ; AVX-NEXT:    vpinsrb $15, %r9d, %xmm0, %xmm0
+; AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %ins0  = insertelement <16 x i8> undef,  i8 undef, i32 0
   %ins1  = insertelement <16 x i8> %ins0,  i8 undef, i32 1

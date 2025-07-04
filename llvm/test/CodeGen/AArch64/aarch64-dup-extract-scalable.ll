@@ -132,7 +132,7 @@ define <vscale x 2 x i64> @dup_extract_nxv2i64_v2i64(<2 x i64> %data) {
 define <vscale x 2 x i64> @dup_extract_nxv2i64_v1i64(<1 x i64> %data) {
 ; CHECK-LABEL: dup_extract_nxv2i64_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, x8
+; CHECK-NEXT:    mov z0.d, d0
 ; CHECK-NEXT:    ret
   %1 = extractelement <1 x i64> %data, i64 1
   %.splatinsert = insertelement <vscale x 2 x i64> poison, i64 %1, i32 0
