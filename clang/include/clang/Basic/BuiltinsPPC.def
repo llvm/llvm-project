@@ -35,7 +35,7 @@
 #define UNALIASED_CUSTOM_BUILTIN(ID, TYPES, ACCUMULATE, FEATURE)               \
   CUSTOM_BUILTIN(ID, ID, TYPES, ACCUMULATE, FEATURE)
 
-#define UNALIASED_CUSTOM_MMA_BUILTIN(ID, TYPES, FEATURE)                \
+#define UNALIASED_CUSTOM_MMA_BUILTIN(ID, TYPES, FEATURE)                       \
   UNALIASED_CUSTOM_BUILTIN(ID, TYPES, false, FEATURE)                          \
   UNALIASED_CUSTOM_BUILTIN(ID##nn, TYPES, true, FEATURE)                       \
   UNALIASED_CUSTOM_BUILTIN(ID##np, TYPES, true, FEATURE)                       \
@@ -1080,21 +1080,21 @@ UNALIASED_CUSTOM_BUILTIN(mma_dmxvi8gerx4spp, "vW1024*W256V", true,
 UNALIASED_CUSTOM_BUILTIN(mma_pmdmxvi8gerx4spp, "vW1024*W256Vi255i15i15", true,
                          "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf16ger2, "vW512*VV",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf32ger, "vW512*VV",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvf64ger, "vW512*W256V",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvf16ger2, "vW512*VVi15i15i3",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvf32ger, "vW512*VVi15i15",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvf64ger, "vW512*W256Vi15i3",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_xvbf16ger2, "vW512*VV",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 UNALIASED_CUSTOM_MMA_BUILTIN(mma_pmxvbf16ger2, "vW512*VVi15i15i3",
-                                    "mma,paired-vector-memops")
+                             "mma,paired-vector-memops")
 
 // FIXME: Obviously incomplete.
 
