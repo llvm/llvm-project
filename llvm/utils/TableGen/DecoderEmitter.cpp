@@ -217,14 +217,13 @@ struct EncodingIDAndOpcode {
 using EncodingIDsVec = std::vector<EncodingIDAndOpcode>;
 using NamespacesHwModesMap = std::map<std::string, std::set<StringRef>>;
 
-// Result of parsing the `InsnCPPTypes` and `InstBitwidths` fields in the Target
-// instruction set.
+// Result of parsing the `DecodeOptions` field in the Target instruction set.
 using BitwidthSet = SmallSet<unsigned, 4>;
-struct NonTemplatedInsnType {
+struct DecoderOption {
   StringRef CPPType;
   BitwidthSet Bitwidths;
 
-  NonTemplatedInsnType(StringRef CPPType, BitwidthSet Bitwidths)
+  DecoderOption(StringRef CPPType, BitwidthSet Bitwidths)
       : CPPType(CPPType), Bitwidths(std::move(Bitwidths)) {}
 };
 
@@ -252,8 +251,8 @@ public:
   void run(raw_ostream &o);
 
 private:
-  SmallVector<NonTemplatedInsnType>
-  parseNonTemplatedInsnTypes(BitwidthSet &InstrBitwidths);
+  SmallVector<DecoderOption> parseDecoderOptions(BitwidthSet &InstrBitwidths);
+
   CodeGenTarget Target;
 
 public:
@@ -2657,9 +2656,9 @@ handleHwModesUnrelatedEncodings(const CodeGenInstruction *Instr,
     break;
   }
 }
-SmallVector<NonTemplatedInsnType>
-DecoderEmitter::parseNonTemplatedInsnTypes(BitwidthSet &InstrBitwidths) {
-  SmallVector<NonTemplatedInsnType> Parsed;
+SmallVector<DecoderOption>
+DecoderEmitter::parseDecoderOptions(BitwidthSet &InstrBitwidths) {
+  SmallVector<DecoderOption> Parsed;
 
   const Record *InstructionSet = Target.getInstructionSet();
   std::vector<const Record *> DecoderOptions =
@@ -2683,7 +2682,7 @@ DecoderEmitter::parseNonTemplatedInsnTypes(BitwidthSet &InstrBitwidths) {
     StringRef CPPType = Option->getValueAsString("CPPType");
     if (CPPType.empty())
       PrintFatalError(CPPTypesLoc,
-                      "CPP Type cannot be empty in `InsnCPPTypes`");
+                      "CPP Type cannot be empty in DecoderOptions");
 
     const ListInit *BWL = Option->getValueAsListInit("Bitwidths");
     if (!BWL || BWL->empty())
@@ -2710,7 +2709,7 @@ DecoderEmitter::parseNonTemplatedInsnTypes(BitwidthSet &InstrBitwidths) {
     PrintFatalError([&InstrBitwidths](raw_ostream &OS) {
       OS << "Bitwidth(s) ";
       interleaveComma(InstrBitwidths, OS);
-      OS << " missing in `InsnBitwidths`";
+      OS << " missing in DecoderOptions";
     });
   }
   return Parsed;
@@ -2837,25 +2836,25 @@ namespace {
     const unsigned Bitwidth = 8 * NSAndByteSize.second;
     InstrBitwidths.insert(Bitwidth);
   }
-  SmallVector<NonTemplatedInsnType> NonTemplatedInsnTypes =
-      parseNonTemplatedInsnTypes(InstrBitwidths);
+  SmallVector<DecoderOption> DecoderOptions =
+      parseDecoderOptions(InstrBitwidths);
 
   DecoderTableInfo TableInfo;
   bool HasCheckPredicate = false;
-  for (const auto &[NTType, NTBitwidths] : NonTemplatedInsnTypes) {
+  for (const auto &[CPPType, Bitwidths] : DecoderOptions) {
     // Reset the Decoders for each non-templated type.
     TableInfo.Decoders.clear();
     unsigned OpcodeMask = 0;
 
-    if (!NTType.empty()) {
+    if (!CPPType.empty()) {
       OS << "// ------------------------------------------------------------\n";
       OS << "// Decoder tables and functions for bitwidths: ";
-      interleaveComma(NTBitwidths, OS);
-      OS << "\n// Using InsnType = " << NTType << '\n';
+      interleaveComma(Bitwidths, OS);
+      OS << "\n// Using InsnType = " << CPPType << '\n';
     }
 
-    emitFieldFromInstruction(OS, NTType);
-    emitInsertBits(OS, NTType);
+    emitFieldFromInstruction(OS, CPPType);
+    emitInsertBits(OS, CPPType);
 
     for (const auto &[NSAndByteSize, EncodingIDs] : OpcMap) {
       const std::string &DecoderNamespace = NSAndByteSize.first;
@@ -2864,7 +2863,7 @@ namespace {
 
       // Only handle instruction of the non-templated bitwidth size when
       // non-templated bitwidth option is enabled.
-      if (!NTBitwidths.empty() && !NTBitwidths.contains(InstrBitwidth))
+      if (!Bitwidths.empty() && !Bitwidths.contains(InstrBitwidth))
         continue;
 
       // Emit the decoder for this namespace+width combination.
@@ -2894,12 +2893,12 @@ namespace {
     }
 
     // Emit the decoder function for this BitWidth.
-    emitDecoderFunction(OS, TableInfo.Decoders, NTType, indent(0));
+    emitDecoderFunction(OS, TableInfo.Decoders, CPPType, indent(0));
 
     HasCheckPredicate |= OpcodeMask & ((1 << MCD::OPC_CheckPredicate) |
                                        (1 << MCD::OPC_CheckPredicateOrFail));
 
-    emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, NTType);
+    emitDecodeInstruction(OS, IsVarLenInst, OpcodeMask, CPPType);
   }
 
   // Emit the predicate function.
