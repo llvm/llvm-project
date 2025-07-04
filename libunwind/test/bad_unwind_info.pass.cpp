@@ -21,7 +21,6 @@
 #undef NDEBUG
 #include <assert.h>
 #include <libunwind.h>
-#include <stdio.h>
 
 __attribute__((naked)) void bad_unwind_info() {
 #if defined(__aarch64__)
