@@ -156,28 +156,18 @@ static bool
 getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
                                      const ArgList &Args,
                                      std::vector<StringRef> &Features) {
-  std::string MtuneLowerCase = Mtune.lower();
   // Check CPU name is valid, but ignore any extensions on it.
+  std::string MtuneLowerCase = Mtune.lower();
   llvm::AArch64::ExtensionSet Extensions;
   StringRef Tune;
-  if (!DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions))
-    return false;
-
-  return true;
+  return DecodeAArch64Mcpu(D, MtuneLowerCase, Tune, Extensions);
 }
 
 static bool
 getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
                                     const ArgList &Args,
                                     std::vector<StringRef> &Features) {
-  StringRef CPU;
-  // Check CPU name is valid, but ignore any extensions on it.
-  llvm::AArch64::ExtensionSet DecodedFeature;
-  std::string McpuLowerCase = Mcpu.lower();
-  if (!DecodeAArch64Mcpu(D, McpuLowerCase, CPU, DecodedFeature))
-    return false;
-
-  return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
+  return getAArch64MicroArchFeaturesFromMtune(D, Mcpu, Args, Features);
 }
 
 void aarch64::getAArch64TargetFeatures(const Driver &D,
