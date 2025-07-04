@@ -23,8 +23,7 @@ namespace LIBC_NAMESPACE_DECL {
 static constexpr float16 ONE_OVER_TWO = 0.5f16;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr size_t N_ASINFPI_EXCEPTS = 5;
-static constexpr float16 ONE_OVER_SIX = 0.166748046875f16;
+static constexpr size_t N_ASINFPI_EXCEPTS = 3;
 
 static constexpr fputil::ExceptValues<float16, N_ASINFPI_EXCEPTS>
     ASINFPI_EXCEPTS{{
@@ -33,21 +32,12 @@ static constexpr fputil::ExceptValues<float16, N_ASINFPI_EXCEPTS>
         {0x0000, 0x0000, 0, 0, 0},
 
         // x = 1.0, asinfpi(1) = 1/2
-        {(fputil::FPBits<float16>(-1.0f16)).uintval(),
-         (fputil::FPBits<float16>(-ONE_OVER_TWO)).uintval(), 0, 0, 0},
+        {(fputil::FPBits<float16>(1.0f16)).uintval(),
+         (fputil::FPBits<float16>(ONE_OVER_TWO)).uintval(), 0, 0, 0},
 
         // x = -1.0, asinfpi(-1.0) = -1/2
         {(fputil::FPBits<float16>(-1.0f16)).uintval(),
          (fputil::FPBits<float16>(-ONE_OVER_TWO)).uintval(), 0, 0, 0},
-
-        // x = 0.5, asinfpi(0.5) = 1/6
-        {(fputil::FPBits<float16>(0.5f16)).uintval(),
-         (fputil::FPBits<float16>(ONE_OVER_SIX)).uintval(), 0, 0, 0},
-
-        // x = -0.5, asinfpi(0.5) = -1/6
-        {(fputil::FPBits<float16>(-0.5f16)).uintval(),
-         (fputil::FPBits<float16>(-ONE_OVER_SIX)).uintval(), 0, 0, 0},
-
     }};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
