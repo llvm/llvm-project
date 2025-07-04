@@ -1311,6 +1311,7 @@ private:
     using __key_type = __remove_const_t<typename value_type::first_type>;
 
     if (__libcpp_is_constant_evaluated()) {
+      using __node_value_type = __get_node_value_type_t<value_type>;
       __get_node_value_type_t<value_type> __tmp{__rhs.first, __rhs.second};
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
