@@ -5,7 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include <clc/opencl/clc.h>
 
 _CLC_DEF _CLC_OVERLOAD size_t get_global_id(uint dim) {
