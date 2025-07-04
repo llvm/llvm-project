@@ -1994,6 +1994,18 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
             }
             break;
           }
+          case SPIRV::ExecutionMode::ContractionOff:
+          case SPIRV::ExecutionMode::SignedZeroInfNanPreserve:
+            if (HasKHRFloatControls2) {
+              RequireKHRFloatControls2 = true;
+              MAI.Reqs.getAndAddRequirements(
+                  SPIRV::OperandCategory::ExecutionModeOperand,
+                  SPIRV::ExecutionMode::FPFastMathDefault, ST);
+            } else {
+              MAI.Reqs.getAndAddRequirements(
+                  SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
+            }
+            break;
           default:
             MAI.Reqs.getAndAddRequirements(
                 SPIRV::OperandCategory::ExecutionModeOperand, EM, ST);
@@ -2163,7 +2175,8 @@ static void handleMIFlagDecoration(
     for (SPIRV::FPFastMathDefaultInfo &Elem : FPFastMathDefaultInfoVec) {
       if (Ty == Elem.Ty) {
         FMFlags = Elem.FastMathFlags;
-        Emit = Elem.ContractionOff || Elem.SignedZeroInfNanPreserve || Elem.FPFastMathDefault;
+        Emit = Elem.ContractionOff || Elem.SignedZeroInfNanPreserve ||
+               Elem.FPFastMathDefault;
         break;
       }
     }
