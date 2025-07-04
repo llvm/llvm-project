@@ -206,7 +206,7 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
       Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx, Loc);
     }
   }
-  Fixups.push_back(MCFixup::create(Offset, Expr, (MCFixupKind)Kind));
+  Fixups.push_back(MCFixup::create(Offset, Expr, Kind, true));
 
   // Output the fixup for the TLS marker if present.
   if (AllowTLS && OpNum + 1 < MI.getNumOperands()) {
