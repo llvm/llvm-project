@@ -3335,6 +3335,28 @@ public:
   }
 };
 
+/// Pattern to rewrite a InsertOp(InsertOp) to InsertOp.
+class InsertInsertToInsert final : public OpRewritePattern<InsertOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(InsertOp op,
+                                PatternRewriter &rewriter) const override {
+    auto destInsert = op.getDest().getDefiningOp<InsertOp>();
+    if (!destInsert)
+      return failure();
+
+    if (!destInsert->hasOneUse())
+      return failure();
+
+    if (op.getMixedPosition() != destInsert.getMixedPosition())
+      return failure();
+
+    rewriter.replaceOpWithNewOp<InsertOp>(
+        op, op.getValueToStore(), destInsert.getDest(), op.getMixedPosition());
+    return success();
+  }
+};
+
 } // namespace
 
 static Attribute
@@ -3389,7 +3411,8 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
 
 void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
+              InsertInsertToInsert>(context);
 }
 
 OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {

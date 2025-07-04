@@ -3446,3 +3446,17 @@ func.func @fold_insert_constant_indices(%arg : vector<4x1xi32>) -> vector<4x1xi3
   %res = vector.insert %1, %arg[%0, %0] : i32 into vector<4x1xi32>
   return %res : vector<4x1xi32>
 }
+
+// -----
+
+// CHECK-LABEL: @insert_insert_to_insert(
+//  CHECK-SAME:   %[[ARG:.*]]: vector<4xf32>,
+//  CHECK-SAME:   %[[VAL:.*]]: f32) -> vector<4xf32> {
+//       CHECK:   %[[RES:.*]] = vector.insert %[[VAL]], %[[ARG]] [0] : f32 into vector<4xf32>
+//       CHECK:    return %[[RES]] : vector<4xf32>
+func.func @insert_insert_to_insert(%v : vector<4xf32>, %value : f32) -> vector<4xf32> {
+  %v_0 = vector.insert %value, %v[0] : f32 into vector<4xf32>
+  %v_1 = vector.insert %value, %v_0[0] : f32 into vector<4xf32>
+  %v_2 = vector.insert %value, %v_1[0] : f32 into vector<4xf32>
+  return %v_2 : vector<4xf32>  
+}
