@@ -4567,7 +4567,6 @@ static SDValue foldSetCCWithRotate(EVT VT, SDValue N0, SDValue N1,
   // or (rot X, Y), Z ==/!= 0 --> (or X, Z) ==/!= 0
   // or Z, (rot X, Y) ==/!= 0 --> (or X, Z) ==/!= 0
   //
-  // TODO: Add the 'and' with -1 sibling.
   // TODO: Recurse through a series of 'or' ops to find the rotate.
   EVT OpVT = N0.getValueType();
   if (N0.hasOneUse() && N0.getOpcode() == ISD::OR && C1->isZero()) {
@@ -4578,6 +4577,21 @@ static SDValue foldSetCCWithRotate(EVT VT, SDValue N0, SDValue N1,
     if (SDValue R = getRotateSource(N0.getOperand(1))) {
       SDValue NewOr = DAG.getNode(ISD::OR, dl, OpVT, R, N0.getOperand(0));
       return DAG.getSetCC(dl, VT, NewOr, N1, Cond);
+    }
+  }
+
+  // and (rot X, Y), Z ==/!= -1 --> (and X, Z) ==/!= -1
+  // and Z, (rot X, Y) ==/!= -1 --> (and X, Z) ==/!= -1
+  //
+  // TODO: Recurse through a series of 'and' ops to find the rotate.
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::AND && C1->isAllOnes()) {
+    if (SDValue R = getRotateSource(N0.getOperand(0))) {
+      SDValue NewAnd = DAG.getNode(ISD::AND, dl, OpVT, R, N0.getOperand(1));
+      return DAG.getSetCC(dl, VT, NewAnd, N1, Cond);
+    }
+    if (SDValue R = getRotateSource(N0.getOperand(1))) {
+      SDValue NewAnd = DAG.getNode(ISD::AND, dl, OpVT, R, N0.getOperand(0));
+      return DAG.getSetCC(dl, VT, NewAnd, N1, Cond);
     }
   }
 

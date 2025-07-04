@@ -524,10 +524,7 @@ define i1 @fshl_or_ne_2(i32 %x, i32 %y) {
 define i1 @and_rotl_eq_neg_1(i8 %x, i8 %y, i8 %z) nounwind {
 ; CHECK-LABEL: and_rotl_eq_neg_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    rolb %cl, %dil
-; CHECK-NEXT:    andb %sil, %dil
+; CHECK-NEXT:    andl %esi, %edi
 ; CHECK-NEXT:    cmpb $-1, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -596,25 +593,9 @@ define i1 @and_rotl_ne_neg_1_use(i32 %x, i32 %y, i32 %z) nounwind {
 define <4 x i1> @and_rotl_ne_eq_neg_1(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: and_rotl_ne_eq_neg_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    pslld $23, %xmm2
-; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm2, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,3,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; CHECK-NEXT:    pmuludq %xmm3, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,3,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
-; CHECK-NEXT:    por %xmm4, %xmm3
-; CHECK-NEXT:    pand %xmm1, %xmm3
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %rot = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32>%x, <4 x i32> %x, <4 x i32> %y)
   %and = and <4 x i32> %y, %rot
