@@ -3279,7 +3279,7 @@ bool Sema::checkTargetAttr(SourceLocation LiteralLoc, StringRef AttrStr) {
 }
 
 bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
-                                  StringRef AttrStr) {
+                                  StringRef AttrStr, SmallString<64> &NewStr) {
   enum FirstParam { Unsupported };
   enum SecondParam { None };
   enum ThirdParam { Target, TargetClones, TargetVersion };
@@ -3330,11 +3330,19 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
       return Diag(LiteralLoc, diag::warn_unsupported_target_attribute)
              << Unsupported << None << AttrStr << TargetVersion;
 
+    NewStr = AttrStr;
     return false;
   }
-  AttrStr.split(Features, "+");
+
+  auto [LHS, RHS] = AttrStr.split(';');
+  LHS.split(Features, '+');
+  if (!RHS.empty())
+    RHS.split(Features, '+');
   for (auto &CurFeature : Features) {
     CurFeature = CurFeature.trim();
+    if (!NewStr.empty())
+      NewStr.append("+");
+    NewStr.append(CurFeature);
     if (CurFeature == "default")
       continue;
     if (!Context.getTargetInfo().validateCpuSupports(CurFeature))
@@ -3346,12 +3354,13 @@ bool Sema::checkTargetVersionAttr(SourceLocation LiteralLoc, Decl *D,
 
 static void handleTargetVersionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   StringRef Str;
+  SmallString<64> NewStr;
   SourceLocation LiteralLoc;
   if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, &LiteralLoc) ||
-      S.checkTargetVersionAttr(LiteralLoc, D, Str))
+      S.checkTargetVersionAttr(LiteralLoc, D, Str, NewStr))
     return;
   TargetVersionAttr *NewAttr =
-      ::new (S.Context) TargetVersionAttr(S.Context, AL, Str);
+      ::new (S.Context) TargetVersionAttr(S.Context, AL, NewStr);
   D->addAttr(NewAttr);
 }
 
@@ -3404,6 +3413,19 @@ bool Sema::checkTargetClonesAttrString(
         else
           StringsBuffer.push_back(Cur);
       } else {
+        auto [LHS, RHS] = Cur.split(';');
+        StringRef Priority;
+        if (LHS.starts_with("priority")) {
+          Priority = LHS;
+          Cur = !RHS.empty() ? RHS : LHS;
+        } else if (RHS.starts_with("priority")) {
+          Priority = RHS;
+          Cur = LHS;
+        }
+        if (!Priority.empty() && !TInfo.validateCpuSupports(Priority))
+          Diag(CurLoc, diag::warn_unsupported_target_attribute)
+              << Unsupported << None << Priority << TargetClones;
+
         std::pair<StringRef, StringRef> CurParts = {{}, Cur};
         llvm::SmallVector<StringRef, 8> CurFeatures;
         while (!CurParts.second.empty()) {
@@ -3425,6 +3447,10 @@ bool Sema::checkTargetClonesAttrString(
           if (!Res.empty())
             Res.append("+");
           Res.append(CurFeat);
+        }
+        if (!Res.empty() && !Priority.empty()) {
+          Res.append("+");
+          Res.append(Priority);
         }
         if (llvm::is_contained(StringsBuffer, Res) || DefaultIsDupe)
           Diag(CurLoc, diag::warn_target_clone_duplicate_options);

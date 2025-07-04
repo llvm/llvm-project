@@ -28,13 +28,13 @@ __attribute__((target_clones("aes", "lse", "default"))) int explicit_default_bad
 __attribute__((target_version("aes"))) int explicit_version_priority(void) { return 0; }
 // expected-error@+2 {{definition with same mangled name 'explicit_version_priority._Maes' as another definition}}
 // expected-note@-2 {{previous definition is here}}
-__attribute__((target_version("priority1+aes"))) int explicit_version_priority(void) { return 1; }
+__attribute__((target_version("priority1;aes"))) int explicit_version_priority(void) { return 1; }
 
 #elif defined(CHECK_EXPLICIT_CLONES_PRIORITY)
 
-__attribute__((target_version("aes+priority2"))) int explicit_clones_priority(void) { return 0; }
+__attribute__((target_version("aes;priority2"))) int explicit_clones_priority(void) { return 0; }
 // expected-error@+2 {{definition with same mangled name 'explicit_clones_priority._Maes' as another definition}}
 // expected-note@-2 {{previous definition is here}}
-__attribute__((target_clones("priority1+aes", "lse"))) int explicit_clones_priority(void) { return 1; }
+__attribute__((target_clones("priority1;aes", "lse"))) int explicit_clones_priority(void) { return 1; }
 
 #endif

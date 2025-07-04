@@ -3,6 +3,6 @@
 int __attribute__((target_version("sve2-bitperm + sha2"))) foov(void) { return 1; }
 int __attribute__((target_clones(" lse + fp + sha3 ", "default"))) fooc(void) { return 2; }
 // CHECK: TargetVersionAttr
-// CHECK: sve2-bitperm + sha2
+// CHECK: sve2-bitperm+sha2
 // CHECK: TargetClonesAttr
 // CHECK: fp+lse+sha3 default
