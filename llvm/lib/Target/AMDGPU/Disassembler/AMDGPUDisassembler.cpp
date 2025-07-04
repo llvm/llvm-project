@@ -598,7 +598,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
-    if (isGFX11Plus() && Bytes.size() >= 12 ) {
+    if (isGFX11Plus() && Bytes.size() >= 12) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
 
       if (isGFX11() &&
