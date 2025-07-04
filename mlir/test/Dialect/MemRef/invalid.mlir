@@ -512,6 +512,14 @@ func.func @collapse_shape_wrong_collapsed_type(%arg0: memref<?x?x?xf32>) {
 
 // -----
 
+func.func @collapse_shape_infer_stride_of_dynamic_dim(%arg0: memref<1x1x?x1xsi32, strided<[36960, 4620, 1, 330]>, 1>, %dim : index) -> (memref<?xsi32, strided<[?]>, 1>) {
+  // expected-error @+1 {{expected collapsed type to be 'memref<?xsi32, strided<[1]>, 1>' but found 'memref<?xsi32, strided<[?]>, 1>'}}
+  %collapse_shape = memref.collapse_shape %arg0 [[0, 1, 2, 3]] : memref<1x1x?x1xsi32, strided<[36960, 4620, 1, 330]>, 1> into memref<?xsi32, strided<[?]>, 1>
+  return %collapse_shape : memref<?xsi32, strided<[?]>, 1>
+}
+
+// -----
+
 func.func @expand_shape_illegal_static_memref
   (%arg0: memref<2x3x20xf32>) -> memref<2x3x2x4x5xf32> {
   // expected-error @+1 {{collapsed dim size (20) must equal reassociation group size (40)}}
