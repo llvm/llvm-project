@@ -9,7 +9,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %expr: i32) {
     %t2 = llvm.sdiv %t1, %expr : i32
     %newval = llvm.add %xval, %t2 : i32
     omp.yield(%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   llvm.return
 }
 
@@ -24,7 +24,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.mul %expr, %expr : i32
     omp.yield(%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   llvm.return
 }
 
@@ -41,7 +41,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, 
     ^bb0(%xval: i32):
       %newval = llvm.mul %expr, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
   }
   llvm.return
 }
@@ -59,7 +59,7 @@ llvm.func @omp_atomic_update_multiple_step_update(%x: !llvm.ptr, %v: !llvm.ptr, 
       %t2 = llvm.sdiv %t1, %expr : i32
       %newval = llvm.add %xval, %t2 : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
   }
   llvm.return
 }

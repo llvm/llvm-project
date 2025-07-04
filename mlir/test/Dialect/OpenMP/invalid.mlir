@@ -1040,7 +1040,7 @@ func.func @omp_atomic_update1(%x: memref<i32>, %expr: f32) {
   ^bb0(%xval: f32):
     %newval = llvm.fadd %xval, %expr : f32
     omp.yield (%newval : f32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1053,7 +1053,7 @@ func.func @omp_atomic_update2(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.terminator
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1065,7 +1065,7 @@ func.func @omp_atomic_update3(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1077,7 +1077,7 @@ func.func @omp_atomic_update4(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1089,7 +1089,7 @@ func.func @omp_atomic_update5(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1101,7 +1101,7 @@ func.func @omp_atomic_update6(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval, %expr : i32, i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1113,7 +1113,7 @@ func.func @omp_atomic_update7(%x: memref<i32>, %expr: i32, %y: f32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%y: f32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1125,7 +1125,7 @@ func.func @omp_atomic_update8(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32, %tmp: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1137,7 +1137,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1149,7 +1149,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1161,7 +1161,7 @@ func.func @omp_atomic_update(%x: memref<i32>, %expr: i32) {
   ^bb0(%xval: i32):
     %newval = llvm.add %xval, %expr : i32
     omp.yield (%newval : i32)
-  }
+  } {atomic_control = #omp.atomic_control<>}
   return
 }
 
@@ -1197,12 +1197,12 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.update %x : memref<i32> {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.terminator
   }
   return
@@ -1230,7 +1230,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.terminator
   }
   return
@@ -1245,7 +1245,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.write %x = %expr : memref<i32>, i32
     omp.terminator
   }
@@ -1273,7 +1273,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %y : memref<i32>, memref<i32>, i32
     omp.terminator
   }
@@ -1289,7 +1289,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %y: memref<i32>, %v: memref<i32>,
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield (%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.terminator
   }
 }
@@ -1314,7 +1314,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
@@ -1329,7 +1329,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
@@ -1344,7 +1344,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
@@ -1359,7 +1359,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
@@ -1374,7 +1374,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %x : memref<i32>, memref<i32>, i32
   }
   return
@@ -1389,7 +1389,7 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
     ^bb0(%xval: i32):
       %newval = llvm.add %xval, %expr : i32
       omp.yield(%newval : i32)
-    }
+    } {atomic_control = #omp.atomic_control<>}
     omp.atomic.read %v = %x memory_order(seq_cst) : memref<i32>, memref<i32>, i32
   }
   return

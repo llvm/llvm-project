@@ -3248,13 +3248,21 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
     return moduleTranslation.lookupValue(yieldop.getResults()[0]);
   };
 
+  mlir::omp::AtomicControlAttr atomicControlAttr =
+      opInst.getAtomicControlAttr();
+  bool isIgnoreDenormalMode =
+      atomicControlAttr.getIgnoreDenormalMode();
+  bool isNoFineGrainedMemory =
+      !atomicControlAttr.getFineGrainedMemory();
+  bool isNoRemoteMemory = !atomicControlAttr.getRemoteMemory();
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-      ompBuilder->createAtomicUpdate(ompLoc, allocaIP, llvmAtomicX, llvmExpr,
-                                     atomicOrdering, binop, updateFn,
-                                     isXBinopExpr);
+      ompBuilder->createAtomicUpdate(
+          ompLoc, allocaIP, llvmAtomicX, llvmExpr, atomicOrdering, binop,
+          updateFn, isXBinopExpr, isIgnoreDenormalMode,
+          isNoFineGrainedMemory, isNoRemoteMemory);
 
   if (failed(handleError(afterIP, *opInst)))
     return failure();
@@ -3276,6 +3284,7 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
   llvm::AtomicRMWInst::BinOp binop = llvm::AtomicRMWInst::BinOp::BAD_BINOP;
 
   omp::AtomicUpdateOp atomicUpdateOp = atomicCaptureOp.getAtomicUpdateOp();
+
   omp::AtomicWriteOp atomicWriteOp = atomicCaptureOp.getAtomicWriteOp();
 
   assert((atomicUpdateOp || atomicWriteOp) &&
@@ -3343,13 +3352,27 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     return moduleTranslation.lookupValue(yieldop.getResults()[0]);
   };
 
+  bool isIgnoreDenormalMode = false;
+  bool isNoFineGrainedMemory = true;
+  bool isNoRemoteMemory = true;
+  if (atomicUpdateOp) {
+    mlir::omp::AtomicControlAttr atomicControlAttr =
+        atomicUpdateOp.getAtomicControlAttr();
+    isIgnoreDenormalMode =
+        atomicControlAttr.getIgnoreDenormalMode();
+    isNoFineGrainedMemory =
+        !atomicControlAttr.getFineGrainedMemory();
+    isNoRemoteMemory = !atomicControlAttr.getRemoteMemory();
+  }
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       ompBuilder->createAtomicCapture(
           ompLoc, allocaIP, llvmAtomicX, llvmAtomicV, llvmExpr, atomicOrdering,
-          binop, updateFn, atomicUpdateOp, isPostfixUpdate, isXBinopExpr);
+          binop, updateFn, atomicUpdateOp, isPostfixUpdate, isXBinopExpr,
+          isIgnoreDenormalMode, isNoFineGrainedMemory,
+          isNoRemoteMemory);
 
   if (failed(handleError(afterIP, *atomicCaptureOp)))
     return failure();
