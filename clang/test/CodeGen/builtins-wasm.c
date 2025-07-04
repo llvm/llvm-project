@@ -770,8 +770,8 @@ void test_function_pointer_signature_void(F1 func) {
   use(__builtin_wasm_test_function_pointer_signature((F2)func));
   // WEBASSEMBLY:  %2 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0, i32 0, i32 0, i32 0)
   use(__builtin_wasm_test_function_pointer_signature((F3)func));
-  // WEBASSEMBLY:  %3 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token undef, i32 0, i32 0, i32 0)
+  // WEBASSEMBLY:  %3 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison, i32 0, i32 0, i32 0)
   use(__builtin_wasm_test_function_pointer_signature((F4)func));
-  // WEBASSEMBLY:  %4 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token undef)
+  // WEBASSEMBLY:  %4 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token poison)
   use(__builtin_wasm_test_function_pointer_signature((F5)func));
 }
