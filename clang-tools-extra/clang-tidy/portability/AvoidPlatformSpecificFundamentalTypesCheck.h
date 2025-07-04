@@ -1,4 +1,4 @@
-//===--- AvoidFundamentalIntegerTypesCheck.h - clang-tidy -------*- C++ -*-===//
+//===--- AvoidPlatformSpecificFundamentalTypesCheck.h - clang-tidy -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDFUNDAMENTALINTEGERTYPESCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDFUNDAMENTALINTEGERTYPESCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPLATFORMSPECIFICFUNDAMENTALTYPESCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPLATFORMSPECIFICFUNDAMENTALTYPESCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::portability {
 
 /// Find fundamental integer types and recommend using typedefs or fixed-width types.
 ///
@@ -21,10 +21,10 @@ namespace clang::tidy::modernize {
 /// char32_t, size_t, and ptrdiff_t.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-fundamental-integer-types.html
-class AvoidFundamentalIntegerTypesCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-platform-specific-fundamental-types.html
+class AvoidPlatformSpecificFundamentalTypesCheck : public ClangTidyCheck {
 public:
-  AvoidFundamentalIntegerTypesCheck(StringRef Name, ClangTidyContext *Context);
+  AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
@@ -39,6 +39,6 @@ private:
   bool isSemanticType(const Type *T) const;
 };
 
-} // namespace clang::tidy::modernize
+} // namespace clang::tidy::portability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDFUNDAMENTALINTEGERTYPESCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPLATFORMSPECIFICFUNDAMENTALTYPESCHECK_H

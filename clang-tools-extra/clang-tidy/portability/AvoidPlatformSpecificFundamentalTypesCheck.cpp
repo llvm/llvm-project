@@ -1,4 +1,4 @@
-//===--- AvoidFundamentalIntegerTypesCheck.cpp - clang-tidy ---------------===//
+//===--- AvoidPlatformSpecificFundamentalTypesCheck.cpp - clang-tidy ---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AvoidFundamentalIntegerTypesCheck.h"
+#include "AvoidPlatformSpecificFundamentalTypesCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::portability {
 
 namespace {
 
@@ -31,11 +31,11 @@ AST_MATCHER_P(clang::TypeLoc, hasType,
 
 } // namespace
 
-AvoidFundamentalIntegerTypesCheck::AvoidFundamentalIntegerTypesCheck(
+AvoidPlatformSpecificFundamentalTypesCheck::AvoidPlatformSpecificFundamentalTypesCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
-bool AvoidFundamentalIntegerTypesCheck::isFundamentalIntegerType(
+bool AvoidPlatformSpecificFundamentalTypesCheck::isFundamentalIntegerType(
     const Type *T) const {
   if (!T->isBuiltinType())
     return false;
@@ -59,7 +59,7 @@ bool AvoidFundamentalIntegerTypesCheck::isFundamentalIntegerType(
   }
 }
 
-bool AvoidFundamentalIntegerTypesCheck::isSemanticType(const Type *T) const {
+bool AvoidPlatformSpecificFundamentalTypesCheck::isSemanticType(const Type *T) const {
   if (!T->isBuiltinType())
     return false;
 
@@ -84,7 +84,7 @@ bool AvoidFundamentalIntegerTypesCheck::isSemanticType(const Type *T) const {
   }
 }
 
-void AvoidFundamentalIntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
+void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(MatchFinder *Finder) {
   // Match variable declarations with fundamental integer types
   Finder->addMatcher(
       varDecl().bind("var_decl"),
@@ -115,7 +115,7 @@ void AvoidFundamentalIntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void AvoidFundamentalIntegerTypesCheck::check(
+void AvoidPlatformSpecificFundamentalTypesCheck::check(
     const MatchFinder::MatchResult &Result) {
   SourceLocation Loc;
   QualType QT;
@@ -178,4 +178,4 @@ void AvoidFundamentalIntegerTypesCheck::check(
       << TypeName;
 }
 
-} // namespace clang::tidy::modernize
+} // namespace clang::tidy::portability

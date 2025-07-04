@@ -1,9 +1,9 @@
-.. title:: clang-tidy - modernize-avoid-fundamental-integer-types
+.. title:: clang-tidy - portability-avoid-platform-specific-fundamental-types
 
-modernize-avoid-fundamental-integer-types
+portability-avoid-platform-specific-fundamental-types
 ==========================================
 
-Finds fundamental integer types and recommends using typedefs or fixed-width types instead.
+Finds fundamental types and recommends using typedefs or fixed-width types instead.
 
 This check detects fundamental integer types (``int``, ``short``, ``long``, ``long long``, and their
 ``unsigned`` variants) and warns against their use due to non-standard platform-dependent behavior.

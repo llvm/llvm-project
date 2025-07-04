@@ -280,7 +280,6 @@ Clang-Tidy Checks
    :doc:`misc-use-internal-linkage <misc/use-internal-linkage>`, "Yes"
    :doc:`modernize-avoid-bind <modernize/avoid-bind>`, "Yes"
    :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
-   :doc:`modernize-avoid-fundamental-integer-types <modernize/avoid-fundamental-integer-types>`,
    :doc:`modernize-concat-nested-namespaces <modernize/concat-nested-namespaces>`, "Yes"
    :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
    :doc:`modernize-deprecated-ios-base-aliases <modernize/deprecated-ios-base-aliases>`, "Yes"
@@ -354,6 +353,7 @@ Clang-Tidy Checks
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
+   :doc:`portability-avoid-platform-specific-fundamental-types <portability/avoid-platform-specific-fundamental-types>`,
    :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
