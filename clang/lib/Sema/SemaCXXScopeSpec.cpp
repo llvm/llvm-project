@@ -206,20 +206,23 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
   if (tag->isBeingDefined())
     return false;
 
-  // Avoid emitting duplicate diagnostics for the same tag.
-  // This happens in C++20+ due to more aggressive semantic analysis.
-  if (IncompleteDiagSet.contains(tag))
-    return true;
-
   SourceLocation loc = SS.getLastQualifierNameLoc();
   if (loc.isInvalid()) loc = SS.getRange().getBegin();
+
+  // If the DeclContext is a tag declaration, form a unique key
+  // from the TagDecl and the source location where the scope starts.
+  // If this key has already been diagnosed, skip emitting the error again.
+  const TagDecl *Tag = dyn_cast_or_null<TagDecl>(DC);
+  if (Tag) {
+    auto Key = std::make_pair(Tag, SS.getBeginLoc());
+    if (!DiagnosedIncompleteTypeSet.insert(Key).second)
+      return true; // Already diagnosed
+  }
+
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
-    // mark as diagnosed
-    IncompleteDiagSet.insert(tag); 
-
     SS.SetInvalid(SS.getRange());
 
     return true;

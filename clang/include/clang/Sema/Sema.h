@@ -1555,11 +1555,11 @@ private:
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
 
-  /// Used to suppress duplicate diagnostics for incomplete types
-  /// in nested name specifiers (e.g. `incomplete::type`).
-  /// Without this, Clang may emit the same error multiple times
-  /// in C++20 or later, due to multiple semantic passes over the scope.
-  llvm::DenseSet<const TagDecl *> IncompleteDiagSet;
+  /// Tracks (TagDecl, SourceLocation) pairs that have already triggered
+  /// an "incomplete type in nested name specifier" diagnostic,
+  /// to prevent emitting duplicate errors in C++20 and later,
+  /// where the same scope may be processed multiple times.
+  llvm::DenseSet<std::pair<const clang::TagDecl *, clang::SourceLocation>> DiagnosedIncompleteTypeSet;
 
   /// The handler for the FileChanged preprocessor events.
   ///
