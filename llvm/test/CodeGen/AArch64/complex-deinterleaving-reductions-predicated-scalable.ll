@@ -18,8 +18,8 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    whilelo p1.d, xzr, x8
-; CHECK-NEXT:    mov x10, x9
-; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    mov x11, x9
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
@@ -33,16 +33,16 @@ define %"class.std::complex" @complex_mul_v2f64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x1, #1, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x0]
 ; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x1]
-; CHECK-NEXT:    add x1, x1, x11
-; CHECK-NEXT:    add x0, x0, x11
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x0, x0, x10
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #90
 ; CHECK-NEXT:    mov z0.d, p2/m, z7.d
 ; CHECK-NEXT:    mov z1.d, p1/m, z6.d
-; CHECK-NEXT:    whilelo p1.d, x10, x8
-; CHECK-NEXT:    add x10, x10, x9
+; CHECK-NEXT:    whilelo p1.d, x11, x8
+; CHECK-NEXT:    add x11, x11, x9
 ; CHECK-NEXT:    b.mi .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z2.d, z1.d, z0.d
@@ -217,10 +217,10 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    cntd x9
 ; CHECK-NEXT:    whilelo p1.d, xzr, x8
-; CHECK-NEXT:    mov x10, x9
-; CHECK-NEXT:    rdvl x11, #2
+; CHECK-NEXT:    rdvl x10, #2
+; CHECK-NEXT:    cnth x11
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    cnth x12
+; CHECK-NEXT:    mov x12, x9
 ; CHECK-NEXT:    zip2 z0.d, z1.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z1.d, z1.d
 ; CHECK-NEXT:  .LBB2_1: // %vector.body
@@ -228,7 +228,7 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    ld1w { z2.d }, p1/z, [x2]
 ; CHECK-NEXT:    mov z6.d, z1.d
 ; CHECK-NEXT:    mov z7.d, z0.d
-; CHECK-NEXT:    add x2, x2, x12
+; CHECK-NEXT:    add x2, x2, x11
 ; CHECK-NEXT:    and z2.d, z2.d, #0xffffffff
 ; CHECK-NEXT:    cmpne p1.d, p1/z, z2.d, #0
 ; CHECK-NEXT:    zip2 p2.d, p1.d, p1.d
@@ -237,16 +237,16 @@ define %"class.std::complex" @complex_mul_predicated_x2_v2f64(ptr %a, ptr %b, pt
 ; CHECK-NEXT:    ld1d { z4.d }, p2/z, [x1, #1, mul vl]
 ; CHECK-NEXT:    ld1d { z3.d }, p1/z, [x0]
 ; CHECK-NEXT:    ld1d { z5.d }, p1/z, [x1]
-; CHECK-NEXT:    add x1, x1, x11
-; CHECK-NEXT:    add x0, x0, x11
+; CHECK-NEXT:    add x1, x1, x10
+; CHECK-NEXT:    add x0, x0, x10
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #0
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #0
 ; CHECK-NEXT:    fcmla z7.d, p0/m, z4.d, z2.d, #90
 ; CHECK-NEXT:    fcmla z6.d, p0/m, z5.d, z3.d, #90
 ; CHECK-NEXT:    mov z0.d, p2/m, z7.d
 ; CHECK-NEXT:    mov z1.d, p1/m, z6.d
-; CHECK-NEXT:    whilelo p1.d, x10, x8
-; CHECK-NEXT:    add x10, x10, x9
+; CHECK-NEXT:    whilelo p1.d, x12, x8
+; CHECK-NEXT:    add x12, x12, x9
 ; CHECK-NEXT:    b.mi .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %exit.block
 ; CHECK-NEXT:    uzp1 z2.d, z1.d, z0.d

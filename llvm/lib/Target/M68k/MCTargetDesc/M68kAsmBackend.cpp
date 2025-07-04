@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -52,23 +53,9 @@ public:
                               .CasesLower("m68020", "m68030", "m68040", true)
                               .Default(false)) {}
 
-  void applyFixup(const MCFragment &, const MCFixup &Fixup, const MCValue &,
-                  MutableArrayRef<char> Data, uint64_t Value, bool) override {
-    unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
-
-    assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
-    // Check that uppper bits are either all zeros or all ones.
-    // Specifically ignore overflow/underflow as long as the leakage is
-    // limited to the lower bits. This is to remain compatible with
-    // other assemblers.
-    assert(isIntN(Size * 8 + 1, static_cast<int64_t>(Value)) &&
-           "Value does not fit in the Fixup field");
-
-    // Write in Big Endian
-    for (unsigned i = 0; i != Size; ++i)
-      Data[Fixup.getOffset() + i] =
-          uint8_t(static_cast<int64_t>(Value) >> ((Size - i - 1) * 8));
-  }
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
@@ -90,6 +77,28 @@ public:
                     const MCSubtargetInfo *STI) const override;
 };
 } // end anonymous namespace
+
+void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                                const MCValue &Target,
+                                MutableArrayRef<char> Data, uint64_t Value,
+                                bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
+  unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
+  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+  // Check that uppper bits are either all zeros or all ones.
+  // Specifically ignore overflow/underflow as long as the leakage is
+  // limited to the lower bits. This is to remain compatible with
+  // other assemblers.
+  assert(isIntN(Size * 8 + 1, static_cast<int64_t>(Value)) &&
+         "Value does not fit in the Fixup field");
+
+  // Write in Big Endian
+  for (unsigned i = 0; i != Size; ++i)
+    Data[Fixup.getOffset() + i] =
+        uint8_t(static_cast<int64_t>(Value) >> ((Size - i - 1) * 8));
+}
 
 /// cc—Carry clear      GE—Greater than or equal
 /// LS—Lower or same    PL—Plus

@@ -122,18 +122,9 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  bool shouldForceRelocation(const MCFixup &Fixup,
-                             const MCValue &Target) override {
-    switch ((VE::Fixups)Fixup.getKind()) {
-    default:
-      return false;
-    case VE::fixup_ve_tls_gd_hi32:
-    case VE::fixup_ve_tls_gd_lo32:
-    case VE::fixup_ve_tpoff_hi32:
-    case VE::fixup_ve_tpoff_lo32:
-      return true;
-    }
-  }
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
+                  MutableArrayRef<char>, uint64_t Value,
+                  bool IsResolved) override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override {
@@ -169,31 +160,6 @@ public:
   ELFVEAsmBackend(const Target &T, Triple::OSType OSType)
       : VEAsmBackend(T), OSType(OSType) {}
 
-  void applyFixup(const MCFragment &, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) override {
-    Value = adjustFixupValue(Fixup.getKind(), Value);
-    if (!Value)
-      return; // Doesn't change encoding.
-
-    MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
-
-    // Shift the value into position.
-    Value <<= Info.TargetOffset;
-
-    unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-    unsigned Offset = Fixup.getOffset();
-    assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
-    // For each byte of the fragment that the fixup touches, mask in the bits
-    // from the fixup value. The Value has been "split up" into the
-    // appropriate bitfields above.
-    for (unsigned i = 0; i != NumBytes; ++i) {
-      unsigned Idx =
-          Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
-      Data[Offset + Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
-    }
-  }
-
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
     uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(OSType);
@@ -201,6 +167,39 @@ public:
   }
 };
 } // end anonymous namespace
+
+void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                              const MCValue &Target, MutableArrayRef<char> Data,
+                              uint64_t Value, bool IsResolved) {
+  switch (Fixup.getTargetKind()) {
+  case VE::fixup_ve_tls_gd_hi32:
+  case VE::fixup_ve_tls_gd_lo32:
+  case VE::fixup_ve_tpoff_hi32:
+  case VE::fixup_ve_tpoff_lo32:
+    IsResolved = false;
+    break;
+  }
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
+  Value = adjustFixupValue(Fixup.getKind(), Value);
+  if (!Value)
+    return; // Doesn't change encoding.
+
+  MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
+
+  // Shift the value into position.
+  Value <<= Info.TargetOffset;
+
+  unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
+  unsigned Offset = Fixup.getOffset();
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  // For each byte of the fragment that the fixup touches, mask in the bits
+  // from the fixup value. The Value has been "split up" into the
+  // appropriate bitfields above.
+  for (unsigned i = 0; i != NumBytes; ++i) {
+    unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1) - i;
+    Data[Offset + Idx] |= static_cast<uint8_t>((Value >> (i * 8)) & 0xff);
+  }
+}
 
 MCAsmBackend *llvm::createVEAsmBackend(const Target &T,
                                        const MCSubtargetInfo &STI,
