@@ -12329,9 +12329,9 @@ SDValue RISCVTargetLowering::lowerVECTOR_SPLICE(SDValue Op,
 
   SDValue TrueMask = getAllOnesMask(VecVT, VLMax, DL, DAG);
 
-  SDValue SlideDown =
-      getVSlidedown(DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1,
-                    DownOffset, TrueMask, DAG.getRegister(RISCV::X0, XLenVT));
+  SDValue SlideDown = getVSlidedown(
+      DAG, Subtarget, DL, VecVT, DAG.getUNDEF(VecVT), V1, DownOffset, TrueMask,
+      Subtarget.minimizeVL() ? UpOffset : DAG.getRegister(RISCV::X0, XLenVT));
   return getVSlideup(DAG, Subtarget, DL, VecVT, SlideDown, V2, UpOffset,
                      TrueMask, DAG.getRegister(RISCV::X0, XLenVT),
                      RISCVVType::TAIL_AGNOSTIC);
@@ -13354,7 +13354,8 @@ RISCVTargetLowering::lowerVPSpliceExperimental(SDValue Op,
 
   if (ImmValue != 0)
     Op1 = getVSlidedown(DAG, Subtarget, DL, ContainerVT,
-                        DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask, EVL2);
+                        DAG.getUNDEF(ContainerVT), Op1, DownOffset, Mask,
+                        Subtarget.minimizeVL() ? UpOffset : EVL2);
   SDValue Result = getVSlideup(DAG, Subtarget, DL, ContainerVT, Op1, Op2,
                                UpOffset, Mask, EVL2, RISCVVType::TAIL_AGNOSTIC);
 
