@@ -157,7 +157,7 @@ GetSwiftDemangledStr(ConstString m_mangled, const SymbolContext *sc,
   Log *log = GetLog(LLDBLog::Demangle);
   LLDB_LOGF(log, "demangle swift: %s", mangled_name);
   auto [demangled, info] = SwiftLanguageRuntime::TrackedDemangleSymbolAsString(
-      mangled_name, SwiftLanguageRuntime::eSimplified, sc);
+      mangled_name, SwiftLanguageRuntime::eTypeName, sc);
   info.PrefixRange.second =
       std::min(info.BasenameRange.first, info.ArgumentsRange.first);
   info.SuffixRange.first =

@@ -39,7 +39,8 @@ private:
   }
 
   void startParameters(unsigned depth) {
-    if (parametersDepth || !info.hasBasename() || info.hasArguments()) {
+    if (parametersDepth || !info.hasBasename() ||
+        info.ArgumentsRange.first < info.ArgumentsRange.second) {
       return;
     }
     info.ArgumentsRange.first = getStreamLength();
@@ -47,7 +48,8 @@ private:
   }
 
   void endParameters(unsigned depth) {
-    if (!parametersDepth || *parametersDepth != depth || info.hasArguments()) {
+    if (!parametersDepth || *parametersDepth != depth ||
+        info.ArgumentsRange.first < info.ArgumentsRange.second) {
       return;
     }
     info.ArgumentsRange.second = getStreamLength();
