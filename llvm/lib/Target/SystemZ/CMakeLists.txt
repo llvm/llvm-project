@@ -42,20 +42,9 @@ add_llvm_target(SystemZCodeGen
   SystemZTDC.cpp
 
   LINK_COMPONENTS
-  Analysis
-  AsmPrinter
-  CodeGen
-  CodeGenTypes
-  Core
-  MC
-  Scalar
-  SelectionDAG
-  Support
   SystemZDesc
   SystemZInfo
-  Target
-  TargetParser
-  TransformUtils
+  ${TARGET_LIBRARIES}
 
   ADD_TO_COMPONENT
   SystemZ
