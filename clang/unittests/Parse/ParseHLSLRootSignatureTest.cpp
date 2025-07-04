@@ -697,7 +697,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_0, Elements,
                                    Signature, *PP);
 
@@ -707,17 +707,17 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   ASSERT_FALSE(Parser.parse());
 
   auto DefRootDescriptorFlag = llvm::dxbc::RootDescriptorFlags::DataVolatile;
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
 
-  Elem = Elements[2];
+  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags, DefRootDescriptorFlag);
@@ -725,22 +725,22 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion10Test) {
   auto ValidNonSamplerFlags =
       llvm::dxbc::DescriptorRangeFlags::DescriptorsVolatile |
       llvm::dxbc::DescriptorRangeFlags::DataVolatile;
-  Elem = Elements[3];
+  Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
-  Elem = Elements[4];
+  Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
-  Elem = Elements[5];
+  Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags, ValidNonSamplerFlags);
 
-  Elem = Elements[6];
+  Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
@@ -770,7 +770,7 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
 
-  SmallVector<RootElement> Elements;
+  SmallVector<RootSignatureElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements,
                                    Signature, *PP);
 
@@ -779,43 +779,43 @@ TEST_F(ParseHLSLRootSignatureTest, ValidVersion11Test) {
 
   ASSERT_FALSE(Parser.parse());
 
-  RootElement Elem = Elements[0];
+  RootElement Elem = Elements[0].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::CBuffer);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
-  Elem = Elements[1];
+  Elem = Elements[1].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::SRV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataStaticWhileSetAtExecute);
 
-  Elem = Elements[2];
+  Elem = Elements[2].getElement();
   ASSERT_TRUE(std::holds_alternative<RootDescriptor>(Elem));
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Type, DescriptorType::UAV);
   ASSERT_EQ(std::get<RootDescriptor>(Elem).Flags,
             llvm::dxbc::RootDescriptorFlags::DataVolatile);
 
-  Elem = Elements[3];
+  Elem = Elements[3].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::CBuffer);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
-  Elem = Elements[4];
+  Elem = Elements[4].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::SRV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataStaticWhileSetAtExecute);
 
-  Elem = Elements[5];
+  Elem = Elements[5].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::UAV);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
             llvm::dxbc::DescriptorRangeFlags::DataVolatile);
 
-  Elem = Elements[6];
+  Elem = Elements[6].getElement();
   ASSERT_TRUE(std::holds_alternative<DescriptorTableClause>(Elem));
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Type, ClauseType::Sampler);
   ASSERT_EQ(std::get<DescriptorTableClause>(Elem).Flags,
