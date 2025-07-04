@@ -396,7 +396,7 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(MCLEBFragment &LF,
     return std::make_pair(false, false);
   const MCExpr &Expr = LF.getValue();
   if (ULEB128Reloc) {
-    LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+    LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
   }
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, *Asm), false);
 }
@@ -885,7 +885,7 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN, SMLoc());
+  MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN);
 
   uint64_t FixedValue = 0;
   MCValue NopBytes = MCValue::get(Count);
