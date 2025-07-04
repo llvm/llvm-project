@@ -222,11 +222,11 @@ public:
   const Stmt *getStmt() const;
 
   const LocationContext *getRootLocationContext() const {
-    assert(G.roots_begin() != G.roots_end());
-    return (*G.roots_begin())->getLocation().getLocationContext();
+    assert(G.getRoot());
+    return G.getRoot()->getLocation().getLocationContext();
   }
 
-  CFGBlock::ConstCFGElementRef getCFGElementRef() const {
+  ConstCFGElementRef getCFGElementRef() const {
     const CFGBlock *blockPtr = currBldrCtx ? currBldrCtx->getBlock() : nullptr;
     return {blockPtr, currStmtIdx};
   }
@@ -320,6 +320,10 @@ public:
   void processCFGBlockEntrance(const BlockEdge &L,
                                NodeBuilderWithSinks &nodeBuilder,
                                ExplodedNode *Pred);
+
+  void runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
+                                   const BlockEntrance &Entrance,
+                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// ProcessBranch - Called by CoreEngine. Used to generate successor nodes by
   /// processing the 'effects' of a branch condition. If the branch condition

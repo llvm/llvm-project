@@ -394,6 +394,19 @@ private:
   MaybeExpr AnalyzeComplex(MaybeExpr &&re, MaybeExpr &&im, const char *what);
   std::optional<Chevrons> AnalyzeChevrons(const parser::CallStmt &);
 
+  // CheckStructureConstructor() is used for parsed structure constructors
+  // as well as for generic function references.
+  struct ComponentSpec {
+    ComponentSpec() = default;
+    ComponentSpec(ComponentSpec &&) = default;
+    parser::CharBlock source, exprSource;
+    bool hasKeyword{false};
+    const Symbol *keywordSymbol{nullptr};
+    MaybeExpr expr;
+  };
+  MaybeExpr CheckStructureConstructor(parser::CharBlock typeName,
+      const semantics::DerivedTypeSpec &, std::list<ComponentSpec> &&);
+
   MaybeExpr IterativelyAnalyzeSubexpressions(const parser::Expr &);
 
   semantics::SemanticsContext &context_;

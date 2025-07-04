@@ -367,7 +367,7 @@ func.func @subgroup_reduce_cluster_stride_without_size(%arg0 : vector<4xf32>) {
 // -----
 
 func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
-  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or vector of}}
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or fixed-length vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<2x2xf32>) -> vector<2x2xf32>
   return
 }
@@ -375,7 +375,7 @@ func.func @subgroup_reduce_bad_type(%arg0 : vector<2x2xf32>) {
 // -----
 
 func.func @subgroup_reduce_bad_type_scalable(%arg0 : vector<[2]xf32>) {
-  // expected-error@+1 {{is not compatible with scalable vector types}}
+  // expected-error@+1 {{'gpu.subgroup_reduce' op operand #0 must be Integer or Float or fixed-length vector of}}
   %res = gpu.subgroup_reduce add %arg0 : (vector<[2]xf32>) -> vector<[2]xf32>
   return
 }
@@ -463,8 +463,94 @@ func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
 // -----
 
 func.func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{op operand #0 must be Integer or Float or vector of Integer or Float values of ranks 1, but got 'index'}}
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'index'}}
   %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
+  return
+}
+
+// -----
+
+func.func @shuffle_unsupported_type_vec(%arg0 : vector<[4]xf32>, %arg1 : i32, %arg2 : i32) {
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'vector<[4]xf32>'}}
+  %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : vector<[4]xf32>
+  return
+}
+
+// -----
+
+func.func @rotate_mismatching_type(%arg0 : f32) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op failed to verify that all of {value, rotateResult} have same type}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (i32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_type(%arg0 : index) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'index'}}
+  %rotate, %valid = gpu.rotate %arg0, %offset, %width : index
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_type_vec(%arg0 : vector<[4]xf32>) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'vector<[4]xf32>'}}
+  %rotate, %valid = gpu.rotate %arg0, %offset, %width : vector<[4]xf32>
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_width(%arg0 : f32) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 15 : i32
+  // expected-error@+1 {{op width must be a power of two}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_offset(%arg0 : f32) {
+  %offset = arith.constant 16 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_offset_minus(%arg0 : f32) {
+  %offset = arith.constant -1 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_offset_non_constant(%arg0 : f32, %offset : i32) {
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op offset is not a constant value}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_width_non_constant(%arg0 : f32, %width : i32) {
+  %offset = arith.constant 0 : i32
+  // expected-error@+1 {{op width is not a constant value}}
+  %rotate, %valid = "gpu.rotate"(%arg0, %offset, %width) : (f32, i32, i32) -> (f32, i1)
   return
 }
 

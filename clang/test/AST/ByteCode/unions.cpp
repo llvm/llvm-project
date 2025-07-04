@@ -76,9 +76,10 @@ namespace DefaultInit {
 
   constexpr U1 u1; /// OK.
 
-  constexpr int foo() {
+  constexpr int foo() { // expected-error {{never produces a constant expression}}
     U1 u;
-    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}} \
+                // expected-note {{read of member 'a' of union with active member 'b'}}
   }
   static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
@@ -598,6 +599,18 @@ namespace MoveOrAssignOp {
     return true;
   }
   static_assert(foo());
+}
+
+namespace CopyEmptyUnion {
+  struct A {
+    union {}; // both-warning {{declaration does not declare anything}}
+  };
+  constexpr int foo() {
+     A a;
+     A a2 = a;
+     return 1;
+  }
+  static_assert(foo() == 1);
 }
 #endif
 

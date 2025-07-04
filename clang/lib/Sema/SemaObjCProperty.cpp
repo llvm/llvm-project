@@ -310,7 +310,7 @@ static bool LocPropertyAttribute( ASTContext &Context, const char *attrName,
     return false;
 
   SourceManager &SM = Context.getSourceManager();
-  std::pair<FileID, unsigned> locInfo = SM.getDecomposedLoc(LParenLoc);
+  FileIDAndOffset locInfo = SM.getDecomposedLoc(LParenLoc);
   // Try to load the file buffer.
   bool invalidTemp = false;
   StringRef file = SM.getBufferData(locInfo.first, &invalidTemp);
@@ -1349,9 +1349,9 @@ Decl *SemaObjC::ActOnPropertyImplDecl(
             PropertyIvarType->castAs<ObjCObjectPointerType>(),
             IvarType->castAs<ObjCObjectPointerType>());
       else {
-        compat = (SemaRef.CheckAssignmentConstraints(
-                      PropertyIvarLoc, PropertyIvarType, IvarType) ==
-                  Sema::Compatible);
+        compat = SemaRef.IsAssignConvertCompatible(
+            SemaRef.CheckAssignmentConstraints(PropertyIvarLoc,
+                                               PropertyIvarType, IvarType));
       }
       if (!compat) {
         Diag(PropertyDiagLoc, diag::err_property_ivar_type)
@@ -1702,8 +1702,9 @@ bool SemaObjC::DiagnosePropertyAccessorMismatch(ObjCPropertyDecl *property,
              PropertyRValueType->getAs<ObjCObjectPointerType>()) &&
         (getterObjCPtr = GetterType->getAs<ObjCObjectPointerType>()))
       compat = Context.canAssignObjCInterfaces(getterObjCPtr, propertyObjCPtr);
-    else if (SemaRef.CheckAssignmentConstraints(
-                 Loc, GetterType, PropertyRValueType) != Sema::Compatible) {
+    else if (!SemaRef.IsAssignConvertCompatible(
+                 SemaRef.CheckAssignmentConstraints(Loc, GetterType,
+                                                    PropertyRValueType))) {
       Diag(Loc, diag::err_property_accessor_type)
           << property->getDeclName() << PropertyRValueType
           << GetterMethod->getSelector() << GetterType;

@@ -276,12 +276,15 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
               // Lookup UUID locally, before attempting dsymForUUID like action
               FileSpecList search_paths =
                   Target::GetDefaultDebugFileSearchPaths();
+
+              StatisticsMap symbol_locator_map;
               module_spec.GetSymbolFileSpec() =
-                  PluginManager::LocateExecutableSymbolFile(module_spec,
-                                                            search_paths);
+                  PluginManager::LocateExecutableSymbolFile(
+                      module_spec, search_paths, symbol_locator_map);
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
-                    PluginManager::LocateExecutableObjectFile(module_spec);
+                    PluginManager::LocateExecutableObjectFile(
+                        module_spec, symbol_locator_map);
                 if (FileSystem::Instance().Exists(
                         executable_module_spec.GetFileSpec())) {
                   module_spec.GetFileSpec() =
@@ -297,6 +300,8 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
 
               if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
                 ModuleSP module_sp(new Module(module_spec));
+                module_sp->GetSymbolLocatorStatistics().merge(
+                    symbol_locator_map);
                 if (module_sp.get() && module_sp->GetObjectFile()) {
                   // Get the current target executable
                   ModuleSP exe_module_sp(target.GetExecutableModule());
@@ -398,8 +403,7 @@ Status ProcessKDP::DoResume(RunDirection direction) {
 
   if (direction == RunDirection::eRunReverse)
     return Status::FromErrorStringWithFormatv(
-        "error: {0} does not support reverse execution of processes",
-        GetPluginName());
+        "{0} does not support reverse execution of processes", GetPluginName());
 
   // Only start the async thread if we try to do any process control
   if (!m_async_thread.IsJoinable())

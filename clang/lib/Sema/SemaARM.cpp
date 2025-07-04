@@ -389,7 +389,7 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     if (SemaRef.BuiltinConstantArg(TheCall, ArgIdx, Imm))
       return true;
 
-    if (std::find(Set.begin(), Set.end(), Imm.getSExtValue()) == Set.end())
+    if (!llvm::is_contained(Set, Imm.getSExtValue()))
       return Diag(TheCall->getBeginLoc(), ErrDiag) << Arg->getSourceRange();
     return false;
   };
@@ -766,7 +766,7 @@ bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
     if (HasConstPtr)
       EltTy = EltTy.withConst();
     QualType LHSTy = getASTContext().getPointerType(EltTy);
-    Sema::AssignConvertType ConvTy;
+    AssignConvertType ConvTy;
     ConvTy = SemaRef.CheckSingleAssignmentConstraints(LHSTy, RHS);
     if (RHS.isInvalid())
       return true;
@@ -1010,8 +1010,11 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
   case ARM::BI__builtin_arm_vcvtr_d:
     return SemaRef.BuiltinConstantArgRange(TheCall, 1, 0, 1);
   case ARM::BI__builtin_arm_dmb:
+  case ARM::BI__dmb:
   case ARM::BI__builtin_arm_dsb:
+  case ARM::BI__dsb:
   case ARM::BI__builtin_arm_isb:
+  case ARM::BI__isb:
   case ARM::BI__builtin_arm_dbg:
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
   case ARM::BI__builtin_arm_cdp:
@@ -1081,7 +1084,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   // converted to a register of the form S1_2_C3_C4_5. Let the hardware throw
   // an exception for incorrect registers. This matches MSVC behavior.
   if (BuiltinID == AArch64::BI_ReadStatusReg ||
-      BuiltinID == AArch64::BI_WriteStatusReg)
+      BuiltinID == AArch64::BI_WriteStatusReg || BuiltinID == AArch64::BI__sys)
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 0x7fff);
 
   if (BuiltinID == AArch64::BI__getReg)
@@ -1108,8 +1111,11 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default: return false;
   case AArch64::BI__builtin_arm_dmb:
+  case AArch64::BI__dmb:
   case AArch64::BI__builtin_arm_dsb:
+  case AArch64::BI__dsb:
   case AArch64::BI__builtin_arm_isb:
+  case AArch64::BI__isb:
     l = 0;
     u = 15;
     break;
@@ -1310,12 +1316,36 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  const TargetInfo &TI = getASTContext().getTargetInfo();
-  if (TI.hasFeature("vfp"))
-    Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  if (!D->hasAttr<ARMSaveFPAttr>()) {
+    const TargetInfo &TI = getASTContext().getTargetInfo();
+    if (TI.hasFeature("vfp"))
+      Diag(D->getLocation(), diag::warn_arm_interrupt_vfp_clobber);
+  }
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
+}
+
+void SemaARM::handleInterruptSaveFPAttr(Decl *D, const ParsedAttr &AL) {
+  // Go ahead and add ARMSaveFPAttr because handleInterruptAttr() checks for
+  // it when deciding to issue a diagnostic about clobbering floating point
+  // registers, which ARMSaveFPAttr prevents.
+  D->addAttr(::new (SemaRef.Context) ARMSaveFPAttr(SemaRef.Context, AL));
+  SemaRef.ARM().handleInterruptAttr(D, AL);
+
+  // If ARM().handleInterruptAttr() failed, remove ARMSaveFPAttr.
+  if (!D->hasAttr<ARMInterruptAttr>()) {
+    D->dropAttr<ARMSaveFPAttr>();
+    return;
+  }
+
+  // If VFP not enabled, remove ARMSaveFPAttr but leave ARMInterruptAttr.
+  bool VFP = SemaRef.Context.getTargetInfo().hasFeature("vfp");
+
+  if (!VFP) {
+    SemaRef.Diag(D->getLocation(), diag::warn_arm_interrupt_save_fp_without_vfp_unit);
+    D->dropAttr<ARMSaveFPAttr>();
+  }
 }
 
 // Check if the function definition uses any AArch64 SME features without
@@ -1377,6 +1407,127 @@ void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
            diag::err_sme_definition_using_zt0_in_non_sme2_target);
     }
   }
+}
+
+/// getSVETypeSize - Return SVE vector or predicate register size.
+static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty,
+                               bool IsStreaming) {
+  assert(Ty->isSveVLSBuiltinType() && "Invalid SVE Type");
+  uint64_t VScale = IsStreaming ? Context.getLangOpts().VScaleStreamingMin
+                                : Context.getLangOpts().VScaleMin;
+  if (Ty->getKind() == BuiltinType::SveBool ||
+      Ty->getKind() == BuiltinType::SveCount)
+    return (VScale * 128) / Context.getCharWidth();
+  return VScale * 128;
+}
+
+bool SemaARM::areCompatibleSveTypes(QualType FirstType, QualType SecondType) {
+  bool IsStreaming = false;
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
+    if (const FunctionDecl *FD =
+            SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+      // For streaming-compatible functions, we don't know vector length.
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>()) {
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          return false;
+      }
+
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+        IsStreaming = true;
+    }
+  }
+
+  auto IsValidCast = [&](QualType FirstType, QualType SecondType) {
+    if (const auto *BT = FirstType->getAs<BuiltinType>()) {
+      if (const auto *VT = SecondType->getAs<VectorType>()) {
+        // Predicates have the same representation as uint8 so we also have to
+        // check the kind to make these types incompatible.
+        ASTContext &Context = getASTContext();
+        if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
+          return BT->getKind() == BuiltinType::SveBool;
+        else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
+          return VT->getElementType().getCanonicalType() ==
+                 FirstType->getSveEltType(Context);
+        else if (VT->getVectorKind() == VectorKind::Generic)
+          return Context.getTypeSize(SecondType) ==
+                     getSVETypeSize(Context, BT, IsStreaming) &&
+                 Context.hasSameType(
+                     VT->getElementType(),
+                     Context.getBuiltinVectorTypeInfo(BT).ElementType);
+      }
+    }
+    return false;
+  };
+
+  return IsValidCast(FirstType, SecondType) ||
+         IsValidCast(SecondType, FirstType);
+}
+
+bool SemaARM::areLaxCompatibleSveTypes(QualType FirstType,
+                                       QualType SecondType) {
+  bool IsStreaming = false;
+  if (getLangOpts().VScaleMin != getLangOpts().VScaleStreamingMin ||
+      getLangOpts().VScaleMax != getLangOpts().VScaleStreamingMax) {
+    if (const FunctionDecl *FD =
+            SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+      // For streaming-compatible functions, we don't know vector length.
+      if (const auto *T = FD->getType()->getAs<FunctionProtoType>())
+        if (T->getAArch64SMEAttributes() &
+            FunctionType::SME_PStateSMCompatibleMask)
+          return false;
+
+      if (IsArmStreamingFunction(FD, /*IncludeLocallyStreaming=*/true))
+        IsStreaming = true;
+    }
+  }
+
+  auto IsLaxCompatible = [&](QualType FirstType, QualType SecondType) {
+    const auto *BT = FirstType->getAs<BuiltinType>();
+    if (!BT)
+      return false;
+
+    const auto *VecTy = SecondType->getAs<VectorType>();
+    if (VecTy && (VecTy->getVectorKind() == VectorKind::SveFixedLengthData ||
+                  VecTy->getVectorKind() == VectorKind::Generic)) {
+      const LangOptions::LaxVectorConversionKind LVCKind =
+          getLangOpts().getLaxVectorConversions();
+      ASTContext &Context = getASTContext();
+
+      // Can not convert between sve predicates and sve vectors because of
+      // different size.
+      if (BT->getKind() == BuiltinType::SveBool &&
+          VecTy->getVectorKind() == VectorKind::SveFixedLengthData)
+        return false;
+
+      // If __ARM_FEATURE_SVE_BITS != N do not allow GNU vector lax conversion.
+      // "Whenever __ARM_FEATURE_SVE_BITS==N, GNUT implicitly
+      // converts to VLAT and VLAT implicitly converts to GNUT."
+      // ACLE Spec Version 00bet6, 3.7.3.2. Behavior common to vectors and
+      // predicates.
+      if (VecTy->getVectorKind() == VectorKind::Generic &&
+          Context.getTypeSize(SecondType) !=
+              getSVETypeSize(Context, BT, IsStreaming))
+        return false;
+
+      // If -flax-vector-conversions=all is specified, the types are
+      // certainly compatible.
+      if (LVCKind == LangOptions::LaxVectorConversionKind::All)
+        return true;
+
+      // If -flax-vector-conversions=integer is specified, the types are
+      // compatible if the elements are integer types.
+      if (LVCKind == LangOptions::LaxVectorConversionKind::Integer)
+        return VecTy->getElementType().getCanonicalType()->isIntegerType() &&
+               FirstType->getSveEltType(Context)->isIntegerType();
+    }
+
+    return false;
+  };
+
+  return IsLaxCompatible(FirstType, SecondType) ||
+         IsLaxCompatible(SecondType, FirstType);
 }
 
 } // namespace clang

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -enable-vplan-native-path -vplan-build-stress-test -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -enable-vplan-native-path -vplan-build-stress-test -debug-only=vplan -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 ; Verify that the stress testing flag for the VPlan H-CFG builder works as

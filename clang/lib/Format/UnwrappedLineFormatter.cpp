@@ -314,8 +314,8 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if ((*J)->InPPDirective || (*J)->isComment() ||
-                (*J)->Level > TheLine->Level) {
+            if (((*J)->InPPDirective && !(*J)->InMacroBody) ||
+                (*J)->isComment() || (*J)->Level > TheLine->Level) {
               continue;
             }
             if ((*J)->Level < TheLine->Level ||
@@ -907,7 +907,8 @@ private:
         // { <-- current Line
         //   baz();
         // }
-        if (Line.First == Line.Last && Line.First->isNot(TT_FunctionLBrace) &&
+        if (Line.First == Line.Last &&
+            Line.First->is(TT_ControlStatementLBrace) &&
             Style.BraceWrapping.AfterControlStatement ==
                 FormatStyle::BWACS_MultiLine) {
           return 0;

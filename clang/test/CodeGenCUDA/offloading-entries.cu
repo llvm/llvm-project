@@ -29,7 +29,7 @@
 // CUDA: @.offloading.entry_name.4 = internal unnamed_addr constant [5 x i8] c"surf\00", section ".llvm.rodata.offloading"
 // CUDA: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 2, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
 // CUDA: @.offloading.entry_name.5 = internal unnamed_addr constant [4 x i8] c"tex\00", section ".llvm.rodata.offloading"
-// CUDA: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 2, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
+// CUDA: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 2, i32 35, ptr @tex, ptr @.offloading.entry_name.5, i64 1, i64 1, ptr null }, section "llvm_offload_entries"
 //.
 // HIP: @managed.managed = global i32 0, align 4
 // HIP: @managed = externally_initialized global ptr null
@@ -44,7 +44,7 @@
 // HIP: @.offloading.entry_name.4 = internal unnamed_addr constant [5 x i8] c"surf\00", section ".llvm.rodata.offloading"
 // HIP: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
 // HIP: @.offloading.entry_name.5 = internal unnamed_addr constant [4 x i8] c"tex\00", section ".llvm.rodata.offloading"
-// HIP: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries"
+// HIP: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 35, ptr @tex, ptr @.offloading.entry_name.5, i64 1, i64 1, ptr null }, section "llvm_offload_entries"
 //.
 // CUDA-COFF: @managed = dso_local global i32 undef, align 4
 // CUDA-COFF: @.offloading.entry_name = internal unnamed_addr constant [8 x i8] c"_Z3foov\00", section ".llvm.rodata.offloading"
@@ -58,7 +58,7 @@
 // CUDA-COFF: @.offloading.entry_name.4 = internal unnamed_addr constant [5 x i8] c"surf\00", section ".llvm.rodata.offloading"
 // CUDA-COFF: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 2, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
 // CUDA-COFF: @.offloading.entry_name.5 = internal unnamed_addr constant [4 x i8] c"tex\00", section ".llvm.rodata.offloading"
-// CUDA-COFF: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 2, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
+// CUDA-COFF: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 2, i32 35, ptr @tex, ptr @.offloading.entry_name.5, i64 1, i64 1, ptr null }, section "llvm_offload_entries$OE"
 //.
 // HIP-COFF: @managed.managed = dso_local global i32 0, align 4
 // HIP-COFF: @managed = dso_local externally_initialized global ptr null
@@ -73,7 +73,7 @@
 // HIP-COFF: @.offloading.entry_name.4 = internal unnamed_addr constant [5 x i8] c"surf\00", section ".llvm.rodata.offloading"
 // HIP-COFF: @.offloading.entry.surf = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 2, ptr @surf, ptr @.offloading.entry_name.4, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
 // HIP-COFF: @.offloading.entry_name.5 = internal unnamed_addr constant [4 x i8] c"tex\00", section ".llvm.rodata.offloading"
-// HIP-COFF: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 3, ptr @tex, ptr @.offloading.entry_name.5, i64 4, i64 1, ptr null }, section "llvm_offload_entries$OE"
+// HIP-COFF: @.offloading.entry.tex = weak constant %struct.__tgt_offload_entry { i64 0, i16 1, i16 4, i32 35, ptr @tex, ptr @.offloading.entry_name.5, i64 1, i64 1, ptr null }, section "llvm_offload_entries$OE"
 //.
 // CUDA-LABEL: @_Z18__device_stub__foov(
 // CUDA-NEXT:  entry:
@@ -139,18 +139,6 @@ __device__ __managed__ int managed = 0;
 //
 __global__ void kernel() { external = 1; }
 
-struct surfaceReference { int desc; };
-
-template <typename T, int dim = 1>
-struct __attribute__((device_builtin_surface_type)) surface : public surfaceReference {};
-
 surface<void> surf;
 
-struct textureReference {
-  int desc;
-};
-
-template <typename T, int dim = 1, int mode = 0>
-struct __attribute__((device_builtin_texture_type)) texture : public textureReference {};
-
-texture<void> tex;
+texture<void, cudaTextureType2D> tex;

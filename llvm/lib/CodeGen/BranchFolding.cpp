@@ -42,6 +42,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
@@ -106,8 +107,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoPHIs);
+    return MachineFunctionProperties().setNoPHIs();
   }
 };
 
@@ -863,7 +863,7 @@ void BranchFolder::mergeCommonTails(unsigned commonTailIndex) {
             "Reached BB end within common tail");
       }
       assert(MI.isIdenticalTo(*Pos) && "Expected matching MIIs!");
-      DL = DILocation::getMergedLocation(DL, Pos->getDebugLoc());
+      DL = DebugLoc::getMergedLocation(DL, Pos->getDebugLoc());
       NextCommonInsts[i] = ++Pos;
     }
     MI.setDebugLoc(DL);
@@ -934,7 +934,13 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
 
   // Sort by hash value so that blocks with identical end sequences sort
   // together.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+  // If origin-tracking is enabled then MergePotentialElt is no longer a POD
+  // type, so we need std::sort instead.
+  std::sort(MergePotentials.begin(), MergePotentials.end());
+#else
   array_pod_sort(MergePotentials.begin(), MergePotentials.end());
+#endif
 
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
@@ -2071,7 +2077,40 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   if (!HasDups)
     return false;
 
-  MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  // Hoist the instructions from [T.begin, TIB) and then delete [F.begin, FIB).
+  // If we're hoisting from a single block then just splice. Else step through
+  // and merge the debug locations.
+  if (TBB == FBB) {
+    MBB->splice(Loc, TBB, TBB->begin(), TIB);
+  } else {
+    // TIB and FIB point to the end of the regions to hoist/merge in TBB and
+    // FBB.
+    MachineBasicBlock::iterator FE = FIB;
+    MachineBasicBlock::iterator FI = FBB->begin();
+    for (MachineBasicBlock::iterator TI :
+         make_early_inc_range(make_range(TBB->begin(), TIB))) {
+      // Move debug instructions and pseudo probes without modifying them.
+      // FIXME: This is the wrong thing to do for debug locations, which
+      // should at least be killed (and hoisted from BOTH blocks).
+      if (TI->isDebugOrPseudoInstr()) {
+        TI->moveBefore(&*Loc);
+        continue;
+      }
+
+      // Get the next non-meta instruction in FBB.
+      FI = skipDebugInstructionsForward(FI, FE, false);
+      // NOTE: The loop above checks CheckKillDead but we can't do that here as
+      // it modifies some kill markers after the check.
+      assert(TI->isIdenticalTo(*FI, MachineInstr::CheckDefs) &&
+             "Expected non-debug lockstep");
+
+      // Merge debug locs on hoisted instructions.
+      TI->setDebugLoc(
+          DILocation::getMergedLocation(TI->getDebugLoc(), FI->getDebugLoc()));
+      TI->moveBefore(&*Loc);
+      ++FI;
+    }
+  }
   FBB->erase(FBB->begin(), FIB);
 
   if (UpdateLiveIns)

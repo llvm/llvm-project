@@ -480,6 +480,39 @@ func.func @omp_simd_pretty_simdlen_safelen(%lb : index, %ub : index, %step : ind
 
 // -----
 
+func.func @omp_simd_bad_privatizer(%lb : index, %ub : index, %step : index) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  // expected-error @below {{Cannot find privatizer '@not_defined'}}
+  omp.simd private(@not_defined %1 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+omp.private {type = firstprivate} @_QFEp_firstprivate_i32 : i32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+func.func @omp_simd_firstprivate(%lb : index, %ub : index, %step : index) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  // expected-error @below {{FIRSTPRIVATE cannot be used with SIMD}}
+  omp.simd private(@_QFEp_firstprivate_i32 %1 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
 // expected-error @below {{op expects alloc region to yield a value of the reduction type}}
 omp.declare_reduction @add_f32 : f32
 alloc {
@@ -1754,6 +1787,18 @@ func.func @omp_cancel2() {
 
 // -----
 
+func.func @omp_cancel_taskloop() {
+  omp.sections {
+    // expected-error @below {{cancel taskgroup must appear inside a task region}}
+    omp.cancel cancellation_construct_type(taskgroup)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_cancel3(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
   omp.wsloop nowait {
     omp.loop_nest (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
@@ -1833,6 +1878,18 @@ func.func @omp_cancellationpoint2() {
   omp.sections {
     // expected-error @below {{cancellation point loop must appear inside a worksharing-loop region}}
     omp.cancellation_point cancellation_construct_type(loop)
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_cancellationpoint_taskgroup() {
+  omp.sections {
+    // expected-error @below {{cancellation point taskgroup must appear inside a task region}}
+    omp.cancellation_point cancellation_construct_type(taskgroup)
     // CHECK: omp.terminator
     omp.terminator
   }

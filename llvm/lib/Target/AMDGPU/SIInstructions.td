@@ -303,16 +303,29 @@ def : GCNPat <(vt (int_amdgcn_set_inactive vt:$src, vt:$inactive)),
 def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
-let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
-  def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umin i32:$src, i32:$strategy))]> {
+// clang-format off
+defvar int_amdgcn_wave_reduce_ = "int_amdgcn_wave_reduce_";
+multiclass
+    AMDGPUWaveReducePseudoGenerator<string Op, string DataType> {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+    def !toupper(Op) #"_PSEUDO_" #DataType
+        : VPseudoInstSI<(outs SGPR_32 : $sdst),
+                        (ins VSrc_b32 : $src, VSrc_b32 : $strategy),
+                        [(set i32 : $sdst, (!cast<AMDGPUWaveReduce>(int_amdgcn_wave_reduce_ #Op) i32 : $src, i32 : $strategy))]> {}
   }
+}
+// clang-format on
 
-  def WAVE_REDUCE_UMAX_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umax i32:$src, i32:$strategy))]> {
-  }
+// Input list : [Operation_name,
+//              type - Signed(I)/Unsigned(U)/Float(F)/Bitwise(B)]
+defvar Operations = [
+  ["umin", "U32"], ["min", "I32"], ["umax", "U32"], ["max", "I32"],
+  ["add", "I32"], ["sub", "I32"], ["and", "B32"], ["or", "B32"],
+  ["xor", "B32"]
+];
+
+foreach Op = Operations in {
+  defm WAVE_REDUCE_ : AMDGPUWaveReducePseudoGenerator<Op[0], Op[1]>;
 }
 
 let usesCustomInserter = 1, Defs = [VCC] in {
@@ -1025,13 +1038,16 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
-multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
+multiclass SI_SPILL_VGPR <RegisterClass vgpr_class,
+                          bit UsesTmp = 0, bit HasMask = 0> {
   let UseNamedOperandTable = 1, Spill = 1, VALU = 1,
        SchedRW = [WriteVMEM] in {
     def _SAVE : VPseudoInstSI <
       (outs),
-      (ins vgpr_class:$vdata, i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
+      !con(
+        (ins vgpr_class:$vdata, i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 1;
       let mayLoad = 0;
       // (2 * 4) + (8 * num_subregs) bytes maximum
@@ -1042,8 +1058,10 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class, bit UsesTmp = 0> {
 
     def _RESTORE : VPseudoInstSI <
       (outs vgpr_class:$vdata),
-      (ins i32imm:$vaddr,
-           SReg_32:$soffset, i32imm:$offset)> {
+      !con(
+        (ins i32imm:$vaddr,
+             SReg_32:$soffset, i32imm:$offset),
+        !if(HasMask, (ins SReg_32:$mask), (ins)))> {
       let mayStore = 0;
       let mayLoad = 1;
 
@@ -1070,6 +1088,12 @@ defm SI_SPILL_V352 : SI_SPILL_VGPR <VReg_352>;
 defm SI_SPILL_V384 : SI_SPILL_VGPR <VReg_384>;
 defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 defm SI_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024>;
+
+let Defs = [M0] in {
+  // Spills a block of 32 VGPRs. M0 will contain a mask describing which
+  // registers in the block need to be transferred.
+  defm SI_BLOCK_SPILL_V1024 : SI_SPILL_VGPR <VReg_1024, 0, 1>;
+}
 
 defm SI_SPILL_A32  : SI_SPILL_VGPR <AGPR_32, 1>;
 defm SI_SPILL_A64  : SI_SPILL_VGPR <AReg_64, 1>;
@@ -1365,6 +1389,69 @@ def : GCNPat <
       (i32 (V_MOV_B32_e32 (i32 0))), sub1)
 >;
 
+//===----------------------------------------------------------------------===//
+// PTRADD Patterns
+//===----------------------------------------------------------------------===//
+
+// GlobalISel shouldn't generate 64-bit addition pseudos.
+let GISelShouldIgnore = 1 in {
+def : GCNPat<
+  (DivergentBinFrag<ptradd> i64:$src0, i64:$src1),
+  (V_ADD_U64_PSEUDO $src0, $src1)>;
+def : GCNPat<
+  (UniformBinFrag<ptradd> i64:$src0, i64:$src1),
+  (S_ADD_U64_PSEUDO $src0, $src1)>;
+}
+
+//===----------------------------------------------------------------------===//
+// FP min/max patterns
+//===----------------------------------------------------------------------===//
+
+
+class FPBinOpPat <SDPatternOperator node, ValueType vt, Instruction inst>
+  : GCNPat <(vt (node (vt (VOP3Mods vt:$src0, i32:$src0_mods)),
+                      (vt (VOP3Mods vt:$src1, i32:$src1_mods)))),
+    (inst $src0_mods, $src0, $src1_mods, $src1, DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+class FPPkBinOpPat <SDPatternOperator node, ValueType vt, Instruction inst>
+  : GCNPat <(vt (node (VOP3PMods v2f16:$src0, i32:$src0_mods),
+                      (VOP3PMods v2f16:$src1, i32:$src1_mods))),
+  (inst $src0_mods, $src0, $src1_mods, $src1, DSTCLAMP.NONE)
+>;
+
+/// With IEEE=0, signalingness is ignored and the non-nan input will
+/// be directly returned.
+let OtherPredicates = [IEEEModeDisabled] in {
+  def : FPBinOpPat<fminimumnum, f32, V_MIN_F32_e64>;
+  def : FPBinOpPat<fmaximumnum, f32, V_MAX_F32_e64>;
+  def : FPBinOpPat<fminimumnum, f64, V_MIN_F64_e64>;
+  def : FPBinOpPat<fmaximumnum, f64, V_MAX_F64_e64>;
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = NotHasTrue16BitInsts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_e64>;
+  }
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = UseRealTrue16Insts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_t16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_t16_e64>;
+  }
+
+  let SubtargetPredicate = Has16BitInsts,
+      True16Predicate = UseFakeTrue16Insts in {
+    def : FPBinOpPat<fminimumnum, f16, V_MIN_F16_fake16_e64>;
+    def : FPBinOpPat<fmaximumnum, f16, V_MAX_F16_fake16_e64>;
+  }
+
+  let SubtargetPredicate = HasVOP3PInsts in {
+    def : FPPkBinOpPat<fminimumnum, v2f16, V_PK_MIN_F16>;
+    def : FPPkBinOpPat<fmaximumnum, v2f16, V_PK_MAX_F16>;
+  }
+}
+
 /********** ============================================ **********/
 /********** Extraction, Insertion, Building and Casting  **********/
 /********** ============================================ **********/
@@ -1594,361 +1681,159 @@ foreach Index = 0-31 in {
 // FIXME: Why do only some of these type combinations for SReg and
 // VReg?
 // 16-bit bitcast
-def : BitConvert <i16, f16, VGPR_32>;
-def : BitConvert <f16, i16, VGPR_32>;
-def : BitConvert <f16, bf16, VGPR_32>;
-def : BitConvert <bf16, f16, VGPR_32>;
-
-def : BitConvert <i16, f16, SReg_32>;
-def : BitConvert <f16, i16, SReg_32>;
-def : BitConvert <f16, bf16, SReg_32>;
-def : BitConvert <bf16, f16, SReg_32>;
-
-def : BitConvert <i16, bf16, VGPR_32>;
-def : BitConvert <bf16, i16, VGPR_32>;
-def : BitConvert <i16, bf16, SReg_32>;
-def : BitConvert <bf16, i16, SReg_32>;
+foreach vt = Reg16Types.types in {
+  foreach st = Reg16Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VGPR_32>;
+      def : BitConvert <vt, st, SReg_32>;
+    }
+  }
+}
 
 // 32-bit bitcast
-def : BitConvert <i32, f32, VGPR_32>;
-def : BitConvert <f32, i32, VGPR_32>;
-def : BitConvert <i32, f32, SReg_32>;
-def : BitConvert <f32, i32, SReg_32>;
-def : BitConvert <v2i16, i32, SReg_32>;
-def : BitConvert <i32, v2i16, SReg_32>;
-def : BitConvert <v2f16, i32, SReg_32>;
-def : BitConvert <i32, v2f16, SReg_32>;
-def : BitConvert <v2i16, v2f16, SReg_32>;
-def : BitConvert <v2f16, v2i16, SReg_32>;
-def : BitConvert <v2f16, f32, SReg_32>;
-def : BitConvert <f32, v2f16, SReg_32>;
-def : BitConvert <v2i16, f32, SReg_32>;
-def : BitConvert <f32, v2i16, SReg_32>;
-def : BitConvert <v2bf16, i32, SReg_32>;
-def : BitConvert <i32, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, i32, VGPR_32>;
-def : BitConvert <i32, v2bf16, VGPR_32>;
-def : BitConvert <v2bf16, v2i16, SReg_32>;
-def : BitConvert <v2i16, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, v2i16, VGPR_32>;
-def : BitConvert <v2i16, v2bf16, VGPR_32>;
-def : BitConvert <v2bf16, v2f16, SReg_32>;
-def : BitConvert <v2f16, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, v2f16, VGPR_32>;
-def : BitConvert <v2f16, v2bf16, VGPR_32>;
-def : BitConvert <f32, v2bf16, VGPR_32>;
-def : BitConvert <v2bf16, f32, VGPR_32>;
-def : BitConvert <f32, v2bf16, SReg_32>;
-def : BitConvert <v2bf16, f32, SReg_32>;
+foreach vt = Reg32DataTypes.types in {
+  foreach st = Reg32DataTypes.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VGPR_32>;
+      def : BitConvert <vt, st, SReg_32>;
+    }
+  }
+}
 
 
 // 64-bit bitcast
-def : BitConvert <i64, f64, VReg_64>;
-def : BitConvert <f64, i64, VReg_64>;
-def : BitConvert <v2i32, v2f32, VReg_64>;
-def : BitConvert <v2f32, v2i32, VReg_64>;
-def : BitConvert <i64, v2i32, VReg_64>;
-def : BitConvert <v2i32, i64, VReg_64>;
-def : BitConvert <i64, v2f32, VReg_64>;
-def : BitConvert <v2f32, i64, VReg_64>;
-def : BitConvert <f64, v2f32, VReg_64>;
-def : BitConvert <v2f32, f64, VReg_64>;
-def : BitConvert <f64, v2i32, VReg_64>;
-def : BitConvert <v2i32, f64, VReg_64>;
-def : BitConvert <v4i16, v4f16, VReg_64>;
-def : BitConvert <v4f16, v4i16, VReg_64>;
-def : BitConvert <v4bf16, v2i32, VReg_64>;
-def : BitConvert <v2i32, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, i64, VReg_64>;
-def : BitConvert <i64, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, v4i16, VReg_64>;
-def : BitConvert <v4i16, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, v4f16, VReg_64>;
-def : BitConvert <v4f16, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, v2f32, VReg_64>;
-def : BitConvert <v2f32, v4bf16, VReg_64>;
-def : BitConvert <v4bf16, f64, VReg_64>;
-def : BitConvert <f64, v4bf16, VReg_64>;
+foreach vt = Reg64DataTypes.types in {
+  foreach st = Reg64DataTypes.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_64>;
+    }
+  }
+}
 
-
-// FIXME: Make SGPR
-def : BitConvert <v2i32, v4f16, VReg_64>;
-def : BitConvert <v4f16, v2i32, VReg_64>;
-def : BitConvert <v2i32, v4f16, VReg_64>;
-def : BitConvert <v2i32, v4i16, VReg_64>;
-def : BitConvert <v4i16, v2i32, VReg_64>;
-def : BitConvert <v2f32, v4f16, VReg_64>;
-def : BitConvert <v4f16, v2f32, VReg_64>;
-def : BitConvert <v2f32, v4i16, VReg_64>;
-def : BitConvert <v4i16, v2f32, VReg_64>;
-def : BitConvert <v4i16, f64, VReg_64>;
-def : BitConvert <v4f16, f64, VReg_64>;
-def : BitConvert <f64, v4i16, VReg_64>;
-def : BitConvert <f64, v4f16, VReg_64>;
-def : BitConvert <v4i16, i64, VReg_64>;
-def : BitConvert <v4f16, i64, VReg_64>;
-def : BitConvert <i64, v4i16, VReg_64>;
-def : BitConvert <i64, v4f16, VReg_64>;
-
-def : BitConvert <v4i32, v4f32, VReg_128>;
-def : BitConvert <v4f32, v4i32, VReg_128>;
 
 // 96-bit bitcast
-def : BitConvert <v3i32, v3f32, SGPR_96>;
-def : BitConvert <v3f32, v3i32, SGPR_96>;
+foreach vt = Reg96Types.types in {
+  foreach st = Reg96Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, SGPR_96>;
+    }
+  }
+}
+
 
 // 128-bit bitcast
-def : BitConvert <v2i64, v4i32, SReg_128>;
-def : BitConvert <v4i32, v2i64, SReg_128>;
-def : BitConvert <v2f64, v4f32, VReg_128>;
-def : BitConvert <v2f64, v4i32, VReg_128>;
-def : BitConvert <v4f32, v2f64, VReg_128>;
-def : BitConvert <v4i32, v2f64, VReg_128>;
-def : BitConvert <v2i64, v2f64, VReg_128>;
-def : BitConvert <v2f64, v2i64, VReg_128>;
-def : BitConvert <v4f32, v2i64, VReg_128>;
-def : BitConvert <v2i64, v4f32, VReg_128>;
-def : BitConvert <v8i16, v4i32, SReg_128>;
-def : BitConvert <v4i32, v8i16, SReg_128>;
-def : BitConvert <v8f16, v4f32, VReg_128>;
-def : BitConvert <v8f16, v4i32, VReg_128>;
-def : BitConvert <v4f32, v8f16, VReg_128>;
-def : BitConvert <v4i32, v8f16, VReg_128>;
-def : BitConvert <v8i16, v8f16, VReg_128>;
-def : BitConvert <v8f16, v8i16, VReg_128>;
-def : BitConvert <v4f32, v8i16, VReg_128>;
-def : BitConvert <v8i16, v4f32, VReg_128>;
-def : BitConvert <v8i16, v8f16, SReg_128>;
-def : BitConvert <v8i16, v2i64, SReg_128>;
-def : BitConvert <v8i16, v2f64, SReg_128>;
-def : BitConvert <v8f16, v2i64, SReg_128>;
-def : BitConvert <v8f16, v2f64, SReg_128>;
-def : BitConvert <v8f16, v8i16, SReg_128>;
-def : BitConvert <v2i64, v8i16, SReg_128>;
-def : BitConvert <v2f64, v8i16, SReg_128>;
-def : BitConvert <v2i64, v8f16, SReg_128>;
-def : BitConvert <v2f64, v8f16, SReg_128>;
-
-def : BitConvert <v4i32, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v4i32, SReg_128>;
-def : BitConvert <v4i32, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v4i32, VReg_128>;
-
-def : BitConvert <v4f32, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v4f32, SReg_128>;
-def : BitConvert <v4f32, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v4f32, VReg_128>;
-
-def : BitConvert <v8i16, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v8i16, SReg_128>;
-def : BitConvert <v8i16, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v8i16, VReg_128>;
-
-def : BitConvert <v8f16, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v8f16, SReg_128>;
-def : BitConvert <v8f16, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v8f16, VReg_128>;
-
-def : BitConvert <v2f64, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v2f64, SReg_128>;
-def : BitConvert <v2f64, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v2f64, VReg_128>;
-
-def : BitConvert <v2i64, v8bf16, SReg_128>;
-def : BitConvert <v8bf16, v2i64, SReg_128>;
-def : BitConvert <v2i64, v8bf16, VReg_128>;
-def : BitConvert <v8bf16, v2i64, VReg_128>;
+foreach vt = Reg128Types.types in {
+  foreach st = Reg128Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_128>;
+      def : BitConvert <vt, st, SReg_128>;
+    }
+  }
+}
 
 
 // 160-bit bitcast
-def : BitConvert <v5i32, v5f32, SReg_160>;
-def : BitConvert <v5f32, v5i32, SReg_160>;
-def : BitConvert <v5i32, v5f32, VReg_160>;
-def : BitConvert <v5f32, v5i32, VReg_160>;
+foreach vt = Reg160Types.types in {
+  foreach st = Reg160Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_160>;
+      def : BitConvert <vt, st, SReg_160>;
+    }
+  }
+}
 
 // 192-bit bitcast
-def : BitConvert <v6i32, v6f32, SReg_192>;
-def : BitConvert <v6f32, v6i32, SReg_192>;
-def : BitConvert <v6i32, v6f32, VReg_192>;
-def : BitConvert <v6f32, v6i32, VReg_192>;
-def : BitConvert <v3i64, v3f64, VReg_192>;
-def : BitConvert <v3f64, v3i64, VReg_192>;
-def : BitConvert <v3i64, v6i32, VReg_192>;
-def : BitConvert <v3i64, v6f32, VReg_192>;
-def : BitConvert <v3f64, v6i32, VReg_192>;
-def : BitConvert <v3f64, v6f32, VReg_192>;
-def : BitConvert <v6i32, v3i64, VReg_192>;
-def : BitConvert <v6f32, v3i64, VReg_192>;
-def : BitConvert <v6i32, v3f64, VReg_192>;
-def : BitConvert <v6f32, v3f64, VReg_192>;
+foreach vt = Reg192Types.types in {
+  foreach st = Reg192Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_192>;
+      def : BitConvert <vt, st, SReg_192>;
+    }
+  }
+}
 
 // 224-bit bitcast
-def : BitConvert <v7i32, v7f32, SReg_224>;
-def : BitConvert <v7f32, v7i32, SReg_224>;
-def : BitConvert <v7i32, v7f32, VReg_224>;
-def : BitConvert <v7f32, v7i32, VReg_224>;
+foreach vt = Reg224Types.types in {
+  foreach st = Reg224Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_224>;
+      def : BitConvert <vt, st, SReg_224>;
+    }
+  }
+}
+
 
 // 256-bit bitcast
-def : BitConvert <v8i32, v8f32, SReg_256>;
-def : BitConvert <v8f32, v8i32, SReg_256>;
-def : BitConvert <v8i32, v8f32, VReg_256>;
-def : BitConvert <v8f32, v8i32, VReg_256>;
-def : BitConvert <v4i64, v4f64, VReg_256>;
-def : BitConvert <v4f64, v4i64, VReg_256>;
-def : BitConvert <v4i64, v8i32, VReg_256>;
-def : BitConvert <v4i64, v8f32, VReg_256>;
-def : BitConvert <v4f64, v8i32, VReg_256>;
-def : BitConvert <v4f64, v8f32, VReg_256>;
-def : BitConvert <v8i32, v4i64, VReg_256>;
-def : BitConvert <v8f32, v4i64, VReg_256>;
-def : BitConvert <v8i32, v4f64, VReg_256>;
-def : BitConvert <v8f32, v4f64, VReg_256>;
-def : BitConvert <v16i16, v16f16, SReg_256>;
-def : BitConvert <v16f16, v16i16, SReg_256>;
-def : BitConvert <v16i16, v16f16, VReg_256>;
-def : BitConvert <v16f16, v16i16, VReg_256>;
-def : BitConvert <v16f16, v8i32, VReg_256>;
-def : BitConvert <v16i16, v8i32, VReg_256>;
-def : BitConvert <v16f16, v8f32, VReg_256>;
-def : BitConvert <v16i16, v8f32, VReg_256>;
-def : BitConvert <v8i32, v16f16, VReg_256>;
-def : BitConvert <v8i32, v16i16, VReg_256>;
-def : BitConvert <v8f32, v16f16, VReg_256>;
-def : BitConvert <v8f32, v16i16, VReg_256>;
-def : BitConvert <v16f16, v4i64, VReg_256>;
-def : BitConvert <v16i16, v4i64, VReg_256>;
-def : BitConvert <v16f16, v4f64, VReg_256>;
-def : BitConvert <v16i16, v4f64, VReg_256>;
-def : BitConvert <v4i64, v16f16, VReg_256>;
-def : BitConvert <v4i64, v16i16, VReg_256>;
-def : BitConvert <v4f64, v16f16, VReg_256>;
-def : BitConvert <v4f64, v16i16, VReg_256>;
-
-
-def : BitConvert <v8i32, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v8i32, VReg_256>;
-def : BitConvert <v8f32, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v8f32, VReg_256>;
-def : BitConvert <v4i64, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v4i64, VReg_256>;
-def : BitConvert <v4f64, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v4f64, VReg_256>;
-
-
-
-def : BitConvert <v16i16, v16bf16, SReg_256>;
-def : BitConvert <v16bf16, v16i16, SReg_256>;
-def : BitConvert <v16i16, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v16i16, VReg_256>;
-
-def : BitConvert <v16f16, v16bf16, SReg_256>;
-def : BitConvert <v16bf16, v16f16, SReg_256>;
-def : BitConvert <v16f16, v16bf16, VReg_256>;
-def : BitConvert <v16bf16, v16f16, VReg_256>;
-
-
+foreach vt = Reg256Types.types in {
+  foreach st = Reg256Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_256>;
+      def : BitConvert <vt, st, SReg_256>;
+    }
+  }
+}
 
 
 // 288-bit bitcast
-def : BitConvert <v9i32, v9f32, SReg_288>;
-def : BitConvert <v9f32, v9i32, SReg_288>;
-def : BitConvert <v9i32, v9f32, VReg_288>;
-def : BitConvert <v9f32, v9i32, VReg_288>;
+foreach vt = Reg288Types.types in {
+  foreach st = Reg288Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_288>;
+      def : BitConvert <vt, st, SReg_288>;
+    }
+  }
+}
 
 // 320-bit bitcast
-def : BitConvert <v10i32, v10f32, SReg_320>;
-def : BitConvert <v10f32, v10i32, SReg_320>;
-def : BitConvert <v10i32, v10f32, VReg_320>;
-def : BitConvert <v10f32, v10i32, VReg_320>;
+foreach vt = Reg320Types.types in {
+  foreach st = Reg320Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_320>;
+      def : BitConvert <vt, st, SReg_320>;
+    }
+  }
+}
 
 // 320-bit bitcast
-def : BitConvert <v11i32, v11f32, SReg_352>;
-def : BitConvert <v11f32, v11i32, SReg_352>;
-def : BitConvert <v11i32, v11f32, VReg_352>;
-def : BitConvert <v11f32, v11i32, VReg_352>;
+foreach vt = Reg352Types.types in {
+  foreach st = Reg352Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_352>;
+      def : BitConvert <vt, st, SReg_352>;
+    }
+  }
+}
 
 // 384-bit bitcast
-def : BitConvert <v12i32, v12f32, SReg_384>;
-def : BitConvert <v12f32, v12i32, SReg_384>;
-def : BitConvert <v12i32, v12f32, VReg_384>;
-def : BitConvert <v12f32, v12i32, VReg_384>;
+foreach vt = Reg384Types.types in {
+  foreach st = Reg384Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_384>;
+      def : BitConvert <vt, st, SReg_384>;
+    }
+  }
+}
 
 // 512-bit bitcast
-def : BitConvert <v32f16, v32i16, VReg_512>;
-def : BitConvert <v32i16, v32f16, VReg_512>;
-def : BitConvert <v32f16, v16i32, VReg_512>;
-def : BitConvert <v32f16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32f16, VReg_512>;
-def : BitConvert <v16i32, v32f16, VReg_512>;
-def : BitConvert <v32i16, v16i32, VReg_512>;
-def : BitConvert <v32i16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32i16, VReg_512>;
-def : BitConvert <v16i32, v32i16, VReg_512>;
-def : BitConvert <v16i32, v16f32, VReg_512>;
-def : BitConvert <v16f32, v16i32, VReg_512>;
-def : BitConvert <v8i64,  v8f64,  VReg_512>;
-def : BitConvert <v8f64,  v8i64,  VReg_512>;
-def : BitConvert <v8i64,  v16i32, VReg_512>;
-def : BitConvert <v8f64,  v16i32, VReg_512>;
-def : BitConvert <v16i32, v8i64,  VReg_512>;
-def : BitConvert <v16i32, v8f64,  VReg_512>;
-def : BitConvert <v8i64,  v16f32, VReg_512>;
-def : BitConvert <v8f64,  v16f32, VReg_512>;
-def : BitConvert <v16f32, v8i64,  VReg_512>;
-def : BitConvert <v16f32, v8f64,  VReg_512>;
-def : BitConvert <v8i64,  v32f16, VReg_512>;
-def : BitConvert <v8i64,  v32i16, VReg_512>;
-def : BitConvert <v8f64,  v32f16, VReg_512>;
-def : BitConvert <v8f64,  v32i16, VReg_512>;
-def : BitConvert <v32f16, v8i64,  VReg_512>;
-def : BitConvert <v32f16, v8f64,  VReg_512>;
-def : BitConvert <v32i16, v8i64,  VReg_512>;
-def : BitConvert <v32i16, v8f64,  VReg_512>;
+foreach vt = Reg512Types.types in {
+  foreach st = Reg512Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_512>;
+      def : BitConvert <vt, st, SReg_512>;
+    }
+  }
+}
 
-
-def : BitConvert <v32bf16, v32i16, VReg_512>;
-def : BitConvert <v32i16, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v32i16, SReg_512>;
-def : BitConvert <v32i16, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v32f16, VReg_512>;
-def : BitConvert <v32f16, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v32f16, SReg_512>;
-def : BitConvert <v32f16, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v16i32, VReg_512>;
-def : BitConvert <v16i32, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v16i32, SReg_512>;
-def : BitConvert <v16i32, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v16f32, VReg_512>;
-def : BitConvert <v16f32, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v16f32, SReg_512>;
-def : BitConvert <v16f32, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v8f64, VReg_512>;
-def : BitConvert <v8f64, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v8f64, SReg_512>;
-def : BitConvert <v8f64, v32bf16, SReg_512>;
-
-def : BitConvert <v32bf16, v8i64, VReg_512>;
-def : BitConvert <v8i64, v32bf16, VReg_512>;
-def : BitConvert <v32bf16, v8i64, SReg_512>;
-def : BitConvert <v8i64, v32bf16, SReg_512>;
 
 // 1024-bit bitcast
-def : BitConvert <v32i32, v32f32, VReg_1024>;
-def : BitConvert <v32f32, v32i32, VReg_1024>;
-def : BitConvert <v16i64, v16f64, VReg_1024>;
-def : BitConvert <v16f64, v16i64, VReg_1024>;
-def : BitConvert <v16i64, v32i32, VReg_1024>;
-def : BitConvert <v32i32, v16i64, VReg_1024>;
-def : BitConvert <v16f64, v32f32, VReg_1024>;
-def : BitConvert <v32f32, v16f64, VReg_1024>;
-def : BitConvert <v16i64, v32f32, VReg_1024>;
-def : BitConvert <v32i32, v16f64, VReg_1024>;
-def : BitConvert <v16f64, v32i32, VReg_1024>;
-def : BitConvert <v32f32, v16i64, VReg_1024>;
+foreach vt = Reg1024Types.types in {
+  foreach st = Reg1024Types.types in {
+    if !not(!eq (vt, st)) then {
+      def : BitConvert <vt, st, VReg_1024>;
+      def : BitConvert <vt, st, SReg_1024>;
+    }
+  }
+}
 
 
 /********** =================== **********/
@@ -2021,13 +1906,14 @@ def : GCNPat <
 >;
 } // End foreach fp16vt = ...
 
+foreach v2fp16vt = [v2f16, v2bf16] in {
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (v2f16 SReg_32:$src)),
+  (UniformUnaryFrag<fneg> (v2fp16vt SReg_32:$src)),
   (S_XOR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000)))
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fabs> (v2f16 SReg_32:$src)),
+  (UniformUnaryFrag<fabs> (v2fp16vt SReg_32:$src)),
   (S_AND_B32 SReg_32:$src, (S_MOV_B32 (i32 0x7fff7fff)))
 >;
 
@@ -2036,15 +1922,15 @@ def : GCNPat <
 // fabs is not reported as free because there is modifier for it in
 // VOP3P instructions, so it is turned into the bit op.
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (v2f16 (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
+  (UniformUnaryFrag<fneg> (v2fp16vt (bitconvert (and_oneuse (i32 SReg_32:$src), 0x7fff7fff)))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
 
 def : GCNPat <
-  (UniformUnaryFrag<fneg> (v2f16 (fabs SReg_32:$src))),
+  (UniformUnaryFrag<fneg> (v2fp16vt (fabs SReg_32:$src))),
   (S_OR_B32 SReg_32:$src, (S_MOV_B32 (i32 0x80008000))) // Set sign bit
 >;
-
+}
 
 // COPY_TO_REGCLASS is needed to avoid using SCC from S_XOR_B32 instead
 // of the real value.
@@ -2165,20 +2051,22 @@ def : GCNPat <
 } // End SubtargetPredicate = UseRealTrue16Insts
 } // End foreach fp16vt = ...
 
+foreach v2fp16vt = [v2f16, v2bf16] in {
 def : GCNPat <
-  (fneg (v2f16 VGPR_32:$src)),
+  (fneg (v2fp16vt VGPR_32:$src)),
   (V_XOR_B32_e64 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fabs (v2f16 VGPR_32:$src)),
+  (fabs (v2fp16vt VGPR_32:$src)),
   (V_AND_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), VGPR_32:$src)
 >;
 
 def : GCNPat <
-  (fneg (v2f16 (fabs VGPR_32:$src))),
+  (fneg (v2fp16vt (fabs VGPR_32:$src))),
   (V_OR_B32_e64 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src)
 >;
+}
 
 def : GCNPat <
   (fabs (f64 VReg_64:$src)),
@@ -2253,22 +2141,34 @@ def : GCNPat <
 >;
 } // End foreach fp16vt = [f16, bf16]
 
+
+foreach fp16vt = [v2f16, v2bf16] in {
+
+def : GCNPat <
+  (fcopysign fp16vt:$src0, fp16vt:$src1),
+  (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), $src0, $src1)
+>;
+
+}
+
 /********** ================== **********/
 /********** Immediate Patterns **********/
 /********** ================== **********/
 
 // FIXME: Remove VGPRImm. Should be inferrable from register bank.
 
-foreach vt = [i32, p3, p5, p6, p2] in {
-  def : GCNPat <
-    (VGPRImm<(vt imm)>:$imm),
-    (V_MOV_B32_e32 imm:$imm)
-  >;
+foreach vt = Reg32Types.types in {
+  if !and(!not(vt.isVector), !not(vt.isFP)) then {
+    def : GCNPat <
+      (VGPRImm<(vt imm)>:$imm),
+      (V_MOV_B32_e32 imm:$imm)
+    >;
 
-  def : GCNPat <
-    (vt imm:$imm),
-    (S_MOV_B32 imm:$imm)
-  >;
+    def : GCNPat <
+      (vt imm:$imm),
+      (S_MOV_B32 imm:$imm)
+    >;
+  }
 }
 
 // FIXME: The register bank of the frame index should depend on the
@@ -2300,17 +2200,17 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
       (VGPRImm<(i16 imm)>:$imm),
       (V_MOV_B32_e32 imm:$imm)
     >;
-  }
 
-  // FIXME: Workaround for ordering issue with peephole optimizer where
-  // a register class copy interferes with immediate folding.  Should
-  // use s_mov_b32, which can be shrunk to s_movk_i32
+    // FIXME: Workaround for ordering issue with peephole optimizer where
+    // a register class copy interferes with immediate folding.  Should
+    // use s_mov_b32, which can be shrunk to s_movk_i32
 
-  foreach vt = [f16, bf16] in {
-    def : GCNPat <
-      (VGPRImm<(vt fpimm)>:$imm),
-      (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
-    >;
+    foreach vt = [f16, bf16] in {
+      def : GCNPat <
+        (VGPRImm<(vt fpimm)>:$imm),
+        (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
+      >;
+    }
   }
 }
 
@@ -2736,6 +2636,8 @@ def : GCNPat<
   (i32 (DivergentSextInreg<i1> i32:$src)),
   (V_BFE_I32_e64 i32:$src, (i32 0), (i32 1))>;
 
+foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
+let True16Predicate = p in {
 def : GCNPat <
   (i16 (DivergentSextInreg<i1> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 1))
@@ -2745,6 +2647,23 @@ def : GCNPat <
   (i16 (DivergentSextInreg<i8> i16:$src)),
   (V_BFE_I32_e64 $src, (i32 0), (i32 8))
 >;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+def : GCNPat <
+  (i16 (DivergentSextInreg<i1> i16:$src)),
+  (V_BFE_I32_e64
+   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (i32 0), (i32 1))
+>;
+
+def : GCNPat <
+  (i16 (DivergentSextInreg<i8> i16:$src)),
+  (V_BFE_I32_e64
+   (REG_SEQUENCE VGPR_32, VGPR_16:$src, lo16, (i16 (IMPLICIT_DEF)), hi16),
+   (i32 0), (i32 8))
+>;
+}
 
 def : GCNPat<
   (i32 (DivergentSextInreg<i8> i32:$src)),
@@ -3850,7 +3769,7 @@ def : AMDGPUPat <
 >;
 
 def uint5Bits : PatLeaf<(i32 VGPR_32:$width), [{
-  return CurDAG->computeKnownBits(SDValue(N, 0)).countMaxActiveBits() <= 5;
+  return CurDAG->computeKnownBits(Op).countMaxActiveBits() <= 5;
 }]>;
 
 // x & (-1 >> (bitwidth - y))
@@ -4497,9 +4416,3 @@ def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
   let hasSideEffects = 1;
   let SubtargetPredicate = isGFX10Plus;
 }
-
-// FIXME: Would be nice if we could set the register class for the destination
-// register too.
-def IMP_DEF_FROM_INTRINSIC: Pat<
-  (i32 (int_amdgcn_dead)), (IMPLICIT_DEF)>;
-

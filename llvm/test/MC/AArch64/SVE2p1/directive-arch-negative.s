@@ -15,5 +15,5 @@ bfadd   z23.h, p3/m, z23.h, z13.h
 .arch armv9-a+sve2p1+sve-aes2
 .arch armv9-a+nosve-aes2
 aesdimc {z0.b-z3.b}, {z0.b-z3.b}, z0.q[0]
-// CHECK: error: instruction requires: sve2p1 or ssve-aes sve-aes2
+// CHECK: error: instruction requires: sve-aes2
 // CHECK: aesdimc {z0.b-z3.b}, {z0.b-z3.b}, z0.q[0]

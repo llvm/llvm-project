@@ -21,21 +21,16 @@
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <memory>
-#include <numeric>
 #include <optional>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -45,7 +40,6 @@ using namespace mlir;
 using namespace presburger;
 
 using llvm::SmallDenseMap;
-using llvm::SmallDenseSet;
 
 std::unique_ptr<IntegerRelation> IntegerRelation::clone() const {
   return std::make_unique<IntegerRelation>(*this);
@@ -1824,8 +1818,6 @@ void IntegerRelation::removeTrivialRedundancy() {
   // for a given row.
   SmallDenseMap<ArrayRef<DynamicAPInt>, std::pair<unsigned, DynamicAPInt>>
       rowsWithoutConstTerm;
-  // To unique rows.
-  SmallDenseSet<ArrayRef<DynamicAPInt>, 8> rowSet;
 
   // Check if constraint is of the form <non-negative-constant> >= 0.
   auto isTriviallyValid = [&](unsigned r) -> bool {
@@ -1840,8 +1832,7 @@ void IntegerRelation::removeTrivialRedundancy() {
   SmallVector<bool, 256> redunIneq(getNumInequalities(), false);
   for (unsigned r = 0, e = getNumInequalities(); r < e; r++) {
     DynamicAPInt *rowStart = &inequalities(r, 0);
-    auto row = ArrayRef<DynamicAPInt>(rowStart, getNumCols());
-    if (isTriviallyValid(r) || !rowSet.insert(row).second) {
+    if (isTriviallyValid(r)) {
       redunIneq[r] = true;
       continue;
     }
@@ -2398,8 +2389,9 @@ bool IntegerRelation::removeDuplicateConstraints() {
       addEquality(getInequality(k));
       removeInequality(k);
       removeInequality(l);
-    } else
+    } else {
       *this = getEmpty(getSpace());
+    }
     break;
   }
 

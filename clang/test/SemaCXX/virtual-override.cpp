@@ -16,7 +16,7 @@ namespace T2 {
 
 struct a { };
 struct b { };
-  
+
 class A {
   virtual a* f(); // expected-note{{overridden virtual function is here}}
   virtual int *g(); // expected-note{{overridden virtual function is here}}
@@ -33,7 +33,7 @@ namespace T3 {
 
 struct a { };
 struct b : private a { }; // expected-note{{declared private here}}
-  
+
 class A {
   virtual a* f(); // FIXME: desired-note{{overridden virtual function is here}}
 };
@@ -49,7 +49,7 @@ namespace T4 {
 struct a { };
 struct a1 : a { };
 struct b : a, a1 { }; // expected-warning{{direct base 'a' is inaccessible due to ambiguity:\n    struct T4::b -> a\n    struct T4::b -> a1 -> a}}
-  
+
 class A {
   virtual a* f(); // expected-note{{overridden virtual function is here}}
 };
@@ -63,23 +63,23 @@ class B : A {
 }
 
 namespace T5 {
-  
+
 struct a { };
 
 class A {
-  virtual a* const f(); 
+  virtual a* const f();
   virtual a* const g(); // expected-note{{overridden virtual function is here}}
 };
 
 class B : A {
-  virtual a* const f(); 
+  virtual a* const f();
   virtual a* g(); // expected-error{{return type of virtual function 'g' is not covariant with the return type of the function it overrides ('a *' has different qualifiers than 'a *const')}}
 };
 
 }
 
 namespace T6 {
-  
+
 struct a { };
 
 class A {
@@ -150,11 +150,11 @@ namespace T7 {
 namespace T8 {
   struct a { };
   struct b; // expected-note {{forward declaration of 'T8::b'}}
-  
+
   class A {
     virtual a *f();
   };
-  
+
   class B : A {
     b* f(); // expected-error {{return type of virtual function 'f' is not covariant with the return type of the function it overrides ('b' is incomplete)}}
   };
@@ -162,15 +162,15 @@ namespace T8 {
 
 namespace T9 {
   struct a { };
-  
+
   template<typename T> struct b : a {
     int a[sizeof(T) ? -1 : -1]; // expected-error {{array with a negative size}}
   };
-  
+
   class A {
     virtual a *f();
   };
-  
+
   class B : A {
     virtual b<int> *f(); // expected-note {{in instantiation of template class 'T9::b<int>' requested here}}
   };
@@ -185,7 +185,7 @@ class X1 : public X0 {
 };
 
 template <typename Base>
-struct Foo : Base { 
+struct Foo : Base {
   void f(int) = 0; // expected-error{{not virtual and cannot be declared pure}}
 };
 
@@ -285,7 +285,7 @@ namespace T10 {
   struct A { };
   struct B : A { };
 
-  struct C { 
+  struct C {
     virtual A&& f();
   };
 
@@ -298,7 +298,7 @@ namespace T11 {
   struct A { };
   struct B : A { };
 
-  struct C { 
+  struct C {
     virtual A& f(); // expected-note {{overridden virtual function is here}}
   };
 
@@ -311,7 +311,7 @@ namespace T12 {
   struct A { };
   struct B : A { };
 
-  struct C { 
+  struct C {
     virtual A&& f(); // expected-note {{overridden virtual function is here}}
   };
 
@@ -329,5 +329,15 @@ namespace PR8168 {
   class B : public A {
   public:
     static void foo() {} // expected-error{{'static' member function 'foo' overrides a virtual function}}
+  };
+}
+
+namespace ForwardDeclared {
+  class A;
+  struct B {
+    virtual B *f();
+  };
+  struct A : B {
+    A *f();
   };
 }

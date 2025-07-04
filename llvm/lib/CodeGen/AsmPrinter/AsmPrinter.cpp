@@ -369,7 +369,11 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
     Alignment = InAlign;
 
   // If the GV has a specified alignment, take it into account.
-  const MaybeAlign GVAlign(GV->getAlign());
+  MaybeAlign GVAlign;
+  if (auto *GVar = dyn_cast<GlobalVariable>(GV))
+    GVAlign = GVar->getAlign();
+  else if (auto *F = dyn_cast<Function>(GV))
+    GVAlign = F->getAlign();
   if (!GVAlign)
     return Alignment;
 
@@ -382,7 +386,8 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
   return Alignment;
 }
 
-AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer)
+AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
+                       char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {
@@ -560,7 +565,11 @@ bool AsmPrinter::doInitialization(Module &M) {
 
   if (MAI->doesSupportDebugInformation()) {
     bool EmitCodeView = M.getCodeViewFlag();
-    if (EmitCodeView && TM.getTargetTriple().isOSWindows())
+    // On Windows targets, emit minimal CodeView compiler info even when debug
+    // info is disabled.
+    if ((TM.getTargetTriple().isOSWindows() &&
+         M.getNamedMetadata("llvm.dbg.cu")) ||
+        (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
@@ -1072,13 +1081,6 @@ void AsmPrinter::emitFunctionHeader() {
 /// function.  This can be overridden by targets as required to do custom stuff.
 void AsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->redefineIfPossible();
-
-  // The function label could have already been emitted if two symbols end up
-  // conflicting due to asm renaming.  Detect this and emit an error.
-  if (CurrentFnSym->isVariable())
-    report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
-                       "' is a protected alias");
-
   OutStreamer->emitLabel(CurrentFnSym);
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
@@ -1417,9 +1419,12 @@ getBBAddrMapFeature(const MachineFunction &MF, int NumMBBSectionRanges) {
         "BB entries info is required for BBFreq and BrProb "
         "features");
   }
-  return {FuncEntryCountEnabled, BBFreqEnabled, BrProbEnabled,
+  return {FuncEntryCountEnabled,
+          BBFreqEnabled,
+          BrProbEnabled,
           MF.hasBBSections() && NumMBBSectionRanges > 1,
-          static_cast<bool>(BBAddrMapSkipEmitBBEntries)};
+          static_cast<bool>(BBAddrMapSkipEmitBBEntries),
+          false};
 }
 
 void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
@@ -1478,16 +1483,13 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     }
 
     if (!Features.OmitBBEntries) {
-      // TODO: Remove this check when version 1 is deprecated.
-      if (BBAddrMapVersion > 1) {
-        OutStreamer->AddComment("BB id");
-        // Emit the BB ID for this basic block.
-        // We only emit BaseID since CloneID is unset for
-        // -basic-block-adress-map.
-        // TODO: Emit the full BBID when labels and sections can be mixed
-        // together.
-        OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
-      }
+      OutStreamer->AddComment("BB id");
+      // Emit the BB ID for this basic block.
+      // We only emit BaseID since CloneID is unset for
+      // -basic-block-adress-map.
+      // TODO: Emit the full BBID when labels and sections can be mixed
+      // together.
+      OutStreamer->emitULEB128IntValue(MBB.getBBID()->BaseID);
       // Emit the basic block offset relative to the end of the previous block.
       // This is zero unless the block is padded due to alignment.
       emitLabelDifferenceAsULEB128(MBBSymbol, PrevMBBEndSymbol);
@@ -2137,16 +2139,20 @@ void AsmPrinter::emitFunctionBody() {
 }
 
 /// Compute the number of Global Variables that uses a Constant.
-static unsigned getNumGlobalVariableUses(const Constant *C) {
-  if (!C)
+static unsigned getNumGlobalVariableUses(const Constant *C,
+                                         bool &HasNonGlobalUsers) {
+  if (!C) {
+    HasNonGlobalUsers = true;
     return 0;
+  }
 
   if (isa<GlobalVariable>(C))
     return 1;
 
   unsigned NumUses = 0;
   for (const auto *CU : C->users())
-    NumUses += getNumGlobalVariableUses(dyn_cast<Constant>(CU));
+    NumUses +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(CU), HasNonGlobalUsers);
 
   return NumUses;
 }
@@ -2157,7 +2163,8 @@ static unsigned getNumGlobalVariableUses(const Constant *C) {
 /// candidates are skipped and are emitted later in case at least one cstexpr
 /// isn't replaced by a PC relative GOT entry access.
 static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
-                                     unsigned &NumGOTEquivUsers) {
+                                     unsigned &NumGOTEquivUsers,
+                                     bool &HasNonGlobalUsers) {
   // Global GOT equivalents are unnamed private globals with a constant
   // pointer initializer to another global symbol. They must point to a
   // GlobalVariable or Function, i.e., as GlobalValue.
@@ -2169,7 +2176,8 @@ static bool isGOTEquivalentCandidate(const GlobalVariable *GV,
   // To be a got equivalent, at least one of its users need to be a constant
   // expression used by another global variable.
   for (const auto *U : GV->users())
-    NumGOTEquivUsers += getNumGlobalVariableUses(dyn_cast<Constant>(U));
+    NumGOTEquivUsers +=
+        getNumGlobalVariableUses(dyn_cast<Constant>(U), HasNonGlobalUsers);
 
   return NumGOTEquivUsers > 0;
 }
@@ -2187,9 +2195,13 @@ void AsmPrinter::computeGlobalGOTEquivs(Module &M) {
 
   for (const auto &G : M.globals()) {
     unsigned NumGOTEquivUsers = 0;
-    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers))
+    bool HasNonGlobalUsers = false;
+    if (!isGOTEquivalentCandidate(&G, NumGOTEquivUsers, HasNonGlobalUsers))
       continue;
-
+    // If non-global variables use it, we still need to emit it.
+    // Add 1 here, then emit it in `emitGlobalGOTEquivs`.
+    if (HasNonGlobalUsers)
+      NumGOTEquivUsers += 1;
     const MCSymbol *GOTEquivSym = getSymbol(&G);
     GlobalGOTEquivs[GOTEquivSym] = std::make_pair(&G, NumGOTEquivUsers);
   }
@@ -2320,7 +2332,7 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   }
 
   if (!TM.getTargetTriple().isOSBinFormatMachO() || !getIFuncMCSubtargetInfo())
-    llvm::report_fatal_error("IFuncs are not supported on this platform");
+    reportFatalUsageError("IFuncs are not supported on this platform");
 
   // On Darwin platforms, emit a manually-constructed .symbol_resolver that
   // implements the symbol resolution duties of the IFunc.
@@ -2374,6 +2386,15 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   if (!RS.needsSection())
     return;
 
+  MCSection *RemarksSection =
+      OutContext.getObjectFileInfo()->getRemarksSection();
+  if (!RemarksSection) {
+    OutContext.reportWarning(SMLoc(), "Current object file format does not "
+                                      "support remarks sections. Use the yaml "
+                                      "remark format instead.");
+    return;
+  }
+
   remarks::RemarkSerializer &RemarkSerializer = RS.getSerializer();
 
   std::optional<SmallString<128>> Filename;
@@ -2391,10 +2412,7 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
   MetaSerializer->emit();
 
   // Switch to the remarks section.
-  MCSection *RemarksSection =
-      OutContext.getObjectFileInfo()->getRemarksSection();
   OutStreamer->switchSection(RemarksSection);
-
   OutStreamer->emitBinaryData(Buf);
 }
 
@@ -2876,17 +2894,16 @@ void AsmPrinter::emitConstantPool() {
   // Now print stuff into the calculated sections.
   const MCSection *CurSection = nullptr;
   unsigned Offset = 0;
-  for (unsigned i = 0, e = CPSections.size(); i != e; ++i) {
-    for (unsigned j = 0, ee = CPSections[i].CPEs.size(); j != ee; ++j) {
-      unsigned CPI = CPSections[i].CPEs[j];
+  for (const SectionCPs &CPSection : CPSections) {
+    for (unsigned CPI : CPSection.CPEs) {
       MCSymbol *Sym = GetCPISymbol(CPI);
       if (!Sym->isUndefined())
         continue;
 
-      if (CurSection != CPSections[i].S) {
-        OutStreamer->switchSection(CPSections[i].S);
-        emitAlignment(Align(CPSections[i].Alignment));
-        CurSection = CPSections[i].S;
+      if (CurSection != CPSection.S) {
+        OutStreamer->switchSection(CPSection.S);
+        emitAlignment(Align(CPSection.Alignment));
+        CurSection = CPSection.S;
         Offset = 0;
       }
 
@@ -3193,7 +3210,10 @@ bool AsmPrinter::emitSpecialLLVMGlobal(const GlobalVariable *GV) {
     return true;
   }
 
-  report_fatal_error("unknown special variable with appending linkage");
+  GV->getContext().emitError(
+      "unknown special variable with appending linkage: " +
+      GV->getNameOrAsOperand());
+  return true;
 }
 
 /// EmitLLVMUsedList - For targets that define a MAI::UsedDirective, mark each
@@ -3229,9 +3249,11 @@ void AsmPrinter::preprocessXXStructorList(const DataLayout &DL,
     S.Priority = Priority->getLimitedValue(65535);
     S.Func = CS->getOperand(1);
     if (!CS->getOperand(2)->isNullValue()) {
-      if (TM.getTargetTriple().isOSAIX())
-        llvm::report_fatal_error(
+      if (TM.getTargetTriple().isOSAIX()) {
+        CS->getContext().emitError(
             "associated data of XXStructor list is not yet supported on AIX");
+      }
+
       S.ComdatKey =
           dyn_cast<GlobalValue>(CS->getOperand(2)->stripPointerCasts());
     }
@@ -3589,10 +3611,11 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
   // Otherwise report the problem to the user.
   std::string S;
   raw_string_ostream OS(S);
-  OS << "Unsupported expression in static initializer: ";
+  OS << "unsupported expression in static initializer: ";
   CE->printAsOperand(OS, /*PrintType=*/false,
                      !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(S));
+  CE->getContext().emitError(S);
+  return MCConstantExpr::create(0, Ctx);
 }
 
 static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *C,
@@ -4329,6 +4352,8 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
       OutStreamer->emitLabel(Sym);
   } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
     OutStreamer->AddComment("Block address taken");
+  } else if (isVerbose() && MBB.isInlineAsmBrIndirectTarget()) {
+    OutStreamer->AddComment("Inline asm indirect target");
   }
 
   // Print some verbose block comments.
@@ -4469,7 +4494,7 @@ GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  auto [GCPI, Inserted] = GCMetadataPrinters.insert({&S, nullptr});
+  auto [GCPI, Inserted] = GCMetadataPrinters.try_emplace(&S);
   if (!Inserted)
     return GCPI->second.get();
 
@@ -4720,4 +4745,110 @@ AsmPrinter::getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
   // EK_LabelDifference32 is implemented as an Int32 from the base address.
   return std::make_tuple(Base, 0, BranchLabel,
                          codeview::JumpTableEntrySize::Int32);
+}
+
+void AsmPrinter::emitCOFFReplaceableFunctionData(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  bool IsTargetArm64EC = TT.isWindowsArm64EC();
+  SmallVector<char> Buf;
+  SmallVector<MCSymbol *> FuncOverrideDefaultSymbols;
+  bool SwitchedToDirectiveSection = false;
+  for (const Function &F : M.functions()) {
+    if (F.hasFnAttribute("loader-replaceable")) {
+      if (!SwitchedToDirectiveSection) {
+        OutStreamer->switchSection(
+            OutContext.getObjectFileInfo()->getDrectveSection());
+        SwitchedToDirectiveSection = true;
+      }
+
+      StringRef Name = F.getName();
+
+      // For hybrid-patchable targets, strip the prefix so that we can mark
+      // the real function as replaceable.
+      if (IsTargetArm64EC && Name.ends_with(HybridPatchableTargetSuffix)) {
+        Name = Name.drop_back(HybridPatchableTargetSuffix.size());
+      }
+
+      MCSymbol *FuncOverrideSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+
+      MCSymbol *FuncOverrideDefaultSymbol =
+          MMI->getContext().getOrCreateSymbol(Name + "_$fo_default$");
+      OutStreamer->beginCOFFSymbolDef(FuncOverrideDefaultSymbol);
+      OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_EXTERNAL);
+      OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+      OutStreamer->endCOFFSymbolDef();
+      FuncOverrideDefaultSymbols.push_back(FuncOverrideDefaultSymbol);
+
+      OutStreamer->emitBytes((Twine(" /ALTERNATENAME:") +
+                              FuncOverrideSymbol->getName() + "=" +
+                              FuncOverrideDefaultSymbol->getName())
+                                 .toStringRef(Buf));
+      Buf.clear();
+    }
+  }
+
+  if (SwitchedToDirectiveSection)
+    OutStreamer->popSection();
+
+  if (FuncOverrideDefaultSymbols.empty())
+    return;
+
+  // MSVC emits the symbols for the default variables pointing at the start of
+  // the .data section, but doesn't actually allocate any space for them. LLVM
+  // can't do this, so have all of the variables pointing at a single byte
+  // instead.
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getDataSection());
+  for (MCSymbol *Symbol : FuncOverrideDefaultSymbols) {
+    OutStreamer->emitLabel(Symbol);
+  }
+  OutStreamer->emitZeros(1);
+  OutStreamer->popSection();
+}
+
+void AsmPrinter::emitCOFFFeatureSymbol(Module &M) {
+  const Triple &TT = TM.getTargetTriple();
+  assert(TT.isOSBinFormatCOFF());
+
+  // Emit an absolute @feat.00 symbol.
+  MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
+  OutStreamer->beginCOFFSymbolDef(S);
+  OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
+  OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
+  OutStreamer->endCOFFSymbolDef();
+  int64_t Feat00Value = 0;
+
+  if (TT.getArch() == Triple::x86) {
+    // According to the PE-COFF spec, the LSB of this value marks the object
+    // for "registered SEH".  This means that all SEH handler entry points
+    // must be registered in .sxdata.  Use of any unregistered handlers will
+    // cause the process to terminate immediately.  LLVM does not know how to
+    // register any SEH handlers, so its object files should be safe.
+    Feat00Value |= COFF::Feat00Flags::SafeSEH;
+  }
+
+  if (M.getModuleFlag("cfguard")) {
+    // Object is CFG-aware.
+    Feat00Value |= COFF::Feat00Flags::GuardCF;
+  }
+
+  if (M.getModuleFlag("ehcontguard")) {
+    // Object also has EHCont.
+    Feat00Value |= COFF::Feat00Flags::GuardEHCont;
+  }
+
+  if (M.getModuleFlag("ms-kernel")) {
+    // Object is compiled with /kernel.
+    Feat00Value |= COFF::Feat00Flags::Kernel;
+  }
+
+  OutStreamer->emitSymbolAttribute(S, MCSA_Global);
+  OutStreamer->emitAssignment(
+      S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
 }

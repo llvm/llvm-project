@@ -188,6 +188,77 @@ OpenACCMappableModel<fir::SequenceType>::generateAccBounds(
                                                mlir::acc::DataBoundsType>(
           firBuilder, loc, exv, info);
     }
+
+    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(varPtr.getDefiningOp())) {
+      mlir::Value zero =
+          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
+      mlir::Value one =
+          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
+
+      mlir::Value shape;
+      if (auto declareOp =
+              mlir::dyn_cast_if_present<fir::DeclareOp>(varPtr.getDefiningOp()))
+        shape = declareOp.getShape();
+      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                   varPtr.getDefiningOp()))
+        shape = declareOp.getShape();
+
+      const bool strideIncludeLowerExtent = true;
+
+      llvm::SmallVector<mlir::Value> accBounds;
+      if (auto shapeOp =
+              mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
+        mlir::Value cummulativeExtent = one;
+        for (auto extent : shapeOp.getExtents()) {
+          mlir::Value upperbound =
+              builder.create<mlir::arith::SubIOp>(loc, extent, one);
+          mlir::Value stride = one;
+          if (strideIncludeLowerExtent) {
+            stride = cummulativeExtent;
+            cummulativeExtent = builder.create<mlir::arith::MulIOp>(
+                loc, cummulativeExtent, extent);
+          }
+          auto accBound = builder.create<mlir::acc::DataBoundsOp>(
+              loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+              /*lowerbound=*/zero, /*upperbound=*/upperbound,
+              /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+              /*startIdx=*/one);
+          accBounds.push_back(accBound);
+        }
+      } else if (auto shapeShiftOp =
+                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
+                         shape.getDefiningOp())) {
+        mlir::Value lowerbound;
+        mlir::Value cummulativeExtent = one;
+        for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
+          if (idx % 2 == 0) {
+            lowerbound = val;
+          } else {
+            mlir::Value extent = val;
+            mlir::Value upperbound =
+                builder.create<mlir::arith::SubIOp>(loc, extent, one);
+            upperbound = builder.create<mlir::arith::AddIOp>(loc, lowerbound,
+                                                             upperbound);
+            mlir::Value stride = one;
+            if (strideIncludeLowerExtent) {
+              stride = cummulativeExtent;
+              cummulativeExtent = builder.create<mlir::arith::MulIOp>(
+                  loc, cummulativeExtent, extent);
+            }
+            auto accBound = builder.create<mlir::acc::DataBoundsOp>(
+                loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+                /*lowerbound=*/zero, /*upperbound=*/upperbound,
+                /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+                /*startIdx=*/lowerbound);
+            accBounds.push_back(accBound);
+          }
+        }
+      }
+
+      if (!accBounds.empty())
+        return accBounds;
+    }
+
     assert(false && "array with unknown dimension expected to have descriptor");
     return {};
   }
@@ -235,6 +306,10 @@ static bool isArrayLike(mlir::Type type) {
 }
 
 static bool isCompositeLike(mlir::Type type) {
+  // class(*) is not a composite type since it does not have a determined type.
+  if (fir::isUnlimitedPolymorphicType(type))
+    return false;
+
   return mlir::isa<fir::RecordType, fir::ClassType, mlir::TupleType>(type);
 }
 
@@ -249,8 +324,18 @@ template <>
 mlir::acc::VariableTypeCategory
 OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
                                                         mlir::Value var) const {
+  // Class-type does not behave like a normal box because it does not hold an
+  // element type. Thus special handle it here.
+  if (mlir::isa<fir::ClassType>(type)) {
+    // class(*) is not a composite type since it does not have a determined
+    // type.
+    if (fir::isUnlimitedPolymorphicType(type))
+      return mlir::acc::VariableTypeCategory::uncategorized;
+    return mlir::acc::VariableTypeCategory::composite;
+  }
 
   mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(type);
+  assert(eleTy && "expect to be able to unwrap the element type");
 
   // If the type enclosed by the box is a mappable type, then have it
   // provide the type category.
@@ -275,7 +360,7 @@ OpenACCMappableModel<fir::BaseBoxType>::getTypeCategory(mlir::Type type,
   return mlir::acc::VariableTypeCategory::nonscalar;
 }
 
-static mlir::TypedValue<mlir::acc::PointerLikeType>
+static mlir::Value
 getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // If there is no defining op - the unwrapped reference is the base one.
   mlir::Operation *op = varPtr.getDefiningOp();
@@ -301,7 +386,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
           })
           .Default([&](mlir::Operation *) { return varPtr; });
 
-  return mlir::cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(baseRef);
+  return baseRef;
 }
 
 static mlir::acc::VariableTypeCategory
@@ -313,10 +398,17 @@ categorizePointee(mlir::Type pointer,
   // value would both be represented as !fir.ref<f32>. We do not want to treat
   // such a reference as a scalar. Thus unwrap interior pointer calculations.
   auto baseRef = getBaseRef(varPtr);
-  mlir::Type eleTy = baseRef.getType().getElementType();
 
-  if (auto mappableTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
-    return mappableTy.getTypeCategory(varPtr);
+  if (auto mappableTy =
+          mlir::dyn_cast<mlir::acc::MappableType>(baseRef.getType()))
+    return mappableTy.getTypeCategory(baseRef);
+
+  // It must be a pointer-like type since it is not a MappableType.
+  auto ptrLikeTy = mlir::cast<mlir::acc::PointerLikeType>(baseRef.getType());
+  mlir::Type eleTy = ptrLikeTy.getElementType();
+
+  if (auto mappableEleTy = mlir::dyn_cast<mlir::acc::MappableType>(eleTy))
+    return mappableEleTy.getTypeCategory(varPtr);
 
   if (isScalarLike(eleTy))
     return mlir::acc::VariableTypeCategory::scalar;
@@ -326,8 +418,12 @@ categorizePointee(mlir::Type pointer,
     return mlir::acc::VariableTypeCategory::composite;
   if (mlir::isa<fir::CharacterType, mlir::FunctionType>(eleTy))
     return mlir::acc::VariableTypeCategory::nonscalar;
+  // Assumed-type (type(*))does not have a determined type that can be
+  // categorized.
+  if (mlir::isa<mlir::NoneType>(eleTy))
+    return mlir::acc::VariableTypeCategory::uncategorized;
   // "pointers" - in the sense of raw address point-of-view, are considered
-  // scalars. However
+  // scalars.
   if (mlir::isa<fir::LLVMPointerType>(eleTy))
     return mlir::acc::VariableTypeCategory::scalar;
 

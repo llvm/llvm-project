@@ -144,6 +144,10 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-Wuser-defined-warnings"),
         actions=[AddCompileFlag("-Wuser-defined-warnings")],
     ),
+    Feature(
+        name="character-conversion-warnings",
+        when=lambda cfg: hasCompileFlag(cfg, "-Wcharacter-conversion"),
+    ),
     # Tests to validate whether the compiler has a way to set the maximum number
     # of steps during constant evaluation. Since the flag differs per compiler
     # store the "valid" flag as a feature. This allows passing the proper compile
@@ -332,12 +336,22 @@ DEFAULT_FEATURES = [
         or platform.system().lower().startswith("aix")
         # Avoid building on platforms that don't support modules properly.
         or not hasCompileFlag(cfg, "-Wno-reserved-module-identifier")
-        or not sourceBuilds(
-            cfg,
-            """
+        # older versions don't support extern "C++", newer versions don't support main in named module.
+        or not (
+            sourceBuilds(
+                cfg,
+                """
+            export module test;
+            extern "C++" int main(int, char**) { return 0; }
+          """,
+            )
+            or sourceBuilds(
+                cfg,
+                """
             export module test;
             int main(int, char**) { return 0; }
           """,
+            )
         ),
     ),
     # The time zone validation tests compare the output of zdump against the

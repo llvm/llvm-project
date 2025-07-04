@@ -92,6 +92,7 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
 
   let arguments = (ins
     SymbolNameAttr:$name,
+    IndexElementsAttr:$var_shape,
     TypeAttr:$type,
     OptionalAttr<AnyAttr>:$initial_value
   );
@@ -101,17 +102,23 @@ def Tosa_VariableOp : Tosa_Op<"variable", []> {
     Extension<[Tosa_EXT_VARIABLE]>,
   ];
 
+  let hasCustomAssemblyFormat = 1;
+
   let assemblyFormat = [{
     $name
     attr-dict
-    custom<TypeOrAttr>($type, $initial_value)
+    custom<VariableOpTypeOrInitialValue>($var_shape, $type, $initial_value)
   }];
+
+  let builders = [Tosa_VariableOpBuilder];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: variable.write
+// Operator: variable_write
 //===----------------------------------------------------------------------===//
-def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
+def Tosa_VariableWriteOp : Tosa_Op<"variable_write", []> {
   let summary = "write_buffer operator";
 
   let description = [{
@@ -120,7 +127,7 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
 
   let arguments = (ins
     SymbolNameAttr:$name,
-    AnyType:$value
+    Tosa_Tensor:$input1
   );
 
   list<Availability> availability = [
@@ -129,14 +136,16 @@ def Tosa_VariableWriteOp : Tosa_Op<"variable.write", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `,` $value `:` type($value)
+    $name attr-dict `,` $input1 `:` type($input1)
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: variable.read
+// Operator: variable_read
 //===----------------------------------------------------------------------===//
-def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
+def Tosa_VariableReadOp : Tosa_Op<"variable_read", []> {
   let summary = "read_buffer operator";
 
   let description = [{
@@ -148,7 +157,7 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   );
 
   let results = (outs
-    AnyType:$value
+    Tosa_Tensor:$output1
   );
 
   list<Availability> availability = [
@@ -157,8 +166,10 @@ def Tosa_VariableReadOp : Tosa_Op<"variable.read", []> {
   ];
 
   let assemblyFormat = [{
-    $name attr-dict `:` type($value)
+    $name attr-dict `:` type($output1)
   }];
+
+  let hasVerifier = 1;
 }
 
 #endif // TOSA_UTIL_OPS

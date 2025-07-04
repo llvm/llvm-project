@@ -891,7 +891,7 @@ DeletionKind LLVM::GEPOp::rewire(const DestructurableMemorySlot &slot,
   auto byteType = IntegerType::get(builder.getContext(), 8);
   auto newPtr = builder.createOrFold<LLVM::GEPOp>(
       getLoc(), getResult().getType(), byteType, newSlot.ptr,
-      ArrayRef<GEPArg>(accessInfo->subslotOffset), getInbounds());
+      ArrayRef<GEPArg>(accessInfo->subslotOffset), getNoWrapFlags());
   getResult().replaceAllUsesWith(newPtr);
   return DeletionKind::Delete;
 }

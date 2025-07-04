@@ -26,7 +26,8 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 
-#include "llvm/Config/llvm-config.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/Targets.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -605,9 +606,10 @@ NVPTXSerializer::compileToBinaryNVPTX(const std::string &ptxCode) {
           nvPTXCompilerGetErrorLog(compiler, log.data()));
       emitError(loc) << "NVPTX compiler invocation failed, error log: "
                      << log.data();
-    } else
+    } else {
       emitError(loc) << "NVPTX compiler invocation failed with error code: "
                      << status;
+    }
     return std::nullopt;
   }
 
@@ -673,6 +675,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   llvm::Timer moduleToObjectTimer(
       "moduleToObjectTimer",
       "Timer for perf llvm-ir -> isa and isa -> binary.");
+  auto clear = llvm::make_scope_exit([&]() { moduleToObjectTimer.clear(); });
   // Return LLVM IR if the compilation target is `offload`.
 #define DEBUG_TYPE "serialize-to-llvm"
   LLVM_DEBUG({

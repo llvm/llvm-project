@@ -1,9 +1,13 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-TRUE16-SDAG %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-FAKE16 %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND,WORKAROUND-FAKE16 %s
 
 ; Does not apply to wave64
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
 
 ; Does not apply to gfx1101
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1101 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
@@ -83,7 +87,8 @@ define amdgpu_kernel void @minimal_kernel_inputs_with_stack() #0 {
 }
 
 ; GCN-LABEL: {{^}}queue_ptr:
-; GCN: global_load_u8 v{{[0-9]+}},
+; WORKAROUND-TRUE16-SDAG: global_load_d16_u8
+; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}},
 
 ; WORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s15
 ; NOWORKAROUND: v_mov_b32_e32 [[V:v[0-9]+]], s4
@@ -124,9 +129,13 @@ define amdgpu_kernel void @queue_ptr() #1 {
 ; NOWORKAROUND: v_mov_b32_e32 [[V_Y:v[0-9]+]], s9
 ; NOWORKAROUND: v_mov_b32_e32 [[V_Z:v[0-9]+]], s10
 
-; GCN: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
-; GCN: global_load_u8 v{{[0-9]+}},
-; GCN: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
+; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
+; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}},
+; WORKAROUND-TRUE16-SDAG: global_load_d16_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
+
+; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[0:1]
+; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}},
+; WORKAROUND-FAKE16: global_load_u8 v{{[0-9]+}}, v{{[0-9]+}}, s[4:5]
 
 ; GCN-DAG: v_mov_b32_e32 v[[DISPATCH_LO:[0-9]+]], s6
 ; GCN-DAG: v_mov_b32_e32 v[[DISPATCH_HI:[0-9]+]], s7
@@ -196,5 +205,3 @@ attributes #1 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-ld
 attributes #2 = { "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

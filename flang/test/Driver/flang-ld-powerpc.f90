@@ -23,6 +23,7 @@
 ! AIX64-LD-PER-TARGET-DEFAULT-SAME:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64-ibm-aix{{/|\\\\}}libflang_rt.runtime.a"
 ! AIX64-LD-PER-TARGET-DEFAULT-SAME:     "-lm"
 ! AIX64-LD-PER-TARGET-DEFAULT-SAME:     "-lpthread"
+! AIX64-LD-PER-TARGET-DEFAULT-NOT:      "-L/[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64-ibm-aix"
 
 
 ! Check powerpc64-ibm-aix 64-bit linking to static flang-rt by option 

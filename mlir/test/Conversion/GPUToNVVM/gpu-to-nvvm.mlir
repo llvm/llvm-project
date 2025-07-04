@@ -1027,7 +1027,7 @@ module attributes {transform.with_named_sequence} {
       legal_ops = ["func.func", "gpu.module", "gpu.yield"],
       illegal_dialects = ["gpu"],
       illegal_ops = ["llvm.copysign", "llvm.cos", "llvm.exp", "llvm.exp2", "llvm.fabs", "llvm.fceil",
-                    "llvm.ffloor", "llvm.fma", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
+                    "llvm.ffloor", "llvm.frem", "llvm.log", "llvm.log10", "llvm.log2", "llvm.pow",
                     "llvm.roundeven", "llvm.round", "llvm.sin", "llvm.sqrt"],
       partial_conversion
     } : !transform.any_op

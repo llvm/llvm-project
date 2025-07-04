@@ -25,6 +25,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -46,6 +47,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::abs:
   case Intrinsic::atan2:
   case Intrinsic::exp:
+  case Intrinsic::is_fpclass:
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::pow:
@@ -69,6 +71,17 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::vector_reduce_add:
   case Intrinsic::vector_reduce_fadd:
     return true;
+  case Intrinsic::dx_resource_load_typedbuffer: {
+    // We need to handle i64, doubles, and vectors of them.
+    Type *ScalarTy =
+        F.getReturnType()->getStructElementType(0)->getScalarType();
+    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
+  }
+  case Intrinsic::dx_resource_store_typedbuffer: {
+    // We need to handle i64 and doubles and vectors of i64 and doubles.
+    Type *ScalarTy = F.getFunctionType()->getParamType(2)->getScalarType();
+    return ScalarTy->isDoubleTy() || ScalarTy->isIntegerTy(64);
+  }
   }
   return false;
 }
@@ -138,8 +151,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
 
   VectorType *VT = cast<VectorType>(Orig->getType());
   if (cast<FixedVectorType>(VT)->getNumElements() != 3)
-    report_fatal_error(Twine("return vector must have exactly 3 elements"),
-                       /* gen_crash_diag=*/false);
+    reportFatalUsageError("return vector must have exactly 3 elements");
 
   Value *op0 = Orig->getOperand(0);
   Value *op1 = Orig->getOperand(1);
@@ -197,9 +209,8 @@ static Value *expandFloatDotIntrinsic(CallInst *Orig, Value *A, Value *B) {
     DotIntrinsic = Intrinsic::dx_dot4;
     break;
   default:
-    report_fatal_error(
-        Twine("Invalid dot product input vector: length is outside 2-4"),
-        /* gen_crash_diag=*/false);
+    reportFatalUsageError(
+        "Invalid dot product input vector: length is outside 2-4");
     return nullptr;
   }
 
@@ -271,6 +282,58 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
   Exp2Call->setTailCall(Orig->isTailCall());
   Exp2Call->setAttributes(Orig->getAttributes());
   return Exp2Call;
+}
+
+static Value *expandIsFPClass(CallInst *Orig) {
+  Value *T = Orig->getArgOperand(1);
+  auto *TCI = dyn_cast<ConstantInt>(T);
+
+  // These FPClassTest cases have DXIL opcodes, so they will be handled in
+  // DXIL Op Lowering instead.
+  switch (TCI->getZExtValue()) {
+  case FPClassTest::fcInf:
+  case FPClassTest::fcNan:
+  case FPClassTest::fcNormal:
+  case FPClassTest::fcFinite:
+    return nullptr;
+  }
+
+  IRBuilder<> Builder(Orig);
+
+  Value *F = Orig->getArgOperand(0);
+  Type *FTy = F->getType();
+  unsigned FNumElem = 0; // 0 => F is not a vector
+
+  unsigned BitWidth; // Bit width of F or the ElemTy of F
+  Type *BitCastTy;   // An IntNTy of the same bitwidth as F or ElemTy of F
+
+  if (auto *FVecTy = dyn_cast<FixedVectorType>(FTy)) {
+    Type *ElemTy = FVecTy->getElementType();
+    FNumElem = FVecTy->getNumElements();
+    BitWidth = ElemTy->getPrimitiveSizeInBits();
+    BitCastTy = FixedVectorType::get(Builder.getIntNTy(BitWidth), FNumElem);
+  } else {
+    BitWidth = FTy->getPrimitiveSizeInBits();
+    BitCastTy = Builder.getIntNTy(BitWidth);
+  }
+
+  Value *FBitCast = Builder.CreateBitCast(F, BitCastTy);
+  switch (TCI->getZExtValue()) {
+  case FPClassTest::fcNegZero: {
+    Value *NegZero =
+        ConstantInt::get(Builder.getIntNTy(BitWidth), 1 << (BitWidth - 1));
+    Value *RetVal;
+    if (FNumElem) {
+      Value *NegZeroSplat = Builder.CreateVectorSplat(FNumElem, NegZero);
+      RetVal =
+          Builder.CreateICmpEQ(FBitCast, NegZeroSplat, "is.fpclass.negzero");
+    } else
+      RetVal = Builder.CreateICmpEQ(FBitCast, NegZero, "is.fpclass.negzero");
+    return RetVal;
+  }
+  default:
+    reportFatalUsageError("Unsupported FPClassTest");
+  }
 }
 
 static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
@@ -359,8 +422,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
     if (auto *constantFP = dyn_cast<ConstantFP>(X)) {
       const APFloat &fpVal = constantFP->getValueAPF();
       if (fpVal.isZero())
-        report_fatal_error(Twine("Invalid input scalar: length is zero"),
-                           /* gen_crash_diag=*/false);
+        reportFatalUsageError("Invalid input scalar: length is zero");
     }
     return Builder.CreateFDiv(X, X);
   }
@@ -372,8 +434,7 @@ static Value *expandNormalizeIntrinsic(CallInst *Orig) {
   if (auto *constantFP = dyn_cast<ConstantFP>(DotProduct)) {
     const APFloat &fpVal = constantFP->getValueAPF();
     if (fpVal.isZero())
-      report_fatal_error(Twine("Invalid input vector: length is zero"),
-                         /* gen_crash_diag=*/false);
+      reportFatalUsageError("Invalid input vector: length is zero");
   }
 
   Value *Multiplicand = Builder.CreateIntrinsic(EltTy, Intrinsic::dx_rsqrt,
@@ -483,6 +544,155 @@ static Value *expandRadiansIntrinsic(CallInst *Orig) {
   return Builder.CreateFMul(X, PiOver180);
 }
 
+static bool expandTypedBufferLoadIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  Type *BufferTy = Orig->getType()->getStructElementType(0);
+  Type *ScalarTy = BufferTy->getScalarType();
+  bool IsDouble = ScalarTy->isDoubleTy();
+  assert(IsDouble || ScalarTy->isIntegerTy(64) &&
+                         "Only expand double or int64 scalars or vectors");
+
+  unsigned ExtractNum = 2;
+  if (auto *VT = dyn_cast<FixedVectorType>(BufferTy)) {
+    assert(VT->getNumElements() == 2 &&
+           "TypedBufferLoad vector must be size 2");
+    ExtractNum = 4;
+  }
+
+  Type *Ty = VectorType::get(Builder.getInt32Ty(), ExtractNum, false);
+
+  Type *LoadType = StructType::get(Ty, Builder.getInt1Ty());
+  CallInst *Load =
+      Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_typedbuffer,
+                              {Orig->getOperand(0), Orig->getOperand(1)});
+
+  // extract the buffer load's result
+  Value *Extract = Builder.CreateExtractValue(Load, {0});
+
+  SmallVector<Value *> ExtractElements;
+  for (unsigned I = 0; I < ExtractNum; ++I)
+    ExtractElements.push_back(
+        Builder.CreateExtractElement(Extract, Builder.getInt32(I)));
+
+  // combine into double(s) or int64(s)
+  Value *Result = PoisonValue::get(BufferTy);
+  for (unsigned I = 0; I < ExtractNum; I += 2) {
+    Value *Combined = nullptr;
+    if (IsDouble)
+      // For doubles, use dx_asdouble intrinsic
+      Combined =
+          Builder.CreateIntrinsic(Builder.getDoubleTy(), Intrinsic::dx_asdouble,
+                                  {ExtractElements[I], ExtractElements[I + 1]});
+    else {
+      // For int64, manually combine two int32s
+      // First, zero-extend both values to i64
+      Value *Lo = Builder.CreateZExt(ExtractElements[I], Builder.getInt64Ty());
+      Value *Hi =
+          Builder.CreateZExt(ExtractElements[I + 1], Builder.getInt64Ty());
+      // Shift the high bits left by 32 bits
+      Value *ShiftedHi = Builder.CreateShl(Hi, Builder.getInt64(32));
+      // OR the high and low bits together
+      Combined = Builder.CreateOr(Lo, ShiftedHi);
+    }
+
+    if (ExtractNum == 4)
+      Result = Builder.CreateInsertElement(Result, Combined,
+                                           Builder.getInt32(I / 2));
+    else
+      Result = Combined;
+  }
+
+  Value *CheckBit = nullptr;
+  for (User *U : make_early_inc_range(Orig->users())) {
+    // If it's not a ExtractValueInst, we don't know how to
+    // handle it
+    auto *EVI = dyn_cast<ExtractValueInst>(U);
+    if (!EVI)
+      llvm_unreachable("Unexpected user of typedbufferload");
+
+    ArrayRef<unsigned> Indices = EVI->getIndices();
+    assert(Indices.size() == 1);
+
+    if (Indices[0] == 0) {
+      // Use of the value(s)
+      EVI->replaceAllUsesWith(Result);
+    } else {
+      // Use of the check bit
+      assert(Indices[0] == 1 && "Unexpected type for typedbufferload");
+      if (!CheckBit)
+        CheckBit = Builder.CreateExtractValue(Load, {1});
+      EVI->replaceAllUsesWith(CheckBit);
+    }
+    EVI->eraseFromParent();
+  }
+  Orig->eraseFromParent();
+  return true;
+}
+
+static bool expandTypedBufferStoreIntrinsic(CallInst *Orig) {
+  IRBuilder<> Builder(Orig);
+
+  Type *BufferTy = Orig->getFunctionType()->getParamType(2);
+  Type *ScalarTy = BufferTy->getScalarType();
+  bool IsDouble = ScalarTy->isDoubleTy();
+  assert((IsDouble || ScalarTy->isIntegerTy(64)) &&
+         "Only expand double or int64 scalars or vectors");
+
+  // Determine if we're dealing with a vector or scalar
+  bool IsVector = isa<FixedVectorType>(BufferTy);
+  if (IsVector) {
+    assert(cast<FixedVectorType>(BufferTy)->getNumElements() == 2 &&
+           "TypedBufferStore vector must be size 2");
+  }
+
+  // Create the appropriate vector type for the result
+  Type *Int32Ty = Builder.getInt32Ty();
+  Type *ResultTy = VectorType::get(Int32Ty, IsVector ? 4 : 2, false);
+  Value *Val = PoisonValue::get(ResultTy);
+
+  Type *SplitElementTy = Int32Ty;
+  if (IsVector)
+    SplitElementTy = VectorType::get(SplitElementTy, 2, false);
+
+  Value *LowBits = nullptr;
+  Value *HighBits = nullptr;
+  // Split the 64-bit values into 32-bit components
+  if (IsDouble) {
+    auto *SplitTy = llvm::StructType::get(SplitElementTy, SplitElementTy);
+    Value *Split = Builder.CreateIntrinsic(SplitTy, Intrinsic::dx_splitdouble,
+                                           {Orig->getOperand(2)});
+    LowBits = Builder.CreateExtractValue(Split, 0);
+    HighBits = Builder.CreateExtractValue(Split, 1);
+  } else {
+    // Handle int64 type(s)
+    Value *InputVal = Orig->getOperand(2);
+    Constant *ShiftAmt = Builder.getInt64(32);
+    if (IsVector)
+      ShiftAmt = ConstantVector::getSplat(ElementCount::getFixed(2), ShiftAmt);
+
+    // Split into low and high 32-bit parts
+    LowBits = Builder.CreateTrunc(InputVal, SplitElementTy);
+    Value *ShiftedVal = Builder.CreateLShr(InputVal, ShiftAmt);
+    HighBits = Builder.CreateTrunc(ShiftedVal, SplitElementTy);
+  }
+
+  if (IsVector) {
+    Val = Builder.CreateShuffleVector(LowBits, HighBits, {0, 2, 1, 3});
+  } else {
+    Val = Builder.CreateInsertElement(Val, LowBits, Builder.getInt32(0));
+    Val = Builder.CreateInsertElement(Val, HighBits, Builder.getInt32(1));
+  }
+
+  // Create the final intrinsic call
+  Builder.CreateIntrinsic(Builder.getVoidTy(),
+                          Intrinsic::dx_resource_store_typedbuffer,
+                          {Orig->getOperand(0), Orig->getOperand(1), Val});
+
+  Orig->eraseFromParent();
+  return true;
+}
+
 static Intrinsic::ID getMaxForClamp(Intrinsic::ID ClampIntrinsic) {
   if (ClampIntrinsic == Intrinsic::dx_uclamp)
     return Intrinsic::umax;
@@ -561,6 +771,9 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
   case Intrinsic::exp:
     Result = expandExpIntrinsic(Orig);
     break;
+  case Intrinsic::is_fpclass:
+    Result = expandIsFPClass(Orig);
+    break;
   case Intrinsic::log:
     Result = expandLogIntrinsic(Orig);
     break;
@@ -607,6 +820,14 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     break;
   case Intrinsic::dx_radians:
     Result = expandRadiansIntrinsic(Orig);
+    break;
+  case Intrinsic::dx_resource_load_typedbuffer:
+    if (expandTypedBufferLoadIntrinsic(Orig))
+      return true;
+    break;
+  case Intrinsic::dx_resource_store_typedbuffer:
+    if (expandTypedBufferStoreIntrinsic(Orig))
+      return true;
     break;
   case Intrinsic::usub_sat:
     Result = expandUsubSat(Orig);

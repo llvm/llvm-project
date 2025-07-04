@@ -177,4 +177,67 @@ void f() {
 }
 } // namespace deduced_return_type_in_discareded_statement
 
+namespace GH140449 {
+
+template <typename T>
+int f() {
+    T *ptr;
+    return 0;
+}
+
+template <typename T>
+constexpr int g() {
+    T *ptr; // expected-error{{'ptr' declared as a pointer to a reference of type 'int &'}}
+    return 0;
+}
+
+template <typename T>
+auto h() {
+    T *ptr; // expected-error{{'ptr' declared as a pointer to a reference of type 'int &'}}
+    return 0;
+}
+
+void test() {
+    if constexpr (false) {
+        int x = f<int &>();
+        constexpr int y = g<int &>();
+        // expected-error@-1 {{constexpr variable 'y' must be initialized by a constant expression}} \
+        // expected-note@-1{{in instantiation of function template specialization}}
+        int z = h<int &>();
+        // expected-note@-1{{in instantiation of function template specialization}}
+
+    }
+}
+
+void regression() {
+  if constexpr (false) {
+    auto lam = []() { return 0; };
+    1 | lam(); // expected-warning {{unused}}
+  }
+}
+
+}
+
+namespace GH146063 {
+template <typename>
+struct A {
+  static_assert([]() constexpr { return true; }());
+};
+
+void f1() {
+  if constexpr (false) {
+    A<int> a;
+  }
+}
+
+void f2() {
+  if constexpr (false) {
+    static_assert([]{});
+    // expected-warning@-1 {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  }
+}
+
+}
+
+
 #endif

@@ -79,6 +79,7 @@ module attributes {transform.with_named_sequence} {
       transform.apply_patterns.vector.lower_masked_transfers
       transform.apply_patterns.vector.transfer_permutation_patterns
       transform.apply_patterns.vector.reduction_to_contract
+      transform.apply_patterns.vector.sink_ops
     } : !transform.any_op
 
     // Step 5: Lower vector.contract to vector.outerproduct. Also drop unit

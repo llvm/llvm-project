@@ -249,7 +249,7 @@ public:
   // Hash functor
   unsigned hash() const {
     // Is deterministic because Values are saved in a specific order.
-    return (unsigned)hash_combine_range(Values.begin(), Values.end());
+    return (unsigned)hash_combine_range(Values);
   }
 
   bool operator==(const ModelledPHI &Other) const {

@@ -176,7 +176,8 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       case Mips::JAL:
       case Mips::JAL_MM:
         if (MI.getOperand(0).isGlobal() &&
-            MI.getOperand(0).getGlobal()->getGlobalIdentifier() == "_mcount")
+            MI.getOperand(0).getGlobal()->hasExternalLinkage() &&
+            MI.getOperand(0).getGlobal()->getName() == "_mcount")
           emitMCountABI(MI, MBB, MF);
         break;
       case Mips::JALRPseudo:

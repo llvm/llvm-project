@@ -84,6 +84,9 @@ void RewriteInsertsPass::runOnOperation() {
 LogicalResult RewriteInsertsPass::collectInsertionChain(
     spirv::CompositeInsertOp op,
     SmallVectorImpl<spirv::CompositeInsertOp> &insertions) {
+  if (isa<spirv::CooperativeMatrixType>(op.getComposite().getType()))
+    return failure();
+
   auto indicesArrayAttr = cast<ArrayAttr>(op.getIndices());
   // TODO: handle nested composite object.
   if (indicesArrayAttr.size() == 1) {

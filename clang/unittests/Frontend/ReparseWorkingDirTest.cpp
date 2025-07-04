@@ -57,14 +57,16 @@ public:
     CI->getFileSystemOpts().WorkingDir = *VFS->getCurrentWorkingDirectory();
     CI->getTargetOpts().Triple = "i386-unknown-linux-gnu";
 
+    auto DiagOpts = std::make_shared<DiagnosticOptions>();
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions,
+        CompilerInstance::createDiagnostics(*VFS, *DiagOpts,
                                             new DiagnosticConsumer));
 
     FileManager *FileMgr = new FileManager(CI->getFileSystemOpts(), VFS);
 
     std::unique_ptr<ASTUnit> AST = ASTUnit::LoadFromCompilerInvocation(
-        CI, PCHContainerOpts, Diags, FileMgr, false, CaptureDiagsKind::None,
+        CI, PCHContainerOpts, DiagOpts, Diags, FileMgr, false,
+        CaptureDiagsKind::None,
         /*PrecompilePreambleAfterNParses=*/1);
     return AST;
   }
