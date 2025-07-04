@@ -575,3 +575,212 @@ exit:
   %resigned = call i64 @llvm.ptrauth.resign(i64 %addr, i32 2, i64 %auth.disc, i32 3, i64 %sign.disc)
   ret i64 %resigned
 }
+
+; Test other pseudo instructions accepting discriminator components as separate
+; operands: AUTH_TCRETURN, AUTH_TCRETURN_BTI and BLRA.
+; FIXME: Test BLRA_RVMARKER.
+;
+; A few other PAuth-related pseudo instructions exist that accept address and
+; integer discriminator components, but the way they are currently selected both
+; by DAGISel and GlobalISel is not susceptible to this issue:
+; * MOVaddrPAC and LOADgotPAC are only emitted when lowering `ptrauth` constants
+;   in LLVM IR, so their discriminators are never expressed via blend.
+; * BRA is only emitted for indirect branch, and its address discriminator is
+;   always XZR.
+;
+; Furthermore, a few more pseudo instructions have HasPAuth in their predicates,
+; but only have constant discriminator or no discriminator operands at all:
+; LOADgotAUTH and LOADauthptrstatic.
+;
+; The below test cases specify non-default preserve_nonecc calling convention -
+; this is to prevent meaningless divergence between Darwin and ELF targets due
+; to difference in callee-saved register masks specified in call instructions.
+
+define preserve_nonecc i64 @auth_tcreturn_blend_components(ptr %callee, i1 %cond.b) {
+  ; DAGISEL-LABEL: name: auth_tcreturn_blend_components
+  ; DAGISEL: bb.0.entry:
+  ; DAGISEL-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; DAGISEL-NEXT:   liveins: $x20, $w0
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:tcgprnotx16x17 = COPY $x20
+  ; DAGISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
+  ; DAGISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; DAGISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[LDRXui]], 42, 48
+  ; DAGISEL-NEXT:   [[COPY2:%[0-9]+]]:tcgpr64 = COPY [[MOVKXi]]
+  ; DAGISEL-NEXT:   TBZW [[COPY]], 0, %bb.2
+  ; DAGISEL-NEXT:   B %bb.1
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT: bb.1.next:
+  ; DAGISEL-NEXT:   successors: %bb.2(0x80000000)
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY [[COPY2]]
+  ; DAGISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[COPY3]]
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT: bb.2.exit:
+  ; DAGISEL-NEXT:   AUTH_TCRETURN [[COPY1]], 0, 1, 0, [[COPY2]], csr_aarch64_noneregs, implicit-def dead $x16, implicit-def dead $x17, implicit $sp
+  ;
+  ; GISEL-LABEL: name: auth_tcreturn_blend_components
+  ; GISEL: bb.1.entry:
+  ; GISEL-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GISEL-NEXT:   liveins: $w0, $x20
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:tcgprnotx16x17 = COPY $x20
+  ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
+  ; GISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
+  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:tcgpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64common = MOVKXi [[LDRXui]], 42, 48
+  ; GISEL-NEXT:   TBZW [[COPY1]], 0, %bb.3
+  ; GISEL-NEXT:   B %bb.2
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT: bb.2.next:
+  ; GISEL-NEXT:   successors: %bb.3(0x80000000)
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[MOVKXi]]
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT: bb.3.exit:
+  ; GISEL-NEXT:   AUTH_TCRETURN [[COPY]], 0, 1, 42, [[LDRXui]], csr_aarch64_noneregs, implicit-def $x16, implicit-def $x17, implicit $sp
+entry:
+  %addrdisc = load i64, ptr @discvar
+  %disc = call i64 @llvm.ptrauth.blend(i64 %addrdisc, i64 42)
+  br i1 %cond.b, label %next, label %exit
+
+next:
+  call void asm sideeffect "nop", "r"(i64 %disc)
+  br label %exit
+
+exit:
+  %result = tail call preserve_nonecc i64 %callee() [ "ptrauth"(i32 1, i64 %disc) ]
+  ret i64 %result
+}
+
+define preserve_nonecc i64 @auth_tcreturn_bti_blend_components(ptr %callee, i1 %cond.b) "branch-target-enforcement"="true" {
+  ; DAGISEL-LABEL: name: auth_tcreturn_bti_blend_components
+  ; DAGISEL: bb.0.entry:
+  ; DAGISEL-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; DAGISEL-NEXT:   liveins: $x20, $w0
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $x20
+  ; DAGISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
+  ; DAGISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; DAGISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[LDRXui]], 42, 48
+  ; DAGISEL-NEXT:   [[COPY2:%[0-9]+]]:tcgprnotx16x17 = COPY [[MOVKXi]]
+  ; DAGISEL-NEXT:   TBZW [[COPY]], 0, %bb.2
+  ; DAGISEL-NEXT:   B %bb.1
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT: bb.1.next:
+  ; DAGISEL-NEXT:   successors: %bb.2(0x80000000)
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY [[COPY2]]
+  ; DAGISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[COPY3]]
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT: bb.2.exit:
+  ; DAGISEL-NEXT:   [[COPY4:%[0-9]+]]:tcgprx16x17 = COPY [[COPY1]]
+  ; DAGISEL-NEXT:   AUTH_TCRETURN_BTI [[COPY4]], 0, 1, 0, [[COPY2]], csr_aarch64_noneregs, implicit-def dead $x16, implicit-def dead $x17, implicit $sp
+  ;
+  ; GISEL-LABEL: name: auth_tcreturn_bti_blend_components
+  ; GISEL: bb.1.entry:
+  ; GISEL-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GISEL-NEXT:   liveins: $w0, $x20
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:tcgprx16x17 = COPY $x20
+  ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
+  ; GISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
+  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:tcgprnotx16x17 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64common = MOVKXi [[LDRXui]], 42, 48
+  ; GISEL-NEXT:   TBZW [[COPY1]], 0, %bb.3
+  ; GISEL-NEXT:   B %bb.2
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT: bb.2.next:
+  ; GISEL-NEXT:   successors: %bb.3(0x80000000)
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[MOVKXi]]
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT: bb.3.exit:
+  ; GISEL-NEXT:   AUTH_TCRETURN_BTI [[COPY]], 0, 1, 42, [[LDRXui]], csr_aarch64_noneregs, implicit-def $x16, implicit-def $x17, implicit $sp
+entry:
+  %addrdisc = load i64, ptr @discvar
+  %disc = call i64 @llvm.ptrauth.blend(i64 %addrdisc, i64 42)
+  br i1 %cond.b, label %next, label %exit
+
+next:
+  call void asm sideeffect "nop", "r"(i64 %disc)
+  br label %exit
+
+exit:
+  %result = tail call preserve_nonecc i64 %callee() [ "ptrauth"(i32 1, i64 %disc) ]
+  ret i64 %result
+}
+
+define preserve_nonecc i64 @blra_blend_components(ptr %callee, i1 %cond.b) {
+  ; DAGISEL-LABEL: name: blra_blend_components
+  ; DAGISEL: bb.0.entry:
+  ; DAGISEL-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; DAGISEL-NEXT:   liveins: $x20, $w0
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+  ; DAGISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr64noip = COPY $x20
+  ; DAGISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
+  ; DAGISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; DAGISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[LDRXui]], 42, 48
+  ; DAGISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64 = COPY [[MOVKXi]]
+  ; DAGISEL-NEXT:   TBZW [[COPY]], 0, %bb.2
+  ; DAGISEL-NEXT:   B %bb.1
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT: bb.1.next:
+  ; DAGISEL-NEXT:   successors: %bb.2(0x80000000)
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT:   [[COPY3:%[0-9]+]]:gpr64common = COPY [[COPY2]]
+  ; DAGISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[COPY3]]
+  ; DAGISEL-NEXT: {{  $}}
+  ; DAGISEL-NEXT: bb.2.exit:
+  ; DAGISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+  ; DAGISEL-NEXT:   BLRA [[COPY1]], 1, 0, [[COPY2]], csr_aarch64_noneregs, implicit-def dead $x16, implicit-def dead $x17, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $x0
+  ; DAGISEL-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+  ; DAGISEL-NEXT:   [[COPY4:%[0-9]+]]:gpr64sp = COPY $x0
+  ; DAGISEL-NEXT:   [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY4]], 123, 0
+  ; DAGISEL-NEXT:   $x0 = COPY [[ADDXri]]
+  ; DAGISEL-NEXT:   RET_ReallyLR implicit $x0
+  ;
+  ; GISEL-LABEL: name: blra_blend_components
+  ; GISEL: bb.1.entry:
+  ; GISEL-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GISEL-NEXT:   liveins: $w0, $x20
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT:   [[COPY:%[0-9]+]]:gpr64noip = COPY $x20
+  ; GISEL-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY $w0
+  ; GISEL-NEXT:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @discvar
+  ; GISEL-NEXT:   [[LDRXui:%[0-9]+]]:gpr64 = LDRXui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @discvar :: (dereferenceable load (s64) from @discvar)
+  ; GISEL-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64common = MOVKXi [[LDRXui]], 42, 48
+  ; GISEL-NEXT:   TBZW [[COPY1]], 0, %bb.3
+  ; GISEL-NEXT:   B %bb.2
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT: bb.2.next:
+  ; GISEL-NEXT:   successors: %bb.3(0x80000000)
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT:   INLINEASM &nop, 1 /* sideeffect attdialect */, 3866633 /* reguse:GPR64common */, [[MOVKXi]]
+  ; GISEL-NEXT: {{  $}}
+  ; GISEL-NEXT: bb.3.exit:
+  ; GISEL-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-NEXT:   BLRA [[COPY]], 1, 42, [[LDRXui]], csr_aarch64_noneregs, implicit-def $x16, implicit-def $x17, implicit-def $lr, implicit $sp, implicit-def $x0
+  ; GISEL-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; GISEL-NEXT:   [[COPY2:%[0-9]+]]:gpr64sp = COPY $x0
+  ; GISEL-NEXT:   [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY2]], 123, 0
+  ; GISEL-NEXT:   $x0 = COPY [[ADDXri]]
+  ; GISEL-NEXT:   RET_ReallyLR implicit $x0
+entry:
+  %addrdisc = load i64, ptr @discvar
+  %disc = call i64 @llvm.ptrauth.blend(i64 %addrdisc, i64 42)
+  br i1 %cond.b, label %next, label %exit
+
+next:
+  call void asm sideeffect "nop", "r"(i64 %disc)
+  br label %exit
+
+exit:
+  %tmp = call preserve_nonecc i64 %callee() [ "ptrauth"(i32 1, i64 %disc) ]
+  ; Prevent tail call.
+  %result = add i64 %tmp, 123
+  ret i64 %result
+}
