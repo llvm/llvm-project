@@ -1385,6 +1385,19 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
         ScoreBrackets.simplifyWaitcnt(OldWait, OptNone);
       Wait = Wait.combined(OldWait);
 
+      if (!WaitcntInstr && II.getOpcode() == AMDGPU::S_WAITCNT_soft) {
+        // Each direct load to LDS is also a store to LDS, but we do not have a
+        // separate counter for it. Instead these operations increment LOAD_CNT
+        // and need to be waited for at a release fence. So we treat a release
+        // fence as if it depends on any previous LDS DMA stores.
+        //
+        // Note that a user-specified S_WAITCNT instruction is not affected; we
+        // only check for S_WAITCNT_soft since that represents a fence.
+        //
+        // FIXME: How does one detect that a soft wait is a release???
+        ScoreBrackets.determineWait(LOAD_CNT, FIRST_LDS_VGPR, Wait);
+      }
+
       // Merge consecutive waitcnt of the same type by erasing multiples.
       if (WaitcntInstr ||
           (!Wait.hasWaitExceptStoreCnt() && OpcodeIsSoft && !OptNone)) {
