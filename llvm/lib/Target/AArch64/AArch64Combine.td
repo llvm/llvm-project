@@ -62,8 +62,10 @@ class push_opcode_through_ext<Instruction opcode, Instruction extOpcode> : GICom
 
 def push_sub_through_zext : push_opcode_through_ext<G_SUB, G_ZEXT>;
 def push_add_through_zext : push_opcode_through_ext<G_ADD, G_ZEXT>;
+def push_mul_through_zext : push_opcode_through_ext<G_MUL, G_ZEXT>;
 def push_sub_through_sext : push_opcode_through_ext<G_SUB, G_SEXT>;
 def push_add_through_sext : push_opcode_through_ext<G_ADD, G_SEXT>;
+def push_mul_through_sext : push_opcode_through_ext<G_MUL, G_SEXT>;
 
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
@@ -75,8 +77,10 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       ext_uaddv_to_uaddlv,
                                       push_sub_through_zext,
                                       push_add_through_zext,
+                                      push_mul_through_zext,
                                       push_sub_through_sext,
-                                      push_add_through_sext]> {
+                                      push_add_through_sext,
+                                      push_mul_through_sext]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
 
