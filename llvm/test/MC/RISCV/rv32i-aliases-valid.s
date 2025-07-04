@@ -85,7 +85,7 @@ li x12, 0xFFFFFFFF
 
 # CHECK-ASM-NOALIAS: addi a0, zero, %lo(1193046)
 # CHECK-OBJ-NOALIAS: addi a0, zero, 1110
-# CHECK-ASM: addi a0, zero, %lo(1193046)
+# CHECK-ASM: li a0, %lo(1193046)
 li a0, %lo(0x123456)
 
 # CHECK-OBJ-NOALIAS: addi a0, zero, 0
@@ -109,7 +109,7 @@ li a0, CONST+1
 li a0, CONST
 
 .equ CONST, .Lbuf_end - .Lbuf
-# CHECK-ASM: li a0, CONST
+# CHECK-ASM: addi a0, zero, CONST
 # CHECK-ASM-NOALIAS: addi a0, zero, CONST
 # CHECK-OBJ-NOALIAS: addi a0, zero, 8
 li a0, CONST

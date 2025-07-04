@@ -30,3 +30,17 @@ qc.li x10, 33554432
 
 # CHECK-EXT: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcili' (Qualcomm uC Load Large Immediate Extension)
 qc.li x10, 114514
+
+reldef:
+.global undef
+
+# CHECK-IMM: :[[@LINE+1]]:12: error: operand must be a symbol with a %qc.abs20 specifier or an integer in the range [-524288, 524287]
+qc.li x10, reldef
+# CHECK-IMM: :[[@LINE+1]]:12: error: operand must be a symbol with a %qc.abs20 specifier or an integer in the range [-524288, 524287]
+qc.li x10, reldef-.
+# CHECK-IMM: :[[@LINE+1]]:12: error: operand must be a symbol with a %qc.abs20 specifier or an integer in the range [-524288, 524287]
+qc.li x10, undef
+# CHECK-IMM: :[[@LINE+1]]:12: error: operand must be a symbol with a %qc.abs20 specifier or an integer in the range [-524288, 524287]
+qc.li x10, latedef
+
+.set latedef, 1

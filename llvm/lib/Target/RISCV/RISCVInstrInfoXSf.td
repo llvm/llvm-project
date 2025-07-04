@@ -43,9 +43,9 @@ def tsimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<5>";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return isInt<5>(Imm);
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isInt<5>(Imm);
   }];
 }
 

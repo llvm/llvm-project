@@ -327,12 +327,20 @@ def uimm16 : RISCVUImmOp<16>;
 def uimm32 : RISCVUImmOp<32>;
 def uimm48 : RISCVUImmOp<48>;
 def uimm64 : RISCVUImmOp<64>;
+
 def simm12 : RISCVSImmLeafOp<12> {
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isInt<12>(Imm);
-    return MCOp.isBareSymbolRef();
+
+    MCExpr::Spec S;
+    if (!MCOp.isExpr() || !MCOp.isSimpleSymbolRef(S))
+      return false;
+
+    return (S == RISCV::S_LO) || (S == RISCV::S_PCREL_LO) ||
+           (S == RISCV::S_TPREL_LO) || (S == ELF::R_RISCV_TLSDESC_LOAD_LO12) ||
+           (S == ELF::R_RISCV_TLSDESC_ADD_LO12);
   }];
 }
 
@@ -368,20 +376,37 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
 // is used to match with a basic block (eg. BccPat<>).
 def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
-class UImm20OperandMaybeSym : RISCVUImmOp<20> {
+def uimm20_lui : RISCVUImmOp<20> {
+  let ParserMatchClass = UImmAsmOperand<20, "LUI">;
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isUInt<20>(Imm);
-    return MCOp.isBareSymbolRef();
+
+    MCExpr::Spec S;
+    if (!MCOp.isExpr() || !MCOp.isSimpleSymbolRef(S))
+      return false;
+
+    return (S == ELF::R_RISCV_HI20) ||
+           (S == ELF::R_RISCV_TPREL_HI20);
   }];
 }
-
-def uimm20_lui : UImm20OperandMaybeSym {
-  let ParserMatchClass = UImmAsmOperand<20, "LUI">;
-}
-def uimm20_auipc : UImm20OperandMaybeSym {
+def uimm20_auipc : RISCVUImmOp<20> {
   let ParserMatchClass = UImmAsmOperand<20, "AUIPC">;
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<20>(Imm);
+
+    MCExpr::Spec S;
+    if (!MCOp.isExpr() || !MCOp.isSimpleSymbolRef(S))
+      return false;
+
+    return (S == ELF::R_RISCV_PCREL_HI20) || (S == ELF::R_RISCV_GOT_HI20) ||
+           (S == ELF::R_RISCV_TLS_GOT_HI20) ||
+           (S == ELF::R_RISCV_TLS_GD_HI20) ||
+           (S == ELF::R_RISCV_TLSDESC_HI20);
+  }];
 }
 
 def uimm20 : RISCVUImmOp<20>;

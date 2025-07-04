@@ -72,3 +72,10 @@ c.srli a3, 63
 # CHECK-ASM: encoding: [0x7d,0x96]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 c.srai a2, 63
+
+.set absdef, 1
+
+# CHECK-ASM-AND-OBJ: c.addiw a0, 1
+# CHECK-ASM: encoding: [0x05,0x25]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+c.addiw a0, absdef

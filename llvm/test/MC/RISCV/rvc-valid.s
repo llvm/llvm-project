@@ -175,3 +175,20 @@ c.lui s0, 0xfffff
 # CHECK-ASM: encoding: [0x00,0x00]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 c.unimp
+
+.set absdef, 1
+
+c.addi a0, absdef
+# CHECK-ASM-AND-OBJ: c.addi a0, 1
+# CHECK-ASM: encoding: [0x05,0x05]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+
+c.li a0, absdef
+# CHECK-ASM-AND-OBJ: c.li a0, 1
+# CHECK-ASM: encoding: [0x05,0x45]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+
+c.andi a0, absdef
+# CHECK-ASM-AND-OBJ: c.andi a0, 1
+# CHECK-ASM: encoding: [0x05,0x89]
+# CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}

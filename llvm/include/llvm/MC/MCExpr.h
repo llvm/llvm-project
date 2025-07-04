@@ -46,6 +46,9 @@ public:
     Target     ///< Target specific expression.
   };
 
+  /// The type of a Specifier (used in MCSymbolRefExpr and MCSpecifierExpr).
+  using Spec = uint16_t;
+
 private:
   static const unsigned NumSubclassDataBits = 24;
   static_assert(
@@ -63,7 +66,6 @@ private:
                           bool InSet) const;
 
 protected:
-  using Spec = uint16_t;
   explicit MCExpr(ExprKind Kind, SMLoc Loc, unsigned SubclassData = 0)
       : Kind(Kind), SubclassData(SubclassData), Loc(Loc) {
     assert(SubclassData < (1 << NumSubclassDataBits) &&
