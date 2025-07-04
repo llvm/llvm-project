@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/TemplateBase.h"
@@ -35,6 +36,8 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Timer.h"
+#include "llvm/Support/WithColor.h"
 #include <cstddef>
 #include <optional>
 
@@ -390,16 +393,23 @@ SubstitutionInTemplateArguments(
         Constraint.mappingOccurenceList();
     SubstitutedOuterMost =
         llvm::to_vector_of<TemplateArgument>(MLTAL.getOutermost());
+    unsigned Offset = 0;
     for (unsigned I = 0, MappedIndex = 0; I < Used.size(); I++) {
       TemplateArgument Arg;
       if (Used[I])
         Arg = S.Context.getCanonicalTemplateArgument(
             CTAI.SugaredConverted[MappedIndex++]);
-      if (I < SubstitutedOuterMost.size())
+      if (I < SubstitutedOuterMost.size()) {
         SubstitutedOuterMost[I] = Arg;
-      else
+        Offset = I + 1;
+      } else {
         SubstitutedOuterMost.push_back(Arg);
+        Offset = SubstitutedOuterMost.size();
+      }
     }
+    if (Offset < SubstitutedOuterMost.size())
+      SubstitutedOuterMost.erase(SubstitutedOuterMost.begin() + Offset);
+
     MLTAL.replaceOutermostTemplateArguments(
         const_cast<NamedDecl *>(Constraint.getConstraintDecl()),
         SubstitutedOuterMost);
@@ -585,6 +595,19 @@ static bool calculateConstraintSatisfaction(
     ConstraintSatisfaction &Satisfaction,
     UnsignedOrNone PackSubstitutionIndex) {
 
+  // If the expression has been calculated, e.g. when we are in a nested
+  // requirement, do not compute it repeatedly.
+  if (auto *Expr = Constraint.getConceptSpecializationExpr();
+      Expr && Expr->getDependence() == ExprDependence::None) {
+    auto &Calculated = Expr->getSatisfaction();
+    Satisfaction.ContainsErrors = Calculated.ContainsErrors;
+    Satisfaction.IsSatisfied = Calculated.IsSatisfied;
+    Satisfaction.Details.insert(Satisfaction.Details.end(),
+                                Calculated.records().begin(),
+                                Calculated.records().end());
+    return !Satisfaction.ContainsErrors;
+  }
+
   Sema::ContextRAII CurContext(
       S, Constraint.getConceptId()->getNamedConcept()->getDeclContext(),
       /*NewThisContext=*/false);
@@ -765,7 +788,8 @@ static bool CheckConstraintSatisfaction(
   if (TopLevelConceptId) {
     C = ConceptIdConstraint::Create(S.getASTContext(), TopLevelConceptId,
                                     const_cast<NormalizedConstraint *>(C),
-                                    Template, S.ArgPackSubstIndex);
+                                    Template, /*CSE=*/nullptr,
+                                    S.ArgPackSubstIndex);
   }
 
   return !calculateConstraintSatisfaction(
@@ -1535,26 +1559,6 @@ void Sema::DiagnoseUnsatisfiedConstraint(
                                   ConstraintExpr->getBeginLoc(), First);
 }
 
-const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
-    ConstrainedDeclOrNestedRequirement ConstrainedDeclOrNestedReq,
-    ArrayRef<AssociatedConstraint> AssociatedConstraints) {
-  if (!ConstrainedDeclOrNestedReq)
-    return NormalizedConstraint::fromAssociatedConstraints(
-        *this, nullptr, AssociatedConstraints);
-
-  const NamedDecl *ND =
-      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
-  auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
-  if (CacheEntry == NormalizationCache.end()) {
-    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
-        *this, ND, AssociatedConstraints);
-    CacheEntry =
-        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
-            .first;
-  }
-  return CacheEntry->second;
-}
-
 static bool
 substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                             const MultiLevelTemplateArgumentList &MLTAL,
@@ -1591,6 +1595,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
       SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
                                ? ArgsAsWritten->arguments()[I].getLocation()
                                : SourceLocation();
+      // FIXME: Investigate when we couldn't preserve the SourceLoc. What shall we do??
+      // assert(Loc.isValid());
       if (OccurringIndices[I]) {
         NamedDecl *Param = TemplateParams->begin()[I];
         new (&(TempArgs)[J])
@@ -1624,6 +1630,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
       {InstLocBegin, InstLocEnd});
   if (Inst.isInvalid())
     return true;
+
   // TransformTemplateArguments is unable to preserve the source location of a
   // pack. The SourceLocation is necessary for the instantiation location.
   // FIXME: The BaseLoc will be used as the location of the pack expansion,
@@ -1646,6 +1653,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
     // If this is an empty pack, we have no corresponding SubstArgs.
     if (I < SubstArgs.size())
       Loc = SubstArgs.arguments()[I].getLocation();
+    // assert(Loc.isValid());
     TempArgs[I] = S.getTrivialTemplateArgumentLoc(CTAI.SugaredConverted[I],
                                                   QualType(), Loc);
   }
@@ -1653,9 +1661,9 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
   // N.updateParameterMapping(
   //     N.mappingOccurenceList(),
   //     MutableArrayRef<TemplateArgumentLoc>(TempArgs, SubstArgs.size()));
-  N.updateParameterMapping(N.mappingOccurenceList(),
-                           MutableArrayRef<TemplateArgumentLoc>(
-                               TempArgs, CTAI.SugaredConverted.size()),
+  MutableArrayRef<TemplateArgumentLoc> Mapping(TempArgs,
+                                               CTAI.SugaredConverted.size());
+  N.updateParameterMapping(N.mappingOccurenceList(), Mapping,
                            N.getUsedTemplateParamList());
   return false;
 }
@@ -1664,14 +1672,59 @@ static bool
 substituteParameterMappings(Sema &S, ConceptIdConstraint &N,
                             const MultiLevelTemplateArgumentList &MLTAL,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten) {
-
+  assert(N.getConstraintDecl());
+#if 0
+  return substituteParameterMappings(
+      S, static_cast<NormalizedConstraintWithParamMapping &>(N), MLTAL,
+      ArgsAsWritten);
+#else
+  auto TemplateArgs = MLTAL;
   if (N.getConstraintDecl()) {
-    substituteParameterMappings(
-        S, static_cast<NormalizedConstraintWithParamMapping &>(N), MLTAL,
-        ArgsAsWritten);
+    if (substituteParameterMappings(
+            S, static_cast<NormalizedConstraintWithParamMapping &>(N),
+            TemplateArgs, ArgsAsWritten))
+      return true;
+    auto *CSE = N.getConceptSpecializationExpr();
+    assert(CSE);
+    TemplateArgumentListInfo Out;
+    assert(!N.getBeginLoc().isInvalid());
+    // TransformTemplateArguments is unable to preserve the source location of a
+    // pack. The SourceLocation is necessary for the instantiation location.
+    // FIXME: The BaseLoc will be used as the location of the pack expansion,
+    // which is wrong.
+    ArgsAsWritten = CSE->getTemplateArgsAsWritten();
+    SourceLocation InstLocBegin =
+        ArgsAsWritten->arguments().empty()
+            ? ArgsAsWritten->getLAngleLoc()
+            : ArgsAsWritten->arguments().front().getSourceRange().getBegin();
+    SourceLocation InstLocEnd =
+        ArgsAsWritten->arguments().empty()
+            ? ArgsAsWritten->getRAngleLoc()
+            : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
+    Sema::InstantiatingTemplate Inst(
+        S, InstLocBegin,
+        Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+        const_cast<NamedDecl *>(N.getConstraintDecl()),
+        {InstLocBegin, InstLocEnd});
+    if (Inst.isInvalid())
+      return true;
+
+    if (S.SubstTemplateArgumentsInParameterMapping(ArgsAsWritten->arguments(),
+                                                   N.getBeginLoc(), MLTAL, Out))
+      return true;
+    Sema::CheckTemplateArgumentInfo CTAI;
+    if (S.CheckTemplateArgumentList(CSE->getNamedConcept(),
+                                CSE->getConceptNameInfo().getLoc(), Out,
+                                /*DefaultArgs=*/{},
+                                /*PartialTemplateArgs=*/false, CTAI,
+                                /*UpdateArgsWithConversions=*/false))
+      return true;
+    TemplateArgs.replaceOutermostTemplateArguments(
+        TemplateArgs.getAssociatedDecl(0).first, CTAI.CanonicalConverted);
   }
-  return substituteParameterMappings(S, N.getNormalizedConstraint(), MLTAL,
-                                     ArgsAsWritten);
+  return substituteParameterMappings(S, N.getNormalizedConstraint(),
+                                     TemplateArgs, ArgsAsWritten);
+#endif
 }
 
 static bool
@@ -1714,8 +1767,38 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
   // Don't build Subst* nodes to model lambda expressions.
   // The transform of Subst* is oblivious to the lambda type.
   MLTAL.setKind(TemplateSubstitutionKind::Rewrite);
+  Sema::InstantiatingTemplate Inst(
+      S, N.getBeginLoc(),
+      Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+      CSE->getNamedConcept(), {N.getBeginLoc(), N.getEndLoc()});
+  if (Inst.isInvalid())
+    return true;
+
   return substituteParameterMappings(S, N, MLTAL,
                                      CSE->getTemplateArgsAsWritten());
+}
+
+static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N) {
+  switch (N.getKind()) {
+  case NormalizedConstraint::ConstraintKind::Atomic:
+    return false;
+  case NormalizedConstraint::ConstraintKind::FoldExpanded: {
+    Sema::ArgPackSubstIndexRAII _(S, std::nullopt);
+    return substituteParameterMappings(
+        S, static_cast<FoldExpandedConstraint &>(N).getNormalizedPattern());
+  }
+  case NormalizedConstraint::ConstraintKind::ConceptId: {
+    auto &CC = static_cast<ConceptIdConstraint &>(N);
+    return substituteParameterMappings(S, CC.getNormalizedConstraint(),
+                                       CC.getConceptSpecializationExpr());
+  }
+  case NormalizedConstraint::ConstraintKind::Compound: {
+    auto &Compound = static_cast<CompoundConstraint &>(N);
+    if (substituteParameterMappings(S, Compound.getLHS()))
+      return true;
+    return substituteParameterMappings(S, Compound.getRHS());
+  }
+  }
 }
 
 NormalizedConstraint *NormalizedConstraint::fromAssociatedConstraints(
@@ -1796,11 +1879,11 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
       if (!SubNF)
         return nullptr;
     }
-    if (substituteParameterMappings(S, *SubNF, CSE))
-      return nullptr;
+    // if (substituteParameterMappings(S, *SubNF, CSE))
+    //   return nullptr;
 
     return ConceptIdConstraint::Create(
-        S.getASTContext(), CSE->getConceptReference(), SubNF, D, SubstIndex);
+        S.getASTContext(), CSE->getConceptReference(), SubNF, D, CSE, SubstIndex);
 
   } else if (auto *FE = dyn_cast<const CXXFoldExpr>(E);
              FE && S.getLangOpts().CPlusPlus26 &&
@@ -1840,6 +1923,29 @@ NormalizedConstraint *NormalizedConstraint::fromConstraintExpr(
                                           Kind, Sub);
   }
   return AtomicConstraint::Create(S.getASTContext(), E, D, SubstIndex);
+}
+
+const NormalizedConstraint *Sema::getNormalizedAssociatedConstraints(
+    ConstrainedDeclOrNestedRequirement ConstrainedDeclOrNestedReq,
+    ArrayRef<AssociatedConstraint> AssociatedConstraints) {
+  if (!ConstrainedDeclOrNestedReq)
+    return NormalizedConstraint::fromAssociatedConstraints(
+        *this, nullptr, AssociatedConstraints);
+
+  // FIXME: ConstrainedDeclOrNestedReq is never a NestedRequirement!
+  const NamedDecl *ND =
+      ConstrainedDeclOrNestedReq.dyn_cast<const NamedDecl *>();
+  auto CacheEntry = NormalizationCache.find(ConstrainedDeclOrNestedReq);
+  if (CacheEntry == NormalizationCache.end()) {
+    auto *Normalized = NormalizedConstraint::fromAssociatedConstraints(
+        *this, ND, AssociatedConstraints);
+    CacheEntry =
+        NormalizationCache.try_emplace(ConstrainedDeclOrNestedReq, Normalized)
+            .first;
+    if (!Normalized || substituteParameterMappings(*this, *Normalized))
+      return nullptr;
+  }
+  return CacheEntry->second;
 }
 
 bool FoldExpandedConstraint::AreCompatibleForSubsumption(
