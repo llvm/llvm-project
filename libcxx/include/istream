@@ -295,8 +295,6 @@ public:
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
 #    if _LIBCPP_STD_VER >= 26
-  // _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim)
-  //   requires is_same_v<char_type, char>;
   _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim)
     requires is_same_v<char_type, char>
   {
@@ -876,14 +874,6 @@ basic_istream<_CharT, _Traits>& basic_istream<_CharT, _Traits>::ignore(streamsiz
   }
   return *this;
 }
-
-// #    if _LIBCPP_STD_VER >= 26
-// template <class _CharT, class _Traits>
-// basic_istream& basic_istream<_CharT, _Traits>&
-// basic_istream<_CharT, _Traits>::ignore(streamsize __n, char_type __delim) {
-//   return this->ignore(__n, _Traits::to_int_type(__delim));
-// }
-// #    endif
 
 template <class _CharT, class _Traits>
 typename basic_istream<_CharT, _Traits>::int_type basic_istream<_CharT, _Traits>::peek() {
