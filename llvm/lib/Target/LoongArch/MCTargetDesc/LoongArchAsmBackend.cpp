@@ -140,10 +140,13 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
-void LoongArchAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target,
                                      MutableArrayRef<char> Data, uint64_t Value,
                                      bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -287,7 +290,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
   const MCExpr &Expr = LF.getValue();
   if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
   return std::make_pair(true, true);
 }
 
@@ -453,7 +456,8 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target, uint64_t &FixedValue,
                                    bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
+    MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
+    return true;
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
