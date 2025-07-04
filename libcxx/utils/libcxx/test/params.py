@@ -301,6 +301,7 @@ DEFAULT_PARAMETERS = [
             "",
             "Address",
             "HWAddress",
+            "CFI",
             "Undefined",
             "Memory",
             "MemoryWithOrigins",
@@ -324,6 +325,9 @@ DEFAULT_PARAMETERS = [
 
                 AddFlag("-fsanitize=hwaddress") if sanitizer == "HWAddress" else None,
                 AddFeature("hwasan")            if sanitizer == "HWAddress" else None,
+
+                AddFlag("-fsanitize=cfi") if sanitizer == "CFI" else None,
+                AddFeature("cfi")         if sanitizer == "CFI" else None,
 
                 AddFlag("-fsanitize=memory")               if sanitizer in ["Memory", "MemoryWithOrigins"] else None,
                 AddFeature("msan")                         if sanitizer in ["Memory", "MemoryWithOrigins"] else None,
