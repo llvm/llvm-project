@@ -70,6 +70,7 @@ public:
     basic_istream& getline(char_type* s, streamsize n, char_type delim);
 
     basic_istream& ignore(streamsize n = 1, int_type delim = traits_type::eof());
+    basic_istream& ignore(streamsize n, char_type delim);                         // Since C++26
     int_type peek();
     basic_istream& read (char_type* s, streamsize n);
     streamsize readsome(char_type* s, streamsize n);
@@ -292,6 +293,13 @@ public:
   basic_istream& getline(char_type* __s, streamsize __n, char_type __dlm);
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
+#    if __LIBCPP_STD_VER >= 26
+  basic_istream& ignore(streamsize __n, char_type __delim)
+    requires is_same_v<char_type, char>
+  {
+    return ignore(__n, traits::to_int_type(__delim));
+  }
+#    endif
   int_type peek();
   basic_istream& read(char_type* __s, streamsize __n);
   streamsize readsome(char_type* __s, streamsize __n);
