@@ -344,11 +344,15 @@ def testConcreteShapedType():
         # CHECK: is_static_size_with_dynamic: False
         print("is_static_size_with_dynamic:", vector.is_static_size(dynamic_size_val))
         # CHECK: is_dynamic_stride_or_offset_with_dynamic: True
-        print("is_dynamic_stride_or_offset_with_dynamic:",
-              vector.is_dynamic_stride_or_offset(dynamic_stride_val))
+        print(
+            "is_dynamic_stride_or_offset_with_dynamic:",
+            vector.is_dynamic_stride_or_offset(dynamic_stride_val)
+        )
         # CHECK: is_static_stride_or_offset_with_dynamic: False
-        print("is_static_stride_or_offset_with_dynamic:",
-              vector.is_static_stride_or_offset(dynamic_stride_val))
+        print(
+            "is_static_stride_or_offset_with_dynamic:",
+            vector.is_static_stride_or_offset(dynamic_stride_val)
+        )
         # CHECK: isinstance(ShapedType): True
         print("isinstance(ShapedType):", isinstance(vector, ShapedType))
 
