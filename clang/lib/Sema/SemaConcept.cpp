@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/DependenceFlags.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/TemplateBase.h"
@@ -593,6 +594,19 @@ static bool calculateConstraintSatisfaction(
     SourceLocation TemplateNameLoc, const MultiLevelTemplateArgumentList &MLTAL,
     ConstraintSatisfaction &Satisfaction,
     UnsignedOrNone PackSubstitutionIndex) {
+
+  // If the expression has been calculated, e.g. when we are in a nested
+  // requirement, do not compute it repeatedly.
+  if (auto *Expr = Constraint.getConceptSpecializationExpr();
+      Expr && Expr->getDependence() == ExprDependence::None) {
+    auto &Calculated = Expr->getSatisfaction();
+    Satisfaction.ContainsErrors = Calculated.ContainsErrors;
+    Satisfaction.IsSatisfied = Calculated.IsSatisfied;
+    Satisfaction.Details.insert(Satisfaction.Details.end(),
+                                Calculated.records().begin(),
+                                Calculated.records().end());
+    return !Satisfaction.ContainsErrors;
+  }
 
   Sema::ContextRAII CurContext(
       S, Constraint.getConceptId()->getNamedConcept()->getDeclContext(),
@@ -1598,6 +1612,8 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
       SourceLocation Loc = ArgsAsWritten->NumTemplateArgs > I
                     ? ArgsAsWritten->arguments()[I].getLocation()
                                : SourceLocation();
+      // FIXME: Investigate when we couldn't preserve the SourceLoc. What shall we do??
+      // assert(Loc.isValid());
       if (OccurringIndices[I]) {
         NamedDecl *Param = TemplateParams->begin()[I];
         new (&(TempArgs)[J])
@@ -1654,6 +1670,7 @@ substituteParameterMappings(Sema &S, NormalizedConstraintWithParamMapping &N,
     // If this is an empty pack, we have no corresponding SubstArgs.
     if (I < SubstArgs.size())
       Loc = SubstArgs.arguments()[I].getLocation();
+    // assert(Loc.isValid());
     TempArgs[I] = S.getTrivialTemplateArgumentLoc(CTAI.SugaredConverted[I],
                                                   QualType(), Loc);
   }
@@ -1688,9 +1705,29 @@ substituteParameterMappings(Sema &S, ConceptIdConstraint &N,
     assert(CSE);
     TemplateArgumentListInfo Out;
     assert(!N.getBeginLoc().isInvalid());
-    if (S.SubstTemplateArgumentsInParameterMapping(
-            CSE->getTemplateArgsAsWritten()->arguments(), N.getBeginLoc(),
-            MLTAL, Out))
+    // TransformTemplateArguments is unable to preserve the source location of a
+    // pack. The SourceLocation is necessary for the instantiation location.
+    // FIXME: The BaseLoc will be used as the location of the pack expansion,
+    // which is wrong.
+    ArgsAsWritten = CSE->getTemplateArgsAsWritten();
+    SourceLocation InstLocBegin =
+        ArgsAsWritten->arguments().empty()
+            ? ArgsAsWritten->getLAngleLoc()
+            : ArgsAsWritten->arguments().front().getSourceRange().getBegin();
+    SourceLocation InstLocEnd =
+        ArgsAsWritten->arguments().empty()
+            ? ArgsAsWritten->getRAngleLoc()
+            : ArgsAsWritten->arguments().front().getSourceRange().getEnd();
+    Sema::InstantiatingTemplate Inst(
+        S, InstLocBegin,
+        Sema::InstantiatingTemplate::ParameterMappingSubstitution{},
+        const_cast<NamedDecl *>(N.getConstraintDecl()),
+        {InstLocBegin, InstLocEnd});
+    if (Inst.isInvalid())
+      return true;
+
+    if (S.SubstTemplateArgumentsInParameterMapping(ArgsAsWritten->arguments(),
+                                                   N.getBeginLoc(), MLTAL, Out))
       return true;
     Sema::CheckTemplateArgumentInfo CTAI;
     if (S.CheckTemplateArgumentList(CSE->getNamedConcept(),

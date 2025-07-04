@@ -3698,10 +3698,6 @@ public:
                                         ParentContext);
   }
 
-  /// Build a new Objective-C boxed expression.
-  ///
-  /// By default, performs semantic analysis to build the new expression.
-  /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildConceptSpecializationExpr(NestedNameSpecifierLoc NNS,
       SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
       NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
