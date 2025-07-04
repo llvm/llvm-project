@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s -verify
+// RUN: not %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -o - %s 2>&1 | FileCheck %s
 
 // expected-note@+2 {{overlapping resource range here}}
 // expected-error@+1 {{resource ranges b[42;42] and b[42;42] overlap within space = 0 and visibility = All}}
@@ -76,3 +77,29 @@ void bad_root_signature_12() {}
 // expected-error@+1 {{resource ranges s[2;2] and s[2;2] overlap within space = 0 and visibility = Vertex}}
 [RootSignature("StaticSampler(s2, visibility=SHADER_VISIBILITY_ALL), DescriptorTable(Sampler(s2), visibility=SHADER_VISIBILITY_VERTEX)")]
 void valid_root_signature_13() {}
+
+#define DemoNoteSourceLocations \
+ "DescriptorTable( " \
+ "  CBV(b4, numDescriptors = 4), " \
+ "  SRV(t22, numDescriptors = 1), " \
+ "  UAV(u42, numDescriptors = 2), " \
+ "  CBV(b9, numDescriptors = 8), " \
+ "  SRV(t12, numDescriptors = 3), " \
+ "  UAV(u3, numDescriptors = 16), " \
+ "  SRV(t9, numDescriptors = 1), " \
+ "  CBV(b1, numDescriptors = 2), " \
+ "  SRV(t17, numDescriptors = 7), " \
+ "  UAV(u0, numDescriptors = 3), " \
+ ")"
+
+// CHECK: note: expanded from macro 'DemoNoteSourceLocations'
+// CHECK-NEXT: [[@LINE-5]] | "  SRV(t17, numDescriptors = 7), " \
+// CHECK-NEXT:             |    ^
+// CHECK: note: expanded from macro 'DemoNoteSourceLocations'
+// CHECK-NEXT: [[@LINE-15]] | "  SRV(t22, numDescriptors = 1), "
+// CHECK-NEXT:              |    ^
+
+// expected-note@+2 {{overlapping resource range here}}
+// expected-error@+1 {{resource ranges t[17;23] and t[22;22] overlap within space = 0 and visibility = All}}
+[RootSignature(DemoNoteSourceLocations)]
+void bad_root_signature_14() {}
