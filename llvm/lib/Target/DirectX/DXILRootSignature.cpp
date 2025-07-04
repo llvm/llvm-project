@@ -635,8 +635,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
 //===----------------------------------------------------------------------===//
 bool RootSignatureAnalysisWrapper::runOnModule(Module &M) {
-  FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
-      RootSignatureBindingInfo(analyzeModule(M)));
+  if (!FuncToRsMap)
+    FuncToRsMap = std::make_unique<RootSignatureBindingInfo>(
+        RootSignatureBindingInfo(analyzeModule(M)));
   return false;
 }
 

@@ -153,22 +153,28 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
     RootSignatureBindingValidation Validation;
     Validation.addRsBindingInfo(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
-    for (const auto &CBuf : DRM.cbuffers()) {
+    for (const ResourceInfo &CBuf : DRM.cbuffers()) {
       ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
-      if (!Validation.checkCregBinding(Binding))
+      if (!Validation.checkCRegBinding(Binding))
         reportRegNotBound(M, "cbuffer", Binding);
     }
 
-    for (const auto &CBuf : DRM.srvs()) {
-      ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
+    for (const ResourceInfo &SRV : DRM.srvs()) {
+      ResourceInfo::ResourceBinding Binding = SRV.getBinding();
       if (!Validation.checkTRegBinding(Binding))
         reportRegNotBound(M, "srv", Binding);
     }
 
-    for (const auto &CBuf : DRM.uavs()) {
-      ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
+    for (const ResourceInfo &UAV : DRM.uavs()) {
+      ResourceInfo::ResourceBinding Binding = UAV.getBinding();
       if (!Validation.checkURegBinding(Binding))
         reportRegNotBound(M, "uav", Binding);
+    }
+
+    for (const ResourceInfo &Sampler : DRM.samplers()) {
+      ResourceInfo::ResourceBinding Binding = Sampler.getBinding();
+      if (!Validation.checkSamplerBinding(Binding))
+        reportRegNotBound(M, "sampler", Binding);
     }
   }
 }
@@ -199,10 +205,6 @@ void RootSignatureBindingValidation::addRsBindingInfo(
           RSD.ParametersContainer.getDescriptorTable(Loc);
 
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
-        if (Range.RangeType ==
-            llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
-          continue;
-
         if (Header.ShaderVisibility ==
                 llvm::to_underlying(dxbc::ShaderVisibility::All) ||
             Header.ShaderVisibility == llvm::to_underlying(Visibility))
@@ -212,29 +214,6 @@ void RootSignatureBindingValidation::addRsBindingInfo(
     }
     }
   }
-}
-
-bool RootSignatureBindingValidation::checkCregBinding(
-    ResourceInfo::ResourceBinding Binding) {
-  return CRegBindingsMap.overlaps(
-      combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-      combineUint32ToUint64(Binding.Space,
-                            Binding.LowerBound + Binding.Size - 1));
-}
-
-bool RootSignatureBindingValidation::checkTRegBinding(
-    ResourceInfo::ResourceBinding Binding) {
-  return TRegBindingsMap.overlaps(
-      combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-      combineUint32ToUint64(Binding.Space, Binding.LowerBound + Binding.Size));
-}
-
-bool RootSignatureBindingValidation::checkURegBinding(
-    ResourceInfo::ResourceBinding Binding) {
-  return URegBindingsMap.overlaps(
-      combineUint32ToUint64(Binding.Space, Binding.LowerBound),
-      combineUint32ToUint64(Binding.Space,
-                            Binding.LowerBound + Binding.Size - 1));
 }
 
 PreservedAnalyses

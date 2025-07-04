@@ -36,12 +36,13 @@ private:
   MapT CRegBindingsMap;
   MapT TRegBindingsMap;
   MapT URegBindingsMap;
+  MapT SamplersBindingsMap;
 
   void addRange(const dxbc::RTS0::v2::RootDescriptor &Desc, uint32_t Type) {
     assert((Type == llvm::to_underlying(dxbc::RootParameterType::CBV) ||
             Type == llvm::to_underlying(dxbc::RootParameterType::SRV) ||
             Type == llvm::to_underlying(dxbc::RootParameterType::UAV)) &&
-           "Invalid Type");
+           "Invalid Type in add Range Method");
 
     llvm::dxil::ResourceInfo::ResourceBinding Binding;
     Binding.LowerBound = Desc.ShaderRegister;
@@ -53,19 +54,20 @@ private:
     uint64_t HighRange = combineUint32ToUint64(
         Binding.Space, Binding.LowerBound + Binding.Size - 1);
 
+    assert(LowRange <= HighRange && "Invalid range configuration");
+
     switch (Type) {
 
     case llvm::to_underlying(dxbc::RootParameterType::CBV):
       CRegBindingsMap.insert(LowRange, HighRange, Binding);
-      return;
+      break;
     case llvm::to_underlying(dxbc::RootParameterType::SRV):
       TRegBindingsMap.insert(LowRange, HighRange, Binding);
-      return;
+      break;
     case llvm::to_underlying(dxbc::RootParameterType::UAV):
       URegBindingsMap.insert(LowRange, HighRange, Binding);
-      return;
+      break;
     }
-    llvm_unreachable("Invalid Type in add Range Method");
   }
 
   void addRange(const dxbc::RTS0::v2::DescriptorRange &Range) {
@@ -80,33 +82,59 @@ private:
     uint64_t HighRange = combineUint32ToUint64(
         Binding.Space, Binding.LowerBound + Binding.Size - 1);
 
+    assert(LowRange <= HighRange && "Invalid range configuration");
+
     switch (Range.RangeType) {
     case llvm::to_underlying(dxbc::DescriptorRangeType::CBV):
       CRegBindingsMap.insert(LowRange, HighRange, Binding);
-      return;
+      break;
     case llvm::to_underlying(dxbc::DescriptorRangeType::SRV):
       TRegBindingsMap.insert(LowRange, HighRange, Binding);
-      return;
+      break;
     case llvm::to_underlying(dxbc::DescriptorRangeType::UAV):
       URegBindingsMap.insert(LowRange, HighRange, Binding);
-      return;
+      break;
+    case llvm::to_underlying(dxbc::DescriptorRangeType::Sampler):
+      SamplersBindingsMap.insert(LowRange, HighRange, Binding);
+      break;
     }
-    llvm_unreachable("Invalid Type in add Range Method");
   }
 
 public:
   RootSignatureBindingValidation()
       : Allocator(), CRegBindingsMap(Allocator), TRegBindingsMap(Allocator),
-        URegBindingsMap(Allocator) {}
+        URegBindingsMap(Allocator), SamplersBindingsMap(Allocator) {}
 
   void addRsBindingInfo(mcdxbc::RootSignatureDesc &RSD,
                         dxbc::ShaderVisibility Visibility);
 
-  bool checkCregBinding(dxil::ResourceInfo::ResourceBinding Binding);
+  bool checkCRegBinding(dxil::ResourceInfo::ResourceBinding Binding) {
+    return CRegBindingsMap.overlaps(
+        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+        combineUint32ToUint64(Binding.Space,
+                              Binding.LowerBound + Binding.Size - 1));
+  }
 
-  bool checkTRegBinding(dxil::ResourceInfo::ResourceBinding Binding);
+  bool checkTRegBinding(dxil::ResourceInfo::ResourceBinding Binding) {
+    return TRegBindingsMap.overlaps(
+        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+        combineUint32ToUint64(Binding.Space,
+                              Binding.LowerBound + Binding.Size - 1));
+  }
 
-  bool checkURegBinding(dxil::ResourceInfo::ResourceBinding Binding);
+  bool checkURegBinding(dxil::ResourceInfo::ResourceBinding Binding) {
+    return URegBindingsMap.overlaps(
+        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+        combineUint32ToUint64(Binding.Space,
+                              Binding.LowerBound + Binding.Size - 1));
+  }
+
+  bool checkSamplerBinding(dxil::ResourceInfo::ResourceBinding Binding) {
+    return SamplersBindingsMap.overlaps(
+        combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+        combineUint32ToUint64(Binding.Space,
+                              Binding.LowerBound + Binding.Size - 1));
+  }
 };
 
 class DXILPostOptimizationValidation
