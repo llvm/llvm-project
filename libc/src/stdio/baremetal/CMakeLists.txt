@@ -1,4 +1,27 @@
 add_entrypoint_object(
+  fprintf
+  SRCS
+    fprintf.cpp
+  HDRS
+    ../fprintf.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.src.stdio.printf_core.printf_main
+    .baremetal_write_utils
+)
+
+add_entrypoint_object(
+  fputc
+  SRCS
+    fputc.cpp
+  HDRS
+    ../fputc.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    .baremetal_write_utils
+)
+
+add_entrypoint_object(
   getchar
   SRCS
     getchar.cpp
@@ -21,6 +44,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  putc
+  SRCS
+    putc.cpp
+  HDRS
+    ../putc.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    .baremetal_write_utils
+)
+
+add_entrypoint_object(
   printf
   SRCS
     printf.cpp
@@ -28,9 +62,8 @@ add_entrypoint_object(
     ../printf.h
   DEPENDS
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
+    .baremetal_write_hooks
 )
 
 add_entrypoint_object(
@@ -85,9 +118,8 @@ add_entrypoint_object(
     ../vprintf.h
   DEPENDS
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.writer
     libc.src.__support.arg_list
-    libc.src.__support.OSUtil.osutil
+    .baremetal_write_hooks
 )
 
 add_entrypoint_object(
@@ -101,4 +133,28 @@ add_entrypoint_object(
     libc.src.stdio.scanf_core.scanf_main
     libc.src.__support.arg_list
     libc.src.__support.OSUtil.osutil
+)
+
+add_header_library(
+  baremetal_write_hooks
+  HDRS
+    write_hooks.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+    libc.src.stdio.printf_core.core_structs
+)
+
+add_header_library(
+  baremetal_write_utils
+  HDRS
+    write_utils.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.stdio_macros
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.string_view
+    .baremetal_write_hooks
+    .stdout
+    .stderr
 )
