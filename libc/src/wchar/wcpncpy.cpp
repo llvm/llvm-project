@@ -28,8 +28,9 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcpncpy,
   for (i = 0; i < n && s2[i] != '\0'; ++i)
     s1[i] = s2[i];
   // When n>strlen(src), n-strlen(src) \0 are appended.
-  for (; i < n; ++i)
-    s1[i] = L'\0';
+  for (size_t j = i; j < n; ++j)
+    s1[j] = L'\0';
+  // ...but our result points to the first \0 (if any).
   return s1 + i;
 }
 
