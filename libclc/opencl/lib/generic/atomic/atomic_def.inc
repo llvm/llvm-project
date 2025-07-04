@@ -28,21 +28,40 @@
 
 #ifdef __CLC_NO_VALUE_ARG
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(                              \
-      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr);
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(                               \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr) {                          \
+    return __IMPL_FUNCTION((volatile ADDRSPACE __CLC_GENTYPE *)Ptr,            \
+                           __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);           \
+  }
 #elif defined(__CLC_RETURN_VOID)
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL void FUNCTION(                                       \
-      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value);
+  _CLC_OVERLOAD _CLC_DEF void FUNCTION(                                        \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value) {     \
+    __IMPL_FUNCTION((volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Value,            \
+                    __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);                  \
+  }
 #elif defined(__CLC_COMPARE_EXCHANGE)
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(                              \
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(                               \
       volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr,                            \
-      ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired);
+      ADDRSPACE __CLC_GENTYPE *Expected, __CLC_GENTYPE Desired) {              \
+    __CLC_GENTYPE Comparator = *Expected;                                      \
+    __CLC_GENTYPE RetValue = __clc_atomic_compare_exchange(                    \
+        (volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Comparator, Desired,          \
+        __ATOMIC_SEQ_CST, __ATOMIC_RELAXED, __MEMORY_SCOPE_SYSTEM);            \
+    if (Comparator != RetValue) {                                              \
+      *Expected = RetValue;                                                    \
+      return true;                                                             \
+    }                                                                          \
+    return false;                                                              \
+  }
 #else
 #define __CLC_DEFINE_ATOMIC(ADDRSPACE)                                         \
-  _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(                              \
-      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value);
+  _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE FUNCTION(                               \
+      volatile ADDRSPACE __CLC_ATOMIC_GENTYPE *Ptr, __CLC_GENTYPE Value) {     \
+    return __IMPL_FUNCTION((volatile ADDRSPACE __CLC_GENTYPE *)Ptr, Value,     \
+                           __ATOMIC_SEQ_CST, __MEMORY_SCOPE_SYSTEM);           \
+  }
 #endif
 
 __CLC_DEFINE_ATOMIC(global)

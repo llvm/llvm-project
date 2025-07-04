@@ -7,4 +7,4 @@
 //===----------------------------------------------------------------------===//
 
 #define __CLC_FUNCTION atomic_max
-#include <clc/opencl/atomic/atomic_decl.inc>
+#include <clc/opencl/atomic/atomic_decl_legacy.inc>
