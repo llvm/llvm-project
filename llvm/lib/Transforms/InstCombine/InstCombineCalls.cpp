@@ -1400,42 +1400,41 @@ static Instruction *factorizeMinMaxTree(IntrinsicInst *II) {
 /// try to shuffle after the intrinsic.
 Instruction *
 InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
-  // TODO: This should be extended to handle other intrinsics like fshl, ctpop,
-  //       etc. Use llvm::isTriviallyVectorizable() and related to determine
-  //       which intrinsics are safe to shuffle?
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::smax:
-  case Intrinsic::smin:
-  case Intrinsic::umax:
-  case Intrinsic::umin:
-  case Intrinsic::fma:
-  case Intrinsic::fshl:
-  case Intrinsic::fshr:
-    break;
-  default:
+  if (!isTriviallyVectorizable(II->getIntrinsicID()) ||
+      !II->getCalledFunction()->isSpeculatable())
     return nullptr;
-  }
 
   Value *X;
   Constant *C;
   ArrayRef<int> Mask;
-  auto *NonConstArg = find_if_not(II->args(), IsaPred<Constant>);
+  auto *NonConstArg = find_if_not(II->args(), [&II](Use &Arg) {
+    return isa<Constant>(Arg.get()) ||
+           isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                              Arg.getOperandNo(), nullptr);
+  });
   if (!NonConstArg ||
       !match(NonConstArg, m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))
     return nullptr;
 
-  // At least 1 operand must have 1 use because we are creating 2 instructions.
-  if (none_of(II->args(), [](Value *V) { return V->hasOneUse(); }))
+  // At least 1 operand must be a shuffle with 1 use because we are creating 2
+  // instructions.
+  if (none_of(II->args(), [](Value *V) {
+        return isa<ShuffleVectorInst>(V) && V->hasOneUse();
+      }))
     return nullptr;
 
   // See if all arguments are shuffled with the same mask.
   SmallVector<Value *, 4> NewArgs;
   Type *SrcTy = X->getType();
-  for (Value *Arg : II->args()) {
-    if (match(Arg, m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
-        X->getType() == SrcTy)
+  for (Use &Arg : II->args()) {
+    if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                           Arg.getOperandNo(), nullptr))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg,
+                   m_Shuffle(m_Value(X), m_Poison(), m_SpecificMask(Mask))) &&
+             X->getType() == SrcTy)
       NewArgs.push_back(X);
-    else if (match(Arg, m_ImmConstant(C))) {
+    else if (match(&Arg, m_ImmConstant(C))) {
       // If it's a constant, try find the constant that would be shuffled to C.
       if (Constant *ShuffledC =
               unshuffleConstant(Mask, C, cast<VectorType>(SrcTy)))
@@ -1448,9 +1447,50 @@ InstCombinerImpl::foldShuffledIntrinsicOperands(IntrinsicInst *II) {
 
   // intrinsic (shuf X, M), (shuf Y, M), ... --> shuf (intrinsic X, Y, ...), M
   Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
+  // Result type might be a different vector width.
+  // TODO: Check that the result type isn't widened?
+  VectorType *ResTy =
+      VectorType::get(II->getType()->getScalarType(), cast<VectorType>(SrcTy));
   Value *NewIntrinsic =
-      Builder.CreateIntrinsic(II->getIntrinsicID(), SrcTy, NewArgs, FPI);
+      Builder.CreateIntrinsic(ResTy, II->getIntrinsicID(), NewArgs, FPI);
   return new ShuffleVectorInst(NewIntrinsic, Mask);
+}
+
+/// If all arguments of the intrinsic are reverses, try to pull the reverse
+/// after the intrinsic.
+Value *InstCombinerImpl::foldReversedIntrinsicOperands(IntrinsicInst *II) {
+  if (!isTriviallyVectorizable(II->getIntrinsicID()))
+    return nullptr;
+
+  // At least 1 operand must be a reverse with 1 use because we are creating 2
+  // instructions.
+  if (none_of(II->args(), [](Value *V) {
+        return match(V, m_OneUse(m_VecReverse(m_Value())));
+      }))
+    return nullptr;
+
+  Value *X;
+  Constant *C;
+  SmallVector<Value *> NewArgs;
+  for (Use &Arg : II->args()) {
+    if (isVectorIntrinsicWithScalarOpAtArg(II->getIntrinsicID(),
+                                           Arg.getOperandNo(), nullptr))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg, m_VecReverse(m_Value(X))))
+      NewArgs.push_back(X);
+    else if (isSplatValue(Arg))
+      NewArgs.push_back(Arg);
+    else if (match(&Arg, m_ImmConstant(C)))
+      NewArgs.push_back(Builder.CreateVectorReverse(C));
+    else
+      return nullptr;
+  }
+
+  // intrinsic (reverse X), (reverse Y), ... --> reverse (intrinsic X, Y, ...)
+  Instruction *FPI = isa<FPMathOperator>(II) ? II : nullptr;
+  Instruction *NewIntrinsic = Builder.CreateIntrinsic(
+      II->getType(), II->getIntrinsicID(), NewArgs, FPI);
+  return Builder.CreateVectorReverse(NewIntrinsic);
 }
 
 /// Fold the following cases and accepts bswap and bitreverse intrinsics:
@@ -1962,6 +2002,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if ((IID == Intrinsic::umax || IID == Intrinsic::smin) &&
         II->getType()->isIntOrIntVectorTy(1)) {
       return BinaryOperator::CreateOr(I0, I1);
+    }
+
+    // smin(smax(X, -1), 1) -> scmp(X, 0)
+    // smax(smin(X, 1), -1) -> scmp(X, 0)
+    // At this point, smax(smin(X, 1), -1) is changed to smin(smax(X, -1)
+    // And i1's have been changed to and/ors
+    // So we only need to check for smin
+    if (IID == Intrinsic::smin) {
+      if (match(I0, m_OneUse(m_SMax(m_Value(X), m_AllOnes()))) &&
+          match(I1, m_One())) {
+        Value *Zero = ConstantInt::get(X->getType(), 0);
+        return replaceInstUsesWith(
+            CI,
+            Builder.CreateIntrinsic(II->getType(), Intrinsic::scmp, {X, Zero}));
+      }
     }
 
     if (IID == Intrinsic::smax || IID == Intrinsic::smin) {
@@ -3546,34 +3601,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
     break;
   }
-  case Intrinsic::vector_reverse: {
-    Value *BO0, *BO1, *X, *Y;
+  case Intrinsic::experimental_vp_reverse: {
+    Value *X;
     Value *Vec = II->getArgOperand(0);
-    if (match(Vec, m_OneUse(m_BinOp(m_Value(BO0), m_Value(BO1))))) {
-      auto *OldBinOp = cast<BinaryOperator>(Vec);
-      if (match(BO0, m_VecReverse(m_Value(X)))) {
-        // rev(binop rev(X), rev(Y)) --> binop X, Y
-        if (match(BO1, m_VecReverse(m_Value(Y))))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, Y,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-        // rev(binop rev(X), BO1Splat) --> binop X, BO1Splat
-        if (isSplatValue(BO1))
-          return replaceInstUsesWith(CI, BinaryOperator::CreateWithCopiedFlags(
-                                             OldBinOp->getOpcode(), X, BO1,
-                                             OldBinOp, OldBinOp->getName(),
-                                             II->getIterator()));
-      }
-      // rev(binop BO0Splat, rev(Y)) --> binop BO0Splat, Y
-      if (match(BO1, m_VecReverse(m_Value(Y))) && isSplatValue(BO0))
-        return replaceInstUsesWith(CI,
-                                   BinaryOperator::CreateWithCopiedFlags(
-                                       OldBinOp->getOpcode(), BO0, Y, OldBinOp,
-                                       OldBinOp->getName(), II->getIterator()));
-    }
+    Value *Mask = II->getArgOperand(1);
+    if (!match(Mask, m_AllOnes()))
+      break;
+    Value *EVL = II->getArgOperand(2);
+    // TODO: Canonicalize experimental.vp.reverse after unop/binops?
     // rev(unop rev(X)) --> unop X
-    if (match(Vec, m_OneUse(m_UnOp(m_VecReverse(m_Value(X)))))) {
+    if (match(Vec,
+              m_OneUse(m_UnOp(m_Intrinsic<Intrinsic::experimental_vp_reverse>(
+                  m_Value(X), m_AllOnes(), m_Specific(EVL)))))) {
       auto *OldUnOp = cast<UnaryOperator>(Vec);
       auto *NewUnOp = UnaryOperator::CreateWithCopiedFlags(
           OldUnOp->getOpcode(), X, OldUnOp, OldUnOp->getName(),
@@ -3863,6 +3902,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
   if (Instruction *Shuf = foldShuffledIntrinsicOperands(II))
     return Shuf;
+
+  if (Value *Reverse = foldReversedIntrinsicOperands(II))
+    return replaceInstUsesWith(*II, Reverse);
 
   // Some intrinsics (like experimental_gc_statepoint) can be used in invoke
   // context, so it is handled in visitCallBase and we should trigger it.

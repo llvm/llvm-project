@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Linalg/IR/ValueBoundsOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Interfaces/IndexingMapOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;

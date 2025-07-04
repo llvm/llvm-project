@@ -1244,10 +1244,36 @@ bool checkErrorIfCondIf(Operation *op) {
   return true;
 }
 
+bool checkErrorIfScatter(Operation *op) {
+  auto scatterOp = dyn_cast<tosa::ScatterOp>(op);
+  if (!scatterOp)
+    return true;
+
+  // for constant indices, check that there are no duplicate values
+  DenseIntElementsAttr indicesAttr;
+  if (!matchPattern(scatterOp.getIndices(), m_Constant(&indicesAttr)))
+    return true;
+
+  auto const indicesType =
+      dyn_cast<ShapedType>(scatterOp.getIndices().getType());
+  if (!indicesType || !indicesType.hasRank()) {
+    op->emitOpError("expect ranked indices tensor");
+    return false;
+  }
+
+  if (!hasUniqueConstantScatterIndices(indicesType, indicesAttr)) {
+    op->emitOpError("indices values contain duplicates");
+    return false;
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (!checkErrorIfResize(op) || !checkErrorIfMul(op) ||
       !checkErrorIfTable(op) || !checkErrorIfRescale(op) ||
-      !checkErrorIfPad(op) || !checkErrorIfCondIf(op))
+      !checkErrorIfPad(op) || !checkErrorIfCondIf(op) ||
+      !checkErrorIfScatter(op))
     return failure();
   return success();
 }
@@ -1294,13 +1320,14 @@ void TosaValidation::runOnOperation() {
 
     // validate operator element types:
     // - rescale operator is allowed to have ui8/ui16/ui32
-    //   operands/results
+    //   operands/results when strictOpSpecAlignment is false
     // - perform valid element type check at the beginning to
     //   protect rest of code against quantized element types
-    const bool opIsRescale = isa<tosa::RescaleOp>(op);
+    const bool allowUnsigned =
+        !strictOpSpecAlignment && isa<tosa::RescaleOp>(op);
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
-      if (!isValidElementType(elementTy, opIsRescale)) {
+      if (!isValidElementType(elementTy, allowUnsigned)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();
@@ -1308,7 +1335,7 @@ void TosaValidation::runOnOperation() {
     }
     for (Type resultTy : op->getResultTypes()) {
       auto elementTy = getElementTypeOrSelf(resultTy);
-      if (!isValidElementType(elementTy, opIsRescale)) {
+      if (!isValidElementType(elementTy, allowUnsigned)) {
         op->emitOpError() << "is not profile-aligned: element type "
                           << elementTy << " is not legal";
         return signalPassFailure();

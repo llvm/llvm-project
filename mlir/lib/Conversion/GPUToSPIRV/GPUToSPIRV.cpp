@@ -122,6 +122,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Pattern to convert a gpu.rotate op into a spirv.GroupNonUniformRotateKHROp.
+class GPURotateConversion final : public OpConversionPattern<gpu::RotateOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::RotateOp rotateOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 class GPUPrintfConversion final : public OpConversionPattern<gpu::PrintfOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -251,8 +261,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, const TypeConverter &typeConverter,
   }
   auto newFuncOp = rewriter.create<spirv::FuncOp>(
       funcOp.getLoc(), funcOp.getName(),
-      rewriter.getFunctionType(signatureConverter.getConvertedTypes(),
-                               std::nullopt));
+      rewriter.getFunctionType(signatureConverter.getConvertedTypes(), {}));
   for (const auto &namedAttr : funcOp->getAttrs()) {
     if (namedAttr.getName() == funcOp.getFunctionTypeAttrName() ||
         namedAttr.getName() == SymbolTable::getSymbolAttrName())
@@ -435,26 +444,92 @@ LogicalResult GPUShuffleConversion::matchAndRewrite(
     return rewriter.notifyMatchFailure(
         shuffleOp, "shuffle width and target subgroup size mismatch");
 
+  assert(!adaptor.getOffset().getType().isSignedInteger() &&
+         "shuffle offset must be a signless/unsigned integer");
+
   Location loc = shuffleOp.getLoc();
-  Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
-                                            shuffleOp.getLoc(), rewriter);
   auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
   Value result;
+  Value validVal;
 
   switch (shuffleOp.getMode()) {
-  case gpu::ShuffleMode::XOR:
+  case gpu::ShuffleMode::XOR: {
     result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                         shuffleOp.getLoc(), rewriter);
     break;
-  case gpu::ShuffleMode::IDX:
+  }
+  case gpu::ShuffleMode::IDX: {
     result = rewriter.create<spirv::GroupNonUniformShuffleOp>(
         loc, scope, adaptor.getValue(), adaptor.getOffset());
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                         shuffleOp.getLoc(), rewriter);
     break;
-  default:
-    return rewriter.notifyMatchFailure(shuffleOp, "unimplemented shuffle mode");
+  }
+  case gpu::ShuffleMode::DOWN: {
+    result = rewriter.create<spirv::GroupNonUniformShuffleDownOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
+
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    Value resultLaneId =
+        rewriter.create<arith::AddIOp>(loc, laneId, adaptor.getOffset());
+    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              resultLaneId, adaptor.getWidth());
+    break;
+  }
+  case gpu::ShuffleMode::UP: {
+    result = rewriter.create<spirv::GroupNonUniformShuffleUpOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
+
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    Value resultLaneId =
+        rewriter.create<arith::SubIOp>(loc, laneId, adaptor.getOffset());
+    auto i32Type = rewriter.getIntegerType(32);
+    validVal = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::sge, resultLaneId,
+        rewriter.create<arith::ConstantOp>(
+            loc, i32Type, rewriter.getIntegerAttr(i32Type, 0)));
+    break;
+  }
   }
 
-  rewriter.replaceOp(shuffleOp, {result, trueVal});
+  rewriter.replaceOp(shuffleOp, {result, validVal});
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Rotate
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPURotateConversion::matchAndRewrite(
+    gpu::RotateOp rotateOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  const spirv::TargetEnv &targetEnv =
+      getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  unsigned subgroupSize =
+      targetEnv.getAttr().getResourceLimits().getSubgroupSize();
+  IntegerAttr widthAttr;
+  if (!matchPattern(rotateOp.getWidth(), m_Constant(&widthAttr)) ||
+      widthAttr.getValue().getZExtValue() > subgroupSize)
+    return rewriter.notifyMatchFailure(
+        rotateOp,
+        "rotate width is not a constant or larger than target subgroup size");
+
+  Location loc = rotateOp.getLoc();
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value rotateResult = rewriter.create<spirv::GroupNonUniformRotateKHROp>(
+      loc, scope, adaptor.getValue(), adaptor.getOffset(), adaptor.getWidth());
+  Value validVal;
+  if (widthAttr.getValue().getZExtValue() == subgroupSize) {
+    validVal = spirv::ConstantOp::getOne(rewriter.getI1Type(), loc, rewriter);
+  } else {
+    Value laneId = rewriter.create<gpu::LaneIdOp>(loc, widthAttr);
+    validVal = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              laneId, adaptor.getWidth());
+  }
+
+  rewriter.replaceOp(rotateOp, {rotateResult, validVal});
   return success();
 }
 
@@ -746,7 +821,7 @@ void mlir::populateGPUToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUReturnOpConversion, GPUShuffleConversion,
+      GPUReturnOpConversion, GPUShuffleConversion, GPURotateConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,

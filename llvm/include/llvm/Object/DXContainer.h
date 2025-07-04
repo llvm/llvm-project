@@ -178,19 +178,14 @@ struct RootDescriptorView : RootParameterView {
     return readParameter<dxbc::RTS0::v2::RootDescriptor>();
   }
 };
-
-struct DescriptorTable {
+template <typename T> struct DescriptorTable {
   uint32_t NumRanges;
   uint32_t RangesOffset;
-  ViewArray<dxbc::RTS0::v2::DescriptorRange> Ranges;
+  ViewArray<T> Ranges;
 
-  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator begin() const {
-    return Ranges.begin();
-  }
+  typename ViewArray<T>::iterator begin() const { return Ranges.begin(); }
 
-  typename ViewArray<dxbc::RTS0::v2::DescriptorRange>::iterator end() const {
-    return Ranges.end();
-  }
+  typename ViewArray<T>::iterator end() const { return Ranges.end(); }
 };
 
 struct DescriptorTableView : RootParameterView {
@@ -200,9 +195,9 @@ struct DescriptorTableView : RootParameterView {
   }
 
   // Define a type alias to access the template parameter from inside classof
-  llvm::Expected<DescriptorTable> read(uint32_t Version) {
+  template <typename T> llvm::Expected<DescriptorTable<T>> read() {
     const char *Current = ParamData.begin();
-    DescriptorTable Table;
+    DescriptorTable<T> Table;
 
     Table.NumRanges =
         support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -212,13 +207,8 @@ struct DescriptorTableView : RootParameterView {
         support::endian::read<uint32_t, llvm::endianness::little>(Current);
     Current += sizeof(uint32_t);
 
-    size_t RangeSize = sizeof(dxbc::RTS0::v1::DescriptorRange);
-    if (Version > 1)
-      RangeSize = sizeof(dxbc::RTS0::v2::DescriptorRange);
-
-    Table.Ranges.Stride = RangeSize;
-    Table.Ranges.Data =
-        ParamData.substr(2 * sizeof(uint32_t), Table.NumRanges * RangeSize);
+    Table.Ranges.Data = ParamData.substr(2 * sizeof(uint32_t),
+                                         Table.NumRanges * Table.Ranges.Stride);
     return Table;
   }
 };

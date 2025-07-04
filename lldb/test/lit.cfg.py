@@ -2,6 +2,9 @@
 
 import os
 
+import lit.formats
+from lit.llvm import llvm_config
+
 # This is the top level configuration. Most of these configuration options will
 # be overriden by individual lit configuration files in the test
 # subdirectories. Anything configured here will *not* be loaded when pointing

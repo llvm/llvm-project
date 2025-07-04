@@ -490,6 +490,8 @@ defm DotProductInput4x8Bit : CapabilityOperand<6017, 0x10600, 0, [SPV_KHR_intege
 defm DotProductInput4x8BitPacked : CapabilityOperand<6018, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
 defm DotProduct : CapabilityOperand<6019, 0x10600, 0, [SPV_KHR_integer_dot_product], []>;
 defm GroupNonUniformRotateKHR : CapabilityOperand<6026, 0, 0, [SPV_KHR_subgroup_rotate], [GroupNonUniform]>;
+defm FloatControls2
+    : CapabilityOperand<6029, 0x10200, 0, [SPV_KHR_float_controls2], []>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;

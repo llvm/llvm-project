@@ -296,6 +296,6 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     break;
   }
 
-  Attrs.addNew(II, Loc, nullptr, SourceLocation(), ArgExprs.data(),
-               ArgExprs.size(), ParsedAttr::Form::HLSLAnnotation());
+  Attrs.addNew(II, Loc, AttributeScopeInfo(), ArgExprs.data(), ArgExprs.size(),
+               ParsedAttr::Form::HLSLAnnotation());
 }

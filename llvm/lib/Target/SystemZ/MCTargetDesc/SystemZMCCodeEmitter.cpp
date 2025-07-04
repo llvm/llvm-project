@@ -203,7 +203,7 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
       // into MI.  Add Offset to the relocation value to cancel out
       // this difference.
       const MCExpr *OffsetExpr = MCConstantExpr::create(Offset, Ctx);
-      Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx);
+      Expr = MCBinaryExpr::createAdd(Expr, OffsetExpr, Ctx, Loc);
     }
   }
   Fixups.push_back(MCFixup::create(Offset, Expr, (MCFixupKind)Kind, Loc));

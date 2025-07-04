@@ -248,7 +248,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
 
   // Decompose the location for the declaration and find the beginning of the
   // file buffer.
-  const std::pair<FileID, unsigned> DeclLocDecomp =
+  const FileIDAndOffset DeclLocDecomp =
       SourceMgr.getDecomposedLoc(RepresentativeLocForDecl);
 
   // Slow path.
@@ -1703,6 +1703,73 @@ void ASTContext::setRelocationInfoForCXXRecord(
   CXXRecordDecl *D = RD->getDefinition();
   assert(RelocatableClasses.find(D) == RelocatableClasses.end());
   RelocatableClasses.insert({D, Info});
+}
+
+static bool primaryBaseHaseAddressDiscriminatedVTableAuthentication(
+    ASTContext &Context, const CXXRecordDecl *Class) {
+  if (!Class->isPolymorphic())
+    return false;
+  const CXXRecordDecl *BaseType = Context.baseForVTableAuthentication(Class);
+  using AuthAttr = VTablePointerAuthenticationAttr;
+  const AuthAttr *ExplicitAuth = BaseType->getAttr<AuthAttr>();
+  if (!ExplicitAuth)
+    return Context.getLangOpts().PointerAuthVTPtrAddressDiscrimination;
+  AuthAttr::AddressDiscriminationMode AddressDiscrimination =
+      ExplicitAuth->getAddressDiscrimination();
+  if (AddressDiscrimination == AuthAttr::DefaultAddressDiscrimination)
+    return Context.getLangOpts().PointerAuthVTPtrAddressDiscrimination;
+  return AddressDiscrimination == AuthAttr::AddressDiscrimination;
+}
+
+ASTContext::PointerAuthContent ASTContext::findPointerAuthContent(QualType T) {
+  assert(isPointerAuthenticationAvailable());
+
+  T = T.getCanonicalType();
+  if (T.hasAddressDiscriminatedPointerAuth())
+    return PointerAuthContent::AddressDiscriminatedData;
+  const RecordDecl *RD = T->getAsRecordDecl();
+  if (!RD)
+    return PointerAuthContent::None;
+
+  if (auto Existing = RecordContainsAddressDiscriminatedPointerAuth.find(RD);
+      Existing != RecordContainsAddressDiscriminatedPointerAuth.end())
+    return Existing->second;
+
+  PointerAuthContent Result = PointerAuthContent::None;
+
+  auto SaveResultAndReturn = [&]() -> PointerAuthContent {
+    auto [ResultIter, DidAdd] =
+        RecordContainsAddressDiscriminatedPointerAuth.try_emplace(RD, Result);
+    (void)ResultIter;
+    (void)DidAdd;
+    assert(DidAdd);
+    return Result;
+  };
+  auto ShouldContinueAfterUpdate = [&](PointerAuthContent NewResult) {
+    static_assert(PointerAuthContent::None <
+                  PointerAuthContent::AddressDiscriminatedVTable);
+    static_assert(PointerAuthContent::AddressDiscriminatedVTable <
+                  PointerAuthContent::AddressDiscriminatedData);
+    if (NewResult > Result)
+      Result = NewResult;
+    return Result != PointerAuthContent::AddressDiscriminatedData;
+  };
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    if (primaryBaseHaseAddressDiscriminatedVTableAuthentication(*this, CXXRD) &&
+        !ShouldContinueAfterUpdate(
+            PointerAuthContent::AddressDiscriminatedVTable))
+      return SaveResultAndReturn();
+    for (auto Base : CXXRD->bases()) {
+      if (!ShouldContinueAfterUpdate(findPointerAuthContent(Base.getType())))
+        return SaveResultAndReturn();
+    }
+  }
+  for (auto *FieldDecl : RD->fields()) {
+    if (!ShouldContinueAfterUpdate(
+            findPointerAuthContent(FieldDecl->getType())))
+      return SaveResultAndReturn();
+  }
+  return SaveResultAndReturn();
 }
 
 void ASTContext::addedLocalImportDecl(ImportDecl *Import) {
@@ -3455,6 +3522,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
     case BuiltinType::BFloat16:
     case BuiltinType::VectorQuad:
     case BuiltinType::VectorPair:
+    case BuiltinType::DMR1024:
       OS << "?";
       return;
 
@@ -6039,8 +6107,7 @@ SortAndUniqueProtocols(SmallVectorImpl<ObjCProtocolDecl *> &Protocols) {
 QualType ASTContext::getObjCObjectType(QualType BaseType,
                                        ObjCProtocolDecl * const *Protocols,
                                        unsigned NumProtocols) const {
-  return getObjCObjectType(BaseType, {},
-                           llvm::ArrayRef(Protocols, NumProtocols),
+  return getObjCObjectType(BaseType, {}, ArrayRef(Protocols, NumProtocols),
                            /*isKindOf=*/false);
 }
 
@@ -10443,92 +10510,11 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
   return false;
 }
 
-/// getSVETypeSize - Return SVE vector or predicate register size.
-static uint64_t getSVETypeSize(ASTContext &Context, const BuiltinType *Ty) {
-  assert(Ty->isSveVLSBuiltinType() && "Invalid SVE Type");
-  if (Ty->getKind() == BuiltinType::SveBool ||
-      Ty->getKind() == BuiltinType::SveCount)
-    return (Context.getLangOpts().VScaleMin * 128) / Context.getCharWidth();
-  return Context.getLangOpts().VScaleMin * 128;
-}
-
-bool ASTContext::areCompatibleSveTypes(QualType FirstType,
-                                       QualType SecondType) {
-  auto IsValidCast = [this](QualType FirstType, QualType SecondType) {
-    if (const auto *BT = FirstType->getAs<BuiltinType>()) {
-      if (const auto *VT = SecondType->getAs<VectorType>()) {
-        // Predicates have the same representation as uint8 so we also have to
-        // check the kind to make these types incompatible.
-        if (VT->getVectorKind() == VectorKind::SveFixedLengthPredicate)
-          return BT->getKind() == BuiltinType::SveBool;
-        else if (VT->getVectorKind() == VectorKind::SveFixedLengthData)
-          return VT->getElementType().getCanonicalType() ==
-                 FirstType->getSveEltType(*this);
-        else if (VT->getVectorKind() == VectorKind::Generic)
-          return getTypeSize(SecondType) == getSVETypeSize(*this, BT) &&
-                 hasSameType(VT->getElementType(),
-                             getBuiltinVectorTypeInfo(BT).ElementType);
-      }
-    }
-    return false;
-  };
-
-  return IsValidCast(FirstType, SecondType) ||
-         IsValidCast(SecondType, FirstType);
-}
-
-bool ASTContext::areLaxCompatibleSveTypes(QualType FirstType,
-                                          QualType SecondType) {
-  auto IsLaxCompatible = [this](QualType FirstType, QualType SecondType) {
-    const auto *BT = FirstType->getAs<BuiltinType>();
-    if (!BT)
-      return false;
-
-    const auto *VecTy = SecondType->getAs<VectorType>();
-    if (VecTy && (VecTy->getVectorKind() == VectorKind::SveFixedLengthData ||
-                  VecTy->getVectorKind() == VectorKind::Generic)) {
-      const LangOptions::LaxVectorConversionKind LVCKind =
-          getLangOpts().getLaxVectorConversions();
-
-      // Can not convert between sve predicates and sve vectors because of
-      // different size.
-      if (BT->getKind() == BuiltinType::SveBool &&
-          VecTy->getVectorKind() == VectorKind::SveFixedLengthData)
-        return false;
-
-      // If __ARM_FEATURE_SVE_BITS != N do not allow GNU vector lax conversion.
-      // "Whenever __ARM_FEATURE_SVE_BITS==N, GNUT implicitly
-      // converts to VLAT and VLAT implicitly converts to GNUT."
-      // ACLE Spec Version 00bet6, 3.7.3.2. Behavior common to vectors and
-      // predicates.
-      if (VecTy->getVectorKind() == VectorKind::Generic &&
-          getTypeSize(SecondType) != getSVETypeSize(*this, BT))
-        return false;
-
-      // If -flax-vector-conversions=all is specified, the types are
-      // certainly compatible.
-      if (LVCKind == LangOptions::LaxVectorConversionKind::All)
-        return true;
-
-      // If -flax-vector-conversions=integer is specified, the types are
-      // compatible if the elements are integer types.
-      if (LVCKind == LangOptions::LaxVectorConversionKind::Integer)
-        return VecTy->getElementType().getCanonicalType()->isIntegerType() &&
-               FirstType->getSveEltType(*this)->isIntegerType();
-    }
-
-    return false;
-  };
-
-  return IsLaxCompatible(FirstType, SecondType) ||
-         IsLaxCompatible(SecondType, FirstType);
-}
-
 /// getRVVTypeSize - Return RVV vector register size.
 static uint64_t getRVVTypeSize(ASTContext &Context, const BuiltinType *Ty) {
   assert(Ty->isRVVVLSBuiltinType() && "Invalid RVV Type");
-  auto VScale =
-      Context.getTargetInfo().getVScaleRange(Context.getLangOpts(), false);
+  auto VScale = Context.getTargetInfo().getVScaleRange(
+      Context.getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
   if (!VScale)
     return 0;
 
@@ -13043,9 +13029,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return true;
 
   // Variables that have initialization with side-effects are required.
-  if (VD->getInit() && VD->getInit()->HasSideEffects(*this) &&
-      // We can get a value-dependent initializer during error recovery.
-      (VD->getInit()->isValueDependent() || !VD->evaluateValue()))
+  if (VD->hasInitWithSideEffects())
     return true;
 
   // Likewise, variables with tuple-like bindings are required if their
@@ -14216,7 +14200,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         ::getCommonTemplateNameChecked(Ctx, TX->getTemplateName(),
                                        TY->getTemplateName(),
                                        /*IgnoreDeduced=*/true),
-        As, /*CanonicalArgs=*/std::nullopt, X->getCanonicalTypeInternal());
+        As, /*CanonicalArgs=*/{}, X->getCanonicalTypeInternal());
   }
   case Type::Decltype: {
     const auto *DX = cast<DecltypeType>(X);
@@ -14462,7 +14446,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
                                    TY->template_arguments()))
       return QualType();
     return Ctx.getTemplateSpecializationType(CTN, As,
-                                             /*CanonicalArgs=*/std::nullopt,
+                                             /*CanonicalArgs=*/{},
                                              Ctx.getQualifiedType(Underlying));
   }
   case Type::Typedef: {
@@ -14525,7 +14509,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     Expr *CEX = DX->getCountExpr();
     Expr *CEY = DY->getCountExpr();
-    llvm::ArrayRef<clang::TypeCoupledDeclRefInfo> CDX = DX->getCoupledDecls();
+    ArrayRef<clang::TypeCoupledDeclRefInfo> CDX = DX->getCoupledDecls();
     if (Ctx.hasSameExpr(CEX, CEY))
       return Ctx.getCountAttributedType(Ctx.getQualifiedType(Underlying), CEX,
                                         DX->isCountInBytes(), DX->isOrNull(),

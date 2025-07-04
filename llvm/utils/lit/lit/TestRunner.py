@@ -1,4 +1,7 @@
 from __future__ import absolute_import
+import errno
+import io
+import itertools
 import getopt
 import os, signal, subprocess, sys
 import re
@@ -9,7 +12,10 @@ import shlex
 import shutil
 import tempfile
 import threading
+import typing
 from typing import Optional, Tuple
+
+import io
 
 try:
     from StringIO import StringIO

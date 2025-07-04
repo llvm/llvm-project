@@ -140,10 +140,13 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup,
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
-void LoongArchAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target,
                                      MutableArrayRef<char> Data, uint64_t Value,
                                      bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup, Target))
+    IsResolved = false;
+  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
 
@@ -287,8 +290,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
   const MCExpr &Expr = LF.getValue();
   if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.getFixups().push_back(
-      MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
   return std::make_pair(true, true);
 }
 
@@ -298,9 +300,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
-  size_t OldSize = Data.size();
+  SmallVector<MCFixup, 1> Fixups;
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -309,8 +310,7 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  Data.clear();
-  Fixups.clear();
+  SmallVector<char> Data;
   raw_svector_ostream OS(Data);
 
   // INT64_MAX is a signal that this is actually a DW_LNE_end_sequence.
@@ -355,6 +355,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
@@ -362,9 +364,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                                         bool &WasRelaxed) const {
   const MCExpr &AddrDelta = DF.getAddrDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
-  size_t OldSize = Data.size();
+  SmallVector<MCFixup, 2> Fixups;
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -373,14 +374,12 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   assert(IsAbsolute && "CFA with invalid expression");
   (void)IsAbsolute;
 
-  Data.clear();
-  Fixups.clear();
-  raw_svector_ostream OS(Data);
-
   assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
-    WasRelaxed = OldSize != Data.size();
+    DF.clearContents();
+    DF.clearFixups();
+    WasRelaxed = OldSize != DF.getContents().size();
     return true;
   }
 
@@ -392,6 +391,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
     Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
   };
 
+  SmallVector<char, 8> Data;
+  raw_svector_ostream OS(Data);
   if (isUIntN(6, Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc);
     AddFixups(0, getRelocPairForSize(6));
@@ -410,6 +411,8 @@ bool LoongArchAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
 
   WasRelaxed = OldSize != Data.size();
   return true;
@@ -429,11 +432,32 @@ bool LoongArchAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
+bool LoongArchAsmBackend::isPCRelFixupResolved(const MCSymbol *SymA,
+                                               const MCFragment &F) {
+  // If the section does not contain linker-relaxable fragments, PC-relative
+  // fixups can be resolved.
+  if (!F.getParent()->isLinkerRelaxable())
+    return true;
+
+  // Otherwise, check if the offset between the symbol and fragment is fully
+  // resolved, unaffected by linker-relaxable fragments (e.g. instructions or
+  // offset-affected MCAlignFragment). Complements the generic
+  // isSymbolRefDifferenceFullyResolvedImpl.
+  if (!PCRelTemp)
+    PCRelTemp = getContext().createTempSymbol();
+  PCRelTemp->setFragment(const_cast<MCFragment *>(&F));
+  MCValue Res;
+  MCExpr::evaluateSymbolicAdd(Asm, false, MCValue::get(SymA),
+                              MCValue::get(nullptr, PCRelTemp), Res);
+  return !Res.getSubSym();
+}
+
 bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                    const MCValue &Target, uint64_t &FixedValue,
                                    bool IsResolved) {
   auto Fallback = [&]() {
-    return MCAsmBackend::addReloc(F, Fixup, Target, FixedValue, IsResolved);
+    MCAsmBackend::maybeAddReloc(F, Fixup, Target, FixedValue, IsResolved);
+    return true;
   };
   uint64_t FixedValueA, FixedValueB;
   if (Target.getSubSym()) {
@@ -447,19 +471,24 @@ bool LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     if (!force) {
       const MCSection &SecA = SA.getSection();
       const MCSection &SecB = SB.getSection();
+      const MCSection &SecCur = *F.getParent();
 
-      // We need record relocation if SecA != SecB. Usually SecB is same as the
-      // section of Fixup, which will be record the relocation as PCRel. If SecB
-      // is not same as the section of Fixup, it will report error. Just return
-      // false and then this work can be finished by handleFixup.
-      if (&SecA != &SecB)
+      // To handle the case of A - B which B is same section with the current,
+      // generate PCRel relocations is better than ADD/SUB relocation pair.
+      // We can resolve it as A - PC + PC - B. The A - PC will be resolved
+      // as a PCRel relocation, while PC - B will serve as the addend.
+      // If the linker relaxation is disabled, it can be done directly since
+      // PC - B is constant. Otherwise, we should evaluate whether PC - B
+      // is constant. If it can be resolved as PCRel, use Fallback which
+      // generates R_LARCH_{32,64}_PCREL relocation later.
+      if (&SecA != &SecB && &SecB == &SecCur &&
+          isPCRelFixupResolved(Target.getSubSym(), F))
         return Fallback();
 
-      // In SecA == SecB case. If the linker relaxation is enabled, we need
-      // record the ADD, SUB relocations. Otherwise the FixedValue has already
-      // been calc- ulated out in evaluateFixup, return true and avoid record
-      // relocations.
-      if (!STI.hasFeature(LoongArch::FeatureRelax))
+      // In SecA == SecB case. If the linker relaxation is disabled, the
+      // FixedValue has already been calculated out in evaluateFixup,
+      // return true and avoid record relocations.
+      if (&SecA == &SecB && !STI.hasFeature(LoongArch::FeatureRelax))
         return true;
     }
 
