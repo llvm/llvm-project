@@ -409,7 +409,7 @@ implementation.
 | Private reductions                                          | :good:`mostly`            | :none:`unclaimed`         | Parse/Sema:https://github.com/llvm/llvm-project/pull/129938              |
 |                                                             |                           |                           | Codegen: https://github.com/llvm/llvm-project/pull/134709                |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| Self maps                                                   | :part:`partial`           | :none:`unclaimed`         | parsing/sema done: https://github.com/llvm/llvm-project/pull/129888      |
+| Self maps                                                   | :part:`partial`           | :none:`unclaimed`         | Parse/Sema:129888, CodeGen:134131                                        |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | Release map type for declare mapper                         | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
