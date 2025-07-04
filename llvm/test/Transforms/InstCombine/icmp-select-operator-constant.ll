@@ -6,9 +6,8 @@
 define i1 @shl_nsw_scmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @shl_nsw_scmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = shl nsw i8 [[A]], 3
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 8, i8 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 1, i8 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = shl nsw i8 %a, 3
@@ -20,9 +19,8 @@ define i1 @shl_nsw_scmp(i8 %a, i1 %cond) {
 define i1 @c_shl_nsw_scmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @c_shl_nsw_scmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 8, i8 16
-; CHECK-NEXT:    [[A_SHL:%.*]] = shl nsw i8 [[A]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SEL]], [[A_SHL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 1, i8 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sel = select i1 %cond, i8 8, i8 16
@@ -48,9 +46,8 @@ define i1 @shl_nsw_scmp_mismatch(i8 %a, i1 %cond) {
 define i1 @shl_nsw_ucmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @shl_nsw_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = shl nsw i8 [[A]], 3
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 8, i8 24
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 1, i8 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = shl nsw i8 %a, 3
@@ -64,9 +61,8 @@ define i1 @shl_nsw_ucmp(i8 %a, i1 %cond) {
 define i1 @shl_nuw_ucmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @shl_nuw_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = shl nuw i8 [[A]], 3
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 8, i8 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 1, i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = shl nuw i8 %a, 3
@@ -79,9 +75,8 @@ define i1 @shl_nuw_ucmp(i8 %a, i1 %cond) {
 define i1 @shl_nuw_eqcmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @shl_nuw_eqcmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = shl nuw i8 [[A]], 3
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 8, i8 64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SEL]], [[A_SHL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 1, i8 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = shl nuw i8 %a, 3
@@ -110,9 +105,8 @@ define i1 @shl_nuw_scmp(i8 %a, i1 %cond) {
 define i1 @ashr_exact_ucmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @ashr_exact_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = ashr exact i8 [[A]], 2
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 12, i8 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 48, i8 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = ashr exact i8 %a, 2
@@ -124,9 +118,8 @@ define i1 @ashr_exact_ucmp(i8 %a, i1 %cond) {
 define i1 @ashr_exact_scmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @ashr_exact_scmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = ashr exact i8 [[A]], 2
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 8, i8 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 32, i8 16
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = ashr exact i8 %a, 2
@@ -140,9 +133,8 @@ define i1 @ashr_exact_scmp(i8 %a, i1 %cond) {
 define i1 @lshr_exact_ucmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @lshr_exact_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = lshr exact i8 [[A]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 1, i8 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 2, i8 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = lshr exact i8 %a, 1
@@ -154,9 +146,8 @@ define i1 @lshr_exact_ucmp(i8 %a, i1 %cond) {
 define i1 @lshr_exact_scmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @lshr_exact_scmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[A_SHL:%.*]] = lshr exact i8 [[A]], 1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 1, i8 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign uge i8 [[A_SHL]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 2, i8 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a_shl = lshr exact i8 %a, 1
@@ -170,9 +161,8 @@ define i1 @lshr_exact_scmp(i8 %a, i1 %cond) {
 define i1 @zext_ucmp(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 ; CHECK-LABEL: define i1 @zext_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i16 [[C0:%.*]], i16 [[C1:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[IDX:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 128, i16 64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i16 [[SEL]], [[IDX]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 -128, i8 64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %idx = zext i8 %a to i16
@@ -184,9 +174,8 @@ define i1 @zext_ucmp(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 define i1 @zext_scmp_mismatch(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 ; CHECK-LABEL: define i1 @zext_scmp_mismatch(
 ; CHECK-SAME: i8 [[A:%.*]], i16 [[C0:%.*]], i16 [[C1:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[IDX:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 128, i16 64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i16 [[SEL]], [[IDX]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 -128, i8 64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %idx = zext i8 %a to i16
@@ -200,9 +189,8 @@ define i1 @zext_scmp_mismatch(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 define i1 @sext_ucmp(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 ; CHECK-LABEL: define i1 @sext_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i16 [[C0:%.*]], i16 [[C1:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[IDX:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 -127, i16 126
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[SEL]], [[IDX]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 -127, i8 126
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %idx = sext i8 %a to i16
@@ -228,9 +216,8 @@ define i1 @sext_ucmp_mismatch(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 define i1 @sext_scmp(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 ; CHECK-LABEL: define i1 @sext_scmp(
 ; CHECK-SAME: i8 [[A:%.*]], i16 [[C0:%.*]], i16 [[C1:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[IDX:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i16 -5, i16 9
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[SEL]], [[IDX]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 -5, i8 9
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %idx = sext i8 %a to i16
@@ -244,9 +231,8 @@ define i1 @sext_scmp(i8 %a, i16 %c0, i16 %c1, i1 %cond) {
 define i1 @or_disjoint_ucmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @or_disjoint_ucmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[A]], 3
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 11, i8 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[OR]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 8, i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %or = or disjoint i8 %a, 3
@@ -258,9 +244,8 @@ define i1 @or_disjoint_ucmp(i8 %a, i1 %cond) {
 define i1 @or_disjoint_scmp(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @or_disjoint_scmp(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i8 [[A]], 3
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 11, i8 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OR]], [[SEL]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 8, i8 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %or = or disjoint i8 %a, 3
@@ -288,7 +273,7 @@ define i1 @sub_eq(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @sub_eq(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 4, i8 12
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i8 %a, 5
@@ -317,7 +302,7 @@ define i1 @add_ne(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @add_ne(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND]], i8 -6, i8 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[TMP1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = add i8 %a, 5
@@ -330,9 +315,8 @@ define i1 @add_ne(i8 %a, i1 %cond) {
 define i1 @xor_eq(i8 %a, i1 %cond) {
 ; CHECK-LABEL: define i1 @xor_eq(
 ; CHECK-SAME: i8 [[A:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8 -1, i8 7
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[A]], [[SEL]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 5
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[COND]], i8 -6, i8 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SEL1]], [[A]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = xor i8 %a, 5
