@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=42", "setuptools_scm==8.1.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clang"
+description = "libclang python bindings"
+readme = {file = "README.txt", content-type = "text/plain"}
+
+license = {text = "Apache-2.0 WITH LLVM-exception"}
+authors = [
+    { name = "LLVM" }
+]
+keywords = ["llvm", "clang", "libclang"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Development Status :: 5 - Production/Stable",
+    "Topic :: Software Development :: Compilers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://clang.llvm.org/"
+Download = "https://llvm.org/releases/download.html"
+Discussions = "https://discourse.llvm.org/"
+"Issue Tracker" = "https://github.com/llvm/llvm-project/issues"
+"Source Code" = "https://github.com/llvm/llvm-project/tree/main/clang/bindings/python"
+
+[tool.setuptools_scm]
+root = "../../.."
+version_file = "clang/_version.py"
+version_scheme = "no-guess-dev"
+# Regex version capture group gets x.y.z with optional -rcN, -aN, -bN suffixes; -init is just consumed
+tag_regex = "^llvmorg-(?P<version>\\d+(?:\\.\\d+)*(?:-rc\\d+)?)(?:.*)$"
