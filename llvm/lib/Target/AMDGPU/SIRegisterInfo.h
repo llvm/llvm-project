@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
 
 #define GET_REGINFO_HEADER
 #include "AMDGPUGenRegisterInfo.inc"
@@ -487,6 +488,12 @@ public:
   unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass &RC,
                               bool IncludeCalls = true) const;
+
+  // \returns list of MI uses defined physical reg by a given \p MI.
+  SmallVector<MachineInstr *>
+  findRegUsesFrom(MachineInstr *StartMI, Register TrgReg,
+                  const DenseSet<Register> &StopAtDefs,
+                  const DenseSet<unsigned> &Opcodes) const;
 
   std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
     return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG

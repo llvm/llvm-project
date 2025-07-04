@@ -4065,6 +4065,50 @@ unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
   return 0;
 }
 
+SmallVector<MachineInstr *>
+SIRegisterInfo::findRegUsesFrom(MachineInstr *StartMI, Register TrgReg,
+                                const DenseSet<Register> &StopAtDefs,
+                                const DenseSet<unsigned> &Opcodes) const {
+  DenseSet<MachineInstr *> Visited;
+  SmallVector<MachineInstr *> Stack;
+
+  Stack.push_back(&*std::next(StartMI->getIterator()));
+
+  SmallVector<MachineInstr *> Uses;
+  while (!Stack.empty()) {
+    MachineInstr *I = Stack.back();
+    Stack.pop_back();
+    if (!Visited.insert(I).second)
+      continue;
+
+    MachineBasicBlock *MBB = I->getParent();
+    MachineBasicBlock::iterator It = I->getIterator();
+    MachineBasicBlock::iterator E = MBB->end();
+
+    bool DefFound = false;
+    while (It != E) {
+      if (It->readsRegister(TrgReg, this) && &*It != StartMI)
+        // Only add to Uses if the opcode is in the allowed set
+        if (Opcodes.empty() || Opcodes.count(It->getOpcode()))
+          Uses.push_back(&*It);
+      for (auto DefReg : StopAtDefs)
+        if (It->findRegisterDefOperand(DefReg, this)) {
+          DefFound = true;
+          break;
+        }
+      if (DefFound)
+        break;
+      It++;
+    }
+    if (DefFound)
+      continue;
+    // Push successors onto the stack to visit next.
+    for (auto *Succ : MBB->successors())
+      Stack.push_back(&*(Succ->begin()));
+  }
+  return Uses;
+}
+
 SmallVector<StringLiteral>
 SIRegisterInfo::getVRegFlagsOfReg(Register Reg,
                                   const MachineFunction &MF) const {
