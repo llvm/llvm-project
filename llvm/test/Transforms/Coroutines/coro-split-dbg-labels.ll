@@ -36,7 +36,7 @@ entry:
   br label %loop1, !dbg !27
 
 loop1:                                         ; preds = %for.cond, %entry
-  tail call void (...) @bar() #7, !dbg !33
+  tail call void (...) @bar() #0, !dbg !33
   %3 = tail call token @llvm.coro.save(ptr null), !dbg !34
   %4 = tail call i8 @llvm.coro.suspend(token %3, i1 false), !dbg !34
   switch i8 %4, label %coro_Suspend [
@@ -45,7 +45,7 @@ loop1:                                         ; preds = %for.cond, %entry
   ], !dbg !34
 
 loop2:                                         ; preds = %for.cond, %entry
-  tail call void (...) @baz() #7, !dbg !35
+  tail call void (...) @baz() #0, !dbg !35
   %5 = tail call token @llvm.coro.save(ptr null), !dbg !36
   %6 = tail call i8 @llvm.coro.suspend(token %5, i1 false), !dbg !36
   switch i8 %6, label %coro_Suspend [
@@ -97,24 +97,21 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #5
 
 ; Function Attrs: nounwind
-declare noalias ptr @malloc(i64) local_unnamed_addr #6
+declare noalias ptr @malloc(i64) local_unnamed_addr #0
 declare i64 @llvm.coro.size.i64() #1
-declare ptr @llvm.coro.begin(token, ptr writeonly) #7
-declare token @llvm.coro.save(ptr) #7
-declare i8 @llvm.coro.suspend(token, i1) #7
+declare ptr @llvm.coro.begin(token, ptr writeonly) #0
+declare token @llvm.coro.save(ptr) #0
+declare i8 @llvm.coro.suspend(token, i1) #0
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #5
-declare void @free(ptr nocapture) local_unnamed_addr #6
-declare i1 @llvm.coro.end(ptr, i1, token) #7
+declare void @free(ptr nocapture) local_unnamed_addr #0
+declare i1 @llvm.coro.end(ptr, i1, token) #0
 
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind uwtable presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = {}
+attributes #3 = { nounwind uwtable presplitcoroutine }
 attributes #4 = { noduplicate }
 attributes #5 = { argmemonly nounwind readonly }
-attributes #6 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #7 = { nounwind }
-attributes #8 = { alwaysinline nounwind }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
