@@ -8,4 +8,4 @@ int type_mismatch(int *p)
 
 // CHECK: call void @llvm.ubsantrap(i8 22) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer
+// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Type mismatch in operation"
