@@ -34,6 +34,10 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
 
 SCUDO_FLAG(bool, zero_contents, false, "Zero chunk contents on allocation.")
 
+SCUDO_FLAG(bool, zero_on_dealloc, false,
+           "Clears the memory slot when an allocation is returned to the "
+           "allocator.")
+
 SCUDO_FLAG(bool, pattern_fill_contents, false,
            "Pattern fill chunk contents on allocation.")
 

@@ -150,6 +150,27 @@ template <typename SizeClassMapT> struct TestConfig5 {
   };
 };
 
+// Enable `ZeroOnDealloc`
+template <typename SizeClassMapT> struct TestConfig6 {
+  static const bool MaySupportMemoryTagging = false;
+  template <typename> using TSDRegistryT = void;
+  template <typename> using PrimaryT = void;
+  template <typename> using SecondaryT = void;
+
+  struct Primary {
+    using SizeClassMap = SizeClassMapT;
+    static const scudo::uptr RegionSizeLog = 18U;
+    static const scudo::uptr GroupSizeLog = 18U;
+    static const scudo::s32 MinReleaseToOsIntervalMs = INT32_MIN;
+    static const scudo::s32 MaxReleaseToOsIntervalMs = INT32_MAX;
+    typedef scudo::uptr CompactPtrT;
+    static const scudo::uptr CompactPtrScale = 0;
+    static const bool EnableRandomOffset = true;
+    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const bool ZeroOnDealloc = true;
+  };
+};
+
 template <template <typename> class BaseConfig, typename SizeClassMapT>
 struct Config : public BaseConfig<SizeClassMapT> {};
 
@@ -191,7 +212,8 @@ struct ScudoPrimaryTest : public Test {};
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig5)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig6)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
