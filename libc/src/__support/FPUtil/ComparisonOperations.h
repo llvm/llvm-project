@@ -17,7 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
-// IEEE Standard 754-2019. Section 5.11
+// All predicates are hereby implemented as per IEEE Std 754-2019
+// Implements compareQuietEqual predicate
 // Rules for comparison within the same floating point type
 // 1. +0 = −0
 // 2. (i)   +inf  = +inf
@@ -46,7 +47,8 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
   return x_bits.uintval() == y_bits.uintval();
 }
 
-// Rules:
+// Implements compareSignalingLess predicate
+// Section 5.11 Rules:
 // 1. -inf < x (x != -inf)
 // 2. x < +inf (x != +inf)
 // 3. Any comparison with NaN return false
@@ -62,8 +64,10 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
     fputil::raise_except_if_required(FE_INVALID);
 
   // Any comparison with NaN returns false
-  if (x_bits.is_nan() || y_bits.is_nan())
+  if (x_bits.is_nan() || y_bits.is_nan()) {
+    fputil::raise_except_if_required(FE_INVALID);
     return false;
+  }
 
   if (x_bits.is_zero() && y_bits.is_zero())
     return false;
@@ -85,6 +89,7 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
   return x_bits.uintval() < y_bits.uintval();
 }
 
+// Implements compareSignalingGreater predicate
 // x < y => y > x
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
@@ -92,6 +97,7 @@ greater_than(T x, T y) {
   return less_than(y, x);
 }
 
+// Implements compareSignalingLessEqual predicate
 // following is expression is correct, accounting for NaN case(s) as well
 // x <= y => (x < y) || (x == y)
 template <typename T>
@@ -100,6 +106,7 @@ less_than_or_equals(T x, T y) {
   return less_than(x, y) || equals(x, y);
 }
 
+// Implements compareSignalingGreaterEqual predicate
 // x >= y => (x > y) || (x == y) => (y < x) || (x == y)
 template <typename T>
 LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>

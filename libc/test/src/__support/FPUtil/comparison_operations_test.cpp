@@ -47,8 +47,8 @@ public:
     EXPECT_FALSE(equals(normal1, normal2));
     EXPECT_FALSE(equals(normal1, -normal1));
 
-    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
     auto test_qnan = [&](T x, T y) {
+      LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
       EXPECT_FALSE(equals(x, y));
       // NOTE: equals and not equals operations should raise FE_INVALID for
       // quiet NaN operands
@@ -121,12 +121,6 @@ public:
     auto test_qnan = [&](T x, T y) {
       LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
       EXPECT_FALSE(less_than(x, y));
-      // NOTE: All signaling comparison operations other than equals and not
-      // equals should raise FE_INVALID when comparing with NaN
-      // see Note after table 5.1 in IEEE Std 754-2019
-      //    [...] The Signaling predicates in Table 5.1 signal the invalid
-      //    operation exception on quiet NaN operands to warn of potential
-      //    incorrect behavior of programs written assuming trichotomy.
       EXPECT_FP_EXCEPTION(FE_INVALID);
     };
 
@@ -157,6 +151,7 @@ public:
     test_snan(neg_sNaN, aNaN);
     test_snan(neg_sNaN, neg_sNaN);
   }
+
   void test_greater_than() {
     EXPECT_TRUE(greater_than(large, neg_small));
     EXPECT_TRUE(greater_than(neg_small, neg_large));
@@ -329,13 +324,7 @@ public:
 
 TEST_COMPARISON_OPS(Float, float)
 TEST_COMPARISON_OPS(Double, double)
-
-// We have to use type alias here, since FPBits<(long double)> is not
-// allowed if we do TEST_COMPARISON_OPS(LongDouble, (long double)); and
-// Type(x) for Type = long double evaluates to long double(x)which  is not
-// allowed if we do TEST_COMPARISON_OPS(LongDouble, long double);
-using long_double = long double;
-TEST_COMPARISON_OPS(LongDouble, long_double)
+TEST_COMPARISON_OPS(LongDouble, long double)
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 TEST_COMPARISON_OPS(Float16, float16)
