@@ -407,7 +407,7 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
   let hasSideEffects = 0;
-  let mayLoad = 0;
+  let mayLoad = 1;
   let mayStore = 0;
 
   let Uses = [VTYPE, VL];
