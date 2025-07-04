@@ -219,7 +219,8 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check by
   fixing false positives when calling indexing operators that do not perform
-  pointer arithmetic in template, for example ``std::map::operator[]``.
+  pointer arithmetic in template, for example ``std::map::operator[]`` and
+  when pointer arithmetic was used through type aliases.
 
 - Improved :doc:`cppcoreguidelines-rvalue-reference-param-not-moved
   <clang-tidy/checks/cppcoreguidelines/rvalue-reference-param-not-moved>` check
