@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_OPENCL_INTEGER_MUL24_H__
-#define __CLC_OPENCL_OPENCL_INTEGER_MUL24_H__
+#ifndef __CLC_OPENCL_INTEGER_MUL24_H__
+#define __CLC_OPENCL_INTEGER_MUL24_H__
 
 #define __CLC_FUNCTION mul24
 #define __CLC_BODY <clc/shared/binary_decl.inc>
@@ -16,4 +16,4 @@
 
 #undef __CLC_FUNCTION
 
-#endif // __CLC_OPENCL_OPENCL_INTEGER_MUL24_H__
+#endif // __CLC_OPENCL_INTEGER_MUL24_H__

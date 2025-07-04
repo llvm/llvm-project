@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_OPENCL_INTEGER_CTZ_H__
-#define __CLC_OPENCL_OPENCL_INTEGER_CTZ_H__
+#ifndef __CLC_OPENCL_INTEGER_CTZ_H__
+#define __CLC_OPENCL_INTEGER_CTZ_H__
 
 #if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
@@ -22,4 +22,4 @@
 
 #endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
-#endif // __CLC_OPENCL_OPENCL_INTEGER_CTZ_H__
+#endif // __CLC_OPENCL_INTEGER_CTZ_H__
