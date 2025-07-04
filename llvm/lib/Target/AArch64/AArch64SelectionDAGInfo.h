@@ -32,8 +32,8 @@ public:
   SDValue EmitMOPS(unsigned Opcode, SelectionDAG &DAG, const SDLoc &DL,
                    SDValue Chain, SDValue Dst, SDValue SrcOrValue, SDValue Size,
                    Align Alignment, bool isVolatile,
-                   MachinePointerInfo DstPtrInfo,
-                   MachinePointerInfo SrcPtrInfo) const;
+                   const MachinePointerInfo &DstPtrInfo,
+                   const MachinePointerInfo &SrcPtrInfo) const;
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,

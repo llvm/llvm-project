@@ -193,7 +193,7 @@ namespace {
         Pos = std::distance(B->begin(), It);
       }
     }
-    bool operator<(Loc A) const {
+    bool operator<(const Loc &A) const {
       if (Block != A.Block)
         return Block->getNumber() < A.Block->getNumber();
       if (A.Pos == -1)
