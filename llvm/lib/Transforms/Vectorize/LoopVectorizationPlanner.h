@@ -479,6 +479,16 @@ public:
   /// all profitable VFs in ProfitableVFs.
   VectorizationFactor computeBestVF();
 
+  /// Search in \p ProfitableVFs if the selected \p VF exists.
+  std::optional<VectorizationFactor> getProfitableVF(ElementCount VF) const {
+    if (!hasPlanWithVF(VF))
+      return std::nullopt;
+    for (const auto &P : ProfitableVFs)
+      if (P.Width == VF)
+        return P;
+    return std::nullopt;
+  }
+
   /// Generate the IR code for the vectorized loop captured in VPlan \p BestPlan
   /// according to the best selected \p VF and  \p UF.
   ///
