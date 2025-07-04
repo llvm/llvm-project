@@ -558,7 +558,7 @@ handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
                   "properties and AArch64 build attributes sections with "
                   "different And Features data";
   } else {
-    // When BuildAttributes are missing, PauthABI value default to (TagPlatform
+    // When BuildAttributes are missing, PauthABI value defaults to (TagPlatform
     // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
     // property is not present. To match this behaviour, we only write
     // PAuthAbiCoreInfo when there is at least one non-zero value. The
