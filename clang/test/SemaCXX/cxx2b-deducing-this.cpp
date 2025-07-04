@@ -1168,3 +1168,125 @@ struct S {
   bool g() { return f(); } // expected-error {{no viable conversion from returned value of type 'S' to function return type 'bool'}}
 };
 }
+
+namespace tpl_address {
+
+struct A {
+    template <typename T>
+    void a(this T self); // #tpl-address-a
+
+    template <typename T>
+    void b(this T&& self); // #tpl-address-b
+
+    template <typename T>
+    void c(this T self, int); // #tpl-address-c
+
+    template <typename T, typename U>
+    void d(this T self, U); // #tpl-address-d
+
+    template <typename T, typename U>
+    requires __is_same_as(U, int)  void e(this T self, U); // #tpl-address-e
+
+    template <typename T>
+    requires __is_same_as(T, int)  void f(this T self); // #tpl-address-f
+
+    template <typename T>
+    void g(this T self); // #tpl-address-g1
+
+    template <typename T>
+    void g(this T self, int); // #tpl-address-g2
+
+};
+
+void f() {
+    A a{};
+
+    (&A::a<A>)(a);
+
+    (&A::a)(a);
+
+    (&A::a<A>)();
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate function [with T = tpl_address::A] not viable: requires 1 argument, but 0 were provided}}
+
+    (&A::a)();
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate template ignored: couldn't infer template argument 'T'}}
+
+    (&A::a<A>)(0);
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate function template not viable: no known conversion from 'int' to 'A' for 1st argument}}
+
+    (&A::a<A>)(a, 1);
+    // expected-error@-1 {{no matching function for call to 'a'}} \
+    // expected-note@#tpl-address-a {{candidate function template not viable: requires 1 argument, but 2 were provided}}
+
+
+    (&A::b<A>)(a);
+    // expected-error@-1 {{no matching function for call to 'b'}} \
+    // expected-note@#tpl-address-b{{candidate function template not viable: expects an rvalue for 1st argument}}
+
+    (&A::b)(a);
+
+    (&A::c<A>)(a, 0);
+
+    (&A::c<A>)(a);
+    // expected-error@-1 {{no matching function for call to 'c'}} \
+    // expected-note@#tpl-address-c{{candidate function [with T = tpl_address::A] not viable: requires 2 arguments, but 1 was provided}}
+
+    (&A::c<A>)(a, 0, 0);
+    // expected-error@-1 {{no matching function for call to 'c'}} \
+    // expected-note@#tpl-address-c{{candidate function template not viable: requires 2 arguments, but 3 were provided}}
+
+    (&A::c<A>)(a, a);
+    // expected-error@-1 {{no matching function for call to 'c'}} \
+    // expected-note@#tpl-address-c{{candidate function template not viable: no known conversion from 'A' to 'int' for 2nd argument}}
+
+    (&A::d)(a, 0);
+    (&A::d)(a, a);
+    (&A::d<A>)(a, 0);
+    (&A::d<A>)(a, a);
+    (&A::d<A, int>)(a, 0);
+
+    (&A::d<A, int>)(a, a);
+    // expected-error@-1 {{no matching function for call to 'd'}} \
+    // expected-note@#tpl-address-d{{no known conversion from 'A' to 'int' for 2nd argument}}
+
+
+    (&A::e)(a, 0);
+    (&A::e)(a, a);
+    // expected-error@-1 {{no matching function for call to 'e'}} \
+    // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
+    // expected-note@#tpl-address-e{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+
+    (&A::e<A>)(a, 0);
+    (&A::e<A>)(a, a);
+    // expected-error@-1 {{no matching function for call to 'e'}} \
+    // expected-note@#tpl-address-e{{candidate template ignored: constraints not satisfied [with T = A, U = A]}} \
+    // expected-note@#tpl-address-e{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+
+    (&A::e<A, int>)(a, 0);
+
+    (&A::f<int>)(0);
+    (&A::f)(0);
+
+    (&A::f<A>)(a);
+    // expected-error@-1 {{no matching function for call to 'f'}} \
+    // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
+    // expected-note@#tpl-address-f{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+
+    (&A::f)(a);
+    // expected-error@-1 {{no matching function for call to 'f'}} \
+    // expected-note@#tpl-address-f{{candidate template ignored: constraints not satisfied [with T = A]}} \
+    // expected-note@#tpl-address-f{{because '__is_same(tpl_address::A, int)' evaluated to false}}
+
+    (&A::g)(a);
+    (&A::g)(a, 0);
+    (&A::g)(a, 0, 0);
+    // expected-error@-1 {{no matching function for call to 'g'}} \
+    // expected-note@#tpl-address-g2 {{candidate function template not viable: requires 2 arguments, but 3 were provided}}\
+    // expected-note@#tpl-address-g1 {{candidate function template not viable: requires 1 argument, but 3 were provided}}
+}
+
+
+}
