@@ -51,7 +51,7 @@ public:
   getOverlapping(const RangeInfo &Info) const;
 
   // Return the mapped RangeInfo at X or nullptr if no mapping exists
-  const RangeInfo *lookup(uint32_t X) const;
+  LLVM_ABI const RangeInfo *lookup(uint32_t X) const;
 
   // Removes all entries of the ResourceRange
   LLVM_ABI void clear();
