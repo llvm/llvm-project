@@ -57,6 +57,8 @@ class SValBuilder {
 protected:
   ASTContext &Context;
 
+  const AnalyzerOptions &AnOpts;
+
   /// Manager of APSInt values.
   BasicValueFactory BasicVals;
 
@@ -67,8 +69,6 @@ protected:
   MemRegionManager MemMgr;
 
   ProgramStateManager &StateMgr;
-
-  const AnalyzerOptions &AnOpts;
 
   /// The scalar type to use for array indices.
   const QualType ArrayIndexTy;
@@ -326,8 +326,8 @@ public:
   nonloc::SymbolVal makeNonLoc(const SymExpr *lhs, BinaryOperator::Opcode op,
                                const SymExpr *rhs, QualType type);
 
-  NonLoc makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
-                    QualType type);
+  nonloc::SymbolVal makeNonLoc(const SymExpr *operand, UnaryOperator::Opcode op,
+                               QualType type);
 
   /// Create a NonLoc value for cast.
   nonloc::SymbolVal makeNonLoc(const SymExpr *operand, QualType fromTy,
