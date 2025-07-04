@@ -367,9 +367,7 @@ getBranchTargetOpValueMM(const MCInst &MI, unsigned OpNo,
          "getBranchTargetOpValueMM expects only expressions or immediates");
 
   const MCExpr *Expr = MO.getExpr();
-  Fixups.push_back(MCFixup::create(0, Expr,
-                   MCFixupKind(Mips::
-                               fixup_MICROMIPS_PC16_S1)));
+  Fixups.push_back(MCFixup::create(0, Expr, Mips::fixup_MICROMIPS_PC16_S1));
   return 0;
 }
 
@@ -390,8 +388,8 @@ getBranchTarget21OpValue(const MCInst &MI, unsigned OpNo,
 
   const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
       MO.getExpr(), MCConstantExpr::create(-4, Ctx), Ctx);
-  Fixups.push_back(MCFixup::create(0, FixupExpression,
-                                   MCFixupKind(Mips::fixup_MIPS_PC21_S2)));
+  Fixups.push_back(
+      MCFixup::create(0, FixupExpression, Mips::fixup_MIPS_PC21_S2));
   return 0;
 }
 
@@ -412,8 +410,8 @@ getBranchTarget21OpValueMM(const MCInst &MI, unsigned OpNo,
 
   const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
       MO.getExpr(), MCConstantExpr::create(-4, Ctx), Ctx);
-  Fixups.push_back(MCFixup::create(0, FixupExpression,
-                                   MCFixupKind(Mips::fixup_MICROMIPS_PC21_S1)));
+  Fixups.push_back(
+      MCFixup::create(0, FixupExpression, Mips::fixup_MICROMIPS_PC21_S1));
   return 0;
 }
 
@@ -434,8 +432,8 @@ getBranchTarget26OpValue(const MCInst &MI, unsigned OpNo,
 
   const MCExpr *FixupExpression = MCBinaryExpr::createAdd(
       MO.getExpr(), MCConstantExpr::create(-4, Ctx), Ctx);
-  Fixups.push_back(MCFixup::create(0, FixupExpression,
-                                   MCFixupKind(Mips::fixup_MIPS_PC26_S2)));
+  Fixups.push_back(
+      MCFixup::create(0, FixupExpression, Mips::fixup_MIPS_PC26_S2));
   return 0;
 }
 
@@ -734,8 +732,8 @@ unsigned MipsMCCodeEmitter::getImmOpValue(const MCInst &MI, const MCOperand &MO,
     return Res;
   unsigned MIFrm = MipsII::getFormat(MCII.get(MI.getOpcode()).TSFlags);
   if (!isa<MCSpecifierExpr>(Expr) && MIFrm == MipsII::FrmI) {
-    Fixups.push_back(MCFixup::create(
-        0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16), Expr->getLoc()));
+    Fixups.push_back(
+        MCFixup::create(0, Expr, MCFixupKind(Mips::fixup_Mips_AnyImm16)));
     return 0;
   }
   return getExprOpValue(Expr, Fixups, STI);
