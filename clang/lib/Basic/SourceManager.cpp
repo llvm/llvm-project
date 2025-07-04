@@ -24,6 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
@@ -586,17 +587,6 @@ SourceManager::getOrCreateFileID(FileEntryRef SourceFile,
 					  FileCharacter);
 }
 
-/// Helper function to determine if an input file requires conversion
-bool needConversion(StringRef Filename) {
-#ifdef __MVS__
-  llvm::ErrorOr<bool> NeedConversion =
-      llvm::needzOSConversion(Filename.str().c_str());
-  return NeedConversion && *NeedConversion;
-#else
-  return false;
-#endif
-}
-
 /// createFileID - Create a new FileID for the specified ContentCache and
 /// include position.  This works regardless of whether the ContentCache
 /// corresponds to a file or some other input source.
@@ -616,8 +606,9 @@ FileID SourceManager::createFileIDImpl(ContentCache &File, StringRef Filename,
     return FileID::get(LoadedID);
   }
   unsigned FileSize = File.getSize();
-  bool NeedConversion = needConversion(Filename);
-  if (NeedConversion) {
+  llvm::ErrorOr<bool> NeedConversion =
+      llvm::needConversion(Filename.str().c_str());
+  if (NeedConversion && *NeedConversion) {
     // Buffer size may increase due to potential z/OS EBCDIC to UTF-8
     // conversion.
     if (std::optional<llvm::MemoryBufferRef> Buffer =
@@ -811,6 +802,8 @@ FileID SourceManager::getFileIDSlow(SourceLocation::UIntTy SLocOffset) const {
 /// loaded one.
 FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   assert(SLocOffset < NextLocalOffset && "Bad function choice");
+  assert(SLocOffset >= LocalSLocEntryTable[0].getOffset() &&
+         "Invalid SLocOffset");
 
   // After the first and second level caches, I see two common sorts of
   // behavior: 1) a lot of searched FileID's are "near" the cached file
@@ -854,35 +847,24 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
       break;
   }
 
-  NumProbes = 0;
-  while (true) {
-    unsigned MiddleIndex = (GreaterIndex-LessIndex)/2+LessIndex;
+  while (LessIndex < GreaterIndex) {
+    ++NumBinaryProbes;
+
+    unsigned MiddleIndex = LessIndex + (GreaterIndex - LessIndex) / 2;
+
     SourceLocation::UIntTy MidOffset =
-        getLocalSLocEntry(MiddleIndex).getOffset();
+        LocalSLocEntryTable[MiddleIndex].getOffset();
 
-    ++NumProbes;
-
-    // If the offset of the midpoint is too large, chop the high side of the
-    // range to the midpoint.
-    if (MidOffset > SLocOffset) {
+    if (MidOffset <= SLocOffset)
+      LessIndex = MiddleIndex + 1;
+    else
       GreaterIndex = MiddleIndex;
-      continue;
-    }
-
-    // If the middle index contains the value, succeed and return.
-    if (MiddleIndex + 1 == LocalSLocEntryTable.size() ||
-        SLocOffset < getLocalSLocEntry(MiddleIndex + 1).getOffset()) {
-      FileID Res = FileID::get(MiddleIndex);
-
-      // Remember it.  We have good locality across FileID lookups.
-      LastFileIDLookup = Res;
-      NumBinaryProbes += NumProbes;
-      return Res;
-    }
-
-    // Otherwise, move the low-side up to the middle index.
-    LessIndex = MiddleIndex;
   }
+
+  // At this point, LessIndex is the index of the *first element greater than*
+  // SLocOffset. The element we are actually looking for is the one immediately
+  // before it.
+  return LastFileIDLookup = FileID::get(LessIndex - 1);
 }
 
 /// Return the FileID for a SourceLocation with a high offset.

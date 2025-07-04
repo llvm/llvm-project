@@ -337,6 +337,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+sdext  %s -o - | FileCheck --check-prefix=RV64SDEXT %s
 ; RUN: llc -mtriple=riscv64 -mattr=+sdtrig  %s -o - | FileCheck --check-prefix=RV64SDTRIG %s
 ; RUN: llc -mtriple=riscv64 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV64XQCCMP %s
+; RUN: llc -mtriple=riscv64 -mattr=+experimental-p %s -o - | FileCheck --check-prefix=RV64P %s
 
 
 ; Tests for profile features.
@@ -461,7 +462,7 @@
 ; RV32XANDESPERF: .attribute 5, "rv32i2p1_xandesperf5p0"
 ; RV32XANDESVBFHCVT: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xandesvbfhcvt5p0"
 ; RV32XANDESVDOT: .attribute 5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xandesvdot5p0"
-; RV32XANDESVPACKFPH: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfhmin1p0_zvl32b1p0_xandesvpackfph5p0"
+; RV32XANDESVPACKFPH: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_xandesvpackfph5p0"
 ; RV32ZAAMO: .attribute 5, "rv32i2p1_zaamo1p0"
 ; RV32ZALRSC: .attribute 5, "rv32i2p1_zalrsc1p0"
 ; RV32ZCA: .attribute 5, "rv32i2p1_zca1p0"
@@ -526,6 +527,7 @@
 ; RV32SUPM: .attribute 5, "rv32i2p1_supm1p0"
 ; RV32SMCTR: .attribute 5, "rv32i2p1_smctr1p0_sscsrind1p0"
 ; RV32SSCTR: .attribute 5, "rv32i2p1_sscsrind1p0_ssctr1p0"
+; RV32P: .attribute 5, "rv32i2p1_p0p14"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0_zmmul1p0"
 ; RV64ZMMUL: .attribute 5, "rv64i2p1_zmmul1p0"
@@ -617,7 +619,7 @@
 ; RV64XANDESPERF: .attribute 5, "rv64i2p1_xandesperf5p0"
 ; RV64XANDESVBFHCVT: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xandesvbfhcvt5p0"
 ; RV64XANDESVDOT: .attribute 5, "rv64i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xandesvdot5p0"
-; RV64XANDESVPACKFPH: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfhmin1p0_zvl32b1p0_xandesvpackfph5p0"
+; RV64XANDESVPACKFPH: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_xandesvpackfph5p0"
 ; RV64ZTSO: .attribute 5, "rv64i2p1_ztso1p0"
 ; RV64ZAAMO: .attribute 5, "rv64i2p1_zaamo1p0"
 ; RV64ZALRSC: .attribute 5, "rv64i2p1_zalrsc1p0"
@@ -688,6 +690,7 @@
 ; RV64SDEXT: .attribute 5, "rv64i2p1_sdext1p0"
 ; RV64SDTRIG: .attribute 5, "rv64i2p1_sdtrig1p0"
 ; RV64XQCCMP: .attribute 5, "rv64i2p1_zca1p0_xqccmp0p3"
+; RV64P: .attribute 5, "rv64i2p1_p0p14"
 
 ; RVI20U32: .attribute 5, "rv32i2p1"
 ; RVI20U64: .attribute 5, "rv64i2p1"

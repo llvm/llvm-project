@@ -274,17 +274,16 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 
   int64_t LineDelta = DF.getLineDelta();
   const MCExpr &AddrDelta = DF.getAddrDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
-  size_t OldSize = Data.size();
+  SmallVector<MCFixup, 1> Fixups;
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   [[maybe_unused]] bool IsAbsolute =
       AddrDelta.evaluateKnownAbsolute(Value, *Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
-  Data.clear();
   Fixups.clear();
+  SmallVector<char> Data;
   raw_svector_ostream OS(Data);
 
   // INT64_MAX is a signal that this is actually a DW_LNE_end_sequence.
@@ -329,6 +328,8 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
     OS << uint8_t(dwarf::DW_LNS_copy);
   }
 
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
   WasRelaxed = OldSize != Data.size();
   return true;
 }
@@ -336,9 +337,8 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
 bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
                                     bool &WasRelaxed) const {
   const MCExpr &AddrDelta = DF.getAddrDelta();
-  SmallVectorImpl<char> &Data = DF.getContents();
-  SmallVectorImpl<MCFixup> &Fixups = DF.getFixups();
-  size_t OldSize = Data.size();
+  SmallVector<MCFixup, 2> Fixups;
+  size_t OldSize = DF.getContents().size();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
@@ -347,14 +347,12 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
       AddrDelta.evaluateKnownAbsolute(Value, *Asm);
   assert(IsAbsolute && "CFA with invalid expression");
 
-  Data.clear();
-  Fixups.clear();
-  raw_svector_ostream OS(Data);
-
   assert(getContext().getAsmInfo()->getMinInstAlignment() == 1 &&
          "expected 1-byte alignment");
   if (Value == 0) {
-    WasRelaxed = OldSize != Data.size();
+    DF.clearContents();
+    DF.clearFixups();
+    WasRelaxed = OldSize != DF.getContents().size();
     return true;
   }
 
@@ -365,6 +363,8 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
     Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(Fixup)));
   };
 
+  SmallVector<char, 8> Data;
+  raw_svector_ostream OS(Data);
   if (isUIntN(6, Value)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc);
     AddFixups(0, {ELF::R_RISCV_SET6, ELF::R_RISCV_SUB6});
@@ -383,6 +383,8 @@ bool RISCVAsmBackend::relaxDwarfCFA(MCDwarfCallFrameFragment &DF,
   } else {
     llvm_unreachable("unsupported CFA encoding");
   }
+  DF.setContents(Data);
+  DF.setFixups(Fixups);
 
   WasRelaxed = OldSize != Data.size();
   return true;
@@ -792,8 +794,7 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   // generate a relocation and then append a RELAX.
   if (Fixup.isLinkerRelaxable())
     IsResolved = false;
-  if (IsResolved &&
-      (getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel))
+  if (IsResolved && Fixup.isPCRel())
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
 
   if (!IsResolved) {
@@ -813,10 +814,11 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
   return false;
 }
 
-void RISCVAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void RISCVAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
                                  bool IsResolved) {
+  IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -883,7 +885,6 @@ bool RISCVAsmBackend::shouldInsertFixupForCodeAlign(MCAssembler &Asm,
 
   MCContext &Ctx = getContext();
   const MCExpr *Dummy = MCConstantExpr::create(0, Ctx);
-  // Create fixup_riscv_align fixup.
   MCFixup Fixup = MCFixup::create(0, Dummy, ELF::R_RISCV_ALIGN, SMLoc());
 
   uint64_t FixedValue = 0;

@@ -2611,6 +2611,11 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
+  Printer.printInt("column", N->getColumn());
+  Printer.printBool("isArtificial", N->isArtificial(), false);
+  if (N->getCoroSuspendIdx())
+    Printer.printInt("coroSuspendIdx", *N->getCoroSuspendIdx(),
+                     /* ShouldSkipZero */ false);
   Out << ")";
 }
 
@@ -4128,6 +4133,9 @@ void AssemblyWriter::printFunction(const Function *F) {
     if (!AttrStr.empty())
       Out << "; Function Attrs: " << AttrStr << '\n';
   }
+
+  if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::not_intrinsic)
+    Out << "; Unknown intrinsic\n";
 
   Machine.incorporateFunction(F);
 

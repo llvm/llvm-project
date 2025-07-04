@@ -898,7 +898,7 @@ bool AMDGPUPALMetadata::setFromString(StringRef S) {
         errs() << "Unrecognized PAL metadata register key '" << S << "'\n";
         continue;
       }
-      Key = MsgPackDoc.getNode(uint64_t(Val));
+      Key = MsgPackDoc.getNode(Val);
     }
     Registers.getMap()[Key] = I.second;
   }

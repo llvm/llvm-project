@@ -489,7 +489,7 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
 
   // Allow building a ReturnOp with no return operand.
   let builders = [
-    OpBuilder<(ins), [{ build($_builder, $_state, std::nullopt); }]>
+    OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>
   ];
 
   // Provide extra utility definitions on the c++ operation class definition.
@@ -1670,6 +1670,85 @@ def GetGlobalOp : CIR_Op<"get_global",
 }
 
 //===----------------------------------------------------------------------===//
+// GetBitfieldOp
+//===----------------------------------------------------------------------===//
+
+def GetBitfieldOp : CIR_Op<"get_bitfield"> {
+  let summary = "Get the information for a bitfield member";
+  let description = [{
+    The `cir.get_bitfield` operation provides a load-like access to
+    a bit field of a record.
+
+    It expects a name if a bit field, a pointer to a storage in the
+    base record, a type of the storage, a name of the bitfield,
+    a size the bit field, an offset of the bit field and a sign.
+
+    A unit attribute `volatile` can be used to indicate a volatile load of the
+    bitfield.
+
+    Example:
+    Suppose we have a struct with multiple bitfields stored in
+    different members. The `cir.get_bitfield` operation gets the value
+    of the bitfield.
+    ```C++
+    typedef struct {
+      int a : 4;
+      int b : 27;
+      int c : 17;
+      int d : 2;
+      int e : 15;
+    } S;
+
+    int load_bitfield(S& s) {
+      return s.e;
+    }
+    ```
+
+    ```mlir
+    // 'e' is in the storage with the index 1
+    !cir.record<struct "S" packed padded {!u64i, !u16i, !cir.array<!u8i x 2>}>
+    #bfi_e = #cir.bitfield_info<name = "e", storage_type = !u16i, size = 15,
+                                offset = 0, is_signed = true>
+
+    %2 = cir.load %0 : !cir.ptr<!cir.ptr<!record_type>>, !cir.ptr<!record_type>
+    %3 = cir.get_member %2[1] {name = "e"} : !cir.ptr<!record_type>
+                                                             -> !cir.ptr<!u16i>
+    %4 = cir.get_bitfield(#bfi_e, %3 : !cir.ptr<!u16i>) -> !s32i
+    ```
+    }];
+
+  let arguments = (ins
+    Arg<CIR_PointerType, "the address to load from", [MemRead]>:$addr,
+    BitfieldInfoAttr:$bitfield_info,
+    UnitAttr:$is_volatile
+    );
+
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{ `(`$bitfield_info `,` $addr attr-dict `:`
+   qualified(type($addr)) `)` `->` type($result) }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$type,
+                   "mlir::Value":$addr,
+                   "mlir::Type":$storage_type,
+                   "llvm::StringRef":$name,
+                   "unsigned":$size,
+                   "unsigned":$offset,
+                   "bool":$is_signed,
+                   "bool":$is_volatile
+                   ),
+   [{
+      BitfieldInfoAttr info =
+        BitfieldInfoAttr::get($_builder.getContext(),
+                              name, storage_type,
+                              size, offset, is_signed);
+      build($_builder, $_state, type, addr, info, is_volatile);
+    }]>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GetMemberOp
 //===----------------------------------------------------------------------===//
 
@@ -1912,6 +1991,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
+      UnitAttr:$nothrow,
       DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
 }
 
@@ -1941,29 +2021,14 @@ def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
   let arguments = commonArgs;
 
   let builders = [
-    // Build a call op for a direct call
     OpBuilder<(ins "mlir::SymbolRefAttr":$callee, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands,
-                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
-      assert(callee && "callee attribute is required for direct call");
+                   "mlir::ValueRange":$operands), [{
       $_state.addOperands(operands);
-      $_state.addAttribute("callee", callee);
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
+      if (callee)
+        $_state.addAttribute("callee", callee);
       if (resType && !isa<VoidType>(resType))
         $_state.addTypes(resType);
-    }]>,
-    // Build a call op for an indirect call
-    OpBuilder<(ins "mlir::Value":$calleePtr, "mlir::Type":$resType,
-                   "mlir::ValueRange":$operands,
-                   CArg<"SideEffect", "SideEffect::All">:$sideEffect), [{
-      $_state.addOperands(calleePtr);
-      $_state.addOperands(operands);
-      if (resType && !isa<VoidType>(resType))
-        $_state.addTypes(resType);
-      $_state.addAttribute("side_effect",
-        SideEffectAttr::get($_builder.getContext(), sideEffect));
-    }]>,
+    }]>
   ];
 }
 
@@ -2457,27 +2522,142 @@ def ComplexImagOp : CIR_Op<"complex.imag", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
-// ComplexEqualOp
+// Bit Manipulation Operations
 //===----------------------------------------------------------------------===//
 
-def ComplexEqualOp : CIR_Op<"complex.eq", [Pure, SameTypeOperands]> {
-
-  let summary = "Computes whether two complex values are equal";
-  let description = [{
-   The `complex.equal` op takes two complex numbers and returns whether
-   they are equal.
-
-    ```mlir
-    %r = cir.complex.eq %a, %b : !cir.complex<!cir.float>
-    ```
-  }];
-
-  let results = (outs CIR_BoolType:$result);
-  let arguments = (ins CIR_ComplexType:$lhs, CIR_ComplexType:$rhs);
+class CIR_BitOpBase<string mnemonic, TypeConstraint operandTy>
+  : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins operandTy:$input);
+  let results = (outs operandTy:$result);
 
   let assemblyFormat = [{
-    $lhs `,` $rhs
-    `:` qualified(type($lhs)) attr-dict
+    `(` $input `:` type($input) `)` `:` type($result) attr-dict
+  }];
+}
+
+class CIR_BitZeroCountOpBase<string mnemonic, TypeConstraint operandTy>
+  : CIR_BitOpBase<mnemonic, operandTy> {
+  let arguments = (ins operandTy:$input, UnitAttr:$poison_zero);
+
+  let assemblyFormat = [{
+    `(` $input `:` type($input) `)` (`poison_zero` $poison_zero^)?
+    `:` type($result) attr-dict
+  }];
+}
+
+def BitClrsbOp : CIR_BitOpBase<"bit.clrsb", CIR_SIntOfWidths<[32, 64]>> {
+  let summary = "Get the number of leading redundant sign bits in the input";
+  let description = [{
+    Compute the number of leading redundant sign bits in the input integer.
+
+    The input integer must be a signed integer. The most significant bit of the
+    input integer is the sign bit. The `cir.bit.clrsb` operation returns the
+    number of consecutive bits following the sign bit that are identical to the
+    sign bit.
+
+    The bit width of the input integer must be either 32 or 64.
+
+    Examples:
+
+    ```mlir
+    // %0 = 0b1101_1110_1010_1101_1011_1110_1110_1111
+    %0 = cir.const #cir.int<3735928559> : !s32i
+    // %1 will be 1 because there is 1 bit following the most significant bit
+    // that is identical to it.
+    %1 = cir.bit.clrsb(%0 : !s32i) : !s32i
+
+    // %2 = 1, 0b0000_0000_0000_0000_0000_0000_0000_0001
+    %2 = cir.const #cir.int<1> : !s32i
+    // %3 will be 30 because there are 30 consecutive bits following the sign
+    // bit that are identical to the sign bit.
+    %3 = cir.bit.clrsb(%2 : !s32i) : !s32i
+    ```
+  }];
+}
+
+def BitClzOp : CIR_BitZeroCountOpBase<"bit.clz",
+                                      CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Get the number of leading 0-bits in the input";
+  let description = [{
+    Compute the number of leading 0-bits in the input.
+
+    The input integer must be an unsigned integer. The `cir.bit.clz` operation
+    returns the number of consecutive 0-bits at the most significant bit
+    position in the input.
+
+    If the `poison_zero` attribute is present, this operation will have
+    undefined behavior if the input value is 0.
+
+    Example:
+
+    ```mlir
+    // %0 = 0b0000_0000_0000_0000_0000_0000_0000_1000
+    %0 = cir.const #cir.int<8> : !u32i
+    // %1 will be 28
+    %1 = cir.bit.clz(%0 : !u32i) poison_zero : !u32i
+    ```
+  }];
+}
+
+def BitCtzOp : CIR_BitZeroCountOpBase<"bit.ctz",
+                                      CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Get the number of trailing 0-bits in the input";
+  let description = [{
+    Compute the number of trailing 0-bits in the input.
+
+    The input integer must be an unsigned integer. The `cir.bit.ctz` operation
+    counts the number of consecutive 0-bits starting from the least significant
+    bit.
+
+    If the `poison_zero` attribute is present, this operation will have
+    undefined behavior if the input value is 0.
+
+    Example:
+
+    ```mlir
+    // %0 = 0b1000
+    %0 = cir.const #cir.int<8> : !u32i
+    // %1 will be 3
+    %1 = cir.bit.ctz(%0 : !u32i) poison_zero : !u32i
+    ```
+  }];
+}
+
+def BitParityOp : CIR_BitOpBase<"bit.parity", CIR_UIntOfWidths<[32, 64]>> {
+  let summary = "Get the parity of input";
+  let description = [{
+    Compute the parity of the input. The parity of an integer is the number of
+    1-bits in it modulo 2.
+
+    The input must be an unsigned integer.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x0110_1000
+    %0 = cir.const #cir.int<104> : !u32i
+    // %1 will be 1 since there are three 1-bits in %0
+    %1 = cir.bit.parity(%0 : !u32i) : !u32i
+    ```
+  }];
+}
+
+def BitPopcountOp : CIR_BitOpBase<"bit.popcnt",
+                                  CIR_UIntOfWidths<[16, 32, 64]>> {
+  let summary = "Get the number of 1-bits in input";
+  let description = [{
+    Compute the number of 1-bits in the input.
+
+    The input must be an unsigned integer.
+
+    Example:
+
+    ```mlir
+    // %0 = 0x0110_1000
+    %0 = cir.const #cir.int<104> : !u32i
+    // %1 will be 3 since there are 3 1-bits in %0
+    %1 = cir.bit.popcnt(%0 : !u32i) : !u32i
+    ```
   }];
 }
 
