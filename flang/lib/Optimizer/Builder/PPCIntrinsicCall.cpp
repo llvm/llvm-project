@@ -1685,7 +1685,7 @@ PPCIntrinsicLibrary::genVecExtract(mlir::Type resultType,
   if (!isNativeVecElemOrderOnLE())
     uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
 
-  return builder.create<mlir::vector::ExtractElementOp>(loc, varg0, uremOp);
+  return builder.create<mlir::vector::ExtractOp>(loc, varg0, uremOp);
 }
 
 // VEC_INSERT
@@ -1706,8 +1706,8 @@ PPCIntrinsicLibrary::genVecInsert(mlir::Type resultType,
   if (!isNativeVecElemOrderOnLE())
     uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
 
-  auto res{builder.create<mlir::vector::InsertElementOp>(loc, argBases[0],
-                                                         varg1, uremOp)};
+  auto res{
+      builder.create<mlir::vector::InsertOp>(loc, argBases[0], varg1, uremOp)};
   return builder.create<fir::ConvertOp>(loc, vecTyInfo.toFirVectorType(), res);
 }
 
