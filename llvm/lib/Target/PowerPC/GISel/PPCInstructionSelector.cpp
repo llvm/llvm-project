@@ -65,6 +65,9 @@ private:
   bool selectI64Imm(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
 
+  bool selectUCMP(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+
   const PPCTargetMachine &TM;
   const PPCSubtarget &STI;
   const PPCInstrInfo &TII;
@@ -705,6 +708,53 @@ bool PPCInstructionSelector::selectConstantPool(
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool PPCInstructionSelector::selectUCMP(MachineInstr &I, MachineBasicBlock &MBB,
+                                        MachineRegisterInfo &MRI) const {
+  const DebugLoc &DbgLoc = I.getDebugLoc();
+  Register DstReg = I.getOperand(0).getReg();
+  Register LHS = I.getOperand(1).getReg();
+  Register RHS = I.getOperand(2).getReg();
+
+  LLT Ty = MRI.getType(LHS);
+  bool Is64Bit = Ty.getSizeInBits() == 64;
+
+  // Select appropriate opcodes based on operand size
+  unsigned SubfOp = Is64Bit ? PPC::SUBF8 : PPC::SUBF;
+  unsigned SubfcOp = Is64Bit ? PPC::SUBFC8 : PPC::SUBFC;
+  unsigned SubfeOp = Is64Bit ? PPC::SUBFE8 : PPC::SUBFE;
+
+  const TargetRegisterClass *RC =
+      Is64Bit ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
+
+  // diff = LHS - RHS (subf RHS, LHS -> LHS - RHS)
+  Register DiffReg = MRI.createVirtualRegister(RC);
+  auto Diff =
+      BuildMI(MBB, I, DbgLoc, TII.get(SubfOp), DiffReg).addReg(RHS).addReg(LHS);
+
+  // t1 = RHS - LHS, set carry (subfc LHS, RHS -> RHS - LHS)
+  Register T1Reg = MRI.createVirtualRegister(RC);
+  auto T1 =
+      BuildMI(MBB, I, DbgLoc, TII.get(SubfcOp), T1Reg).addReg(LHS).addReg(RHS);
+
+  // t2 = LHS - RHS + carry (subfe RHS, LHS -> LHS - RHS + CA)
+  Register T2Reg = MRI.createVirtualRegister(RC);
+  auto T2 =
+      BuildMI(MBB, I, DbgLoc, TII.get(SubfeOp), T2Reg).addReg(RHS).addReg(LHS);
+
+  // result = diff - t2 + carry (subfe T2Reg, DiffReg -> diff - t2 + CA)
+  auto Result = BuildMI(MBB, I, DbgLoc, TII.get(SubfeOp), DstReg)
+                    .addReg(T2Reg)
+                    .addReg(DiffReg);
+
+  I.eraseFromParent();
+
+  // Constrain registers
+  return constrainSelectedInstRegOperands(*Diff, TII, TRI, RBI) &&
+         constrainSelectedInstRegOperands(*T1, TII, TRI, RBI) &&
+         constrainSelectedInstRegOperands(*T2, TII, TRI, RBI) &&
+         constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -775,6 +825,8 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
     return selectI64Imm(I, MBB, MRI);
   case TargetOpcode::G_CONSTANT_POOL:
     return selectConstantPool(I, MBB, MRI);
+  case TargetOpcode::G_UCMP:
+    return selectUCMP(I, MBB, MRI);
   }
   return false;
 }
