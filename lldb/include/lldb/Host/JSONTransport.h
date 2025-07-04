@@ -85,7 +85,8 @@ public:
 
   /// Reads the next message from the input stream.
   template <typename T>
-  llvm::Expected<T> Read(const std::chrono::microseconds &timeout) {
+  llvm::Expected<T>
+  Read(std::optional<std::chrono::microseconds> timeout = std::nullopt) {
     llvm::Expected<std::string> message = ReadImpl(timeout);
     if (!message)
       return message.takeError();
@@ -97,10 +98,20 @@ protected:
 
   virtual llvm::Error WriteImpl(const std::string &message) = 0;
   virtual llvm::Expected<std::string>
-  ReadImpl(const std::chrono::microseconds &timeout) = 0;
+  ReadImpl(std::optional<std::chrono::microseconds> timeout) = 0;
+
+  llvm::Expected<std::string>
+  ReadFull(IOObject &descriptor, size_t length,
+           std::optional<std::chrono::microseconds> timeout) const;
+
+  llvm::Expected<std::string>
+  ReadUntil(IOObject &descriptor, llvm::StringRef delimiter,
+            std::optional<std::chrono::microseconds> timeout);
 
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
+
+  std::string m_buffer;
 };
 
 /// A transport class for JSON with a HTTP header.
@@ -113,7 +124,7 @@ public:
 protected:
   virtual llvm::Error WriteImpl(const std::string &message) override;
   virtual llvm::Expected<std::string>
-  ReadImpl(const std::chrono::microseconds &timeout) override;
+  ReadImpl(std::optional<std::chrono::microseconds> timeout) override;
 
   // FIXME: Support any header.
   static constexpr llvm::StringLiteral kHeaderContentLength =
@@ -131,7 +142,7 @@ public:
 protected:
   virtual llvm::Error WriteImpl(const std::string &message) override;
   virtual llvm::Expected<std::string>
-  ReadImpl(const std::chrono::microseconds &timeout) override;
+  ReadImpl(std::optional<std::chrono::microseconds> timeout) override;
 
   static constexpr llvm::StringLiteral kMessageSeparator = "\n";
 };
