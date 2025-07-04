@@ -172,6 +172,8 @@ enum AArch64MachineCombinerPattern : unsigned {
   FMULv8i16_indexed_OP2,
 
   FNMADD,
+
+  SPLIT_LD,
 };
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
