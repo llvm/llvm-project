@@ -134,8 +134,9 @@ static inline SmallVector<Function *> collectUsedFunctions(Module &M) {
       continue;
     if (!F.hasInternalLinkage() && !F.hasPrivateLinkage())
       continue;
-    if (F.hasNUndroppableUsesOrMore(1))
-      Ret.push_back(&F);
+    if (F.hasNUndroppableUses(0))
+      continue;
+    Ret.push_back(&F);
   }
 
   return Ret;
@@ -147,8 +148,12 @@ static inline void removeUnreachable(const Container0 &Predicates,
                                      const Container2 &UnreachableFns) {
   for_each(Predicates, [](auto &&P) { P->eraseFromParent(); });
   for_each(PredicatedFns, [](auto &&F) { removeUnreachableBlocks(*F); });
-  for_each(UnreachableFns,
-           [](auto &&F) { if (F->getNumUses() == 0) F->eraseFromParent(); });
+  for_each(UnreachableFns, [](auto &&F) {
+    if (!F->hasNUndroppableUses(0))
+      return;
+    F->dropDroppableUses();
+    F->eraseFromParent();
+  });
 }
 
 PreservedAnalyses
