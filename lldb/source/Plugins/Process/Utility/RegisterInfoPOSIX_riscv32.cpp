@@ -16,6 +16,9 @@
 
 #define GPR_OFFSET(idx) ((idx) * 4 + 0)
 #define FPR_OFFSET(idx) ((idx) * 4 + sizeof(RegisterInfoPOSIX_riscv32::GPR))
+#define CSR_OFFSET(idx)                                                        \
+  ((idx) * 4 + sizeof(RegisterInfoPOSIX_riscv32::GPR) +                        \
+   sizeof(RegisterInfoPOSIX_riscv32::FPR))
 
 #define REG_CONTEXT_SIZE                                                       \
   (sizeof(RegisterInfoPOSIX_riscv32::GPR) +                                    \
