@@ -1,18 +1,20 @@
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -disable-llvm-passes -emit-llvm %s       -o- | FileCheck --check-prefixes=CHECK,CHECKC %s
+// RUN:   -disable-llvm-passes -emit-llvm %s       -o- | FileCheck --check-prefixes=CHECK,CHECKC,CHECK128 %s
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -disable-llvm-passes -emit-llvm -xc++ %s -o- | FileCheck --check-prefix=CHECK %s
+// RUN:   -disable-llvm-passes -emit-llvm -xc++ %s -o- | FileCheck --check-prefixes=CHECK,CHECK128 %s
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios    -fptrauth-calls -fptrauth-intrinsics -emit-pch %s -o %t.ast
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64-apple-ios    -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -emit-llvm -x ast -o - %t.ast | FileCheck --check-prefixes=CHECK,CHECKC %s
+// RUN:   -emit-llvm -x ast -o - %t.ast | FileCheck --check-prefixes=CHECK,CHECKC,CHECK128 %s
+// RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple arm64e-apple-ios13 -fptrauth-calls -fptrauth-intrinsics \
+// RUN:   -fptrauth-disable-128bit-type-discrimination -disable-llvm-passes -emit-llvm %s       -o- | FileCheck --check-prefixes=CHECK,CHECKC,CHECKNO128 %s
 
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -disable-llvm-passes -emit-llvm %s       -o- | FileCheck --check-prefixes=CHECK,CHECKC %s
+// RUN:   -disable-llvm-passes -emit-llvm %s       -o- | FileCheck --check-prefixes=CHECK,CHECKC,CHECK128 %s
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -disable-llvm-passes -emit-llvm -xc++ %s -o- | FileCheck --check-prefix=CHECK %s
+// RUN:   -disable-llvm-passes -emit-llvm -xc++ %s -o- | FileCheck --check-prefixes=CHECK,CHECK128 %s
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics -emit-pch %s -o %t.ast
 // RUN: %clang_cc1 -fptrauth-function-pointer-type-discrimination -triple aarch64-linux-gnu  -fptrauth-calls -fptrauth-intrinsics \
-// RUN:   -emit-llvm -x ast -o - %t.ast | FileCheck --check-prefixes=CHECK,CHECKC %s
+// RUN:   -emit-llvm -x ast -o - %t.ast | FileCheck --check-prefixes=CHECK,CHECKC,CHECK128 %s
 
 #ifdef __cplusplus
 extern "C" {
@@ -64,6 +66,41 @@ void (*fptr3)(void) = __builtin_ptrauth_sign_constant(&external_function, 2, 26)
 
 // CHECK: @fptr4 = global ptr ptrauth (ptr @external_function, i32 2, i64 26, ptr @fptr4)
 void (*fptr4)(void) = __builtin_ptrauth_sign_constant(&external_function, 2, __builtin_ptrauth_blend_discriminator(&fptr4, 26));
+
+extern void external_function_int(int);
+extern void external_function_char(char);
+extern void external_function_i128(__int128_t);
+extern void external_function_u128(__uint128_t);
+extern void external_function_b128(_BitInt(128));
+extern void external_function_b8(_BitInt(8));
+
+// Check discriminators of functions taking integer type arguments:
+
+//  - Builtin integer types should be discriminated equally (so, pointer to
+//  function taking int argument should accept function taking char argument
+//  - _BitInt types are guaranteed distinct and therefore should be discriminated
+//  differently
+//  - __int128_t / __uint128_t are passed differently than char / int / long
+//  (require two registers instead of one) and therefore should be discriminated
+//  differently.
+
+// CHECK: @fptr5 = global ptr ptrauth (ptr @external_function_int, i32 0, i64 2712)
+// CHECK: @fptr6 = global ptr ptrauth (ptr @external_function_char, i32 0, i64 2712)
+void (*fptr5)(int) = external_function_int;
+void (*fptr6)(char) = external_function_char;
+
+// CHECK128: @fptr7 = global ptr ptrauth (ptr @external_function_i128, i32 0, i64 23141)
+// CHECK128: @fptr8 = global ptr ptrauth (ptr @external_function_u128, i32 0, i64 45743)
+// CHECK128: @fptr9 = global ptr ptrauth (ptr @external_function_b128, i32 0, i64 17854)
+// CHECK128: @fptr10 = global ptr ptrauth (ptr @external_function_b8, i32 0, i64 26383)
+// CHECKNO128: @fptr7 = global ptr ptrauth (ptr @external_function_i128, i32 0, i64 2712)
+// CHECKNO128: @fptr8 = global ptr ptrauth (ptr @external_function_u128, i32 0, i64 2712)
+// CHECKNO128: @fptr9 = global ptr ptrauth (ptr @external_function_b128, i32 0, i64 41228)
+// CHECKNO128: @fptr10 = global ptr ptrauth (ptr @external_function_b8, i32 0, i64 41228)
+void (*fptr7)(__int128_t) = external_function_i128;
+void (*fptr8)(__uint128_t) = external_function_u128;
+void (*fptr9)(_BitInt(128)) = external_function_b128;
+void (*fptr10)(_BitInt(8)) = external_function_b8;
 
 // CHECK-LABEL: define{{.*}} void @test_call()
 void test_call() {
