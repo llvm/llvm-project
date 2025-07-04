@@ -102,14 +102,15 @@ Arm64RegisterFlagsDetector::DetectMTECtrlFields(uint64_t hwcap, uint64_t hwcap2,
   // to prctl(PR_TAGGED_ADDR_CTRL...). Fields are derived from the defines
   // used to build the value.
 
+  std::vector<RegisterFlags::Field> fields;
+  fields.reserve(4);
+  if (hwcap3 & HWCAP3_MTE_STORE_ONLY)
+    fields.push_back({"STORE_ONLY", 19});
+
   static const FieldEnum tcf_enum(
       "tcf_enum",
       {{0, "TCF_NONE"}, {1, "TCF_SYNC"}, {2, "TCF_ASYNC"}, {3, "TCF_ASYMM"}});
 
-  std::vector<RegisterFlags::Field> fields;
-  fields.reserve(5);
-  if (hwcap3 & HWCAP3_MTE_STORE_ONLY)
-    fields.push_back({"STORE_ONLY", 19});
   fields.insert(
       std::end(fields),
       {{"TAGS", 3, 18}, // 16 bit bitfield shifted up by PR_MTE_TAG_SHIFT.
