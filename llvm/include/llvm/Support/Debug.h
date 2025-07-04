@@ -54,6 +54,28 @@ void setCurrentDebugType(const char *Type);
 ///
 void setCurrentDebugTypes(const char **Types, unsigned Count);
 
+/// appendDebugType - Set the current debug type, as if the
+/// -debug-only=CurX,CurY,NewZ option were specified when called with NewZ.
+/// The previous state is tracked, so popAppendedDebugTypes can be called to
+/// restore the previous state. Note that DebugFlag also needs to be set to true
+/// for debug output to be produced.
+///
+void appendDebugType(const char *Type);
+
+/// appendDebugTypes - Set the current debug type, as if the
+/// -debug-only=CurX,CurY,NewX,NewY option were specified when called with
+/// [NewX, NewY]. The previous state is tracked, so popAppendedDebugTypes can be
+/// called to restore the previous state. Note that DebugFlag also needs to be
+/// set to true debug output to be produced.
+///
+void appendDebugTypes(const char **Types, unsigned Count);
+
+/// popAppendedDebugTypes - Restores CurDebugType to the state before the last
+/// call to appendDebugType(s). Asserts and returns if the previous state was
+/// empty or was reset by setCurrentDebugType(s).
+///
+void popAppendedDebugTypes();
+
 /// DEBUG_WITH_TYPE macro - This macro should be used by passes to emit debug
 /// information.  If the '-debug' option is specified on the commandline, and if
 /// this is a debug build, then the code specified as the option to the macro
@@ -76,6 +98,19 @@ void setCurrentDebugTypes(const char **Types, unsigned Count);
 #define setCurrentDebugTypes(X, N) do { (void)(X); (void)(N); } while (false)
 #define DEBUG_WITH_TYPE(TYPE, ...)                                             \
   do {                                                                         \
+  } while (false)
+#define appendDebugType(X)                                                     \
+  do {                                                                         \
+    (void)(X);                                                                 \
+  } while (false)
+#define appendDebugTypes(X, N)                                                 \
+  do {                                                                         \
+    (void)(X);                                                                 \
+    (void)(N);                                                                 \
+  } while (false)
+#define popAppendedDebugTypes()                                                \
+  do {                                                                         \
+    ;                                                                          \
   } while (false)
 #endif
 

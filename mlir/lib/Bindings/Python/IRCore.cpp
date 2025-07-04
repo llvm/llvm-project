@@ -282,7 +282,26 @@ struct PyGlobalDebugFlag {
             pointers.push_back(str.c_str());
           nb::ft_lock_guard lock(mutex);
           mlirSetGlobalDebugTypes(pointers.data(), pointers.size());
-        });
+        })
+        .def_static(
+            "push_debug_only_flags",
+            [](const std::string &type) {
+              mlirAppendGlobalDebugType(type.c_str());
+            },
+            "flags"_a,
+            "Appends specific debug only flags which can be popped later.")
+        .def_static("push_debug_only_flags",
+                    [](const std::vector<std::string> &types) {
+                      std::vector<const char *> pointers;
+                      pointers.reserve(types.size());
+                      for (const std::string &str : types)
+                        pointers.push_back(str.c_str());
+                      mlirAppendGlobalDebugTypes(pointers.data(),
+                                                 pointers.size());
+                    })
+        .def_static(
+            "pop_debug_only_flags", []() { mlirPopAppendedGlobalDebugTypes(); },
+            "Removes the latest non-popped addition from push_debug_only_flags.");
   }
 
 private:

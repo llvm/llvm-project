@@ -34,3 +34,18 @@ bool mlirIsCurrentDebugType(const char *type) {
   using namespace llvm;
   return isCurrentDebugType(type);
 }
+
+void mlirAppendGlobalDebugType(const char *type) {
+  using namespace llvm;
+  appendDebugType(type);
+}
+
+void mlirAppendGlobalDebugTypes(const char **types, intptr_t n) {
+  using namespace llvm;
+  appendDebugTypes(types, n);
+}
+
+void mlirPopAppendedGlobalDebugTypes() {
+  using namespace llvm;
+  popAppendedDebugTypes();
+}

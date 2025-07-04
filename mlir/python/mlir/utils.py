@@ -209,3 +209,79 @@ def call_with_toplevel_context_create_module(
     decorated = with_toplevel_context_create_module(f)
     decorated()
     return decorated
+
+
+def _debug_flags_impl(flags: Sequence[str]) -> Iterator[None]:
+    from mlir.ir import _GlobalDebug
+
+    # Save the original debug state. The debug flags will be popped rather than
+    # manually copied and saved for later.
+    original_flag = _GlobalDebug.flag
+    _GlobalDebug.flag = True
+    _GlobalDebug.push_debug_only_flags(flags)
+
+    try:
+        yield
+    finally:
+        # Reset the global debug flag and remove the most recent flags that were
+        # appended. This assumes that nothing else popped when it should not have.
+        _GlobalDebug.flag = original_flag
+        _GlobalDebug.pop_debug_only_flags()
+
+
+@contextmanager
+def debug_flags_context(flags: Sequence[str]):
+    """Temporarily create a context that enables debugging with specified filters.
+
+    These would be the same as running with -debug-only=*flags. Where multiple contexts
+    will be joined together to create the full list if they are nested.
+
+    This requires that the core MLIR units were compiled without NDEBUG.
+    """
+    return _debug_flags_impl(flags)
+
+
+@contextmanager
+def debug_conversion(flags: Sequence[str] = []) -> Iterator[None]:
+    """Temporarily create a context that enables full conversion debugging,
+    potentially with additional specified filters.
+
+    These would be the same as running with -debug-only=*flags. Where multiple contexts
+    will be joined together to create the full list if they are nested.
+
+    This requires that the core MLIR units were compiled without NDEBUG.
+    """
+    return _debug_flags_impl(list(flags) + ["dialect-conversion"])
+
+
+@contextmanager
+def debug_greedy_rewriter(flags: Sequence[str] = []) -> Iterator[None]:
+    """Temporarily create a context that enables full conversion debugging,
+    potentially with additional specified filters.
+
+    These would be the same as running with -debug-only=*flags. Where multiple contexts
+    will be joined together to create the full list if they are nested.
+
+    This requires that the core MLIR units were compiled without NDEBUG.
+    """
+    return _debug_flags_impl(list(flags) + ["greedy_rewriter"])
+
+
+@contextmanager
+def debug_td(flags: Sequence[str] = [], *, full_debug: bool = False) -> Iterator[None]:
+    """Temporarily create a context that enables full transform dialect debugging,
+    potentially with additional specified filters.
+
+    These would be the same as running with -debug-only=*flags. Where multiple contexts
+    will be joined together to create the full list if they are nested.
+
+    This requires that the core MLIR units were compiled without NDEBUG.
+    """
+    return _debug_flags_impl(
+        list(flags)
+        + [
+            "transform-dialect",
+            "transform-dialect-print-top-level-after-all",
+        ]
+        + (["transform-dialect-full"] if full_debug else [])
+    )

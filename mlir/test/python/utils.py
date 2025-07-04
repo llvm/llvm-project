@@ -1,13 +1,15 @@
 # RUN: %python %s | FileCheck %s
+# RUN: %python %s 2>&1 | FileCheck %s --check-prefix=DEBUG_ONLY
 
 import unittest
 
 from mlir import ir
-from mlir.dialects import arith, builtin
-from mlir.extras import types as T
+from mlir.passmanager import PassManager
+from mlir.dialects import arith
 from mlir.utils import (
     call_with_toplevel_context_create_module,
     caller_mlir_context,
+    debug_conversion,
     using_mlir_context,
 )
 
@@ -31,6 +33,7 @@ class TestRequiredContext(unittest.TestCase):
             c = arith.ConstantOp(value=42.42, result=ir.F32Type.get()).result
             multiple_adds(c, c)
 
+            # CHECK-LABEL: module {
             # CHECK: constant
             # CHECK-NEXT: arith.addf
             # CHECK-NEXT: arith.addf
@@ -52,6 +55,26 @@ class TestRequiredContext(unittest.TestCase):
             registration_funcs=[],
         ):
             pass
+
+
+class TestDebugOnlyFlags(unittest.TestCase):
+    def test_debug_types(self):
+        """Test checks --debug-only=xxx functionality is available in MLIR."""
+
+        @debug_conversion()
+        def lower(module) -> None:
+            pm = PassManager("builtin.module")
+            pm.add("convert-arith-to-llvm")
+            pm.run(module.operation)
+
+        @call_with_toplevel_context_create_module
+        def _(module) -> None:
+            c = arith.ConstantOp(value=42.42, result=ir.F32Type.get()).result
+            arith.AddFOp(c, c, fastmath=arith.FastMathFlags.nnan | arith.FastMathFlags.ninf)
+
+            # DEBUG_ONLY-LABEL: Legalizing operation : 'builtin.module'
+            #       DEBUG_ONLY: Legalizing operation : 'arith.addf'
+            lower(module)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,9 @@
 #undef isCurrentDebugType
 #undef setCurrentDebugType
 #undef setCurrentDebugTypes
+#undef appendDebugType
+#undef appendDebugTypes
+#undef popAppendedDebugTypes
 
 using namespace llvm;
 
@@ -45,6 +48,32 @@ namespace llvm {
 bool DebugFlag = false;
 
 static ManagedStatic<std::vector<std::string>> CurrentDebugType;
+static ManagedStatic<std::vector<int>> AppendedDebugTypeSizes;
+
+/// Appends to the CurrentDebugState by keeping its old state and adding the
+/// new state.
+void appendDebugTypes(const char **Types, unsigned Count) {
+  AppendedDebugTypeSizes->push_back(CurrentDebugType->size());
+  for (size_t T = 0; T < Count; ++T)
+    CurrentDebugType->push_back(Types[T]);
+}
+
+/// Appends to the CurrentDebugState by keeping its old state and adding the
+/// new state.
+void appendDebugType(const char *Type) { appendDebugTypes(&Type, 1); }
+
+/// Restore to the state before the latest call to appendDebugTypes. This can be
+/// done multiple times.
+void popAppendedDebugTypes() {
+  assert(AppendedDebugTypeSizes->size() > 0 &&
+         "Popping from DebugTypes without any previous appending.");
+
+  if (!AppendedDebugTypeSizes->size())
+    return;
+
+  CurrentDebugType->resize(AppendedDebugTypeSizes->back());
+  AppendedDebugTypeSizes->pop_back();
+}
 
 /// Return true if the specified string is the debug type
 /// specified on the command line, or if none was specified on the command line
@@ -72,6 +101,8 @@ void setCurrentDebugType(const char *Type) {
 }
 
 void setCurrentDebugTypes(const char **Types, unsigned Count) {
+  assert(AppendedDebugTypeSizes->size() == 0 &&
+         "Resetting CurrentDebugType when it was previously appended to");
   CurrentDebugType->clear();
   llvm::append_range(*CurrentDebugType, ArrayRef(Types, Count));
 }
