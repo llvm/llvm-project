@@ -434,7 +434,7 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       if (RSD.Version > 1) {
         if (!llvm::hlsl::rootsig::verifyRootDescriptorFlag(RSD.Version,
                                                            Descriptor.Flags))
-          return reportValueError(Ctx, "DescriptorRangeFlag", Descriptor.Flags);
+          return reportValueError(Ctx, "RootDescriptorFlag", Descriptor.Flags);
       }
       break;
     }
