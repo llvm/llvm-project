@@ -11,7 +11,7 @@
 // CHECK: [[@LINE+1]]:1: error: unsupported relocation
 adds r0, r0, #foo
 
-// CHECK: [[@LINE+1]]:1: error: unsupported relocation
+// CHECK: [[@LINE+1]]:[[#]]: error: unsupported relocation
 add r9, r0, #foo
 
 // CHECK: [[@LINE+1]]:1: error: expected relocatable expression
