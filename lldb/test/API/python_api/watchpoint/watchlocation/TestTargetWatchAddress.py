@@ -216,8 +216,8 @@ class TargetWatchpointCreateByAddressPITestCase(TestBase):
                 value.GetValueAsUnsigned(), 365, wp_opts, error
             )
             self.assertFalse(watchpoint)
-            self.expect(
+            # The message depends on whether the lldb-server implementation or the in-process implementation is used.
+            self.assertRegex(
                 error.GetCString(),
-                exe=False,
-                substrs=["Setting one of the watchpoint resources failed"],
+                "Can't enable watchpoint|Setting one of the watchpoint resources failed",
             )
