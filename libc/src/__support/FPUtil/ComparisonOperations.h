@@ -46,13 +46,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> equals(T x,
   return x_bits.uintval() == y_bits.uintval();
 }
 
-// !(x == y) => x != y
-template <typename T>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool>
-not_equals(T x, T y) {
-  return !equals(x, y);
-}
-
 // Rules:
 // 1. -inf < x (x != -inf)
 // 2. x < +inf (x != +inf)
@@ -83,9 +76,6 @@ LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<T>, bool> less_than(T x,
 
   // since we store the float in the format: s | e | m
   // the comparisons should work if we directly compare the uintval's
-
-  // TODO: verify if we should use FPBits.get_exponent and FPBits.get_mantissa
-  // instead of directly comparing uintval's
 
   // both negative
   if (x_bits.is_neg())
