@@ -34,8 +34,7 @@ entry:
 ; Check that eon is generated if the xor is a disjoint or.
 define i64 @disjoint_or(i64 %a, i64 %b) {
 ; CHECK-LABEL: disjoint_or:
-; CHECK: orr
-; CHECK: mvn
+; CHECK: eon
 ; CHECK: ret
   %or = or disjoint i64 %a, %b
   %eon = xor i64 %or, -1
