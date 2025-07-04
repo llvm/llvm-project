@@ -85,10 +85,6 @@ include "RISCVPfmCounters.td"
 
 def RISCVInstrInfo : InstrInfo {
   let guessInstructionProperties = 0;
-
-  // Opt-in into non-templated code for instruction decoder.
-  let InsnCPPTypes = ["uint64_t"];
-  let InsnBitwidths = [[16, 32, 48]];
 }
 
 def RISCVAsmParser : AsmParser {
