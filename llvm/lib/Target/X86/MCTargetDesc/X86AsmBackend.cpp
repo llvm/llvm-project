@@ -169,7 +169,8 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &);
+  std::optional<bool> evaluateFixup(MCFixup &Fixup, MCValue &Target,
+                                    uint64_t &Value) override;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
@@ -685,6 +686,40 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case FK_Data_8:
     return 8;
   }
+}
+
+// Adjust PC-relative fixup offsets, which are calculated from the start of the
+// next instruction.
+std::optional<bool>
+X86AsmBackend::evaluateFixup(MCFixup &Fixup, MCValue &Target, uint64_t &Value) {
+  switch (Fixup.getTargetKind()) {
+  case FK_PCRel_1:
+    Target.setConstant(Target.getConstant() - 1);
+    break;
+  case FK_PCRel_2:
+    Target.setConstant(Target.getConstant() - 2);
+    break;
+  case FK_PCRel_4:
+  case X86::reloc_riprel_4byte:
+  case X86::reloc_riprel_4byte_movq_load:
+  case X86::reloc_riprel_4byte_movq_load_rex2:
+  case X86::reloc_riprel_4byte_relax:
+  case X86::reloc_riprel_4byte_relax_rex:
+  case X86::reloc_riprel_4byte_relax_rex2:
+  case X86::reloc_branch_4byte_pcrel:
+  case X86::reloc_riprel_4byte_relax_evex: {
+    Target.setConstant(Target.getConstant() - 4);
+    auto *Add = Target.getAddSym();
+    // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
+    // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
+    // this needs to be a GOTPC32 relocation.
+    if (Add && Add->getName() == "_GLOBAL_OFFSET_TABLE_")
+      Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
+                              X86::reloc_global_offset_table);
+  } break;
+  }
+  // Use default handling for `Value` and `IsResolved`.
+  return {};
 }
 
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,

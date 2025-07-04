@@ -576,18 +576,10 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
     }
   }
 
-  // If the fixup is pc-relative, we need to bias the value to be relative to
-  // the start of the field, not the end of the field.
   bool PCRel = false;
   switch (FixupKind) {
   case FK_PCRel_1:
-    PCRel = true;
-    ImmOffset -= 1;
-    break;
   case FK_PCRel_2:
-    PCRel = true;
-    ImmOffset -= 2;
-    break;
   case FK_PCRel_4:
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_movq_load:
@@ -598,12 +590,6 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
   case X86::reloc_branch_4byte_pcrel:
   case X86::reloc_riprel_4byte_relax_evex:
     PCRel = true;
-    ImmOffset -= 4;
-    // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
-    // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
-    // this needs to be a GOTPC32 relocation.
-    if (startsWithGlobalOffsetTable(Expr) != GOT_None)
-      FixupKind = X86::reloc_global_offset_table;
     break;
   }
 
@@ -611,7 +597,7 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
     Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(ImmOffset, Ctx),
                                    Ctx, Expr->getLoc());
 
-  // Emit a symbolic constant as a fixup and 4 zeros.
+  // Emit a symbolic constant as a fixup and a few zero bytes.
   Fixups.push_back(MCFixup::create(static_cast<uint32_t>(CB.size() - StartByte),
                                    Expr, FixupKind, PCRel));
   emitConstant(0, Size, CB);

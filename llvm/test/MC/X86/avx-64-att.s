@@ -4125,7 +4125,7 @@ _foo:
 
 // CHECK: vblendvps %ymm1, _foo2(%rip), %ymm0, %ymm0
 // CHECK: encoding: [0xc4,0xe3,0x7d,0x4a,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: _foo2-5
+// CHECK: fixup A - offset: 5, value: _foo2-1
 _foo2:
   nop
   vblendvps %ymm1, _foo2(%rip), %ymm0, %ymm0

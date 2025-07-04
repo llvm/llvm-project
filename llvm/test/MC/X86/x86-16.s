@@ -1058,13 +1058,13 @@ xresldtrk
 
 // CHECK: jmp foo
 // CHECK:  encoding: [0xe9,A,A]
-// CHECK:  fixup A - offset: 1, value: foo-2, kind: FK_PCRel_2
+// CHECK:  fixup A - offset: 1, value: foo, kind: FK_PCRel_2
 {disp32} jmp foo
 foo:
 
 // CHECK: je foo
 // CHECK:  encoding: [0x0f,0x84,A,A]
-// CHECK:  fixup A - offset: 2, value: foo-2, kind: FK_PCRel_2
+// CHECK:  fixup A - offset: 2, value: foo, kind: FK_PCRel_2
 {disp32} je foo
 
 // CHECK: movl nearer, %ebx
