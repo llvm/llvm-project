@@ -109,9 +109,14 @@ public:
     builder.setInsertionPoint(assign);
     rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
     lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-    mlir::Value shape = hlfir::genShape(loc, builder, lhs);
+    mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
+    llvm::SmallVector<mlir::Value> lhsExtents =
+        hlfir::getIndexExtents(loc, builder, lhsShape);
+    mlir::Value rhsShape = hlfir::genShape(loc, builder, rhs);
+    llvm::SmallVector<mlir::Value> rhsExtents =
+        hlfir::getIndexExtents(loc, builder, rhsShape);
     llvm::SmallVector<mlir::Value> extents =
-        hlfir::getIndexExtents(loc, builder, shape);
+        fir::factory::deduceOptimalExtents(lhsExtents, rhsExtents);
     hlfir::LoopNest loopNest =
         hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
                            flangomp::shouldUseWorkshareLowering(assign));
@@ -135,8 +140,8 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineHLFIRAssignConversion>(context);

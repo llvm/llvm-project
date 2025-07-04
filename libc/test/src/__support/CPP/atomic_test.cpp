@@ -50,3 +50,18 @@ TEST(LlvmLibcAtomicTest, TrivialCompositeData) {
   ASSERT_EQ(old.a, 'a');
   ASSERT_EQ(old.b, 'b');
 }
+
+TEST(LlvmLibcAtomicTest, AtomicRefTest) {
+  int val = 123;
+  LIBC_NAMESPACE::cpp::AtomicRef aint(val);
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 123);
+  ASSERT_EQ(aint.fetch_add(1, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 123);
+  aint = 1234;
+  ASSERT_EQ(aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED), 1234);
+
+  // Test the implicit construction from pointer.
+  auto fn = [](LIBC_NAMESPACE::cpp::AtomicRef<int> aint) -> int {
+    return aint.load(LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  };
+  ASSERT_EQ(fn(&val), 1234);
+}

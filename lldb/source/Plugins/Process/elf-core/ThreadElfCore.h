@@ -10,8 +10,10 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_THREADELFCORE_H
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/DenseMap.h"
 #include <optional>
 #include <string>
@@ -77,49 +79,15 @@ struct ELFLinuxPrStatus {
 static_assert(sizeof(ELFLinuxPrStatus) == 112,
               "sizeof ELFLinuxPrStatus is not correct!");
 
-struct ELFLinuxSigInfo {
-
-  int32_t si_signo; // Order matters for the first 3.
-  int32_t si_errno;
-  int32_t si_code;
-  // Copied from siginfo_t so we don't have to include signal.h on non 'Nix
-  // builds. Slight modifications to ensure no 32b vs 64b differences.
-  struct alignas(8) {
-    lldb::addr_t si_addr; /* faulting insn/memory ref. */
-    int16_t si_addr_lsb;  /* Valid LSB of the reported address.  */
-    union {
-      /* used when si_code=SEGV_BNDERR */
-      struct {
-        lldb::addr_t _lower;
-        lldb::addr_t _upper;
-      } _addr_bnd;
-      /* used when si_code=SEGV_PKUERR */
-      uint32_t _pkey;
-    } bounds;
-  } sigfault;
-
-  enum SigInfoNoteType : uint8_t { eUnspecified, eNT_SIGINFO };
-  SigInfoNoteType note_type;
-
-  ELFLinuxSigInfo();
-
-  lldb_private::Status Parse(const lldb_private::DataExtractor &data,
-                             const lldb_private::ArchSpec &arch,
-                             const lldb_private::UnixSignals &unix_signals);
-
-  std::string
-  GetDescription(const lldb_private::UnixSignals &unix_signals) const;
-
-  // Return the bytesize of the structure
-  // 64 bit - just sizeof
-  // 32 bit - hardcoded because we are reusing the struct, but some of the
-  // members are smaller -
-  // so the layout is not the same
-  static size_t GetSize(const lldb_private::ArchSpec &arch);
+struct ThreadData {
+  lldb_private::DataExtractor gpregset;
+  std::vector<lldb_private::CoreNote> notes;
+  lldb::tid_t tid;
+  std::string name;
+  llvm::StringRef siginfo_bytes;
+  int prstatus_sig = 0;
+  int signo = 0;
 };
-
-static_assert(sizeof(ELFLinuxSigInfo) == 56,
-              "sizeof ELFLinuxSigInfo is not correct!");
 
 // PRPSINFO structure's size differs based on architecture.
 // This is the layout in the x86-64 arch case.
@@ -163,15 +131,6 @@ struct ELFLinuxPrPsInfo {
 static_assert(sizeof(ELFLinuxPrPsInfo) == 136,
               "sizeof ELFLinuxPrPsInfo is not correct!");
 
-struct ThreadData {
-  lldb_private::DataExtractor gpregset;
-  std::vector<lldb_private::CoreNote> notes;
-  lldb::tid_t tid;
-  std::string name;
-  ELFLinuxSigInfo siginfo;
-  int prstatus_sig = 0;
-};
-
 class ThreadElfCore : public lldb_private::Thread {
 public:
   ThreadElfCore(lldb_private::Process &process, const ThreadData &td);
@@ -200,8 +159,8 @@ public:
       m_thread_name.clear();
   }
 
-  void CreateStopFromSigInfo(const ELFLinuxSigInfo &siginfo,
-                             const lldb_private::UnixSignals &unix_signals);
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetSiginfo(size_t max_size) const override;
 
 protected:
   // Member variables.
@@ -210,7 +169,9 @@ protected:
 
   lldb_private::DataExtractor m_gpregset_data;
   std::vector<lldb_private::CoreNote> m_notes;
-  ELFLinuxSigInfo m_siginfo;
+  llvm::StringRef m_siginfo_bytes;
+  // Only used if no siginfo note.
+  int m_signo;
 
   bool CalculateStopInfo() override;
 };

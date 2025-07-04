@@ -18,7 +18,6 @@
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCLinkerOptimizationHint.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
@@ -59,8 +58,6 @@ private:
   /// labels in the middle of the section.
   DenseMap<const MCSection*, bool> HasSectionLabel;
 
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &STI) override;
-
   void emitDataRegion(MachO::DataRegionType Kind);
   void emitDataRegionEnd();
 
@@ -89,7 +86,7 @@ public:
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitEHSymAttributes(const MCSymbol *Symbol, MCSymbol *EHSymbol) override;
-  void emitAssemblerFlag(MCAssemblerFlag Flag) override;
+  void emitSubsectionsViaSymbols() override;
   void emitLinkerOptions(ArrayRef<std::string> Options) override;
   void emitDataRegion(MCDataRegionType Kind) override;
   void emitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
@@ -181,10 +178,10 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   MCValue Res;
 
-  if (Value->evaluateAsRelocatable(Res, nullptr, nullptr)) {
-    if (const MCSymbolRefExpr *SymAExpr = Res.getSymA()) {
-      const MCSymbol &SymA = SymAExpr->getSymbol();
-      if (!Res.getSymB() && (SymA.getName() == "" || Res.getConstant() != 0))
+  if (Value->evaluateAsRelocatable(Res, nullptr)) {
+    if (const auto *SymA = Res.getAddSym()) {
+      if (!Res.getSubSym() &&
+          (SymA->getName().empty() || Res.getConstant() != 0))
         cast<MCSymbolMachO>(Symbol)->setAltEntry();
     }
   }
@@ -209,19 +206,8 @@ void MCMachOStreamer::emitDataRegionEnd() {
   emitLabel(Data.End);
 }
 
-void MCMachOStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
-  // Let the target do whatever target specific stuff it needs to do.
-  getAssembler().getBackend().handleAssemblerFlag(Flag);
-  // Do any generic stuff we need to do.
-  switch (Flag) {
-  case MCAF_SyntaxUnified: return; // no-op here.
-  case MCAF_Code16: return; // Change parsing mode; no-op here.
-  case MCAF_Code32: return; // Change parsing mode; no-op here.
-  case MCAF_Code64: return; // Change parsing mode; no-op here.
-  case MCAF_SubsectionsViaSymbols:
-    getWriter().setSubsectionsViaSymbols(true);
-    return;
-  }
+void MCMachOStreamer::emitSubsectionsViaSymbols() {
+  getWriter().setSubsectionsViaSymbols(true);
 }
 
 void MCMachOStreamer::emitLinkerOptions(ArrayRef<std::string> Options) {
@@ -432,23 +418,6 @@ void MCMachOStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
 void MCMachOStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                      uint64_t Size, Align ByteAlignment) {
   emitZerofill(Section, Symbol, Size, ByteAlignment);
-}
-
-void MCMachOStreamer::emitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &STI) {
-  MCDataFragment *DF = getOrCreateDataFragment();
-
-  SmallVector<MCFixup, 4> Fixups;
-  SmallString<256> Code;
-  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
-
-  // Add the fixups and data.
-  for (MCFixup &Fixup : Fixups) {
-    Fixup.setOffset(Fixup.getOffset() + DF->getContents().size());
-    DF->getFixups().push_back(Fixup);
-  }
-  DF->setHasInstructions(STI);
-  DF->appendContents(Code);
 }
 
 void MCMachOStreamer::finishImpl() {

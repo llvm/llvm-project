@@ -503,9 +503,9 @@ define i128 @ashr128(i128 %a, i128 %b) nounwind {
 define i128 @shl128(i128 %a, i128 %b) nounwind {
 ; RV32I-LABEL: shl128:
 ; RV32I:       # %bb.0:
+; RV32I-NEXT:    lw a2, 0(a2)
 ; RV32I-NEXT:    lw a7, 0(a1)
 ; RV32I-NEXT:    lw a3, 4(a1)
-; RV32I-NEXT:    lw a2, 0(a2)
 ; RV32I-NEXT:    li a6, 64
 ; RV32I-NEXT:    li t1, 32
 ; RV32I-NEXT:    neg t5, a2

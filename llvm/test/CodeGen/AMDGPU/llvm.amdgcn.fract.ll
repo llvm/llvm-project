@@ -24,7 +24,7 @@ define amdgpu_kernel void @v_fract_f64(ptr addrspace(1) %out, double %src) #1 {
 ; GCN-NOT: v_fract_f32
 ; GCN-NOT: store_dword
 define amdgpu_kernel void @v_fract_undef_f32(ptr addrspace(1) %out) #1 {
-  %fract = call float @llvm.amdgcn.fract.f32(float undef)
+  %fract = call float @llvm.amdgcn.fract.f32(float poison)
   store float %fract, ptr addrspace(1) %out
   ret void
 }

@@ -36,6 +36,7 @@ TEST(SymbolInfoTests, All) {
           void $decl[[foo]]();
           int bar() {
             fo^o();
+            return 0;
           }
         )cpp",
               {ExpectedSymbolDetails{"foo", "", "c:@F@foo#", "decl"}}},
@@ -44,6 +45,7 @@ TEST(SymbolInfoTests, All) {
           void $def[[foo]]() {}
           int bar() {
             fo^o();
+            return 0;
           }
         )cpp",
               {ExpectedSymbolDetails{"foo", "", "c:@F@foo#", "def", "def"}}},
@@ -53,6 +55,7 @@ TEST(SymbolInfoTests, All) {
           void $def[[foo]]() {}
           int bar() {
             fo^o();
+            return 0;
           }
         )cpp",
               {ExpectedSymbolDetails{"foo", "", "c:@F@foo#", "decl", "def"}}},
@@ -83,6 +86,7 @@ TEST(SymbolInfoTests, All) {
             void $decl[[foo]]();
             int baz() {
               fo^o();
+              return 0;
             }
           }
         )cpp",
@@ -96,6 +100,7 @@ TEST(SymbolInfoTests, All) {
           namespace barbar {
             int baz() {
               bar::fo^o();
+              return 0;
             }
           }
         )cpp",
@@ -108,6 +113,7 @@ TEST(SymbolInfoTests, All) {
             namespace Nbaz {
               int baz() {
                 ::fo^o();
+              return 0;
               }
             }
           }
@@ -121,6 +127,7 @@ TEST(SymbolInfoTests, All) {
           namespace barbar {
             int baz() {
               fo^o();
+              return 0;
             }
           }
         )cpp",
@@ -136,6 +143,7 @@ TEST(SymbolInfoTests, All) {
             int baz() {
               bar::BarType b;
               fo^o(b);
+              return 0;
             }
           }
         )cpp",

@@ -60,11 +60,16 @@ static unsigned adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case Mips::fixup_MIPS_PCLO16:
     Value &= 0xffff;
     break;
-  case FK_DTPRel_4:
-  case FK_DTPRel_8:
-  case FK_TPRel_4:
-  case FK_TPRel_8:
-  case FK_GPRel_4:
+  case Mips::fixup_Mips_AnyImm16:
+    if (!isInt<16>(Value) && !isUInt<16>(Value))
+      Ctx.reportError(Fixup.getLoc(),
+                      "fixup value out of range [-32768, 65535]");
+    break;
+  case Mips::fixup_Mips_GPREL32:
+  case Mips::fixup_Mips_DTPREL32:
+  case Mips::fixup_Mips_DTPREL64:
+  case Mips::fixup_Mips_TPREL32:
+  case Mips::fixup_Mips_TPREL64:
   case FK_Data_4:
   case FK_Data_8:
   case Mips::fixup_Mips_SUB:
@@ -234,16 +239,59 @@ static unsigned calculateMMLEIndex(unsigned i) {
   return (1 - i / 2) * 2 + i % 2;
 }
 
+static bool shouldForceRelocation(const MCFixup &Fixup) {
+  const unsigned FixupKind = Fixup.getKind();
+  switch (FixupKind) {
+  default:
+    return false;
+  // All these relocations require special processing
+  // at linking time. Delegate this work to a linker.
+  case Mips::fixup_Mips_CALL_HI16:
+  case Mips::fixup_Mips_CALL_LO16:
+  case Mips::fixup_Mips_CALL16:
+  case Mips::fixup_Mips_GOT:
+  case Mips::fixup_Mips_GOT_PAGE:
+  case Mips::fixup_Mips_GOT_OFST:
+  case Mips::fixup_Mips_GOT_DISP:
+  case Mips::fixup_Mips_GOT_HI16:
+  case Mips::fixup_Mips_GOT_LO16:
+  case Mips::fixup_Mips_GOTTPREL:
+  case Mips::fixup_Mips_DTPREL_HI:
+  case Mips::fixup_Mips_DTPREL_LO:
+  case Mips::fixup_Mips_TLSGD:
+  case Mips::fixup_Mips_TLSLDM:
+  case Mips::fixup_Mips_TPREL_HI:
+  case Mips::fixup_Mips_TPREL_LO:
+  case Mips::fixup_Mips_JALR:
+  case Mips::fixup_MICROMIPS_CALL16:
+  case Mips::fixup_MICROMIPS_GOT_DISP:
+  case Mips::fixup_MICROMIPS_GOT_PAGE:
+  case Mips::fixup_MICROMIPS_GOT_OFST:
+  case Mips::fixup_MICROMIPS_GOT16:
+  case Mips::fixup_MICROMIPS_GOTTPREL:
+  case Mips::fixup_MICROMIPS_TLS_DTPREL_HI16:
+  case Mips::fixup_MICROMIPS_TLS_DTPREL_LO16:
+  case Mips::fixup_MICROMIPS_TLS_GD:
+  case Mips::fixup_MICROMIPS_TLS_LDM:
+  case Mips::fixup_MICROMIPS_TLS_TPREL_HI16:
+  case Mips::fixup_MICROMIPS_TLS_TPREL_LO16:
+  case Mips::fixup_MICROMIPS_JALR:
+    return true;
+  }
+}
+
 /// ApplyFixup - Apply the \p Value for given \p Fixup into the provided
 /// data fragment, at the offset specified by the fixup and following the
 /// fixup kind as appropriate.
-void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void MipsAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                 const MCValue &Target,
                                 MutableArrayRef<char> Data, uint64_t Value,
-                                bool IsResolved,
-                                const MCSubtargetInfo *STI) const {
+                                bool IsResolved) {
+  if (shouldForceRelocation(Fixup))
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCFixupKind Kind = Fixup.getKind();
-  MCContext &Ctx = Asm.getContext();
+  MCContext &Ctx = getContext();
   Value = adjustFixupValue(Fixup, Value, Ctx);
 
   if (!Value)
@@ -348,25 +396,30 @@ std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
       .Default(MCAsmBackend::getFixupKind(Name));
 }
 
-const MCFixupKindInfo &MipsAsmBackend::
-getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo MipsAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo LittleEndianInfos[] = {
-    // This table *must* be in same the order of fixup_* kinds in
-    // MipsFixupKinds.h.
-    //
-    // name                    offset  bits  flags
+      // This table *must* be in same the order of fixup_* kinds in
+      // MipsFixupKinds.h.
+      //
+      // name                    offset  bits  flags
+      // clang-format off
     { "fixup_Mips_16",           0,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
+    { "fixup_Mips_GPREL32",      0,     32,   0 },
+    { "fixup_Mips_DTPREL32",     0,     32,   0 },
+    { "fixup_Mips_DTPREL64",     0,     64,   0 },
+    { "fixup_Mips_TPREL32",      0,     32,   0 },
+    { "fixup_Mips_TPREL64",      0,     64,   0 },
     { "fixup_Mips_26",           0,     26,   0 },
     { "fixup_Mips_HI16",         0,     16,   0 },
     { "fixup_Mips_LO16",         0,     16,   0 },
+    { "fixup_Mips_AnyImm16",     0,     16,   0 },
     { "fixup_Mips_GPREL16",      0,     16,   0 },
     { "fixup_Mips_LITERAL",      0,     16,   0 },
     { "fixup_Mips_GOT",          0,     16,   0 },
     { "fixup_Mips_PC16",         0,     16,  MCFixupKindInfo::FKF_IsPCRel },
     { "fixup_Mips_CALL16",       0,     16,   0 },
-    { "fixup_Mips_GPREL32",      0,     32,   0 },
     { "fixup_Mips_SHIFT5",       6,      5,   0 },
     { "fixup_Mips_SHIFT6",       6,      5,   0 },
     { "fixup_Mips_64",           0,     64,   0 },
@@ -424,28 +477,35 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_SUB",                  0,     64,   0 },
     { "fixup_MICROMIPS_SUB",             0,     64,   0 },
     { "fixup_Mips_JALR",                 0,     32,   0 },
-    { "fixup_MICROMIPS_JALR",            0,     32,   0 }
+    { "fixup_MICROMIPS_JALR",            0,     32,   0 },
+      // clang-format on
   };
   static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS little endian fixup kinds added!");
 
   const static MCFixupKindInfo BigEndianInfos[] = {
-    // This table *must* be in same the order of fixup_* kinds in
-    // MipsFixupKinds.h.
-    //
-    // name                    offset  bits  flags
+      // This table *must* be in same the order of fixup_* kinds in
+      // MipsFixupKinds.h.
+      //
+      // name                    offset  bits  flags
+      // clang-format off
     { "fixup_Mips_16",          16,     16,   0 },
     { "fixup_Mips_32",           0,     32,   0 },
     { "fixup_Mips_REL32",        0,     32,   0 },
+    { "fixup_Mips_GPREL32",      0,     32,   0 },
+    { "fixup_Mips_DTPREL32",     0,     32,   0 },
+    { "fixup_Mips_DTPREL64",     0,     64,   0 },
+    { "fixup_Mips_TPREL32",      0,     32,   0 },
+    { "fixup_Mips_TPREL64",      0,     64,   0 },
     { "fixup_Mips_26",           6,     26,   0 },
     { "fixup_Mips_HI16",        16,     16,   0 },
     { "fixup_Mips_LO16",        16,     16,   0 },
+    { "fixup_Mips_AnyImm16",    16,     16,   0 },
     { "fixup_Mips_GPREL16",     16,     16,   0 },
     { "fixup_Mips_LITERAL",     16,     16,   0 },
     { "fixup_Mips_GOT",         16,     16,   0 },
     { "fixup_Mips_PC16",        16,     16,  MCFixupKindInfo::FKF_IsPCRel },
     { "fixup_Mips_CALL16",      16,     16,   0 },
-    { "fixup_Mips_GPREL32",      0,     32,   0 },
     { "fixup_Mips_SHIFT5",      21,      5,   0 },
     { "fixup_Mips_SHIFT6",      21,      5,   0 },
     { "fixup_Mips_64",           0,     64,   0 },
@@ -503,18 +563,19 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_SUB",                   0,     64,   0 },
     { "fixup_MICROMIPS_SUB",              0,     64,   0 },
     { "fixup_Mips_JALR",                  0,     32,   0 },
-    { "fixup_MICROMIPS_JALR",             0,     32,   0 }
+    { "fixup_MICROMIPS_JALR",             0,     32,   0 },
+      // clang-format on
   };
   static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
-  if (Kind >= FirstLiteralRelocationKind)
+  if (mc::isRelocation(Kind))
     return MCAsmBackend::getFixupKindInfo(FK_NONE);
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-          "Invalid kind!");
+  assert(unsigned(Kind - FirstTargetFixupKind) < Mips::NumTargetFixupKinds &&
+         "Invalid kind!");
 
   if (Endian == llvm::endianness::little)
     return LittleEndianInfos[Kind - FirstTargetFixupKind];
@@ -537,61 +598,6 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // bigger problems), so just write zeros instead.
   OS.write_zeros(Count);
   return true;
-}
-
-bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
-                                           const MCFixup &Fixup,
-                                           const MCValue &Target,
-                                           const uint64_t,
-                                           const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
-  const unsigned FixupKind = Fixup.getKind();
-  switch (FixupKind) {
-  default:
-    return false;
-  // All these relocations require special processing
-  // at linking time. Delegate this work to a linker.
-  case Mips::fixup_Mips_CALL_HI16:
-  case Mips::fixup_Mips_CALL_LO16:
-  case Mips::fixup_Mips_CALL16:
-  case Mips::fixup_Mips_GOT:
-  case Mips::fixup_Mips_GOT_PAGE:
-  case Mips::fixup_Mips_GOT_OFST:
-  case Mips::fixup_Mips_GOT_DISP:
-  case Mips::fixup_Mips_GOT_HI16:
-  case Mips::fixup_Mips_GOT_LO16:
-  case Mips::fixup_Mips_GOTTPREL:
-  case Mips::fixup_Mips_DTPREL_HI:
-  case Mips::fixup_Mips_DTPREL_LO:
-  case Mips::fixup_Mips_TLSGD:
-  case Mips::fixup_Mips_TLSLDM:
-  case Mips::fixup_Mips_TPREL_HI:
-  case Mips::fixup_Mips_TPREL_LO:
-  case Mips::fixup_Mips_JALR:
-  case Mips::fixup_MICROMIPS_CALL16:
-  case Mips::fixup_MICROMIPS_GOT_DISP:
-  case Mips::fixup_MICROMIPS_GOT_PAGE:
-  case Mips::fixup_MICROMIPS_GOT_OFST:
-  case Mips::fixup_MICROMIPS_GOT16:
-  case Mips::fixup_MICROMIPS_GOTTPREL:
-  case Mips::fixup_MICROMIPS_TLS_DTPREL_HI16:
-  case Mips::fixup_MICROMIPS_TLS_DTPREL_LO16:
-  case Mips::fixup_MICROMIPS_TLS_GD:
-  case Mips::fixup_MICROMIPS_TLS_LDM:
-  case Mips::fixup_MICROMIPS_TLS_TPREL_HI16:
-  case Mips::fixup_MICROMIPS_TLS_TPREL_LO16:
-  case Mips::fixup_MICROMIPS_JALR:
-    return true;
-  }
-}
-
-bool MipsAsmBackend::isMicroMips(const MCSymbol *Sym) const {
-  if (const auto *ElfSym = dyn_cast<const MCSymbolELF>(Sym)) {
-    if (ElfSym->getOther() & ELF::STO_MIPS_MICROMIPS)
-      return true;
-  }
-  return false;
 }
 
 namespace {

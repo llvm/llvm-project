@@ -22,6 +22,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 #include <vector>
 
@@ -60,7 +61,7 @@ class Triple;
 /// Target-specific options that control code generation and printing should
 /// be exposed through a TargetSubtargetInfo-derived class.
 ///
-class TargetSubtargetInfo : public MCSubtargetInfo {
+class LLVM_ABI TargetSubtargetInfo : public MCSubtargetInfo {
 protected: // Can only create subclasses...
   TargetSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                       StringRef FS, ArrayRef<StringRef> PN,
@@ -124,9 +125,8 @@ public:
 
   virtual const LegalizerInfo *getLegalizerInfo() const { return nullptr; }
 
-  /// getRegisterInfo - If register information is available, return it.  If
-  /// not, return null.
-  virtual const TargetRegisterInfo *getRegisterInfo() const { return nullptr; }
+  /// Return the target's register information.
+  virtual const TargetRegisterInfo *getRegisterInfo() const = 0;
 
   /// If the information for the register banks is available, return it.
   /// Otherwise return nullptr.

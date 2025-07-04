@@ -11,7 +11,7 @@ define void @main(float %arg) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 $exec_lo, [[S_MOV_B32_1]], implicit-def dead $scc
   ; CHECK-NEXT:   $vcc_lo = COPY [[S_AND_B32_]]
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.2, implicit $vcc
@@ -64,8 +64,8 @@ bb2:
   br label %bb11
 
 bb11:
-  %i12 = phi float [ %i6, %bb2 ], [ undef, %bb ]
-  %i13 = phi float [ %i10, %bb2 ], [ undef, %bb ]
+  %i12 = phi float [ %i6, %bb2 ], [ poison, %bb ]
+  %i13 = phi float [ %i10, %bb2 ], [ poison, %bb ]
   %i14 = phi i1 [ false, %bb2 ], [ true, %bb ]
   br i1 %i14, label %bb15, label %bb17
 

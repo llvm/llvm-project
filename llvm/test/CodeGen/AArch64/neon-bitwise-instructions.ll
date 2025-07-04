@@ -1143,7 +1143,7 @@ define <4 x i32> @vselect_constant_cond_zero_v4i32(<4 x i32> %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    mov w9, #0 // =0x0
-; CHECK-GI-NEXT:    mov v1.s[0], w8
+; CHECK-GI-NEXT:    fmov s1, w8
 ; CHECK-GI-NEXT:    mov v1.s[1], w9
 ; CHECK-GI-NEXT:    mov v1.s[2], w9
 ; CHECK-GI-NEXT:    mov v1.s[3], w8
@@ -1215,7 +1215,7 @@ define <4 x i32> @vselect_constant_cond_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    mov w9, #0 // =0x0
-; CHECK-GI-NEXT:    mov v2.s[0], w8
+; CHECK-GI-NEXT:    fmov s2, w8
 ; CHECK-GI-NEXT:    mov v2.s[1], w9
 ; CHECK-GI-NEXT:    mov v2.s[2], w9
 ; CHECK-GI-NEXT:    mov v2.s[3], w8
@@ -1499,8 +1499,7 @@ define <8 x i8> @vselect_cmpz_ne(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-GI-LABEL: vselect_cmpz_ne:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
+; CHECK-GI-NEXT:    cmtst v0.8b, v0.8b, v0.8b
 ; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %cmp = icmp ne <8 x i8> %a, zeroinitializer
@@ -1533,17 +1532,10 @@ define <8 x i8> @vselect_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
 }
 
 define <8 x i8> @sext_tst(<8 x i8> %a, <8 x i8> %b, <8 x i8> %c) {
-; CHECK-SD-LABEL: sext_tst:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    cmtst v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_tst:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    cmeq v0.8b, v0.8b, #0
-; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_tst:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmtst v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    ret
   %tmp3 = and <8 x i8> %a, %b
   %tmp4 = icmp ne <8 x i8> %tmp3, zeroinitializer
   %d = sext <8 x i1> %tmp4 to <8 x i8>

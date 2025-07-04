@@ -921,7 +921,7 @@ Clang options that don't fit neatly into other categories.
 
   Instruct clang not to emit the signature string for blocks. Disabling the
   string can potentially break existing code that relies on it. Users should
-  carefully consider this possibiilty when using the flag.
+  carefully consider this possibility when using the flag.
 
 .. _configuration-files:
 
@@ -1072,6 +1072,35 @@ inputs. Here is some example of ``$``-prefixed options:
 
 Language and Target-Independent Features
 ========================================
+
+Freestanding Builds
+-------------------
+Passing the ``-ffreestanding`` flag causes Clang to build for a freestanding
+(rather than a hosted) environment. The flag has the following effects:
+
+* the ``__STDC_HOSTED__`` predefined macro will expand to ``0``,
+* builtin functions are disabled by default (``-fno-builtins``),
+* unwind tables are disabled by default 
+  (``fno-asynchronous-unwind-tables -fno-unwind-tables``), and
+* does not treat the global ``main`` function as a special function.
+
+An implementation of the following runtime library functions must always be
+provided with the usual semantics, as Clang will generate calls to them:
+
+* ``memcpy``,
+* ``memmove``, and
+* ``memset``.
+
+Clang does not, by itself, provide a full "conforming freestanding
+implementation". If you wish to have a conforming freestanding implementation,
+you must provide a freestanding C library. While Clang provides some of the
+required header files, it does not provide all of them, nor any library
+implementations.
+
+Conversely, when ``-ffreestanding`` is specified, Clang does not require you to
+provide a conforming freestanding implementation library. Clang will not make
+any assumptions as to the availability or semantics of standard-library
+functions other than those mentioned above.
 
 Controlling Errors and Warnings
 -------------------------------
@@ -1429,6 +1458,19 @@ will be processed from the PCH file. Otherwise, Clang will report an error.
   ``test.h`` since ``test.h`` was included directly in the source file and not
   specified on the command line using ``-include-pch``.
 
+Ignoring a PCH File
+^^^^^^^^^^^^^^^^^^^
+
+To ignore PCH options, a `-ignore-pch` option is passed to ``clang``:
+
+.. code-block:: console
+
+  $ clang -x c-header test.h -Xclang -ignore-pch -o test.h.pch
+  $ clang -include-pch test.h.pch -Xclang -ignore-pch test.c -o test
+
+This option disables precompiled headers, overrides -emit-pch and -include-pch.
+test.h.pch is not generated and not used as a prefix header.
+
 Relocatable PCH Files
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -1681,19 +1723,27 @@ for more details.
    permitted to produce more precise results than performing the same
    operations separately.
 
-   The C standard permits intermediate floating-point results within an
+   The C and C++ standards permit intermediate floating-point results within an
    expression to be computed with more precision than their type would
    normally allow. This permits operation fusing, and Clang takes advantage
-   of this by default. This behavior can be controlled with the ``FP_CONTRACT``
-   and ``clang fp contract`` pragmas. Please refer to the pragma documentation
-   for a description of how the pragmas interact with this option.
+   of this by default (``on``). Fusion across statements is not compliant with
+   the C and C++ standards but can be enabled using ``-ffp-contract=fast``.
+
+   Fusion can be controlled with the ``FP_CONTRACT`` and ``clang fp contract``
+   pragmas. Please note that pragmas will be ingored with
+   ``-ffp-contract=fast``, and refer to the pragma documentation for a
+   description of how the pragmas interact with the different ``-ffp-contract``
+   option values.
 
    Valid values are:
 
-   * ``fast`` (fuse across statements disregarding pragmas, default for CUDA)
-   * ``on`` (fuse in the same statement unless dictated by pragmas, default for languages other than CUDA/HIP)
-   * ``off`` (never fuse)
-   * ``fast-honor-pragmas`` (fuse across statements unless dictated by pragmas, default for HIP)
+   * ``fast``: enable fusion across statements disregarding pragmas, breaking
+     compliance with the C and C++ standards (default for CUDA).
+   * ``on``: enable C and C++ standard complaint fusion in the same statement
+     unless dictated by pragmas (default for languages other than CUDA/HIP)
+   * ``off``: disable fusion
+   * ``fast-honor-pragmas``: fuse across statements unless dictated by pragmas
+     (default for HIP)
 
 .. option:: -f[no-]honor-infinities
 
@@ -2260,6 +2310,43 @@ are listed below.
    pure ThinLTO, as all split regular LTO modules are merged and LTO linked
    with regular LTO.
 
+.. option:: -f[no-]unique-source-file-names
+
+   When enabled, allows the compiler to assume that each object file
+   passed to the linker has a unique identifier. The identifier for
+   an object file is either the source file path or the value of the
+   argument `-funique-source-file-identifier` if specified. This is
+   useful for reducing link times when doing ThinLTO in combination with
+   whole-program devirtualization or CFI.
+
+   The full source path or identifier passed to the compiler must be
+   unique. This means that, for example, the following is a usage error:
+
+   .. code-block:: console
+
+     $ cd foo
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ../bar
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ..
+     $ clang foo/foo.o bar/foo.o
+    
+   but this is not:
+
+   .. code-block:: console
+
+     $ clang -funique-source-file-names -c foo/foo.c
+     $ clang -funique-source-file-names -c bar/foo.c
+     $ clang foo/foo.o bar/foo.o
+
+   A misuse of this flag may result in a duplicate symbol error at
+   link time.
+
+.. option:: -funique-source-file-identifier=IDENTIFIER
+
+   Used with `-funique-source-file-names` to specify a source file
+   identifier.
+
 .. option:: -fforce-emit-vtables
 
    In order to improve devirtualization, forces emitting of vtables even in
@@ -2725,6 +2812,9 @@ usual build cycle when using sample profilers for optimization:
 
      $ llvm-profgen --binary=./code --output=code.prof --perfdata=perf.data
 
+   Please note, ``perf.data`` must be collected with ``-b`` flag to Linux ``perf``
+   for the above step to work.
+
    When using SEP the output is in the textual format corresponding to
    ``llvm-profgen --perfscript``. For example:
 
@@ -3128,7 +3218,7 @@ indexed format, regardeless whether it is produced by frontend or the IR pass.
 .. option:: -fprofile-continuous
 
   Enables the continuous instrumentation profiling where profile counter updates
-  are continuously synced to a file. This option sets any neccessary modifiers
+  are continuously synced to a file. This option sets any necessary modifiers
   (currently ``%c``) in the default profile filename and passes any necessary
   flags to the middle-end to support this mode. Value profiling is not supported
   in continuous mode.
@@ -3187,7 +3277,6 @@ be collected.
    the profile file to ``Name``.
  * ``void __llvm_profile_reset_counters(void)``: resets all counters to zero.
  * ``int __llvm_profile_dump(void)``: write the profile data to disk.
- * ``int __llvm_orderfile_dump(void)``: write the order file to disk.
 
 For example, the following pattern can be used to skip profiling program
 initialization, profile two specific hot regions, and skip profiling program
@@ -3258,7 +3347,7 @@ on the ``-fprofile-generate`` and the ``-fprofile-use`` flags.
  * ``__LLVM_INSTR_PROFILE_USE``: defined when one of
    ``-fprofile-use``/``-fprofile-instr-use`` is in effect.
 
-The two macros can be used to provide more flexibiilty so a user program
+The two macros can be used to provide more flexibility so a user program
 can execute code specifically intended for profile generate or profile use.
 For example, a user program can have special logging during profile generate:
 
@@ -3328,9 +3417,9 @@ This can be done using the ``-fprofile-list`` option.
 
     $ clang++ -O2 -fprofile-instr-generate -fcoverage-mapping -fprofile-list=fun.list -fprofile-list=code.list code.cc -o code
 
-Supported sections are ``[clang]``, ``[llvm]``, and ``[csllvm]`` representing
-clang PGO, IRPGO, and CSIRPGO, respectively. Supported prefixes are ``function``
-and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
+Supported sections are ``[clang]``, ``[llvm]``, ``[csllvm]``, and ``[sample-coldcov]`` representing
+clang PGO, IRPGO, CSIRPGO and sample PGO based cold function coverage, respectively. Supported prefixes 
+are ``function`` and ``source``. Supported categories are ``allow``, ``skip``, and ``forbid``.
 ``skip`` adds the ``skipprofile`` attribute while ``forbid`` adds the
 ``noprofile`` attribute to the appropriate function. Use
 ``default:<allow|skip|forbid>`` to specify the default category.
@@ -3581,7 +3670,7 @@ below. If multiple flags are present, the last one is used.
   By default, Clang does not emit type information for types that are defined
   but not used in a program. To retain the debug info for these unused types,
   the negation **-fno-eliminate-unused-debug-types** can be used.
-  This can be particulary useful on Windows, when using NATVIS files that
+  This can be particularly useful on Windows, when using NATVIS files that
   can reference const symbols that would otherwise be stripped, even in full
   debug or standalone debug modes.
 
@@ -3673,6 +3762,35 @@ Doxygen-style comments and ignores ordinary comments starting with ``//`` and
   It is also possible to use ``-fcomment-block-commands`` several times; e.g.
   ``-fcomment-block-commands=foo -fcomment-block-commands=bar`` does the same
   as above.
+
+.. _ccc-override-options:
+
+CCC_OVERRIDE_OPTIONS
+--------------------
+The environment variable ``CCC_OVERRIDE_OPTIONS`` can be used to edit clang's
+command line arguments. The value of this variable is a space-separated list of
+edits to perform. The edits are applied in the order in which they appear in
+``CCC_OVERRIDE_OPTIONS``. Each edit should be one of the following forms:
+
+- ``#``: Silence information about the changes to the command line arguments.
+
+- ``^FOO``: Add ``FOO`` as a new argument at the beginning of the command line
+  right after the name of the compiler executable.
+
+- ``+FOO``: Add ``FOO`` as a new argument at the end of the command line.
+
+- ``s/XXX/YYY/``: Substitute the regular expression ``XXX`` with ``YYY`` in the
+  command line.
+
+- ``xOPTION``: Removes all instances of the literal argument ``OPTION``.
+
+- ``XOPTION``: Removes all instances of the literal argument ``OPTION``, and the
+  following argument.
+
+- ``Ox``: Removes all flags matching ``O`` or ``O[sz0-9]`` and adds ``Ox`` at
+  the end of the command line.
+
+This environment variable does not affect the options added by the config files.
 
 .. _c:
 
@@ -4085,7 +4203,7 @@ There is a set of concrete HW architectures that OpenCL can be compiled for.
 Generic Targets
 ^^^^^^^^^^^^^^^
 
-- A SPIR-V binary can be produced for 32 or 64 bit targets.
+- A SPIR-V binary can be produced for 32- or 64-bit targets.
 
    .. code-block:: console
 
@@ -4198,7 +4316,7 @@ nosvm
 ^^^^^
 
 Clang supports this attribute to comply to OpenCL v2.0 conformance, but it
-does not have any effect on the IR. For more details reffer to the specification
+does not have any effect on the IR. For more details refer to the specification
 `section 6.7.2
 <https://www.khronos.org/registry/cl/specs/opencl-2.0-openclc.pdf#49>`_
 
@@ -4673,25 +4791,7 @@ Clang supports generation of SPIR-V conformant to `the OpenCL Environment
 Specification
 <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Env.html>`_.
 
-To generate SPIR-V binaries, Clang uses the external ``llvm-spirv`` tool from the
-`SPIRV-LLVM-Translator repo
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
-
-Prior to the generation of SPIR-V binary with Clang, ``llvm-spirv``
-should be built or installed. Please refer to `the following instructions
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#build-instructions>`_
-for more details. Clang will look for ``llvm-spirv-<LLVM-major-version>`` and
-``llvm-spirv`` executables, in this order, in the ``PATH`` environment variable.
-Clang uses ``llvm-spirv`` with `the widely adopted assembly syntax package
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/#build-with-spirv-tools>`_.
-
-`The versioning
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/releases>`_ of
-``llvm-spirv`` is aligned with Clang major releases. The same applies to the
-main development branch. It is therefore important to ensure the ``llvm-spirv``
-version is in alignment with the Clang version. For troubleshooting purposes
-``llvm-spirv`` can be `tested in isolation
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#test-instructions>`_.
+To generate SPIR-V binaries, Clang uses the in-tree LLVM SPIR-V backend.
 
 Example usage for OpenCL kernel compilation:
 
@@ -4708,18 +4808,6 @@ further by offline SPIR-V consumer tools.
 Converting to SPIR-V produced with the optimization levels other than `-O0` is
 currently available as an experimental feature and it is not guaranteed to work
 in all cases.
-
-Clang also supports integrated generation of SPIR-V without use of ``llvm-spirv``
-tool as an experimental feature when ``-fintegrated-objemitter`` flag is passed in
-the command line.
-
-   .. code-block:: console
-
-     $ clang --target=spirv32 -fintegrated-objemitter -c test.cl
-
-Note that only very basic functionality is supported at this point and therefore
-it is not suitable for arbitrary use cases. This feature is only enabled when clang
-build is configured with ``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=SPIRV`` option.
 
 Linking is done using ``spirv-link`` from `the SPIRV-Tools project
 <https://github.com/KhronosGroup/SPIRV-Tools#linker>`_. Similar to other external
@@ -5110,6 +5198,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -v                      Show commands to run and use verbose output
       -W<warning>             Enable the specified warning
       -Xclang <arg>           Pass <arg> to the clang compiler
+      -Xclangas <arg>         Pass <arg> to the clang assembler
 
 The /clang: Option
 ^^^^^^^^^^^^^^^^^^

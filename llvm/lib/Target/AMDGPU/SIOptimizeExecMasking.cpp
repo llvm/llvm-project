@@ -632,6 +632,8 @@ bool SIOptimizeExecMasking::optimizeVCMPSaveExecSequence(
 
   TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
 
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::op_sel);
+
   // The kill flags may no longer be correct.
   if (Src0->isReg())
     MRI->clearKillFlags(Src0->getReg());

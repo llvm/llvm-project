@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memmove.h"
 
@@ -93,7 +94,8 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
   Randomize(Buffer);
   for (int Size = 0; Size < kMaxSize; ++Size)
     for (int Overlap = -1; Overlap < Size;) {
-      ASSERT_TRUE(CheckMemmove<Adaptor>(Buffer, Size, Overlap));
+      ASSERT_TRUE(
+          CheckMemmove<Adaptor>(Buffer, static_cast<size_t>(Size), Overlap));
       // Prevent quadratic behavior by skipping offset above kDenseOverlap.
       if (Overlap > kDenseOverlap)
         Overlap *= 2;
@@ -101,5 +103,14 @@ TEST(LlvmLibcMemmoveTest, SizeSweep) {
         ++Overlap;
     }
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+
+TEST(LlvmLibcMemmoveTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memmove(nullptr, nullptr, 2); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // LIBC_TARGET_OS_IS_LINUX
 
 } // namespace LIBC_NAMESPACE_DECL

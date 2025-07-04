@@ -387,12 +387,12 @@ define i32 @i32_select_fcmp_oeq(float %a, float %b, i32 %c, i32 %d) nounwind {
 ;
 ; CHECKZFINX-LABEL: i32_select_fcmp_oeq:
 ; CHECKZFINX:       # %bb.0:
-; CHECKZFINX-NEXT:    feq.s a0, a0, a1
-; CHECKZFINX-NEXT:    bnez a0, .LBB16_2
-; CHECKZFINX-NEXT:  # %bb.1:
-; CHECKZFINX-NEXT:    mv a2, a3
-; CHECKZFINX-NEXT:  .LBB16_2:
+; CHECKZFINX-NEXT:    feq.s a1, a0, a1
 ; CHECKZFINX-NEXT:    mv a0, a2
+; CHECKZFINX-NEXT:    bnez a1, .LBB16_2
+; CHECKZFINX-NEXT:  # %bb.1:
+; CHECKZFINX-NEXT:    mv a0, a3
+; CHECKZFINX-NEXT:  .LBB16_2:
 ; CHECKZFINX-NEXT:    ret
   %1 = fcmp oeq float %a, %b
   %2 = select i1 %1, i32 %c, i32 %d
@@ -450,4 +450,43 @@ define signext i32 @select_fcmp_uge_1_2(float %a, float %b) nounwind {
   %1 = fcmp ugt float %a, %b
   %2 = select i1 %1, i32 1, i32 2
   ret i32 %2
+}
+
+define float @CascadedSelect(float noundef %a) {
+; CHECK-LABEL: CascadedSelect:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    flt.s a0, fa5, fa0
+; CHECK-NEXT:    bnez a0, .LBB20_3
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    fmv.w.x fa5, zero
+; CHECK-NEXT:    flt.s a0, fa0, fa5
+; CHECK-NEXT:    bnez a0, .LBB20_3
+; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    fmv.s fa5, fa0
+; CHECK-NEXT:  .LBB20_3: # %entry
+; CHECK-NEXT:    fmv.s fa0, fa5
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: CascadedSelect:
+; CHECKZFINX:       # %bb.0: # %entry
+; CHECKZFINX-NEXT:    lui a1, 260096
+; CHECKZFINX-NEXT:    flt.s a2, a1, a0
+; CHECKZFINX-NEXT:    bnez a2, .LBB20_3
+; CHECKZFINX-NEXT:  # %bb.1: # %entry
+; CHECKZFINX-NEXT:    flt.s a2, a0, zero
+; CHECKZFINX-NEXT:    li a1, 0
+; CHECKZFINX-NEXT:    bnez a2, .LBB20_3
+; CHECKZFINX-NEXT:  # %bb.2: # %entry
+; CHECKZFINX-NEXT:    mv a1, a0
+; CHECKZFINX-NEXT:  .LBB20_3: # %entry
+; CHECKZFINX-NEXT:    mv a0, a1
+; CHECKZFINX-NEXT:    ret
+entry:
+  %cmp = fcmp ogt float %a, 1.000000e+00
+  %cmp1 = fcmp olt float %a, 0.000000e+00
+  %.a = select i1 %cmp1, float 0.000000e+00, float %a
+  %retval.0 = select i1 %cmp, float 1.000000e+00, float %.a
+  ret float %retval.0
 }

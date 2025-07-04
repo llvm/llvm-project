@@ -1,15 +1,20 @@
-; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S -pass-remarks-analysis=loop-vectorize 2>%t | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize 2>%t | FileCheck %s
 ; RUN: cat %t | FileCheck --check-prefix=CHECK-REMARKS %s
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; Tests basic vectorization of homogeneous struct literal returns.
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
 define void @struct_return_f32_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f32_widen
-; CHECK-NOT:   vector.body:
+; CHECK-SAME:  (ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]])
+; CHECK:       vector.body:
+; CHECK:         [[WIDE_CALL:%.*]] = call { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float> [[WIDE_LOAD:%.*]])
+; CHECK:         [[WIDE_A:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_CALL]], 0
+; CHECK:         [[WIDE_B:%.*]] = extractvalue { <2 x float>, <2 x float> } [[WIDE_CALL]], 1
+; CHECK:         store <2 x float> [[WIDE_A]], ptr {{%.*}}, align 4
+; CHECK:         store <2 x float> [[WIDE_B]], ptr {{%.*}}, align 4
 entry:
   br label %for.body
 
@@ -32,11 +37,16 @@ exit:
   ret void
 }
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
 define void @struct_return_f64_widen(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f64_widen
-; CHECK-NOT:   vector.body:
+; CHECK-SAME:  (ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]])
+; CHECK:        vector.body:
+; CHECK:          [[WIDE_CALL:%.*]] = call { <2 x double>, <2 x double> } @fixed_vec_bar(<2 x double> [[WIDE_LOAD:%.*]])
+; CHECK:          [[WIDE_A:%.*]] = extractvalue { <2 x double>, <2 x double> } [[WIDE_CALL]], 0
+; CHECK:          [[WIDE_B:%.*]] = extractvalue { <2 x double>, <2 x double> } [[WIDE_CALL]], 1
+; CHECK:          store <2 x double> [[WIDE_A]], ptr {{%.*}}, align 8
+; CHECK:          store <2 x double> [[WIDE_B]], ptr {{%.*}}, align 8
 entry:
   br label %for.body
 
@@ -59,39 +69,17 @@ exit:
   ret void
 }
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
-define void @struct_return_f32_replicate(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) {
-; CHECK-LABEL: define void @struct_return_f32_replicate
-; CHECK-NOT:   vector.body:
-entry:
-  br label %for.body
-
-for.body:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, ptr %in, i64 %iv
-  %in_val = load float, ptr %arrayidx, align 4
-  ; #3 does not have a fixed-size vector mapping (so replication is used)
-  %call = tail call { float, float } @foo(float %in_val) #3
-  %extract_a = extractvalue { float, float } %call, 0
-  %extract_b = extractvalue { float, float } %call, 1
-  %arrayidx2 = getelementptr inbounds float, ptr %out_a, i64 %iv
-  store float %extract_a, ptr %arrayidx2, align 4
-  %arrayidx4 = getelementptr inbounds float, ptr %out_b, i64 %iv
-  store float %extract_b, ptr %arrayidx4, align 4
-  %iv.next = add nuw nsw i64 %iv, 1
-  %exitcond.not = icmp eq i64 %iv.next, 1024
-  br i1 %exitcond.not, label %exit, label %for.body
-
-exit:
-  ret void
-}
-
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
 define void @struct_return_f32_widen_rt_checks(ptr %in, ptr writeonly %out_a, ptr writeonly %out_b) {
 ; CHECK-LABEL: define void @struct_return_f32_widen_rt_checks
-; CHECK-NOT:   vector.body:
+; CHECK-SAME:  (ptr [[IN:%.*]], ptr writeonly [[OUT_A:%.*]], ptr writeonly [[OUT_B:%.*]])
+; CHECK:       entry:
+; CHECK:         br i1 false, label %scalar.ph, label %vector.memcheck
+; CHECK:       vector.memcheck:
+; CHECK:       vector.body:
+; CHECK:         call { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float> [[WIDE_LOAD:%.*]])
+; CHECK:       for.body:
+; CHECK          call { float, float } @foo(float [[LOAD:%.*]])
 entry:
   br label %for.body
 
@@ -143,11 +131,11 @@ exit:
   ret void
 }
 
-; TODO: Support vectorization in this case.
-; CHECK-REMARKS: remark: {{.*}} loop not vectorized: Auto-vectorization of calls that return struct types is not yet supported
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
 define void @struct_return_i32_three_results_widen(ptr noalias %in, ptr noalias writeonly %out_a) {
 ; CHECK-LABEL: define void @struct_return_i32_three_results_widen
-; CHECK-NOT:   vector.body:
+; CHECK:   vector.body:
+; CHECK:     call { <2 x i32>, <2 x i32>, <2 x i32> } @fixed_vec_qux(<2 x i32> [[WIDE_LOAD:%.*]])
 entry:
   br label %for.body
 
@@ -159,6 +147,40 @@ for.body:
   %extract_a = extractvalue { i32, i32, i32 } %call, 0
   %arrayidx2 = getelementptr inbounds i32, ptr %out_a, i64 %iv
   store i32 %extract_a, ptr %arrayidx2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Test crafted to exercise computePredInstDiscount with struct results
+; (mainly it does not crash).
+; CHECK-REMARKS: remark: {{.*}} vectorized loop
+define void @scalarized_predicated_struct_return(ptr %a) {
+; CHECK-LABEL: define void @scalarized_predicated_struct_return
+; CHECK:  vector.body:
+; CHECK:  pred.store.if:
+; CHECK:     tail call { i64, i64 } @bar_i64(i64 {{.+}})
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %in_val = load i64, ptr %arrayidx, align 8
+  %sgt_zero = icmp sgt i64 %in_val, 0
+  br i1 %sgt_zero, label %if.then, label %for.inc
+
+if.then:
+  %call = tail call { i64, i64 } @bar_i64(i64 %in_val) #6
+  %extract_a = extractvalue { i64, i64 } %call, 0
+  %div = udiv i64 %extract_a, %in_val
+  store i64 %div, ptr %arrayidx, align 8
+  br label %for.inc
+
+for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %for.body
@@ -390,13 +412,14 @@ declare { [2 x float] } @foo_arrays(float)
 declare { float, [1 x float] } @foo_one_non_widenable_element(float)
 declare { <1 x float>, <1 x float> } @foo_vectors(<1 x float>)
 declare { i32, i32, i32 } @qux(i32)
+declare { i64, i64 } @bar_i64(i64)
 
 declare { <2 x float>, <2 x float> } @fixed_vec_foo(<2 x float>)
 declare { <2 x double>, <2 x double> } @fixed_vec_bar(<2 x double>)
 declare { <2 x float>, <2 x i32> } @fixed_vec_baz(<2 x float>)
 declare { <2 x i32>, <2 x i32>, <2 x i32> } @fixed_vec_qux(<2 x i32>)
-
 declare { <vscale x 4 x float>, <vscale x 4 x float> } @scalable_vec_masked_foo(<vscale x 4 x float>, <vscale x 4 x i1>)
+declare { <vscale x 4 x i64>, <vscale x 4 x i64> } @scalable_vec_masked_bar_i64(<vscale x 4 x i64>, <vscale x 4 x i1>)
 
 attributes #0 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_foo(fixed_vec_foo)" }
 attributes #1 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_bar(fixed_vec_bar)" }
@@ -404,3 +427,4 @@ attributes #2 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_baz(fixed_vec
 attributes #3 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_foo(scalable_vec_masked_foo)" }
 attributes #4 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_bar_named(fixed_vec_bar)" }
 attributes #5 = { nounwind "vector-function-abi-variant"="_ZGVnN2v_qux(fixed_vec_qux)" }
+attributes #6 = { nounwind "vector-function-abi-variant"="_ZGVsMxv_bar_i64(scalable_vec_masked_bar_i64)" }

@@ -95,8 +95,8 @@ bool M68kInstrInfo::AnalyzeBranchImpl(MachineBasicBlock &MBB,
   // Erase any instructions if allowed at the end of the scope.
   std::vector<std::reference_wrapper<llvm::MachineInstr>> EraseList;
   auto FinalizeOnReturn = llvm::make_scope_exit([&EraseList] {
-    std::for_each(EraseList.begin(), EraseList.end(),
-                  [](auto &ref) { ref.get().eraseFromParent(); });
+    for (auto &Ref : EraseList)
+      Ref.get().eraseFromParent();
   });
 
   // Start from the bottom of the block and work up, examining the
@@ -705,8 +705,8 @@ bool M68kInstrInfo::isPCRelRegisterOperandLegal(
 
 void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI,
-                                const DebugLoc &DL, MCRegister DstReg,
-                                MCRegister SrcReg, bool KillSrc,
+                                const DebugLoc &DL, Register DstReg,
+                                Register SrcReg, bool KillSrc,
                                 bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0;
 

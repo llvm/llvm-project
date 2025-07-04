@@ -14,6 +14,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -47,19 +48,14 @@ public:
   LanaiAsmBackend(const Target &T, Triple::OSType OST)
       : MCAsmBackend(llvm::endianness::big), OSType(OST) {}
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
+                  MutableArrayRef<char> Data, uint64_t Value,
+                  bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  unsigned getNumFixupKinds() const override {
-    return Lanai::NumTargetFixupKinds;
-  }
+  MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
@@ -76,14 +72,15 @@ bool LanaiAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   return true;
 }
 
-void LanaiAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+void LanaiAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,
-                                 bool /*IsResolved*/,
-                                 const MCSubtargetInfo * /*STI*/) const {
+                                 bool IsResolved) {
+  if (!IsResolved)
+    Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
+
   MCFixupKind Kind = Fixup.getKind();
   Value = adjustFixupValue(static_cast<unsigned>(Kind), Value);
-
   if (!Value)
     return; // This value doesn't change the encoding
 
@@ -119,8 +116,7 @@ LanaiAsmBackend::createObjectTargetWriter() const {
   return createLanaiELFObjectWriter(MCELFObjectTargetWriter::getOSABI(OSType));
 }
 
-const MCFixupKindInfo &
-LanaiAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+MCFixupKindInfo LanaiAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   static const MCFixupKindInfo Infos[Lanai::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // LanaiFixupKinds.h.
@@ -143,7 +139,7 @@ LanaiAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < Lanai::NumTargetFixupKinds &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }

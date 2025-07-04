@@ -507,6 +507,21 @@ static int dl_iterate_phdr_cb(dl_phdr_info *info, size_t size, void *arg) {
   return 0;
 }
 
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+#if !defined(HAVE_BACKTRACE)
+#error DebugLoc origin-tracking currently requires `backtrace()`.
+#endif
+namespace llvm {
+namespace sys {
+template <unsigned long MaxDepth>
+int getStackTrace(std::array<void *, MaxDepth> &StackTrace) {
+  return backtrace(StackTrace.data(), MaxDepth);
+}
+template int getStackTrace<16ul>(std::array<void *, 16ul> &);
+} // namespace sys
+} // namespace llvm
+#endif
+
 /// If this is an ELF platform, we can find all loaded modules and their virtual
 /// addresses with dl_iterate_phdr.
 static bool findModulesAndOffsets(void **StackTrace, int Depth,
@@ -826,14 +841,17 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
   int width = 0;
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-
     int nwidth;
-    if (!name)
-      nwidth = strlen(dlinfo.dli_fname);
-    else
-      nwidth = strlen(name) - 1;
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      nwidth = 7; // "(error)"
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
+
+      if (!name)
+        nwidth = strlen(dlinfo.dli_fname);
+      else
+        nwidth = strlen(name) - 1;
+    }
 
     if (nwidth > width)
       width = nwidth;
@@ -841,15 +859,20 @@ void llvm::sys::PrintStackTrace(raw_ostream &OS, int Depth) {
 
   for (int i = 0; i < depth; ++i) {
     Dl_info dlinfo;
-    dladdr(StackTrace[i], &dlinfo);
 
     OS << format("%-2d", i);
 
-    const char *name = strrchr(dlinfo.dli_fname, '/');
-    if (!name)
-      OS << format(" %-*s", width, dlinfo.dli_fname);
-    else
-      OS << format(" %-*s", width, name + 1);
+    if (dladdr(StackTrace[i], &dlinfo) == 0) {
+      OS << format(" %-*s", width, static_cast<const char *>("(error)"));
+      dlinfo.dli_sname = nullptr;
+    } else {
+      const char *name = strrchr(dlinfo.dli_fname, '/');
+      if (!name)
+        OS << format(" %-*s", width,
+                     static_cast<const char *>(dlinfo.dli_fname));
+      else
+        OS << format(" %-*s", width, name + 1);
+    }
 
     OS << format(" %#0*lx", (int)(sizeof(void *) * 2) + 2,
                  (unsigned long)StackTrace[i]);

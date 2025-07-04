@@ -15,6 +15,9 @@ using LlvmLibcCbrtTest = LIBC_NAMESPACE::testing::FPTest<double>;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcCbrtTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::cbrt(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::cbrt(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(inf, LIBC_NAMESPACE::cbrt(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_inf, LIBC_NAMESPACE::cbrt(neg_inf));

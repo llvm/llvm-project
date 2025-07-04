@@ -19,6 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 constexpr size_t N_EXCEPTS = 9;
 
 constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
@@ -33,6 +34,7 @@ constexpr fputil::ExceptValues<float16, N_EXCEPTS> TANF16_EXCEPTS{{
     {0x6f4d, 0xbe19, 0, 1, 1},
     {0x7330, 0xcb62, 0, 1, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, tanf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -40,13 +42,15 @@ LLVM_LIBC_FUNCTION(float16, tanf16, (float16 x)) {
 
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
-  bool x_sign = x_u >> 15;
   float xf = x;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  bool x_sign = x_u >> 15;
   // Handle exceptional values
   if (auto r = TANF16_EXCEPTS.lookup_odd(x_abs, x_sign);
       LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // |x| <= 0x1.d1p-5
   if (LIBC_UNLIKELY(x_abs <= 0x2b44)) {
@@ -80,6 +84,10 @@ LLVM_LIBC_FUNCTION(float16, tanf16, (float16 x)) {
 
   // tan(+/-inf) = NaN, and tan(NaN) = NaN
   if (LIBC_UNLIKELY(x_abs >= 0x7c00)) {
+    if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
+      return FPBits::quiet_nan().get_val();
+    }
     // x = +/-inf
     if (x_abs == 0x7c00) {
       fputil::set_errno_if_required(EDOM);

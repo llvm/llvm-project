@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -1109,6 +1108,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasFloat128)
     Builder.defineMacro("__SIZEOF_FLOAT128__", "16");
+
+  if (Opts.CFProtectionReturn || Opts.CFProtectionBranch)
+    Builder.defineMacro("__CET__", Twine{(Opts.CFProtectionReturn << 1) |
+                                         Opts.CFProtectionBranch});
 }
 
 bool X86TargetInfo::isValidFeatureName(StringRef Name) const {

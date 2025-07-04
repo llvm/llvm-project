@@ -77,24 +77,21 @@ computeReshapeOutput(ArrayRef<int64_t> higherRankShape,
   // Initialize new shapes with [1] * higherRank.
   int64_t higherRank = higherRankShape.size();
   int64_t lowerRank = lowerRankShape.size();
-
   reshapeOutputShape.assign(higherRank, 1);
 
   int64_t higherRankDim;
   int64_t lowerRankDim;
+  const int64_t rankDiff = higherRank - lowerRank;
 
-  for (int64_t i = higherRank - 1, j = lowerRank - 1; i >= 0 && j >= 0;
-       i--, j--) {
-    higherRankDim = higherRankShape[i];
-    lowerRankDim = lowerRankShape[j];
+  for (int64_t i = lowerRank - 1; i >= 0; i--) {
+    higherRankDim = higherRankShape[i + rankDiff];
+    lowerRankDim = lowerRankShape[i];
 
-    if (lowerRankDim == 1 && higherRankDim > 1)
-      reshapeOutputShape[i] = 1;
-    else if ((lowerRankDim > 1 && higherRankDim == 1) ||
-             (lowerRankDim == higherRankDim))
-      reshapeOutputShape[i] = lowerRankDim;
-    else if (higherRankDim != lowerRankDim)
+    if (lowerRankDim != 1 && higherRankDim != 1 &&
+        lowerRankDim != higherRankDim)
       return failure();
+
+    reshapeOutputShape[i + rankDiff] = lowerRankDim == 1 ? 1 : lowerRankDim;
   }
   return success();
 }
@@ -181,13 +178,13 @@ SmallVector<int64_t> mlir::tosa::convertFromMlirShape(ArrayRef<int64_t> shape) {
   }));
 }
 
-bool mlir::tosa::getConstShapeValue(Operation *op,
-                                    llvm::SmallVector<int64_t> &result_shape) {
+bool mlir::tosa::getConstShapeValues(Operation *op,
+                                     llvm::SmallVector<int64_t> &result_shape) {
   if (!op) {
     return false;
   }
   if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
-    Attribute constOpAttr = constOp->getAttr("value");
+    Attribute constOpAttr = constOp->getAttr("values");
     DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];
@@ -197,4 +194,49 @@ bool mlir::tosa::getConstShapeValue(Operation *op,
   }
   // for undefined op, return false.
   return false;
+}
+
+// returns a small vector of int64_t values that attr contains
+SmallVector<int64_t>
+mlir::tosa::convertFromIntAttr(const DenseElementsAttr &attr, const int rank) {
+  if (attr.isSplat()) {
+    int64_t v = attr.getSplatValue<APInt>().getSExtValue();
+    return SmallVector<int64_t>(rank, v);
+  }
+
+  if (auto int_array_attr = llvm::dyn_cast<DenseIntElementsAttr>(attr)) {
+    SmallVector<int64_t> vec;
+    for (APInt val : int_array_attr.getValues<APInt>()) {
+      vec.push_back(val.getSExtValue());
+    }
+    return vec;
+  }
+  return {};
+}
+
+bool mlir::tosa::hasUniqueConstantScatterIndices(
+    ShapedType indicesType, DenseIntElementsAttr indicesAttr) {
+  llvm::ArrayRef<int64_t> const indicesShape = indicesType.getShape();
+  const unsigned int indicesRank = indicesShape.size();
+  const unsigned int lastDimSize = indicesShape[indicesRank - 1];
+
+  // check each batch of indices from the flat indicesAttr values
+  // for duplicates
+  auto const indicesValues = indicesAttr.getValues<int32_t>();
+  assert(
+      (indicesValues.size() % lastDimSize == 0) &&
+      "Constant indices data length should be a multiple of indicesShape[-1]");
+
+  std::vector<uint64_t> indices(lastDimSize);
+  for (auto beg = indicesValues.begin(); beg < indicesValues.end();
+       beg += lastDimSize) {
+    std::copy(beg, beg + lastDimSize, indices.begin());
+    std::sort(indices.begin(), indices.end());
+    if (std::adjacent_find(indices.begin(), indices.end()) != indices.end()) {
+      // found duplicate values in indices in batch
+      return false;
+    }
+  }
+
+  return true;
 }

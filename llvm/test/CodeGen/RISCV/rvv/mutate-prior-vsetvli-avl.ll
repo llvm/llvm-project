@@ -17,10 +17,10 @@ define dso_local void @test(ptr nocapture noundef %var_99) {
 ; CHECK-NEXT:    li a1, 1
 ; CHECK-NEXT:    csrwi vxrm, 0
 ; CHECK-NEXT:    vmul.vx v16, v8, a1
-; CHECK-NEXT:    vssra.vv v12, v12, v8
 ; CHECK-NEXT:    vmv.x.s a1, v16
 ; CHECK-NEXT:    vmsleu.vx v0, v8, a1
-; CHECK-NEXT:    vmerge.vvm v8, v12, v12, v0
+; CHECK-NEXT:    vssra.vv v8, v12, v8
+; CHECK-NEXT:    vmerge.vvm v8, v8, v8, v0
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:

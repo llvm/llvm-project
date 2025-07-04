@@ -236,7 +236,7 @@ some information about them:
     } else {
       // If there is no defining op, the Value is necessarily a Block
       // argument.
-      auto blockArg = operand.cast<BlockArgument>();
+      auto blockArg = cast<BlockArgument>(operand);
       llvm::outs() << "  - Operand produced by Block argument, number "
                    << blockArg.getArgNumber() << "\n";
     }
@@ -257,14 +257,10 @@ results and print informations about them:
       llvm::outs() << " has no uses\n";
       continue;
     }
-    if (result.hasOneUse()) {
+    if (result.hasOneUse())
       llvm::outs() << " has a single use: ";
-    } else {
-      llvm::outs() << " has "
-                   << std::distance(result.getUses().begin(),
-                                    result.getUses().end())
-                   << " uses:\n";
-    }
+    else
+      llvm::outs() << " has " << result.getNumUses() << " uses:\n";
     for (Operation *userOp : result.getUsers()) {
       llvm::outs() << "    - " << userOp->getName() << "\n";
     }

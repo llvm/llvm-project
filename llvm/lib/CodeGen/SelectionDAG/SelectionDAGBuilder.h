@@ -56,7 +56,6 @@ class CleanupPadInst;
 class CleanupReturnInst;
 class Constant;
 class ConstrainedFPIntrinsic;
-class DbgValueInst;
 class DataLayout;
 class DIExpression;
 class DILocalVariable;
@@ -254,7 +253,7 @@ public:
 
   // Emit PHI-node-operand constants only once even if used by multiple
   // PHI nodes.
-  DenseMap<const Constant *, unsigned> ConstantsOut;
+  DenseMap<const Constant *, Register> ConstantsOut;
 
   /// Information about the function as a whole.
   FunctionLoweringInfo &FuncInfo;
@@ -320,7 +319,7 @@ public:
     return CurInst ? CurInst->getDebugLoc() : DebugLoc();
   }
 
-  void CopyValueToVirtualRegister(const Value *V, unsigned Reg,
+  void CopyValueToVirtualRegister(const Value *V, Register Reg,
                                   ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
@@ -704,9 +703,6 @@ private:
   SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
-
-  /// Lowers CallInst to an external symbol.
-  void lowerCallToExternalSymbol(const CallInst &I, const char *FunctionName);
 
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);

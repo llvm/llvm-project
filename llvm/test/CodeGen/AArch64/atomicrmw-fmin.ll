@@ -62,13 +62,13 @@ define half @test_atomicrmw_fmin_f16_seq_cst_align2(ptr %ptr, half %value) #0 {
 ; SOFTFP-NOLSE-NEXT:    // Child Loop BB0_3 Depth 2
 ; SOFTFP-NOLSE-NEXT:    mov w22, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w20, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w21, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w22, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w1, w21
 ; SOFTFP-NOLSE-NEXT:    bl fminf
-; SOFTFP-NOLSE-NEXT:    bl __gnu_f2h_ieee
+; SOFTFP-NOLSE-NEXT:    bl __truncsfhf2
 ; SOFTFP-NOLSE-NEXT:    mov w8, w0
 ; SOFTFP-NOLSE-NEXT:  .LBB0_3: // %cmpxchg.start
 ; SOFTFP-NOLSE-NEXT:    // Parent Loop BB0_2 Depth=1
@@ -150,13 +150,13 @@ define half @test_atomicrmw_fmin_f16_seq_cst_align4(ptr %ptr, half %value) #0 {
 ; SOFTFP-NOLSE-NEXT:    // Child Loop BB1_3 Depth 2
 ; SOFTFP-NOLSE-NEXT:    mov w22, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w20, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w21, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w22, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w1, w21
 ; SOFTFP-NOLSE-NEXT:    bl fminf
-; SOFTFP-NOLSE-NEXT:    bl __gnu_f2h_ieee
+; SOFTFP-NOLSE-NEXT:    bl __truncsfhf2
 ; SOFTFP-NOLSE-NEXT:    mov w8, w0
 ; SOFTFP-NOLSE-NEXT:  .LBB1_3: // %cmpxchg.start
 ; SOFTFP-NOLSE-NEXT:    // Parent Loop BB1_2 Depth=1
@@ -592,22 +592,22 @@ define <2 x half> @test_atomicrmw_fmin_v2f16_seq_cst_align4(ptr %ptr, <2 x half>
 ; SOFTFP-NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; SOFTFP-NOLSE-NEXT:    // Child Loop BB6_3 Depth 2
 ; SOFTFP-NOLSE-NEXT:    and w0, w19, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w24, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w23, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w1, w24
 ; SOFTFP-NOLSE-NEXT:    bl fminf
-; SOFTFP-NOLSE-NEXT:    bl __gnu_f2h_ieee
+; SOFTFP-NOLSE-NEXT:    bl __truncsfhf2
 ; SOFTFP-NOLSE-NEXT:    mov w24, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w21, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w25, w0
 ; SOFTFP-NOLSE-NEXT:    and w0, w22, #0xffff
-; SOFTFP-NOLSE-NEXT:    bl __gnu_h2f_ieee
+; SOFTFP-NOLSE-NEXT:    bl __extendhfsf2
 ; SOFTFP-NOLSE-NEXT:    mov w1, w25
 ; SOFTFP-NOLSE-NEXT:    bl fminf
-; SOFTFP-NOLSE-NEXT:    bl __gnu_f2h_ieee
+; SOFTFP-NOLSE-NEXT:    bl __truncsfhf2
 ; SOFTFP-NOLSE-NEXT:    mov w8, w22
 ; SOFTFP-NOLSE-NEXT:    bfi w0, w24, #16, #16
 ; SOFTFP-NOLSE-NEXT:    bfi w8, w23, #16, #16
@@ -641,7 +641,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; NOLSE-LABEL: test_atomicrmw_fmin_v2bf16_seq_cst_align4:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; NOLSE-NEXT:    dup v1.4h, v0.h[1]
+; NOLSE-NEXT:    mov h1, v0.h[1]
 ; NOLSE-NEXT:    mov w8, #32767 // =0x7fff
 ; NOLSE-NEXT:    shll v0.4s, v0.4h, #16
 ; NOLSE-NEXT:    shll v1.4s, v1.4h, #16
@@ -649,7 +649,7 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; NOLSE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; NOLSE-NEXT:    ldaxr w9, [x0]
 ; NOLSE-NEXT:    fmov s2, w9
-; NOLSE-NEXT:    dup v3.4h, v2.h[1]
+; NOLSE-NEXT:    mov h3, v2.h[1]
 ; NOLSE-NEXT:    shll v2.4s, v2.4h, #16
 ; NOLSE-NEXT:    fminnm s2, s2, s0
 ; NOLSE-NEXT:    shll v3.4s, v3.4h, #16
@@ -677,14 +677,14 @@ define <2 x bfloat> @test_atomicrmw_fmin_v2bf16_seq_cst_align4(ptr %ptr, <2 x bf
 ; LSE-LABEL: test_atomicrmw_fmin_v2bf16_seq_cst_align4:
 ; LSE:       // %bb.0:
 ; LSE-NEXT:    // kill: def $d0 killed $d0 def $q0
-; LSE-NEXT:    dup v1.4h, v0.h[1]
+; LSE-NEXT:    mov h1, v0.h[1]
 ; LSE-NEXT:    shll v2.4s, v0.4h, #16
 ; LSE-NEXT:    mov w8, #32767 // =0x7fff
 ; LSE-NEXT:    ldr s0, [x0]
 ; LSE-NEXT:    shll v1.4s, v1.4h, #16
 ; LSE-NEXT:  .LBB7_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    dup v3.4h, v0.h[1]
+; LSE-NEXT:    mov h3, v0.h[1]
 ; LSE-NEXT:    shll v4.4s, v0.4h, #16
 ; LSE-NEXT:    fminnm s4, s4, s2
 ; LSE-NEXT:    shll v3.4s, v3.4h, #16

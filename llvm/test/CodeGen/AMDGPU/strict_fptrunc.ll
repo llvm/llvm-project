@@ -82,9 +82,9 @@ define <2 x half> @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict(<2 x flo
 ; GFX11-TRUE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v0
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict:
@@ -144,11 +144,10 @@ define <3 x half> @v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict(<3 x flo
 ; GFX11-TRUE16-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v1.l
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v3.l, v0
 ; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v2
-; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v3, v0, 0x5040100
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_constrained_fptrunc_v3f32_to_v3f16_fpexcept_strict:
@@ -405,10 +404,9 @@ define void @v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi(<2 x flo
 ; GFX11-TRUE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v1
-; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; GFX11-TRUE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; GFX11-TRUE16-NEXT:    global_store_b32 v[2:3], v0, off
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.h, v1
+; GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v1.l, v0
+; GFX11-TRUE16-NEXT:    global_store_b32 v[2:3], v1, off
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: v_constrained_fptrunc_v2f32_to_v2f16_fpexcept_strict_noabi:

@@ -13,7 +13,10 @@ Covered scenarios:
 Expression                                           Replacement
 ---------------------------------------------------- ---------------------
 ``u.find(v) == 0``                                   ``u.starts_with(v)``
+``u.find(v, 0) == 0``                                ``u.starts_with(v)``
+``u.find(v, 0, v.size()) == 0``                      ``u.starts_with(v)``
 ``u.rfind(v, 0) != 0``                               ``!u.starts_with(v)``
+``u.rfind(v, 0, v.size()) != 0``                     ``!u.starts_with(v)``
 ``u.compare(0, v.size(), v) == 0``                   ``u.starts_with(v)``
 ``u.substr(0, v.size()) == v``                       ``u.starts_with(v)``
 ``v != u.substr(0, v.size())``                       ``!u.starts_with(v)``

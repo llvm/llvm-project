@@ -24,7 +24,6 @@
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signposts.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
 #include <optional>
@@ -222,15 +221,27 @@ public:
              StringRef GroupDescription) {
     sys::SmartScopedLock<true> L(timerLock());
 
-    std::pair<TimerGroup*, Name2TimerMap> &GroupEntry = Map[GroupName];
-
-    if (!GroupEntry.first)
-      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
-
+    std::pair<TimerGroup *, Name2TimerMap> &GroupEntry =
+        getGroupEntry(GroupName, GroupDescription);
     Timer &T = GroupEntry.second[Name];
     if (!T.isInitialized())
       T.init(Name, Description, *GroupEntry.first);
     return T;
+  }
+
+  TimerGroup &getTimerGroup(StringRef GroupName, StringRef GroupDescription) {
+    sys::SmartScopedLock<true> L(timerLock());
+    return *getGroupEntry(GroupName, GroupDescription).first;
+  }
+
+private:
+  std::pair<TimerGroup *, Name2TimerMap> &
+  getGroupEntry(StringRef GroupName, StringRef GroupDescription) {
+    std::pair<TimerGroup *, Name2TimerMap> &GroupEntry = Map[GroupName];
+    if (!GroupEntry.first)
+      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
+
+    return GroupEntry;
   }
 };
 
@@ -243,6 +254,11 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                      ? nullptr
                      : &namedGroupedTimers().get(Name, Description, GroupName,
                                                  GroupDescription)) {}
+
+TimerGroup &NamedRegionTimer::getNamedTimerGroup(StringRef GroupName,
+                                                 StringRef GroupDescription) {
+  return namedGroupedTimers().getTimerGroup(GroupName, GroupDescription);
+}
 
 //===----------------------------------------------------------------------===//
 //   TimerGroup Implementation
@@ -284,6 +300,11 @@ TimerGroup::~TimerGroup() {
   while (FirstTimer)
     removeTimer(*FirstTimer);
 
+  if (!TimersToPrint.empty()) {
+    std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
+    PrintQueuedTimers(*OutStream);
+  }
+
   // Remove the group from the TimerGroupList.
   sys::SmartScopedLock<true> L(timerLock());
   *Prev = Next;
@@ -305,14 +326,6 @@ void TimerGroup::removeTimer(Timer &T) {
   *T.Prev = T.Next;
   if (T.Next)
     T.Next->Prev = T.Prev;
-
-  // Print the report when all timers in this group are destroyed if some of
-  // them were started.
-  if (FirstTimer || TimersToPrint.empty())
-    return;
-
-  std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
-  PrintQueuedTimers(*OutStream);
 }
 
 void TimerGroup::addTimer(Timer &T) {
@@ -428,10 +441,6 @@ void TimerGroup::clearAll() {
 
 void TimerGroup::printJSONValue(raw_ostream &OS, const PrintRecord &R,
                                 const char *suffix, double Value) {
-  assert(yaml::needsQuotes(Name) == yaml::QuotingType::None &&
-         "TimerGroup name should not need quotes");
-  assert(yaml::needsQuotes(R.Name) == yaml::QuotingType::None &&
-         "Timer name should not need quotes");
   constexpr auto max_digits10 = std::numeric_limits<double>::max_digits10;
   OS << "\t\"time." << Name << '.' << R.Name << suffix
      << "\": " << format("%.*e", max_digits10 - 1, Value);

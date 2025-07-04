@@ -4,8 +4,8 @@
 define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) inreg %output, <3 x i32> %LocalInvocationId) {
 ; GCN-LABEL: if_then:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:  ; %bb.1: ; %.bb0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
@@ -60,8 +60,8 @@ define amdgpu_cs void @if_then(ptr addrspace(8) inreg %input, ptr addrspace(8) i
 define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrspace(8) inreg %output, <3 x i32> %LocalInvocationId) {
 ; GCN-LABEL: if_else_vgpr_opt:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:  ; %bb.1: ; %.bb0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1

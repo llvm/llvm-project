@@ -97,7 +97,7 @@ define i32 @addorlow16(i32 %x) {
 ; RV64-LABEL: addorlow16:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
+; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    addw a0, a0, a1
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
@@ -107,19 +107,12 @@ define i32 @addorlow16(i32 %x) {
 }
 
 define i32 @andxorlow16(i32 %x) {
-; RV32-LABEL: andxorlow16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a1, 16
-; RV32-NEXT:    addi a1, a1, -1
-; RV32-NEXT:    andn a0, a1, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: andxorlow16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, -1
-; RV64-NEXT:    andn a0, a1, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: andxorlow16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    andn a0, a1, a0
+; CHECK-NEXT:    ret
   %and = and i32 %x, 65535
   %xor = xor i32 %and, 65535
   ret i32 %xor
@@ -137,13 +130,13 @@ define void @orarray100(ptr %a) {
 ; RV32-NEXT:    addi a1, a1, 1
 ; RV32-NEXT:    add a4, a0, a4
 ; RV32-NEXT:    lw a5, 0(a4)
+; RV32-NEXT:    seqz a6, a1
+; RV32-NEXT:    add a2, a2, a6
+; RV32-NEXT:    xori a6, a1, 100
 ; RV32-NEXT:    orn a5, a5, a3
+; RV32-NEXT:    or a6, a6, a2
 ; RV32-NEXT:    sw a5, 0(a4)
-; RV32-NEXT:    seqz a4, a1
-; RV32-NEXT:    xori a5, a1, 100
-; RV32-NEXT:    add a2, a2, a4
-; RV32-NEXT:    or a5, a5, a2
-; RV32-NEXT:    bnez a5, .LBB8_1
+; RV32-NEXT:    bnez a6, .LBB8_1
 ; RV32-NEXT:  # %bb.2: # %for.cond.cleanup
 ; RV32-NEXT:    ret
 ;
@@ -180,16 +173,16 @@ for.body:
 define void @orarray3(ptr %a) {
 ; CHECK-LABEL: orarray3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1048560
-; CHECK-NEXT:    lw a2, 0(a0)
-; CHECK-NEXT:    lw a3, 4(a0)
-; CHECK-NEXT:    lw a4, 8(a0)
-; CHECK-NEXT:    orn a2, a2, a1
-; CHECK-NEXT:    orn a3, a3, a1
-; CHECK-NEXT:    orn a1, a4, a1
-; CHECK-NEXT:    sw a2, 0(a0)
-; CHECK-NEXT:    sw a3, 4(a0)
-; CHECK-NEXT:    sw a1, 8(a0)
+; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    lw a2, 4(a0)
+; CHECK-NEXT:    lw a3, 8(a0)
+; CHECK-NEXT:    lui a4, 1048560
+; CHECK-NEXT:    orn a1, a1, a4
+; CHECK-NEXT:    orn a2, a2, a4
+; CHECK-NEXT:    orn a3, a3, a4
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    sw a2, 4(a0)
+; CHECK-NEXT:    sw a3, 8(a0)
 ; CHECK-NEXT:    ret
   %1 = load i32, ptr %a, align 4
   %or = or i32 %1, 65535
@@ -325,7 +318,7 @@ define i64 @andnofff(i64 %x) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lui a2, 1044480
 ; RV32-NEXT:    and a1, a1, a2
-; RV32-NEXT:    andi a0, a0, 255
+; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: andnofff:
@@ -384,4 +377,42 @@ define i64 @xornofff(i64 %x) {
 ; RV64-NEXT:    ret
   %xor = xor i64 %x, -1152921504606846721
   ret i64 %xor
+}
+
+define i64 @and_or_or(i64 %x, i64 %y) {
+; RV32-LABEL: and_or_or:
+; RV32:       # %bb.0:
+; RV32-NEXT:    ori a1, a1, -2
+; RV32-NEXT:    ori a0, a0, 1
+; RV32-NEXT:    ori a3, a3, 1
+; RV32-NEXT:    ori a2, a2, -2
+; RV32-NEXT:    and a0, a0, a2
+; RV32-NEXT:    and a1, a1, a3
+; RV32-NEXT:    ret
+;
+; NOZBS64-LABEL: and_or_or:
+; NOZBS64:       # %bb.0:
+; NOZBS64-NEXT:    li a2, -1
+; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    addi a2, a2, 1
+; NOZBS64-NEXT:    or a0, a0, a2
+; NOZBS64-NEXT:    li a2, 1
+; NOZBS64-NEXT:    slli a2, a2, 33
+; NOZBS64-NEXT:    addi a2, a2, -2
+; NOZBS64-NEXT:    or a1, a1, a2
+; NOZBS64-NEXT:    and a0, a0, a1
+; NOZBS64-NEXT:    ret
+;
+; ZBS64-LABEL: and_or_or:
+; ZBS64:       # %bb.0:
+; ZBS64-NEXT:    bseti a2, zero, 33
+; ZBS64-NEXT:    addi a2, a2, -2
+; ZBS64-NEXT:    orn a0, a0, a2
+; ZBS64-NEXT:    or a1, a1, a2
+; ZBS64-NEXT:    and a0, a0, a1
+; ZBS64-NEXT:    ret
+  %a = or i64 %x, -8589934591
+  %b = or i64 %y, 8589934590
+  %c = and i64 %a, %b
+  ret i64 %c
 }

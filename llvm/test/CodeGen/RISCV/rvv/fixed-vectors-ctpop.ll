@@ -167,14 +167,16 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ;
 ; RV64-LABEL: ctpop_v2i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -183,8 +185,6 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    add a3, a3, a5
 ; RV64-NEXT:    slli a5, a4, 32
 ; RV64-NEXT:    add a4, a4, a5
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vsrl.vi v9, v8, 1
 ; RV64-NEXT:    vand.vx v9, v9, a1
 ; RV64-NEXT:    vsub.vv v8, v8, v9
@@ -473,14 +473,16 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ;
 ; RV64-LABEL: ctpop_v4i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    lui a1, 349525
 ; RV64-NEXT:    lui a2, 209715
 ; RV64-NEXT:    lui a3, 61681
 ; RV64-NEXT:    lui a4, 4112
-; RV64-NEXT:    addiw a1, a1, 1365
-; RV64-NEXT:    addiw a2, a2, 819
-; RV64-NEXT:    addiw a3, a3, -241
-; RV64-NEXT:    addiw a4, a4, 257
+; RV64-NEXT:    addi a1, a1, 1365
+; RV64-NEXT:    addi a2, a2, 819
+; RV64-NEXT:    addi a3, a3, -241
+; RV64-NEXT:    addi a4, a4, 257
 ; RV64-NEXT:    slli a5, a1, 32
 ; RV64-NEXT:    add a1, a1, a5
 ; RV64-NEXT:    slli a5, a2, 32
@@ -489,8 +491,6 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; RV64-NEXT:    add a3, a3, a5
 ; RV64-NEXT:    slli a5, a4, 32
 ; RV64-NEXT:    add a4, a4, a5
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vsrl.vi v10, v8, 1
 ; RV64-NEXT:    vand.vx v10, v10, a1
 ; RV64-NEXT:    vsub.vv v8, v8, v10

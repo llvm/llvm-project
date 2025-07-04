@@ -274,6 +274,6 @@ Error ReOptimizeLayer::handleRemoveResources(JITDylib &JD, ResourceKey K) {
 void ReOptimizeLayer::handleTransferResources(JITDylib &JD, ResourceKey DstK,
                                               ResourceKey SrcK) {
   std::unique_lock<std::mutex> Lock(Mutex);
-  MUResources[DstK].insert(MUResources[SrcK].begin(), MUResources[SrcK].end());
+  MUResources[DstK].insert_range(MUResources[SrcK]);
   MUResources.erase(SrcK);
 }

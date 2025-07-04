@@ -47,12 +47,6 @@ SmallVector<Range, 8> getOrCreateRanges(OffsetSizeAndStrideOpInterface op,
 #include "mlir/Dialect/Tensor/IR/TensorOpsDialect.h.inc"
 
 //===----------------------------------------------------------------------===//
-// Tensor Interfaces
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tensor/IR/TensorInterfaces.h.inc"
-
-//===----------------------------------------------------------------------===//
 // Tensor Dialect Operations
 //===----------------------------------------------------------------------===//
 
@@ -181,6 +175,10 @@ void populateFoldConstantExtractSlicePatterns(
           // constant tensor, which would affect the compile time and storage.
           return false;
         });
+
+/// Patterns to fold extracts of a collapse_shaped tensor to an extract of the
+/// source tensor.
+void populateFoldCollapseExtractPatterns(RewritePatternSet &patterns);
 
 } // namespace tensor
 } // namespace mlir

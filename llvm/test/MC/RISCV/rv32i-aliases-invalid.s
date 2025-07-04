@@ -32,7 +32,7 @@ lla x1, %hi(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a bare sy
 lla x1, %lo(1234) # CHECK: :[[@LINE]]:9: error: operand either must be a bare symbol name or an immediate integer in the range [-2147483648, 4294967295]
 lla x1, %hi(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a bare symbol name or an immediate integer in the range [-2147483648, 4294967295]
 lla x1, %lo(foo) # CHECK: :[[@LINE]]:9: error: operand either must be a bare symbol name or an immediate integer in the range [-2147483648, 4294967295]
-lla a2, foo@plt # CHECK: :[[@LINE]]:17: error: '@plt' operand not valid for instruction
+lla a2, foo@plt # CHECK: :[[@LINE]]:12: error: unexpected token
 
 negw x1, x2   # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 sext.w x3, x4 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}

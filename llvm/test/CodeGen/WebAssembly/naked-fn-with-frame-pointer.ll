@@ -9,13 +9,11 @@ define dso_local void @naked() naked "frame-pointer"="all" {
 ; CHECK-32:         .functype naked () -> ()
 ; CHECK-32-NEXT:  # %bb.0:
 ; CHECK-32-NEXT:    call main
-; CHECK-32-NEXT:    unreachable
 ;
 ; CHECK-64-LABEL: naked:
 ; CHECK-64:         .functype naked () -> ()
 ; CHECK-64-NEXT:  # %bb.0:
 ; CHECK-64-NEXT:    call main
-; CHECK-64-NEXT:    unreachable
   call void @main()
   unreachable
 }

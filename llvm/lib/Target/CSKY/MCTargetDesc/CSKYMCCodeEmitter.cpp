@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYMCCodeEmitter.h"
-#include "CSKYMCExpr.h"
+#include "CSKYMCAsmInfo.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -293,28 +293,27 @@ unsigned CSKYMCCodeEmitter::getImmJMPIX(const MCInst &MI, unsigned Idx,
 }
 
 MCFixupKind CSKYMCCodeEmitter::getTargetFixup(const MCExpr *Expr) const {
-  const CSKYMCExpr *CSKYExpr = cast<CSKYMCExpr>(Expr);
-
-  switch (CSKYExpr->getKind()) {
+  const auto *CSKYExpr = cast<MCSpecifierExpr>(Expr);
+  switch (CSKYExpr->getSpecifier()) {
   default:
     llvm_unreachable("Unhandled fixup kind!");
-  case CSKYMCExpr::VK_CSKY_ADDR:
+  case CSKY::S_ADDR:
     return MCFixupKind(CSKY::fixup_csky_addr32);
-  case CSKYMCExpr::VK_CSKY_ADDR_HI16:
+  case CSKY::S_ADDR_HI16:
     return MCFixupKind(CSKY::fixup_csky_addr_hi16);
-  case CSKYMCExpr::VK_CSKY_ADDR_LO16:
+  case CSKY::S_ADDR_LO16:
     return MCFixupKind(CSKY::fixup_csky_addr_lo16);
-  case CSKYMCExpr::VK_CSKY_GOT:
+  case CSKY::S_GOT:
     return MCFixupKind(CSKY::fixup_csky_got32);
-  case CSKYMCExpr::VK_CSKY_GOTPC:
+  case CSKY::S_GOTPC:
     return MCFixupKind(CSKY::fixup_csky_gotpc);
-  case CSKYMCExpr::VK_CSKY_GOTOFF:
+  case CSKY::S_GOTOFF:
     return MCFixupKind(CSKY::fixup_csky_gotoff);
-  case CSKYMCExpr::VK_CSKY_PLT:
+  case CSKY::S_PLT:
     return MCFixupKind(CSKY::fixup_csky_plt32);
-  case CSKYMCExpr::VK_CSKY_PLT_IMM18_BY4:
+  case CSKY::S_PLT_IMM18_BY4:
     return MCFixupKind(CSKY::fixup_csky_plt_imm18_scale4);
-  case CSKYMCExpr::VK_CSKY_GOT_IMM18_BY4:
+  case CSKY::S_GOT_IMM18_BY4:
     return MCFixupKind(CSKY::fixup_csky_got_imm18_scale4);
   }
 }

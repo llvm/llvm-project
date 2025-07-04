@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,7 +11,7 @@ from lldbsuite.test import lldbutil
 class StdUniquePtrDataFormatterTestCase(TestBase):
     @add_test_categories(["libstdcxx"])
     @expectedFailureAll(bugnumber="llvm.org/pr50861", compiler="gcc")
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_with_run_command(self):
         self.build()
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
@@ -31,15 +30,16 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
         self.assertTrue(frame.IsValid())
 
         self.expect("frame variable nup", substrs=["nup = nullptr"])
-        self.expect("frame variable iup", substrs=["iup = 0x"])
-        self.expect("frame variable sup", substrs=["sup = 0x"])
+        self.expect("frame variable iup", substrs=["iup = 123"])
+        self.expect("frame variable sup", substrs=['sup = "foobar"'])
 
         self.expect("frame variable ndp", substrs=["ndp = nullptr"])
         self.expect(
-            "frame variable idp", substrs=["idp = 0x", "deleter = ", "a = 1", "b = 2"]
+            "frame variable idp", substrs=["idp = 456", "deleter = ", "a = 1", "b = 2"]
         )
         self.expect(
-            "frame variable sdp", substrs=["sdp = 0x", "deleter = ", "a = 3", "b = 4"]
+            "frame variable sdp",
+            substrs=['sdp = "baz"', "deleter = ", "a = 3", "b = 4"],
         )
 
         self.assertEqual(
@@ -89,7 +89,7 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
     @skipIfWindows  # libstdcpp not ported to Windows
     @skipIfDarwin  # doesn't compile on Darwin
     @skipIfwatchOS  # libstdcpp not ported to watchos
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     @add_test_categories(["libstdcxx"])
     def test_recursive_unique_ptr(self):
         # Tests that LLDB can handle when we have a loop in the unique_ptr
@@ -106,13 +106,13 @@ class StdUniquePtrDataFormatterTestCase(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-        self.expect("frame variable f1->fp", substrs=["fp = 0x"])
+        self.expect("frame variable f1->fp", substrs=["fp = Foo @ 0x"])
         self.expect(
-            "frame variable --ptr-depth=1 f1->fp", substrs=["data = 2", "fp = 0x"]
+            "frame variable --ptr-depth=1 f1->fp", substrs=["data = 2", "fp = Foo @ 0x"]
         )
         self.expect(
             "frame variable --ptr-depth=2 f1->fp",
-            substrs=["data = 2", "fp = 0x", "data = 1"],
+            substrs=["data = 2", "fp = Foo @ 0x", "data = 1"],
         )
 
         frame = self.frame()

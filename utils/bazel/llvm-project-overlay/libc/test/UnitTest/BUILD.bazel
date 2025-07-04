@@ -4,13 +4,13 @@
 
 # LLVM libc unittest library.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
 
-libc_support_library(
+libc_test_library(
     name = "test_logger",
     srcs = ["TestLogger.cpp"],
     hdrs = ["TestLogger.h"],
@@ -29,7 +29,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "LibcUnitTest",
     srcs = [
         "BazelFilePath.cpp",
@@ -49,6 +49,7 @@ libc_support_library(
         "//libc:__support_c_string",
         "//libc:__support_cpp_bit",
         "//libc:__support_cpp_bitset",
+        "//libc:__support_cpp_limits",
         "//libc:__support_cpp_span",
         "//libc:__support_cpp_string",
         "//libc:__support_cpp_string_view",
@@ -57,6 +58,7 @@ libc_support_library(
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_fpbits_str",
         "//libc:__support_fputil_rounding_mode",
+        "//libc:__support_libc_errno",
         "//libc:__support_macros_config",
         "//libc:__support_macros_properties_architectures",
         "//libc:__support_macros_properties_types",
@@ -70,9 +72,25 @@ libc_support_library(
         "//libc:llvm_libc_macros_stdfix_macros",
         "//llvm:Support",
     ],
+    # Force linking in this library's `main()` to surface
+    # a duplicate symbol error if a test defines its own main.
+    alwayslink = True,
 )
 
-libc_support_library(
+libc_test_library(
+    name = "errno_test_helpers",
+    hdrs = [
+        "ErrnoCheckingTest.h",
+    ],
+    deps = [
+        ":LibcUnitTest",
+        "//libc:__support_libc_errno",
+        "//libc:__support_macros_config",
+        "//libc:errno",
+    ],
+)
+
+libc_test_library(
     name = "fp_test_helpers",
     srcs = [
         "FEnvSafeTest.cpp",
@@ -107,7 +125,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "memory_matcher",
     srcs = [
         "MemoryMatcher.cpp",
@@ -126,7 +144,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "printf_matcher",
     srcs = [
         "PrintfMatcher.cpp",
@@ -143,7 +161,7 @@ libc_support_library(
     ],
 )
 
-libc_support_library(
+libc_test_library(
     name = "string_utils",
     hdrs = [
         "StringUtils.h",

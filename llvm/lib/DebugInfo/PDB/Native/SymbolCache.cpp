@@ -627,14 +627,15 @@ SymbolCache::getSourceFileById(SymIndexId FileId) const {
 
 SymIndexId
 SymbolCache::getOrCreateSourceFile(const FileChecksumEntry &Checksums) const {
-  auto Iter = FileNameOffsetToId.find(Checksums.FileNameOffset);
-  if (Iter != FileNameOffsetToId.end())
+  auto [Iter, Inserted] =
+      FileNameOffsetToId.try_emplace(Checksums.FileNameOffset);
+  if (!Inserted)
     return Iter->second;
 
   SymIndexId Id = SourceFiles.size();
   auto SrcFile = std::make_unique<NativeSourceFile>(Session, Id, Checksums);
   SourceFiles.push_back(std::move(SrcFile));
-  FileNameOffsetToId[Checksums.FileNameOffset] = Id;
+  Iter->second = Id;
   return Id;
 }
 

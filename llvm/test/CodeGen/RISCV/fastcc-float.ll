@@ -23,9 +23,6 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-NEXT:    fmv.w.x fa2, a2
 ; CHECK-NEXT:    fmv.w.x fa3, a3
 ; CHECK-NEXT:    fmv.w.x fa4, a4
-; CHECK-NEXT:    fmv.w.x fa5, a5
-; CHECK-NEXT:    fmv.w.x fa6, a6
-; CHECK-NEXT:    fmv.w.x fa7, a7
 ; CHECK-NEXT:    flw ft0, 64(sp)
 ; CHECK-NEXT:    flw ft1, 68(sp)
 ; CHECK-NEXT:    flw ft2, 72(sp)
@@ -50,6 +47,9 @@ define float @caller(<32 x float> %A) nounwind {
 ; CHECK-NEXT:    flw fs9, 148(sp)
 ; CHECK-NEXT:    flw fs10, 152(sp)
 ; CHECK-NEXT:    flw fs11, 156(sp)
+; CHECK-NEXT:    fmv.w.x fa5, a5
+; CHECK-NEXT:    fmv.w.x fa6, a6
+; CHECK-NEXT:    fmv.w.x fa7, a7
 ; CHECK-NEXT:    fsw fs8, 32(sp)
 ; CHECK-NEXT:    fsw fs9, 36(sp)
 ; CHECK-NEXT:    fsw fs10, 40(sp)

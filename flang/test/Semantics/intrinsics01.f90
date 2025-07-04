@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Check for semantic errors for DREAL, DIMAG, DCONJG intrinsics
 

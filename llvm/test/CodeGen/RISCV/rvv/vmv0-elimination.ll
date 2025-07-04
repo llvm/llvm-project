@@ -16,10 +16,10 @@ define <vscale x 1 x i64> @between_inline_asm(<vscale x 1 x i64> %a, <vscale x 1
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vadd.vv v9, v8, v9, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v11
-; CHECK-NEXT:    vs1r.v v9, (a0)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vadd.vv v8, v8, v0
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vs1r.v v9, (a0)
 ; CHECK-NEXT:    ret
   %asm1 = tail call <vscale x 1 x i64> asm "vadd.vv $0, $1, $2", "={v0},^vr,^vr"(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b)
   %x = call <vscale x 1 x i64> @llvm.riscv.vadd.mask(<vscale x 1 x i64> poison, <vscale x 1 x i64> %a, <vscale x 1 x i64> %b, <vscale x 1 x i1> %mask, i64 -1, i64 0)

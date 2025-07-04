@@ -67,18 +67,20 @@ extern "C" {
 extern int __attribute__((weak)) __llvm_write_custom_profile(
     const char *Target, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd);
+    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
+    const uint64_t *VersionOverride);
 }
-
 /// PGO profiling data extracted from a GPU device
 struct GPUProfGlobals {
   SmallVector<int64_t> Counts;
   SmallVector<__llvm_profile_data> Data;
   SmallVector<uint8_t> NamesData;
   Triple TargetTriple;
+  uint64_t Version = INSTR_PROF_RAW_VERSION;
 
   void dump() const;
   Error write() const;
+  bool empty() const;
 };
 
 /// Subclass of GlobalTy that holds the memory for a global of \p Ty.
@@ -190,9 +192,6 @@ public:
     return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
                                           /*D2H=*/false);
   }
-
-  /// Checks whether a given image contains profiling globals.
-  bool hasProfilingGlobals(GenericDeviceTy &Device, DeviceImageTy &Image);
 
   /// Reads profiling data from a GPU image to supplied profdata struct.
   /// Iterates through the image symbol table and stores global values

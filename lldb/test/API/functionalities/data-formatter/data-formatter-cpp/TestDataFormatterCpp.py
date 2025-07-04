@@ -62,7 +62,7 @@ class CppDataFormatterTestCase(TestBase):
         self.expect(
             "frame variable",
             patterns=[
-                "\(Speed\) SPILookHex = 0x[0-9a-f]+"  # Speed should look hex-ish now.
+                r"\(Speed\) SPILookHex = 0x[0-9a-f]+"  # Speed should look hex-ish now.
             ],
         )
 
@@ -71,14 +71,14 @@ class CppDataFormatterTestCase(TestBase):
             self.expect(
                 "frame variable",
                 patterns=[
-                    "\(SignalMask\) SMILookHex = 0x[0-9a-f]+"  # SignalMask should look hex-ish now.
+                    r"\(SignalMask\) SMILookHex = 0x[0-9a-f]+"  # SignalMask should look hex-ish now.
                 ],
             )
             self.expect(
                 "frame variable",
                 matching=False,
                 patterns=[
-                    "\(Type4\) T4ILookChar = 0x[0-9a-f]+"  # Type4 should NOT look hex-ish now.
+                    r"\(Type4\) T4ILookChar = 0x[0-9a-f]+"  # Type4 should NOT look hex-ish now.
                 ],
             )
 

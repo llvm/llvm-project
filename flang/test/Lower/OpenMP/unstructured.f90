@@ -72,7 +72,7 @@ end
 ! CHECK:     omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_2:.*]] : !fir.ref<i32>) {
 ! CHECK:       omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
 ! CHECK:         %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         fir.store %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#1 : !fir.ref<i32>
+! CHECK:         hlfir.assign %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:         @_FortranAioBeginExternalListOutput
 ! CHECK:         %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
 ! CHECK:         @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
@@ -83,7 +83,7 @@ end
 ! CHECK:     omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_1:.*]] : !fir.ref<i32>) {
 ! CHECK:       omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
 ! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         fir.store %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
+! CHECK:         hlfir.assign %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:         br ^bb1
 ! CHECK:       ^bb2:  // 2 preds: ^bb1, ^bb5
 ! CHECK:         cond_br %{{[0-9]*}}, ^bb3, ^bb6
@@ -128,7 +128,7 @@ end
 ! CHECK:         omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:      omp.loop_nest (%[[ARG:.*]]) : {{.*}} {
 ! CHECK:             %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "_QFss4Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:             fir.store %[[ARG]] to %[[OMP_LOOP_J_DECL]]#1 : !fir.ref<i32>
+! CHECK:             hlfir.assign %[[ARG]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:             %[[COND:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}}
 ! CHECK:             %[[COND_XOR:.*]] = arith.xori %[[COND]], %{{.*}}
 ! CHECK:             fir.if %[[COND_XOR]] {

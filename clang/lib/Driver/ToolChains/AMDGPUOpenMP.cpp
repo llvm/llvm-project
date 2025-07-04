@@ -8,20 +8,11 @@
 
 #include "AMDGPUOpenMP.h"
 #include "AMDGPU.h"
-#include "CommonArgs.h"
-#include "ROCm.h"
-#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatAdapters.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -49,7 +40,8 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");
 
-  if (DriverArgs.hasArg(options::OPT_nogpulib))
+  if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                          true))
     return;
 
   for (auto BCFile : getDeviceLibs(DriverArgs)) {
@@ -141,7 +133,7 @@ AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 AMDGPUOpenMPToolChain::getDeviceLibs(const llvm::opt::ArgList &Args) const {
-  if (Args.hasArg(options::OPT_nogpulib))
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     return {};
 
   StringRef GpuArch = getProcessorFromTargetID(

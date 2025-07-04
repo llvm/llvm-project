@@ -234,8 +234,8 @@ define i32 @fcmp_one(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    frflags a0
 ; CHECKIF-NEXT:    flt.s a2, fa1, fa0
 ; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    or a0, a2, a1
+; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_one:
@@ -247,8 +247,9 @@ define i32 @fcmp_one(float %a, float %b) nounwind strictfp {
 ; CHECKIZFINX-NEXT:    frflags a2
 ; CHECKIZFINX-NEXT:    flt.s a4, a1, a0
 ; CHECKIZFINX-NEXT:    fsflags a2
+; CHECKIZFINX-NEXT:    or a2, a4, a3
 ; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    or a0, a4, a3
+; CHECKIZFINX-NEXT:    mv a0, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_one:
@@ -352,9 +353,9 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    frflags a0
 ; CHECKIF-NEXT:    flt.s a2, fa1, fa0
 ; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    or a1, a2, a1
 ; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ueq:
@@ -366,9 +367,10 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; CHECKIZFINX-NEXT:    frflags a2
 ; CHECKIZFINX-NEXT:    flt.s a4, a1, a0
 ; CHECKIZFINX-NEXT:    fsflags a2
-; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
 ; CHECKIZFINX-NEXT:    or a3, a4, a3
-; CHECKIZFINX-NEXT:    xori a0, a3, 1
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
+; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
+; CHECKIZFINX-NEXT:    mv a0, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ueq:
@@ -380,13 +382,13 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    call __eqsf2
-; RV32I-NEXT:    seqz s2, a0
+; RV32I-NEXT:    call __unordsf2
+; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __unordsf2
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    or a0, a0, s2
+; RV32I-NEXT:    call __eqsf2
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    or a0, s2, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -403,13 +405,13 @@ define i32 @fcmp_ueq(float %a, float %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqsf2
-; RV64I-NEXT:    seqz s2, a0
+; RV64I-NEXT:    call __unordsf2
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unordsf2
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    or a0, a0, s2
+; RV64I-NEXT:    call __eqsf2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    or a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -427,8 +429,8 @@ define i32 @fcmp_ugt(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    frflags a0
 ; CHECKIF-NEXT:    fle.s a1, fa0, fa1
 ; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ugt:
@@ -436,8 +438,9 @@ define i32 @fcmp_ugt(float %a, float %b) nounwind strictfp {
 ; CHECKIZFINX-NEXT:    frflags a2
 ; CHECKIZFINX-NEXT:    fle.s a3, a0, a1
 ; CHECKIZFINX-NEXT:    fsflags a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
 ; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    xori a0, a3, 1
+; CHECKIZFINX-NEXT:    mv a0, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ugt:
@@ -470,8 +473,8 @@ define i32 @fcmp_uge(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    frflags a0
 ; CHECKIF-NEXT:    flt.s a1, fa0, fa1
 ; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    feq.s zero, fa0, fa1
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_uge:
@@ -479,8 +482,9 @@ define i32 @fcmp_uge(float %a, float %b) nounwind strictfp {
 ; CHECKIZFINX-NEXT:    frflags a2
 ; CHECKIZFINX-NEXT:    flt.s a3, a0, a1
 ; CHECKIZFINX-NEXT:    fsflags a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
 ; CHECKIZFINX-NEXT:    feq.s zero, a0, a1
-; CHECKIZFINX-NEXT:    xori a0, a3, 1
+; CHECKIZFINX-NEXT:    mv a0, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_uge:
@@ -515,8 +519,8 @@ define i32 @fcmp_ult(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    frflags a0
 ; CHECKIF-NEXT:    fle.s a1, fa1, fa0
 ; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ult:
@@ -524,8 +528,9 @@ define i32 @fcmp_ult(float %a, float %b) nounwind strictfp {
 ; CHECKIZFINX-NEXT:    frflags a2
 ; CHECKIZFINX-NEXT:    fle.s a3, a1, a0
 ; CHECKIZFINX-NEXT:    fsflags a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
 ; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    xori a0, a3, 1
+; CHECKIZFINX-NEXT:    mv a0, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ult:
@@ -558,8 +563,8 @@ define i32 @fcmp_ule(float %a, float %b) nounwind strictfp {
 ; CHECKIF-NEXT:    frflags a0
 ; CHECKIF-NEXT:    flt.s a1, fa1, fa0
 ; CHECKIF-NEXT:    fsflags a0
-; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    xori a0, a1, 1
+; CHECKIF-NEXT:    feq.s zero, fa1, fa0
 ; CHECKIF-NEXT:    ret
 ;
 ; CHECKIZFINX-LABEL: fcmp_ule:
@@ -567,8 +572,9 @@ define i32 @fcmp_ule(float %a, float %b) nounwind strictfp {
 ; CHECKIZFINX-NEXT:    frflags a2
 ; CHECKIZFINX-NEXT:    flt.s a3, a1, a0
 ; CHECKIZFINX-NEXT:    fsflags a2
+; CHECKIZFINX-NEXT:    xori a2, a3, 1
 ; CHECKIZFINX-NEXT:    feq.s zero, a1, a0
-; CHECKIZFINX-NEXT:    xori a0, a3, 1
+; CHECKIZFINX-NEXT:    mv a0, a2
 ; CHECKIZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: fcmp_ule:
@@ -985,13 +991,13 @@ define i32 @fcmps_ueq(float %a, float %b) nounwind strictfp {
 ; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a1
 ; RV32I-NEXT:    mv s1, a0
-; RV32I-NEXT:    call __eqsf2
-; RV32I-NEXT:    seqz s2, a0
+; RV32I-NEXT:    call __unordsf2
+; RV32I-NEXT:    mv s2, a0
 ; RV32I-NEXT:    mv a0, s1
 ; RV32I-NEXT:    mv a1, s0
-; RV32I-NEXT:    call __unordsf2
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    or a0, a0, s2
+; RV32I-NEXT:    call __eqsf2
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    or a0, s2, a0
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
@@ -1008,13 +1014,13 @@ define i32 @fcmps_ueq(float %a, float %b) nounwind strictfp {
 ; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a1
 ; RV64I-NEXT:    mv s1, a0
-; RV64I-NEXT:    call __eqsf2
-; RV64I-NEXT:    seqz s2, a0
+; RV64I-NEXT:    call __unordsf2
+; RV64I-NEXT:    mv s2, a0
 ; RV64I-NEXT:    mv a0, s1
 ; RV64I-NEXT:    mv a1, s0
-; RV64I-NEXT:    call __unordsf2
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    or a0, a0, s2
+; RV64I-NEXT:    call __eqsf2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    or a0, s2, a0
 ; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload

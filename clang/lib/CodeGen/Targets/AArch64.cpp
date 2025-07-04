@@ -136,13 +136,15 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
-    if (!FD)
+    auto *Fn = dyn_cast<llvm::Function>(GV);
+    if (!Fn)
       return;
 
+    const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
     TargetInfo::BranchProtectionInfo BPI(CGM.getLangOpts());
 
-    if (const auto *TA = FD->getAttr<TargetAttr>()) {
+    if (FD && FD->hasAttr<TargetAttr>()) {
+      const auto *TA = FD->getAttr<TargetAttr>();
       ParsedTargetAttr Attr =
           CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
@@ -152,8 +154,8 @@ public:
         assert(Error.empty());
       }
     }
-    auto *Fn = cast<llvm::Function>(GV);
     setBranchProtectionFnAttributes(BPI, *Fn);
+    setPointerAuthFnAttributes(CGM.getCodeGenOpts().PointerAuth, *Fn);
   }
 
   bool isScalarizableAsmOperand(CodeGen::CodeGenFunction &CGF,
@@ -327,7 +329,8 @@ ABIArgInfo AArch64ABIInfo::coerceIllegalVector(QualType Ty, unsigned &NSRN,
     return ABIArgInfo::getDirect(ResType);
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
@@ -335,7 +338,8 @@ ABIArgInfo AArch64ABIInfo::coerceAndExpandPureScalableAggregate(
     const SmallVectorImpl<llvm::Type *> &UnpaddedCoerceToSeq, unsigned &NSRN,
     unsigned &NPRN) const {
   if (!IsNamedArg || NSRN + NVec > 8 || NPRN + NPred > 4)
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+    return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                   /*ByVal=*/false);
   NSRN += NVec;
   NPRN += NPred;
 
@@ -375,7 +379,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
 
     if (const auto *EIT = Ty->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(Ty, false);
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       false);
 
     if (Ty->isVectorType())
       NSRN = std::min(NSRN + 1, 8u);
@@ -411,8 +416,9 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   // Structures with either a non-trivial destructor or a non-trivial
   // copy constructor are always indirect.
   if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, getCXXABI())) {
-    return getNaturalAlignIndirect(Ty, /*ByVal=*/RAA ==
-                                     CGCXXABI::RAA_DirectInMemory);
+    return getNaturalAlignIndirect(
+        Ty, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+        /*ByVal=*/RAA == CGCXXABI::RAA_DirectInMemory);
   }
 
   // Empty records:
@@ -481,15 +487,45 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    auto ContainsOnlyPointers = [&](const auto &Self, QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
+      const RecordType *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return false;
+      const RecordDecl *RD = RT->getDecl();
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!Self(Self, I.getType()))
+            return false;
+      }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        if (FDTy->isArrayType())
+          FDTy = getContext().getBaseElementType(FDTy);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64 &&
+                !FDTy->getPointeeType().hasAddressSpace()) ||
+               Self(Self, FDTy);
+      });
+    };
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
+    if ((Size == 64 || Size == 128) && Alignment == 64 &&
+        ContainsOnlyPointers(ContainsOnlyPointers, Ty))
+      BaseTy = llvm::PointerType::getUnqual(getVMContext());
     return ABIArgInfo::getDirect(
         Size == Alignment ? BaseTy
                           : llvm::ArrayType::get(BaseTy, Size / Alignment));
   }
 
-  return getNaturalAlignIndirect(Ty, /*ByVal=*/false);
+  return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                 /*ByVal=*/false);
 }
 
 ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
@@ -507,7 +543,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
   // Large vector types should be returned via memory.
   if (RetTy->isVectorType() && getContext().getTypeSize(RetTy) > 128)
-    return getNaturalAlignIndirect(RetTy);
+    return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 
   if (!passAsAggregateType(RetTy)) {
     // Treat an enum type as its underlying type.
@@ -516,7 +552,8 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
 
     if (const auto *EIT = RetTy->getAs<BitIntType>())
       if (EIT->getNumBits() > 128)
-        return getNaturalAlignIndirect(RetTy);
+        return getNaturalAlignIndirect(RetTy,
+                                       getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(RetTy) && isDarwinPCS()
                 ? ABIArgInfo::getExtend(RetTy)
@@ -575,7 +612,7 @@ ABIArgInfo AArch64ABIInfo::classifyReturnType(QualType RetTy,
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Size));
   }
 
-  return getNaturalAlignIndirect(RetTy);
+  return getNaturalAlignIndirect(RetTy, getDataLayout().getAllocaAddrSpace());
 }
 
 /// isIllegalVectorType - check whether the vector type is legal for AArch64.
@@ -693,7 +730,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
       return false;
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltCoerceToSeq, std::back_inserter(CoerceToSeq));
+      llvm::append_range(CoerceToSeq, EltCoerceToSeq);
 
     NVec += NElt * NV;
     NPred += NElt * NP;
@@ -757,7 +794,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
     return false;
 
   bool isPredicate;
-  switch (Ty->getAs<BuiltinType>()->getKind()) {
+  switch (Ty->castAs<BuiltinType>()->getKind()) {
 #define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
     isPredicate = false;                                                       \
@@ -766,8 +803,7 @@ bool AArch64ABIInfo::passAsPureScalableType(
   case BuiltinType::Id:                                                        \
     isPredicate = true;                                                        \
     break;
-#define SVE_TYPE(Name, Id, SingletonId)
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
   default:
     return false;
   }
@@ -812,7 +848,7 @@ void AArch64ABIInfo::flattenType(
     flattenType(AT->getElementType(), EltFlattened);
 
     for (uint64_t I = 0; I < NElt; ++I)
-      llvm::copy(EltFlattened, std::back_inserter(Flattened));
+      llvm::append_range(Flattened, EltFlattened);
     return;
   }
 

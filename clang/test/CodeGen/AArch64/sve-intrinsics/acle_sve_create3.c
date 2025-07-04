@@ -230,3 +230,22 @@ svfloat64x3_t test_svcreate3_f64(svfloat64_t x0, svfloat64_t x1, svfloat64_t x2)
 {
   return SVE_ACLE_FUNC(svcreate3,_f64,,)(x0, x1, x2);
 }
+
+// CHECK-LABEL: @test_svcreate3_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[X0:%.*]], 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[X1:%.*]], 1
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[X2:%.*]], 2
+// CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]]
+//
+// CPP-CHECK-LABEL: @_Z18test_svcreate3_mf8u13__SVMfloat8_tS_S_(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } poison, <vscale x 16 x i8> [[X0:%.*]], 0
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP0]], <vscale x 16 x i8> [[X1:%.*]], 1
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP1]], <vscale x 16 x i8> [[X2:%.*]], 2
+// CPP-CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP2]]
+//
+svmfloat8x3_t test_svcreate3_mf8(svmfloat8_t x0, svmfloat8_t x1, svmfloat8_t x2) ATTR
+{
+  return SVE_ACLE_FUNC(svcreate3,_mf8,,)(x0, x1, x2);
+}

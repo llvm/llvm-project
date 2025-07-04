@@ -18,7 +18,7 @@ endmacro()
 
 function(add_flang_library name)
   set(options SHARED STATIC INSTALL_WITH_TOOLCHAIN)
-  set(multiValueArgs ADDITIONAL_HEADERS CLANG_LIBS MLIR_LIBS)
+  set(multiValueArgs ADDITIONAL_HEADERS CLANG_LIBS MLIR_LIBS MLIR_DEPS)
   cmake_parse_arguments(ARG
     "${options}"
     ""
@@ -69,6 +69,9 @@ function(add_flang_library name)
   if (ARG_MLIR_LIBS)
     mlir_target_link_libraries(${name} PRIVATE ${ARG_MLIR_LIBS})
   endif()
+  if (ARG_MLIR_DEPS AND NOT FLANG_STANDALONE_BUILD)
+    add_dependencies(${name} ${ARG_MLIR_DEPS})
+  endif()
 
   if (TARGET ${name})
 
@@ -91,6 +94,9 @@ function(add_flang_library name)
       set_property(GLOBAL APPEND PROPERTY FLANG_LIBS ${name})
     endif()
     set_property(GLOBAL APPEND PROPERTY FLANG_EXPORTS ${name})
+    if (FLANG_PARALLEL_COMPILE_JOBS)
+      set_property(TARGET ${name} PROPERTY JOB_POOL_COMPILE flang_compile_job_pool)
+    endif()
   else()
     # Add empty "phony" target
     add_custom_target(${name})

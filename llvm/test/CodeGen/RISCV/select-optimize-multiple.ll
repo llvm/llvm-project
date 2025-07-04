@@ -96,24 +96,24 @@ entry:
 define i64 @cmov64(i1 %a, i64 %b, i64 %c) nounwind {
 ; RV32I-LABEL: cmov64:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    bnez a0, .LBB2_2
+; RV32I-NEXT:    andi a5, a0, 1
+; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    bnez a5, .LBB2_2
 ; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    mv a1, a3
+; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:  .LBB2_2: # %entry
-; RV32I-NEXT:    mv a0, a1
 ; RV32I-NEXT:    mv a1, a2
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: cmov64:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    bnez a0, .LBB2_2
-; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    mv a1, a2
-; RV64I-NEXT:  .LBB2_2: # %entry
+; RV64I-NEXT:    andi a3, a0, 1
 ; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    bnez a3, .LBB2_2
+; RV64I-NEXT:  # %bb.1: # %entry
+; RV64I-NEXT:    mv a0, a2
+; RV64I-NEXT:  .LBB2_2: # %entry
 ; RV64I-NEXT:    ret
 entry:
   %cond = select i1 %a, i64 %b, i64 %c
@@ -161,13 +161,13 @@ define i128 @cmov128(i1 %a, i128 %b, i128 %c) nounwind {
 ;
 ; RV64I-LABEL: cmov128:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    bnez a0, .LBB3_2
+; RV64I-NEXT:    andi a5, a0, 1
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    bnez a5, .LBB3_2
 ; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    mv a1, a3
+; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:    mv a2, a4
 ; RV64I-NEXT:  .LBB3_2: # %entry
-; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:    mv a1, a2
 ; RV64I-NEXT:    ret
 entry:
@@ -221,9 +221,9 @@ define double @cmovdouble(i1 %a, double %b, double %c) nounwind {
 ; RV32I-NEXT:    sw a3, 8(sp)
 ; RV32I-NEXT:    sw a4, 12(sp)
 ; RV32I-NEXT:    fld fa5, 8(sp)
+; RV32I-NEXT:    andi a0, a0, 1
 ; RV32I-NEXT:    sw a1, 8(sp)
 ; RV32I-NEXT:    sw a2, 12(sp)
-; RV32I-NEXT:    andi a0, a0, 1
 ; RV32I-NEXT:    beqz a0, .LBB5_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    fld fa5, 8(sp)
@@ -301,8 +301,8 @@ entry:
 define i32 @cmovdiffcc(i1 %a, i1 %b, i32 %c, i32 %d, i32 %e, i32 %f) nounwind {
 ; RV32I-LABEL: cmovdiffcc:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    andi a1, a1, 1
 ; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    andi a1, a1, 1
 ; RV32I-NEXT:    beqz a0, .LBB7_3
 ; RV32I-NEXT:  # %bb.1: # %entry
 ; RV32I-NEXT:    beqz a1, .LBB7_4
@@ -318,8 +318,8 @@ define i32 @cmovdiffcc(i1 %a, i1 %b, i32 %c, i32 %d, i32 %e, i32 %f) nounwind {
 ;
 ; RV64I-LABEL: cmovdiffcc:
 ; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    andi a1, a1, 1
 ; RV64I-NEXT:    andi a0, a0, 1
+; RV64I-NEXT:    andi a1, a1, 1
 ; RV64I-NEXT:    beqz a0, .LBB7_3
 ; RV64I-NEXT:  # %bb.1: # %entry
 ; RV64I-NEXT:    beqz a1, .LBB7_4
@@ -337,46 +337,4 @@ entry:
   %cond2 = select i1 %b, i32 %e, i32 %f
   %ret = add i32 %cond1, %cond2
   ret i32 %ret
-}
-
-define float @CascadedSelect(float noundef %a) {
-; RV32I-LABEL: CascadedSelect:
-; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    fmv.w.x fa5, a0
-; RV32I-NEXT:    lui a0, 260096
-; RV32I-NEXT:    fmv.w.x fa4, a0
-; RV32I-NEXT:    flt.s a0, fa4, fa5
-; RV32I-NEXT:    bnez a0, .LBB8_3
-; RV32I-NEXT:  # %bb.1: # %entry
-; RV32I-NEXT:    fmv.w.x fa4, zero
-; RV32I-NEXT:    flt.s a0, fa5, fa4
-; RV32I-NEXT:    bnez a0, .LBB8_3
-; RV32I-NEXT:  # %bb.2: # %entry
-; RV32I-NEXT:    fmv.s fa4, fa5
-; RV32I-NEXT:  .LBB8_3: # %entry
-; RV32I-NEXT:    fmv.x.w a0, fa4
-; RV32I-NEXT:    ret
-;
-; RV64I-LABEL: CascadedSelect:
-; RV64I:       # %bb.0: # %entry
-; RV64I-NEXT:    fmv.w.x fa5, a0
-; RV64I-NEXT:    lui a0, 260096
-; RV64I-NEXT:    fmv.w.x fa4, a0
-; RV64I-NEXT:    flt.s a0, fa4, fa5
-; RV64I-NEXT:    bnez a0, .LBB8_3
-; RV64I-NEXT:  # %bb.1: # %entry
-; RV64I-NEXT:    fmv.w.x fa4, zero
-; RV64I-NEXT:    flt.s a0, fa5, fa4
-; RV64I-NEXT:    bnez a0, .LBB8_3
-; RV64I-NEXT:  # %bb.2: # %entry
-; RV64I-NEXT:    fmv.s fa4, fa5
-; RV64I-NEXT:  .LBB8_3: # %entry
-; RV64I-NEXT:    fmv.x.w a0, fa4
-; RV64I-NEXT:    ret
-entry:
-  %cmp = fcmp ogt float %a, 1.000000e+00
-  %cmp1 = fcmp olt float %a, 0.000000e+00
-  %.a = select i1 %cmp1, float 0.000000e+00, float %a
-  %retval.0 = select i1 %cmp, float 1.000000e+00, float %.a
-  ret float %retval.0
 }

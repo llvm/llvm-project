@@ -6,15 +6,24 @@
 
 # CHECK: Found 1 function(s).
 # CHECK: foo: [input.o[0x0-0xe), input.o[0x14-0x1c)]
-# CHECK-NEXT: input.o[0x0]: cmpl   $0x0, %edi
-# CHECK-NEXT: input.o[0x3]: je     0x14
-# CHECK-NEXT: input.o[0x5]: jmp    0x7
-# CHECK-NEXT: input.o[0x7]: callq  0xe
-# CHECK-NEXT: input.o[0xc]: jmp    0x1b
+# CHECK-NEXT: input.o[0x0]: callq  0xe
+# CHECK-NEXT: input.o[0x5]: jmp    0x1b
+# CHECK-NEXT: input.o[0x7]: cmpl   $0x0, %edi
+# CHECK-NEXT: input.o[0xa]: je     0x14
+# CHECK-NEXT: input.o[0xc]: jmp    0x0
 # CHECK-EMPTY:
 # CHECK-NEXT: input.o[0x14]: callq  0x19
 # CHECK-NEXT: input.o[0x19]: jmp    0x1b
 # CHECK-NEXT: input.o[0x1b]: retq
+## Testing the GetRangeIndexForBlockAddress API. "ffffffff" indicates that
+## the address does not belong to any range.
+# CHECK-NEXT: offset 0x00 => index 0
+# CHECK-NEXT: offset 0x0c => index 0
+# CHECK-NEXT: offset 0x0e => index ffffffff
+# CHECK-NEXT: offset 0x13 => index ffffffff
+# CHECK-NEXT: offset 0x14 => index 1
+# CHECK-NEXT: offset 0x1b => index 1
+# CHECK-NEXT: offset 0x1c => index ffffffff
 
 
 #--- script.py
@@ -28,6 +37,10 @@ def __lldb_init_module(debugger, internal_dict):
     fn = ctx.function
     print(f"{fn.name}: {fn.GetRanges()}")
     print(fn.GetInstructions(target))
+    text = fn.addr.section
+    for offset in [0x00, 0x0c, 0x0e, 0x13, 0x14, 0x1b, 0x1c]:
+      idx = fn.block.GetRangeIndexForBlockAddress(lldb.SBAddress(text, offset))
+      print(f"offset 0x{offset:02x} => index {idx:x}")
 
 #--- input.s
 # An example of a function which has been split into two parts. Roughly
@@ -40,6 +53,14 @@ def __lldb_init_module(debugger, internal_dict):
         .text
 
         .type   foo,@function
+foo.__part.1:
+        .cfi_startproc
+        callq   bar
+        jmp     foo.__part.3
+.Lfoo.__part.1_end:
+        .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
+        .cfi_endproc
+
 foo:
         .cfi_startproc
         cmpl    $0, %edi
@@ -48,14 +69,6 @@ foo:
         .cfi_endproc
 .Lfoo_end:
         .size   foo, .Lfoo_end-foo
-
-foo.__part.1:
-        .cfi_startproc
-        callq   bar
-        jmp     foo.__part.3
-.Lfoo.__part.1_end:
-        .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
-        .cfi_endproc
 
 bar:
         .cfi_startproc

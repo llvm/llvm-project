@@ -11,7 +11,8 @@ foreach(entry ${entries})
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/libunwind) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/test-suite) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/openmp) AND
-       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/cross-project-tests))
+       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/cross-project-tests) AND
+       (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/flang-rt))
       get_filename_component(entry_name "${entry}" NAME)
       add_llvm_external_project(${entry_name})
     endif()
@@ -37,6 +38,7 @@ if(${LLVM_BUILD_RUNTIME})
   if(NOT LLVM_BUILD_EXTERNAL_COMPILER_RT)
     add_llvm_external_project(compiler-rt)
   endif()
+  add_llvm_external_project(flang-rt)
 endif()
 
 add_llvm_external_project(dragonegg)
