@@ -14,6 +14,7 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
+#include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
@@ -29,6 +30,9 @@ public:
   bool isFull();
   bool isEmpty();
   bool isValidState();
+
+  size_t sizeAsUTF32();
+  size_t sizeAsUTF8();
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
