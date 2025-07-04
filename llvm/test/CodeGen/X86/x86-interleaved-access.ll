@@ -478,7 +478,8 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(ptr %ptr) nounwind {
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm3[4,5,6,7]
 ; AVX1-NEXT:    vpcmpeqb %xmm0, %xmm5, %xmm0
 ; AVX1-NEXT:    vpxor %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_load_vf16_i8_stride4:
@@ -517,7 +518,8 @@ define <16 x i1> @interleaved_load_vf16_i8_stride4(ptr %ptr) nounwind {
 ; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
 ; AVX2-NEXT:    vpcmpeqb %xmm0, %xmm3, %xmm0
 ; AVX2-NEXT:    vpxor %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -633,7 +635,9 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(ptr %ptr) nounwind {
 ; AVX1-NEXT:    vinsertf128 $1, %xmm9, %ymm8, %ymm2
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vxorps %ymm0, %ymm2, %ymm0
-; AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vcmptrueps %ymm1, %ymm1, %ymm1
+; AVX1-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleaved_load_vf32_i8_stride4:
@@ -698,7 +702,8 @@ define <32 x i1> @interleaved_load_vf32_i8_stride4(ptr %ptr) nounwind {
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm3[4,5,6,7]
 ; AVX2-NEXT:    vpcmpeqb %ymm0, %ymm6, %ymm0
 ; AVX2-NEXT:    vpxor %ymm0, %ymm5, %ymm0
-; AVX2-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
+; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: interleaved_load_vf32_i8_stride4:
