@@ -2054,13 +2054,7 @@ def FeatureISAVersion12_Generic: FeatureSet<
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
-
-  // Opt-in into non-templated code for instruction decoder.
-  let DecoderOptions = [
-    InstrDecoderOption<"uint32_t", [32]>,
-    InstrDecoderOption<"uint64_t", [64]>,
-    InstrDecoderOption<"DecoderUInt128", [96, 128]>,
-  ];
+  let GenerateTemplatedDecoder = false;
 }
 
 def AMDGPUAsmParser : AsmParser {

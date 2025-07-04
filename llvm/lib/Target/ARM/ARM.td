@@ -38,7 +38,9 @@ include "ARMSchedule.td"
 //===----------------------------------------------------------------------===//
 
 include "ARMInstrInfo.td"
-def ARMInstrInfo : InstrInfo;
+def ARMInstrInfo : InstrInfo {
+  let GenerateTemplatedDecoder = false;
+}
 
 //===----------------------------------------------------------------------===//
 // ARM schedules

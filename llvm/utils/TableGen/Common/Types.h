@@ -10,12 +10,17 @@
 #define LLVM_UTILS_TABLEGEN_COMMON_TYPES_H
 
 #include <cstdint>
+#include <string>
 
 namespace llvm {
 /// Returns the smallest unsigned integer type that can hold the given range.
 /// MaxSize indicates the largest size of integer to consider (in bits) and only
 /// supports values of at least 32.
 const char *getMinimalTypeForRange(uint64_t Range, unsigned MaxSize = 64);
+
+/// Returns the smallest unsigned integer type that can hold integers of the
+/// given bit width. For bit width > 64, returns appropriate bitset type.
+std::string getTypeForBitwidth(unsigned Bitwidth);
 } // namespace llvm
 
 #endif // LLVM_UTILS_TABLEGEN_COMMON_TYPES_H
