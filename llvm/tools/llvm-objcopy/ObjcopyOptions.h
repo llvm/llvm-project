@@ -51,6 +51,11 @@ parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
 Expected<DriverConfig>
 parseStripOptions(ArrayRef<const char *> ArgsArr,
                   llvm::function_ref<Error(Error)> ErrorCallback);
+
+// parseDumpURI reads a URI as a string, and extracts the raw memory into a
+// code object file named from the URI string given
+static void parseDumpOffloadBundle(StringRef URI);
+
 } // namespace objcopy
 } // namespace llvm
 
