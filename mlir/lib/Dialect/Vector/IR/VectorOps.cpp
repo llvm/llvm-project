@@ -3334,29 +3334,6 @@ public:
     return success();
   }
 };
-
-/// Pattern to rewrite a InsertOp(InsertOp) to InsertOp.
-class InsertInsertToInsert final : public OpRewritePattern<InsertOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(InsertOp op,
-                                PatternRewriter &rewriter) const override {
-    auto destInsert = op.getDest().getDefiningOp<InsertOp>();
-    if (!destInsert)
-      return failure();
-
-    if (!destInsert->hasOneUse())
-      return failure();
-
-    if (op.getMixedPosition() != destInsert.getMixedPosition())
-      return failure();
-
-    rewriter.replaceOpWithNewOp<InsertOp>(
-        op, op.getValueToStore(), destInsert.getDest(), op.getMixedPosition());
-    return success();
-  }
-};
-
 } // namespace
 
 static Attribute
@@ -3409,13 +3386,26 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   return newAttr;
 }
 
-void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                           MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
-              InsertInsertToInsert>(context);
+/// Folder to replace the `dest` operand of the insert op with the root dest of
+/// the insert op use chain.
+static Value foldInsertUseChain(InsertOp insertOp) {
+  auto destInsert = insertOp.getDest().getDefiningOp<InsertOp>();
+  if (!destInsert)
+    return {};
+
+  if (insertOp.getMixedPosition() != destInsert.getMixedPosition())
+    return {};
+
+  insertOp.setOperand(1, destInsert.getDest());
+  return insertOp.getResult();
 }
 
-OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
+void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
+}
+
+OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
   // Do not create constants with more than `vectorSizeFoldThreashold` elements,
   // unless the source vector constant has a single use.
   constexpr int64_t vectorSizeFoldThreshold = 256;
@@ -3430,6 +3420,8 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   SmallVector<Value> operands = {getValueToStore(), getDest()};
   auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
 
+  if (auto res = foldInsertUseChain(*this))
+    return res;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
