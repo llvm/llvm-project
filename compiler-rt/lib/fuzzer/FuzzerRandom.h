@@ -11,7 +11,7 @@
 #ifndef LLVM_FUZZER_RANDOM_H
 #define LLVM_FUZZER_RANDOM_H
 
-#include <math.h>
+#include <cmath>
 #include <random>
 
 namespace fuzzer {
