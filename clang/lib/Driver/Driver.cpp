@@ -192,7 +192,12 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath) {
 
   StringRef ConfiguredResourceDir(CLANG_RESOURCE_DIR);
   if (!ConfiguredResourceDir.empty()) {
-    llvm::sys::path::append(P, ConfiguredResourceDir);
+    // FIXME: We should fix the behavior of llvm::sys::path::append so we don't
+    // need to check for absolute paths here.
+    if (llvm::sys::path::is_absolute(ConfiguredResourceDir))
+      P = ConfiguredResourceDir;
+    else
+      llvm::sys::path::append(P, ConfiguredResourceDir);
   } else {
     // On Windows, libclang.dll is in bin/.
     // On non-Windows, libclang.so/.dylib is in lib/.
@@ -1085,19 +1090,16 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       llvm::Triple AMDTriple("amdgcn-amd-amdhsa");
       llvm::Triple NVPTXTriple("nvptx64-nvidia-cuda");
 
-      for (StringRef A :
+      for (StringRef Arch :
            C.getInputArgs().getAllArgValues(options::OPT_offload_arch_EQ)) {
-        for (StringRef Arch : llvm::split(A, ",")) {
-          bool IsNVPTX = IsNVIDIAOffloadArch(
-              StringToOffloadArch(getProcessorFromTargetID(NVPTXTriple, Arch)));
-          bool IsAMDGPU = IsAMDOffloadArch(
-              StringToOffloadArch(getProcessorFromTargetID(AMDTriple, Arch)));
-          if (!IsNVPTX && !IsAMDGPU && !Arch.empty() &&
-              !Arch.equals_insensitive("native")) {
-            Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch)
-                << Arch;
-            return;
-          }
+        bool IsNVPTX = IsNVIDIAOffloadArch(
+            StringToOffloadArch(getProcessorFromTargetID(NVPTXTriple, Arch)));
+        bool IsAMDGPU = IsAMDOffloadArch(
+            StringToOffloadArch(getProcessorFromTargetID(AMDTriple, Arch)));
+        if (!IsNVPTX && !IsAMDGPU && !Arch.empty() &&
+            !Arch.equals_insensitive("native")) {
+          Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch) << Arch;
+          return;
         }
       }
 
@@ -4787,7 +4789,7 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     // Add or remove the seen architectures in order of appearance. If an
     // invalid architecture is given we simply exit.
     if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
-      for (StringRef Arch : llvm::split(Arg->getValue(), ",")) {
+      for (StringRef Arch : Arg->getValues()) {
         if (Arch == "native" || Arch.empty()) {
           auto GPUsOrErr = TC->getSystemGPUArchs(Args);
           if (!GPUsOrErr) {
