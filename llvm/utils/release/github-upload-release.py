@@ -45,9 +45,26 @@ def create_release(repo, release, tag=None, name=None, message=None):
         # Note that these lines are not length limited because if we do so, GitHub
         # assumes that should be how it is laid out on the page. We want GitHub to
         # do the reflowing for us instead.
+        #
+        # Once all binaries are built, the HTML comments in the text below will be
+        # used to swap the placeholder text with the now valid download links.
         message = dedent(
             """\
-LLVM {release} Release
+## LLVM {release} Release
+
+<!-- DOWNLOAD_LINKS_BEGIN
+**Linux:**
+* [x86_64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-X64.tar.xz.jsonl))
+* [Arm64](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-Linux-ARM64.tar.xz.jsonl))
+
+**macOS:**
+* [Apple Silicon](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz) (ARM64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-ARM64.tar.xz.jsonl))
+* [Intel](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz) (x86-64) ([signature](https://github.com/llvm/llvm-project/releases/download/llvmorg-{release}/LLVM-{release}-macOS-X64.tar.xz.jsonl))
+DOWNLOAD_LINKS_END -->
+
+Download links for Linux and macOS will appear above once builds complete. <!-- DOWNLOAD_LINKS_PLACEHOLDER -->
+
+For Windows, and any other variants of platform and architecture, check the full list of release packages at the bottom of this release page.
 
 ## Package Types
 
@@ -95,6 +112,29 @@ def upload_files(repo, release, files):
         print("Done")
 
 
+def uncomment_download_links(repo, release):
+    release = repo.get_release("llvmorg-{}".format(release))
+
+    new_message = []
+    to_remove = [
+        "DOWNLOAD_LINKS_BEGIN",
+        "DOWNLOAD_LINKS_END",
+        "DOWNLOAD_LINKS_PLACEHOLDER",
+    ]
+    for line in release.message.splitlines():
+        for comment in to_remove:
+            if comment in line:
+                continue
+        new_message.append(line)
+
+    release.update_release(
+        name=release.name,
+        message="\n".join(new_message),
+        draft=release.draft,
+        prerelease=release.prerelease,
+    )
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "command", type=str, choices=["create", "upload", "check-permissions"]
@@ -137,3 +177,5 @@ if args.command == "create":
     create_release(llvm_repo, args.release)
 if args.command == "upload":
     upload_files(llvm_repo, args.release, args.files)
+if args.commands == "uncomment_download_links":
+    uncomment_download_links(llvm_repo, args.release)
