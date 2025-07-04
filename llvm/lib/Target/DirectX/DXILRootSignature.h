@@ -10,6 +10,8 @@
 ///       Root Signatures.
 ///
 //===----------------------------------------------------------------------===//
+#ifndef LLVM_LIB_TARGET_DIRECTX_DXILROOTSIGNATURE_H
+#define LLVM_LIB_TARGET_DIRECTX_DXILROOTSIGNATURE_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
@@ -45,7 +47,7 @@ public:
   RootSignatureBindingInfo() = default;
   RootSignatureBindingInfo(
       SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> Map)
-      : FuncToRsMap(Map) {};
+      : FuncToRsMap(Map){};
 
   iterator find(const Function *F) { return FuncToRsMap.find(F); }
 
@@ -109,3 +111,4 @@ public:
 
 } // namespace dxil
 } // namespace llvm
+#endif
