@@ -2060,17 +2060,29 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
                  : BinaryOperator::CreateNot(Builder.CreateAnd(Xor, B));
     }
 
+    bool Op0OneUse = Op0->hasOneUse();
+
     // (~(A | B) & C) | ~(A | C) --> ~((B & C) | A)
     // (~(A & B) | C) & ~(A & C) --> ~((B | C) & A)
-    if (match(Op1, m_OneUse(m_Not(m_OneUse(
-                       m_c_BinOp(Opcode, m_Specific(A), m_Specific(C)))))))
+    if (!Op0OneUse && match(Op1, m_OneUse(m_Not(m_OneUse(m_c_BinOp(
+                                     Opcode, m_Specific(A), m_Specific(C)))))))
+      return BinaryOperator::CreateNot(Builder.CreateBinOp(
+          Opcode, Builder.CreateBinOp(FlippedOpcode, B, C), A));
+
+    if (Op0OneUse &&
+        match(Op1, m_Not(m_c_BinOp(Opcode, m_Specific(A), m_Specific(C)))))
       return BinaryOperator::CreateNot(Builder.CreateBinOp(
           Opcode, Builder.CreateBinOp(FlippedOpcode, B, C), A));
 
     // (~(A | B) & C) | ~(B | C) --> ~((A & C) | B)
     // (~(A & B) | C) & ~(B & C) --> ~((A | C) & B)
-    if (match(Op1, m_OneUse(m_Not(m_OneUse(
-                       m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)))))))
+    if (!Op0OneUse && match(Op1, m_OneUse(m_Not(m_OneUse(m_c_BinOp(
+                                     Opcode, m_Specific(B), m_Specific(C)))))))
+      return BinaryOperator::CreateNot(Builder.CreateBinOp(
+          Opcode, Builder.CreateBinOp(FlippedOpcode, A, C), B));
+
+    if (Op0OneUse &&
+        match(Op1, m_Not(m_c_BinOp(Opcode, m_Specific(B), m_Specific(C)))))
       return BinaryOperator::CreateNot(Builder.CreateBinOp(
           Opcode, Builder.CreateBinOp(FlippedOpcode, A, C), B));
 
@@ -2078,7 +2090,7 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
     // Note, the pattern with swapped and/or is not handled because the
     // result is more undefined than a source:
     // (~(A & B) | C) & ~(C & (A ^ B)) --> (A ^ B ^ C) | ~(A | C) is invalid.
-    if (Opcode == Instruction::Or && Op0->hasOneUse() &&
+    if (Opcode == Instruction::Or && Op0OneUse &&
         match(Op1, m_OneUse(m_Not(m_CombineAnd(
                        m_Value(Y),
                        m_c_BinOp(Opcode, m_Specific(C),
