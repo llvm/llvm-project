@@ -689,35 +689,39 @@ define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y,
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
 ; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    pandn %xmm1, %xmm3
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    movdqa %xmm3, (%rdi)
-; SSE2-NEXT:    movdqa %xmm0, (%rsi)
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
+; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE2-NEXT:    pand %xmm1, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    movdqa %xmm4, (%rdi)
+; SSE2-NEXT:    movdqa %xmm3, (%rsi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    pandn %xmm1, %xmm3
-; SSE41-NEXT:    pand %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm3, (%rdi)
-; SSE41-NEXT:    movdqa %xmm0, (%rsi)
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm3
+; SSE41-NEXT:    pxor %xmm4, %xmm4
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE41-NEXT:    pand %xmm1, %xmm4
+; SSE41-NEXT:    pand %xmm2, %xmm3
+; SSE41-NEXT:    movdqa %xmm4, (%rdi)
+; SSE41-NEXT:    movdqa %xmm3, (%rsi)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
-; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
-; AVX-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm3
+; AVX-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; AVX-NEXT:    vpcmpeqd %xmm4, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpand %xmm2, %xmm3, %xmm1
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX-NEXT:    vmovdqa %xmm1, (%rsi)
 ; AVX-NEXT:    retq
   %and = and <4 x i32> %x, <i32 1, i32 2, i32 4, i32 8>
   %cond = icmp ne <4 x i32> %and, zeroinitializer
