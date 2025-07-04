@@ -15,6 +15,7 @@
 
 #include "Basic/CodeGenIntrinsics.h"
 #include "Common/CodeGenTarget.h"
+#include "Common/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -178,14 +179,9 @@ private:
     }
     if (const auto *BI = dyn_cast<BitsRecTy>(Field.RecType)) {
       unsigned NumBits = BI->getNumBits();
-      if (NumBits <= 8)
-        return "uint8_t";
-      if (NumBits <= 16)
-        return "uint16_t";
-      if (NumBits <= 32)
-        return "uint32_t";
       if (NumBits <= 64)
-        return "uint64_t";
+        return getTypeForBitwidth(NumBits);
+
       PrintFatalError(Index.Loc, Twine("In table '") + Table.Name +
                                      "' lookup method '" + Index.Name +
                                      "', key field '" + Field.Name +

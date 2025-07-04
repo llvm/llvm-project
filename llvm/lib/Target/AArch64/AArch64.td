@@ -40,7 +40,9 @@ include "AArch64SchedPredExynos.td"
 include "AArch64SchedPredNeoverse.td"
 include "AArch64Combine.td"
 
-def AArch64InstrInfo : InstrInfo;
+def AArch64InstrInfo : InstrInfo {
+  let GenerateTemplatedDecoder = false;
+}
 
 //===----------------------------------------------------------------------===//
 // Named operands for MRS/MSR/TLBI/...
