@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_EXPROBJC_H
 #define LLVM_CLANG_AST_EXPROBJC_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -1233,6 +1234,17 @@ public:
   /// It is also not always the declared return type of the method because
   /// of `instancetype` (in that case it's an expression type).
   QualType getCallReturnType(ASTContext &Ctx) const;
+
+  /// Returns the WarnUnusedResultAttr that is either declared on the called
+  /// method, or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached onto.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(ASTContext &Ctx) const;
+
+  /// Returns true if this message send should warn on unused results.
+  bool hasUnusedResultAttr(ASTContext &Ctx) const {
+    return getUnusedResultAttr(Ctx).second != nullptr;
+  }
 
   /// Source range of the receiver.
   SourceRange getReceiverRange() const;
