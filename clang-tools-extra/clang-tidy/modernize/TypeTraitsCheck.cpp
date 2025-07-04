@@ -124,8 +124,9 @@ static const llvm::StringSet<> ValueTraits = {
     "variant_size",
 };
 
-// FIXME: Add tuple_element_t. This is a recursively-defined type trait, so
-// you'll have to ensure the check doesn't fire within the trait's definition.
+// FIXME: Add tuple_element_t and variant_alternative_t. These are recursively
+// defined type traits, so you'll have to ensure the check doesn't fire within
+// the trait's definition.
 static const llvm::StringSet<> TypeTraits = {
     "remove_cv",
     "remove_const",
@@ -154,7 +155,6 @@ static const llvm::StringSet<> TypeTraits = {
     "result_of",
     "invoke_result",
     "type_identity",
-    "variant_alternative",
     "compare_three_way_result",
     "common_comparison_category",
     "unwrap_ref_decay",

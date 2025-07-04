@@ -38,3 +38,10 @@ Options
     #define IS_SIGNED(T) std::is_signed<T>::value
 
   Defaults to `false`. 
+
+Limitations
+-----------
+
+Does not currently diagnose uses of ``std::chrono::is_clock``,
+``std::chrono::treat_as_floating_point``, ``std::tuple_element``,
+or ``std::variant_alternative``.
