@@ -1,12 +1,12 @@
 // RUN: fir-opt --lower-workdistribute %s | FileCheck %s
 
 // CHECK-LABEL:   func.func @x({{.*}})
-// CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
 // CHECK:           omp.teams {
 // CHECK:             omp.parallel {
 // CHECK:               omp.distribute {
 // CHECK:                 omp.wsloop {
 // CHECK:                   omp.loop_nest (%[[VAL_1:.*]]) : index = (%[[ARG0:.*]]) to (%[[ARG1:.*]]) inclusive step (%[[ARG2:.*]]) {
+// CHECK:                     %[[VAL_0:.*]] = arith.constant 0 : index
 // CHECK:                     fir.store %[[VAL_0]] to %[[ARG4:.*]] : !fir.ref<index>
 // CHECK:                     omp.yield
 // CHECK:                   }
