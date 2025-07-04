@@ -222,15 +222,9 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    if defined(_MSC_VER) && !defined(__MINGW32__)
 #      define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
 #    endif
-#    if (defined(_M_AMD64) || defined(__x86_64__)) || (defined(_M_ARM) || defined(__arm__))
-#      define _LIBCPP_HAS_BITSCAN64 1
-#    else
-#      define _LIBCPP_HAS_BITSCAN64 0
-#    endif
 #    define _LIBCPP_HAS_OPEN_WITH_WCHAR 1
 #  else
 #    define _LIBCPP_HAS_OPEN_WITH_WCHAR 0
-#    define _LIBCPP_HAS_BITSCAN64 0
 #  endif // defined(_WIN32)
 
 #  if defined(_AIX) && !defined(__64BIT__)
