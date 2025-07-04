@@ -1,6 +1,10 @@
-// RUN: %clang_tysan -O0 %s -o %t && %run %t 10 >%t.out.0 2>&1
+// RUN: %clang_tysan -O0 -mllvm -tysan-outline-instrumentation=false %s -o %t && %run %t 10 >%t.out.0 2>&1
 // RUN: FileCheck %s < %t.out.0
-// RUN: %clang_tysan -O2 %s -o %t && %run %t 10 >%t.out 2>&1
+// RUN: %clang_tysan -O2 -mllvm -tysan-outline-instrumentation=false %s -o %t && %run %t 10 >%t.out 2>&1
+// RUN: FileCheck %s < %t.out
+// RUN: %clang_tysan -O0 -mllvm -tysan-outline-instrumentation=true %s -o %t && %run %t 10 >%t.out.0 2>&1
+// RUN: FileCheck %s < %t.out.0
+// RUN: %clang_tysan -O2 -mllvm -tysan-outline-instrumentation=true %s -o %t && %run %t 10 >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
 
 #include <stdio.h>
