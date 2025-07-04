@@ -934,7 +934,7 @@ static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
 ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     const Module &M,
     std::function<BlockFrequencyInfo *(const Function &F)> GetBFICallback,
-    ProfileSummaryInfo *PSI,
+    ProfileSummaryInfo *PSI, const TargetMachine *TM,
     std::function<const StackSafetyInfo *(const Function &F)> GetSSICallback) {
   assert(PSI);
   bool EnableSplitLTOUnit = false;
@@ -978,7 +978,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
     // be listed on the llvm.used or llvm.compiler.used global and marked as
     // referenced from there.
     ModuleSymbolTable::CollectAsmSymbols(
-        M, [&](StringRef Name, object::BasicSymbolRef::Flags Flags) {
+        M,
+        [&](StringRef Name, object::BasicSymbolRef::Flags Flags) {
           // Symbols not marked as Weak or Global are local definitions.
           if (Flags & (object::BasicSymbolRef::SF_Weak |
                        object::BasicSymbolRef::SF_Global))
@@ -987,7 +988,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           GlobalValue *GV = M.getNamedValue(Name);
           if (!GV)
             return;
-          assert(GV->isDeclaration() && "Def in module asm already has definition");
+          assert(GV->isDeclaration() &&
+                 "Def in module asm already has definition");
           GlobalValueSummary::GVFlags GVFlags(
               GlobalValue::InternalLinkage, GlobalValue::DefaultVisibility,
               /* NotEligibleToImport = */ true,
@@ -1031,7 +1033,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                     SmallVector<ValueInfo, 0>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           }
-        });
+        },
+        TM);
   }
 
   bool IsThinLTO = true;
@@ -1144,8 +1147,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
 AnalysisKey ModuleSummaryIndexAnalysis::Key;
 
-ModuleSummaryIndex
-ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+ModuleSummaryIndex ModuleSummaryIndexAnalysis::run(Module &M,
+                                                   ModuleAnalysisManager &AM) {
   ProfileSummaryInfo &PSI = AM.getResult<ProfileSummaryAnalysis>(M);
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool NeedSSI = needsParamAccessSummary(M);
@@ -1155,7 +1158,7 @@ ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
         return &FAM.getResult<BlockFrequencyAnalysis>(
             *const_cast<Function *>(&F));
       },
-      &PSI,
+      &PSI, nullptr,
       [&FAM, NeedSSI](const Function &F) -> const StackSafetyInfo * {
         return NeedSSI ? &FAM.getResult<StackSafetyAnalysis>(
                              const_cast<Function &>(F))
@@ -1190,7 +1193,7 @@ bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
                          *const_cast<Function *>(&F))
                      .getBFI());
       },
-      PSI,
+      PSI, nullptr,
       [&](const Function &F) -> const StackSafetyInfo * {
         return NeedSSI ? &getAnalysis<StackSafetyInfoWrapperPass>(
                               const_cast<Function &>(F))
