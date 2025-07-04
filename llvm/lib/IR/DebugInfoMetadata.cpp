@@ -63,6 +63,10 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableIntrinsic *DVI)
     : DebugVariable(DVI->getVariable(), std::nullopt,
                     DVI->getDebugLoc()->getInlinedAt()) {}
 
+DebugVariableAggregate::DebugVariableAggregate(const DbgVariableRecord *DVR)
+    : DebugVariable(DVR->getVariable(), std::nullopt,
+                    DVR->getDebugLoc()->getInlinedAt()) {}
+
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
