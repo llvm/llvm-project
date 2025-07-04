@@ -5,14 +5,18 @@
 // RUN: mlir-opt %s -inline='op-pipelines=func.func(canonicalize,cse)' | FileCheck %s --check-prefix INLINE_SIMPLIFY
 
 // Inline a function that takes an argument.
-func.func @func_with_arg(%c : i32) -> i32 {
-  %b = arith.addi %c, %c : i32
-  return %b : i32
+func.func @func_with_arg(%arg0 : i32) -> i32 {
+  %b = arith.addi %arg0, %arg0 : i32
+  %c = builtin.unrealized_conversion_cast %b : i32 to i64
+  %d = builtin.unrealized_conversion_cast %c : i64 to i32
+  return %d : i32
 }
 
 // CHECK-LABEL: func @inline_with_arg
 func.func @inline_with_arg(%arg0 : i32) -> i32 {
   // CHECK-NEXT: arith.addi
+  // CHECK-NEXT: unrealized_conversion_cast
+  // CHECK-NEXT: unrealized_conversion_cast
   // CHECK-NEXT: return
 
   %0 = call @func_with_arg(%arg0) : (i32) -> i32
