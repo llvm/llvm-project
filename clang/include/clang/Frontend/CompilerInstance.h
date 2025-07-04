@@ -632,22 +632,17 @@ public:
 
   bool hasSummaryContext() { return (bool)SummaryCtx; }
 
-  SummaryContext &getSummaryContext() {
-    assert(SummaryCtx && "Compiler instance has no summary context!");
-    return *SummaryCtx;
-  }
+  SummaryContext *getSummaryContext() { return SummaryCtx.get(); }
 
   void createSummaryContext() { SummaryCtx.reset(new SummaryContext()); }
 
   bool hasSummaryConsumer() const { return (bool)TheSummaryConsumer; }
 
-  SummaryConsumer &getSummaryConsumer() const {
-    assert(TheSummaryConsumer &&
-           "Compiler instance has no code summary consumer!");
-    return *TheSummaryConsumer;
+  SummaryConsumer *getSummaryConsumer() const {
+    return TheSummaryConsumer.get();
   }
 
-  void createSummaryConsumer();
+  void createSummaryConsumer(FrontendInputFile Input);
 
   bool hasSummarySerializer() const { return (bool)TheSummarySerializer; }
 
@@ -786,8 +781,7 @@ public:
 
   /// Create the Sema object to be used for parsing.
   void createSema(TranslationUnitKind TUKind,
-                  CodeCompleteConsumer *CompletionConsumer,
-                  SummaryConsumer *SummaryConsumer = nullptr);
+                  CodeCompleteConsumer *CompletionConsumer);
 
   /// Create the frontend timer and replace any existing one with it.
   void createFrontendTimer();

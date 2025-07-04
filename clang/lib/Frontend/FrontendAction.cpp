@@ -966,16 +966,21 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     }
   }
 
-  bool ProcessesSummaries = !CI.getFrontendOpts().SummaryDirPath.empty() ||
-                            !CI.getFrontendOpts().SummaryFile.empty();
-  if (ProcessesSummaries && !CI.hasSummaryContext())
-    CI.createSummaryContext();
+  bool EmitSummaries = !CI.getFrontendOpts().EmitSummaryDir.empty();
+  bool ReadSummaries = !CI.getFrontendOpts().ReadSummaryDir.empty();
 
-  if (ProcessesSummaries && !CI.hasSummarySerializer())
-    CI.createSummarySerializer();
+  if (EmitSummaries || ReadSummaries) {
+    if (!CI.hasSummaryContext())
+      CI.createSummaryContext();
 
-  // FIXME: cleanup and lookup dirs recursively
-  if (!CI.getFrontendOpts().SummaryDirPath.empty()) {
+    if (!CI.hasSummarySerializer())
+      CI.createSummarySerializer();
+  }
+
+  if (EmitSummaries)
+    CI.createSummaryConsumer(getCurrentInput());
+
+  if (ReadSummaries) {
     // FIXME: this is a quick shortcut so large summaries are only evaluated
     // once, we should think about implementing it in a reasonable way...
     static const char *reducedCacheName =
@@ -984,7 +989,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         '.' + CI.getFrontendOpts().SummaryFormat;
 
     FileManager &FileMgr = CI.getFileManager();
-    StringRef SummaryDirPath = CI.getFrontendOpts().SummaryDirPath;
+    StringRef SummaryDirPath = CI.getFrontendOpts().ReadSummaryDir;
     if (auto SummaryDir = FileMgr.getOptionalDirectoryRef(SummaryDirPath)) {
       std::error_code EC;
       SmallString<128> DirNative;
@@ -1017,13 +1022,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         CI.getSummarySerializer().parse(buffer.str());
       }
 
-      CI.getSummaryContext().ReduceSummaries();
+      CI.getSummaryContext()->ReduceSummaries();
 
       if (!FS.exists(cacheFile)) {
         // FIXME: very quick printing of the summary to the cache file
         llvm::raw_fd_ostream fd(cacheFile, EC, llvm::sys::fs::CD_CreateAlways);
         CI.getSummarySerializer().serialize(
-            CI.getSummaryContext().FunctionSummaries, fd);
+            CI.getSummaryContext()->FunctionSummaries, fd);
       }
     }
   }
@@ -1399,17 +1404,8 @@ void ASTFrontendAction::ExecuteAction() {
   if (CI.hasCodeCompletionConsumer())
     CompletionConsumer = &CI.getCodeCompletionConsumer();
 
-  if (!CI.getFrontendOpts().SummaryFile.empty())
-    CI.createSummaryConsumer();
-
-  // Use a code summary consumer?
-  SummaryConsumer *SummaryConsumer = nullptr;
-  if (CI.hasSummaryConsumer())
-    SummaryConsumer = &CI.getSummaryConsumer();
-
   if (!CI.hasSema())
-    CI.createSema(getTranslationUnitKind(), CompletionConsumer,
-                  SummaryConsumer);
+    CI.createSema(getTranslationUnitKind(), CompletionConsumer);
 
   ParseAST(CI.getSema(), CI.getFrontendOpts().ShowStats,
            CI.getFrontendOpts().SkipFunctionBodies);

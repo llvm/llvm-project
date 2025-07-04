@@ -743,10 +743,15 @@ CompilerInstance::createCodeCompletionConsumer(Preprocessor &PP,
   return new PrintingCodeCompleteConsumer(Opts, OS);
 }
 
-void CompilerInstance::createSummaryConsumer() {
-  const std::string &SummaryFile = getFrontendOpts().SummaryFile;
-  if (SummaryFile.empty())
+void CompilerInstance::createSummaryConsumer(FrontendInputFile Input) {
+  StringRef EmitSummaryDir = getFrontendOpts().EmitSummaryDir;
+  if (EmitSummaryDir.empty() || !Input.isFile())
     return;
+
+  llvm::SmallString<32> SummaryFile = EmitSummaryDir;
+  llvm::sys::path::append(SummaryFile, Input.getFile());
+  llvm::sys::path::replace_extension(SummaryFile,
+                                     getFrontendOpts().SummaryFormat);
 
   std::error_code EC;
   SummaryOS.reset(new llvm::raw_fd_ostream(SummaryFile, EC,
@@ -768,21 +773,22 @@ void CompilerInstance::createSummarySerializer() {
   StringRef Format = getFrontendOpts().SummaryFormat;
   SummarySerializer *Serializer;
 
+  if (!hasSummaryContext())
+    createSummaryContext();
+
   if (Format == "yaml")
-    Serializer = new YAMLSummarySerializer(getSummaryContext());
+    Serializer = new YAMLSummarySerializer(*getSummaryContext());
   else
-    Serializer = new JSONSummarySerializer(getSummaryContext());
+    Serializer = new JSONSummarySerializer(*getSummaryContext());
 
   TheSummarySerializer.reset(Serializer);
 }
 
 void CompilerInstance::createSema(TranslationUnitKind TUKind,
-                                  CodeCompleteConsumer *CompletionConsumer,
-                                  SummaryConsumer *SummaryConsumer) {
+                                  CodeCompleteConsumer *CompletionConsumer) {
   TheSema.reset(new Sema(getPreprocessor(), getASTContext(), getASTConsumer(),
-                         TUKind, CompletionConsumer,
-                         hasSummaryContext() ? &getSummaryContext() : nullptr,
-                         SummaryConsumer));
+                         TUKind, CompletionConsumer, getSummaryContext(),
+                         getSummaryConsumer()));
 
   // Set up API notes.
   TheSema->APINotes.setSwiftVersion(getAPINotesOpts().SwiftVersion);

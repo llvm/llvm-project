@@ -1265,7 +1265,7 @@ public:
   SourceManager &SourceMgr;
   api_notes::APINotesManager APINotes;
   SummaryContext *SummaryCtx;
-  SummaryConsumer *SummaryCnsmr;
+  SummaryConsumer *TheSummaryConsumer;
 
   /// A RAII object to enter scope of a compound statement.
   class CompoundScopeRAII {

@@ -534,13 +534,13 @@ public:
   /// minimization hints.
   std::string DumpMinimizationHintsPath;
 
-  /// Filename to write summaries about function definitions to.
-  std::string SummaryFile;
+  /// The directory used to write summary files to.
+  std::string EmitSummaryDir;
 
-  /// The directory used to load summary files.
-  std::string SummaryDirPath;
+  /// The directory used to load summary files from.
+  std::string ReadSummaryDir;
 
-  /// The format of the emitted summary files.
+  /// The format of the summary files.
   std::string SummaryFormat;
 
 public:

@@ -5473,45 +5473,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_summaries_dir_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_summaries_dir_EQ);
 
-  std::string SummaryFormat = "json";
-  if (Arg *A = Args.getLastArg(options::OPT_summary_format_EQ)) {
-    // FIXME: This logic is duplicated, so something is clearly wrong here...
-    StringRef Format = A->getValue();
-    if (Format == "json" || Format == "yaml")
-      SummaryFormat = Format;
-
+  if (Arg *A = Args.getLastArg(options::OPT_summary_format_EQ))
     Args.AddLastArg(CmdArgs, options::OPT_summary_format_EQ);
-  }
 
-  // FIXME: This arg shouldn't exist...
   if (const Arg *A = Args.getLastArg(options::OPT_emit_summaries_EQ)) {
-    llvm::SmallString<10> input;
-    for (const auto &II : Inputs) {
-      if (!II.isFilename())
-        continue;
+    std::string EmitSummaryDir = ".";
 
-      input = II.getFilename();
-      break;
-    }
+    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
+        A->containsValue("obj") && FinalOutput)
+      EmitSummaryDir = llvm::sys::path::parent_path(FinalOutput->getValue());
 
-    if (!input.empty()) {
-      Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o);
-      StringRef filename = llvm::sys::path::filename(input);
-      llvm::SmallString<10> summaryFile;
-
-      if (A->containsValue("cwd") || !FinalOutput) {
-        summaryFile = filename;
-      } else if (A->containsValue("obj") && FinalOutput) {
-        summaryFile = llvm::sys::path::parent_path(FinalOutput->getValue());
-        llvm::sys::path::append(summaryFile, filename);
-      }
-
-      if (!summaryFile.empty()) {
-        llvm::sys::path::replace_extension(summaryFile, SummaryFormat);
-        CmdArgs.push_back(
-            Args.MakeArgString(Twine("-summary-file=") + summaryFile));
-      }
-    }
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-emit-summary-dir=") + EmitSummaryDir));
   }
 
   auto *MemProfArg = Args.getLastArg(options::OPT_fmemory_profile,

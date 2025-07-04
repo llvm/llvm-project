@@ -5944,9 +5944,9 @@ def save_temps : Flag<["-", "--"], "save-temps">, Flags<[NoXarchOption]>,
 def summaries_dir_EQ : Joined<["-", "--"], "summaries-dir=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Read summaries about different functions from this directory">,
-  MarshallingInfoString<FrontendOpts<"SummaryDirPath">>;
+  MarshallingInfoString<FrontendOpts<"ReadSummaryDir">>;
 def emit_summaries_EQ : Joined<["-", "--"], "emit-summaries=">, Flags<[NoXarchOption]>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption]>,
   HelpText<"Save summaries about the different functions. <arg> can be set to 'cwd' for "
   "current working directory, or 'obj' which will save temporary files in the "
   "same directory as the final output file">;
@@ -8164,10 +8164,9 @@ defm emit_llvm_uselists : BoolOption<"", "emit-llvm-uselists",
   NegFlag<SetFalse, [], [ClangOption], "Don't preserve">,
   BothFlags<[], [ClangOption], " order of LLVM use-lists when serializing">>;
 
-def summary_file : Joined<["-"], "summary-file=">,
-  HelpText<"Filename to write summaries about function definitions to">,
-  MarshallingInfoString<FrontendOpts<"SummaryFile">>;
-
+def emit_summary_dir : Joined<["-"], "emit-summary-dir=">,
+  HelpText<"Directory to write summaries about function definitions to">,
+  MarshallingInfoString<FrontendOpts<"EmitSummaryDir">>;
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">,
   MarshallingInfoFlag<FrontendOpts<"ShowStats">>;
