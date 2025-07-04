@@ -155,8 +155,7 @@ public:
 
   // Returns true when D is invalid and a diagnostic was produced
   bool
-  handleRootSignatureElements(ArrayRef<hlsl::RootSignatureElement> Elements,
-                              SourceLocation Loc);
+  handleRootSignatureElements(ArrayRef<hlsl::RootSignatureElement> Elements);
   void handleRootSignatureAttr(Decl *D, const ParsedAttr &AL);
   void handleNumThreadsAttr(Decl *D, const ParsedAttr &AL);
   void handleWaveSizeAttr(Decl *D, const ParsedAttr &AL);
