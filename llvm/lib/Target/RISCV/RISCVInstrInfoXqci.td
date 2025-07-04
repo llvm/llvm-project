@@ -1312,6 +1312,22 @@ class QCIMVCCIPat<CondCode Cond, QCIMVCCI Inst>
     : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$imm, GPRNoX0:$rs3)>;
 
+class QCILICCPat<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), simm5:$simm, (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm)>;
+
+class QCILICCPatInv<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), (XLenVT GPRNoX0:$rs2), Cond)), (XLenVT GPRNoX0:$rd), simm5:$simm),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm)>;
+
+class QCILICCIPat<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), simm5:$imm, Cond)), simm5:$simm, (XLenVT GPRNoX0:$rd)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$imm, simm5:$simm)>;
+
+class QCILICCIPatInv<CondCode Cond, QCILICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rd), simm5:$simm),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$imm, simm5:$simm)>;
+
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
@@ -1459,6 +1475,36 @@ def : QCIMVCCIPat <SETEQ,  QC_MVEQI>;
 def : QCIMVCCIPat <SETNE,  QC_MVNEI>;
 def : QCIMVCCIPat <SETLT,  QC_MVLTI>;
 def : QCIMVCCIPat <SETULT, QC_MVLTUI>;
+}
+
+let Predicates = [HasVendorXqcicli, IsRV32] in {
+def : QCILICCPat <SETEQ,  QC_LIEQ>;
+def : QCILICCPat <SETNE,  QC_LINE>;
+def : QCILICCPat <SETLT,  QC_LILT>;
+def : QCILICCPat <SETGE,  QC_LIGE>;
+def : QCILICCPat <SETULT, QC_LILTU>;
+def : QCILICCPat <SETUGE, QC_LIGEU>;
+
+def : QCILICCIPat <SETEQ,  QC_LIEQI>;
+def : QCILICCIPat <SETNE,  QC_LINEI>;
+def : QCILICCIPat <SETLT,  QC_LILTI>;
+def : QCILICCIPat <SETGE,  QC_LIGEI>;
+def : QCILICCIPat <SETULT, QC_LILTUI>;
+def : QCILICCIPat <SETUGE, QC_LIGEUI>;
+
+def : QCILICCPatInv <SETNE,  QC_LIEQ>;
+def : QCILICCPatInv <SETEQ,  QC_LINE>;
+def : QCILICCPatInv <SETGE,  QC_LILT>;
+def : QCILICCPatInv <SETLT,  QC_LIGE>;
+def : QCILICCPatInv <SETUGE, QC_LILTU>;
+def : QCILICCPatInv <SETULT, QC_LIGEU>;
+
+def : QCILICCIPatInv <SETNE,  QC_LIEQI>;
+def : QCILICCIPatInv <SETEQ,  QC_LINEI>;
+def : QCILICCIPatInv <SETGE,  QC_LILTI>;
+def : QCILICCIPatInv <SETLT,  QC_LIGEI>;
+def : QCILICCIPatInv <SETUGE, QC_LILTUI>;
+def : QCILICCIPatInv <SETULT, QC_LIGEUI>;
 }
 
 //===----------------------------------------------------------------------===/i
