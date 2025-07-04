@@ -36,10 +36,6 @@ public:
   std::optional<TraversalKind> getCheckTraversalKind() const override {
     return TK_IgnoreUnlessSpelledInSource;
   }
-
-private:
-  bool isFundamentalIntegerType(const Type *T) const;
-  bool isSemanticType(const Type *T) const;
 };
 
 } // namespace clang::tidy::portability

@@ -21,84 +21,33 @@ AvoidPlatformSpecificFundamentalTypesCheck::
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
-bool AvoidPlatformSpecificFundamentalTypesCheck::isFundamentalIntegerType(
-    const Type *T) const {
-  if (!T->isBuiltinType())
-    return false;
-
-  const auto *BT = T->getAs<BuiltinType>();
-  if (!BT)
-    return false;
-
-  switch (BT->getKind()) {
-  case BuiltinType::Int:
-  case BuiltinType::UInt:
-  case BuiltinType::Short:
-  case BuiltinType::UShort:
-  case BuiltinType::Long:
-  case BuiltinType::ULong:
-  case BuiltinType::LongLong:
-  case BuiltinType::ULongLong:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool AvoidPlatformSpecificFundamentalTypesCheck::isSemanticType(
-    const Type *T) const {
-  if (!T->isBuiltinType())
-    return false;
-
-  const auto *BT = T->getAs<BuiltinType>();
-  if (!BT)
-    return false;
-
-  switch (BT->getKind()) {
-  case BuiltinType::Bool:
-  case BuiltinType::Char_S:
-  case BuiltinType::Char_U:
-  case BuiltinType::SChar:
-  case BuiltinType::UChar:
-  case BuiltinType::WChar_S:
-  case BuiltinType::WChar_U:
-  case BuiltinType::Char8:
-  case BuiltinType::Char16:
-  case BuiltinType::Char32:
-    return true;
-  default:
-    return false;
-  }
-}
-
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
   // Create a matcher for platform-specific fundamental integer types
   // This should only match direct uses of builtin types, not typedefs
-  auto PlatformSpecificFundamentalType = qualType(
-      allOf(
-          // Must be a builtin type directly (not through typedef)
-          builtinType(),
-          // Only match the specific fundamental integer types we care about
-          anyOf(
-              asString("int"),
-              asString("unsigned int"),
-              asString("short"),
-              asString("unsigned short"),
-              asString("long"),
-              asString("unsigned long"),
-              asString("long long"),
-              asString("unsigned long long")
-          )
-      )
-  );
+  auto PlatformSpecificFundamentalType = qualType(allOf(
+      // Must be a builtin type directly (not through typedef)
+      builtinType(),
+      // Only match the specific fundamental integer types we care about
+      anyOf(asString("short"), asString("short int"), asString("signed short"),
+            asString("signed short int"), asString("unsigned short"),
+            asString("unsigned short int"), asString("int"), asString("signed"),
+            asString("signed int"), asString("unsigned"),
+            asString("unsigned int"), asString("long"), asString("long int"),
+            asString("signed long"), asString("signed long int"),
+            asString("unsigned long"), asString("unsigned long int"),
+            asString("long long"), asString("long long int"),
+            asString("signed long long"), asString("signed long long int"),
+            asString("unsigned long long"),
+            asString("unsigned long long int"))));
 
-  // Match variable declarations with platform-specific fundamental integer types
+  // Match variable declarations with platform-specific fundamental integer
+  // types
   Finder->addMatcher(
-      varDecl(hasType(PlatformSpecificFundamentalType)).bind("var_decl"),
-      this);
+      varDecl(hasType(PlatformSpecificFundamentalType)).bind("var_decl"), this);
 
-  // Match function declarations with platform-specific fundamental integer return types
+  // Match function declarations with platform-specific fundamental integer
+  // return types
   Finder->addMatcher(
       functionDecl(returns(PlatformSpecificFundamentalType)).bind("func_decl"),
       this);
@@ -113,51 +62,47 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
       fieldDecl(hasType(PlatformSpecificFundamentalType)).bind("field_decl"),
       this);
 
-  // Match typedef declarations with platform-specific fundamental underlying types
+  // Match typedef declarations with platform-specific fundamental underlying
+  // types
   Finder->addMatcher(
-      typedefDecl(hasUnderlyingType(PlatformSpecificFundamentalType)).bind("typedef_decl"),
+      typedefDecl(hasUnderlyingType(PlatformSpecificFundamentalType))
+          .bind("typedef_decl"),
       this);
 
-  // Match type alias declarations with platform-specific fundamental underlying types
-  Finder->addMatcher(
-      typeAliasDecl(hasType(PlatformSpecificFundamentalType)).bind("alias_decl"),
-      this);
+  // Match type alias declarations with platform-specific fundamental underlying
+  // types
+  Finder->addMatcher(typeAliasDecl(hasType(PlatformSpecificFundamentalType))
+                         .bind("alias_decl"),
+                     this);
 }
 
 void AvoidPlatformSpecificFundamentalTypesCheck::check(
     const MatchFinder::MatchResult &Result) {
   SourceLocation Loc;
   QualType QT;
-  std::string DeclType;
 
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var_decl")) {
     Loc = VD->getLocation();
     QT = VD->getType();
-    DeclType = "variable";
   } else if (const auto *FD =
                  Result.Nodes.getNodeAs<FunctionDecl>("func_decl")) {
     Loc = FD->getLocation();
     QT = FD->getReturnType();
-    DeclType = "function return type";
   } else if (const auto *PD =
                  Result.Nodes.getNodeAs<ParmVarDecl>("param_decl")) {
     Loc = PD->getLocation();
     QT = PD->getType();
-    DeclType = "function parameter";
   } else if (const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("field_decl")) {
     Loc = FD->getLocation();
     QT = FD->getType();
-    DeclType = "field";
   } else if (const auto *TD =
                  Result.Nodes.getNodeAs<TypedefDecl>("typedef_decl")) {
     Loc = TD->getLocation();
     QT = TD->getUnderlyingType();
-    DeclType = "typedef";
   } else if (const auto *AD =
                  Result.Nodes.getNodeAs<TypeAliasDecl>("alias_decl")) {
     Loc = AD->getLocation();
     QT = AD->getUnderlyingType();
-    DeclType = "type alias";
   } else {
     return;
   }
