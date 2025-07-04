@@ -1312,6 +1312,30 @@ class QCIMVCCIPat<CondCode Cond, QCIMVCCI Inst>
     : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rs1), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs3), (XLenVT GPRNoX0:$rd)),
           (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$imm, GPRNoX0:$rs3)>;
 
+class QCISELECTCCIPat<CondCode Cond, QCISELECTCCI Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs2), (XLenVT GPRNoX0:$rs3)),
+          (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, GPRNoX0:$rs3)>;
+
+class QCISELECTICCIPat<CondCode Cond, QCISELECTICCI Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
+          (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2)>;
+
+class QCISELECTICCIPatInv<CondCode Cond, QCISELECTICCI Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), simm5:$imm, Cond)), simm5:$simm2, (XLenVT GPRNoX0:$rs2)),
+          (Inst GPRNoX0:$rd, simm5:$imm, GPRNoX0:$rs2, simm5:$simm2)>;
+
+class QCISELECTICCPat<CondCode Cond, QCISELECTICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), (XLenVT GPRNoX0:$rs2), simm5:$simm2),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2)>;
+
+class QCISELECTICCPatInv<CondCode Cond, QCISELECTICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), simm5:$simm2, (XLenVT GPRNoX0:$rs2)),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, GPRNoX0:$rs2, simm5:$simm2)>;
+
+class QCISELECTIICCPat<CondCode Cond, QCISELECTIICC Inst>
+    : Pat<(select (XLenVT (setcc (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs1), Cond)), simm5:$simm1, simm5:$simm2),
+          (Inst GPRNoX0:$rd, GPRNoX0:$rs1, simm5:$simm1, simm5:$simm2)>;
+
 // Match `riscv_brcc` and lower to the appropriate XQCIBI branch instruction.
 class BcciPat<CondCode Cond, QCIBranchInst_rii Inst, DAGOperand InTyImm>
     : Pat<(riscv_brcc (XLenVT GPRNoX0:$rs1), InTyImm:$rs2, Cond, bb:$imm12),
@@ -1460,6 +1484,33 @@ def : QCIMVCCIPat <SETNE,  QC_MVNEI>;
 def : QCIMVCCIPat <SETLT,  QC_MVLTI>;
 def : QCIMVCCIPat <SETULT, QC_MVLTUI>;
 }
+
+let Predicates = [HasVendorXqcics, IsRV32] in {
+def : Pat<(select (XLenVT GPRNoX0:$rd), (XLenVT GPRNoX0:$rs2),(XLenVT GPRNoX0:$rs3)),
+          (QC_SELECTEQI GPRNoX0:$rd, (XLenVT 0), GPRNoX0:$rs3, GPRNoX0:$rs2)>;
+
+// Below AddedComplexity is added to prefer these conditional select instructions over
+// conditional move instructions
+let AddedComplexity = 1 in {
+def : QCISELECTCCIPat <SETEQ,  QC_SELECTEQI>;
+def : QCISELECTCCIPat <SETNE,  QC_SELECTNEI>;
+}
+
+def : QCISELECTICCIPat <SETEQ,  QC_SELECTIEQI>;
+def : QCISELECTICCIPat <SETNE,  QC_SELECTINEI>;
+
+def : QCISELECTICCIPatInv <SETEQ,  QC_SELECTINEI>;
+def : QCISELECTICCIPatInv <SETNE,  QC_SELECTIEQI>;
+
+def : QCISELECTICCPat <SETEQ,  QC_SELECTIEQ>;
+def : QCISELECTICCPat <SETNE,  QC_SELECTINE>;
+
+def : QCISELECTICCPatInv <SETEQ,  QC_SELECTINE>;
+def : QCISELECTICCPatInv <SETNE,  QC_SELECTIEQ>;
+
+def : QCISELECTIICCPat <SETEQ,  QC_SELECTIIEQ>;
+def : QCISELECTIICCPat <SETNE,  QC_SELECTIINE>;
+} // Predicates = [HasVendorXqcics, IsRV32]
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.
