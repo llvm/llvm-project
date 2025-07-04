@@ -17482,7 +17482,50 @@ double  __ovld __conv intel_sub_group_shuffle_up( double prev, double cur, uint 
 double  __ovld __conv intel_sub_group_shuffle_xor( double, uint );
 #endif
 
-#endif //cl_intel_subgroups
+#if defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||   \
+    defined(cl_intel_subgroups_long)
+
+#if defined(__opencl_c_images)
+uint       __ovld __conv intel_sub_group_block_read_ui(read_only image2d_t, int2);
+uint2      __ovld __conv intel_sub_group_block_read_ui2(read_only image2d_t, int2);
+uint4      __ovld __conv intel_sub_group_block_read_ui4(read_only image2d_t, int2);
+uint8      __ovld __conv intel_sub_group_block_read_ui8(read_only image2d_t, int2);
+#endif // defined(__opencl_c_images)
+
+#if defined(__opencl_c_read_write_images)
+uint       __ovld __conv intel_sub_group_block_read_ui(read_write image2d_t, int2);
+uint2      __ovld __conv intel_sub_group_block_read_ui2(read_write image2d_t, int2);
+uint4      __ovld __conv intel_sub_group_block_read_ui4(read_write image2d_t, int2);
+uint8      __ovld __conv intel_sub_group_block_read_ui8(read_write image2d_t, int2);
+#endif // defined(__opencl_c_read_write_images)
+
+uint       __ovld __conv intel_sub_group_block_read_ui( const __global uint* p );
+uint2      __ovld __conv intel_sub_group_block_read_ui2( const __global uint* p );
+uint4      __ovld __conv intel_sub_group_block_read_ui4( const __global uint* p );
+uint8      __ovld __conv intel_sub_group_block_read_ui8( const __global uint* p );
+
+#if defined(__opencl_c_images)
+void       __ovld __conv intel_sub_group_block_write_ui(read_only image2d_t, int2, uint);
+void       __ovld __conv intel_sub_group_block_write_ui2(read_only image2d_t, int2, uint2);
+void       __ovld __conv intel_sub_group_block_write_ui4(read_only image2d_t, int2, uint4);
+void       __ovld __conv intel_sub_group_block_write_ui8(read_only image2d_t, int2, uint8);
+#endif // defined(__opencl_c_images)
+
+#if defined(__opencl_c_read_write_images)
+void       __ovld __conv intel_sub_group_block_write_ui(read_write image2d_t, int2, uint);
+void       __ovld __conv intel_sub_group_block_write_ui2(read_write image2d_t, int2, uint2);
+void       __ovld __conv intel_sub_group_block_write_ui4(read_write image2d_t, int2, uint4);
+void       __ovld __conv intel_sub_group_block_write_ui8(read_write image2d_t, int2, uint8);
+#endif // defined(__opencl_c_read_write_images)
+
+void       __ovld __conv intel_sub_group_block_write_ui( __global uint* p, uint data );
+void       __ovld __conv intel_sub_group_block_write_ui2( __global uint* p, uint2 data );
+void       __ovld __conv intel_sub_group_block_write_ui4( __global uint* p, uint4 data );
+void       __ovld __conv intel_sub_group_block_write_ui8( __global uint* p, uint8 data );
+
+#endif // defined(cl_intel_subgroups_char) || defined(cl_intel_subgroups_short) ||
+       // defined(cl_intel_subgroups_long)
+#endif // cl_intel_subgroups
 
 #if defined(cl_intel_subgroups_short)
 short       __ovld __conv intel_sub_group_broadcast( short , uint sub_group_local_id );
@@ -17575,48 +17618,11 @@ short       __ovld __conv intel_sub_group_scan_inclusive_max( short   x );
 ushort      __ovld __conv intel_sub_group_scan_inclusive_max( ushort  x );
 
 #if defined(__opencl_c_images)
-uint       __ovld __conv intel_sub_group_block_read_ui(read_only image2d_t, int2);
-uint2      __ovld __conv intel_sub_group_block_read_ui2(read_only image2d_t, int2);
-uint4      __ovld __conv intel_sub_group_block_read_ui4(read_only image2d_t, int2);
-uint8      __ovld __conv intel_sub_group_block_read_ui8(read_only image2d_t, int2);
-#endif // defined(__opencl_c_images)
-
-#if defined(__opencl_c_read_write_images)
-uint       __ovld __conv intel_sub_group_block_read_ui(read_write image2d_t, int2);
-uint2      __ovld __conv intel_sub_group_block_read_ui2(read_write image2d_t, int2);
-uint4      __ovld __conv intel_sub_group_block_read_ui4(read_write image2d_t, int2);
-uint8      __ovld __conv intel_sub_group_block_read_ui8(read_write image2d_t, int2);
-#endif // defined(__opencl_c_read_write_images)
-
-uint       __ovld __conv intel_sub_group_block_read_ui( const __global uint* p );
-uint2      __ovld __conv intel_sub_group_block_read_ui2( const __global uint* p );
-uint4      __ovld __conv intel_sub_group_block_read_ui4( const __global uint* p );
-uint8      __ovld __conv intel_sub_group_block_read_ui8( const __global uint* p );
-
-#if defined(__opencl_c_images)
-void       __ovld __conv intel_sub_group_block_write_ui(read_only image2d_t, int2, uint);
-void       __ovld __conv intel_sub_group_block_write_ui2(read_only image2d_t, int2, uint2);
-void       __ovld __conv intel_sub_group_block_write_ui4(read_only image2d_t, int2, uint4);
-void       __ovld __conv intel_sub_group_block_write_ui8(read_only image2d_t, int2, uint8);
-#endif //defined(__opencl_c_images)
-
-#if defined(__opencl_c_read_write_images)
-void       __ovld __conv intel_sub_group_block_write_ui(read_write image2d_t, int2, uint);
-void       __ovld __conv intel_sub_group_block_write_ui2(read_write image2d_t, int2, uint2);
-void       __ovld __conv intel_sub_group_block_write_ui4(read_write image2d_t, int2, uint4);
-void       __ovld __conv intel_sub_group_block_write_ui8(read_write image2d_t, int2, uint8);
-#endif // defined(__opencl_c_read_write_images)
-
-void       __ovld __conv intel_sub_group_block_write_ui( __global uint* p, uint data );
-void       __ovld __conv intel_sub_group_block_write_ui2( __global uint* p, uint2 data );
-void       __ovld __conv intel_sub_group_block_write_ui4( __global uint* p, uint4 data );
-void       __ovld __conv intel_sub_group_block_write_ui8( __global uint* p, uint8 data );
-
-#if defined(__opencl_c_images)
 ushort      __ovld __conv intel_sub_group_block_read_us(read_only image2d_t, int2);
 ushort2     __ovld __conv intel_sub_group_block_read_us2(read_only image2d_t, int2);
 ushort4     __ovld __conv intel_sub_group_block_read_us4(read_only image2d_t, int2);
 ushort8     __ovld __conv intel_sub_group_block_read_us8(read_only image2d_t, int2);
+ushort16    __ovld __conv intel_sub_group_block_read_us16(read_only image2d_t, int2);
 #endif // defined(__opencl_c_images)
 
 #if defined(__opencl_c_read_write_images)
@@ -17624,18 +17630,21 @@ ushort      __ovld __conv intel_sub_group_block_read_us(read_write image2d_t, in
 ushort2     __ovld __conv intel_sub_group_block_read_us2(read_write image2d_t, int2);
 ushort4     __ovld __conv intel_sub_group_block_read_us4(read_write image2d_t, int2);
 ushort8     __ovld __conv intel_sub_group_block_read_us8(read_write image2d_t, int2);
+ushort16    __ovld __conv intel_sub_group_block_read_us16(read_write image2d_t, int2);
 #endif // defined(__opencl_c_read_write_images)
 
 ushort      __ovld __conv intel_sub_group_block_read_us(  const __global ushort* p );
 ushort2     __ovld __conv intel_sub_group_block_read_us2( const __global ushort* p );
 ushort4     __ovld __conv intel_sub_group_block_read_us4( const __global ushort* p );
 ushort8     __ovld __conv intel_sub_group_block_read_us8( const __global ushort* p );
+ushort16    __ovld __conv intel_sub_group_block_read_us16(const __global ushort* p);
 
 #if defined(__opencl_c_images)
 void        __ovld __conv intel_sub_group_block_write_us(write_only image2d_t, int2, ushort);
 void        __ovld __conv intel_sub_group_block_write_us2(write_only image2d_t, int2, ushort2);
 void        __ovld __conv intel_sub_group_block_write_us4(write_only image2d_t, int2, ushort4);
 void        __ovld __conv intel_sub_group_block_write_us8(write_only image2d_t, int2, ushort8);
+void        __ovld __conv intel_sub_group_block_write_us16(write_only image2d_t, int2, ushort16);
 #endif // defined(__opencl_c_images)
 
 #if defined(__opencl_c_read_write_images)
@@ -17643,13 +17652,194 @@ void        __ovld __conv intel_sub_group_block_write_us(read_write image2d_t, i
 void        __ovld __conv intel_sub_group_block_write_us2(read_write image2d_t, int2, ushort2);
 void        __ovld __conv intel_sub_group_block_write_us4(read_write image2d_t, int2, ushort4);
 void        __ovld __conv intel_sub_group_block_write_us8(read_write image2d_t, int2, ushort8);
+void        __ovld __conv intel_sub_group_block_write_us16(read_write image2d_t, int2, ushort16);
 #endif // defined(__opencl_c_read_write_images)
 
 void        __ovld __conv intel_sub_group_block_write_us(  __global ushort* p, ushort  data );
 void        __ovld __conv intel_sub_group_block_write_us2( __global ushort* p, ushort2 data );
 void        __ovld __conv intel_sub_group_block_write_us4( __global ushort* p, ushort4 data );
 void        __ovld __conv intel_sub_group_block_write_us8( __global ushort* p, ushort8 data );
+void        __ovld __conv intel_sub_group_block_write_us16( __global ushort* p, ushort16 data );
 #endif // cl_intel_subgroups_short
+
+#if defined(cl_intel_subgroups_char)
+char       __ovld __conv intel_sub_group_broadcast( char , uint sub_group_local_id );
+char2      __ovld __conv intel_sub_group_broadcast( char2, uint sub_group_local_id );
+char3      __ovld __conv intel_sub_group_broadcast( char3, uint sub_group_local_id );
+char4      __ovld __conv intel_sub_group_broadcast( char4, uint sub_group_local_id );
+char8      __ovld __conv intel_sub_group_broadcast( char8, uint sub_group_local_id );
+
+uchar      __ovld __conv intel_sub_group_broadcast( uchar , uint sub_group_local_id );
+uchar2     __ovld __conv intel_sub_group_broadcast( uchar2, uint sub_group_local_id );
+uchar3     __ovld __conv intel_sub_group_broadcast( uchar3, uint sub_group_local_id );
+uchar4     __ovld __conv intel_sub_group_broadcast( uchar4, uint sub_group_local_id );
+uchar8     __ovld __conv intel_sub_group_broadcast( uchar8, uint sub_group_local_id );
+
+char       __ovld __conv intel_sub_group_shuffle( char  , uint );
+char2      __ovld __conv intel_sub_group_shuffle( char2 , uint );
+char3      __ovld __conv intel_sub_group_shuffle( char3 , uint );
+char4      __ovld __conv intel_sub_group_shuffle( char4 , uint );
+char8      __ovld __conv intel_sub_group_shuffle( char8 , uint );
+char16     __ovld __conv intel_sub_group_shuffle( char16, uint);
+
+uchar      __ovld __conv intel_sub_group_shuffle( uchar  , uint );
+uchar2     __ovld __conv intel_sub_group_shuffle( uchar2 , uint );
+uchar3     __ovld __conv intel_sub_group_shuffle( uchar3 , uint );
+uchar4     __ovld __conv intel_sub_group_shuffle( uchar4 , uint );
+uchar8     __ovld __conv intel_sub_group_shuffle( uchar8 , uint );
+uchar16    __ovld __conv intel_sub_group_shuffle( uchar16, uint );
+
+char       __ovld __conv intel_sub_group_shuffle_down( char   cur, char   next, uint );
+char2      __ovld __conv intel_sub_group_shuffle_down( char2  cur, char2  next, uint );
+char3      __ovld __conv intel_sub_group_shuffle_down( char3  cur, char3  next, uint );
+char4      __ovld __conv intel_sub_group_shuffle_down( char4  cur, char4  next, uint );
+char8      __ovld __conv intel_sub_group_shuffle_down( char8  cur, char8  next, uint );
+char16     __ovld __conv intel_sub_group_shuffle_down( char16 cur, char16 next, uint );
+
+uchar      __ovld __conv intel_sub_group_shuffle_down( uchar   cur, uchar   next, uint );
+uchar2     __ovld __conv intel_sub_group_shuffle_down( uchar2  cur, uchar2  next, uint );
+uchar3     __ovld __conv intel_sub_group_shuffle_down( uchar3  cur, uchar3  next, uint );
+uchar4     __ovld __conv intel_sub_group_shuffle_down( uchar4  cur, uchar4  next, uint );
+uchar8     __ovld __conv intel_sub_group_shuffle_down( uchar8  cur, uchar8  next, uint );
+uchar16    __ovld __conv intel_sub_group_shuffle_down( uchar16 cur, uchar16 next, uint );
+
+char       __ovld __conv intel_sub_group_shuffle_up( char   cur, char   next, uint );
+char2      __ovld __conv intel_sub_group_shuffle_up( char2  cur, char2  next, uint );
+char3      __ovld __conv intel_sub_group_shuffle_up( char3  cur, char3  next, uint );
+char4      __ovld __conv intel_sub_group_shuffle_up( char4  cur, char4  next, uint );
+char8      __ovld __conv intel_sub_group_shuffle_up( char8  cur, char8  next, uint );
+char16     __ovld __conv intel_sub_group_shuffle_up( char16 cur, char16 next, uint );
+
+uchar      __ovld __conv intel_sub_group_shuffle_up( uchar   cur, uchar   next, uint );
+uchar2     __ovld __conv intel_sub_group_shuffle_up( uchar2  cur, uchar2  next, uint );
+uchar3     __ovld __conv intel_sub_group_shuffle_up( uchar3  cur, uchar3  next, uint );
+uchar4     __ovld __conv intel_sub_group_shuffle_up( uchar4  cur, uchar4  next, uint );
+uchar8     __ovld __conv intel_sub_group_shuffle_up( uchar8  cur, uchar8  next, uint );
+uchar16    __ovld __conv intel_sub_group_shuffle_up( uchar16 cur, uchar16 next, uint );
+
+char       __ovld __conv intel_sub_group_shuffle_xor( char  , uint );
+char2      __ovld __conv intel_sub_group_shuffle_xor( char2 , uint );
+char3      __ovld __conv intel_sub_group_shuffle_xor( char3 , uint );
+char4      __ovld __conv intel_sub_group_shuffle_xor( char4 , uint );
+char8      __ovld __conv intel_sub_group_shuffle_xor( char8 , uint );
+char16     __ovld __conv intel_sub_group_shuffle_xor( char16, uint );
+
+uchar      __ovld __conv intel_sub_group_shuffle_xor( uchar  , uint );
+uchar2     __ovld __conv intel_sub_group_shuffle_xor( uchar2 , uint );
+uchar3     __ovld __conv intel_sub_group_shuffle_xor( uchar3 , uint );
+uchar4     __ovld __conv intel_sub_group_shuffle_xor( uchar4 , uint );
+uchar8     __ovld __conv intel_sub_group_shuffle_xor( uchar8 , uint );
+uchar16    __ovld __conv intel_sub_group_shuffle_xor( uchar16, uint );
+
+char       __ovld __conv intel_sub_group_reduce_add( char   x );
+uchar      __ovld __conv intel_sub_group_reduce_add( uchar  x );
+char       __ovld __conv intel_sub_group_reduce_min( char   x );
+uchar      __ovld __conv intel_sub_group_reduce_min( uchar  x );
+char       __ovld __conv intel_sub_group_reduce_max( char   x );
+uchar      __ovld __conv intel_sub_group_reduce_max( uchar  x );
+
+char       __ovld __conv intel_sub_group_scan_exclusive_add( char   x );
+uchar      __ovld __conv intel_sub_group_scan_exclusive_add( uchar  x );
+char       __ovld __conv intel_sub_group_scan_exclusive_min( char   x );
+uchar      __ovld __conv intel_sub_group_scan_exclusive_min( uchar  x );
+char       __ovld __conv intel_sub_group_scan_exclusive_max( char   x );
+uchar      __ovld __conv intel_sub_group_scan_exclusive_max( uchar  x );
+
+char       __ovld __conv intel_sub_group_scan_inclusive_add( char   x );
+uchar      __ovld __conv intel_sub_group_scan_inclusive_add( uchar  x );
+char       __ovld __conv intel_sub_group_scan_inclusive_min( char   x );
+uchar      __ovld __conv intel_sub_group_scan_inclusive_min( uchar  x );
+char       __ovld __conv intel_sub_group_scan_inclusive_max( char   x );
+uchar      __ovld __conv intel_sub_group_scan_inclusive_max( uchar  x );
+
+#if defined(__opencl_c_images)
+uchar      __ovld __conv intel_sub_group_block_read_uc(read_only image2d_t, int2);
+uchar2     __ovld __conv intel_sub_group_block_read_uc2(read_only image2d_t, int2);
+uchar4     __ovld __conv intel_sub_group_block_read_uc4(read_only image2d_t, int2);
+uchar8     __ovld __conv intel_sub_group_block_read_uc8(read_only image2d_t, int2);
+uchar16    __ovld __conv intel_sub_group_block_read_uc16(read_only image2d_t, int2);
+#endif // defined(__opencl_c_images)
+
+#if defined(__opencl_c_read_write_images)
+uchar      __ovld __conv intel_sub_group_block_read_uc(read_write image2d_t, int2);
+uchar2     __ovld __conv intel_sub_group_block_read_uc2(read_write image2d_t, int2);
+uchar4     __ovld __conv intel_sub_group_block_read_uc4(read_write image2d_t, int2);
+uchar8     __ovld __conv intel_sub_group_block_read_uc8(read_write image2d_t, int2);
+uchar16    __ovld __conv intel_sub_group_block_read_uc16(read_write image2d_t, int2);
+#endif // defined(__opencl_c_read_write_images)
+
+uchar      __ovld __conv intel_sub_group_block_read_uc(  const __global uchar* p );
+uchar2     __ovld __conv intel_sub_group_block_read_uc2( const __global uchar* p );
+uchar4     __ovld __conv intel_sub_group_block_read_uc4( const __global uchar* p );
+uchar8     __ovld __conv intel_sub_group_block_read_uc8( const __global uchar* p );
+uchar16    __ovld __conv intel_sub_group_block_read_uc16( const __global uchar* p );
+
+#if defined(__opencl_c_images)
+void        __ovld __conv intel_sub_group_block_write_uc(write_only image2d_t, int2, uchar);
+void        __ovld __conv intel_sub_group_block_write_uc2(write_only image2d_t, int2, uchar2);
+void        __ovld __conv intel_sub_group_block_write_uc4(write_only image2d_t, int2, uchar4);
+void        __ovld __conv intel_sub_group_block_write_uc8(write_only image2d_t, int2, uchar8);
+void        __ovld __conv intel_sub_group_block_write_uc16(write_only image2d_t, int2, uchar16);
+#endif // defined(__opencl_c_images)
+
+#if defined(__opencl_c_read_write_images)
+void        __ovld __conv intel_sub_group_block_write_uc(read_write image2d_t, int2, uchar);
+void        __ovld __conv intel_sub_group_block_write_uc2(read_write image2d_t, int2, uchar2);
+void        __ovld __conv intel_sub_group_block_write_uc4(read_write image2d_t, int2, uchar4);
+void        __ovld __conv intel_sub_group_block_write_uc8(read_write image2d_t, int2, uchar8);
+void        __ovld __conv intel_sub_group_block_write_uc16(read_write image2d_t, int2, uchar16);
+#endif // defined(__opencl_c_read_write_images)
+
+void        __ovld __conv intel_sub_group_block_write_uc(  __global uchar* p, uchar  data );
+void        __ovld __conv intel_sub_group_block_write_uc2( __global uchar* p, uchar2 data );
+void        __ovld __conv intel_sub_group_block_write_uc4( __global uchar* p, uchar4 data );
+void        __ovld __conv intel_sub_group_block_write_uc8( __global uchar* p, uchar8 data );
+void        __ovld __conv intel_sub_group_block_write_uc16( __global uchar* p, uchar16 data );
+#endif // cl_intel_subgroups_char
+
+#if defined(cl_intel_subgroups_long)
+#if defined(__opencl_c_images)
+ulong      __ovld __conv intel_sub_group_block_read_ul(read_only image2d_t, int2);
+ulong2     __ovld __conv intel_sub_group_block_read_ul2(read_only image2d_t, int2);
+ulong4     __ovld __conv intel_sub_group_block_read_ul4(read_only image2d_t, int2);
+ulong8     __ovld __conv intel_sub_group_block_read_ul8(read_only image2d_t, int2);
+ulong16    __ovld __conv intel_sub_group_block_read_ul16(read_only image2d_t, int2);
+#endif // defined(__opencl_c_images)
+
+#if defined(__opencl_c_read_write_images)
+ulong      __ovld __conv intel_sub_group_block_read_ul(read_write image2d_t, int2);
+ulong2     __ovld __conv intel_sub_group_block_read_ul2(read_write image2d_t, int2);
+ulong4     __ovld __conv intel_sub_group_block_read_ul4(read_write image2d_t, int2);
+ulong8     __ovld __conv intel_sub_group_block_read_ul8(read_write image2d_t, int2);
+ulong16    __ovld __conv intel_sub_group_block_read_ul16(read_write image2d_t, int2);
+#endif // defined(__opencl_c_read_write_images)
+
+ulong      __ovld __conv intel_sub_group_block_read_ul(  const __global ulong* p );
+ulong2     __ovld __conv intel_sub_group_block_read_ul2( const __global ulong* p );
+ulong4     __ovld __conv intel_sub_group_block_read_ul4( const __global ulong* p );
+ulong8     __ovld __conv intel_sub_group_block_read_ul8( const __global ulong* p );
+
+#if defined(__opencl_c_images)
+void        __ovld __conv intel_sub_group_block_write_ul(write_only image2d_t, int2, ulong);
+void        __ovld __conv intel_sub_group_block_write_ul2(write_only image2d_t, int2, ulong2);
+void        __ovld __conv intel_sub_group_block_write_ul4(write_only image2d_t, int2, ulong4);
+void        __ovld __conv intel_sub_group_block_write_ul8(write_only image2d_t, int2, ulong8);
+void        __ovld __conv intel_sub_group_block_write_ul16(write_only image2d_t, int2, ulong16);
+#endif // defined(__opencl_c_images)
+
+#if defined(__opencl_c_read_write_images)
+void        __ovld __conv intel_sub_group_block_write_ul(read_write image2d_t, int2, ulong);
+void        __ovld __conv intel_sub_group_block_write_ul2(read_write image2d_t, int2, ulong2);
+void        __ovld __conv intel_sub_group_block_write_ul4(read_write image2d_t, int2, ulong4);
+void        __ovld __conv intel_sub_group_block_write_ul8(read_write image2d_t, int2, ulong8);
+void        __ovld __conv intel_sub_group_block_write_ul16(read_write image2d_t, int2, ulong16);
+#endif // defined(__opencl_c_read_write_images)
+
+void        __ovld __conv intel_sub_group_block_write_ul(  __global ulong* p, ulong  data );
+void        __ovld __conv intel_sub_group_block_write_ul2( __global ulong* p, ulong2 data );
+void        __ovld __conv intel_sub_group_block_write_ul4( __global ulong* p, ulong4 data );
+void        __ovld __conv intel_sub_group_block_write_ul8( __global ulong* p, ulong8 data);
+#endif // cl_intel_subgroups_long
 
 #ifdef cl_intel_device_side_avc_motion_estimation
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
