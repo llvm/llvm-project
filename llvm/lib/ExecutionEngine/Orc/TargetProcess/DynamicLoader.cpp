@@ -17,6 +17,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 
+#define DEBUG_TYPE "orc"
+
 namespace llvm::orc {
 
 DynamicLoader::DynamicLoader(const DynamicLoader::Setup &setup)
@@ -140,7 +142,9 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
         static_cast<uint32_t>(SymbolEnumerator::Filter::IgnoreUndefined) |
         static_cast<uint32_t>(SymbolEnumerator::Filter::IgnoreWeak) |
         static_cast<uint32_t>(SymbolEnumerator::Filter::IgnoreIndirect);
-
+    // LLVM_DEBUG(
+    dbgs() << "Enumerating symbols in library: " << lib.getFullPath() << "\n";
+    // );
     SymbolEnumerator::enumerateSymbols(
         lib.getFullPath(),
         [&](const std::string &sym) {
@@ -152,19 +156,35 @@ void DynamicLoader::resolveSymbolsInLibrary(LibraryInfo &lib,
 
   const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
 
-  if (!unresolved.empty())
+  if (unresolved.empty()) {
+    // LLVM_DEBUG(
+    dbgs() << "Skipping library: " << lib.getFullPath()
+           << " — unresolved symbols exist.\n";
+    // );
     return;
-
+  }
+  enumerateSymbolsIfNeeded();
   if (!lib.hasFilter()) {
-    enumerateSymbolsIfNeeded();
+    // LLVM_DEBUG(
+    dbgs() << "Building filter for library: " << lib.getFullPath() << "\n"; //);
     lib.ensureFilterBuilt(FB,
                           {discoveredSymbols.begin(), discoveredSymbols.end()});
+    dbgs() << "discoveredSymbols : " << discoveredSymbols.size() << "\n";
+    for (const auto &sym : discoveredSymbols)
+      dbgs() << "discoveredSymbols : " << sym << "\n";
   }
 
   for (const auto &symbol : unresolved) {
     if (lib.mayContain(symbol)) {
-      if (discoveredSymbols.count(symbol) > 0)
+      // LLVM_DEBUG(
+      dbgs() << "Checking symbol '" << symbol
+             << "' in library: " << lib.getFullPath() << "\n"; //);
+      if (discoveredSymbols.count(symbol) > 0) {
+        // LLVM_DEBUG(
+        dbgs() << "  Resolved symbol: " << symbol
+               << " in library: " << lib.getFullPath() << "\n"; //);
         unresolvedSymbols.resolve(symbol, lib.getFullPath());
+      }
     }
   }
 }
@@ -178,6 +198,9 @@ void DynamicLoader::searchSymbolsInLibraries(
   auto tryResolveFrom = [&](LibraryState S, LibraryType K) {
     if (query.allResolved())
       return;
+    // LLVM_DEBUG(
+    dbgs() << "Trying resolve from state=" << static_cast<int>(S)
+           << " type=" << static_cast<int>(K) << "\n"; //);
     scanLibrariesIfNeeded(K);
     for (auto &lib : LibMgr.getView(S, K)) {
       // can use Async here?
@@ -202,6 +225,8 @@ void DynamicLoader::searchSymbolsInLibraries(
   }
 
 done:
+  // LLVM_DEBUG(
+  dbgs() << "Search complete.\n"; //);
   // ProcessLib(query.getResolvedPath());
   onComplete(query);
 }
@@ -233,6 +258,10 @@ done:
 // }
 
 void DynamicLoader::scanLibrariesIfNeeded(LibraryManager::Kind PK) {
+  // LLVM_DEBUG(
+  llvm::dbgs() << "DynamicLoader::scanLibrariesIfNeeded: Scanning for "
+               << (PK == LibraryManager::Kind::User ? "User" : "System")
+               << " libraries\n"; //);
   LibraryScanner Scanner(ScanH, LibMgr, m_shouldScan);
   Scanner.scanNext(PK == LibraryManager::Kind::User ? PathKind::User
                                                     : PathKind::System);
