@@ -258,7 +258,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         // TokenTy isn't a first class value either but apparently the verifier
         // doesn't mind it.
         Args.push_back(
-            UndefValue::get(llvm::Type::getTokenTy(getLLVMContext())));
+            PoisonValue::get(llvm::Type::getTokenTy(getLLVMContext())));
       } else if (T->isFloatingPointTy()) {
         Args.push_back(ConstantFP::get(T, 0));
       } else if (T->isIntegerTy()) {
