@@ -289,10 +289,10 @@ MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetRank(MlirType type);
 /// Checks whether the given shaped type has a static shape.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeHasStaticShape(MlirType type);
 
-/// Checks wither the dim-th dimension of the given shaped type is dynamic.
+/// Checks whether the dim-th dimension of the given shaped type is dynamic.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicDim(MlirType type, intptr_t dim);
 
-/// Checks wither the dim-th dimension of the given shaped type is static.
+/// Checks whether the dim-th dimension of the given shaped type is static.
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticDim(MlirType type, intptr_t dim);
 
 /// Returns the dim-th dimension of the given ranked shaped type.
