@@ -18,11 +18,6 @@ using LIBC_NAMESPACE::fputil::greater_than;
 using LIBC_NAMESPACE::fputil::greater_than_or_equals;
 using LIBC_NAMESPACE::fputil::less_than;
 using LIBC_NAMESPACE::fputil::less_than_or_equals;
-using LIBC_NAMESPACE::fputil::not_equals;
-
-// FIXME: currently i have used NAN here
-// need to find a better way to get a NAN floating point type
-// - need to see if FPRep could be used?
 
 #define TEST_EQUALS(Name, Type)                                                \
   TEST(LlvmLibc##Name##ComparisionOperationsTest, Equals) {                    \
@@ -31,7 +26,8 @@ using LIBC_NAMESPACE::fputil::not_equals;
     Type neg_zero = -pos_zero;                                                 \
     Type pos_inf = Bits::inf().get_val();                                      \
     Type neg_inf = Bits::inf(Sign::NEG).get_val();                             \
-    Type nan = NAN;                                                            \
+    Type qnan = Bits::quiet_nan().get_val();                                   \
+    Type snan = Bits::signaling_nan().get_val();                               \
     Type pos_normal = Type(3.14);                                              \
     Type neg_normal = Type(-2.71);                                             \
     Type pos_large = Type(1000000.0);                                          \
@@ -54,11 +50,39 @@ using LIBC_NAMESPACE::fputil::not_equals;
     EXPECT_FALSE(equals(neg_inf, neg_normal));                                 \
     EXPECT_FALSE(equals(pos_large, neg_large));                                \
                                                                                \
-    EXPECT_FALSE(equals(nan, nan));                                            \
-    EXPECT_FALSE(equals(nan, pos_normal));                                     \
-    EXPECT_FALSE(equals(nan, pos_zero));                                       \
-    EXPECT_FALSE(equals(nan, pos_inf));                                        \
-    EXPECT_FALSE(equals(pos_normal, nan));                                     \
+    EXPECT_FALSE(equals(qnan, qnan));                                          \
+    EXPECT_FALSE(equals(qnan, pos_normal));                                    \
+    EXPECT_FALSE(equals(qnan, pos_zero));                                      \
+    EXPECT_FALSE(equals(qnan, pos_inf));                                       \
+    EXPECT_FALSE(equals(pos_normal, qnan));                                    \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(snan, snan));                                          \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(snan, qnan));                                          \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(qnan, snan));                                          \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(snan, pos_normal));                                    \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(pos_normal, snan));                                    \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(snan, pos_inf));                                       \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(equals(snan, pos_zero));                                      \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
   }
 
 #define TEST_LESS_THAN(Name, Type)                                             \
@@ -68,7 +92,8 @@ using LIBC_NAMESPACE::fputil::not_equals;
     Type neg_zero = -pos_zero;                                                 \
     Type pos_inf = Bits::inf().get_val();                                      \
     Type neg_inf = Bits::inf(Sign::NEG).get_val();                             \
-    Type nan = NAN;                                                            \
+    Type qnan = Bits::quiet_nan().get_val();                                   \
+    Type snan = Bits::signaling_nan().get_val();                               \
     Type pos_small = Type(0.1);                                                \
     Type neg_small = Type(-0.1);                                               \
     Type pos_large = Type(1000000.0);                                          \
@@ -96,9 +121,29 @@ using LIBC_NAMESPACE::fputil::not_equals;
     EXPECT_FALSE(less_than(pos_small, pos_small));                             \
     EXPECT_FALSE(less_than(neg_inf, neg_inf));                                 \
                                                                                \
-    EXPECT_FALSE(less_than(nan, pos_small));                                   \
-    EXPECT_FALSE(less_than(pos_small, nan));                                   \
-    EXPECT_FALSE(less_than(nan, nan));                                         \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than(qnan, pos_small));                                  \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than(pos_small, qnan));                                  \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than(qnan, qnan));                                       \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than(snan, pos_small));                                  \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than(pos_small, snan));                                  \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than(snan, snan));                                       \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
   }
 
 #define TEST_GREATER_THAN(Name, Type)                                          \
@@ -108,7 +153,8 @@ using LIBC_NAMESPACE::fputil::not_equals;
     Type neg_zero = -pos_zero;                                                 \
     Type pos_inf = Bits::inf().get_val();                                      \
     Type neg_inf = Bits::inf(Sign::NEG).get_val();                             \
-    Type nan = NAN;                                                            \
+    Type qnan = Bits::quiet_nan().get_val();                                   \
+    Type snan = Bits::signaling_nan().get_val();                               \
     Type pos_small = Type(0.1);                                                \
     Type neg_small = Type(-0.1);                                               \
     Type pos_large = Type(1000000.0);                                          \
@@ -131,9 +177,29 @@ using LIBC_NAMESPACE::fputil::not_equals;
     EXPECT_FALSE(greater_than(pos_small, pos_small));                          \
     EXPECT_FALSE(greater_than(pos_inf, pos_inf));                              \
                                                                                \
-    EXPECT_FALSE(greater_than(nan, pos_small));                                \
-    EXPECT_FALSE(greater_than(pos_small, nan));                                \
-    EXPECT_FALSE(greater_than(nan, nan));                                      \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than(qnan, pos_small));                               \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than(pos_small, qnan));                               \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than(qnan, qnan));                                    \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than(snan, pos_small));                               \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than(pos_small, snan));                               \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than(snan, snan));                                    \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
   }
 
 #define TEST_LESS_THAN_OR_EQUALS(Name, Type)                                   \
@@ -143,7 +209,8 @@ using LIBC_NAMESPACE::fputil::not_equals;
     Type neg_zero = -pos_zero;                                                 \
     Type pos_inf = Bits::inf().get_val();                                      \
     Type neg_inf = Bits::inf(Sign::NEG).get_val();                             \
-    Type nan = NAN;                                                            \
+    Type qnan = Bits::quiet_nan().get_val();                                   \
+    Type snan = Bits::signaling_nan().get_val();                               \
     Type pos_small = Type(0.1);                                                \
     Type neg_small = Type(-0.1);                                               \
     Type pos_large = Type(1000000.0);                                          \
@@ -164,9 +231,29 @@ using LIBC_NAMESPACE::fputil::not_equals;
     EXPECT_TRUE(less_than_or_equals(neg_large, pos_small));                    \
     EXPECT_FALSE(less_than_or_equals(pos_large, neg_small));                   \
                                                                                \
-    EXPECT_FALSE(less_than_or_equals(nan, pos_small));                         \
-    EXPECT_FALSE(less_than_or_equals(pos_small, nan));                         \
-    EXPECT_FALSE(less_than_or_equals(nan, nan));                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than_or_equals(qnan, pos_small));                        \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than_or_equals(pos_small, qnan));                        \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than_or_equals(qnan, qnan));                             \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than_or_equals(snan, pos_small));                        \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than_or_equals(pos_small, snan));                        \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(less_than_or_equals(snan, snan));                             \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
   }
 
 #define TEST_GREATER_THAN_OR_EQUALS(Name, Type)                                \
@@ -176,7 +263,8 @@ using LIBC_NAMESPACE::fputil::not_equals;
     Type neg_zero = -pos_zero;                                                 \
     Type pos_inf = Bits::inf().get_val();                                      \
     Type neg_inf = Bits::inf(Sign::NEG).get_val();                             \
-    Type nan = NAN;                                                            \
+    Type qnan = Bits::quiet_nan().get_val();                                   \
+    Type snan = Bits::signaling_nan().get_val();                               \
     Type pos_small = Type(0.1);                                                \
     Type neg_small = Type(-0.1);                                               \
     Type pos_large = Type(1000000.0);                                          \
@@ -197,9 +285,29 @@ using LIBC_NAMESPACE::fputil::not_equals;
     EXPECT_TRUE(greater_than_or_equals(pos_large, neg_small));                 \
     EXPECT_FALSE(greater_than_or_equals(neg_large, pos_small));                \
                                                                                \
-    EXPECT_FALSE(greater_than_or_equals(nan, pos_small));                      \
-    EXPECT_FALSE(greater_than_or_equals(pos_small, nan));                      \
-    EXPECT_FALSE(greater_than_or_equals(nan, nan));                            \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than_or_equals(qnan, pos_small));                     \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than_or_equals(pos_small, qnan));                     \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than_or_equals(qnan, qnan));                          \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than_or_equals(snan, pos_small));                     \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than_or_equals(pos_small, snan));                     \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
+                                                                               \
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);                       \
+    EXPECT_FALSE(greater_than_or_equals(snan, snan));                          \
+    EXPECT_FP_EXCEPTION(FE_INVALID);                                           \
   }
 
 #define TEST_COMPARISON_OPS(Name, Type)                                        \
@@ -211,10 +319,13 @@ using LIBC_NAMESPACE::fputil::not_equals;
 
 TEST_COMPARISON_OPS(Float, float)
 TEST_COMPARISON_OPS(Double, double)
-// FIXME:  error: expected '(' for function-style cast or type construction
-// TEST_COMPARISON_OPS(LongDouble, (long double))
+
+// We have to use type alias here, since FPBits<(long double)> is not allowed
+// if we do TEST_COMPARISON_OPS(LongDouble, (long double));
+// and Type(x) for Type = long double evaulates to long double(x)which  is not
+// allowed if we do TEST_COMPARISON_OPS(LongDouble, long double);
+using long_double = long double;
+TEST_COMPARISON_OPS(LongDouble, long_double)
 #ifdef LIBC_TYPES_HAS_FLOAT16
 TEST_COMPARISON_OPS(Float16, float16)
 #endif // LIBC_TYPES_HAS_FLOAT16
-
-// TODO: add other types if this is correct?
