@@ -128,6 +128,49 @@ TEST(ScudoStringsTest, Padding) {
   testAgainstLibc<int>("%03d - %03d", -12, -1234);
 }
 
+TEST(ScudoStringsTest, CopyFromAnEmptyString) {
+  scudo::ScopedString Str;
+  char buf[256] = {'0', '1'};
+  EXPECT_EQ(1U, Str.copyToBuffer(buf, sizeof(buf)));
+  EXPECT_STREQ("", buf);
+  EXPECT_EQ(0, buf[0]); // Rest of the buffer remains unchanged.
+}
+
+TEST(ScudoStringsTest, CopyFromAnEmptyStringIntoZeroSizeBuffer) {
+  scudo::ScopedString Str;
+  char buf[256] = {'0', '1'};
+  EXPECT_EQ(1U, Str.copyToBuffer(buf, 0));
+  EXPECT_EQ('0', buf[0]); // Nothing changed because provided size is 0.
+}
+
+TEST(ScudoStringsTest, CopyIntoLargeEnoughBuffer) {
+  scudo::ScopedString Str;
+  Str.append("abc");
+  char buf[256] = {'0', '1', '2', '3', '4', '5'};
+  // Size includes terminal null.
+  EXPECT_EQ(4U, Str.copyToBuffer(buf, sizeof(buf)));
+  EXPECT_STREQ("abc", buf);
+  EXPECT_EQ(buf[4], '4');
+}
+
+TEST(ScudoStringsTest, CopyWithTextOverflow) {
+  scudo::ScopedString Str;
+  Str.append("abc");
+  char buf[256] = {'0', '1', '2', '3', '4', '5'};
+  EXPECT_EQ(4U, Str.copyToBuffer(buf, 3));
+  EXPECT_STREQ("ab", buf);
+  EXPECT_EQ(buf[3], '3');
+}
+
+TEST(ScudoStringsTest, CopyIntoExactFit) {
+  scudo::ScopedString Str;
+  Str.append("abc");
+  char buf[256] = {'0', '1', '2', '3', '4', '5'};
+  EXPECT_EQ(4U, Str.copyToBuffer(buf, 4));
+  EXPECT_STREQ("abc", buf);
+  EXPECT_EQ(buf[4], '4');
+}
+
 #if defined(__linux__)
 
 #include <sys/resource.h>

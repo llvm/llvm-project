@@ -638,6 +638,7 @@ public:
   // sizing purposes.
   uptr getStats(char *Buffer, uptr Size) {
     ScopedString Str;
+    // TODO: Use Str.copyToBuffer and fail when Buffer is NULL.
     const uptr Length = getStats(&Str) + 1;
     if (Length < Size)
       Size = Length;
@@ -652,6 +653,12 @@ public:
     ScopedString Str;
     getStats(&Str);
     Str.output();
+  }
+
+  uptr getFragmentationInfo(char *Buffer, uptr Size) {
+    ScopedString Str;
+    Primary.getFragmentationInfo(&Str);
+    return Str.copyToBuffer(Buffer, Size);
   }
 
   void printFragmentationInfo() {
