@@ -8,6 +8,8 @@
 
 #include "platform.h"
 
+#include <stdlib.h>
+
 #if SCUDO_FUCHSIA
 #include <zxtest/zxtest.h>
 using Test = ::zxtest::Test;
@@ -56,6 +58,17 @@ using Test = ::testing::Test;
 // The zxtest library provides a default main function that does the same thing
 // for Fuchsia builds.
 #define SCUDO_NO_TEST_MAIN
+#endif
+
+// Match Android's default configuration, which disables Scudo's mismatch
+// allocation check, as it is being triggered by some third party code.
+#if SCUDO_ANDROID
+#define DEALLOC_TYPE_MISMATCH "false"
+#define SKIP_DEALLOC_TYPE_MISMATCH 1
+#else
+#define DEALLOC_TYPE_MISMATCH "true"
+#define SKIP_DEALLOC_TYPE_MISMATCH                                             \
+  (getenv("SKIP_DEALLOC_TYPE_MISMATCH") != nullptr)
 #endif
 
 extern bool UseQuarantine;

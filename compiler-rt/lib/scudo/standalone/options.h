@@ -25,6 +25,9 @@ enum class OptionBit {
   UseOddEvenTags,
   UseMemoryTagging,
   AddLargeAllocationSlack,
+  DeleteAlignmentMismatch,
+  FreeSizeMismatch,
+  FreeAlignmentMismatch,
 };
 
 struct Options {

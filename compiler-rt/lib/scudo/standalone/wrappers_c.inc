@@ -68,6 +68,18 @@ INTERFACE WEAK void SCUDO_PREFIX(free)(void *ptr) {
   SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc);
 }
 
+INTERFACE WEAK void SCUDO_PREFIX(free_sized)(void *ptr, size_t size) {
+  reportDeallocation(ptr);
+  SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::Malloc, size, true);
+}
+
+INTERFACE WEAK void
+SCUDO_PREFIX(free_aligned_sized)(void *ptr, size_t alignment, size_t size) {
+  reportDeallocation(ptr);
+  SCUDO_ALLOCATOR.deallocate(ptr, scudo::Chunk::Origin::AlignedAlloc, size,
+                             true, alignment, true);
+}
+
 INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   struct SCUDO_MALLINFO Info = {};
   scudo::StatCounters Stats;
@@ -139,8 +151,8 @@ INTERFACE WEAK void *SCUDO_PREFIX(memalign)(size_t alignment, size_t size) {
       scudo::reportAlignmentNotPowerOfTwo(alignment);
     }
   }
-  void *Ptr =
-      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign, alignment);
+  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::AlignedAlloc,
+                                       alignment);
   reportAllocation(Ptr, size);
   return Ptr;
 }
@@ -152,8 +164,8 @@ INTERFACE WEAK int SCUDO_PREFIX(posix_memalign)(void **memptr, size_t alignment,
       scudo::reportInvalidPosixMemalignAlignment(alignment);
     return EINVAL;
   }
-  void *Ptr =
-      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign, alignment);
+  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::AlignedAlloc,
+                                       alignment);
   if (UNLIKELY(!Ptr))
     return ENOMEM;
   reportAllocation(Ptr, size);
@@ -174,7 +186,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(pvalloc)(size_t size) {
   // pvalloc(0) should allocate one page.
   void *Ptr =
       SCUDO_ALLOCATOR.allocate(size ? scudo::roundUp(size, PageSize) : PageSize,
-                               scudo::Chunk::Origin::Memalign, PageSize);
+                               scudo::Chunk::Origin::AlignedAlloc, PageSize);
   reportAllocation(Ptr, scudo::roundUp(size, PageSize));
 
   return scudo::setErrnoOnNull(Ptr);
@@ -218,7 +230,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
 }
 
 INTERFACE WEAK void *SCUDO_PREFIX(valloc)(size_t size) {
-  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Memalign,
+  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::AlignedAlloc,
                                        scudo::getPageSizeCached());
   reportAllocation(Ptr, size);
 
@@ -307,8 +319,8 @@ INTERFACE WEAK void *SCUDO_PREFIX(aligned_alloc)(size_t alignment,
     scudo::reportInvalidAlignedAllocAlignment(alignment, size);
   }
 
-  void *Ptr =
-      SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::Malloc, alignment);
+  void *Ptr = SCUDO_ALLOCATOR.allocate(size, scudo::Chunk::Origin::AlignedAlloc,
+                                       alignment);
   reportAllocation(Ptr, size);
 
   return scudo::setErrnoOnNull(Ptr);
