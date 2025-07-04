@@ -128,6 +128,12 @@ inline __lsan::ChunkTag Metadata::GetLsanTag() const {
   return static_cast<__lsan::ChunkTag>(lsan_tag);
 }
 
+inline void Metadata::SetAllocType(AllocType type) { alloc_type = type; }
+
+inline AllocType Metadata::GetAllocType() const {
+  return static_cast<AllocType>(alloc_type);
+}
+
 uptr GetAliasRegionStart() {
 #if defined(HWASAN_ALIASING_MODE)
   constexpr uptr kAliasRegionOffset = 1ULL << (kTaggableRegionCheckShift - 1);
@@ -181,7 +187,7 @@ static uptr TaggedSize(uptr size) {
 }
 
 static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
-                            bool zeroise) {
+                            AllocType alloc_type, bool zeroise) {
   // Keep this consistent with LSAN and ASAN behavior.
   if (UNLIKELY(orig_size == 0))
     orig_size = 1;
@@ -259,6 +265,7 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   meta->SetLsanTag(__lsan::DisabledInThisThread() ? __lsan::kIgnored
                                                   : __lsan::kDirectlyLeaked);
 #endif
+  meta->SetAllocType(alloc_type);
   meta->SetAllocated(StackDepotPut(*stack), orig_size);
   RunMallocHooks(user_ptr, orig_size);
   return user_ptr;
@@ -285,7 +292,7 @@ static bool CheckInvalidFree(StackTrace *stack, void *untagged_ptr,
   return false;
 }
 
-static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
+static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr, AllocType) {
   CHECK(tagged_ptr);
   void *untagged_ptr = UntagPtr(tagged_ptr);
 
@@ -379,15 +386,15 @@ static void *HwasanReallocate(StackTrace *stack, void *tagged_ptr_old,
   void *untagged_ptr_old = UntagPtr(tagged_ptr_old);
   if (CheckInvalidFree(stack, untagged_ptr_old, tagged_ptr_old))
     return nullptr;
-  void *tagged_ptr_new =
-      HwasanAllocate(stack, new_size, alignment, false /*zeroise*/);
+  void *tagged_ptr_new = HwasanAllocate(stack, new_size, alignment, FROM_MALLOC,
+                                        false /*zeroise*/);
   if (tagged_ptr_old && tagged_ptr_new) {
     Metadata *meta =
         reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr_old));
     void *untagged_ptr_new = UntagPtr(tagged_ptr_new);
     internal_memcpy(untagged_ptr_new, untagged_ptr_old,
                     Min(new_size, static_cast<uptr>(meta->GetRequestedSize())));
-    HwasanDeallocate(stack, tagged_ptr_old);
+    HwasanDeallocate(stack, tagged_ptr_old, FROM_MALLOC);
   }
   return tagged_ptr_new;
 }
@@ -398,7 +405,7 @@ static void *HwasanCalloc(StackTrace *stack, uptr nmemb, uptr size) {
       return nullptr;
     ReportCallocOverflow(nmemb, size, stack);
   }
-  return HwasanAllocate(stack, nmemb * size, sizeof(u64), true);
+  return HwasanAllocate(stack, nmemb * size, sizeof(u64), FROM_MALLOC, true);
 }
 
 HwasanChunkView FindHeapChunkByAddress(uptr address) {
@@ -449,7 +456,8 @@ static uptr AllocationSizeFast(const void *p) {
 }
 
 void *hwasan_malloc(uptr size, StackTrace *stack) {
-  return SetErrnoOnNull(HwasanAllocate(stack, size, sizeof(u64), false));
+  return SetErrnoOnNull(
+      HwasanAllocate(stack, size, sizeof(u64), FROM_MALLOC, false));
 }
 
 void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack) {
@@ -458,9 +466,10 @@ void *hwasan_calloc(uptr nmemb, uptr size, StackTrace *stack) {
 
 void *hwasan_realloc(void *ptr, uptr size, StackTrace *stack) {
   if (!ptr)
-    return SetErrnoOnNull(HwasanAllocate(stack, size, sizeof(u64), false));
+    return SetErrnoOnNull(
+        HwasanAllocate(stack, size, sizeof(u64), FROM_MALLOC, false));
   if (size == 0) {
-    HwasanDeallocate(stack, ptr);
+    HwasanDeallocate(stack, ptr, FROM_MALLOC);
     return nullptr;
   }
   return SetErrnoOnNull(HwasanReallocate(stack, ptr, size, sizeof(u64)));
@@ -478,7 +487,7 @@ void *hwasan_reallocarray(void *ptr, uptr nmemb, uptr size, StackTrace *stack) {
 
 void *hwasan_valloc(uptr size, StackTrace *stack) {
   return SetErrnoOnNull(
-      HwasanAllocate(stack, size, GetPageSizeCached(), false));
+      HwasanAllocate(stack, size, GetPageSizeCached(), FROM_MALLOC, false));
 }
 
 void *hwasan_pvalloc(uptr size, StackTrace *stack) {
@@ -491,7 +500,8 @@ void *hwasan_pvalloc(uptr size, StackTrace *stack) {
   }
   // pvalloc(0) should allocate one page.
   size = size ? RoundUpTo(size, PageSize) : PageSize;
-  return SetErrnoOnNull(HwasanAllocate(stack, size, PageSize, false));
+  return SetErrnoOnNull(
+      HwasanAllocate(stack, size, PageSize, FROM_MALLOC, false));
 }
 
 void *hwasan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack) {
@@ -501,7 +511,8 @@ void *hwasan_aligned_alloc(uptr alignment, uptr size, StackTrace *stack) {
       return nullptr;
     ReportInvalidAlignedAllocAlignment(size, alignment, stack);
   }
-  return SetErrnoOnNull(HwasanAllocate(stack, size, alignment, false));
+  return SetErrnoOnNull(
+      HwasanAllocate(stack, size, alignment, FROM_MALLOC, false));
 }
 
 void *hwasan_memalign(uptr alignment, uptr size, StackTrace *stack) {
@@ -511,7 +522,8 @@ void *hwasan_memalign(uptr alignment, uptr size, StackTrace *stack) {
       return nullptr;
     ReportInvalidAllocationAlignment(alignment, stack);
   }
-  return SetErrnoOnNull(HwasanAllocate(stack, size, alignment, false));
+  return SetErrnoOnNull(
+      HwasanAllocate(stack, size, alignment, FROM_MALLOC, false));
 }
 
 int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
@@ -521,7 +533,7 @@ int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
       return errno_EINVAL;
     ReportInvalidPosixMemalignAlignment(alignment, stack);
   }
-  void *ptr = HwasanAllocate(stack, size, alignment, false);
+  void *ptr = HwasanAllocate(stack, size, alignment, FROM_MALLOC, false);
   if (UNLIKELY(!ptr))
     // OOM error is already taken care of by HwasanAllocate.
     return errno_ENOMEM;
@@ -531,7 +543,95 @@ int hwasan_posix_memalign(void **memptr, uptr alignment, uptr size,
 }
 
 void hwasan_free(void *ptr, StackTrace *stack) {
-  return HwasanDeallocate(stack, ptr);
+  HwasanDeallocate(stack, ptr, FROM_MALLOC);
+}
+
+namespace {
+
+void *hwasan_new(uptr size, StackTrace *stack, bool array) {
+  return SetErrnoOnNull(HwasanAllocate(stack, size, sizeof(u64),
+                                       array ? FROM_NEW_BR : FROM_NEW, true));
+}
+
+void *hwasan_new_aligned(uptr size, uptr alignment, StackTrace *stack,
+                         bool array) {
+  if (UNLIKELY(alignment == 0 || !IsPowerOfTwo(alignment))) {
+    errno = errno_EINVAL;
+    if (AllocatorMayReturnNull())
+      return nullptr;
+    ReportInvalidAllocationAlignment(alignment, stack);
+  }
+  return SetErrnoOnNull(HwasanAllocate(stack, size, alignment,
+                                       array ? FROM_NEW_BR : FROM_NEW, false));
+}
+
+void hwasan_delete(void *ptr, StackTrace *stack, bool array) {
+  HwasanDeallocate(stack, ptr, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+void hwasan_delete_aligned(void *ptr, uptr, StackTrace *stack, bool array) {
+  HwasanDeallocate(stack, ptr, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+void hwasan_delete_sized(void *ptr, uptr, StackTrace *stack, bool array) {
+  HwasanDeallocate(stack, ptr, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+void hwasan_delete_sized_aligned(void *ptr, uptr, uptr, StackTrace *stack,
+                                 bool array) {
+  HwasanDeallocate(stack, ptr, array ? FROM_NEW_BR : FROM_NEW);
+}
+
+}  // namespace
+
+void *hwasan_new(uptr size, StackTrace *stack) {
+  return hwasan_new(size, stack, /*array=*/false);
+}
+
+void *hwasan_new_aligned(uptr size, uptr alignment, StackTrace *stack) {
+  return hwasan_new_aligned(size, alignment, stack, /*array=*/false);
+}
+
+void *hwasan_new_array(uptr size, StackTrace *stack) {
+  return hwasan_new(size, stack, /*array=*/true);
+}
+
+void *hwasan_new_array_aligned(uptr size, uptr alignment, StackTrace *stack) {
+  return hwasan_new_aligned(size, alignment, stack, /*array=*/true);
+}
+
+void hwasan_delete(void *ptr, StackTrace *stack) {
+  hwasan_delete(ptr, stack, /*array=*/false);
+}
+
+void hwasan_delete_aligned(void *ptr, uptr alignment, StackTrace *stack) {
+  hwasan_delete_aligned(ptr, alignment, stack, /*array=*/false);
+}
+
+void hwasan_delete_sized(void *ptr, uptr size, StackTrace *stack) {
+  hwasan_delete_sized(ptr, size, stack, /*array=*/false);
+}
+
+void hwasan_delete_sized_aligned(void *ptr, uptr size, uptr alignment,
+                                 StackTrace *stack) {
+  hwasan_delete_sized_aligned(ptr, size, alignment, stack, /*array=*/false);
+}
+
+void hwasan_delete_array(void *ptr, StackTrace *stack) {
+  hwasan_delete(ptr, stack, /*array=*/true);
+}
+
+void hwasan_delete_array_aligned(void *ptr, uptr alignment, StackTrace *stack) {
+  hwasan_delete_aligned(ptr, alignment, stack, /*array=*/true);
+}
+
+void hwasan_delete_array_sized(void *ptr, uptr size, StackTrace *stack) {
+  hwasan_delete_sized(ptr, size, stack, /*array=*/true);
+}
+
+void hwasan_delete_array_sized_aligned(void *ptr, uptr size, uptr alignment,
+                                       StackTrace *stack) {
+  hwasan_delete_sized_aligned(ptr, size, alignment, stack, /*array=*/true);
 }
 
 }  // namespace __hwasan
