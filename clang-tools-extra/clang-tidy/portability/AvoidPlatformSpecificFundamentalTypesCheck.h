@@ -1,4 +1,5 @@
-//===--- AvoidPlatformSpecificFundamentalTypesCheck.h - clang-tidy -------*- C++ -*-===//
+//===--- AvoidPlatformSpecificFundamentalTypesCheck.h - clang-tidy -------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +14,8 @@
 
 namespace clang::tidy::portability {
 
-/// Find fundamental integer types and recommend using typedefs or fixed-width types.
+/// Find fundamental integer types and recommend using typedefs or fixed-width
+/// types.
 ///
 /// Detects fundamental integer types (int, short, long, long long, and their
 /// unsigned variants) and warns against their use due to platform-dependent
@@ -24,7 +26,8 @@ namespace clang::tidy::portability {
 /// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-platform-specific-fundamental-types.html
 class AvoidPlatformSpecificFundamentalTypesCheck : public ClangTidyCheck {
 public:
-  AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name, ClangTidyContext *Context);
+  AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
+                                             ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {

@@ -1,4 +1,5 @@
-//===--- AvoidPlatformSpecificFundamentalTypesCheck.cpp - clang-tidy ---------------===//
+//===--- AvoidPlatformSpecificFundamentalTypesCheck.cpp - clang-tidy
+//---------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,8 +32,9 @@ AST_MATCHER_P(clang::TypeLoc, hasType,
 
 } // namespace
 
-AvoidPlatformSpecificFundamentalTypesCheck::AvoidPlatformSpecificFundamentalTypesCheck(
-    StringRef Name, ClangTidyContext *Context)
+AvoidPlatformSpecificFundamentalTypesCheck::
+    AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
+                                               ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context) {}
 
 bool AvoidPlatformSpecificFundamentalTypesCheck::isFundamentalIntegerType(
@@ -59,7 +61,8 @@ bool AvoidPlatformSpecificFundamentalTypesCheck::isFundamentalIntegerType(
   }
 }
 
-bool AvoidPlatformSpecificFundamentalTypesCheck::isSemanticType(const Type *T) const {
+bool AvoidPlatformSpecificFundamentalTypesCheck::isSemanticType(
+    const Type *T) const {
   if (!T->isBuiltinType())
     return false;
 
@@ -84,35 +87,24 @@ bool AvoidPlatformSpecificFundamentalTypesCheck::isSemanticType(const Type *T) c
   }
 }
 
-void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(MatchFinder *Finder) {
+void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
+    MatchFinder *Finder) {
   // Match variable declarations with fundamental integer types
-  Finder->addMatcher(
-      varDecl().bind("var_decl"),
-      this);
+  Finder->addMatcher(varDecl().bind("var_decl"), this);
 
   // Match function declarations with fundamental integer return types
-  Finder->addMatcher(
-      functionDecl().bind("func_decl"),
-      this);
+  Finder->addMatcher(functionDecl().bind("func_decl"), this);
 
   // Match function parameters with fundamental integer types
-  Finder->addMatcher(
-      parmVarDecl().bind("param_decl"),
-      this);
+  Finder->addMatcher(parmVarDecl().bind("param_decl"), this);
 
   // Match field declarations with fundamental integer types
-  Finder->addMatcher(
-      fieldDecl().bind("field_decl"),
-      this);
+  Finder->addMatcher(fieldDecl().bind("field_decl"), this);
 
   // Match typedef declarations to check their underlying types
-  Finder->addMatcher(
-      typedefDecl().bind("typedef_decl"),
-      this);
+  Finder->addMatcher(typedefDecl().bind("typedef_decl"), this);
 
-  Finder->addMatcher(
-      typeAliasDecl().bind("alias_decl"),
-      this);
+  Finder->addMatcher(typeAliasDecl().bind("alias_decl"), this);
 }
 
 void AvoidPlatformSpecificFundamentalTypesCheck::check(
@@ -125,11 +117,13 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     Loc = VD->getLocation();
     QT = VD->getType();
     DeclType = "variable";
-  } else if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("func_decl")) {
+  } else if (const auto *FD =
+                 Result.Nodes.getNodeAs<FunctionDecl>("func_decl")) {
     Loc = FD->getLocation();
     QT = FD->getReturnType();
     DeclType = "function return type";
-  } else if (const auto *PD = Result.Nodes.getNodeAs<ParmVarDecl>("param_decl")) {
+  } else if (const auto *PD =
+                 Result.Nodes.getNodeAs<ParmVarDecl>("param_decl")) {
     Loc = PD->getLocation();
     QT = PD->getType();
     DeclType = "function parameter";
@@ -137,11 +131,13 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     Loc = FD->getLocation();
     QT = FD->getType();
     DeclType = "field";
-  } else if (const auto *TD = Result.Nodes.getNodeAs<TypedefDecl>("typedef_decl")) {
+  } else if (const auto *TD =
+                 Result.Nodes.getNodeAs<TypedefDecl>("typedef_decl")) {
     Loc = TD->getLocation();
     QT = TD->getUnderlyingType();
     DeclType = "typedef";
-  } else if (const auto *AD = Result.Nodes.getNodeAs<TypeAliasDecl>("alias_decl")) {
+  } else if (const auto *AD =
+                 Result.Nodes.getNodeAs<TypeAliasDecl>("alias_decl")) {
     Loc = AD->getLocation();
     QT = AD->getUnderlyingType();
     DeclType = "type alias";
