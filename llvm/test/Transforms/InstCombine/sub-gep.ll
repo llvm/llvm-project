@@ -1092,7 +1092,7 @@ define <2 x i64> @splat_geps_multiple(ptr %base, i64 %idx0, <2 x i64> %idx1, <2 
 
 define i64 @nuw_ptrdiff_shl_nsw(ptr %base, i64 %idx) {
 ; CHECK-LABEL: @nuw_ptrdiff_shl_nsw(
-; CHECK-NEXT:    [[OFFSET:%.*]] = shl nsw i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    [[OFFSET:%.*]] = shl nuw nsw i64 [[IDX:%.*]], 3
 ; CHECK-NEXT:    ret i64 [[OFFSET]]
 ;
   %offset = shl nsw i64 %idx, 3
@@ -1131,7 +1131,7 @@ define i64 @nuw_ptrdiff_mul_nsw_nneg_scale(ptr %base, i64 %idx) {
 
 define i64 @nuw_ptrdiff_mul_nsw_unknown_scale(ptr %base, i64 %idx, i64 %scale) {
 ; CHECK-LABEL: @nuw_ptrdiff_mul_nsw_unknown_scale(
-; CHECK-NEXT:    [[OFFSET:%.*]] = mul nuw nsw i64 [[IDX:%.*]], [[SCALE:%.*]]
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul nsw i64 [[IDX:%.*]], [[SCALE:%.*]]
 ; CHECK-NEXT:    ret i64 [[OFFSET]]
 ;
   %offset = mul nsw i64 %idx, %scale
