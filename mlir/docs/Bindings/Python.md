@@ -51,8 +51,9 @@ python -m pip install --upgrade pip
 # packages will be installed there.
 python -m pip install -r mlir/python/requirements.txt
 
-# Now run `cmake`, `ninja`, et al. For example, to run python bindings test only
-# using ninja:
+# Now run your build command with `cmake`, `ninja`, et al.
+
+# Run mlir tests. For example, to run python bindings tests only using ninja:
 ninja check-mlir-python
 ```
 
