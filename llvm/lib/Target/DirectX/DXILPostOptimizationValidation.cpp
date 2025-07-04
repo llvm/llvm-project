@@ -84,9 +84,57 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
     }
   }
 }
-  uint64_t combine_uint32_to_uint64(uint32_t high, uint32_t low) {
-      return (static_cast<uint64_t>(high) << 32) | low;
+
+static void reportRegNotBound(Module &M, Twine Type,
+                              ResourceInfo::ResourceBinding Binding) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << Type << " (space=" << Binding.Space
+     << ", register=" << Binding.LowerBound << ")"
+     << " is not defined in Root Signature";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
+static dxbc::ShaderVisibility
+tripleToVisibility(llvm::Triple::EnvironmentType ET) {
+  assert((ET == Triple::Pixel || ET == Triple::Vertex ||
+          ET == Triple::Geometry || ET == Triple::Hull ||
+          ET == Triple::Domain || ET == Triple::Mesh ||
+          ET == Triple::Compute) &&
+         "Invalid Triple to shader stage conversion");
+
+  switch (ET) {
+  case Triple::Pixel:
+    return dxbc::ShaderVisibility::Pixel;
+  case Triple::Vertex:
+    return dxbc::ShaderVisibility::Vertex;
+  case Triple::Geometry:
+    return dxbc::ShaderVisibility::Geometry;
+  case Triple::Hull:
+    return dxbc::ShaderVisibility::Hull;
+  case Triple::Domain:
+    return dxbc::ShaderVisibility::Domain;
+  case Triple::Mesh:
+    return dxbc::ShaderVisibility::Mesh;
+  case Triple::Compute:
+    return dxbc::ShaderVisibility::All;
+  default:
+    llvm_unreachable("Invalid triple to shader stage conversion");
   }
+}
+
+std::optional<mcdxbc::RootSignatureDesc>
+getRootSignature(RootSignatureBindingInfo &RSBI,
+                 dxil::ModuleMetadataInfo &MMI) {
+  if (MMI.EntryPropertyVec.size() == 0)
+    return std::nullopt;
+  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
+      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
+  if (!RootSigDesc)
+    return std::nullopt;
+  return RootSigDesc;
+}
+
 static void reportErrors(Module &M, DXILResourceMap &DRM,
                          DXILResourceBindingInfo &DRBI,
                          RootSignatureBindingInfo &RSBI,
@@ -99,57 +147,95 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
 
   assert(!DRBI.hasImplicitBinding() && "implicit bindings should be handled in "
                                        "DXILResourceImplicitBinding pass");
-  // Assuming this is used to validate only the root signature assigned to the
-  // entry function.
-  //Start test stuff
-  if(MMI.EntryPropertyVec.size() == 0)
-    return;
 
-  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
-      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
-  if (!RootSigDesc)
-    return;
+  if (auto RSD = getRootSignature(RSBI, MMI)) {
 
-  using MapT = llvm::IntervalMap<uint64_t, llvm::dxil::ResourceInfo::ResourceBinding, sizeof(llvm::dxil::ResourceInfo::ResourceBinding), llvm::IntervalMapInfo<uint64_t>>;
-  MapT::Allocator Allocator;
-  MapT BindingsMap(Allocator);
-  auto RSD = *RootSigDesc;
-   for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
-    const auto &[Type, Loc] =
-        RootSigDesc->ParametersContainer.getTypeAndLocForParameter(I);
-    switch (Type) {
-    case llvm::to_underlying(dxbc::RootParameterType::CBV):{
-      dxbc::RTS0::v2::RootDescriptor Desc =
-          RootSigDesc->ParametersContainer.getRootDescriptor(Loc);
+    RootSignatureBindingValidation Validation;
+    Validation.addRsBindingInfo(*RSD, tripleToVisibility(MMI.ShaderProfile));
 
-      llvm::dxil::ResourceInfo::ResourceBinding Binding;
-      Binding.LowerBound = Desc.ShaderRegister;
-      Binding.Space = Desc.RegisterSpace;
-      Binding.Size = 1;
-
-      BindingsMap.insert(combine_uint32_to_uint64(Binding.Space, Binding.LowerBound), combine_uint32_to_uint64(Binding.Space, Binding.LowerBound + Binding.Size -1), Binding);
-      break;
-    }
-    // case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable):{
-    //   mcdxbc::DescriptorTable Table =
-    //       RootSigDesc->ParametersContainer.getDescriptorTable(Loc);
-    //   for (const dxbc::RTS0::v2::DescriptorRange &Range : Table){
-    //     Range.
-    //   }
-      
-    //   break;
-    // }
+    for (const auto &CBuf : DRM.cbuffers()) {
+      ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
+      if (!Validation.checkCregBinding(Binding))
+        reportRegNotBound(M, "cbuffer", Binding);
     }
 
-  }
+    for (const auto &CBuf : DRM.srvs()) {
+      ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
+      if (!Validation.checkTRegBinding(Binding))
+        reportRegNotBound(M, "srv", Binding);
+    }
 
-  for(const auto &CBuf : DRM.cbuffers()) {
-    auto Binding = CBuf.getBinding();
-    if(!BindingsMap.overlaps(combine_uint32_to_uint64(Binding.Space, Binding.LowerBound), combine_uint32_to_uint64(Binding.Space, Binding.LowerBound + Binding.Size -1)))
-      auto X = 1;
+    for (const auto &CBuf : DRM.uavs()) {
+      ResourceInfo::ResourceBinding Binding = CBuf.getBinding();
+      if (!Validation.checkURegBinding(Binding))
+        reportRegNotBound(M, "uav", Binding);
+    }
   }
 }
 } // namespace
+
+void RootSignatureBindingValidation::addRsBindingInfo(
+    mcdxbc::RootSignatureDesc &RSD, dxbc::ShaderVisibility Visibility) {
+  for (size_t I = 0; I < RSD.ParametersContainer.size(); I++) {
+    const auto &[Type, Loc] =
+        RSD.ParametersContainer.getTypeAndLocForParameter(I);
+
+    const auto &Header = RSD.ParametersContainer.getHeader(I);
+    switch (Type) {
+    case llvm::to_underlying(dxbc::RootParameterType::SRV):
+    case llvm::to_underlying(dxbc::RootParameterType::UAV):
+    case llvm::to_underlying(dxbc::RootParameterType::CBV): {
+      dxbc::RTS0::v2::RootDescriptor Desc =
+          RSD.ParametersContainer.getRootDescriptor(Loc);
+
+      if (Header.ShaderVisibility ==
+              llvm::to_underlying(dxbc::ShaderVisibility::All) ||
+          Header.ShaderVisibility == llvm::to_underlying(Visibility))
+        addRange(Desc, Type);
+      break;
+    }
+    case llvm::to_underlying(dxbc::RootParameterType::DescriptorTable): {
+      const mcdxbc::DescriptorTable &Table =
+          RSD.ParametersContainer.getDescriptorTable(Loc);
+
+      for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
+        if (Range.RangeType ==
+            llvm::to_underlying(dxbc::DescriptorRangeType::Sampler))
+          continue;
+
+        if (Header.ShaderVisibility ==
+                llvm::to_underlying(dxbc::ShaderVisibility::All) ||
+            Header.ShaderVisibility == llvm::to_underlying(Visibility))
+          addRange(Range);
+      }
+      break;
+    }
+    }
+  }
+}
+
+bool RootSignatureBindingValidation::checkCregBinding(
+    ResourceInfo::ResourceBinding Binding) {
+  return CRegBindingsMap.overlaps(
+      combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+      combineUint32ToUint64(Binding.Space,
+                            Binding.LowerBound + Binding.Size - 1));
+}
+
+bool RootSignatureBindingValidation::checkTRegBinding(
+    ResourceInfo::ResourceBinding Binding) {
+  return TRegBindingsMap.overlaps(
+      combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+      combineUint32ToUint64(Binding.Space, Binding.LowerBound + Binding.Size));
+}
+
+bool RootSignatureBindingValidation::checkURegBinding(
+    ResourceInfo::ResourceBinding Binding) {
+  return URegBindingsMap.overlaps(
+      combineUint32ToUint64(Binding.Space, Binding.LowerBound),
+      combineUint32ToUint64(Binding.Space,
+                            Binding.LowerBound + Binding.Size - 1));
+}
 
 PreservedAnalyses
 DXILPostOptimizationValidation::run(Module &M, ModuleAnalysisManager &MAM) {

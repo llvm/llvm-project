@@ -1,19 +1,22 @@
+// RUN: %clang_dxc -T cs_6_6 -E CSMain %s 2>&1 
+
+// expected-no-diagnostics
+
 
 #define ROOT_SIGNATURE \
-    "RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), " \
     "CBV(b3, space=1, visibility=SHADER_VISIBILITY_ALL), " \
     "DescriptorTable(SRV(t0, space=0, numDescriptors=1), visibility=SHADER_VISIBILITY_ALL), " \
-    "DescriptorTable(Sampler(s0, numDescriptors=2), visibility=SHADER_VISIBILITY_ALL), " \
+    "DescriptorTable(Sampler(s0, numDescriptors=2), visibility=SHADER_VISIBILITY_VERTEX), " \
     "DescriptorTable(UAV(u0, numDescriptors=unbounded), visibility=SHADER_VISIBILITY_ALL)"
 
-cbuffer CB : register(b3, space2) {
+cbuffer CB : register(b3, space1) {
   float a;
 }
 
 StructuredBuffer<int> In : register(t0, space0);
 RWStructuredBuffer<int> Out : register(u0);
 
-RWBuffer<float> UAV : register(u3);
+RWBuffer<float> UAV : register(u4294967294);
 
 RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
 
