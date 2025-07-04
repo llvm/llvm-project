@@ -751,3 +751,27 @@ void *tp (void) {
   return __builtin_thread_pointer ();
   // WEBASSEMBLY: call {{.*}} @llvm.thread.pointer.p0()
 }
+
+
+typedef void (*funcref_t)();
+typedef int (*funcref_int_t)(int);
+typedef float (*F1)(float, double, int);
+typedef int (*F2)(float, double, int);
+typedef int (*F3)(int, int, int);
+typedef void (*F4)(int, int, int);
+typedef void (*F5)(void);
+
+void use(int);
+
+void test_function_pointer_signature_void(F1 func) {
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, float 0.000000e+00, float 0.000000e+00, double 0.000000e+00, i32 0)
+  use(__builtin_wasm_test_function_pointer_signature(func));
+  // WEBASSEMBLY:  %1 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0, float 0.000000e+00, double 0.000000e+00, i32 0)
+  use(__builtin_wasm_test_function_pointer_signature((F2)func));
+  // WEBASSEMBLY:  %2 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, i32 0, i32 0, i32 0, i32 0)
+  use(__builtin_wasm_test_function_pointer_signature((F3)func));
+  // WEBASSEMBLY:  %3 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token undef, i32 0, i32 0, i32 0)
+  use(__builtin_wasm_test_function_pointer_signature((F4)func));
+  // WEBASSEMBLY:  %4 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, token undef)
+  use(__builtin_wasm_test_function_pointer_signature((F5)func));
+}
