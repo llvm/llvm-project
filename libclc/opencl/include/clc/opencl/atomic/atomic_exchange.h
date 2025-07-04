@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_EXCHANGE_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_EXCHANGE_H__
+
 #define FUNCTION atomic_exchange
 
 #define __CLC_BODY <clc/opencl/atomic/atomic_decl.inc>
@@ -15,3 +18,5 @@
 #include <clc/math/gentype.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_EXCHANGE_H__

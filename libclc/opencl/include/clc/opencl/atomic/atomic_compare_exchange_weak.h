@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_COMPARE_EXCHANGE_WEAK_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_COMPARE_EXCHANGE_WEAK_H__
+
 #define FUNCTION atomic_compare_exchange_weak
 #define __CLC_COMPARE_EXCHANGE
 
@@ -17,3 +20,5 @@
 
 #undef __CLC_COMPARE_EXCHANGE
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_COMPARE_EXCHANGE_WEAK_H__

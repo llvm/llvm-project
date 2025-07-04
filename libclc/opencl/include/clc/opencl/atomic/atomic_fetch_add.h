@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_ADD_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_ADD_H__
+
 #define FUNCTION atomic_fetch_add
 
 #define __CLC_BODY <clc/opencl/atomic/atomic_decl.inc>
@@ -15,3 +18,5 @@
 #include <clc/math/gentype.inc>
 
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_FETCH_ADD_H__

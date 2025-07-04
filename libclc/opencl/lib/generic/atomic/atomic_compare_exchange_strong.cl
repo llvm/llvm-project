@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_compare_exchange.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/atomic/atomic_compare_exchange_strong.h>
 
 #define FUNCTION atomic_compare_exchange_strong
 #define __CLC_COMPARE_EXCHANGE

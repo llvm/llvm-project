@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_LOAD_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_LOAD_H__
+
 #define FUNCTION atomic_load
 #define __CLC_NO_VALUE_ARG
 
@@ -17,3 +20,5 @@
 
 #undef __CLC_NO_VALUE_ARG
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_LOAD_H__

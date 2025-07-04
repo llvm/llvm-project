@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_fetch_add.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/atomic/atomic_fetch_add.h>
 
 #define FUNCTION atomic_fetch_add
 #define __IMPL_FUNCTION __clc_atomic_fetch_add

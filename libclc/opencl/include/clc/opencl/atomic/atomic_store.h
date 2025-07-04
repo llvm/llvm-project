@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
+
 #define FUNCTION atomic_store
 #define __CLC_RETURN_VOID
 
@@ -17,3 +20,5 @@
 
 #undef __CLC_RETURN_VOID
 #undef FUNCTION
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_STORE_H__
