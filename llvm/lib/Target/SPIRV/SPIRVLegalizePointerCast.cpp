@@ -144,11 +144,67 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     // - float v = s.m;
     else if (SST && SST->getTypeAtIndex(0u) == ToTy)
       Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
-    else
+    else {
+      LI->dump();
       llvm_unreachable("Unimplemented implicit down-cast from load.");
+    }
 
     GR->replaceAllUsesWith(LI, Output, /* DeleteOld= */ true);
     DeadInstructions.push_back(LI);
+  }
+
+  llvm::SmallVector<uint32_t>
+  getAccessChainIndiciesForOffset(Type *FromTy, uint32_t Offset,
+                                  const DataLayout &DL) {
+    llvm::SmallVector<uint32_t> Indices;
+    APInt O(32, Offset, true);
+
+    while (!O.isZero()) {
+      // TODO: getGEPIndexForOffset does not work for vector types. Need to do
+      // something.
+      auto R = DL.getGEPIndexForOffset(FromTy, O);
+      assert(R.has_value() && "Unable to build AC indices.");
+      Indices.push_back(R->getSExtValue());
+    }
+    return Indices;
+  }
+
+  void transformGEP(IRBuilder<> &B, IntrinsicInst *GEP, Value *CastedOperand,
+                    Value *OriginalOperand) {
+    // Assumptions: If the offset for the GEP is not constant then it would not
+    // have changed the type for the GEP, and there should be no pointer cast.
+
+    assert(GEP->getNumOperands() == 4 &&
+           "Expecting operand to have been fold to a single operand");
+
+    Type *ToTy = GR->findDeducedElementType(CastedOperand);
+    assert(ToTy->isIntegerTy() && ToTy->getIntegerBitWidth() == 8);
+
+    llvm::Value *OffsetOperand = GEP->getOperand(2);
+    assert(isa<ConstantInt>(OffsetOperand) &&
+           "Expecing the offset in the operand to have been folded to a "
+           "constant operand.");
+
+    uint32_t Offset = cast<ConstantInt>(OffsetOperand)->getSExtValue();
+
+    Type *FromTy = GR->findDeducedElementType(OriginalOperand);
+    FromTy->dump();
+    llvm::dbgs() << "We have an offset of " << Offset << "\n";
+    const DataLayout &DL = GEP->getModule()->getDataLayout();
+
+    llvm::SmallVector<uint32_t> ACIndecies =
+        getAccessChainIndiciesForOffset(FromTy, Offset, DL);
+
+    llvm::dbgs() << "The ac indexes are:";
+    for (uint32_t Idx : ACIndecies) {
+      llvm::dbgs() << " " << Idx;
+    }
+
+    llvm::dbgs() << "\n";
+    llvm_unreachable("Need to build new access chain.");
+
+    // GR->replaceAllUsesWith(LI, Output, /* DeleteOld= */ true);
+    // DeadInstructions.push_back(LI);
   }
 
   // Creates an spv_insertelt instruction (equivalent to llvm's insertelement).
@@ -297,8 +353,9 @@ class SPIRVLegalizePointerCast : public FunctionPass {
         }
 
         if (Intrin->getIntrinsicID() == Intrinsic::spv_gep) {
-          GR->replaceAllUsesWith(CastedOperand, OriginalOperand,
-                                 /* DeleteOld= */ false);
+          transformGEP(B, Intrin, CastedOperand, OriginalOperand);
+          // GR->replaceAllUsesWith(CastedOperand, OriginalOperand,
+          //                                 /* DeleteOld= */ false);
           continue;
         }
 
