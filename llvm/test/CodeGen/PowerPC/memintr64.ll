@@ -9,14 +9,12 @@
 ; RUN:    -mtriple=powerpc64-ibm-aix < %s | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-AIX-64-P9
 
-define noundef i32 @_Z11memcmp_testPKvS0_m(ptr noundef readonly captures(none) %ptr1, ptr noundef readonly captures(none) %ptr2, i64 noundef %num) local_unnamed_addr {
+define noundef i32 @_Z11memcmp_testPKvS0_m(ptr noundef readonly captures(none) %ptr1, ptr noundef readonly captures(none) %ptr2, i64 noundef %num) nounwind {
 ; CHECK-LE-P9-LABEL: _Z11memcmp_testPKvS0_m:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    mflr r0
 ; CHECK-LE-P9-NEXT:    stdu r1, -32(r1)
 ; CHECK-LE-P9-NEXT:    std r0, 48(r1)
-; CHECK-LE-P9-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-LE-P9-NEXT:    bl memcmp
 ; CHECK-LE-P9-NEXT:    nop
 ; CHECK-LE-P9-NEXT:    addi r1, r1, 32
@@ -29,8 +27,6 @@ define noundef i32 @_Z11memcmp_testPKvS0_m(ptr noundef readonly captures(none) %
 ; CHECK-BE-P9-NEXT:    mflr r0
 ; CHECK-BE-P9-NEXT:    stdu r1, -112(r1)
 ; CHECK-BE-P9-NEXT:    std r0, 128(r1)
-; CHECK-BE-P9-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-BE-P9-NEXT:    .cfi_offset lr, 16
 ; CHECK-BE-P9-NEXT:    bl memcmp
 ; CHECK-BE-P9-NEXT:    nop
 ; CHECK-BE-P9-NEXT:    addi r1, r1, 112
@@ -54,6 +50,6 @@ entry:
   ret i32 %call
 }
 
-declare i32 @memcmp(ptr noundef captures(none), ptr noundef captures(none), i64 noundef) local_unnamed_addr
+declare i32 @memcmp(ptr noundef captures(none), ptr noundef captures(none), i64 noundef) nounwind
 
 
