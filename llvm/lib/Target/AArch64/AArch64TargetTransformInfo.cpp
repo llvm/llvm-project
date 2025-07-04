@@ -3897,6 +3897,8 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
                                                    unsigned Index,
                                                    const Value *Op0,
                                                    const Value *Op1) const {
+  if (Index == 0 && Op0 && isa<PoisonValue>(Op0))
+    return 0;
   return getVectorInstrCostHelper(Opcode, Val, CostKind, Index);
 }
 

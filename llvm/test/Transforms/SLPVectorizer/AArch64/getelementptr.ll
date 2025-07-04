@@ -46,9 +46,9 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[CMP31:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP31]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[X:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Z:%.*]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 0, i32 poison>, i32 [[X:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[Z:%.*]], i64 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    [[ADD16:%.*]] = extractelement <2 x i32> [[TMP21:%.*]], i64 0
@@ -75,12 +75,14 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[T8:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[ADD1]], [[T8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP10]], i32 0
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[G]], i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP23:%.*]] = sext i32 [[TMP22]] to i64
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, ptr [[G]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[T10:%.*]] = load i32, ptr [[ARRAYIDX10]], align 4
 ; CHECK-NEXT:    [[ADD11:%.*]] = add nsw i32 [[ADD6]], [[T10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP10]], i32 1
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[G]], i32 [[TMP11]]
+; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
+; CHECK-NEXT:    [[TMP18:%.*]] = sext i32 [[TMP24]] to i64
+; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, ptr [[G]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[T12:%.*]] = load i32, ptr [[ARRAYIDX15]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[ADD11]], i64 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x i32> [[TMP7]], i32 [[T12]], i64 0
@@ -145,6 +147,8 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[CMP31:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP31]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i32> poison, i32 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> [[TMP10]], i32 [[Z:%.*]], i64 1
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = extractelement <2 x i32> [[TMP18:%.*]], i64 0
