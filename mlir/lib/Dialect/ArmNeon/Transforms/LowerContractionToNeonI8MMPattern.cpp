@@ -12,7 +12,7 @@
 // TODO: There may be opportunities to unify this with a similar pattern
 // for SVE. See:
 //   https://github.com/llvm/llvm-project/issues/145559
-//   LowerContractionToSVEI8MMPattern.cpp
+//   LowerContractToSVEPatterns.cpp
 //
 //===----------------------------------------------------------------------===//
 
