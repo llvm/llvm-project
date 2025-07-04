@@ -83,6 +83,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   set_target_properties(${LIB_TARGET_NAME} PROPERTIES
                         VERSION ${LIBSYCL_VERSION_STRING}
                         SOVERSION ${LIBSYCL_VERSION_STRING})
+  set_target_properties(${LIB_TARGET_NAME} PROPERTIES OUTPUT_NAME ${LIB_OUTPUT_NAME})
 endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
@@ -91,13 +92,9 @@ set(LIBSYCL_SOURCES
 
 # Version-agnostic name of the import library, has effect on Windows only.
 set(IMPLIB_NAME "libsycl")
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-set(LIB_NAME "sycl${LIBSYCL_MAJOR_VERSION}")
-set(LIB_OUTPUT_NAME "${LIB_NAME}")
-else()
 set(LIB_NAME "sycl")
 set(LIB_OUTPUT_NAME "${LIB_NAME}")
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   if (CMAKE_BUILD_TYPE STREQUAL Debug OR CMAKE_MSVC_RUNTIME_LIBRARY STREQUAL MultiThreadedDebugDLL)
     set(LIB_OUTPUT_NAME "${LIB_OUTPUT_NAME}d")
     set(IMPLIB_NAME "${IMPLIB_NAME}d")
@@ -106,10 +103,6 @@ endif()
 
 add_sycl_rt_library(${LIB_NAME} sycl_object ${LIB_OUTPUT_NAME}
                     SOURCES ${LIBSYCL_SOURCES} IMPLIB_OUTPUT_NAME ${IMPLIB_NAME})
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  add_library(sycl ALIAS ${LIB_NAME})
-endif()
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
   ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
