@@ -1219,8 +1219,8 @@ bool SemaHLSL::handleRootSignatureElements(
   };
 
   // Helper to report diagnostics
-  auto ReportOverlap = [this, InfoIndexMap, &HadOverlap](const RangeInfo *Info,
-                                                const RangeInfo *OInfo) {
+  auto ReportOverlap = [this, InfoIndexMap, &HadOverlap](
+                           const RangeInfo *Info, const RangeInfo *OInfo) {
     HadOverlap = true;
     auto CommonVis = Info->Visibility == llvm::dxbc::ShaderVisibility::All
                          ? OInfo->Visibility
