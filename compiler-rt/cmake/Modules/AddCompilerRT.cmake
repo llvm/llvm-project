@@ -178,8 +178,14 @@ function(add_compiler_rt_runtime name type)
   # Until we support this some other way, build compiler-rt runtime without LTO
   # to allow non-LTO projects to link with it. GPU targets can currently only be
   # distributed as LLVM-IR and ignore this.
-  if(COMPILER_RT_HAS_FNO_LTO_FLAG AND NOT COMPILER_RT_GPU_BUILD)
+  if(COMPILER_RT_HAS_FNO_LTO_FLAG AND NOT COMPILER_RT_GPU_BUILD OR NOT COMPILER_RT_ENABLE_LTO)
     set(NO_LTO_FLAGS "-fno-lto")
+    if(COMPILER_RT_HAS_FNO_WPD_FLAG)
+      list(APPEND NO_LTO_FLAGS "-fno-whole-program-vtables")
+    endif()
+    if(COMPILER_RT_HAS_FNO_VFE_FLAG)
+      list(APPEND NO_LTO_FLAGS "-fno-virtual-function-elimination")
+    endif()
   else()
     set(NO_LTO_FLAGS "")
   endif()
