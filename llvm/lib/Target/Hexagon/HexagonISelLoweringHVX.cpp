@@ -128,7 +128,9 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FSUB,              T, Legal);
       setOperationAction(ISD::FMUL,              T, Legal);
       setOperationAction(ISD::FMINIMUMNUM, T, Legal);
+      setOperationAction(ISD::FMINNUM, T, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, T, Legal);
+      setOperationAction(ISD::FMAXNUM, T, Legal);
 
       setOperationAction(ISD::INSERT_SUBVECTOR,  T, Custom);
       setOperationAction(ISD::EXTRACT_SUBVECTOR, T, Custom);
@@ -165,7 +167,9 @@ HexagonTargetLowering::initializeHVXLowering() {
       setOperationAction(ISD::FSUB,           P, Custom);
       setOperationAction(ISD::FMUL,           P, Custom);
       setOperationAction(ISD::FMINIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMINNUM, P, Custom);
       setOperationAction(ISD::FMAXIMUMNUM, P, Custom);
+      setOperationAction(ISD::FMAXNUM, P, Custom);
       setOperationAction(ISD::SETCC,          P, Custom);
       setOperationAction(ISD::VSELECT,        P, Custom);
 
@@ -3173,7 +3177,9 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::FSUB:
       case ISD::FMUL:
       case ISD::FMINIMUMNUM:
+      case ISD::FMINNUM:
       case ISD::FMAXIMUMNUM:
+      case ISD::FMAXNUM:
       case ISD::MULHS:
       case ISD::MULHU:
       case ISD::AND:
