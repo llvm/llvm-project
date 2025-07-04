@@ -203,6 +203,14 @@ functions:
     arguments:
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcslcpy
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t
   - name: wcstok
     standards:
       - stdc
