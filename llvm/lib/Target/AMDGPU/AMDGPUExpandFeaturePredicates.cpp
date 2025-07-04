@@ -127,6 +127,30 @@ handlePredicate(const GCNSubtarget &ST, FunctionAnalysisManager &FAM,
 }
 } // Unnamed namespace.
 
+static inline SmallVector<Function *> collectUsedFunctions(Module &M) {
+  SmallVector<Function *> Ret;
+  for (auto &&F : M) {
+    if (F.isIntrinsic() || F.isDeclaration())
+      continue;
+    if (!F.hasInternalLinkage() && !F.hasPrivateLinkage())
+      continue;
+    if (F.hasNUndroppableUsesOrMore(1))
+      Ret.push_back(&F);
+  }
+
+  return Ret;
+}
+
+template<typename Container0, typename Container1, typename Container2>
+static inline void removeUnreachable(const Container0 &Predicates,
+                                     const Container1 &PredicatedFns,
+                                     const Container2 &UnreachableFns) {
+  for_each(Predicates, [](auto &&P) { P->eraseFromParent(); });
+  for_each(PredicatedFns, [](auto &&F) { removeUnreachableBlocks(*F); });
+  for_each(UnreachableFns,
+           [](auto &&F) { if (F->getNumUses() == 0) F->eraseFromParent(); });
+}
+
 PreservedAnalyses
 AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (M.empty())
@@ -148,6 +172,7 @@ AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
 
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   SmallPtrSet<Function *, 32> Predicated;
+  SmallVector<Function *> MaybeUnreachable = collectUsedFunctions(M);
   auto Ret = PreservedAnalyses::all();
   for (auto &&P : Predicates) {
     auto R = handlePredicate(ST, FAM, Predicated, P);
@@ -158,10 +183,7 @@ AMDGPUExpandFeaturePredicatesPass::run(Module &M, ModuleAnalysisManager &MAM) {
     Ret.intersect(R.first);
   }
 
-  for (auto &&P : Predicates)
-    P->eraseFromParent();
-  for (auto &&F : Predicated)
-    removeUnreachableBlocks(*F);
+  removeUnreachable(Predicates, Predicated, MaybeUnreachable);
 
   return Ret;
 }
