@@ -32,6 +32,18 @@ class Symbol:
             return str(self.namespace) < str(other.namespace)
         return self.name < other.name
 
+    def __eq__(self, other):
+        if not isinstance(other, Symbol):
+            return False
+        return (
+            self.name == other.name
+            and self.namespace == other.namespace
+            and set(self.headers) == set(other.headers)
+        )
+
+    def __hash__(self):
+        return hash((self.name, self.namespace, tuple(self.headers)))
+
 
 def _HasClass(tag, *classes):
     for c in tag.get("class", []):
@@ -51,8 +63,8 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
 
     Returns a list of headers.
     """
-    headers = set()
-    all_headers = set()
+    headers = []
+    all_headers = []
 
     soup = BeautifulSoup(symbol_page_html, "html.parser")
     # Rows in table are like:
@@ -73,7 +85,7 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
                     sym == symbol_name or sym == qual_name for sym in found_symbols
                 ):
                     continue
-                headers.update(current_headers)
+                headers.extend(current_headers)
             elif _HasClass(row, "t-dsc-header"):
                 # If we saw a decl since the last header, this is a new block of headers
                 # for a new block of decls.
@@ -86,7 +98,7 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
                 # The interesting header content (e.g. <cstdlib>) is wrapped in <code>.
                 for header_code in row.find_all("code"):
                     current_headers.append(header_code.text)
-                    all_headers.add(header_code.text)
+                    all_headers.append(header_code.text)
     # If the symbol was never named, consider all named headers.
     return headers or all_headers
 
@@ -183,9 +195,12 @@ def _GetSymbols(pool, root_dir, index_page_name, namespace, variants_to_accept):
                 )
 
         # Build map from symbol name to a set of headers.
-        symbol_headers = collections.defaultdict(set)
+        symbol_headers = collections.defaultdict(list)
         for symbol_name, lazy_headers in results:
-            symbol_headers[symbol_name].update(lazy_headers.get())
+            headers = lazy_headers.get()
+            for header in headers:
+                if header not in symbol_headers[symbol_name]:
+                    symbol_headers[symbol_name].append(header)
 
     symbols = []
     for name, headers in sorted(symbol_headers.items(), key=lambda t: t[0]):
@@ -232,4 +247,4 @@ def GetSymbols(parse_pages):
     finally:
         pool.terminate()
         pool.join()
-    return sorted(symbols)
+    return sorted(set(symbols))

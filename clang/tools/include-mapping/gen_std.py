@@ -43,7 +43,7 @@ import re
 
 
 CODE_PREFIX = """\
-//===-- gen_std.py generated file -------------------------------*- C++ -*-===//
+//===-- gen_std.py generated file -------------------------------*- %s -*-===//
 //
 // Used to build a lookup table (qualified names => include headers) for %s
 // Standard Library symbols.
@@ -154,7 +154,7 @@ def AdditionalHeadersForIOSymbols(symbol):
     if sym_header in ["<ios>", "<istream>", "<ostream>", "<streambuf>"]:
         headers.append("<iostream>")
 
-    if symbol.name in iosfwd_symbols:
+    if symbol.name in iosfwd_symbols and sym_header != "<iosfwd>":
         headers.append("<iosfwd>")
 
     return headers
@@ -223,6 +223,34 @@ def GetCCompatibilitySymbols(symbol):
     return results
 
 
+def PrintSymbol(symbol):
+    """Print SYMBOL entries for a given symbol, handling all header variations."""
+
+    if len(symbol.headers) == 0:
+        sys.stderr.write("No header found for symbol %s\n" % symbol.name)
+        return
+
+    if len(symbol.headers) == 1:
+        augmented_symbols = [symbol]
+    else:
+        augmented_symbols = [cppreference_parser.Symbol(symbol.name, symbol.namespace, [header])
+                            for header in symbol.headers]
+
+    # Add C compatibility symbols
+    augmented_symbols.extend([csymbol
+                            for s in augmented_symbols
+                            for csymbol in GetCCompatibilitySymbols(s)])
+
+    # Add additional headers for IO symbols
+    augmented_symbols.extend([cppreference_parser.Symbol(s.name, s.namespace, [header])
+                            for s in augmented_symbols
+                            for header in AdditionalHeadersForIOSymbols(s)])
+
+    for s in augmented_symbols:
+        # SYMBOL(unqualified_name, namespace, header)
+        print("SYMBOL(%s, %s, %s)" % (s.name, s.namespace, s.headers[0]))
+
+
 def main():
     args = ParseArg()
     if args.symbols == "cpp":
@@ -256,8 +284,9 @@ def main():
         ]
     elif args.symbols == "c":
         page_root = os.path.join(args.cppreference, "en", "c")
-        symbol_index_root = page_root
-        parse_pages = [(page_root, "index.html", None)]
+        symbol_index_root = os.path.join(page_root, "symbol_index")
+        parse_pages = [(page_root, "index.html", None),
+                       (symbol_index_root, "macro.html", None)]
 
     if not os.path.exists(symbol_index_root):
         exit("Path %s doesn't exist!" % symbol_index_root)
@@ -270,24 +299,11 @@ def main():
     cppreference_modified_date = datetime.datetime.fromtimestamp(
         os.stat(index_page_path).st_mtime
     ).strftime("%Y-%m-%d")
-    print(CODE_PREFIX % (args.symbols.upper(), cppreference_modified_date))
+    language = "C++" if args.symbols == "cpp" else " C "
+    print(CODE_PREFIX % (language, args.symbols.upper(), cppreference_modified_date))
+
     for symbol in symbols:
-        if len(symbol.headers) == 1:
-            augmented_symbols = [symbol]
-            augmented_symbols.extend(GetCCompatibilitySymbols(symbol))
-            for s in augmented_symbols:
-                s.headers.extend(AdditionalHeadersForIOSymbols(s))
-                for header in s.headers:
-                    # SYMBOL(unqualified_name, namespace, header)
-                    print("SYMBOL(%s, %s, %s)" % (s.name, s.namespace, header))
-        elif len(symbol.headers) == 0:
-            sys.stderr.write("No header found for symbol %s\n" % symbol.name)
-        else:
-            # FIXME: support symbols with multiple headers (e.g. std::move).
-            sys.stderr.write(
-                "Ambiguous header for symbol %s: %s\n"
-                % (symbol.name, ", ".join(symbol.headers))
-            )
+        PrintSymbol(symbol)
 
 
 if __name__ == "__main__":
