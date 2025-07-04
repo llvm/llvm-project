@@ -16,6 +16,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -909,7 +910,7 @@ TEST(ValueTracking, propagatesPoison) {
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
       {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
-      {false, "call float @llvm.sqrt.f32(float %fx)", 0},
+      {true, "call float @llvm.sqrt.f32(float %fx)", 0},
       {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
       {false, "call float @llvm.sin.f32(float %fx)", 0},
       {false, "call float @llvm.cos.f32(float %fx)", 0},

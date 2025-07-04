@@ -181,8 +181,7 @@ void RISCVMCCodeEmitter::expandTLSDESCCall(const MCInst &MI,
   MCRegister Link = MI.getOperand(0).getReg();
   MCRegister Dest = MI.getOperand(1).getReg();
   int64_t Imm = MI.getOperand(2).getImm();
-  Fixups.push_back(
-      MCFixup::create(0, Expr, ELF::R_RISCV_TLSDESC_CALL, MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, Expr, ELF::R_RISCV_TLSDESC_CALL));
   MCInst Call =
       MCInstBuilder(RISCV::JALR).addReg(Link).addReg(Dest).addImm(Imm);
 
@@ -209,8 +208,7 @@ void RISCVMCCodeEmitter::expandAddTPRel(const MCInst &MI,
   assert(Expr && Expr->getSpecifier() == ELF::R_RISCV_TPREL_ADD &&
          "Expected tprel_add relocation on TP-relative symbol");
 
-  Fixups.push_back(
-      MCFixup::create(0, Expr, ELF::R_RISCV_TPREL_ADD, MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, Expr, ELF::R_RISCV_TPREL_ADD));
   if (STI.hasFeature(RISCV::FeatureRelax))
     Fixups.back().setLinkerRelaxable();
 
@@ -653,7 +651,7 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
 
   assert(FixupKind != RISCV::fixup_riscv_invalid && "Unhandled expression!");
 
-  Fixups.push_back(MCFixup::create(0, Expr, FixupKind, MI.getLoc()));
+  Fixups.push_back(MCFixup::create(0, Expr, FixupKind));
   // If linker relaxation is enabled and supported by this relocation, set
   // a bit so that if fixup is unresolved, a R_RISCV_RELAX relocation will be
   // appended.

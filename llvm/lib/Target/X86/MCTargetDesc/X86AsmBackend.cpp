@@ -9,7 +9,7 @@
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86FixupKinds.h"
-#include "MCTargetDesc/X86MCExpr.h"
+#include "MCTargetDesc/X86MCAsmInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -169,7 +169,7 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  bool shouldForceRelocation(const MCFixup &, const MCValue &) override;
+  bool shouldForceRelocation(const MCFixup &, const MCValue &);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
@@ -359,7 +359,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
       continue;
     const MCExpr &Expr = *Operand.getExpr();
     if (Expr.getKind() == MCExpr::SymbolRef &&
-        getSpecifier(cast<MCSymbolRefExpr>(&Expr)) != X86MCExpr::VK_None)
+        cast<MCSymbolRefExpr>(&Expr)->getSpecifier())
       return true;
   }
   return false;
@@ -687,16 +687,16 @@ static unsigned getFixupKindSize(unsigned Kind) {
   }
 }
 
-// Force relocation when there is a specifier. This might be too conservative -
-// GAS doesn't emit a relocation for call local@plt; local:.
-bool X86AsmBackend::shouldForceRelocation(const MCFixup &,
-                                          const MCValue &Target) {
-  return Target.getSpecifier();
-}
+void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data, uint64_t Value,
+                               bool IsResolved) {
+  // Force relocation when there is a specifier. This might be too conservative
+  // - GAS doesn't emit a relocation for call local@plt; local:.
+  if (Target.getSpecifier())
+    IsResolved = false;
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
 
-void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
-                               const MCValue &, MutableArrayRef<char> Data,
-                               uint64_t Value, bool IsResolved) {
   auto Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
@@ -705,8 +705,7 @@ void X86AsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
-  if (IsResolved &&
-      getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
+  if (IsResolved && Fixup.isPCRel()) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
       getContext().reportError(Fixup.getLoc(),
@@ -748,7 +747,7 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
 
   // Otherwise, relax unless there is a @ABS8 specifier.
   if (Fixup.getKind() == FK_Data_1 && Target.getAddSym() &&
-      Target.getSpecifier() == X86MCExpr::VK_ABS8)
+      Target.getSpecifier() == X86::S_ABS8)
     return false;
   return true;
 }
@@ -847,7 +846,7 @@ bool X86AsmBackend::padInstructionViaRelaxation(MCRelaxableFragment &RF,
     return false;
   RF.setInst(Relaxed);
   RF.setContents(Code);
-  RF.getFixups() = Fixups;
+  RF.setFixups(Fixups);
   RemainingSize -= Delta;
   return true;
 }

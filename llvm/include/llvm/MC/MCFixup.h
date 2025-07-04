@@ -73,14 +73,14 @@ class MCFixup {
   /// determine how the operand value should be encoded into the instruction.
   MCFixupKind Kind = FK_NONE;
 
+  bool PCRel = false;
+
   /// Used by RISC-V style linker relaxation. Whether the fixup is
   /// linker-relaxable.
   bool LinkerRelaxable = false;
 
   /// Consider bit fields if we need more flags.
 
-  /// The source location which gave rise to the fixup, if any.
-  SMLoc Loc;
 public:
   static MCFixup create(uint32_t Offset, const MCExpr *Value,
                         MCFixupKind Kind, SMLoc Loc = SMLoc()) {
@@ -88,12 +88,10 @@ public:
     FI.Value = Value;
     FI.Offset = Offset;
     FI.Kind = Kind;
-    FI.Loc = Loc;
     return FI;
   }
-  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind,
-                        SMLoc Loc = SMLoc()) {
-    return create(Offset, Value, MCFixupKind(Kind), Loc);
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind) {
+    return create(Offset, Value, MCFixupKind(Kind));
   }
 
   MCFixupKind getKind() const { return Kind; }
@@ -105,6 +103,8 @@ public:
 
   const MCExpr *getValue() const { return Value; }
 
+  bool isPCRel() const { return PCRel; }
+  void setPCRel() { PCRel = true; }
   bool isLinkerRelaxable() const { return LinkerRelaxable; }
   void setLinkerRelaxable() { LinkerRelaxable = true; }
 
@@ -124,7 +124,7 @@ public:
     }
   }
 
-  SMLoc getLoc() const { return Loc; }
+  SMLoc getLoc() const;
 };
 
 namespace mc {

@@ -617,7 +617,7 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
   const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(MCII, MI);
   unsigned FixupWidth = HexagonMCInstrInfo::getExtentBits(MCII, MI) -
                         HexagonMCInstrInfo::getExtentAlignment(MCII, MI);
-  HexagonMCExpr::VariantKind VarKind = getVariantKind(MCSRE);
+  auto VarKind = HexagonMCExpr::VariantKind(MCSRE->getSpecifier());
   unsigned Opc = MCID.getOpcode();
   unsigned IType = HexagonMCInstrInfo::getType(MCII, MI);
 
@@ -698,8 +698,8 @@ unsigned HexagonMCCodeEmitter::getExprOpValue(const MCInst &MI,
     FixupExpr = MCBinaryExpr::createAdd(FixupExpr, C, MCT);
   }
 
-  MCFixup Fixup = MCFixup::create(State.Addend, FixupExpr,
-                                  MCFixupKind(FixupKind), MI.getLoc());
+  MCFixup Fixup =
+      MCFixup::create(State.Addend, FixupExpr, MCFixupKind(FixupKind));
   Fixups.push_back(Fixup);
   // All of the information is in the fixup.
   return 0;

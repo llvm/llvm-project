@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_CSKY_MCTARGETDESC_CSKYMCCODEEMITTER_H
 
 #include "MCTargetDesc/CSKYFixupKinds.h"
-#include "MCTargetDesc/CSKYMCExpr.h"
+#include "MCTargetDesc/CSKYMCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 
@@ -57,7 +57,7 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = getTargetFixup(MO.getExpr());
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -107,10 +107,10 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = MCFixupKind(FIXUP);
-    if (MO.getExpr()->getKind() == MCExpr::Target)
+    if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -122,10 +122,10 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = MCFixupKind(FIXUP);
-    if (MO.getExpr()->getKind() == MCExpr::Target)
+    if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -137,10 +137,10 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = MCFixupKind(FIXUP);
-    if (MO.getExpr()->getKind() == MCExpr::Target)
+    if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -151,10 +151,10 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = MCFixupKind(CSKY::fixup_csky_pcrel_imm26_scale2);
-    if (MO.getExpr()->getKind() == MCExpr::Target)
+    if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -165,10 +165,10 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = MCFixupKind(CSKY::fixup_csky_pcrel_imm18_scale2);
-    if (MO.getExpr()->getKind() == MCExpr::Target)
+    if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
