@@ -1030,8 +1030,9 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
 bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
-                    ScalarEvolution *SE, const TargetTransformInfo *TTI, DominatorTree &DT, AssumptionCache *AC,
-                    bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
+                    ScalarEvolution *SE, const TargetTransformInfo *TTI,
+                    DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA,
+                    ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
   assert(canPeel(L) && "Attempt to peel a loop which is not peelable?");
   assert((!PeelLast || (canPeelLastIteration(*L, *SE) && PeelCount == 1)) &&

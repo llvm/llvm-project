@@ -460,10 +460,11 @@ static void DisableAllLoopOptsOnLoop(Loop &L) {
 LoopConstrainer::LoopConstrainer(Loop &L, LoopInfo &LI,
                                  function_ref<void(Loop *, bool)> LPMAddNewLoop,
                                  const LoopStructure &LS, ScalarEvolution &SE,
-                                 TargetTransformInfo &TTI, DominatorTree &DT, Type *T, SubRanges SR)
-    : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()), SE(SE), TTI(TTI),
-      DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L), RangeTy(T),
-      MainLoopStructure(LS), SR(SR) {}
+                                 TargetTransformInfo &TTI, DominatorTree &DT,
+                                 Type *T, SubRanges SR)
+    : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()), SE(SE),
+      TTI(TTI), DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L),
+      RangeTy(T), MainLoopStructure(LS), SR(SR) {}
 
 void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
                                 const char *Tag) const {

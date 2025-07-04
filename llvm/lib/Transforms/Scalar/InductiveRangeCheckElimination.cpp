@@ -249,7 +249,8 @@ class InductiveRangeCheckElimination {
 
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
-                                 BranchProbabilityInfo *BPI, TargetTransformInfo &TTI, DominatorTree &DT,
+                                 BranchProbabilityInfo *BPI,
+                                 TargetTransformInfo &TTI, DominatorTree &DT,
                                  LoopInfo &LI, GetBFIFunc GetBFI = std::nullopt)
       : SE(SE), BPI(BPI), TTI(TTI), DT(DT), LI(LI), GetBFI(GetBFI) {}
 
@@ -915,14 +916,14 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto getBFI = [&F, &AM ]()->BlockFrequencyInfo & {
     return AM.getResult<BlockFrequencyAnalysis>(F);
   };
-  InductiveRangeCheckElimination IRCE(SE, &BPI, TTI, DT, LI, { getBFI });
+  InductiveRangeCheckElimination IRCE(SE, &BPI, TTI, DT, LI, {getBFI});
 
   bool Changed = false;
   {
     bool CFGChanged = false;
     for (const auto &L : LI) {
-      CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
-                                 &TTI, /*PreserveLCSSA=*/false);
+      CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, &TTI,
+                                 /*PreserveLCSSA=*/false);
       Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
     }
     Changed |= CFGChanged;

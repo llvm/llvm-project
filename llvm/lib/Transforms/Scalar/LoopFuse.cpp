@@ -2083,8 +2083,8 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   // LoopSimplify pass as a dependency.
   bool Changed = false;
   for (auto &L : LI) {
-    Changed |=
-        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, &TTI, false /* PreserveLCSSA */);
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, &TTI,
+                            false /* PreserveLCSSA */);
   }
   if (Changed)
     PDT.recalculate(F);

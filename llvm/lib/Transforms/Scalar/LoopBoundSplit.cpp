@@ -285,7 +285,8 @@ static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
 }
 
 static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
-                           ScalarEvolution &SE, LPMUpdater &U, const TargetTransformInfo *TTI) {
+                           ScalarEvolution &SE, LPMUpdater &U,
+                           const TargetTransformInfo *TTI) {
   ConditionInfo SplitCandidateCond;
   ConditionInfo ExitingCond;
 

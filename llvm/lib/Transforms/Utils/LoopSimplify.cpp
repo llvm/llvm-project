@@ -474,7 +474,9 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 static bool simplifyOneLoop(Loop *L, SmallVectorImpl<Loop *> &Worklist,
                             DominatorTree *DT, LoopInfo *LI,
                             ScalarEvolution *SE, AssumptionCache *AC,
-                            MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI, bool PreserveLCSSA) {
+                            MemorySSAUpdater *MSSAU,
+                            const TargetTransformInfo *TTI,
+                            bool PreserveLCSSA) {
   bool Changed = false;
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
@@ -695,7 +697,8 @@ ReprocessLoop:
 
 bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                         ScalarEvolution *SE, AssumptionCache *AC,
-                        MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI, bool PreserveLCSSA) {
+                        MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI,
+                        bool PreserveLCSSA) {
   bool Changed = false;
 
 #ifndef NDEBUG
@@ -809,7 +812,8 @@ bool LoopSimplify::runOnFunction(Function &F) {
 
   // Simplify each loop nest in the function.
   for (auto *L : *LI)
-    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), &TTI, PreserveLCSSA);
+    Changed |=
+        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), &TTI, PreserveLCSSA);
 
 #ifndef NDEBUG
   if (PreserveLCSSA) {
@@ -836,12 +840,11 @@ PreservedAnalyses LoopSimplifyPass::run(Function &F,
   }
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-
   // Note that we don't preserve LCSSA in the new PM, if you need it run LCSSA
   // after simplifying the loops. MemorySSA is preserved if it exists.
   for (auto *L : *LI)
-    Changed |=
-        simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), &TTI, /*PreserveLCSSA*/ false);
+    Changed |= simplifyLoop(L, DT, LI, SE, AC, MSSAU.get(), &TTI,
+                            /*PreserveLCSSA*/ false);
 
   if (!Changed)
     return PreservedAnalyses::all();
