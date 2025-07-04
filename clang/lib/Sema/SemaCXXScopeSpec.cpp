@@ -206,22 +206,21 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
   if (tag->isBeingDefined())
     return false;
 
+  // Avoid emitting duplicate diagnostics for the same tag.
+  // This happens in C++20+ due to more aggressive semantic analysis.
+  if (IncompleteDiagSet.contains(tag))
+    return true;
+
   SourceLocation loc = SS.getLastQualifierNameLoc();
   if (loc.isInvalid()) loc = SS.getRange().getBegin();
-
-  // If an incomplete-type error has already been emitted for this scope,
-  // suppress duplicate diagnostics to avoid noisy repeated messages.
-  if (SS.hasIncompleteTypeError())
-    return true;
 
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
-    SS.SetInvalid(SS.getRange());
+    // mark as diagnosed
+    IncompleteDiagSet.insert(tag); 
 
-    // Remember that we've already diagnosed this incomplete type,
-    // so later checks won't emit redundant diagnostics.
-    SS.setIncompleteTypeError();
+    SS.SetInvalid(SS.getRange());
 
     return true;
   }
