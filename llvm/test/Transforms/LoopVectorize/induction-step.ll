@@ -368,11 +368,11 @@ define void @wide_add_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i16 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i16 [ [[TMP0]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i16 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i16 [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ADD]] = add i16 [[IV_2]], [[O_1]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 [[ADD]], ptr [[GEP_DST]], align 2
@@ -439,11 +439,11 @@ define void @wide_sub_induction_step_live_in(ptr %dst, i64 %N, i16 %off) {
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i16 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i16 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i16 [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i16 [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[SUB:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUB]] = sub i16 [[IV_2]], [[O_1]]
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 [[SUB]], ptr [[GEP_DST]], align 2

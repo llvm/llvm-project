@@ -211,9 +211,9 @@ struct VPlanTransforms {
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
-  static void
-  optimizeInductionExitUsers(VPlan &Plan,
-                             DenseMap<VPValue *, VPValue *> &EndValues);
+  static void optimizeInductionExitUsers(
+      VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues,
+      DenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);

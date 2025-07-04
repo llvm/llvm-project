@@ -823,10 +823,10 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 
 /// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
-static VPValue *
-optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
-                               VPBlockBase *PredVPBB, VPValue *Op,
-                               DenseMap<VPValue *, VPValue *> &EndValues) {
+static VPValue *optimizeLatchExitInductionUser(
+    VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
+    DenseMap<VPValue *, VPValue *> &EndValues,
+    DenseMap<VPValue *, VPWidenInductionRecipe *> MapIVs) {
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
@@ -834,7 +834,13 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
                      m_VPValue(Incoming))))
     return nullptr;
 
-  auto *WideIV = getOptimizableIVOf(Incoming);
+  // Truncated IV is not handled here.
+  auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(Incoming);
+  if (IntOrFpIV && IntOrFpIV->getTruncInst())
+    return nullptr;
+  auto *WideIV = dyn_cast<VPWidenInductionRecipe>(Incoming);
+  if (!WideIV)
+    WideIV = MapIVs.lookup(Incoming);
   if (!WideIV)
     return nullptr;
 
@@ -873,7 +879,8 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
 }
 
 void VPlanTransforms::optimizeInductionExitUsers(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues) {
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues,
+    DenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs) {
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
@@ -883,8 +890,9 @@ void VPlanTransforms::optimizeInductionExitUsers(
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         VPValue *Escape = nullptr;
         if (PredVPBB == MiddleVPBB)
-          Escape = optimizeLatchExitInductionUser(
-              Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx), EndValues);
+          Escape = optimizeLatchExitInductionUser(Plan, TypeInfo, PredVPBB,
+                                                  ExitIRI->getOperand(Idx),
+                                                  EndValues, MapIVs);
         else
           Escape = optimizeEarlyExitInductionUser(Plan, TypeInfo, PredVPBB,
                                                   ExitIRI->getOperand(Idx));

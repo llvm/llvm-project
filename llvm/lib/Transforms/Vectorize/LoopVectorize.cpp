@@ -8887,15 +8887,18 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
+  DenseMap<VPValue *, VPWidenInductionRecipe *> MapIVs;
   for (const auto &[Phi, ID] : Legal->getInductionVars()) {
     auto *IVInc = cast<Instruction>(
         Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-    if (IVInc->getOperand(0) != Phi || IVInc->getOpcode() != Instruction::Add)
-      continue;
     VPWidenInductionRecipe *WideIV =
         cast<VPWidenInductionRecipe>(RecipeBuilder.getRecipe(Phi));
-    VPRecipeBase *R = RecipeBuilder.getRecipe(IVInc);
-    R->setOperand(1, WideIV->getStepValue());
+    VPValue *V = RecipeBuilder.getVPValueOrAddLiveIn(IVInc);
+    if (!dyn_cast<PHINode>(IVInc))
+      MapIVs[V] = WideIV;
+    if (IVInc->getOperand(0) != Phi || IVInc->getOpcode() != Instruction::Add)
+      continue;
+    V->getDefiningRecipe()->setOperand(1, WideIV->getStepValue());
   }
 
   DenseMap<VPValue *, VPValue *> IVEndValues;
@@ -8992,7 +8995,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
                                        WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
+  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, MapIVs);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
