@@ -24,6 +24,8 @@ namespace bolt {
 // target of ADD is another symbol. When found change ADRP symbol reference to
 // the ADDs one.
 void FixRelaxations::runOnFunction(BinaryFunction &BF) {
+  if (BF.isIgnored())
+    return;
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
     for (auto II = BB.begin(); II != BB.end(); ++II) {
