@@ -282,6 +282,12 @@ static cl::opt<bool> ClPoisonUndefVectors(
              "unaffected by this flag (see -msan-poison-undef)."),
     cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClPreciseDisjointOr(
+    "msan-precise-disjoint-or",
+    cl::desc("Precisely poison disjoint OR. If false (legacy behavior), "
+             "disjointedness is ignored (i.e., 1|1 is initialized)."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<bool>
     ClHandleICmp("msan-handle-icmp",
                  cl::desc("propagate shadow through ICmpEQ and ICmpNE"),
@@ -665,6 +671,7 @@ private:
 
   // These arrays are indexed by log2(AccessSize).
   FunctionCallee MaybeWarningFn[kNumberOfAccessSizes];
+  FunctionCallee MaybeWarningVarSizeFn;
   FunctionCallee MaybeStoreOriginFn[kNumberOfAccessSizes];
 
   /// Run-time helper that generates a new origin value for a stack
@@ -939,7 +946,9 @@ void MemorySanitizer::createUserspaceApi(Module &M,
     MaybeWarningFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 1}, /*Signed=*/false),
         IRB.getVoidTy(), IRB.getIntNTy(AccessSize * 8), IRB.getInt32Ty());
-
+    MaybeWarningVarSizeFn = M.getOrInsertFunction(
+        "__msan_maybe_warning_N", TLI.getAttrList(C, {}, /*Signed=*/false),
+        IRB.getVoidTy(), PtrTy, IRB.getInt64Ty(), IRB.getInt32Ty());
     FunctionName = "__msan_maybe_store_origin_" + itostr(AccessSize);
     MaybeStoreOriginFn[AccessSizeIndex] = M.getOrInsertFunction(
         FunctionName, TLI.getAttrList(C, {0, 2}, /*Signed=*/false),
@@ -1248,7 +1257,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Constants likely will be eliminated by follow-up passes.
     if (isa<Constant>(V))
       return false;
-
     ++SplittableBlocksCount;
     return ClInstrumentationWithCallThreshold >= 0 &&
            SplittableBlocksCount > ClInstrumentationWithCallThreshold;
@@ -1384,9 +1392,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ true);
 
-      StoreInst *NewSI = IRB.CreateAlignedStore(Shadow, ShadowPtr, Alignment);
+      [[maybe_unused]] StoreInst *NewSI =
+          IRB.CreateAlignedStore(Shadow, ShadowPtr, Alignment);
       LLVM_DEBUG(dbgs() << "  STORE: " << *NewSI << "\n");
-      (void)NewSI;
 
       if (SI->isAtomic())
         SI->setOrdering(addReleaseOrdering(SI->getOrdering()));
@@ -1447,18 +1455,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const DataLayout &DL = F.getDataLayout();
     TypeSize TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
-    if (instrumentWithCalls(ConvertedShadow) &&
-        SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
-      FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+    if (instrumentWithCalls(ConvertedShadow) && !MS.CompileKernel) {
       // ZExt cannot convert between vector and scalar
       ConvertedShadow = convertShadowToScalar(ConvertedShadow, IRB);
       Value *ConvertedShadow2 =
           IRB.CreateZExt(ConvertedShadow, IRB.getIntNTy(8 * (1 << SizeIndex)));
-      CallBase *CB = IRB.CreateCall(
-          Fn, {ConvertedShadow2,
-               MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
-      CB->addParamAttr(0, Attribute::ZExt);
-      CB->addParamAttr(1, Attribute::ZExt);
+
+      if (SizeIndex < kNumberOfAccessSizes) {
+        FunctionCallee Fn = MS.MaybeWarningFn[SizeIndex];
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ConvertedShadow2,
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(0, Attribute::ZExt);
+        CB->addParamAttr(1, Attribute::ZExt);
+      } else {
+        FunctionCallee Fn = MS.MaybeWarningVarSizeFn;
+        Value *ShadowAlloca = IRB.CreateAlloca(ConvertedShadow2->getType(), 0u);
+        IRB.CreateStore(ConvertedShadow2, ShadowAlloca);
+        unsigned ShadowSize = DL.getTypeAllocSize(ConvertedShadow2->getType());
+        CallBase *CB = IRB.CreateCall(
+            Fn,
+            {ShadowAlloca, ConstantInt::get(IRB.getInt64Ty(), ShadowSize),
+             MS.TrackOrigins && Origin ? Origin : (Value *)IRB.getInt32(0)});
+        CB->addParamAttr(1, Attribute::ZExt);
+        CB->addParamAttr(2, Attribute::ZExt);
+      }
     } else {
       Value *Cmp = convertToBool(ConvertedShadow, IRB, "_mscmp");
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
@@ -1999,18 +2021,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Value *Shadow = ShadowMap[V];
       if (!Shadow) {
         LLVM_DEBUG(dbgs() << "No shadow: " << *V << "\n" << *(I->getParent()));
-        (void)I;
         assert(Shadow && "No shadow for a value");
       }
       return Shadow;
     }
     // Handle fully undefined values
     // (partially undefined constant vectors are handled later)
-    if (UndefValue *U = dyn_cast<UndefValue>(V)) {
+    if ([[maybe_unused]] UndefValue *U = dyn_cast<UndefValue>(V)) {
       Value *AllOnes = (PropagateShadow && PoisonUndef) ? getPoisonedShadow(V)
                                                         : getCleanShadow(V);
       LLVM_DEBUG(dbgs() << "Undef: " << *U << " ==> " << *AllOnes << "\n");
-      (void)U;
       return AllOnes;
     }
     if (Argument *A = dyn_cast<Argument>(V)) {
@@ -2059,10 +2079,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
             } else {
               Value *Base = getShadowPtrForArgument(EntryIRB, ArgOffset);
               const Align CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
-              Value *Cpy = EntryIRB.CreateMemCpy(CpShadowPtr, CopyAlign, Base,
-                                                 CopyAlign, Size);
+              [[maybe_unused]] Value *Cpy = EntryIRB.CreateMemCpy(
+                  CpShadowPtr, CopyAlign, Base, CopyAlign, Size);
               LLVM_DEBUG(dbgs() << "  ByValCpy: " << *Cpy << "\n");
-              (void)Cpy;
 
               if (MS.TrackOrigins) {
                 Value *OriginPtr = getOriginPtrForArgument(EntryIRB, ArgOffset);
@@ -2481,23 +2500,40 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   void visitOr(BinaryOperator &I) {
     IRBuilder<> IRB(&I);
-    //  "Or" of 1 and a poisoned value results in unpoisoned value.
-    //  1|1 => 1;     0|1 => 1;     p|1 => 1;
-    //  1|0 => 1;     0|0 => 0;     p|0 => p;
-    //  1|p => 1;     0|p => p;     p|p => p;
-    //  S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
+    //  "Or" of 1 and a poisoned value results in unpoisoned value:
+    //    1|1 => 1;     0|1 => 1;     p|1 => 1;
+    //    1|0 => 1;     0|0 => 0;     p|0 => p;
+    //    1|p => 1;     0|p => p;     p|p => p;
+    //
+    //    S = (S1 & S2) | (~V1 & S2) | (S1 & ~V2)
+    //
+    //  Addendum if the "Or" is "disjoint":
+    //    1|1 => p;
+    //    S = S | (V1 & V2)
     Value *S1 = getShadow(&I, 0);
     Value *S2 = getShadow(&I, 1);
-    Value *V1 = IRB.CreateNot(I.getOperand(0));
-    Value *V2 = IRB.CreateNot(I.getOperand(1));
+    Value *V1 = I.getOperand(0);
+    Value *V2 = I.getOperand(1);
     if (V1->getType() != S1->getType()) {
       V1 = IRB.CreateIntCast(V1, S1->getType(), false);
       V2 = IRB.CreateIntCast(V2, S2->getType(), false);
     }
+
+    Value *NotV1 = IRB.CreateNot(V1);
+    Value *NotV2 = IRB.CreateNot(V2);
+
     Value *S1S2 = IRB.CreateAnd(S1, S2);
-    Value *V1S2 = IRB.CreateAnd(V1, S2);
-    Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
+    Value *S2NotV1 = IRB.CreateAnd(NotV1, S2);
+    Value *S1NotV2 = IRB.CreateAnd(S1, NotV2);
+
+    Value *S = IRB.CreateOr({S1S2, S2NotV1, S1NotV2});
+
+    if (ClPreciseDisjointOr && cast<PossiblyDisjointInst>(&I)->isDisjoint()) {
+      Value *V1V2 = IRB.CreateAnd(V1, V2);
+      S = IRB.CreateOr(S, V1V2, "_ms_disjoint");
+    }
+
+    setShadow(&I, S);
     setOriginForNaryOp(I);
   }
 
@@ -3278,22 +3314,51 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Op));
   }
 
-  void handleCountZeroes(IntrinsicInst &I) {
+  // Uninitialized bits are ok if they appear after the leading/trailing 0's
+  // and a 1. If the input is all zero, it is fully initialized iff
+  // !is_zero_poison.
+  //
+  // e.g., for ctlz, with little-endian, if 0/1 are initialized bits with
+  // concrete value 0/1, and ? is an uninitialized bit:
+  //       - 0001 0??? is fully initialized
+  //       - 000? ???? is fully uninitialized (*)
+  //       - ???? ???? is fully uninitialized
+  //       - 0000 0000 is fully uninitialized if is_zero_poison,
+  //                      fully initialized   otherwise
+  //
+  // (*) TODO: arguably, since the number of zeros is in the range [3, 8], we
+  //     only need to poison 4 bits.
+  //
+  // OutputShadow =
+  //      ((ConcreteZerosCount >= ShadowZerosCount) && !AllZeroShadow)
+  //   || (is_zero_poison && AllZeroSrc)
+  void handleCountLeadingTrailingZeros(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Src = I.getArgOperand(0);
+    Value *SrcShadow = getShadow(Src);
 
-    // Set the Output shadow based on input Shadow
-    Value *BoolShadow = IRB.CreateIsNotNull(getShadow(Src), "_mscz_bs");
+    Value *False = IRB.getInt1(false);
+    Value *ConcreteZerosCount = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {Src, /*is_zero_poison=*/False});
+    Value *ShadowZerosCount = IRB.CreateIntrinsic(
+        I.getType(), I.getIntrinsicID(), {SrcShadow, /*is_zero_poison=*/False});
+
+    Value *CompareConcreteZeros = IRB.CreateICmpUGE(
+        ConcreteZerosCount, ShadowZerosCount, "_mscz_cmp_zeros");
+
+    Value *NotAllZeroShadow =
+        IRB.CreateIsNotNull(SrcShadow, "_mscz_shadow_not_null");
+    Value *OutputShadow =
+        IRB.CreateAnd(CompareConcreteZeros, NotAllZeroShadow, "_mscz_main");
 
     // If zero poison is requested, mix in with the shadow
     Constant *IsZeroPoison = cast<Constant>(I.getOperand(1));
     if (!IsZeroPoison->isZeroValue()) {
       Value *BoolZeroPoison = IRB.CreateIsNull(Src, "_mscz_bzp");
-      BoolShadow = IRB.CreateOr(BoolShadow, BoolZeroPoison, "_mscz_bs");
+      OutputShadow = IRB.CreateOr(OutputShadow, BoolZeroPoison, "_mscz_bs");
     }
 
-    Value *OutputShadow =
-        IRB.CreateSExt(BoolShadow, getShadowTy(Src), "_mscz_os");
+    OutputShadow = IRB.CreateSExt(OutputShadow, getShadowTy(Src), "_mscz_os");
 
     setShadow(&I, OutputShadow);
     setOriginForNaryOp(I);
@@ -4209,15 +4274,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   // Instrument AVX permutation intrinsic.
   // We apply the same permutation (argument index 1) to the shadow.
-  void handleAVXPermutation(IntrinsicInst &I) {
-    assert(I.arg_size() == 2);
-    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(I.getType() == I.getArgOperand(0)->getType());
+  void handleAVXVpermilvar(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Shadow = getShadow(&I, 0);
     insertShadowCheck(I.getArgOperand(1), &I);
@@ -4227,38 +4284,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
     CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
                                        {Shadow, I.getArgOperand(1)});
-
-    setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
-    setOriginForNaryOp(I);
-  }
-  // Instrument AVX permutation intrinsic.
-  // We apply the same permutation (argument index 1) to the shadows.
-  void handleAVXVpermil2var(IntrinsicInst &I) {
-    assert(I.arg_size() == 3);
-    assert(isa<FixedVectorType>(I.getArgOperand(0)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(1)->getType()));
-    assert(isa<FixedVectorType>(I.getArgOperand(2)->getType()));
-    [[maybe_unused]] auto ArgVectorSize =
-        cast<FixedVectorType>(I.getArgOperand(0)->getType())->getNumElements();
-    assert(cast<FixedVectorType>(I.getArgOperand(1)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(cast<FixedVectorType>(I.getArgOperand(2)->getType())
-               ->getNumElements() == ArgVectorSize);
-    assert(I.getArgOperand(0)->getType() == I.getArgOperand(2)->getType());
-    assert(I.getType() == I.getArgOperand(0)->getType());
-    assert(I.getArgOperand(1)->getType()->isIntOrIntVectorTy());
-    IRBuilder<> IRB(&I);
-    Value *AShadow = getShadow(&I, 0);
-    Value *Idx = I.getArgOperand(1);
-    Value *BShadow = getShadow(&I, 2);
-    insertShadowCheck(Idx, &I);
-
-    // Shadows are integer-ish types but some intrinsics require a
-    // different (e.g., floating-point) type.
-    AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
-    BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {AShadow, Idx, BShadow});
 
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
@@ -4750,7 +4775,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       break;
     case Intrinsic::ctlz:
     case Intrinsic::cttz:
-      handleCountZeroes(I);
+      handleCountLeadingTrailingZeros(I);
       break;
     case Intrinsic::masked_compressstore:
       handleMaskedCompressStore(I);
@@ -5208,52 +5233,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(Success);
       break;
     }
-    case Intrinsic::x86_avx2_permd:
-    case Intrinsic::x86_avx2_permps:
-    case Intrinsic::x86_ssse3_pshuf_b_128:
-    case Intrinsic::x86_avx2_pshuf_b:
-    case Intrinsic::x86_avx512_pshuf_b_512:
-    case Intrinsic::x86_avx512_permvar_df_256:
-    case Intrinsic::x86_avx512_permvar_df_512:
-    case Intrinsic::x86_avx512_permvar_di_256:
-    case Intrinsic::x86_avx512_permvar_di_512:
-    case Intrinsic::x86_avx512_permvar_hi_128:
-    case Intrinsic::x86_avx512_permvar_hi_256:
-    case Intrinsic::x86_avx512_permvar_hi_512:
-    case Intrinsic::x86_avx512_permvar_qi_128:
-    case Intrinsic::x86_avx512_permvar_qi_256:
-    case Intrinsic::x86_avx512_permvar_qi_512:
-    case Intrinsic::x86_avx512_permvar_sf_512:
-    case Intrinsic::x86_avx512_permvar_si_512:
+
     case Intrinsic::x86_avx_vpermilvar_pd:
     case Intrinsic::x86_avx_vpermilvar_pd_256:
     case Intrinsic::x86_avx512_vpermilvar_pd_512:
     case Intrinsic::x86_avx_vpermilvar_ps:
     case Intrinsic::x86_avx_vpermilvar_ps_256:
     case Intrinsic::x86_avx512_vpermilvar_ps_512: {
-      handleAVXPermutation(I);
+      handleAVXVpermilvar(I);
       break;
     }
-    case Intrinsic::x86_avx512_vpermi2var_d_128:
-    case Intrinsic::x86_avx512_vpermi2var_d_256:
-    case Intrinsic::x86_avx512_vpermi2var_d_512:
-    case Intrinsic::x86_avx512_vpermi2var_hi_128:
-    case Intrinsic::x86_avx512_vpermi2var_hi_256:
-    case Intrinsic::x86_avx512_vpermi2var_hi_512:
-    case Intrinsic::x86_avx512_vpermi2var_pd_128:
-    case Intrinsic::x86_avx512_vpermi2var_pd_256:
-    case Intrinsic::x86_avx512_vpermi2var_pd_512:
-    case Intrinsic::x86_avx512_vpermi2var_ps_128:
-    case Intrinsic::x86_avx512_vpermi2var_ps_256:
-    case Intrinsic::x86_avx512_vpermi2var_ps_512:
-    case Intrinsic::x86_avx512_vpermi2var_q_128:
-    case Intrinsic::x86_avx512_vpermi2var_q_256:
-    case Intrinsic::x86_avx512_vpermi2var_q_512:
-    case Intrinsic::x86_avx512_vpermi2var_qi_128:
-    case Intrinsic::x86_avx512_vpermi2var_qi_256:
-    case Intrinsic::x86_avx512_vpermi2var_qi_512:
-      handleAVXVpermil2var(I);
-      break;
 
     case Intrinsic::x86_avx512fp16_mask_add_sh_round:
     case Intrinsic::x86_avx512fp16_mask_sub_sh_round:
@@ -5579,7 +5568,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         insertShadowCheck(A, &CB);
         Size = DL.getTypeAllocSize(A->getType());
       } else {
-        Value *Store = nullptr;
+        [[maybe_unused]] Value *Store = nullptr;
         // Compute the Shadow for arg even if it is ByVal, because
         // in that case getShadow() will copy the actual arg shadow to
         // __msan_param_tls.
@@ -5636,7 +5625,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                             getOriginPtrForArgument(IRB, ArgOffset));
           }
         }
-        (void)Store;
         assert(Store != nullptr);
         LLVM_DEBUG(dbgs() << "  Param:" << *Store << "\n");
       }

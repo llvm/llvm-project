@@ -39,12 +39,20 @@ public:
   void emitStoreOfComplex(mlir::Location loc, mlir::Value val, LValue lv,
                           bool isInit);
 
+  mlir::Value VisitArraySubscriptExpr(Expr *e);
   mlir::Value VisitBinAssign(const BinaryOperator *e);
+  mlir::Value VisitBinComma(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
+  mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
+  mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
   mlir::Value VisitInitListExpr(const InitListExpr *e);
   mlir::Value VisitImaginaryLiteral(const ImaginaryLiteral *il);
+  mlir::Value VisitParenExpr(ParenExpr *e);
+  mlir::Value
+  VisitSubstNonTypeTemplateParmExpr(SubstNonTypeTemplateParmExpr *e);
+  mlir::Value VisitUnaryDeref(const Expr *e);
 };
 } // namespace
 
@@ -117,6 +125,10 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
   builder.createStore(loc, val, destAddr);
 }
 
+mlir::Value ComplexExprEmitter::VisitArraySubscriptExpr(Expr *e) {
+  return emitLoadOfLValue(e);
+}
+
 mlir::Value ComplexExprEmitter::VisitBinAssign(const BinaryOperator *e) {
   mlir::Value value;
   LValue lv = emitBinAssignLValue(e, value);
@@ -133,6 +145,11 @@ mlir::Value ComplexExprEmitter::VisitBinAssign(const BinaryOperator *e) {
   return emitLoadOfLValue(lv, e->getExprLoc());
 }
 
+mlir::Value ComplexExprEmitter::VisitBinComma(const BinaryOperator *e) {
+  cgf.emitIgnoredExpr(e->getLHS());
+  return Visit(e->getRHS());
+}
+
 mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
@@ -140,10 +157,19 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
   return cgf.emitCallExpr(e).getValue();
 }
 
+mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
+  return Visit(e->getChosenSubExpr());
+}
+
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
   if (CIRGenFunction::ConstantEmission constant = cgf.tryEmitAsConstant(e))
     return emitConstant(constant, e);
   return emitLoadOfLValue(e);
+}
+
+mlir::Value
+ComplexExprEmitter::VisitGenericSelectionExpr(GenericSelectionExpr *e) {
+  return Visit(e->getResultExpr());
 }
 
 mlir::Value ComplexExprEmitter::VisitImplicitCastExpr(ImplicitCastExpr *e) {
@@ -190,7 +216,7 @@ ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
     realValueAttr = cir::IntAttr::get(elementTy, 0);
     imagValueAttr = cir::IntAttr::get(elementTy, imagValue);
   } else {
-    assert(mlir::isa<cir::CIRFPTypeInterface>(elementTy) &&
+    assert(mlir::isa<cir::FPTypeInterface>(elementTy) &&
            "Expected complex element type to be floating-point");
 
     llvm::APFloat imagValue =
@@ -202,6 +228,19 @@ ComplexExprEmitter::VisitImaginaryLiteral(const ImaginaryLiteral *il) {
 
   auto complexAttr = cir::ConstComplexAttr::get(realValueAttr, imagValueAttr);
   return builder.create<cir::ConstantOp>(loc, complexAttr);
+}
+
+mlir::Value ComplexExprEmitter::VisitParenExpr(ParenExpr *e) {
+  return Visit(e->getSubExpr());
+}
+
+mlir::Value ComplexExprEmitter::VisitSubstNonTypeTemplateParmExpr(
+    SubstNonTypeTemplateParmExpr *e) {
+  return Visit(e->getReplacement());
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryDeref(const Expr *e) {
+  return emitLoadOfLValue(e);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
