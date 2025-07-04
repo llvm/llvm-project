@@ -3147,17 +3147,18 @@ void AArch64TargetLowering::fixupBlendComponents(
       IntDisc = MaybeBlend->getOperand(2).getImm();
     } else if (MaybeBlend->getOpcode() == AArch64::MOVi32imm &&
                isUInt<16>(MaybeBlend->getOperand(1).getImm())) {
-      AddrDisc = AArch64::XZR;
+      AddrDisc = AArch64::NoRegister;
       IntDisc = MaybeBlend->getOperand(1).getImm();
     }
   }
 
-  // Normalize NoRegister operands emitted by GlobalISel.
-  if (AddrDisc == AArch64::NoRegister)
-    AddrDisc = AArch64::XZR;
+  // For uniformity, always use NoRegister, as XZR is not necessarily contained
+  // in the requested register class.
+  if (AddrDisc == AArch64::XZR)
+    AddrDisc = AArch64::NoRegister;
 
   // Make sure AddrDisc operand respects the register class imposed by MI.
-  if (AddrDisc != AArch64::XZR && MRI.getRegClass(AddrDisc) != AddrDiscRC) {
+  if (AddrDisc && MRI.getRegClass(AddrDisc) != AddrDiscRC) {
     Register TmpReg = MRI.createVirtualRegister(AddrDiscRC);
     BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), TmpReg).addReg(AddrDisc);
     AddrDisc = TmpReg;
