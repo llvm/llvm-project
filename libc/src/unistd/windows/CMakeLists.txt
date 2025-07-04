@@ -9,3 +9,15 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  rmdir
+  SRCS
+    rmdir.cpp
+  HDRS
+    ../rmdir.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.__support.OSUtil.windows.error
+)
