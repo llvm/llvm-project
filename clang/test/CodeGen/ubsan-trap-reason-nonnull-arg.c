@@ -13,4 +13,4 @@ void trigger_nonnull_arg()
 
 // CHECK: call void @llvm.ubsantrap(i8 16) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer
+// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Passing null pointer as an argument which is declared to never be null"

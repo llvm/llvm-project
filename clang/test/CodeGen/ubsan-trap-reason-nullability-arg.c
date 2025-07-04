@@ -15,4 +15,4 @@ int trigger_nullability_arg()
 
 // CHECK: call void @llvm.ubsantrap(i8 14) {{.*}}!dbg [[LOC:![0-9]+]]
 // CHECK: [[LOC]] = !DILocation(line: 0, scope: [[MSG:![0-9]+]], {{.+}})
-// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer
+// CHECK: distinct !DISubprogram(name: "__clang_trap_msg$Undefined Behavior Sanitizer$Passing null as an argument which is annotated with _Nonnull"
