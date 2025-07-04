@@ -2490,8 +2490,12 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   NewCond->takeName(&I);
   I.replaceAllUsesWith(NewCond);
   eraseInstruction(I, SafetyInfo, MSSAU);
-  eraseInstruction(*cast<Instruction>(Cond1), SafetyInfo, MSSAU);
-  eraseInstruction(*cast<Instruction>(Cond2), SafetyInfo, MSSAU);
+  Instruction &CondI1 = *cast<Instruction>(Cond1);
+  Instruction &CondI2 = *cast<Instruction>(Cond2);
+  salvageDebugInfo(CondI1);
+  salvageDebugInfo(CondI2);
+  eraseInstruction(CondI1, SafetyInfo, MSSAU);
+  eraseInstruction(CondI2, SafetyInfo, MSSAU);
   return true;
 }
 
