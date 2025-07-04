@@ -42,3 +42,4 @@ target_include_directories(MLIRAffineTransformsTestPasses
   ${CMAKE_CURRENT_BINARY_DIR}/../Test
   )
 
+set_target_properties(MLIRAffineTransformsTestPasses PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
