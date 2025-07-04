@@ -326,7 +326,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     return false;
 
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
+      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, AC, &DT);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
