@@ -71,7 +71,7 @@ class MCFixup {
 
   /// The target dependent kind of fixup item this is. The kind is used to
   /// determine how the operand value should be encoded into the instruction.
-  MCFixupKind Kind = FK_NONE;
+  uint16_t Kind = FK_NONE;
 
   bool PCRel = false;
 
@@ -82,19 +82,19 @@ class MCFixup {
   /// Consider bit fields if we need more flags.
 
 public:
-  static MCFixup create(uint32_t Offset, const MCExpr *Value,
-                        MCFixupKind Kind, SMLoc Loc = SMLoc()) {
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, uint16_t Kind) {
     MCFixup FI;
     FI.Value = Value;
     FI.Offset = Offset;
     FI.Kind = Kind;
     return FI;
   }
-  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind) {
-    return create(Offset, Value, MCFixupKind(Kind));
+  static MCFixup create(uint32_t Offset, const MCExpr *Value,
+                        MCFixupKind Kind) {
+    return create(Offset, Value, unsigned(Kind));
   }
 
-  MCFixupKind getKind() const { return Kind; }
+  MCFixupKind getKind() const { return MCFixupKind(Kind); }
 
   unsigned getTargetKind() const { return Kind; }
 

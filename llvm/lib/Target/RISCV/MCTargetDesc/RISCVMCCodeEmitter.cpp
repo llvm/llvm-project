@@ -319,9 +319,8 @@ void RISCVMCCodeEmitter::expandLongCondBr(const MCInst &MI,
   Fixups.resize(FixupStartIndex);
 
   if (SrcSymbol.isExpr()) {
-    Fixups.push_back(MCFixup::create(Offset, SrcSymbol.getExpr(),
-                                     MCFixupKind(RISCV::fixup_riscv_jal),
-                                     MI.getLoc()));
+    Fixups.push_back(
+        MCFixup::create(Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal));
   }
 }
 
@@ -370,9 +369,8 @@ void RISCVMCCodeEmitter::expandQCLongCondBrImm(const MCInst &MI,
   // Drop any fixup added so we can add the correct one.
   Fixups.resize(FixupStartIndex);
   if (SrcSymbol.isExpr()) {
-    Fixups.push_back(MCFixup::create(Offset, SrcSymbol.getExpr(),
-                                     MCFixupKind(RISCV::fixup_riscv_jal),
-                                     MI.getLoc()));
+    Fixups.push_back(
+        MCFixup::create(Offset, SrcSymbol.getExpr(), RISCV::fixup_riscv_jal));
   }
 }
 
