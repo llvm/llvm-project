@@ -523,6 +523,40 @@ static unsigned int getCodeAddrSpace(const MemSDNode *N) {
       .value_or(NVPTX::AddressSpace::Generic);
 }
 
+unsigned int NVPTXDAGToDAGISel::getAddrSpace(const MemSDNode *N) const {
+  return convertAS(N->getMemOperand()->getAddrSpace())
+      .value_or(NVPTX::AddressSpace::Generic);
+}
+
+unsigned int NVPTXDAGToDAGISel::getMemOrder(const MemSDNode *N) const {
+  // No "sem" orderings for SM/PTX versions which do not support memory ordering
+  if (!Subtarget->hasMemoryOrdering())
+    return NVPTX::Ordering::NotAtomic;
+  auto Ordering = N->getMergedOrdering();
+  switch (Ordering) {
+  case AtomicOrdering::NotAtomic:
+  case AtomicOrdering::Unordered:
+    return NVPTX::Ordering::NotAtomic;
+  case AtomicOrdering::Monotonic:
+    return NVPTX::Ordering::Relaxed;
+  case AtomicOrdering::Acquire:
+    return NVPTX::Ordering::Acquire;
+  case AtomicOrdering::Release:
+    return NVPTX::Ordering::Release;
+  case AtomicOrdering::AcquireRelease:
+    return NVPTX::Ordering::AcquireRelease;
+  case AtomicOrdering::SequentiallyConsistent:
+    return NVPTX::Ordering::SequentiallyConsistent;
+  }
+}
+
+unsigned int NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
+  // No "scope" modifier for SM/PTX versions which do not support scoped atomics
+  if (!Subtarget->hasAtomScope())
+    return NVPTX::Scope::Thread;
+  return Scopes[N->getSyncScopeID()];
+}
+
 namespace {
 
 struct OperationOrderings {
