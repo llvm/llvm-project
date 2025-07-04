@@ -175,6 +175,12 @@ struct VPlanTransforms {
           &InterleaveGroups,
       VPRecipeBuilder &RecipeBuilder, const bool &ScalarEpilogueAllowed);
 
+  /// Transform reverse memory recipes into strided access recipes when legal
+  /// and profitable. Clamps \p Range to maintain consistency with widen
+  /// decisions of \p Plan, and uses \p Ctx to evaluate the cost.
+  static void convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+                                       VFRange &Range);
+
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
