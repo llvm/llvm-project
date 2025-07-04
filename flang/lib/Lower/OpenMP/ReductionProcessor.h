@@ -19,7 +19,6 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 
@@ -65,6 +64,9 @@ public:
   static ReductionIdentifier
   getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
+  static ReductionIdentifier
+  getReductionType(const fir::ReduceOperationEnum &pd);
+
   static bool
   supportedIntrinsicProcReduction(const omp::clause::ProcedureDesignator &pd);
 
@@ -78,10 +80,9 @@ public:
                                       const fir::KindMapping &kindMap,
                                       mlir::Type ty, bool isByRef);
 
-  static std::string
-  getReductionName(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp,
-                   const fir::KindMapping &kindMap, mlir::Type ty,
-                   bool isByRef);
+  static std::string getReductionName(ReductionIdentifier redId,
+                                      const fir::KindMapping &kindMap,
+                                      mlir::Type ty, bool isByRef);
 
   /// This function returns the identity value of the operator \p
   /// reductionOpName. For example:
@@ -113,22 +114,23 @@ public:
   /// symbol table. The declaration has a constant initializer with the neutral
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
   /// TODO: add atomic region.
-  static mlir::omp::DeclareReductionOp
-  createDeclareReduction(AbstractConverter &builder,
-                         llvm::StringRef reductionOpName,
-                         const ReductionIdentifier redId, mlir::Type type,
-                         mlir::Location loc, bool isByRef);
+  template <typename OpType>
+  static OpType createDeclareReduction(AbstractConverter &builder,
+                                       llvm::StringRef reductionOpName,
+                                       const ReductionIdentifier redId,
+                                       mlir::Type type, mlir::Location loc,
+                                       bool isByRef);
 
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
-  template <class T>
+  template <typename OpType, typename RedOperatorListTy>
   static void processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
-      const T &reduction, llvm::SmallVectorImpl<mlir::Value> &reductionVars,
+      const RedOperatorListTy &redOperatorList,
+      llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
-      mlir::omp::ReductionModifierAttr *reductionMod = nullptr);
+      const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
 };
 
 template <typename FloatOp, typename IntegerOp>
