@@ -16,7 +16,6 @@
 // basic_istream& ignore(streamsize n, char_type delim);
 
 #include <cassert>
-#include <istream>
 #include <sstream>
 #include <string>
 
