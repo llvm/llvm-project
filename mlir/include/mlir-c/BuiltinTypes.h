@@ -320,8 +320,8 @@ MLIR_CAPI_EXPORTED bool mlirShapedTypeIsDynamicStrideOrOffset(int64_t val);
 MLIR_CAPI_EXPORTED bool mlirShapedTypeIsStaticStrideOrOffset(int64_t val);
 
 /// Returns the value indicating a dynamic stride or offset in a shaped type.
-/// Prefer mlirShapedTypeGetDynamicStrideOrOffset to direct comparisons with
-/// this value.
+/// Prefer mlirShapedTypeIsDynamicStrideOrOffset and
+/// mlirShapedTypeIsStaticStrideOrOffset to direct comparisons with this value.
 MLIR_CAPI_EXPORTED int64_t mlirShapedTypeGetDynamicStrideOrOffset(void);
 
 //===----------------------------------------------------------------------===//
