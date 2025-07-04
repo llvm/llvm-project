@@ -2166,7 +2166,8 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
   // then the final multiplication is also nuw.
   if (auto *I = dyn_cast<OverflowingBinaryOperator>(Result))
     if (IsNUW && match(Offset2, m_Zero()) && Base.LHSNW.isInBounds() &&
-        I->hasNoSignedWrap() && !I->hasNoUnsignedWrap() &&
+        (I->use_empty() || I->hasOneUse()) && I->hasNoSignedWrap() &&
+        !I->hasNoUnsignedWrap() &&
         ((I->getOpcode() == Instruction::Mul &&
           match(I->getOperand(1), m_NonNegative())) ||
          I->getOpcode() == Instruction::Shl))

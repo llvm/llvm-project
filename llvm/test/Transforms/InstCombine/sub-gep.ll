@@ -1141,3 +1141,20 @@ define i64 @nuw_ptrdiff_mul_nsw_unknown_scale(ptr %base, i64 %idx, i64 %scale) {
   %diff = sub nuw i64 %lhs, %rhs
   ret i64 %diff
 }
+
+declare void @usei64(i64)
+
+define i64 @nuw_ptrdiff_mul_nsw_nneg_scale_multiuse(ptr %base, i64 %idx) {
+; CHECK-LABEL: @nuw_ptrdiff_mul_nsw_nneg_scale_multiuse(
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul nsw i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    call void @usei64(i64 [[OFFSET]])
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %offset = mul nsw i64 %idx, 3
+  call void @usei64(i64 %offset)
+  %gep = getelementptr inbounds i8, ptr %base, i64 %offset
+  %lhs = ptrtoint ptr %gep to i64
+  %rhs = ptrtoint ptr %base to i64
+  %diff = sub nuw i64 %lhs, %rhs
+  ret i64 %diff
+}
