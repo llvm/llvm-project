@@ -520,3 +520,352 @@ define i1 @fshl_or_ne_2(i32 %x, i32 %y) {
   %r = icmp ne i32 %f, 2
   ret i1 %r
 }
+
+define i1 @and_rotl_eq_neg_1(i8 %x, i8 %y, i8 %z) nounwind {
+; CHECK-LABEL: and_rotl_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    rolb %cl, %dil
+; CHECK-NEXT:    andb %sil, %dil
+; CHECK-NEXT:    cmpb $-1, %dil
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %rot = tail call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %z)
+  %and = and i8 %rot, %y
+  %r = icmp eq i8 %and, -1
+  ret i1 %r
+}
+
+define i1 @and_rotr_ne_neg_1(i64 %x, i64 %y, i64 %z) nounwind {
+; CHECK-LABEL: and_rotr_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdx, %rcx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
+; CHECK-NEXT:    rorq %cl, %rdi
+; CHECK-NEXT:    testq %rdi, %rsi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %rot = tail call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
+  %and = and i64 %y, %rot
+  %r = icmp ne i64 %and, 0
+  ret i1 %r
+}
+
+; negative test - wrong constant
+
+define i1 @or_rotl_ne_neg_1(i32 %x, i32 %y, i32 %z) nounwind {
+; CHECK-LABEL: or_rotl_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    roll %cl, %edi
+; CHECK-NEXT:    testl %edi, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %rot = tail call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
+  %and = and i32 %y, %rot
+  %r = icmp ne i32 %and, 0
+  ret i1 %r
+}
+
+; negative test - extra use
+
+define i1 @and_rotl_ne_neg_1_use(i32 %x, i32 %y, i32 %z) nounwind {
+; CHECK-LABEL: and_rotl_ne_neg_1_use:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    movl %edi, %ebx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
+; CHECK-NEXT:    roll %cl, %ebx
+; CHECK-NEXT:    andl %esi, %ebx
+; CHECK-NEXT:    movl %ebx, %edi
+; CHECK-NEXT:    callq use32@PLT
+; CHECK-NEXT:    cmpl $-1, %ebx
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    retq
+  %rot = tail call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
+  %and = and i32 %y, %rot
+  call void @use32(i32 %and)
+  %r = icmp ne i32 %and, -1
+  ret i1 %r
+}
+
+define <4 x i1> @and_rotl_ne_eq_neg_1(<4 x i32> %x, <4 x i32> %y) nounwind {
+; CHECK-LABEL: and_rotl_ne_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pslld $23, %xmm2
+; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; CHECK-NEXT:    cvttps2dq %xmm2, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,3,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-NEXT:    pmuludq %xmm3, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,3,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,2,2,3]
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
+; CHECK-NEXT:    por %xmm4, %xmm3
+; CHECK-NEXT:    pand %xmm1, %xmm3
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm3, %xmm0
+; CHECK-NEXT:    retq
+  %rot = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32>%x, <4 x i32> %x, <4 x i32> %y)
+  %and = and <4 x i32> %y, %rot
+  %r = icmp eq <4 x i32> %and, <i32 -1, i32 -1, i32 -1, i32 poison>
+  ret <4 x i1> %r
+}
+
+define i1 @fshl_or_eq_neg_1(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_or_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldl $5, %edi, %esi
+; CHECK-NEXT:    cmpl $-1, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %and, i32 %x, i32 5)
+  %r = icmp eq i32 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshl_and_commute_eq_neg_1(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_and_commute_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldl $5, %edi, %esi
+; CHECK-NEXT:    cmpl $-1, %esi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i32 %y, %x
+  %f = call i32 @llvm.fshl.i32(i32 %and, i32 %x, i32 5)
+  %r = icmp eq i32 %f, -1
+  ret i1 %r
+}
+
+define <4 x i1> @fshl_and2_eq_neg_1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_and2_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    psrld $7, %xmm1
+; CHECK-NEXT:    pslld $25, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %and = and <4 x i32> %x, %y
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %and, <4 x i32> <i32 25, i32 25, i32 25, i32 25>)
+  %r = icmp eq <4 x i32> %f, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @fshl_and2_commute_eq_neg_1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_and2_commute_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    psrld $7, %xmm1
+; CHECK-NEXT:    pslld $25, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %and = and <4 x i32> %y, %x
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %and, <4 x i32> <i32 25, i32 25, i32 25, i32 25>)
+  %r = icmp eq <4 x i32> %f, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i1> %r
+}
+
+define i1 @fshr_and_eq_neg_1(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_and_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldw $8, %di, %si
+; CHECK-NEXT:    cmpw $-1, %si
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i16 %x, %y
+  %f = call i16 @llvm.fshr.i16(i16 %and, i16 %x, i16 8)
+  %r = icmp eq i16 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshr_and_commute_eq_neg_1(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_and_commute_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldw $8, %di, %si
+; CHECK-NEXT:    cmpw $-1, %si
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i16 %y, %x
+  %f = call i16 @llvm.fshr.i16(i16 %and, i16 %x, i16 8)
+  %r = icmp eq i16 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshr_and2_eq_neg_1(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_and2_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andq %rdi, %rsi
+; CHECK-NEXT:    shrdq $3, %rdi, %rsi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i64 %x, %y
+  %f = call i64 @llvm.fshr.i64(i64 %x, i64 %and, i64 3)
+  %r = icmp eq i64 %f, 0
+  ret i1 %r
+}
+
+define i1 @fshr_and2_commute_eq_neg_1(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_and2_commute_eq_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andq %rdi, %rsi
+; CHECK-NEXT:    shrdq $3, %rdi, %rsi
+; CHECK-NEXT:    cmpq $-1, %rsi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %and = and i64 %y, %x
+  %f = call i64 @llvm.fshr.i64(i64 %x, i64 %and, i64 3)
+  %r = icmp eq i64 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshl_and_ne_neg_1(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_and_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldl $7, %edi, %esi
+; CHECK-NEXT:    cmpl $-1, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %and, i32 %x, i32 7)
+  %r = icmp ne i32 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshl_and_commute_ne_neg_1(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_and_commute_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldl $7, %edi, %esi
+; CHECK-NEXT:    cmpl $-1, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i32 %y, %x
+  %f = call i32 @llvm.fshl.i32(i32 %and, i32 %x, i32 7)
+  %r = icmp ne i32 %f, -1
+  ret i1 %r
+}
+
+define <4 x i1> @fshl_and2_ne_neg_1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_and2_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    psrld $27, %xmm1
+; CHECK-NEXT:    pslld $5, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %and = and <4 x i32> %x, %y
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %and, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+  %r = icmp ne <4 x i32> %f, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i1> %r
+}
+
+define <4 x i1> @fshl_and2_commute_ne_neg_1(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: fshl_and2_commute_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pand %xmm0, %xmm1
+; CHECK-NEXT:    psrld $27, %xmm1
+; CHECK-NEXT:    pslld $5, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %and = and <4 x i32> %y, %x
+  %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %and, <4 x i32> <i32 5, i32 5, i32 5, i32 5>)
+  %r = icmp ne <4 x i32> %f, <i32 -1, i32 -1, i32 -1, i32 -1>
+  ret <4 x i1> %r
+}
+
+define i1 @fshr_and_ne_neg_1(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_and_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldq $63, %rdi, %rsi
+; CHECK-NEXT:    cmpq $-1, %rsi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i64 %x, %y
+  %f = call i64 @llvm.fshr.i64(i64 %and, i64 %x, i64 1)
+  %r = icmp ne i64 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshr_and_commute_ne_neg_1(i64 %x, i64 %y) {
+; CHECK-LABEL: fshr_and_commute_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldq $63, %rdi, %rsi
+; CHECK-NEXT:    cmpq $-1, %rsi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i64 %y, %x
+  %f = call i64 @llvm.fshr.i64(i64 %and, i64 %x, i64 1)
+  %r = icmp ne i64 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshr_and2_ne_neg_1(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_and2_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shrdw $2, %di, %si
+; CHECK-NEXT:    cmpw $-1, %si
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i16 %x, %y
+  %f = call i16 @llvm.fshr.i16(i16 %x, i16 %and, i16 2)
+  %r = icmp ne i16 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshr_and2_commute_ne_neg_1(i16 %x, i16 %y) {
+; CHECK-LABEL: fshr_and2_commute_ne_neg_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shrdw $2, %di, %si
+; CHECK-NEXT:    cmpw $-1, %si
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i16 %y, %x
+  %f = call i16 @llvm.fshr.i16(i16 %x, i16 %and, i16 2)
+  %r = icmp ne i16 %f, -1
+  ret i1 %r
+}
+
+define i1 @fshl_and_ne_neg_1_2(i32 %x, i32 %y) {
+; CHECK-LABEL: fshl_and_ne_neg_1_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl %edi, %esi
+; CHECK-NEXT:    shldl $2, %edi, %esi
+; CHECK-NEXT:    cmpl $2, %esi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %and = and i32 %x, %y
+  %f = call i32 @llvm.fshl.i32(i32 %and, i32 %x, i32 2)
+  %r = icmp ne i32 %f, 2
+  ret i1 %r
+}
+
