@@ -2093,8 +2093,7 @@ let IntrProperties = [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<
     def int_nvvm_prefetch_local_ # level : DefaultAttrsIntrinsic<[], [llvm_local_ptr_ty]>;
   }
 
-  def int_nvvm_prefetch_generic_tensormap : DefaultAttrsIntrinsic<[], [llvm_ptr_ty]>;
-  def int_nvvm_prefetch_const_tensormap   : DefaultAttrsIntrinsic<[], [llvm_constant_ptr_ty]>;
+  def int_nvvm_prefetch_tensormap : DefaultAttrsIntrinsic<[], [llvm_anyptr_ty]>;
   
   foreach eviction_priority = ["evict_normal", "evict_last"] in
     def int_nvvm_prefetch_global_L2_ # eviction_priority : DefaultAttrsIntrinsic<[], [llvm_global_ptr_ty]>;
