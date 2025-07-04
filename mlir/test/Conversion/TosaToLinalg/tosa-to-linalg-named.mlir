@@ -1052,7 +1052,7 @@ func.func @max_pool2d_nan_ignore(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x4x32
 func.func @conv2d_local_bound_true(%input: tensor<1x49x42x27xf32>, %weights: tensor<28x3x3x27xf32>, %bias: tensor<1xf32>) -> () {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // CHECK: linalg.conv_2d_nhwc_fhwc {dilations = dense<[2, 1]> : tensor<2xi64>, local_bound = true, strides = dense<1> : tensor<2xi64>}
+  // CHECK: linalg.conv_2d_nhwc_fhwc {dilations = dense<[2, 1]> : tensor<2xi64>, tosa.local_bound = true, strides = dense<1> : tensor<2xi64>}
   %0 = tosa.conv2d %input, %weights, %bias, %input_zp, %weight_zp {acc_type = f32, local_bound = true, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, dilation = array<i64: 2, 1>} : (tensor<1x49x42x27xf32>, tensor<28x3x3x27xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x45x40x28xf32>
   return
 }
@@ -1074,7 +1074,7 @@ func.func @conv2d_local_bound_false(%input: tensor<1x49x42x27xf32>, %weights: te
 func.func @conv3d_local_bound_true(%input: tensor<1x49x48x47x27xf32>, %weights: tensor<28x3x4x5x27xf32>, %bias: tensor<1xf32>) -> () {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // CHECK: linalg.conv_3d_ndhwc_dhwcf {dilations = dense<1> : tensor<3xi64>, local_bound = true, strides = dense<1> : tensor<3xi64>}
+  // CHECK: linalg.conv_3d_ndhwc_dhwcf {dilations = dense<1> : tensor<3xi64>, tosa.local_bound = true, strides = dense<1> : tensor<3xi64>}
   %0 = tosa.conv3d %input, %weights, %bias, %input_zp, %weight_zp {acc_type = f32, local_bound = true, pad = array<i64: 0, 0, 0, 0, 0, 0>, stride = array<i64: 1, 1, 1>, dilation = array<i64: 1, 1, 1>} : (tensor<1x49x48x47x27xf32>, tensor<28x3x4x5x27xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x47x45x43x28xf32>
   return
 }
@@ -1096,7 +1096,7 @@ func.func @conv3d_local_bound_false(%input: tensor<1x49x48x47x27xf32>, %weights:
 func.func @depthwise_conv_local_bound_true(%arg0 : tensor<1x7x5x3xf32>, %arg1 : tensor<3x1x3x11xf32>, %arg2 : tensor<1xf32>) -> () {
   %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
   %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
-  // CHECK: linalg.depthwise_conv_2d_nhwc_hwcm {dilations = dense<1> : tensor<2xi64>, local_bound = true, strides = dense<1> : tensor<2xi64>}
+  // CHECK: linalg.depthwise_conv_2d_nhwc_hwcm {dilations = dense<1> : tensor<2xi64>, tosa.local_bound = true, strides = dense<1> : tensor<2xi64>}
   %2 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = f32, local_bound = true, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1> } : (tensor<1x7x5x3xf32>, tensor<3x1x3x11xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x5x5x33xf32>
   return
 }

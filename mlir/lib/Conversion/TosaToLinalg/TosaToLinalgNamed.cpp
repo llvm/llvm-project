@@ -415,7 +415,7 @@ public:
           ValueRange{broadcastBias}, strideAttr, dilationAttr);
 
       if (localBound)
-        conv->setAttr("local_bound", rewriter.getBoolAttr(true));
+        conv->setAttr("tosa.local_bound", rewriter.getBoolAttr(true));
 
       rewriter.replaceOp(op, conv->getResult(0));
       return success();
@@ -427,7 +427,7 @@ public:
     Value convVal = conv.getResult(0);
 
     if (localBound)
-      conv->setAttr("local_bound", rewriter.getBoolAttr(true));
+      conv->setAttr("tosa.local_bound", rewriter.getBoolAttr(true));
 
     // We may need to truncate back to the result type if the accumulator was
     // wider than the result.
@@ -569,7 +569,7 @@ public:
       Value convVal = conv.getResult(0);
 
       if (localBound)
-        conv->setAttr("local_bound", rewriter.getBoolAttr(true));
+        conv->setAttr("tosa.local_bound", rewriter.getBoolAttr(true));
 
       // We may need to truncate back to the result type if the accumulator was
       // wider than the result.
@@ -614,7 +614,7 @@ public:
           ValueRange{zeroTensor}, strideAttr, dilationAttr);
 
       if (localBound)
-        conv->setAttr("local_bound", rewriter.getBoolAttr(true));
+        conv->setAttr("tosa.local_bound", rewriter.getBoolAttr(true));
 
       SmallVector<ReassociationExprs, 4> reassociationMap;
       createDepthwiseConvCollapseMap(resultRank, reassociationMap, rewriter);
