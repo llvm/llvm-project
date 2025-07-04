@@ -1141,13 +1141,12 @@ define i32 @mask_test_eq(i32 %x) nounwind {
 ; RV32I-LABEL: mask_test_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 12
-; RV32I-NEXT:    srli a0, a0, 12
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCILIA-LABEL: mask_test_eq:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    qc.e.andi a0, a0, 1048575
+; RV32XQCILIA-NEXT:    slli a0, a0, 12
 ; RV32XQCILIA-NEXT:    seqz a0, a0
 ; RV32XQCILIA-NEXT:    ret
   %y = and i32 %x, 1048575
@@ -1160,13 +1159,12 @@ define i32 @mask_test_ne(i32 %x) nounwind {
 ; RV32I-LABEL: mask_test_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a0, a0, 12
-; RV32I-NEXT:    srli a0, a0, 12
 ; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCILIA-LABEL: mask_test_ne:
 ; RV32XQCILIA:       # %bb.0:
-; RV32XQCILIA-NEXT:    qc.e.andi a0, a0, 1048575
+; RV32XQCILIA-NEXT:    slli a0, a0, 12
 ; RV32XQCILIA-NEXT:    snez a0, a0
 ; RV32XQCILIA-NEXT:    ret
   %y = and i32 %x, 1048575
