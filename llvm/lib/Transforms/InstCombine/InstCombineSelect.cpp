@@ -2051,27 +2051,6 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   return Changed ? &SI : nullptr;
 }
 
-/// We have an SPF (e.g. a min or max) of an SPF of the form:
-///   SPF2(SPF1(A, B), C)
-Instruction *InstCombinerImpl::foldSPFofSPF(Instruction *Inner,
-                                            SelectPatternFlavor SPF1, Value *A,
-                                            Value *B, Instruction &Outer,
-                                            SelectPatternFlavor SPF2,
-                                            Value *C) {
-  if (Outer.getType() != Inner->getType())
-    return nullptr;
-
-  if (C == A || C == B) {
-    // MAX(MAX(A, B), B) -> MAX(A, B)
-    // MIN(MIN(a, b), a) -> MIN(a, b)
-    // TODO: This could be done in instsimplify.
-    if (SPF1 == SPF2 && SelectPatternResult::isMinOrMax(SPF1))
-      return replaceInstUsesWith(Outer, Inner);
-  }
-
-  return nullptr;
-}
-
 /// Turn select C, (X + Y), (X - Y) --> (X + (select C, Y, (-Y))).
 /// This is even legal for FP.
 static Instruction *foldAddSubSelect(SelectInst &SI,
@@ -4157,17 +4136,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     Instruction::CastOps CastOp;
     SelectPatternResult SPR = matchSelectPattern(&SI, LHS, RHS, &CastOp);
     auto SPF = SPR.Flavor;
-    if (SPF) {
-      Value *LHS2, *RHS2;
-      if (SelectPatternFlavor SPF2 = matchSelectPattern(LHS, LHS2, RHS2).Flavor)
-        if (Instruction *R = foldSPFofSPF(cast<Instruction>(LHS), SPF2, LHS2,
-                                          RHS2, SI, SPF, RHS))
-          return R;
-      if (SelectPatternFlavor SPF2 = matchSelectPattern(RHS, LHS2, RHS2).Flavor)
-        if (Instruction *R = foldSPFofSPF(cast<Instruction>(RHS), SPF2, LHS2,
-                                          RHS2, SI, SPF, LHS))
-          return R;
-    }
 
     if (SelectPatternResult::isMinOrMax(SPF)) {
       // Canonicalize so that
