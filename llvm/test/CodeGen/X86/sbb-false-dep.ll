@@ -58,34 +58,34 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; IDIOM-NEXT:    pushq %r14
 ; IDIOM-NEXT:    pushq %r12
 ; IDIOM-NEXT:    pushq %rbx
-; IDIOM-NEXT:    movl %r8d, %ebp
-; IDIOM-NEXT:    movl %ecx, %r14d
-; IDIOM-NEXT:    movl %edx, %r15d
-; IDIOM-NEXT:    movq %rsi, %rbx
+; IDIOM-NEXT:    movl %r8d, %ebx
+; IDIOM-NEXT:    movl %ecx, %ebp
+; IDIOM-NEXT:    movl %edx, %r14d
+; IDIOM-NEXT:    movq %rsi, %r15
 ; IDIOM-NEXT:    movq %rdi, %r12
 ; IDIOM-NEXT:    movq (%rsi), %rdi
 ; IDIOM-NEXT:    movq 8(%rsi), %rsi
-; IDIOM-NEXT:    movq %rbx, %rdx
+; IDIOM-NEXT:    movq %r15, %rdx
 ; IDIOM-NEXT:    callq foo1@PLT
-; IDIOM-NEXT:    movq 8(%rbx), %rax
+; IDIOM-NEXT:    movq 8(%r15), %rax
 ; IDIOM-NEXT:    movq (%rax), %rax
-; IDIOM-NEXT:    movl %ebp, %ecx
+; IDIOM-NEXT:    movl %ebx, %ecx
 ; IDIOM-NEXT:    negl %ecx
 ; IDIOM-NEXT:    sbbq %r10, %r10
 ; IDIOM-NEXT:    orq %rax, %r10
-; IDIOM-NEXT:    cmpl $1, %ebp
+; IDIOM-NEXT:    cmpl $1, %ebx
 ; IDIOM-NEXT:    sbbq %r11, %r11
 ; IDIOM-NEXT:    orq %rax, %r11
 ; IDIOM-NEXT:    subq $8, %rsp
 ; IDIOM-NEXT:    movq %r12, %rdi
-; IDIOM-NEXT:    movl %r15d, %esi
-; IDIOM-NEXT:    movl %r14d, %edx
+; IDIOM-NEXT:    movl %r14d, %esi
+; IDIOM-NEXT:    movl %ebp, %edx
 ; IDIOM-NEXT:    xorl %ecx, %ecx
 ; IDIOM-NEXT:    xorl %r8d, %r8d
 ; IDIOM-NEXT:    xorl %r9d, %r9d
 ; IDIOM-NEXT:    pushq %r11
 ; IDIOM-NEXT:    pushq %r10
-; IDIOM-NEXT:    pushq %rbx
+; IDIOM-NEXT:    pushq %r15
 ; IDIOM-NEXT:    callq foo2@PLT
 ; IDIOM-NEXT:    addq $32, %rsp
 ; IDIOM-NEXT:    popq %rbx
