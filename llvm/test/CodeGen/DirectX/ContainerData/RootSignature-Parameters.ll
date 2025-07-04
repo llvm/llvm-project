@@ -15,7 +15,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 !3 = !{ !4, !5, !6, !7 } ; list of root signature elements
 !4 = !{ !"RootFlags", i32 1 } ; 1 = allow_input_assembler_input_layout
 !5 = !{ !"RootConstants", i32 0, i32 1, i32 2, i32 3 }
-!6 = !{ !"RootSRV", i32 1, i32 4, i32 5, i32 6 }
+!6 = !{ !"RootSRV", i32 1, i32 4, i32 5, i32 4 }
 !7 = !{ !"DescriptorTable", i32 0, !8, !9 }
 !8 = !{ !"SRV", i32 1, i32 1, i32 0, i32 -1, i32 4 }
 !9 = !{ !"UAV", i32 5, i32 1, i32 10, i32 5, i32 2 }
@@ -34,7 +34,7 @@ attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 ;CHECK-NEXT:     Shader Visibility: 1
 ;CHECK-NEXT:     Register Space: 5
 ;CHECK-NEXT:     Shader Register: 4
-;CHECK-NEXT:     Flags: 6
+;CHECK-NEXT:     Flags: 4
 ;CHECK-NEXT:   - Parameter Type: 0
 ;CHECK-NEXT:     Shader Visibility: 0
 ;CHECK-NEXT:     NumRanges: 2
