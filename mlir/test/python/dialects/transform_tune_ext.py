@@ -54,3 +54,19 @@ def testKnobOp(target):
 
     # CHECK: transform.debug.emit_param_as_remark %[[HEADS]]
     debug.emit_param_as_remark(heads)
+
+    # CHECK: transform.tune.knob<"range_as_a_dict"> = 4 : i64 from options = {start = 2 : i64, step = 2 : i64, stop = 16 : i64} -> !transform.any_param
+    # NB: Membership of `selected` in non-ArrayAttr `options` is _not_ verified.
+    i64 = IntegerType.get_signless(64)
+    tune.knob(
+        any_param,
+        "range_as_a_dict",
+        DictAttr.get(
+            {
+                "start": IntegerAttr.get(i64, 2),
+                "stop": IntegerAttr.get(i64, 16),
+                "step": IntegerAttr.get(i64, 2),
+            }
+        ),
+        selected=4,
+    )
