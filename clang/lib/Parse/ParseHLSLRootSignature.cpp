@@ -20,9 +20,9 @@ using TokenKind = RootSignatureToken::Kind;
 RootSignatureParser::RootSignatureParser(
     llvm::dxbc::RootSignatureVersion Version,
     SmallVector<RootElement> &Elements, RootSignatureLexer &Lexer,
-    Preprocessor &PP)
-    : Version(Version), Elements(Elements), Lexer(Lexer), PP(PP),
-      CurToken(SourceLocation()) {}
+    StringLiteral *Signature, Preprocessor &PP)
+    : Version(Version), Elements(Elements), Signature(Signature), Lexer(Lexer),
+      PP(PP), CurToken(SourceLocation()) {}
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible

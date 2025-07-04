@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 #define LLVM_CLANG_PARSE_PARSEHLSLROOTSIGNATURE_H
 
+#include "clang/AST/Expr.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Lex/LexHLSLRootSignature.h"
 #include "clang/Lex/Preprocessor.h"
@@ -29,7 +30,8 @@ class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
                       SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
-                      RootSignatureLexer &Lexer, clang::Preprocessor &PP);
+                      RootSignatureLexer &Lexer, StringLiteral *Signature,
+                      Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
   /// representations of the RootElements. Tokens are consumed until an
@@ -192,6 +194,7 @@ private:
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
   RootSignatureLexer &Lexer;
 
+  clang::StringLiteral *Signature;
   clang::Preprocessor &PP;
 
   RootSignatureToken CurToken;
