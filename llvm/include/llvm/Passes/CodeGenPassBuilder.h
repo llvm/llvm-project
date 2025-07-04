@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -210,10 +211,7 @@ protected:
   class AddIRPass {
   public:
     AddIRPass(ModulePassManager &MPM, const DerivedT &PB) : MPM(MPM), PB(PB) {}
-    ~AddIRPass() {
-      if (!FPM.isEmpty())
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    }
+    ~AddIRPass() { flushFPMToMPM(); }
 
     template <typename PassT>
     void operator()(PassT &&Pass, StringRef Name = PassT::name()) {
@@ -231,16 +229,40 @@ protected:
         FPM.addPass(std::forward<PassT>(Pass));
       } else {
         // Add Module Pass
-        if (!FPM.isEmpty()) {
-          MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-          FPM = FunctionPassManager();
-        }
-
+        flushFPMToMPM();
         MPM.addPass(std::forward<PassT>(Pass));
       }
     }
 
+    /// Setting this will add passes to the CGSCC pass manager.
+    void requireCGSCCOrder() {
+      if (PB.AddInCGSCCOrder)
+        return;
+      flushFPMToMPM();
+      PB.AddInCGSCCOrder = true;
+    }
+
+    /// Stop adding passes to the CGSCC pass manager.
+    /// Existing passes won't be removed.
+    void stopAddingInCGSCCOrder() {
+      if (!PB.AddInCGSCCOrder)
+        return;
+      flushFPMToMPM();
+      PB.AddInCGSCCOrder = false;
+    }
+
   private:
+    void flushFPMToMPM() {
+      if (FPM.isEmpty())
+        return;
+      if (PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      } else {
+        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
+      }
+      FPM = FunctionPassManager();
+    }
     ModulePassManager &MPM;
     FunctionPassManager FPM;
     const DerivedT &PB;
@@ -252,13 +274,17 @@ protected:
     AddMachinePass(ModulePassManager &MPM, const DerivedT &PB)
         : MPM(MPM), PB(PB) {}
     ~AddMachinePass() {
-      if (!MFPM.isEmpty()) {
-        FunctionPassManager FPM;
-        FPM.addPass(
-            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
-        FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      if (MFPM.isEmpty())
+        return;
+
+      FunctionPassManager FPM;
+      FPM.addPass(createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)));
+      FPM.addPass(InvalidateAnalysisPass<MachineFunctionAnalysis>());
+      if (this->PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(std::move(FPM))));
+      } else
         MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-      }
     }
 
     template <typename PassT>
@@ -276,12 +302,7 @@ protected:
         MFPM.addPass(std::forward<PassT>(Pass));
       } else {
         // Add Module Pass
-        if (!MFPM.isEmpty()) {
-          MPM.addPass(createModuleToFunctionPassAdaptor(
-              createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
-          MFPM = MachineFunctionPassManager();
-        }
-
+        flushMFPMToMPM();
         MPM.addPass(std::forward<PassT>(Pass));
       }
 
@@ -289,7 +310,39 @@ protected:
         C(Name, MFPM);
     }
 
+    /// Setting this will add passes to the CGSCC pass manager.
+    void requireCGSCCOrder() {
+      if (PB.AddInCGSCCOrder)
+        return;
+      flushMFPMToMPM();
+      PB.AddInCGSCCOrder = true;
+    }
+
+    /// Stop adding passes to the CGSCC pass manager.
+    /// Existing passes won't be removed.
+    void stopAddingInCGSCCOrder() {
+      if (!PB.AddInCGSCCOrder)
+        return;
+      flushMFPMToMPM();
+      PB.AddInCGSCCOrder = false;
+    }
+
   private:
+    void flushMFPMToMPM() {
+      if (MFPM.isEmpty())
+        return;
+
+      if (PB.AddInCGSCCOrder) {
+        MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
+            createCGSCCToFunctionPassAdaptor(
+                createFunctionToMachineFunctionPassAdaptor(std::move(MFPM)))));
+      } else {
+        MPM.addPass(createModuleToFunctionPassAdaptor(
+            createFunctionToMachineFunctionPassAdaptor(std::move(MFPM))));
+      }
+      MFPM = MachineFunctionPassManager();
+    }
+
     ModulePassManager &MPM;
     MachineFunctionPassManager MFPM;
     const DerivedT &PB;
@@ -555,6 +608,7 @@ private:
   /// Helper variable for `-start-before/-start-after/-stop-before/-stop-after`
   mutable bool Started = true;
   mutable bool Stopped = true;
+  mutable bool AddInCGSCCOrder = false;
 };
 
 template <typename Derived, typename TargetMachineT>
@@ -812,6 +866,9 @@ template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addISelPrepare(
     AddIRPass &addPass) const {
   derived().addPreISel(addPass);
+
+  if (Opt.RequiresCodeGenSCCOrder)
+    addPass.requireCGSCCOrder();
 
   addPass(CallBrPreparePass());
   // Add both the safe stack and the stack protection passes: each of them will
