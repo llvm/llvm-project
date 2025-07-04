@@ -3682,12 +3682,13 @@ static StringRef GetInputKindName(InputKind IK) {
 static StringRef getExceptionHandlingName(unsigned EHK) {
   switch (static_cast<LangOptions::ExceptionHandlingKind>(EHK)) {
   case LangOptions::ExceptionHandlingKind::None:
-  default:
     return "none";
-  case LangOptions::ExceptionHandlingKind::SjLj:
-    return "sjlj";
   case LangOptions::ExceptionHandlingKind::DwarfCFI:
     return "dwarf";
+  case LangOptions::ExceptionHandlingKind::SjLj:
+    return "sjlj";
+  case LangOptions::ExceptionHandlingKind::WinEH:
+    return "seh";
   case LangOptions::ExceptionHandlingKind::Wasm:
     return "wasm";
   }
@@ -4028,7 +4029,7 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
               A->getValue())
               .Case("dwarf", LangOptions::ExceptionHandlingKind::DwarfCFI)
               .Case("sjlj", LangOptions::ExceptionHandlingKind::SjLj)
-              .Case("wineh", LangOptions::ExceptionHandlingKind::WinEH)
+              .Case("seh", LangOptions::ExceptionHandlingKind::WinEH)
               .Case("wasm", LangOptions::ExceptionHandlingKind::Wasm)
               .Case("none", LangOptions::ExceptionHandlingKind::None)
               .Default(std::nullopt);
@@ -4615,6 +4616,11 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
 
   // Error if -mvscale-min is unbounded.
   if (Arg *A = Args.getLastArg(options::OPT_mvscale_min_EQ)) {
+    unsigned VScaleMin;
+    if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
+      Diags.Report(diag::err_cc1_unbounded_vscale_min);
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_mvscale_streaming_min_EQ)) {
     unsigned VScaleMin;
     if (StringRef(A->getValue()).getAsInteger(10, VScaleMin) || VScaleMin == 0)
       Diags.Report(diag::err_cc1_unbounded_vscale_min);
