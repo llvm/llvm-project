@@ -661,6 +661,9 @@ Improvements to Clang's diagnostics
   diagnostics when floating-point numbers had both width field and plus or space
   prefix specified. (#GH143951)
 
+- A warning is now emitted when ``main`` is attached to a named module,
+  which can be turned off with ``-Wno-main-attached-to-named-module``. (#GH146247)
+
 - Clang now avoids issuing `-Wreturn-type` warnings in some cases where
   the final statement of a non-void function is a `throw` expression, or
   a call to a function that is trivially known to always throw (i.e., its
@@ -896,6 +899,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -969,6 +973,8 @@ Arm and AArch64 Support
 
 - For AArch64, added support for generating executable-only code sections by using the
   ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
+- Added ``-msve-streaming-vector-bits=`` flag, which allows specifying the
+  SVE vector width in streaming mode.
 
 Android Support
 ^^^^^^^^^^^^^^^
