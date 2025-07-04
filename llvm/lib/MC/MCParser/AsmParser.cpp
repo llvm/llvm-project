@@ -1268,7 +1268,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
       if (IDVal == "f" || IDVal == "b") {
         MCSymbol *Sym =
             Ctx.getDirectionalLocalSymbol(IntVal, IDVal == "b");
-        Res = MCSymbolRefExpr::create(Sym, Spec, getContext());
+        Res = MCSymbolRefExpr::create(Sym, Spec, getContext(), Loc);
         if (IDVal == "b" && Sym->isUndefined())
           return Error(Loc, "directional label undefined");
         DirLabels.push_back(std::make_tuple(Loc, CppHashInfo, Sym));
