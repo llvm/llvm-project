@@ -1191,7 +1191,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
 
     auto transferReadOp = rewriter.create<vector::TransferReadOp>(
         loc, resultType, extractOp.getTensor(), transferReadIdxs,
-        permutationMap, inBounds);
+        /*padding=*/std::nullopt, permutationMap, inBounds);
 
     // Mask this broadcasting xfer_read here rather than relying on the generic
     // path (the generic path assumes identity masking map, which wouldn't be
@@ -1227,8 +1227,8 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   }
 
   auto transferReadOp = rewriter.create<vector::TransferReadOp>(
-      loc, resultType, extractOp.getTensor(), transferReadIdxs, permutationMap,
-      inBounds);
+      loc, resultType, extractOp.getTensor(), transferReadIdxs,
+      /*padding=*/std::nullopt, permutationMap, inBounds);
 
   LDBG("Vectorised as contiguous load: " << extractOp);
   return VectorizationHookResult{VectorizationHookStatus::NewOp,
@@ -1384,7 +1384,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
 /// performed to the maximal common vector size implied by the `linalgOp`
 /// iteration space. This eager broadcasting is introduced in the
 /// permutation_map of the vector.transfer_read operations. The eager
-/// broadcasting makes it trivial to detrmine where broadcast, transposes and
+/// broadcasting makes it trivial to determine where broadcast, transposes and
 /// reductions should occur, without any bookkeeping. The tradeoff is that, in
 /// the absence of good canonicalizations, the amount of work increases.
 /// This is not deemed a problem as we expect canonicalizations and foldings to
@@ -1439,7 +1439,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     SmallVector<Value> indices(linalgOp.getShape(opOperand).size(), zero);
 
     Operation *read = rewriter.create<vector::TransferReadOp>(
-        loc, readType, opOperand->get(), indices, readMap);
+        loc, readType, opOperand->get(), indices,
+        /*padding=*/std::nullopt, readMap);
     read = state.maskOperation(rewriter, read, linalgOp, indexingMap);
     Value readValue = read->getResult(0);
 
@@ -2641,6 +2642,7 @@ LogicalResult mlir::linalg::vectorizeCopy(RewriterBase &rewriter,
 
   Value readValue = rewriter.create<vector::TransferReadOp>(
       loc, readType, copyOp.getSource(), indices,
+      /*padding=*/std::nullopt,
       rewriter.getMultiDimIdentityMap(srcType.getRank()));
   if (cast<VectorType>(readValue.getType()).getRank() == 0) {
     readValue =
@@ -3487,15 +3489,18 @@ struct Conv1DGenerator
     SmallVector<Value> resPadding(resShape.size(), zero);
 
     // Read the whole lhs, rhs and res in one shot (with zero padding).
-    Value lhs = rewriter.create<vector::TransferReadOp>(loc, lhsType, lhsShaped,
-                                                        lhsPadding);
+    Value lhs = rewriter.create<vector::TransferReadOp>(
+        loc, lhsType, lhsShaped, lhsPadding,
+        /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
     // This is needed only for Conv.
     Value rhs = nullptr;
     if (oper == ConvOperationKind::Conv)
-      rhs = rewriter.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
-                                                    rhsPadding);
-    Value res = rewriter.create<vector::TransferReadOp>(loc, resType, resShaped,
-                                                        resPadding);
+      rhs = rewriter.create<vector::TransferReadOp>(
+          loc, rhsType, rhsShaped, rhsPadding,
+          /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
+    Value res = rewriter.create<vector::TransferReadOp>(
+        loc, resType, resShaped, resPadding,
+        /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
 
     // The base vectorization case for channeled convolution is input:
     // {n,w,c}, weight: {kw,c,f}, output: {n,w,f}. To reuse the base pattern
@@ -3742,19 +3747,22 @@ struct Conv1DGenerator
     // Read lhs slice of size {n, w * strideW + kw * dilationW, c} @ [0, 0,
     // 0].
     Value lhs = rewriter.create<vector::TransferReadOp>(
-        loc, lhsType, lhsShaped, ValueRange{zero, zero, zero});
+        loc, lhsType, lhsShaped, ValueRange{zero, zero, zero},
+        /*padding=*/arith::getZeroConstant(rewriter, loc, lhsEltType));
     auto maybeMaskedLhs = maybeMaskXferOp(
         lhsType.getShape(), lhsType.getScalableDims(), lhs.getDefiningOp());
 
     // Read rhs slice of size {kw, c} @ [0, 0].
-    Value rhs = rewriter.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
-                                                        ValueRange{zero, zero});
+    Value rhs = rewriter.create<vector::TransferReadOp>(
+        loc, rhsType, rhsShaped, ValueRange{zero, zero},
+        /*padding=*/arith::getZeroConstant(rewriter, loc, rhsEltType));
     auto maybeMaskedRhs = maybeMaskXferOp(
         rhsType.getShape(), rhsType.getScalableDims(), rhs.getDefiningOp());
 
     // Read res slice of size {n, w, c} @ [0, 0, 0].
     Value res = rewriter.create<vector::TransferReadOp>(
-        loc, resType, resShaped, ValueRange{zero, zero, zero});
+        loc, resType, resShaped, ValueRange{zero, zero, zero},
+        /*padding=*/arith::getZeroConstant(rewriter, loc, resEltType));
     auto maybeMaskedRes = maybeMaskXferOp(
         resType.getShape(), resType.getScalableDims(), res.getDefiningOp());
 

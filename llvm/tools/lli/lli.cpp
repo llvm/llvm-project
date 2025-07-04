@@ -878,7 +878,8 @@ static void exitOnLazyCallThroughFailure() { exit(1); }
 Expected<orc::ThreadSafeModule>
 loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   SMDiagnostic Err;
-  auto M = parseIRFile(Path, Err, *TSCtx.getContext());
+  auto M = TSCtx.withContextDo(
+      [&](LLVMContext *Ctx) { return parseIRFile(Path, Err, *Ctx); });
   if (!M) {
     std::string ErrMsg;
     {

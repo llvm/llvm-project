@@ -5295,12 +5295,13 @@ bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
   return false;
 }
 
-MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_UDIV);
-  auto &UDiv = cast<GenericMachineInstr>(MI);
-  Register Dst = UDiv.getReg(0);
-  Register LHS = UDiv.getReg(1);
-  Register RHS = UDiv.getReg(2);
+MachineInstr *CombinerHelper::buildUDivorURemUsingMul(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
+  auto &UDivorRem = cast<GenericMachineInstr>(MI);
+  Register Dst = UDivorRem.getReg(0);
+  Register LHS = UDivorRem.getReg(1);
+  Register RHS = UDivorRem.getReg(2);
   LLT Ty = MRI.getType(Dst);
   LLT ScalarTy = Ty.getScalarType();
   const unsigned EltBits = ScalarTy.getScalarSizeInBits();
@@ -5453,11 +5454,18 @@ MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) const {
   auto IsOne = MIB.buildICmp(
       CmpInst::Predicate::ICMP_EQ,
       Ty.isScalar() ? LLT::scalar(1) : Ty.changeElementSize(1), RHS, One);
-  return MIB.buildSelect(Ty, IsOne, LHS, Q);
+  auto ret = MIB.buildSelect(Ty, IsOne, LHS, Q);
+
+  if (Opcode == TargetOpcode::G_UREM) {
+    auto Prod = MIB.buildMul(Ty, ret, RHS);
+    return MIB.buildSub(Ty, LHS, Prod);
+  }
+  return ret;
 }
 
-bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_UDIV);
+bool CombinerHelper::matchUDivorURemByConst(MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  assert(Opcode == TargetOpcode::G_UDIV || Opcode == TargetOpcode::G_UREM);
   Register Dst = MI.getOperand(0).getReg();
   Register RHS = MI.getOperand(2).getReg();
   LLT DstTy = MRI.getType(Dst);
@@ -5474,7 +5482,8 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
   if (MF.getFunction().hasMinSize())
     return false;
 
-  if (MI.getFlag(MachineInstr::MIFlag::IsExact)) {
+  if (Opcode == TargetOpcode::G_UDIV &&
+      MI.getFlag(MachineInstr::MIFlag::IsExact)) {
     return matchUnaryPredicate(
         MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
   }
@@ -5494,14 +5503,17 @@ bool CombinerHelper::matchUDivByConst(MachineInstr &MI) const {
              {DstTy.isVector() ? DstTy.changeElementSize(1) : LLT::scalar(1),
               DstTy}}))
       return false;
+    if (Opcode == TargetOpcode::G_UREM &&
+        !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
+      return false;
   }
 
   return matchUnaryPredicate(
       MRI, RHS, [](const Constant *C) { return C && !C->isNullValue(); });
 }
 
-void CombinerHelper::applyUDivByConst(MachineInstr &MI) const {
-  auto *NewMI = buildUDivUsingMul(MI);
+void CombinerHelper::applyUDivorURemByConst(MachineInstr &MI) const {
+  auto *NewMI = buildUDivorURemUsingMul(MI);
   replaceSingleDefInstWithReg(MI, NewMI->getOperand(0).getReg());
 }
 

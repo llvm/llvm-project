@@ -1404,6 +1404,13 @@ def HasVendorXMIPSLSP
     : Predicate<"Subtarget->hasVendorXMIPSLSP()">,
       AssemblerPredicate<(all_of FeatureVendorXMIPSLSP),
                          "'Xmipslsp' (load and store pair instructions)">;
+def FeatureVendorXMIPSCBOP
+    : RISCVExtension<1, 0, "MIPS Software Prefetch">;
+def HasVendorXMIPSCBOP
+    : Predicate<"Subtarget->hasVendorXMIPSCBOP()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSCBOP),
+                         "'Xmipscbop' (MIPS hardware prefetch)">;
+def NotHasVendorXMIPSCBOP : Predicate<"!Subtarget->hasVendorXMIPSCBOP()">;
 
 // WCH / Nanjing Qinheng Microelectronics Extension(s)
 
@@ -1600,10 +1607,9 @@ def HasVendorXAndesVBFHCvt
       AssemblerPredicate<(all_of FeatureVendorXAndesVBFHCvt),
                          "'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension)">;
 
-
 def FeatureVendorXAndesVPackFPH
-    : RISCVExtension<5, 0, "Andes Vector Packed FP16 Extension",
-                     [FeatureStdExtZvfhmin]>;
+    : RISCVExtension<5, 0,
+                     "Andes Vector Packed FP16 Extension", [FeatureStdExtF]>;
 def HasVendorXAndesVPackFPH
     : Predicate<"Subtarget->hasVendorXAndesVPackFPH()">,
       AssemblerPredicate<(all_of FeatureVendorXAndesVPackFPH),
