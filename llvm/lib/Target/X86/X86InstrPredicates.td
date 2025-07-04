@@ -46,6 +46,7 @@ def NoEGPR       : Predicate<"!Subtarget->hasEGPR()">;
 def HasNDD       : Predicate<"Subtarget->hasNDD()">;
 def NoNDD        : Predicate<"!Subtarget->hasNDD()">;
 def HasZU        : Predicate<"Subtarget->hasZU()">;
+def NoZU         : Predicate<"!Subtarget->hasZU()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
