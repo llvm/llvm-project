@@ -173,6 +173,7 @@ template <class Stream, class T>
 #    include <__type_traits/conjunction.h>
 #    include <__type_traits/enable_if.h>
 #    include <__type_traits/is_base_of.h>
+#    include <__type_traits/is_same.h>
 #    include <__type_traits/make_unsigned.h>
 #    include <__utility/declval.h>
 #    include <__utility/forward.h>
@@ -293,11 +294,13 @@ public:
   basic_istream& getline(char_type* __s, streamsize __n, char_type __dlm);
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
-#    if __LIBCPP_STD_VER >= 26
-  basic_istream& ignore(streamsize __n, char_type __delim)
+#    if _LIBCPP_STD_VER >= 26
+  // _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim)
+  //   requires is_same_v<char_type, char>;
+  _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim)
     requires is_same_v<char_type, char>
   {
-    return ignore(__n, traits::to_int_type(__delim));
+    return this->ignore(__n, _Traits::to_int_type(__delim));
   }
 #    endif
   int_type peek();
@@ -873,6 +876,14 @@ basic_istream<_CharT, _Traits>& basic_istream<_CharT, _Traits>::ignore(streamsiz
   }
   return *this;
 }
+
+// #    if _LIBCPP_STD_VER >= 26
+// template <class _CharT, class _Traits>
+// basic_istream& basic_istream<_CharT, _Traits>&
+// basic_istream<_CharT, _Traits>::ignore(streamsize __n, char_type __delim) {
+//   return this->ignore(__n, _Traits::to_int_type(__delim));
+// }
+// #    endif
 
 template <class _CharT, class _Traits>
 typename basic_istream<_CharT, _Traits>::int_type basic_istream<_CharT, _Traits>::peek() {

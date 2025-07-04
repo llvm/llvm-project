@@ -16,23 +16,12 @@
 // basic_istream& ignore(streamsize n, char_type delim);
 
 #include <cassert>
-#include <istream>
 #include <sstream>
 #include <string>
 
 #include "test_macros.h"
 
-int main(int, char**) {
+void test() {
   std::istringstream in("\xF0\x9F\xA4\xA1 Clown Face");
-  in.ignore(100, '\xA1'); // ignore up to '\xA1' delimiter,
-                          // previously might have ignored to EOF
-
-  assert(in.gcount() == 4); // 4 bytes were ignored
-  assert(in.peek() == ' '); // next character is a space
-
-  std::string str; // read the next word
-  in >> str;
-  assert(str == "Clown");
-
-  return 0;
+  in.ignore(100, -1L); // expected-error {{call to member function 'ignore' is ambiguous}}
 }
