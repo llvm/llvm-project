@@ -216,8 +216,8 @@ add_header_library(
   DEPENDS
     .fenv_impl
     .fp_bits
-  libc.src.__support.macros.config
     libc.src.__support.CPP.type_traits
+  libc.src.__support.macros.config
 )
 
 add_header_library(
