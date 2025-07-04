@@ -767,8 +767,22 @@ struct FoldSelfCopy : public OpRewritePattern<CopyOp> {
 
   LogicalResult matchAndRewrite(CopyOp copyOp,
                                 PatternRewriter &rewriter) const override {
-    if (copyOp.getSource() != copyOp.getTarget())
-      return failure();
+    if (copyOp.getSource() != copyOp.getTarget()) {
+      // We can still fold if source and target are similar SubViews.
+      auto source = copyOp.getSource().getDefiningOp<SubViewOp>();
+      auto target = copyOp.getTarget().getDefiningOp<SubViewOp>();
+      if (!source || !target)
+        return failure();
+      if (source.getSource() != target.getSource() ||
+          source.getOffsets() != target.getOffsets() ||
+          source.getStaticOffsets() != target.getStaticOffsets() ||
+          source.getStrides() != target.getStrides() ||
+          source.getStaticStrides() != target.getStaticStrides()) {
+        // By copy semantics, sizes of source and target must be the same
+        // -> no need to check sizes.
+        return failure();
+      }
+    }
 
     rewriter.eraseOp(copyOp);
     return success();
