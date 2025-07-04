@@ -428,10 +428,11 @@ define i32 @test_nxv256i1(<vscale x 256 x i1> %x) {
 ; CHECK-NEXT:    vmerge.vim v24, v24, 1, v0
 ; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v6, a1
-; CHECK-NEXT:    vslidedown.vx v5, v7, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v24, v24, 1, v0.t
-; CHECK-NEXT:    vmv1r.v v0, v5
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v7, a1
+; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vadd.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vadd.vv v8, v8, v24
 ; CHECK-NEXT:    addi a2, sp, 16
