@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_OPENCL_INTEGER_UPSAMPLE_H__
-#define __CLC_OPENCL_OPENCL_INTEGER_UPSAMPLE_H__
+#ifndef __CLC_OPENCL_INTEGER_UPSAMPLE_H__
+#define __CLC_OPENCL_INTEGER_UPSAMPLE_H__
 
 #include <clc/opencl/opencl-base.h>
 
@@ -36,4 +36,4 @@ __CLC_UPSAMPLE_TYPES()
 #undef __CLC_UPSAMPLE_DECL
 #undef __CLC_UPSAMPLE_VEC
 
-#endif // __CLC_OPENCL_OPENCL_INTEGER_UPSAMPLE_H__
+#endif // __CLC_OPENCL_INTEGER_UPSAMPLE_H__

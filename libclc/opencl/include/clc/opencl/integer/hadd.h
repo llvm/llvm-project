@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_OPENCL_INTEGER_HADD_H__
-#define __CLC_OPENCL_OPENCL_INTEGER_HADD_H__
+#ifndef __CLC_OPENCL_INTEGER_HADD_H__
+#define __CLC_OPENCL_INTEGER_HADD_H__
 
 #include <clc/opencl/opencl-base.h>
 
@@ -18,4 +18,4 @@
 
 #undef FUNCTION
 
-#endif // __CLC_OPENCL_OPENCL_INTEGER_HADD_H__
+#endif // __CLC_OPENCL_INTEGER_HADD_H__
