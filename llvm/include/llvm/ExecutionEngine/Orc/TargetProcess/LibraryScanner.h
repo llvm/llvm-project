@@ -156,6 +156,9 @@ public:
                              std::shared_ptr<LibraryPathCache> m_cache,
                              std::shared_ptr<PathResolver> m_resolver)
       : m_cache(std::move(m_cache)), m_resolver(std::move(m_resolver)) {
+    // LLVM_DEBUG(
+    llvm::dbgs() << "LibraryScanHelper::LibraryScanHelper: base paths : "
+                 << paths.size() << "\n"; //);
     for (const auto &p : paths)
       addBasePath(p);
   }
