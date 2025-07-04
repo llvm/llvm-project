@@ -1965,8 +1965,6 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::r600:
   case Triple::renderscript32:
   case Triple::renderscript64:
-  case Triple::riscv32be:
-  case Triple::riscv64be:
   case Triple::shave:
   case Triple::spir64:
   case Triple::spir:
@@ -2086,8 +2084,6 @@ bool Triple::isLittleEndian() const {
   case Triple::renderscript64:
   case Triple::riscv32:
   case Triple::riscv64:
-  case Triple::riscv32be:
-  case Triple::riscv64be:
   case Triple::shave:
   case Triple::sparcel:
   case Triple::spir64:
