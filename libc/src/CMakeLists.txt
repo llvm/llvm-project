@@ -19,6 +19,7 @@ add_subdirectory(unistd)
 add_subdirectory(wchar)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
+  message(FATAL_ERROR "hello world")
   add_subdirectory(dirent)
   add_subdirectory(fcntl)
   add_subdirectory(poll)
