@@ -34,14 +34,14 @@ entry:
 !14 = !{i32 1, i32 0}
 
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_FLOAT]] FPFastMathDefault %[[#FLOAT_TYPE:]] 131079 
-!19 = !{ptr @k_float_controls_float, i32 6028, float undef, i32 131079}
+!19 = !{ptr @k_float_controls_float, i32 6028, float poison, i32 131079}
 ; We expect 130179 for float type.
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FLOAT_TYPE:]] 131079 
 ; We expect 7 for the rest of types because it's NotInf | NotNaN | NSZ set by SignedZeroInfNanPreserve.
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#HALF_TYPE:]] 7 
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#DOUBLE_TYPE:]] 7 
 ; CHECK-DAG: OpExecutionMode %[[#KERNEL_ALL]] FPFastMathDefault %[[#FP128_TYPE:]] 7 
-!20 = !{ptr @k_float_controls_all, i32 6028, float undef, i32 131079}
+!20 = !{ptr @k_float_controls_all, i32 6028, float poison, i32 131079}
 ; ContractionOff is now replaced with FPFastMathDefault with AllowContract bit set to false.
 !21 = !{ptr @k_float_controls_float, i32 31}
 !22 = !{ptr @k_float_controls_all, i32 31}
