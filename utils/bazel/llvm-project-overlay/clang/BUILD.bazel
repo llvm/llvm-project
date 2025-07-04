@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
     "//:vars.bzl",
@@ -2455,13 +2456,33 @@ cc_library(
     ],
 )
 
+# This is the equivalent of the CLANG_ENABLE_PROTO_FUZZER cmake flag.
+# Use `bazel build --@llvm-project//clang:enable_proto_fuzzer` to enable it.
+bool_flag(
+    name = "enable_proto_fuzzer",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "proto_fuzzer_enabled",
+    flag_values = {":enable_proto_fuzzer": "True"},
+)
+
 proto_library(
     name = "cxx-proto",
     srcs = ["tools/clang-fuzzer/cxx_proto.proto"],
+    target_compatible_with = select({
+        ":proto_fuzzer_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
 
 cc_proto_library(
     name = "cxx_cc_proto",
+    target_compatible_with = select({
+        ":proto_fuzzer_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [":cxx-proto"],
 )
 
@@ -2470,12 +2491,20 @@ cc_library(
     srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.cpp"],
     hdrs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx.h"],
     includes = ["tools/clang-fuzzer"],
+    target_compatible_with = select({
+        ":proto_fuzzer_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [":cxx_cc_proto"],
 )
 
 cc_binary(
     name = "clang-proto-to-cxx",
     srcs = ["tools/clang-fuzzer/proto-to-cxx/proto_to_cxx_main.cpp"],
+    target_compatible_with = select({
+        ":proto_fuzzer_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [":proto-to-cxx-lib"],
 )
 
@@ -2483,6 +2512,10 @@ cc_library(
     name = "clang-fuzzer-initialize",
     srcs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.cpp"],
     hdrs = ["tools/clang-fuzzer/fuzzer-initialize/fuzzer_initialize.h"],
+    target_compatible_with = select({
+        ":proto_fuzzer_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         "//llvm:Core",
         "//llvm:Support",
