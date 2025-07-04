@@ -1356,7 +1356,8 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
       return E;
     }
 
-    return MCSymbolRefExpr::create(&SRE->getSymbol(), Spec, getContext());
+    return MCSymbolRefExpr::create(&SRE->getSymbol(), Spec, getContext(),
+                                   SRE->getLoc());
   }
 
   case MCExpr::Unary: {
@@ -1364,7 +1365,8 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
     const MCExpr *Sub = applySpecifier(UE->getSubExpr(), Spec);
     if (!Sub)
       return nullptr;
-    return MCUnaryExpr::create(UE->getOpcode(), Sub, getContext());
+    return MCUnaryExpr::create(UE->getOpcode(), Sub, getContext(),
+                               UE->getLoc());
   }
 
   case MCExpr::Binary: {
@@ -1380,7 +1382,8 @@ const MCExpr *MCAsmParser::applySpecifier(const MCExpr *E, uint32_t Spec) {
     if (!RHS)
       RHS = BE->getRHS();
 
-    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, getContext());
+    return MCBinaryExpr::create(BE->getOpcode(), LHS, RHS, getContext(),
+                                BE->getLoc());
   }
   }
 

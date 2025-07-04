@@ -8266,7 +8266,7 @@ bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     return true;
 
   Res = AArch64AuthMCExpr::create(Res, Discriminator, *KeyIDOrNone,
-                                  UseAddressDiversity, Ctx);
+                                  UseAddressDiversity, Ctx, Res->getLoc());
   return false;
 }
 
