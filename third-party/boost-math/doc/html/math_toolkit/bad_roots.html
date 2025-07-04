@@ -1,0 +1,126 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Examples Where Root Finding Goes Wrong</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../root_finding.html" title="Chapter 10. Root Finding &amp; Minimization Algorithms">
+<link rel="prev" href="bad_guess.html" title="The Effect of a Poor Initial Guess">
+<link rel="next" href="brent_minima.html" title="Locating Function Minima using Brent's algorithm">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bad_guess.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="brent_minima.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.bad_roots"></a><a class="link" href="bad_roots.html" title="Examples Where Root Finding Goes Wrong">Examples Where Root Finding Goes
+    Wrong</a>
+</h2></div></div></div>
+<p>
+      There are many reasons why root root finding can fail, here are just a few
+      of the more common examples:
+    </p>
+<h4>
+<a name="math_toolkit.bad_roots.h0"></a>
+      <span class="phrase"><a name="math_toolkit.bad_roots.local_minima"></a></span><a class="link" href="bad_roots.html#math_toolkit.bad_roots.local_minima">Local
+      Minima</a>
+    </h4>
+<p>
+      If you start in the wrong place, such as z<sub>0</sub> here:
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../roots/bad_root_1.svg" width="372" height="262"></object></span>
+    </p>
+<p>
+      Then almost any root-finding algorithm will descend into a local minima rather
+      than find the root.
+    </p>
+<h4>
+<a name="math_toolkit.bad_roots.h1"></a>
+      <span class="phrase"><a name="math_toolkit.bad_roots.flatlining"></a></span><a class="link" href="bad_roots.html#math_toolkit.bad_roots.flatlining">Flatlining</a>
+    </h4>
+<p>
+      In this example, we're starting from a location (z<sub>0</sub>) where the first derivative
+      is essentially zero:
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../roots/bad_root_2.svg" width="372" height="262"></object></span>
+    </p>
+<p>
+      In this situation the next iteration will shoot off to infinity (assuming we're
+      using derivatives that is). Our code guards against this by insisting that
+      the root is always bracketed, and then never stepping outside those bounds.
+      In a case like this, no root finding algorithm can do better than bisecting
+      until the root is found.
+    </p>
+<p>
+      Note that there is no scale on the graph, we have seen examples of this situation
+      occur in practice <span class="emphasis"><em>even when several decimal places of the initial
+      guess z<sub>0</sub> are correct.</em></span>
+    </p>
+<p>
+      This is really a special case of a more common situation where root finding
+      with derivatives is <span class="emphasis"><em>divergent</em></span>. Consider starting at z<sub>0</sub> in
+      this case:
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../roots/bad_root_4.svg" width="372" height="262"></object></span>
+    </p>
+<p>
+      An initial Newton step would take you further from the root than you started,
+      as will all subsequent steps.
+    </p>
+<h4>
+<a name="math_toolkit.bad_roots.h2"></a>
+      <span class="phrase"><a name="math_toolkit.bad_roots.micro_stepping_non_convergence"></a></span><a class="link" href="bad_roots.html#math_toolkit.bad_roots.micro_stepping_non_convergence">Micro-stepping
+      / Non-convergence</a>
+    </h4>
+<p>
+      Consider starting at z<sub>0</sub> in this situation:
+    </p>
+<p>
+      <span class="inlinemediaobject"><object type="image/svg+xml" data="../../roots/bad_root_3.svg" width="372" height="262"></object></span>
+    </p>
+<p>
+      The first derivative is essentially infinite, and the second close to zero
+      (and so offers no correction if we use it), as a result we take a very small
+      first step. In the worst case situation, the first step is so small - perhaps
+      even so small that subtracting from z<sub>0</sub> has no effect at the current working
+      precision - that our algorithm will assume we are at the root already and terminate.
+      Otherwise we will take lot's of very small steps which never converge on the
+      root: our algorithms will protect against that by reverting to bisection.
+    </p>
+<p>
+      An example of this situation would be trying to find the root of e<sup>-1/z<sup>2</sup></sup> - this
+      function has a single root at <span class="emphasis"><em>z = 0</em></span>, but for <span class="emphasis"><em>z<sub>0</sub> &lt;
+      0</em></span> neither Newton nor Halley steps will ever converge on the root,
+      and for <span class="emphasis"><em>z<sub>0</sub> &gt; 0</em></span> the steps are actually divergent.
+    </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bad_guess.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../root_finding.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="brent_minima.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

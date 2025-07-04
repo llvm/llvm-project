@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd" [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>legendre_3</title>
+<!-- MathML created with MathCast Equation Editor version 0.92 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mtable columnalign="right center left">
+      <mtr>
+        <mtd>
+          <msubsup>
+            <mi>P</mi>
+            <mrow>
+              <mi>l</mi>
+            </mrow>
+            <mrow>
+              <mo>&#x2212;</mo>
+              <mi>m</mi>
+            </mrow>
+          </msubsup>
+          <mfenced>
+            <mrow>
+              <mi>x</mi>
+            </mrow>
+          </mfenced>
+        </mtd>
+        <mtd>
+          <mo>=</mo>
+        </mtd>
+        <mtd>
+          <msup>
+            <mfenced>
+              <mrow>
+                <mo>&#x2212;</mo>
+                <mn>1</mn>
+              </mrow>
+            </mfenced>
+            <mi>m</mi>
+          </msup>
+          <mfrac>
+            <mrow>
+              <mfenced>
+                <mrow>
+                  <mi>l</mi>
+                  <mo>&#x2212;</mo>
+                  <mi>m</mi>
+                </mrow>
+              </mfenced>
+              <mo>!</mo>
+            </mrow>
+            <mrow>
+              <mfenced>
+                <mrow>
+                  <mi>l</mi>
+                  <mo>+</mo>
+                  <mi>m</mi>
+                </mrow>
+              </mfenced>
+              <mo>!</mo>
+            </mrow>
+          </mfrac>
+          <msubsup>
+            <mi>P</mi>
+            <mrow>
+              <mi>l</mi>
+            </mrow>
+            <mi>m</mi>
+          </msubsup>
+          <mfenced>
+            <mrow>
+              <mi>x</mi>
+            </mrow>
+          </mfenced>
+        </mtd>
+      </mtr>
+      <mtr>
+        <mtd>
+          <msubsup>
+            <mi>P</mi>
+            <mrow>
+              <mo>&#x2212;</mo>
+              <mi>l</mi>
+              <mo>&#x2212;</mo>
+              <mn>1</mn>
+            </mrow>
+            <mi>m</mi>
+          </msubsup>
+          <mfenced>
+            <mrow>
+              <mi>x</mi>
+            </mrow>
+          </mfenced>
+        </mtd>
+        <mtd>
+          <mo>=</mo>
+        </mtd>
+        <mtd>
+          <msubsup>
+            <mi>P</mi>
+            <mrow>
+              <mi>l</mi>
+            </mrow>
+            <mi>m</mi>
+          </msubsup>
+          <mfenced>
+            <mrow>
+              <mi>x</mi>
+            </mrow>
+          </mfenced>
+        </mtd>
+      </mtr>
+    </mtable>
+  </mrow>
+</math></body>
+</html>

@@ -1,0 +1,506 @@
+[section:special_tut Tutorial: How to Write a New Special Function]
+
+[section:special_tut_impl Implementation]
+
+In this section, we'll provide a "recipe" for adding a new special function to this library to make life easier for
+future authors wishing to contribute.  We'll assume the function returns a single floating-point result, and takes
+two floating-point arguments.  For the sake of exposition we'll give the function the name [~my_special].
+
+Normally, the implementation of such a function is split into two layers - a public user layer, and an internal
+implementation layer that does the actual work.
+The implementation layer is declared inside a `detail` namespace and has a simple signature:
+
+   namespace boost { namespace math { namespace detail {
+
+   template <class T, class Policy>
+   T my_special_imp(const T& a, const T&b, const Policy& pol)
+   {
+      /* Implementation goes here */
+   }
+
+   }}} // namespaces
+
+We'll come back to what can go inside the implementation later, but first lets look at the user layer.
+This consists of two overloads of the function, with and without a __Policy argument:
+
+   namespace boost{ namespace math{
+
+   template <class T, class U>
+   typename tools::promote_args<T, U>::type my_special(const T& a, const U& b);
+
+   template <class T, class U, class Policy>
+   typename tools::promote_args<T, U>::type my_special(const T& a, const U& b, const Policy& pol);
+
+   }} // namespaces
+
+Note how each argument has a different template type - this allows for mixed type arguments - the return
+type is computed from a traits class and is the "common type" of all the arguments after any integer
+arguments have been promoted to type `double`.
+
+The implementation of the non-policy overload is trivial:
+
+   namespace boost{ namespace math{
+
+   template <class T, class U>
+   inline typename tools::promote_args<T, U>::type my_special(const T& a, const U& b)
+   {
+      // Simply forward with a default policy:
+      return my_special(a, b, policies::policy<>();
+   }
+
+   }} // namespaces
+
+The implementation of the other overload is somewhat more complex, as there's some meta-programming to do,
+but from a runtime perspective is still a one-line forwarding function.  Here it is with comments explaining
+what each line does:
+
+   namespace boost{ namespace math{
+
+   template <class T, class U, class Policy>
+   inline typename tools::promote_args<T, U>::type my_special(const T& a, const U& b, const Policy& pol)
+   {
+      //
+      // We've found some standard library functions to misbehave if any FPU exception flags
+      // are set prior to their call, this code will clear those flags, then reset them
+      // on exit:
+      //
+      BOOST_FPU_EXCEPTION_GUARD
+      //
+      // The type of the result - the common type of T and U after
+      // any integer types have been promoted to double:
+      //
+      typedef typename tools::promote_args<T, U>::type result_type;
+      //
+      // The type used for the calculation.  This may be a wider type than
+      // the result in order to ensure full precision:
+      //
+      typedef typename policies::evaluation<result_type, Policy>::type value_type;
+      //
+      // The type of the policy to forward to the actual implementation.
+      // We disable promotion of float and double as that's [possibly]
+      // happened already in the line above.  Also reset to the default
+      // any policies we don't use (reduces code bloat if we're called
+      // multiple times with differing policies we don't actually use).
+      // Also normalise the type, again to reduce code bloat in case we're
+      // called multiple times with functionally identical policies that happen
+      // to be different types.
+      //
+      typedef typename policies::normalise<
+         Policy,
+         policies::promote_float<false>,
+         policies::promote_double<false>,
+         policies::discrete_quantile<>,
+         policies::assert_undefined<> >::type forwarding_policy;
+      //
+      // Whew.  Now we can make the actual call to the implementation.
+      // Arguments are explicitly cast to the evaluation type, and the result
+      // passed through checked_narrowing_cast which handles things like overflow
+      // according to the policy passed:
+      //
+      return policies::checked_narrowing_cast<result_type, forwarding_policy>(
+            detail::my_special_imp(
+                  static_cast<value_type>(a),
+                  static_cast<value_type>(x),
+                  forwarding_policy()),
+            "boost::math::my_special<%1%>(%1%, %1%)");
+   }
+
+   }} // namespaces
+
+We're now almost there, we just need to flesh out the details of the implementation layer:
+
+   namespace boost { namespace math { namespace detail {
+
+   template <class T, class Policy>
+   T my_special_imp(const T& a, const T&b, const Policy& pol)
+   {
+      /* Implementation goes here */
+   }
+
+   }}} // namespaces
+
+The following guidelines indicate what (other than basic arithmetic) can go in the implementation:
+
+* Error conditions (for example bad arguments) should be handled by calling one of the
+[link math_toolkit.error_handling.finding_more_information policy based error handlers].
+* Calls to standard library functions should be made unqualified (this allows argument
+dependent lookup to find standard library functions for user-defined floating point
+types such as those from __multiprecision).  In addition, the macro `BOOST_MATH_STD_USING`
+should appear at the start of the function (note no semi-colon afterwards!) so that
+all the math functions in `namespace std` are visible in the current scope.
+* Calls to other special functions should be made as fully qualified calls, and include the
+policy parameter as the last argument, for example `boost::math::tgamma(a, pol)`.
+* Where possible, evaluation of series, continued fractions, polynomials, or root
+finding should use one of the [link math_toolkit.internals_overview  boiler-plate functions].  In any case, after
+any iterative method, you should verify that the number of iterations did not exceed the
+maximum specified in the __Policy type, and if it did terminate as a result of exceeding the
+maximum, then the appropriate error handler should be called (see existing code for examples).
+* Numeric constants such as [pi] etc should be obtained via a call to the [link math_toolkit.constants appropriate function],
+for example: `constants::pi<T>()`.
+* Where tables of coefficients are used (for example for rational approximations), care should be taken
+to ensure these are initialized at program startup to ensure thread safety when using user-defined number types.
+See for example the use of `erf_initializer` in [@../../include/boost/math/special_functions/erf.hpp  erf.hpp].
+
+Here are some other useful internal functions:
+
+[table
+[[function][Meaning]]
+[[`policies::digits<T, Policy>()`][Returns number of binary digits in T (possible overridden by the policy).]]
+[[`policies::get_max_series_iterations<Policy>()`][Maximum number of iterations for series evaluation.]]
+[[`policies::get_max_root_iterations<Policy>()`][Maximum number of iterations for root finding.]]
+[[`polices::get_epsilon<T, Policy>()`][Epsilon for type T, possibly overridden by the Policy.]]
+[[`tools::digits<T>()`][Returns the number of binary digits in T.]]
+[[`tools::max_value<T>()`][Equivalent to `std::numeric_limits<T>::max()`]]
+[[`tools::min_value<T>()`][Equivalent to `std::numeric_limits<T>::min()`]]
+[[`tools::log_max_value<T>()`][Equivalent to the natural logarithm of `std::numeric_limits<T>::max()`]]
+[[`tools::log_min_value<T>()`][Equivalent to the natural logarithm of `std::numeric_limits<T>::min()`]]
+[[`tools::epsilon<T>()`][Equivalent to `std::numeric_limits<T>::epsilon()`.]]
+[[`tools::root_epsilon<T>()`][Equivalent to the square root of `std::numeric_limits<T>::epsilon()`.]]
+[[`tools::forth_root_epsilon<T>()`][Equivalent to the forth root of `std::numeric_limits<T>::epsilon()`.]]
+]
+
+[endsect]
+
+[section:special_tut_test Testing]
+
+We work under the assumption that untested code doesn't work, so some tests for your new special function are in order,
+we'll divide these up in to 3 main categories:
+
+[h4 Spot Tests]
+
+Spot tests consist of checking that the expected exception is generated when the inputs are in error (or
+otherwise generate undefined values), and checking any special values.  We can check for expected exceptions
+with `BOOST_CHECK_THROW`, so for example if it's a domain error for the last parameter to be outside the range
+`[0,1]` then we might have:
+
+   BOOST_CHECK_THROW(my_special(0, -0.1), std::domain_error);
+   BOOST_CHECK_THROW(my_special(0, 1.1), std::domain_error);
+
+When the function has known exact values (typically integer values) we can use `BOOST_CHECK_EQUAL`:
+
+   BOOST_CHECK_EQUAL(my_special(1.0, 0.0), 0);
+   BOOST_CHECK_EQUAL(my_special(1.0, 1.0), 1);
+
+When the function has known values which are not exact (from a floating point perspective) then we can use
+`BOOST_CHECK_CLOSE_FRACTION`:
+
+   // Assumes 4 epsilon is as close as we can get to a true value of 2Pi:
+   BOOST_CHECK_CLOSE_FRACTION(my_special(0.5, 0.5), 2 * constants::pi<double>(), std::numeric_limits<double>::epsilon() * 4);
+
+[h4 Independent Test Values]
+
+If the function is implemented by some other known good source (for example Mathematica or it's online versions
+[@http://functions.wolfram.com functions.wolfram.com] or [@http://www.wolframalpha.com www.wolframalpha.com]
+then it's a good idea to sanity check our implementation by having at least one independently generated value
+for each code branch our implementation may take.  To slot these in nicely with our testing framework it's best to
+tabulate these like this:
+
+    // function values calculated on http://functions.wolfram.com/
+    static const std::array<std::array<T, 3>, 10> my_special_data = {{
+        {{ SC_(0), SC_(0), SC_(1) }},
+        {{ SC_(0), SC_(1), SC_(1.26606587775200833559824462521471753760767031135496220680814) }},
+        /* More values here... */
+    }};
+
+We'll see how to use this table and the meaning of the `SC_` macro later.  One important point
+is to make sure that the input values have exact binary representations: so choose values such as
+1.5, 1.25, 1.125 etc.  This ensures that if `my_special` is unusually sensitive in one area, that
+we don't get apparently large errors just because the inputs are 0.5 ulp in error.
+
+[h4 Random Test Values]
+
+We can generate a large number of test values to check both for future regressions, and for
+accumulated rounding or cancellation error in our implementation.  Ideally we would use an
+independent implementation for this (for example my_special may be defined in directly terms
+of other special functions but not implemented that way for performance or accuracy reasons).
+Alternatively we may use our own implementation directly, but with any special cases (asymptotic
+expansions etc) disabled.  We have a set of [link math_toolkit.internals.test_data tools]
+to generate test data directly, here's a typical example:
+
+[import ../../example/special_data.cpp]
+[special_data_example]
+
+Typically several sets of data will be generated this way, including random values in some "normal"
+range, extreme values (very large or very small), and values close to any "interesting" behaviour
+of the function (singularities etc).
+
+[h4 The Test File Header]
+
+We split the actual test file into 2 distinct parts: a header that contains the testing code
+as a series of function templates, and the actual .cpp test driver that decides which types
+are tested, and sets the "expected" error rates for those types.  It's done this way because:
+
+* We want to test with both built in floating point types, and with multiprecision types.
+However, both compile and runtimes with the latter can be too long for the folks who run
+the tests to realistically cope with, so it makes sense to split the test into (at least)
+2 parts.
+* The definition of the SC_ macro used in our tables of data may differ depending on what type
+we're testing (see below).  Again this is largely a matter of managing compile times as large tables
+of user-defined-types can take a crazy amount of time to compile with some compilers.
+
+The test header contains 2 functions:
+
+   template <class Real, class T>
+   void do_test(const T& data, const char* type_name, const char* test_name);
+
+   template <class T>
+   void test(T, const char* type_name);
+
+Before implementing those, we'll include the headers we'll need, and provide a default
+definition for the SC_ macro:
+
+   // A couple of Boost.Test headers in case we need any BOOST_CHECK_* macros:
+   #include <boost/test/unit_test.hpp>
+   #include <boost/test/tools/floating_point_comparison.hpp>
+   // Our function to test:
+   #include <boost/math/special_functions/my_special.hpp>
+   // We need std::array for our test data, plus a few headers from
+   // libs/math/test that contain our testing machinery:
+   #include <boost/array.hpp>
+   #include "functor.hpp"
+   #include "handle_test_result.hpp"
+   #include "table_type.hpp"
+
+   #ifndef SC_
+   #define SC_(x) static_cast<typename table_type<T>::type>(BOOST_JOIN(x, L))
+   #endif
+
+The easiest function to implement is the "test" function which is what we'll be calling
+from the test-driver program.  It simply includes the files containing the tabular
+test data and calls `do_test` function for each table, along with a description of what's
+being tested:
+
+   template <class T>
+   void test(T, const char* type_name)
+   {
+      //
+      // The actual test data is rather verbose, so it's in a separate file
+      //
+      // The contents are as follows, each row of data contains
+      // three items, input value a, input value b and my_special(a, b):
+      //
+   #  include "my_special_1.ipp"
+
+      do_test<T>(my_special_1, name, "MySpecial Function: Mathematica Values");
+
+   #  include "my_special_2.ipp"
+
+      do_test<T>(my_special_2, name, "MySpecial Function: Random Values");
+
+   #  include "my_special_3.ipp"
+
+      do_test<T>(my_special_3, name, "MySpecial Function: Very Small Values");
+   }
+
+The function `do_test` takes each table of data and calculates values for each row
+of data, along with statistics for max and mean error etc, most of this is handled
+by some boilerplate code:
+
+   template <class Real, class T>
+   void do_test(const T& data, const char* type_name, const char* test_name)
+   {
+      // Get the type of each row and each element in the rows:
+      typedef typename T::value_type row_type;
+      typedef Real                   value_type;
+
+      // Get a pointer to our function, we have to use a workaround here
+      // as some compilers require the template types to be explicitly
+      // specified, while others don't much like it if it is!
+      typedef value_type (*pg)(value_type, value_type);
+   #if defined(BOOST_MATH_NO_DEDUCED_FUNCTION_POINTERS)
+      pg funcp = boost::math::my_special<value_type, value_type>;
+   #else
+      pg funcp = boost::math::my_special;
+   #endif
+
+      // Somewhere to hold our results:
+      boost::math::tools::test_result<value_type> result;
+      // And some pretty printing:
+      std::cout << "Testing " << test_name << " with type " << type_name
+         << "\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+
+      //
+      // Test my_special against data:
+      //
+      result = boost::math::tools::test_hetero<Real>(
+         /* First argument is the table */
+         data,
+         /* Next comes our function pointer, plus the indexes of it's arguments in the table */
+         bind_func<Real>(funcp, 0, 1),
+         /* Then the index of the result in the table - potentially we can test several
+         related functions this way, each having the same input arguments, and different
+         output values in different indexes in the table */
+         extract_result<Real>(2));
+      //
+      // Finish off with some boilerplate to check the results were within the expected errors,
+      // and pretty print the results:
+      //
+      handle_test_result(result, data[result.worst()], result.worst(), type_name, "boost::math::my_special", test_name);
+   }
+
+Now we just need to write the test driver program, at it's most basic it looks something like this:
+
+   #include <boost/math/special_functions/math_fwd.hpp>
+   #include <boost/math/tools/test.hpp>
+   #include <boost/math/tools/stats.hpp>
+   #include <boost/type_traits.hpp>
+   #include <boost/array.hpp>
+   #include "functor.hpp"
+
+   #include "handle_test_result.hpp"
+   #include "test_my_special.hpp"
+
+   BOOST_AUTO_TEST_CASE( test_main )
+   {
+      //
+      // Test each floating point type, plus real_concept.
+      // We specify the name of each type by hand as typeid(T).name()
+      // often gives an unreadable mangled name.
+      //
+      test(0.1F, "float");
+      test(0.1, "double");
+      //
+      // Testing of long double and real_concept is protected
+      // by some logic to disable these for unsupported
+      // or problem compilers.
+      //
+   #ifndef BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
+      test(0.1L, "long double");
+   #ifndef BOOST_MATH_NO_REAL_CONCEPT_TESTS
+      test(boost::math::concepts::real_concept(0.1), "real_concept);
+   #endif
+   #else
+      std::cout << "<note>The long double tests have been disabled on this platform "
+         "either because the long double overloads of the usual math functions are "
+         "not available at all, or because they are too inaccurate for these tests "
+         "to pass.</note>" << std::endl;
+   #endif
+   }
+
+That's almost all there is too it - except that if the above program is run it's very likely that
+all the tests will fail as the default maximum allowable error is 1 epsilon.  So we'll
+define a function (don't forget to call it from the start of the `test_main` above) to
+up the limits to something sensible, based both on the function we're calling and on
+the particular tests plus the platform and compiler:
+
+   void expected_results()
+   {
+      //
+      // Define the max and mean errors expected for
+      // various compilers and platforms.
+      //
+      const char* largest_type;
+   #ifndef BOOST_MATH_NO_LONG_DOUBLE_MATH_FUNCTIONS
+      if(boost::math::policies::digits<double, boost::math::policies::policy<> >() == boost::math::policies::digits<long double, boost::math::policies::policy<> >())
+      {
+         largest_type = "(long\\s+)?double|real_concept";
+      }
+      else
+      {
+         largest_type = "long double|real_concept";
+      }
+   #else
+      largest_type = "(long\\s+)?double";
+   #endif
+      //
+      // We call add_expected_result for each error rate we wish to adjust, these tell
+      // handle_test_result what level of error is acceptable.  We can have as many calls
+      // to add_expected_result as we need, each one establishes a rule for acceptable error
+      // with rules set first given preference.
+      //
+      add_expected_result(
+         /* First argument is a regular expression to match against the name of the compiler
+            set in BOOST_COMPILER */
+         ".*",
+         /* Second argument is a regular expression to match against the name of the
+            C++ standard library as set in BOOST_STDLIB */
+         ".*",
+         /* Third argument is a regular expression to match against the name of the
+            platform as set in BOOST_PLATFORM */
+         ".*",
+         /* Forth argument is the name of the type being tested, normally we will
+            only need to up the acceptable error rate for the widest floating
+            point type being tested */
+         largest_real,
+         /* Fifth argument is a regular expression to match against
+            the name of the group of data being tested */
+         "MySpecial Function:.*Small.*",
+         /* Sixth argument is a regular expression to match against the name
+            of the function being tested */
+         "boost::math::my_special",
+         /* Seventh argument is the maximum allowable error expressed in units
+            of machine epsilon passed as a long integer value */
+         50,
+         /* Eighth argument is the maximum allowable mean error expressed in units
+            of machine epsilon passed as a long integer value */
+         20);
+   }
+
+[h4 Testing Multiprecision Types]
+
+Testing of multiprecision types is handled by the test drivers in libs/multiprecision/test/math,
+please refer to these for examples.  Note that these tests are run only occasionally as they take
+a lot of CPU cycles to build and run.
+
+[h4 Improving Compile Times]
+
+As noted above, these test programs can take a while to build as we're instantiating a lot of templates
+for several different types, and our test runners are already stretched to the limit, and probably
+using outdated "spare" hardware.  There are two things we can do to speed things up:
+
+* Use a precompiled header.
+* Use separate compilation of our special function templates.
+
+We can make these changes by changing the list of includes from:
+
+   #include <boost/math/special_functions/math_fwd.hpp>
+   #include <boost/math/tools/test.hpp>
+   #include <boost/math/tools/stats.hpp>
+   #include <boost/type_traits.hpp>
+   #include <boost/array.hpp>
+   #include "functor.hpp"
+
+   #include "handle_test_result.hpp"
+
+To just:
+
+   #include <pch_light.hpp>
+
+And changing
+
+   #include <boost/math/special_functions/my_special.hpp>
+
+To:
+
+   #include <boost/math/special_functions/math_fwd.hpp>
+
+The Jamfile target that builds the test program will need the targets
+
+   test_instances//test_instances pch_light
+
+adding to it's list of source dependencies (see the Jamfile for examples).
+
+Finally the project in libs/math/test/test_instances will need modifying
+to instantiate function `my_special`.
+
+These changes should be made last, when `my_special` is stable and the code is in Trunk.
+
+[h4 Concept Checks]
+
+Our concept checks verify that your function's implementation makes no assumptions that aren't
+required by our [link math_toolkit.real_concepts Real number conceptual requirements].  They also
+check for various common bugs and programming traps that we've fallen into over time.  To
+add your function to these tests, edit libs/math/test/compile_test/instantiate.hpp to add
+calls to your function: there are 7 calls to each function, each with a different purpose.
+Search for something like "ibeta" or "gamm_p" and follow their examples.
+
+[endsect]
+
+[endsect]
+
+[/
+  Copyright 2013 John Maddock.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
