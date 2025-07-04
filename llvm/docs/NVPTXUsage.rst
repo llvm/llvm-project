@@ -971,8 +971,9 @@ Syntax:
   declare void  @llvm.nvvm.prefetch.L1(ptr %ptr)
   declare void  @llvm.nvvm.prefetch.L2(ptr %ptr)
   
-  declare void  @llvm.nvvm.prefetch.generic.tensormap(ptr %ptr)
-  declare void  @llvm.nvvm.prefetch.const.tensormap(ptr addrspace(4) %const_ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p0(ptr %ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p4(ptr addrspace(4) %const_ptr)
+  declare void  @llvm.nvvm.prefetch.tensormap.p101(ptr addrspace(101) %param_ptr)  
   
   declare void  @llvm.nvvm.prefetch.global.L2.evict.normal(ptr addrspace(1) %global_ptr)
   declare void  @llvm.nvvm.prefetch.global.L2.evict.last(ptr addrspace(1) %global_ptr)
