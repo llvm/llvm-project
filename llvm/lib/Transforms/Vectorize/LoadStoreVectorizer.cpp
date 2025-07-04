@@ -343,6 +343,9 @@ private:
   /// Postcondition: For all i, ret[i][0].second == 0, because the first instr
   /// in the chain is the leader, and an instr touches distance 0 from itself.
   std::vector<Chain> gatherChains(ArrayRef<Instruction *> Instrs);
+
+  /// Propagates the best alignment in a chain of contiguous accesses
+  void propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const;
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -716,6 +719,14 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
   unsigned AS = getLoadStoreAddressSpace(C[0].Inst);
   unsigned VecRegBytes = TTI.getLoadStoreVecRegBitWidth(AS) / 8;
 
+  // We know that the accesses are contiguous. Propagate alignment
+  // information so that slices of the chain can still be vectorized.
+  propagateBestAlignmentsInChain(C);
+  LLVM_DEBUG({
+    dbgs() << "LSV: Chain after alignment propagation:\n";
+    dumpChain(C);
+  });
+
   std::vector<Chain> Ret;
   for (unsigned CBegin = 0; CBegin < C.size(); ++CBegin) {
     // Find candidate chains of size not greater than the largest vector reg.
@@ -823,6 +834,7 @@ std::vector<Chain> Vectorizer::splitChainByAlignment(Chain &C) {
                      << Alignment.value() << " to " << NewAlign.value()
                      << "\n");
           Alignment = NewAlign;
+          setLoadStoreAlignment(C[CBegin].Inst, Alignment);
         }
       }
 
@@ -880,14 +892,6 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       VecElemTy, 8 * ChainBytes / DL.getTypeSizeInBits(VecElemTy));
 
   Align Alignment = getLoadStoreAlignment(C[0].Inst);
-  // If this is a load/store of an alloca, we might have upgraded the alloca's
-  // alignment earlier.  Get the new alignment.
-  if (AS == DL.getAllocaAddrSpace()) {
-    Alignment = std::max(
-        Alignment,
-        getOrEnforceKnownAlignment(getLoadStorePointerOperand(C[0].Inst),
-                                   MaybeAlign(), DL, C[0].Inst, nullptr, &DT));
-  }
 
   // All elements of the chain must have the same scalar-type size.
 #ifndef NDEBUG
@@ -1633,4 +1637,33 @@ std::optional<APInt> Vectorizer::getConstantOffset(Value *PtrA, Value *PtrB,
     return (OffsetB - OffsetA + Diff->sext(OffsetB.getBitWidth()))
         .sextOrTrunc(OrigBitWidth);
   return std::nullopt;
+}
+
+void Vectorizer::propagateBestAlignmentsInChain(ArrayRef<ChainElem> C) const {
+  auto PropagateAlignments = [](auto ChainIt) {
+    ChainElem BestAlignedElem = *ChainIt.begin();
+    Align BestAlignSoFar = getLoadStoreAlignment(BestAlignedElem.Inst);
+
+    for (const ChainElem &E : ChainIt) {
+      Align OrigAlign = getLoadStoreAlignment(E.Inst);
+      if (OrigAlign > BestAlignSoFar) {
+        BestAlignedElem = E;
+        BestAlignSoFar = OrigAlign;
+        continue;
+      }
+
+      APInt DeltaFromBestAlignedElem =
+          APIntOps::abdu(E.OffsetFromLeader, BestAlignedElem.OffsetFromLeader);
+      // commonAlignment is equivalent to a greatest common power-of-two
+      // divisor; it returns the largest power of 2 that divides both A and B.
+      Align NewAlign = commonAlignment(
+          BestAlignSoFar, DeltaFromBestAlignedElem.getLimitedValue());
+      if (NewAlign > OrigAlign)
+        setLoadStoreAlignment(E.Inst, NewAlign);
+    }
+  };
+
+  // Propagate forwards and backwards.
+  PropagateAlignments(C);
+  PropagateAlignments(reverse(C));
 }
