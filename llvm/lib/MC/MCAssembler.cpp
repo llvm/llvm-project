@@ -1240,3 +1240,9 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
   OS << "\n]\n";
 }
 #endif
+
+SMLoc MCFixup::getLoc() const {
+  if (auto *E = getValue())
+    return E->getLoc();
+  return {};
+}
