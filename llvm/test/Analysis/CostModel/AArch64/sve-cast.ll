@@ -42,8 +42,8 @@ define void @ext() {
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %z2i32i64 = zext <2 x i32> undef to <2 x i64>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %s4i8i16 = sext <4 x i8> undef to <4 x i16>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %z4i8i16 = zext <4 x i8> undef to <4 x i16>
-; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
-; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %z4i8i32 = zext <4 x i8> undef to <4 x i32>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %z4i8i32 = zext <4 x i8> undef to <4 x i32>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %s4i8i64 = sext <4 x i8> undef to <4 x i64>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %z4i8i64 = zext <4 x i8> undef to <4 x i64>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %s4i16i32 = sext <4 x i16> undef to <4 x i32>
@@ -184,8 +184,8 @@ define void @ext() {
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %z2i32i64 = zext <2 x i32> undef to <2 x i64>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %s4i8i16 = sext <4 x i8> undef to <4 x i16>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %z4i8i16 = zext <4 x i8> undef to <4 x i16>
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %z4i8i32 = zext <4 x i8> undef to <4 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %z4i8i32 = zext <4 x i8> undef to <4 x i32>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %s4i8i64 = sext <4 x i8> undef to <4 x i64>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %z4i8i64 = zext <4 x i8> undef to <4 x i64>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %s4i16i32 = sext <4 x i16> undef to <4 x i32>
@@ -255,8 +255,8 @@ define void @ext() {
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %z2i32i64 = zext <2 x i32> undef to <2 x i64>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %s4i8i16 = sext <4 x i8> undef to <4 x i16>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %z4i8i16 = zext <4 x i8> undef to <4 x i16>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %z4i8i32 = zext <4 x i8> undef to <4 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s4i8i32 = sext <4 x i8> undef to <4 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %z4i8i32 = zext <4 x i8> undef to <4 x i32>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %s4i8i64 = sext <4 x i8> undef to <4 x i64>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %z4i8i64 = zext <4 x i8> undef to <4 x i64>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %s4i16i32 = sext <4 x i16> undef to <4 x i32>
@@ -1809,8 +1809,8 @@ define i32 @load_extends() #0 {
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %loadi32 to i64
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
-; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
-; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v4 = sext <2 x i8> %loadv2i8 to <2 x i64>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v5 = zext <2 x i8> %loadv2i8 to <2 x i64>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of 1 for: %v6 = sext <4 x i16> %loadv4i16 to <4 x i32>
@@ -1899,8 +1899,8 @@ define i32 @load_extends() #0 {
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %loadi32 to i64
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
-; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
+; FIXED-MIN-256-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v4 = sext <2 x i8> %loadv2i8 to <2 x i64>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v5 = zext <2 x i8> %loadv2i8 to <2 x i64>
 ; FIXED-MIN-256-NEXT:  Cost Model: Found costs of 1 for: %v6 = sext <4 x i16> %loadv4i16 to <4 x i32>
@@ -1944,8 +1944,8 @@ define i32 @load_extends() #0 {
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 0 for: %r11 = zext i32 %loadi32 to i64
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v0 = sext <8 x i8> %loadv8i8 to <8 x i16>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v1 = zext <8 x i8> %loadv8i8 to <8 x i16>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
-; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v2 = sext <4 x i8> %loadv4i8 to <4 x i32>
+; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %v3 = zext <4 x i8> %loadv4i8 to <4 x i32>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v4 = sext <2 x i8> %loadv2i8 to <2 x i64>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v5 = zext <2 x i8> %loadv2i8 to <2 x i64>
 ; FIXED-MIN-2048-NEXT:  Cost Model: Found costs of 1 for: %v6 = sext <4 x i16> %loadv4i16 to <4 x i32>
