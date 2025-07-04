@@ -376,9 +376,9 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
 
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err) {
-    LLDB_LOG_ERROR(
-        GetLog(LLDBLog::Language), info_or_err.takeError(),
-        "Failed to handle ${{function.basename}} frame-format variable: {0}");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Language), info_or_err.takeError(),
+                   "Failed to handle ${{function.formatted-arguments}} "
+                   "frame-format variable: {0}");
     return false;
   }
   auto [demangled_name, info] = *info_or_err;
