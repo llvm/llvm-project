@@ -114,3 +114,28 @@ func.func @transfer_scalar(%mem : memref<8x8xf32, #amdgpu.address_space<fat_raw_
 // CHECK: %[[IF:.*]] = scf.if
 // CHECK: %[[LOAD:.*]] = vector.load %[[ARG0]][%[[ARG1]], %[[ARG1]]]
 // CHECK: %[[SELECT:.*]] = arith.select %arg2, %[[LOAD]], %[[ARG3]]
+
+// -----
+
+func.func @transfer_to_maskedload_fatrawbuffer(%mem : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, %idx : index, %mask : vector<4xi1>, %passthru : vector<4xf32>) -> vector<4xf32> {
+  %res = vector.maskedload %mem[%idx, %idx], %mask, %passthru : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+
+// -----
+
+func.func @full_select_maskedload_fatrawbuffer_to_load(%mem : memref<8x8xf16, #amdgpu.address_space<fat_raw_buffer>>, %idx : index, %cond : i1, %passthru : vector<4xf16>) -> vector<4xf16> {
+  %true = arith.constant dense<true> : vector<4xi1>
+  %false = arith.constant dense<false> : vector<4xi1>
+  %mask = arith.select %cond, %true, %false : vector<4xi1>
+  %res = vector.maskedload %mem[%idx, %idx], %mask, %passthru : memref<8x8xf16, #amdgpu.address_space<fat_raw_buffer>>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %res : vector<4xf16>
+}
+
+func.func @full_select_maskedload_to_load(%mem : memref<8x8xf16>, %idx : index, %cond : i1, %passthru : vector<4xf16>) -> vector<4xf16> {
+  %true = arith.constant dense<true> : vector<4xi1>
+  %false = arith.constant dense<false> : vector<4xi1>
+  %mask = arith.select %cond, %true, %false : vector<4xi1>
+  %res = vector.maskedload %mem[%idx, %idx], %mask, %passthru : memref<8x8xf16>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %res : vector<4xf16>
+}
