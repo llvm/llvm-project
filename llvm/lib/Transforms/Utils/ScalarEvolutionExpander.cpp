@@ -1224,6 +1224,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
 }
 
 Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
+  Type *STy = S->getType();
   const Loop *L = S->getLoop();
   BasicBlock *EB = L->getExitBlock();
   if (!EB || !EB->getSinglePredecessor() ||
@@ -1231,11 +1232,25 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     return nullptr;
 
   for (auto &PN : EB->phis()) {
-    if (!SE.isSCEVable(PN.getType()) || PN.getType() != S->getType())
+    if (!SE.isSCEVable(PN.getType()))
       continue;
-    auto *ExitV = SE.getSCEV(&PN);
-    if (S == ExitV)
-      return &PN;
+    auto *ExitSCEV = SE.getSCEV(&PN);
+    Type *PhiTy = PN.getType();
+    if (STy->isIntegerTy() && PhiTy->isPointerTy())
+      ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
+    else if (S->getType() != PN.getType())
+      continue;
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    if (isa<SCEVCouldNotCompute>(Diff) ||
+        SCEVExprContains(Diff,
+                         [](const SCEV *S) { return isa<SCEVAddRecExpr>(S); }))
+      continue;
+
+    Value *DiffV = expand(Diff);
+    Value *BaseV = &PN;
+    if (DiffV->getType()->isIntegerTy() && PhiTy->isPointerTy())
+      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
+    return Builder.CreateAdd(BaseV, DiffV);
   }
 
   return nullptr;

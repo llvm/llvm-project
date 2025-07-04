@@ -104,27 +104,23 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-LABEL: define void @runtime_checks_ptr_inductions(
 ; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[DST_11:%.*]] = ptrtoint ptr [[DST_1]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1:.*]]
 ; CHECK:       [[LOOP_1]]:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], %[[LOOP_1]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[DST_1]], %[[ENTRY]] ], [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @val()
 ; CHECK-NEXT:    [[SEL_DST:%.*]] = select i1 [[C]], ptr [[DST_1]], ptr [[DST_2]]
 ; CHECK-NEXT:    [[PTR_IV_1_NEXT]] = getelementptr i8, ptr [[PTR_IV_1]], i64 1
 ; CHECK-NEXT:    [[EC_1:%.*]] = icmp eq i32 [[CALL]], 0
-; CHECK-NEXT:    [[INDVAR_NEXT]] = add i64 [[INDVAR]], 1
 ; CHECK-NEXT:    br i1 [[EC_1]], label %[[LOOP_2_HEADER_PREHEADER:.*]], label %[[LOOP_1]]
 ; CHECK:       [[LOOP_2_HEADER_PREHEADER]]:
-; CHECK-NEXT:    [[SEL_DST_LCSSA2:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i64 [ [[INDVAR]], %[[LOOP_1]] ]
+; CHECK-NEXT:    [[SEL_DST_LCSSA1:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[PTR_IV_1_LCSSA:%.*]] = phi ptr [ [[PTR_IV_1]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    [[SEL_DST_LCSSA:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
-; CHECK-NEXT:    [[SEL_DST_LCSSA23:%.*]] = ptrtoint ptr [[SEL_DST_LCSSA2]] to i64
+; CHECK-NEXT:    [[SEL_DST_LCSSA12:%.*]] = ptrtoint ptr [[SEL_DST_LCSSA1]] to i64
 ; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDVAR_LCSSA]], [[DST_11]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SEL_DST_LCSSA23]]
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR_IV_1_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SEL_DST_LCSSA12]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
@@ -146,13 +142,13 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1023, %[[MIDDLE_BLOCK]] ], [ 1, %[[LOOP_2_HEADER_PREHEADER]] ], [ 1, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PTR_IV_1_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ], [ [[PTR_IV_1_LCSSA]], %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[SEL_DST_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ], [ [[SEL_DST_LCSSA]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi ptr [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ [[PTR_IV_1_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ], [ [[PTR_IV_1_LCSSA]], %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi ptr [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ [[SEL_DST_LCSSA]], %[[LOOP_2_HEADER_PREHEADER]] ], [ [[SEL_DST_LCSSA]], %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP_2_HEADER:.*]]
 ; CHECK:       [[LOOP_2_HEADER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[DEC7:%.*]], %[[LOOP_2_LATCH:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PTR_IV_3:%.*]] = phi ptr [ [[PTR_IV_3_NEXT:%.*]], %[[LOOP_2_LATCH]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[EC_2:%.*]] = icmp eq i32 [[IV]], 1024
 ; CHECK-NEXT:    br i1 [[EC_2]], label %[[EXIT:.*]], label %[[LOOP_2_LATCH]]
 ; CHECK:       [[LOOP_2_LATCH]]:
