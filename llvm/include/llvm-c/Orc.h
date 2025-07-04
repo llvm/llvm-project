@@ -386,6 +386,12 @@ typedef int (*LLVMOrcSymbolPredicate)(void *Ctx,
 typedef struct LLVMOrcOpaqueThreadSafeContext *LLVMOrcThreadSafeContextRef;
 
 /**
+ * A reference to an orc::ThreadSafeContext::Lock instance.
+ */
+typedef struct LLVMOrcOpaqueThreadSafeContextLock
+    *LLVMOrcThreadSafeContextLockRef;
+
+/**
  * A reference to an orc::ThreadSafeModule instance.
  */
 typedef struct LLVMOrcOpaqueThreadSafeModule *LLVMOrcThreadSafeModuleRef;
@@ -1093,6 +1099,18 @@ LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextRef Ctx);
  * Dispose of a ThreadSafeContext.
  */
 void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx);
+
+/**
+ * Acquire the lock associated with a ThreadSafeContext.
+ */
+LLVMOrcThreadSafeContextLockRef
+LLVMOrcThreadSafeContextGetLock(LLVMOrcThreadSafeContextRef TSCtx);
+
+/**
+ * Release the lock associated with a ThreadSafeContext.
+ */
+void LLVMOrcThreadSafeContextReleaseLock(
+    LLVMOrcThreadSafeContextLockRef TSCtxLock);
 
 /**
  * Create a ThreadSafeModule wrapper around the given LLVM module. This takes
