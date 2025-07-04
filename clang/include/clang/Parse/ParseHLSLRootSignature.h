@@ -30,8 +30,7 @@ class RootSignatureParser {
 public:
   RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
                       SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
-                      RootSignatureLexer &Lexer, StringLiteral *Signature,
-                      Preprocessor &PP);
+                      StringLiteral *Signature, Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
   /// representations of the RootElements. Tokens are consumed until an
@@ -198,9 +197,8 @@ private:
 private:
   llvm::dxbc::RootSignatureVersion Version;
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
-  RootSignatureLexer &Lexer;
-
   clang::StringLiteral *Signature;
+  RootSignatureLexer Lexer;
   clang::Preprocessor &PP;
 
   RootSignatureToken CurToken;
