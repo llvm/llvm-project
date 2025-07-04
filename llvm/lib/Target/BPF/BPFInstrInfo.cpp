@@ -181,6 +181,10 @@ bool BPFInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
     if (!isUnpredicatedTerminator(*I))
       break;
 
+    // If a JX insn, we're done.
+    if (I->getOpcode() == BPF::JX)
+      break;
+
     // A terminator that isn't a branch can't easily be handled
     // by this analysis.
     if (!I->isBranch())
@@ -258,4 +262,41 @@ unsigned BPFInstrInfo::removeBranch(MachineBasicBlock &MBB,
   }
 
   return Count;
+}
+
+int BPFInstrInfo::getJumpTableIndex(const MachineInstr &MI) const {
+  // The pattern looks like:
+  // %0 = LD_imm64 %jump-table.0   ; load jump-table address
+  // %1 = ADD_rr %0, $another_reg  ; address + offset
+  // %2 = LDD %1, 0                ; load the actual label
+  // JX %2
+  const MachineFunction &MF = *MI.getParent()->getParent();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  Register Reg = MI.getOperand(0).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+  MachineInstr *Ldd = MRI.getUniqueVRegDef(Reg);
+  if (Ldd == nullptr || Ldd->getOpcode() != BPF::LDD)
+    return -1;
+
+  Reg = Ldd->getOperand(1).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+  MachineInstr *Add = MRI.getUniqueVRegDef(Reg);
+  if (Add == nullptr || Add->getOpcode() != BPF::ADD_rr)
+    return -1;
+
+  Reg = Add->getOperand(1).getReg();
+  if (!Reg.isVirtual())
+    return -1;
+  MachineInstr *LDimm64 = MRI.getUniqueVRegDef(Reg);
+  if (LDimm64 == nullptr || LDimm64->getOpcode() != BPF::LD_imm64)
+    return -1;
+
+  const MachineOperand &MO = LDimm64->getOperand(1);
+  if (!MO.isJTI())
+    return -1;
+
+  return MO.getIndex();
 }
