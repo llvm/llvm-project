@@ -4832,18 +4832,7 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
   return {Stat.first, Mods};
 }
 
-int64_t getAllKindImm(const MachineOperand *Op) {
-  switch (Op->getType()) {
-  case MachineOperand::MachineOperandType::MO_Immediate:
-    return Op->getImm();
-  case MachineOperand::MachineOperandType::MO_CImmediate:
-    return Op->getCImm()->getSExtValue();
-  case MachineOperand::MachineOperandType::MO_FPImmediate:
-    return Op->getFPImm()->getValueAPF().bitcastToAPInt().getSExtValue();
-  default:
-    llvm_unreachable("not an imm type");
-  }
-}
+// Removed unused function `getAllKindImm` to eliminate dead code.
 
 static bool checkRB(Register Reg, unsigned int RBNo,
                     const AMDGPURegisterBankInfo &RBI,
