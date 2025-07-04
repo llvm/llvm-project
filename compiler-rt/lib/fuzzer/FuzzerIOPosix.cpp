@@ -15,7 +15,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <dirent.h>
-#include <errno.h>
+#include <cerrno>
 #include <fstream>
 #include <iterator>
 #include <libgen.h>
