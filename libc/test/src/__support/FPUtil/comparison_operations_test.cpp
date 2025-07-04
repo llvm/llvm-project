@@ -50,8 +50,6 @@ public:
     auto test_qnan = [&](T x, T y) {
       LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
       EXPECT_FALSE(equals(x, y));
-      // NOTE: equals and not equals operations should raise FE_INVALID for
-      // quiet NaN operands
       EXPECT_FP_EXCEPTION(0);
     };
 
