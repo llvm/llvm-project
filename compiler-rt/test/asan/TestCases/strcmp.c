@@ -3,6 +3,9 @@
 // RUN: %env_asan_opts=intercept_strcmp=true not %run %t 2>&1 | FileCheck %s
 // RUN:                                      not %run %t 2>&1 | FileCheck %s
 
+// AIX does not intercept strcmp.
+//UNSUPPORTED: target={{.*aix.*}}
+
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
