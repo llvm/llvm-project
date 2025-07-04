@@ -3409,6 +3409,12 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
           (isSignedIntSetCC(CC) && isSafeSignedCMN(Op, DAG)));
 }
 
+static bool canBeCommutedToCMN(SDValue LHS, SDValue RHS, ISD::CondCode CC) {
+  if (LHS.getOpcode() != ISD::SUB || !isNullConstant(LHS.getOperand(0)))
+    return false;
+  return isIntEqualitySetCC(CC);
+}
+
 static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &DL,
                                       SelectionDAG &DAG, SDValue Chain,
                                       bool IsSignaling) {
@@ -3453,8 +3459,7 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     // Can we combine a (CMP op1, (sub 0, op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
     RHS = RHS.getOperand(1);
-  } else if (LHS.getOpcode() == ISD::SUB && isNullConstant(LHS.getOperand(0)) &&
-             isIntEqualitySetCC(CC)) {
+  } else if (canBeCommutedToCMN(LHS, RHS, CC)) {
     // As we are looking for EQ/NE compares, the operands can be commuted ; can
     // we combine a (CMP (sub 0, op1), op2) into a CMN instruction ?
     Opcode = AArch64ISD::ADDS;
@@ -3908,6 +3913,17 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     bool RHSIsCMN = isCMN(RHS, CC, DAG);
     SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
     SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
+
+    // Do not count twice. If the CMN can be commuted, hence OR.
+    // TODO: Is it possible for us to choose between two CMN? If so,
+    // this should be changed to an add. This is an or because as far as I can
+    // tell, emitComparison only changes the subs to an adds and not back, so
+    // this reflects the fact There can be at most one removal of a neg
+    // instruction.
+
+    // So, do not count twice if the CMN can be commuted, hence OR.
+    LHSIsCMN |= canBeCommutedToCMN(RHS, LHS, CC);
+    RHSIsCMN |= canBeCommutedToCMN(LHS, RHS, CC);
 
     if (getCmpOperandFoldingProfit(TheLHS) + (LHSIsCMN ? 1 : 0) >
         getCmpOperandFoldingProfit(TheRHS) + (RHSIsCMN ? 1 : 0)) {
