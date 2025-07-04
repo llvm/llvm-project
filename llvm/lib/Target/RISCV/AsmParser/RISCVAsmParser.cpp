@@ -2107,7 +2107,7 @@ bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   if (getParser().parseParenExpression(SubExpr, E))
     return true;
 
-  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext());
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), SubExpr->getLoc());
   return false;
 }
 
