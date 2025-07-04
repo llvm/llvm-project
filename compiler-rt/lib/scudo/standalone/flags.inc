@@ -24,7 +24,11 @@ SCUDO_FLAG(int, quarantine_max_chunk_size, 0,
            "Size (in bytes) up to which chunks will be quarantined (if lower "
            "than or equal to).")
 
-SCUDO_FLAG(bool, dealloc_type_mismatch, false,
+// Historically dealloc_type_mismatch was disabled by default. Mismatching is
+// undefined behavior and software that triggers it should feel bad. To stop the
+// bleeding, we default enable except on Android, Fuchsia, and Trusty.
+SCUDO_FLAG(bool, dealloc_type_mismatch,
+           !SCUDO_ANDROID && !SCUDO_FUCHSIA && !SCUDO_TRUSTY,
            "Terminate on a type mismatch in allocation-deallocation functions, "
            "eg: malloc/delete, new/free, new/delete[], etc.")
 
