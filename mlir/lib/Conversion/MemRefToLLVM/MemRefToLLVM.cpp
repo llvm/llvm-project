@@ -44,7 +44,7 @@ static constexpr LLVM::GEPNoWrapFlags kNoWrapFlags =
 namespace {
 
 static bool isStaticStrideOrOffset(int64_t strideOrOffset) {
-  return !ShapedType::isDynamic(strideOrOffset);
+  return ShapedType::isStatic(strideOrOffset);
 }
 
 static FailureOr<LLVM::LLVMFuncOp>
@@ -1469,7 +1469,7 @@ private:
       Value stride = nullptr;
       int64_t targetRank = targetMemRefType.getRank();
       for (auto i : llvm::reverse(llvm::seq<int64_t>(0, targetRank))) {
-        if (!ShapedType::isDynamic(strides[i])) {
+        if (ShapedType::isStatic(strides[i])) {
           // If the stride for this dimension is dynamic, then use the product
           // of the sizes of the inner dimensions.
           stride =
@@ -1723,7 +1723,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
                 ArrayRef<int64_t> shape, ValueRange dynamicSizes, unsigned idx,
                 Type indexType) const {
     assert(idx < shape.size());
-    if (!ShapedType::isDynamic(shape[idx]))
+    if (ShapedType::isStatic(shape[idx]))
       return createIndexAttrConstant(rewriter, loc, indexType, shape[idx]);
     // Count the number of dynamic dims in range [0, idx]
     unsigned nDynamic =
@@ -1739,7 +1739,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
                   ArrayRef<int64_t> strides, Value nextSize,
                   Value runningStride, unsigned idx, Type indexType) const {
     assert(idx < strides.size());
-    if (!ShapedType::isDynamic(strides[idx]))
+    if (ShapedType::isStatic(strides[idx]))
       return createIndexAttrConstant(rewriter, loc, indexType, strides[idx]);
     if (nextSize)
       return runningStride
