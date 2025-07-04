@@ -106,10 +106,10 @@ define alignstack(8) %struct.float2 @aligned_return(%struct.float2 %a ) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [aligned_return_param_0+4];
-; CHECK-NEXT:    ld.param.b32 %r2, [aligned_return_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r1;
+; CHECK-NEXT:    ld.param.b32 %r1, [aligned_return_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [aligned_return_param_0+4];
+; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   ret %struct.float2 %a
 }
