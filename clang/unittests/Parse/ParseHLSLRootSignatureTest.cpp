@@ -134,9 +134,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseEmptyTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -172,9 +171,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseDTClausesTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -279,9 +277,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseStaticSamplerTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -368,9 +365,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseFloatsTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -447,9 +443,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidSamplerFlagsTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -482,9 +477,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootConsantsTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -543,9 +537,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootFlagsTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -600,9 +593,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidParseRootDescriptorsTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -678,9 +670,8 @@ TEST_F(ParseHLSLRootSignatureTest, ValidTrailingCommaTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -852,9 +843,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedTokenTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -876,9 +866,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseInvalidTokenTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -900,9 +889,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseUnexpectedEndOfStreamTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -929,9 +917,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingDTParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -955,9 +942,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRDParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -981,9 +967,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidMissingRCParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1009,9 +994,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryDTParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1035,9 +1019,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedMandatoryRCParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1063,9 +1046,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalDTParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1093,9 +1075,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidRepeatedOptionalRCParameterTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1120,9 +1101,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedNumberTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1146,9 +1126,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidParseOverflowedNegativeNumberTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1171,9 +1150,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedFloatTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1196,9 +1174,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexNegOverflowedFloatTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1221,9 +1198,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexOverflowedDoubleTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1246,9 +1222,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidLexUnderflowFloatTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);
@@ -1274,9 +1249,8 @@ TEST_F(ParseHLSLRootSignatureTest, InvalidNonZeroFlagsTest) {
 
   TrivialModuleLoader ModLoader;
   auto PP = createPP(Source, ModLoader);
-  auto TokLoc = SourceLocation();
 
-  hlsl::RootSignatureLexer Lexer(Source, TokLoc);
+  hlsl::RootSignatureLexer Lexer(Source);
   SmallVector<RootElement> Elements;
   hlsl::RootSignatureParser Parser(RootSignatureVersion::V1_1, Elements, Lexer,
                                    Signature, *PP);

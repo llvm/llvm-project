@@ -189,6 +189,12 @@ private:
   bool tryConsumeExpectedToken(RootSignatureToken::Kind Expected);
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
+  /// Convert the token's offset in the signature string to its SourceLocation
+  ///
+  /// This allows to currently retrieve the location for multi-token
+  /// StringLiterals
+  SourceLocation getTokenLocation(RootSignatureToken Tok);
+
 private:
   llvm::dxbc::RootSignatureVersion Version;
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;

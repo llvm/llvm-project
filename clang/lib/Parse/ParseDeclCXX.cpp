@@ -4950,10 +4950,8 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
   // If we haven't found an already defined DeclIdent then parse the root
   // signature string and construct the in-memory elements
   if (!Found) {
-    // Offset location 1 to account for '"'
-    SourceLocation SignatureLoc = Signature->getExprLoc().getLocWithOffset(1);
     // Invoke the root signature parser to construct the in-memory constructs
-    hlsl::RootSignatureLexer Lexer(Signature->getString(), SignatureLoc);
+    hlsl::RootSignatureLexer Lexer(Signature->getString());
     SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
     hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
                                      Lexer, Signature, PP);

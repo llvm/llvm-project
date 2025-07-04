@@ -22,7 +22,7 @@ RootSignatureParser::RootSignatureParser(
     SmallVector<RootElement> &Elements, RootSignatureLexer &Lexer,
     StringLiteral *Signature, Preprocessor &PP)
     : Version(Version), Elements(Elements), Signature(Signature), Lexer(Lexer),
-      PP(PP), CurToken(SourceLocation()) {}
+      PP(PP), CurToken(0) {}
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
@@ -91,7 +91,8 @@ std::optional<llvm::dxbc::RootFlags> RootSignatureParser::parseRootFlags() {
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
-      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
+      getDiags().Report(getTokenLocation(CurToken),
+                        diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
   } else {
@@ -141,7 +142,8 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
 
   // Check mandatory parameters where provided
   if (!Params->Num32BitConstants.has_value()) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+    getDiags().Report(getTokenLocation(CurToken),
+                      diag::err_hlsl_rootsig_missing_param)
         << TokenKind::kw_num32BitConstants;
     return std::nullopt;
   }
@@ -149,7 +151,8 @@ std::optional<RootConstants> RootSignatureParser::parseRootConstants() {
   Constants.Num32BitConstants = Params->Num32BitConstants.value();
 
   if (!Params->Reg.has_value()) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+    getDiags().Report(getTokenLocation(CurToken),
+                      diag::err_hlsl_rootsig_missing_param)
         << TokenKind::bReg;
     return std::nullopt;
   }
@@ -209,7 +212,8 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
 
   // Check mandatory parameters were provided
   if (!Params->Reg.has_value()) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+    getDiags().Report(getTokenLocation(CurToken),
+                      diag::err_hlsl_rootsig_missing_param)
         << ExpectedReg;
     return std::nullopt;
   }
@@ -258,7 +262,8 @@ std::optional<DescriptorTable> RootSignatureParser::parseDescriptorTable() {
 
     if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       if (Visibility.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -328,7 +333,8 @@ RootSignatureParser::parseDescriptorTableClause() {
 
   // Check mandatory parameters were provided
   if (!Params->Reg.has_value()) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+    getDiags().Report(getTokenLocation(CurToken),
+                      diag::err_hlsl_rootsig_missing_param)
         << ExpectedReg;
     return std::nullopt;
   }
@@ -372,7 +378,8 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
 
   // Check mandatory parameters were provided
   if (!Params->Reg.has_value()) {
-    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+    getDiags().Report(getTokenLocation(CurToken),
+                      diag::err_hlsl_rootsig_missing_param)
         << TokenKind::sReg;
     return std::nullopt;
   }
@@ -437,7 +444,8 @@ RootSignatureParser::parseRootConstantParams() {
     // `num32BitConstants` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_num32BitConstants)) {
       if (Params.Num32BitConstants.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -454,7 +462,8 @@ RootSignatureParser::parseRootConstantParams() {
     // `b` POS_INT
     if (tryConsumeExpectedToken(TokenKind::bReg)) {
       if (Params.Reg.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -467,7 +476,8 @@ RootSignatureParser::parseRootConstantParams() {
     // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -484,7 +494,8 @@ RootSignatureParser::parseRootConstantParams() {
     // `visibility` `=` SHADER_VISIBILITY
     if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       if (Params.Visibility.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -512,7 +523,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
     // ( `b` | `t` | `u`) POS_INT
     if (tryConsumeExpectedToken(RegType)) {
       if (Params.Reg.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -525,7 +537,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
     // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -542,7 +555,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
     // `visibility` `=` SHADER_VISIBILITY
     if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       if (Params.Visibility.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -559,7 +573,8 @@ RootSignatureParser::parseRootDescriptorParams(TokenKind RegType) {
     // `flags` `=` ROOT_DESCRIPTOR_FLAGS
     if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
       if (Params.Flags.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -587,7 +602,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
     // ( `b` | `t` | `u` | `s`) POS_INT
     if (tryConsumeExpectedToken(RegType)) {
       if (Params.Reg.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -600,7 +616,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
     // `numDescriptors` `=` POS_INT | unbounded
     if (tryConsumeExpectedToken(TokenKind::kw_numDescriptors)) {
       if (Params.NumDescriptors.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -623,7 +640,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
     // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -640,7 +658,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
     // `offset` `=` POS_INT | DESCRIPTOR_RANGE_OFFSET_APPEND
     if (tryConsumeExpectedToken(TokenKind::kw_offset)) {
       if (Params.Offset.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -663,7 +682,8 @@ RootSignatureParser::parseDescriptorTableClauseParams(TokenKind RegType) {
     // `flags` `=` DESCRIPTOR_RANGE_FLAGS
     if (tryConsumeExpectedToken(TokenKind::kw_flags)) {
       if (Params.Flags.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -692,7 +712,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `s` POS_INT
     if (tryConsumeExpectedToken(TokenKind::sReg)) {
       if (Params.Reg.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -705,7 +726,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `filter` `=` FILTER
     if (tryConsumeExpectedToken(TokenKind::kw_filter)) {
       if (Params.Filter.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -722,7 +744,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `addressU` `=` TEXTURE_ADDRESS
     if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
       if (Params.AddressU.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -739,7 +762,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `addressV` `=` TEXTURE_ADDRESS
     if (tryConsumeExpectedToken(TokenKind::kw_addressV)) {
       if (Params.AddressV.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -756,7 +780,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `addressW` `=` TEXTURE_ADDRESS
     if (tryConsumeExpectedToken(TokenKind::kw_addressW)) {
       if (Params.AddressW.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -773,7 +798,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `mipLODBias` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
       if (Params.MipLODBias.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -790,7 +816,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `maxAnisotropy` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_maxAnisotropy)) {
       if (Params.MaxAnisotropy.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -807,7 +834,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `comparisonFunc` `=` COMPARISON_FUNC
     if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
       if (Params.CompFunc.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -824,7 +852,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `borderColor` `=` STATIC_BORDER_COLOR
     if (tryConsumeExpectedToken(TokenKind::kw_borderColor)) {
       if (Params.BorderColor.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -841,7 +870,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `minLOD` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
       if (Params.MinLOD.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -858,7 +888,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `maxLOD` `=` NUMBER
     if (tryConsumeExpectedToken(TokenKind::kw_maxLOD)) {
       if (Params.MaxLOD.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -875,7 +906,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `space` `=` POS_INT
     if (tryConsumeExpectedToken(TokenKind::kw_space)) {
       if (Params.Space.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -892,7 +924,8 @@ RootSignatureParser::parseStaticSamplerParams() {
     // `visibility` `=` SHADER_VISIBILITY
     if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
       if (Params.Visibility.has_value()) {
-        getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
+        getDiags().Report(getTokenLocation(CurToken),
+                          diag::err_hlsl_rootsig_repeat_param)
             << CurToken.TokKind;
         return std::nullopt;
       }
@@ -1124,7 +1157,8 @@ RootSignatureParser::parseRootDescriptorFlags() {
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
-      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
+      getDiags().Report(getTokenLocation(CurToken),
+                        diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
     return llvm::dxbc::RootDescriptorFlags::None;
@@ -1163,7 +1197,8 @@ RootSignatureParser::parseDescriptorRangeFlags() {
   // Handle the edge-case of '0' to specify no flags set
   if (tryConsumeExpectedToken(TokenKind::int_literal)) {
     if (!verifyZeroFlag()) {
-      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_non_zero_flag);
+      getDiags().Report(getTokenLocation(CurToken),
+                        diag::err_hlsl_rootsig_non_zero_flag);
       return std::nullopt;
     }
     return llvm::dxbc::DescriptorRangeFlags::None;
@@ -1196,9 +1231,9 @@ RootSignatureParser::parseDescriptorRangeFlags() {
 
 std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   // Parse the numeric value and do semantic checks on its specification
-  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
-                                      PP.getSourceManager(), PP.getLangOpts(),
-                                      PP.getTargetInfo(), PP.getDiagnostics());
+  clang::NumericLiteralParser Literal(
+      CurToken.NumSpelling, getTokenLocation(CurToken), PP.getSourceManager(),
+      PP.getLangOpts(), PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
     return std::nullopt; // Error has already been reported so just return
 
@@ -1208,7 +1243,7 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
   llvm::APSInt Val(32, /*IsUnsigned=*/true);
   if (Literal.GetIntegerValue(Val)) {
     // Report that the value has overflowed
-    PP.getDiagnostics().Report(CurToken.TokLoc,
+    PP.getDiagnostics().Report(getTokenLocation(CurToken),
                                diag::err_hlsl_number_literal_overflow)
         << /*integer type*/ 0 << /*is signed*/ 0;
     return std::nullopt;
@@ -1219,9 +1254,9 @@ std::optional<uint32_t> RootSignatureParser::handleUIntLiteral() {
 
 std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
   // Parse the numeric value and do semantic checks on its specification
-  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
-                                      PP.getSourceManager(), PP.getLangOpts(),
-                                      PP.getTargetInfo(), PP.getDiagnostics());
+  clang::NumericLiteralParser Literal(
+      CurToken.NumSpelling, getTokenLocation(CurToken), PP.getSourceManager(),
+      PP.getLangOpts(), PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
     return std::nullopt; // Error has already been reported so just return
 
@@ -1242,7 +1277,7 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
 
   if (Overflowed) {
     // Report that the value has overflowed
-    PP.getDiagnostics().Report(CurToken.TokLoc,
+    PP.getDiagnostics().Report(getTokenLocation(CurToken),
                                diag::err_hlsl_number_literal_overflow)
         << /*integer type*/ 0 << /*is signed*/ 1;
     return std::nullopt;
@@ -1256,9 +1291,9 @@ std::optional<int32_t> RootSignatureParser::handleIntLiteral(bool Negated) {
 
 std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
   // Parse the numeric value and do semantic checks on its specification
-  clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
-                                      PP.getSourceManager(), PP.getLangOpts(),
-                                      PP.getTargetInfo(), PP.getDiagnostics());
+  clang::NumericLiteralParser Literal(
+      CurToken.NumSpelling, getTokenLocation(CurToken), PP.getSourceManager(),
+      PP.getLangOpts(), PP.getTargetInfo(), PP.getDiagnostics());
   if (Literal.hadError)
     return std::nullopt; // Error has already been reported so just return
 
@@ -1286,14 +1321,14 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
 
   if (Status & llvm::APFloat::opStatus::opUnderflow) {
     // Report that the value has underflowed
-    PP.getDiagnostics().Report(CurToken.TokLoc,
+    PP.getDiagnostics().Report(getTokenLocation(CurToken),
                                diag::err_hlsl_number_literal_underflow);
     return std::nullopt;
   }
 
   if (Status & llvm::APFloat::opStatus::opOverflow) {
     // Report that the value has overflowed
-    PP.getDiagnostics().Report(CurToken.TokLoc,
+    PP.getDiagnostics().Report(getTokenLocation(CurToken),
                                diag::err_hlsl_number_literal_overflow)
         << /*float type*/ 1;
     return std::nullopt;
@@ -1306,7 +1341,7 @@ std::optional<float> RootSignatureParser::handleFloatLiteral(bool Negated) {
   double FloatMax = double(std::numeric_limits<float>::max());
   if (FloatMax < DoubleVal || DoubleVal < -FloatMax) {
     // Report that the value has overflowed
-    PP.getDiagnostics().Report(CurToken.TokLoc,
+    PP.getDiagnostics().Report(getTokenLocation(CurToken),
                                diag::err_hlsl_number_literal_overflow)
         << /*float type*/ 1;
     return std::nullopt;
@@ -1337,7 +1372,7 @@ bool RootSignatureParser::consumeExpectedToken(TokenKind Expected,
     return false;
 
   // Report unexpected token kind error
-  DiagnosticBuilder DB = getDiags().Report(CurToken.TokLoc, DiagID);
+  DiagnosticBuilder DB = getDiags().Report(getTokenLocation(CurToken), DiagID);
   switch (DiagID) {
   case diag::err_expected:
     DB << Expected;
@@ -1364,6 +1399,11 @@ bool RootSignatureParser::tryConsumeExpectedToken(
     return false;
   consumeNextToken();
   return true;
+}
+
+SourceLocation RootSignatureParser::getTokenLocation(RootSignatureToken Tok) {
+  return Signature->getLocationOfByte(Tok.LocOffset, PP.getSourceManager(),
+                                      PP.getLangOpts(), PP.getTargetInfo());
 }
 
 } // namespace hlsl
