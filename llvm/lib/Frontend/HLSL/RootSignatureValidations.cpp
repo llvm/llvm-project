@@ -32,7 +32,24 @@ bool verifyRegisterSpace(uint32_t RegisterSpace) {
   return !(RegisterSpace >= 0xFFFFFFF0 && RegisterSpace <= 0xFFFFFFFF);
 }
 
-bool verifyDescriptorFlag(uint32_t Flags) { return (Flags & ~0xE) == 0; }
+bool verifyRootDescriptorFlag(uint32_t Version, uint32_t FlagsVal) {
+  using FlagT = dxbc::RootDescriptorFlags;
+  FlagT Flags = FlagT(FlagsVal);
+  if (Version == 1)
+    return Flags == FlagT::DataVolatile;
+
+  assert(Version == 2 && "Provided invalid root signature version");
+
+  // The data-specific flags are mutually exclusive.
+  FlagT DataFlags = FlagT::DataVolatile | FlagT::DataStatic |
+                    FlagT::DataStaticWhileSetAtExecute;
+
+  if (popcount(llvm::to_underlying(Flags & DataFlags)) > 1)
+    return false;
+
+  // Only a data flag or no flags is valid
+  return (Flags | DataFlags) == DataFlags;
+}
 
 bool verifyRangeType(uint32_t Type) {
   switch (Type) {
@@ -106,6 +123,10 @@ bool verifyDescriptorRangeFlag(uint32_t Version, uint32_t Type,
     Mask |= FlagT::DataStatic;
   }
   return (Flags & ~Mask) == FlagT::None;
+}
+
+bool verifyNumDescriptors(uint32_t NumDescriptors) {
+  return NumDescriptors > 0;
 }
 
 bool verifySamplerFilter(uint32_t Value) {
