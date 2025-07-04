@@ -10001,15 +10001,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
   if (!LegalOperations || hasOperation(ISD::ABS, VT)) {
-    SDValue A = N0Opcode == ISD::ADD ? N0 : N1;
-    SDValue S = N0Opcode == ISD::SRA ? N0 : N1;
-    if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
-      SDValue A0 = A.getOperand(0), A1 = A.getOperand(1);
-      SDValue S0 = S.getOperand(0);
-      if ((A0 == S && A1 == S0) || (A1 == S && A0 == S0))
-        if (ConstantSDNode *C = isConstOrConstSplat(S.getOperand(1)))
-          if (C->getAPIntValue() == (VT.getScalarSizeInBits() - 1))
-            return DAG.getNode(ISD::ABS, DL, VT, S0);
+    SDValue X, Y;
+    if (sd_match(N, m_Xor(m_Add(m_Value(X), m_Value(Y)), m_Deferred(Y))) &&
+        sd_match(Y, m_Sra(m_Specific(X),
+                          m_SpecificInt(VT.getScalarSizeInBits() - 1)))) {
+      return DAG.getNode(ISD::ABS, DL, VT, X);
     }
   }
 
