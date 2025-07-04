@@ -4567,10 +4567,41 @@ static std::optional<ConstantRange> getRange(const Instruction &I) {
   return std::nullopt;
 }
 
+static void tryToImproveAlign(const DataLayout &DL, Type *Ty, Align &Alignment,
+                              const Value *&PtrV, const Value *&CxtI,
+                              int64_t &Offset) {
+  Align PrefAlign = DL.getPrefTypeAlign(Ty);
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrV);
+      GEP && PrefAlign > Alignment && PrefAlign.previous() > Alignment) {
+    const Value *BasePtrV = GEP->getPointerOperand();
+    APInt OffsetAccumulated =
+        APInt(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+    if (GEP->accumulateConstantOffset(DL, OffsetAccumulated)) {
+      KnownBits Known = computeKnownBits(PtrV, DL);
+      KnownBits SplitKnown =
+          KnownBits::add(Known, KnownBits::makeConstant(APInt(
+                                    Known.getBitWidth(), Alignment.value())));
+      unsigned TrailZ = std::min(SplitKnown.countMinTrailingZeros(),
+                                 +Value::MaxAlignmentExponent);
+      Align ExpandAlign =
+          Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));
+      Align BaseAlignment =
+          getKnownAlignment(const_cast<Value *>(BasePtrV), DL, GEP);
+      if (ExpandAlign > Alignment) {
+        CxtI = PtrV;
+        PtrV = BasePtrV;
+        Alignment = BaseAlignment;
+        Offset = OffsetAccumulated.getSExtValue();
+      }
+    }
+  }
+}
+
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (I.isAtomic())
     return visitAtomicLoad(I);
 
+  const DataLayout &DL = DAG.getDataLayout();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   const Value *SV = I.getOperand(0);
   if (TLI.supportSwiftError()) {
@@ -4592,7 +4623,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   Type *Ty = I.getType();
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
-  ComputeValueVTs(TLI, DAG.getDataLayout(), Ty, ValueVTs, &MemVTs, &Offsets);
+  ComputeValueVTs(TLI, DL, Ty, ValueVTs, &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -4602,7 +4633,12 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   const MDNode *Ranges = getRangeMetadata(I);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
-      TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
+      TLI.getLoadMemOperandFlags(I, DL, AC, LibInfo);
+
+  // See visitStore comments.
+  int64_t Offset = 0;
+  const Value *CxtI = nullptr;
+  tryToImproveAlign(DL, Ty, Alignment, SV, CxtI, Offset);
 
   SDValue Root;
   bool ConstantMemory = false;
@@ -4652,7 +4688,8 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     // TODO: MachinePointerInfo only supports a fixed length offset.
     MachinePointerInfo PtrInfo =
         !Offsets[i].isScalable() || Offsets[i].isZero()
-            ? MachinePointerInfo(SV, Offsets[i].getKnownMinValue())
+            ? MachinePointerInfo(SV, Offsets[i].getKnownMinValue() + Offset, 0,
+                                 CxtI)
             : MachinePointerInfo();
 
     SDValue A = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
@@ -4739,6 +4776,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   if (I.isAtomic())
     return visitAtomicStore(I);
 
+  const DataLayout &DL = DAG.getDataLayout();
   const Value *SrcV = I.getOperand(0);
   const Value *PtrV = I.getOperand(1);
 
@@ -4759,8 +4797,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
 
   SmallVector<EVT, 4> ValueVTs, MemVTs;
   SmallVector<TypeSize, 4> Offsets;
-  ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
-                  SrcV->getType(), ValueVTs, &MemVTs, &Offsets);
+  ComputeValueVTs(DAG.getTargetLoweringInfo(), DL, SrcV->getType(), ValueVTs,
+                  &MemVTs, &Offsets);
   unsigned NumValues = ValueVTs.size();
   if (NumValues == 0)
     return;
@@ -4777,7 +4815,19 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
 
-  auto MMOFlags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());
+  // refine MPI: V + Offset
+  // Example:
+  // align 4 %p
+  // %gep = getelementptr i8, ptr %p, i32 1
+  // store i32 %v, ptr %len, align 1
+  // ->
+  // MPI: V = %p, Offset = 1
+  // SDNode: store<(store (s32) into %p + 1, align 1, basealign 4)>
+  int64_t Offset = 0;
+  const Value *CxtI = nullptr;
+  tryToImproveAlign(DL, SrcV->getType(), Alignment, PtrV, CxtI, Offset);
+
+  auto MMOFlags = TLI.getStoreMemOperandFlags(I, DL);
 
   unsigned ChainI = 0;
   for (unsigned i = 0; i != NumValues; ++i, ++ChainI) {
@@ -4792,7 +4842,8 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
     // TODO: MachinePointerInfo only supports a fixed length offset.
     MachinePointerInfo PtrInfo =
         !Offsets[i].isScalable() || Offsets[i].isZero()
-            ? MachinePointerInfo(PtrV, Offsets[i].getKnownMinValue())
+            ? MachinePointerInfo(PtrV, Offsets[i].getKnownMinValue() + Offset,
+                                 0, CxtI)
             : MachinePointerInfo();
 
     SDValue Add = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
