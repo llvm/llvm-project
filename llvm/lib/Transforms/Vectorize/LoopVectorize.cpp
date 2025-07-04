@@ -7327,9 +7327,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                            OrigLoop->getHeader()->getContext());
   VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
-  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator()))
+  if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
+    std::optional<unsigned> VScale = CM.getVScaleForTuning();
     VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
-                             BestVPlan, BestVF);
+                             BestVPlan, BestVF, VScale);
+  }
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::narrowInterleaveGroups(
@@ -7767,8 +7769,9 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
           (CM.foldTailByMasking() || !GEP || !GEP->isInBounds())
               ? GEPNoWrapFlags::none()
               : GEPNoWrapFlags::inBounds();
-      VectorPtr = new VPVectorEndPointerRecipe(
-          Ptr, &Plan.getVF(), getLoadStoreType(I), Flags, I->getDebugLoc());
+      VectorPtr =
+          new VPVectorEndPointerRecipe(Ptr, &Plan.getVF(), getLoadStoreType(I),
+                                       /*Stride*/ -1, Flags, I->getDebugLoc());
     } else {
       VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
                                             GEP ? GEP->getNoWrapFlags()
@@ -8146,15 +8149,15 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   // something that isn't another partial reduction. This is because the
   // extends are intended to be lowered along with the reduction itself.
 
-  // Build up a set of partial reduction bin ops for efficient use checking.
-  SmallSet<User *, 4> PartialReductionBinOps;
+  // Build up a set of partial reduction ops for efficient use checking.
+  SmallSet<User *, 4> PartialReductionOps;
   for (const auto &[PartialRdx, _] : PartialReductionChains)
-    PartialReductionBinOps.insert(PartialRdx.BinOp);
+    PartialReductionOps.insert(PartialRdx.ExtendUser);
 
   auto ExtendIsOnlyUsedByPartialReductions =
-      [&PartialReductionBinOps](Instruction *Extend) {
+      [&PartialReductionOps](Instruction *Extend) {
         return all_of(Extend->users(), [&](const User *U) {
-          return PartialReductionBinOps.contains(U);
+          return PartialReductionOps.contains(U);
         });
       };
 
@@ -8163,7 +8166,7 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
   for (auto Pair : PartialReductionChains) {
     PartialReductionChain Chain = Pair.first;
     if (ExtendIsOnlyUsedByPartialReductions(Chain.ExtendA) &&
-        ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB))
+        (!Chain.ExtendB || ExtendIsOnlyUsedByPartialReductions(Chain.ExtendB)))
       ScaledReductionMap.try_emplace(Chain.Reduction, Pair.second);
   }
 }
@@ -8171,7 +8174,6 @@ void VPRecipeBuilder::collectScaledReductions(VFRange &Range) {
 bool VPRecipeBuilder::getScaledReductions(
     Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
     SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains) {
-
   if (!CM.TheLoop->contains(RdxExitInstr))
     return false;
 
@@ -8200,43 +8202,71 @@ bool VPRecipeBuilder::getScaledReductions(
   if (PhiOp != PHI)
     return false;
 
-  auto *BinOp = dyn_cast<BinaryOperator>(Op);
-  if (!BinOp || !BinOp->hasOneUse())
-    return false;
-
   using namespace llvm::PatternMatch;
-  // Use the side-effect of match to replace BinOp only if the pattern is
-  // matched, we don't care at this point whether it actually matched.
-  match(BinOp, m_Neg(m_BinOp(BinOp)));
 
-  Value *A, *B;
-  if (!match(BinOp->getOperand(0), m_ZExtOrSExt(m_Value(A))) ||
-      !match(BinOp->getOperand(1), m_ZExtOrSExt(m_Value(B))))
+  // If the update is a binary operator, check both of its operands to see if
+  // they are extends. Otherwise, see if the update comes directly from an
+  // extend.
+  Instruction *Exts[2] = {nullptr};
+  BinaryOperator *ExtendUser = dyn_cast<BinaryOperator>(Op);
+  std::optional<unsigned> BinOpc;
+  Type *ExtOpTypes[2] = {nullptr};
+
+  auto CollectExtInfo = [&Exts,
+                         &ExtOpTypes](SmallVectorImpl<Value *> &Ops) -> bool {
+    unsigned I = 0;
+    for (Value *OpI : Ops) {
+      Value *ExtOp;
+      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
+        return false;
+      Exts[I] = cast<Instruction>(OpI);
+      ExtOpTypes[I] = ExtOp->getType();
+      I++;
+    }
+    return true;
+  };
+
+  if (ExtendUser) {
+    if (!ExtendUser->hasOneUse())
+      return false;
+
+    // Use the side-effect of match to replace BinOp only if the pattern is
+    // matched, we don't care at this point whether it actually matched.
+    match(ExtendUser, m_Neg(m_BinOp(ExtendUser)));
+
+    SmallVector<Value *> Ops(ExtendUser->operands());
+    if (!CollectExtInfo(Ops))
+      return false;
+
+    BinOpc = std::make_optional(ExtendUser->getOpcode());
+  } else if (match(Update, m_Add(m_Value(), m_Value()))) {
+    // We already know the operands for Update are Op and PhiOp.
+    SmallVector<Value *> Ops({Op});
+    if (!CollectExtInfo(Ops))
+      return false;
+
+    ExtendUser = Update;
+    BinOpc = std::nullopt;
+  } else
     return false;
-
-  Instruction *ExtA = cast<Instruction>(BinOp->getOperand(0));
-  Instruction *ExtB = cast<Instruction>(BinOp->getOperand(1));
 
   TTI::PartialReductionExtendKind OpAExtend =
-      TargetTransformInfo::getPartialReductionExtendKind(ExtA);
+      TTI::getPartialReductionExtendKind(Exts[0]);
   TTI::PartialReductionExtendKind OpBExtend =
-      TargetTransformInfo::getPartialReductionExtendKind(ExtB);
-
-  PartialReductionChain Chain(RdxExitInstr, ExtA, ExtB, BinOp);
+      Exts[1] ? TTI::getPartialReductionExtendKind(Exts[1]) : TTI::PR_None;
+  PartialReductionChain Chain(RdxExitInstr, Exts[0], Exts[1], ExtendUser);
 
   TypeSize PHISize = PHI->getType()->getPrimitiveSizeInBits();
-  TypeSize ASize = A->getType()->getPrimitiveSizeInBits();
-
+  TypeSize ASize = ExtOpTypes[0]->getPrimitiveSizeInBits();
   if (!PHISize.hasKnownScalarFactor(ASize))
     return false;
-
   unsigned TargetScaleFactor = PHISize.getKnownScalarFactor(ASize);
 
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
             InstructionCost Cost = TTI->getPartialReductionCost(
-                Update->getOpcode(), A->getType(), B->getType(), PHI->getType(),
-                VF, OpAExtend, OpBExtend, BinOp->getOpcode(), CM.CostKind);
+                Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
+                PHI->getType(), VF, OpAExtend, OpBExtend, BinOpc, CM.CostKind);
             return Cost.isValid();
           },
           Range)) {

@@ -1234,14 +1234,12 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
   std::unique_ptr<GlobalIFunc> GI;
   GlobalValue *GV;
   if (IsAlias) {
-    GA.reset(GlobalAlias::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GA.reset(GlobalAlias::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GA.get();
   } else {
-    GI.reset(GlobalIFunc::create(Ty, AddrSpace,
-                                 (GlobalValue::LinkageTypes)Linkage, Name,
-                                 Aliasee, /*Parent*/ nullptr));
+    GI.reset(GlobalIFunc::create(Ty, AddrSpace, Linkage, Name, Aliasee,
+                                 /*Parent=*/nullptr));
     GV = GI.get();
   }
   GV->setThreadLocalMode(TLM);
@@ -6117,18 +6115,26 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
 }
 
 /// parseDILabel:
-///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
 bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   REQUIRED(name, MDStringField, );                                             \
   REQUIRED(file, MDField, );                                                   \
-  REQUIRED(line, LineField, );
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  OPTIONAL(isArtificial, MDBoolField, );                                       \
+  OPTIONAL(coroSuspendIdx, MDUnsignedField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  std::optional<unsigned> CoroSuspendIdx =
+      coroSuspendIdx.Seen ? std::optional<unsigned>(coroSuspendIdx.Val)
+                          : std::nullopt;
+
   Result = GET_OR_DISTINCT(DILabel,
-                           (Context, scope.Val, name.Val, file.Val, line.Val));
+                           (Context, scope.Val, name.Val, file.Val, line.Val,
+                            column.Val, isArtificial.Val, CoroSuspendIdx));
   return false;
 }
 

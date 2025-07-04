@@ -838,7 +838,7 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vrecpsq_v, arm_neon_vrecps, Add1ArgType),
   NEONMAP2(vrhadd_v, arm_neon_vrhaddu, arm_neon_vrhadds, Add1ArgType | UnsignedAlts),
   NEONMAP2(vrhaddq_v, arm_neon_vrhaddu, arm_neon_vrhadds, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vrnd_v, arm_neon_vrintz, Add1ArgType),
+  NEONMAP1(vrnd_v, trunc, Add1ArgType),
   NEONMAP1(vrnda_v, round, Add1ArgType),
   NEONMAP1(vrndaq_v, round, Add1ArgType),
   NEONMAP0(vrndi_v),
@@ -847,11 +847,11 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vrndmq_v, floor, Add1ArgType),
   NEONMAP1(vrndn_v, arm_neon_vrintn, Add1ArgType),
   NEONMAP1(vrndnq_v, arm_neon_vrintn, Add1ArgType),
-  NEONMAP1(vrndp_v, arm_neon_vrintp, Add1ArgType),
-  NEONMAP1(vrndpq_v, arm_neon_vrintp, Add1ArgType),
-  NEONMAP1(vrndq_v, arm_neon_vrintz, Add1ArgType),
-  NEONMAP1(vrndx_v, arm_neon_vrintx, Add1ArgType),
-  NEONMAP1(vrndxq_v, arm_neon_vrintx, Add1ArgType),
+  NEONMAP1(vrndp_v, ceil, Add1ArgType),
+  NEONMAP1(vrndpq_v, ceil, Add1ArgType),
+  NEONMAP1(vrndq_v, trunc, Add1ArgType),
+  NEONMAP1(vrndx_v, rint, Add1ArgType),
+  NEONMAP1(vrndxq_v, rint, Add1ArgType),
   NEONMAP2(vrshl_v, arm_neon_vrshiftu, arm_neon_vrshifts, Add1ArgType | UnsignedAlts),
   NEONMAP2(vrshlq_v, arm_neon_vrshiftu, arm_neon_vrshifts, Add1ArgType | UnsignedAlts),
   NEONMAP2(vrshr_n_v, arm_neon_vrshiftu, arm_neon_vrshifts, UnsignedAlts),
@@ -5471,19 +5471,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
-      BuiltinID == clang::AArch64::BI_WriteStatusReg) {
+      BuiltinID == clang::AArch64::BI_WriteStatusReg ||
+      BuiltinID == clang::AArch64::BI__sys) {
     LLVMContext &Context = CGM.getLLVMContext();
 
     unsigned SysReg =
       E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
 
     std::string SysRegStr;
-    llvm::raw_string_ostream(SysRegStr) <<
-                       ((1 << 1) | ((SysReg >> 14) & 1))  << ":" <<
-                       ((SysReg >> 11) & 7)               << ":" <<
-                       ((SysReg >> 7)  & 15)              << ":" <<
-                       ((SysReg >> 3)  & 15)              << ":" <<
-                       ( SysReg        & 7);
+    unsigned SysRegOp0 = (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
+                          BuiltinID == clang::AArch64::BI_WriteStatusReg)
+                             ? ((1 << 1) | ((SysReg >> 14) & 1))
+                             : 1;
+    llvm::raw_string_ostream(SysRegStr)
+        << SysRegOp0 << ":" << ((SysReg >> 11) & 7) << ":"
+        << ((SysReg >> 7) & 15) << ":" << ((SysReg >> 3) & 15) << ":"
+        << (SysReg & 7);
 
     llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysRegStr) };
     llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
@@ -5500,8 +5503,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::write_register, Types);
     llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
-
-    return Builder.CreateCall(F, { Metadata, ArgValue });
+    llvm::Value *Result = Builder.CreateCall(F, {Metadata, ArgValue});
+    if (BuiltinID == clang::AArch64::BI__sys) {
+      // Return 0 for convenience, even though MSVC returns some other undefined
+      // value.
+      Result = ConstantInt::get(Builder.getInt32Ty(), 0);
+    }
+    return Result;
   }
 
   if (BuiltinID == clang::AArch64::BI_AddressOfReturnAddress) {
