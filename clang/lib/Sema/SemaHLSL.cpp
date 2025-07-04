@@ -1066,7 +1066,7 @@ void SemaHLSL::ActOnFinishRootSignatureDecl(
     SourceLocation Loc, IdentifierInfo *DeclIdent,
     ArrayRef<hlsl::RootSignatureElement> RootElements) {
 
-  if (handleRootSignatureElements(RootElements, Loc))
+  if (handleRootSignatureElements(RootElements))
     return;
 
   SmallVector<llvm::hlsl::rootsig::RootElement> Elements;
