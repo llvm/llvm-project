@@ -485,7 +485,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   parseDoConcurrentMapping(opts, args, diags);
 
-  if (const auto *arg =
+  if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::driver::options::OPT_complex_range_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
     if (argValue == "full") {
