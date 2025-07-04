@@ -2269,7 +2269,7 @@ protected:
     PtrdiffT,
 
     // Indicates how many items the enum has.
-    Max
+    NumElements
   };
 
   class PresefinedSugarTypeBitfields {
