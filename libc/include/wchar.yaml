@@ -166,6 +166,14 @@ functions:
     arguments: 
       - type: wchar_t *__restrict
       - type: const wchar_t *__restrict
+  - name: wcslcat
+    standards:
+      - stdc
+    return_type: size_t
+    arguments:
+      - type: wchar_t *__restrict
+      - type: const wchar_t *__restrict
+      - type: size_t
   - name: wcsstr
     standards:
       - stdc

@@ -284,6 +284,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcslcat_test
+  SUITE
+    libc_wchar_unittests
+  SRCS
+    wcslcat_test.cpp
+  DEPENDS
+    libc.src.wchar.wcslcat
+    libc.hdr.types.size_t
+)
+
+add_libc_test(
   wcscpy_test
   SUITE
     libc_wchar_unittests
