@@ -9585,8 +9585,7 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
 }
 
 bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
-  unsigned int NumOps = BVN.getNumOperands();
-  assert(NumOps > 0 && "Unexpected 0-size build vector");
+  assert(BVN.getNumOperands() > 0 && "Unexpected 0-size build vector");
 
   BitMask.clearAllBits();
   EVT VT = BVN.getValueType(0);
