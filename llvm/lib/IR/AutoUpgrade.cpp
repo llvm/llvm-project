@@ -722,7 +722,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                              .StartsWith("vrinta.", Intrinsic::round)
                              .StartsWith("vrintm.", Intrinsic::floor)
                              .StartsWith("vrintp.", Intrinsic::ceil)
-                             .StartsWith("vrintz", Intrinsic::trunc)
+                             .StartsWith("vrintx.", Intrinsic::rint)
+                             .StartsWith("vrintz.", Intrinsic::trunc)
                              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,

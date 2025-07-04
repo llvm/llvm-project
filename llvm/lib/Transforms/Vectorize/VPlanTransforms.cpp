@@ -3131,6 +3131,9 @@ static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
          GroupSize == VectorRegWidth;
 }
 
+/// Returns true if \p VPValue is a narrow VPValue.
+static bool isAlreadyNarrow(VPValue *VPV) { return VPV->isLiveIn(); }
+
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
                                              unsigned VectorRegWidth) {
   using namespace llvm::VPlanPatternMatch;
@@ -3181,6 +3184,16 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     // Skip read interleave groups.
     if (InterleaveR->getStoredValues().empty())
       continue;
+
+    // Narrow interleave groups, if all operands are already matching narrow
+    // ops.
+    auto *Member0 = InterleaveR->getStoredValues()[0];
+    if (isAlreadyNarrow(Member0) &&
+        all_of(InterleaveR->getStoredValues(),
+               [Member0](VPValue *VPV) { return Member0 == VPV; })) {
+      StoreGroups.push_back(InterleaveR);
+      continue;
+    }
 
     // For now, we only support full interleave groups storing load interleave
     // groups.
@@ -3252,13 +3265,16 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
     VPValue *Res = nullptr;
-    if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(
-            StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
+    VPValue *Member0 = StoreGroup->getStoredValues()[0];
+    if (isAlreadyNarrow(Member0)) {
+      Res = Member0;
+    } else if (auto *WideMember0 =
+                   dyn_cast<VPWidenRecipe>(Member0->getDefiningRecipe())) {
       for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
         WideMember0->setOperand(Idx, NarrowOp(WideMember0->getOperand(Idx)));
       Res = WideMember0;
     } else {
-      Res = NarrowOp(StoreGroup->getStoredValues()[0]);
+      Res = NarrowOp(Member0);
     }
 
     auto *S = new VPWidenStoreRecipe(
