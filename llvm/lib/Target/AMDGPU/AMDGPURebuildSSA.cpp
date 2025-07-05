@@ -59,47 +59,6 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
   MachineOperand &rewriteUse(MachineOperand &Op, MachineBasicBlock::iterator I,
                              MachineBasicBlock &MBB,
                              DenseMap<unsigned, VRegDefStack> VregNames) {
-    const std::pair<unsigned, std::string> indexToNameTable[] = {
-        {0, "NoSubRegister"},
-        {1, "hi16"},
-        {2, "lo16"},
-        {3, "sub0"},
-        {4, "sub0_sub1"},
-        {5, "sub0_sub1_sub2"},
-        {6, "sub0_sub1_sub2_sub3"},
-        {7, "sub0_sub1_sub2_sub3_sub4"},
-        {8, "sub0_sub1_sub2_sub3_sub4_sub5"},
-        {9, "sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7"},
-        {10, "sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_"
-             "sub11_sub12_sub13_sub14_sub15"},
-        {11, "sub1"},
-        {12, "sub1_hi16"},
-        {13, "sub1_lo16"},
-        {14, "sub1_sub2"},
-        {15, "sub1_sub2_sub3"},
-        {16, "sub1_sub2_sub3_sub4"},
-        {17, "sub1_sub2_sub3_sub4_sub5"},
-        {18, "sub1_sub2_sub3_sub4_sub5_sub6"},
-        {19, "sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8"},
-        {20, "sub1_sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_"
-             "sub12_sub13_sub14_sub15_sub16"},
-        {21, "sub2"},
-        {22, "sub2_hi16"},
-        {23, "sub2_lo16"},
-        {24, "sub2_sub3"},
-        {25, "sub2_sub3_sub4"},
-        {26, "sub2_sub3_sub4_sub5"},
-        {27, "sub2_sub3_sub4_sub5_sub6"},
-        {28, "sub2_sub3_sub4_sub5_sub6_sub7"},
-        {29, "sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9"},
-        {30, "sub2_sub3_sub4_sub5_sub6_sub7_sub8_sub9_sub10_sub11_sub12_"
-             "sub13_sub14_sub15_sub16_sub17"},
-        {31, "sub3"},
-        {32, "sub3_hi16"},
-        {33, "sub3_lo16"}};
-    std::map<unsigned, std::string> indexToName(
-        indexToNameTable, indexToNameTable + sizeof(indexToNameTable) /
-                                                 sizeof(indexToNameTable[0]));
     // Sub-reg handling:
     // 1. if (UseMask & ~DefMask) != 0 : current Def does not define all used
     // lanes. We should search names stack for the Def that defines missed
@@ -136,6 +95,8 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       CurVReg = VRInfo.CurName;
       MachineInstr *DefMI = VRInfo.DefMI;
       MachineOperand *DefOp = DefMI->findRegisterDefOperand(CurVReg, TRI);
+      const TargetRegisterClass *RC =
+          TRI->getRegClassForOperandReg(*MRI, *DefOp);
       dbgs() << "DefMI: " << *DefMI << "\n";
       dbgs() << "Operand: " << *DefOp << "\n";
       LaneBitmask DefMask = VRInfo.PrevMask;
@@ -167,42 +128,10 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         unsigned DstSubReg =
             getSubRegIndexForLaneMask(LanesDefinedyCurrentDef, TRI);
         if (!DstSubReg) {
-          const TargetRegisterClass *RC =
-              TRI->getRegClassForOperandReg(*MRI, *DefOp);
-          SmallVector<unsigned, 8> MatchingSubIndices;
-
-          for (unsigned SubIdx = 1; SubIdx < TRI->getNumSubRegIndices();
-               ++SubIdx) {
-            if (!TRI->getSubClassWithSubReg(RC, SubIdx))
-              continue;
-
-            LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubIdx);
-            if ((SubMask & LanesDefinedyCurrentDef).any()) {
-              MatchingSubIndices.push_back(SubIdx);
-            }
-          }
-          for (unsigned SubIdx : MatchingSubIndices) {
-            dbgs() << "Matching subreg: " << indexToName[SubIdx] << " : "
-                   << PrintLaneMask(TRI->getSubRegIndexLaneMask(SubIdx))
-                   << "\n";
-          }
-
-          SmallVector<unsigned, 8> OptimalSubIndices;
-          llvm::stable_sort(MatchingSubIndices, [&](unsigned A, unsigned B) {
-            return TRI->getSubRegIndexLaneMask(A).getNumLanes() >
-                   TRI->getSubRegIndexLaneMask(B).getNumLanes();
-          });
-          for (unsigned SubIdx : MatchingSubIndices) {
-            LaneBitmask SubMask = TRI->getSubRegIndexLaneMask(SubIdx);
-            if ((LanesDefinedyCurrentDef & SubMask) == SubMask) {
-              OptimalSubIndices.push_back(SubIdx);
-              LanesDefinedyCurrentDef &= ~SubMask; // remove covered bits
-              if (LanesDefinedyCurrentDef.none())
-                break;
-            }
-          }
-          for (unsigned SubIdx : OptimalSubIndices) {
-            dbgs() << "Matching subreg: " << indexToName[SubIdx] << " : "
+          SmallVector<unsigned> Idxs =
+              getCoveringSubRegsForLaneMask(LanesDefinedyCurrentDef, RC, TRI);
+          for (unsigned SubIdx : Idxs) {
+            dbgs() << "Matching subreg: " << SubIdx << " : "
                    << PrintLaneMask(TRI->getSubRegIndexLaneMask(SubIdx))
                    << "\n";
             RegSeqOps.push_back({CurVReg, SubIdx, SubIdx});
@@ -210,7 +139,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         } else {
           unsigned SrcSubReg = (DefMask & ~LanesDefinedyCurrentDef).any()
                                    ? DstSubReg
-                                   : AMDGPU::NoRegister;
+                                   : DefOp->getSubReg();
           RegSeqOps.push_back({CurVReg, SrcSubReg, DstSubReg});
         }
         UndefSubRegs = UseMask & ~DefinedLanes;
@@ -225,6 +154,22 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
       }
     }
 
+    if (UndefSubRegs != UseMask && !UndefSubRegs.none()) {
+      // WE haven't found all sub-regs definition. Assume undef.
+      // Insert IMPLISIT_DEF
+
+      const TargetRegisterClass *RC = TRI->getRegClassForOperandReg(*MRI, Op);
+      SmallVector<unsigned> Idxs =
+          getCoveringSubRegsForLaneMask(UndefSubRegs, RC, TRI);
+      for (unsigned SubIdx : Idxs) {
+        const TargetRegisterClass *SubRC = TRI->getSubRegisterClass(RC, SubIdx);
+        Register NewVReg = MRI->createVirtualRegister(SubRC);
+        BuildMI(MBB, I, I->getDebugLoc(), TII->get(AMDGPU::IMPLICIT_DEF))
+            .addReg(NewVReg, RegState::Define);
+        RegSeqOps.push_back({NewVReg, AMDGPU::NoRegister, SubIdx});
+      }
+    }
+
     if (!RegSeqOps.empty()) {
       // All subreg defs are found. Insert REG_SEQUENCE.
       auto *RC = TRI->getRegClassForReg(*MRI, VReg);
@@ -236,6 +181,7 @@ class AMDGPURebuildSSALegacy : public MachineFunctionPass {
         RS.addReg(R, 0, SrcSubreg);
         RS.addImm(DstSubreg);
       }
+
       VregNames[VReg].push_back(
           {CurVReg, getFullMaskForRC(*RC, TRI), AMDGPU::NoRegister, RS});
     }

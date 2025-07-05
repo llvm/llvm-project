@@ -28,13 +28,13 @@ namespace {
 class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   LiveIntervals &LIS;
   MachineLoopInfo &LI;
+  MachineDominatorTree &MDT;
   AMDGPUNextUseAnalysis::Result &NU;
   MachineRegisterInfo *MRI;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   const GCNSubtarget *ST;
   MachineFrameInfo *MFI;
-
   unsigned NumSpillSlots;
 
   DenseMap<VRegMaskPair, unsigned> Virt2StackSlotMap;
@@ -137,14 +137,15 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
   void initActiveSetUsualBlock(MachineBasicBlock &MBB);
   void initActiveSetLoopHeader(MachineBasicBlock &MBB);
 
-  Register reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
+  Register reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP,
+                       MachineInstr *ReloadMI);
   void spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP);
-  Register reloadBefore(MachineBasicBlock &MBB,
-                    MachineBasicBlock::iterator InsertBefore, VRegMaskPair VMP);
+  Register reloadBefore(MachineBasicBlock::iterator InsertBefore,
+                        VRegMaskPair VMP, MachineInstr *&ReloadMI);
   void spillBefore(MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator InsertBefore, VRegMaskPair VMP);
 
-  void rewriteUses(MachineBasicBlock &MBB, Register OldVReg, Register NewVReg);
+  void rewriteUses(MachineInstr &I, Register OldVReg, Register NewVReg);
 
   unsigned getLoopMaxRP(MachineLoop *L);
   // Returns number of spilled VRegs
@@ -191,8 +192,8 @@ class AMDGPUSSASpiller : public PassInfoMixin <AMDGPUSSASpiller> {
 
 public:
   AMDGPUSSASpiller(LiveIntervals &LIS, MachineLoopInfo &LI,
-                   AMDGPUNextUseAnalysis::Result &NU)
-      : LIS(LIS), LI(LI), NU(NU), NumSpillSlots(0) {
+                   MachineDominatorTree &MDT, AMDGPUNextUseAnalysis::Result &NU)
+      : LIS(LIS), LI(LI), MDT(MDT), NU(NU), NumSpillSlots(0) {
     TG = new TimerGroup("SSA SPiller Timing",
                         "Time Spent in different parts of the SSA Spiller");
     T1 = new Timer("General time", "ProcessFunction", *TG);
@@ -361,10 +362,12 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "\nActive set with uses reloaded:\n";
                dumpRegSet(Active));
 
-    
+    unsigned NSpills = 0;
     limit(MBB, Active, Spilled, I, NumAvailableRegs);
-    unsigned NSpills = limit(MBB, Active, Spilled, std::next(I),
-           NumAvailableRegs - getRegSetSizeInRegs(Defs));
+    if (!I->isRegSequence()) {
+      NSpills = limit(MBB, Active, Spilled, std::next(I),
+                      NumAvailableRegs - getRegSetSizeInRegs(Defs));
+    }
 
     // T4->startTimer();
 
@@ -374,8 +377,10 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
     for (auto R : Reloads) {
       LLVM_DEBUG(dbgs() << "\nReloading "; printVRegMaskPair(R);
                  dbgs() << "\n");
-      Register NewVReg = reloadBefore(MBB, I, R);
-      rewriteUses(MBB, R.getVReg(), NewVReg);
+      MachineInstr *ReloadMI = nullptr;
+      Register NewVReg = reloadBefore(I, R, ReloadMI);
+      assert(ReloadMI && "NULL returned from reloadBefore\n");
+      rewriteUses(*ReloadMI, R.getVReg(), NewVReg);
     }
 
     std::advance(I, NSpills);
@@ -417,7 +422,8 @@ void AMDGPUSSASpiller::processBlock(MachineBasicBlock &MBB) {
           if (ValueSrc->getNumber() == MBB.getNumber()) {
             VRegMaskPair VMP(U, TRI, MRI);
             if (!isCoveredActive(VMP, Active)) {
-              Register NewVReg = reloadAtEnd(MBB, VMP);
+              MachineInstr *ReloadMI = nullptr;
+              Register NewVReg = reloadAtEnd(MBB, VMP, ReloadMI);
               // U.setReg(NewVReg);
               // U.setSubReg(AMDGPU::NoRegister);
 
@@ -521,6 +527,41 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
   //               fail if the CF reached BB3 along the BB0 -> BB3 edge]
 
   // set_intersect(Entry.SpillSet, Entry.ActiveSet);
+  DenseMap<MachineBasicBlock*, RegisterSet> ToSpill;
+  for (auto Pred : Preds) {
+    auto &PE = getBlockInfo(*Pred);
+    LLVM_DEBUG(dbgs() << "\nCurr block [ MBB_" << MBB.getNumber() << "."
+                      << MBB.getName() << " ] Active Set:\n";
+               dumpRegSet(Entry.ActiveSet);
+               dbgs() << "\nPred [ MBB_" << Pred->getNumber() << "."
+                      << Pred->getName() << " ] ActiveSet:\n";
+               dumpRegSet(PE.ActiveSet));
+    LLVM_DEBUG(dbgs() << "\nCur BB [ MBB_" << MBB.getNumber() << "."
+                      << MBB.getName() << " ] SpillSet:\n";
+               dumpRegSet(Entry.SpillSet));
+    LLVM_DEBUG(dbgs() << "\nPred [ MBB_" << Pred->getNumber() << "."
+                      << Pred->getName() << " ] SpillSet:\n";
+               dumpRegSet(PE.SpillSet));
+    for (auto S : set_intersection(set_difference(Entry.SpillSet, PE.SpillSet),
+                                   PE.ActiveSet)) {
+      printVRegMaskPair(S);
+      ToSpill[Pred].insert(S);
+    }
+  }
+
+  for (auto E : ToSpill) {
+    MachineBasicBlock *Pred = E.first;
+    auto &PE = getBlockInfo(*Pred);
+    for (auto S : E.second) {
+      spillAtEnd(*Pred, S);
+      PE.SpillSet.insert(S);
+      PE.ActiveSet.remove(S);
+      dumpRegSet(PE.ActiveSet);
+      Entry.SpillSet.insert(S);
+      Entry.ActiveSet.remove(S);
+      dumpRegSet(Entry.ActiveSet);
+    }
+  }
 
   for (auto Pred : Preds) {
     auto &PE = getBlockInfo(*Pred);
@@ -540,30 +581,19 @@ void AMDGPUSSASpiller::connectToPredecessors(MachineBasicBlock &MBB,
     dumpRegSet(ReloadInPred);
     if (!ReloadInPred.empty()) {
 
-      // Since we operate on SSA, any register that is live across the edge must
-      // either be defined before or within the IDom, or be a PHI operand. If a
-      // register is neither a PHI operand nor live-out from all predecessors,
-      // it must have been spilled in one of them. Registers that are defined
-      // and used entirely within a predecessor are dead at its exit. Therefore,
-      // there is always room to reload a register that is not live across the
-      // edge.
+      // Since we operate on SSA, any register that is live across the edge
+      // must either be defined before or within the IDom, or be a PHI
+      // operand. If a register is neither a PHI operand nor live-out from all
+      // predecessors, it must have been spilled in one of them. Registers
+      // that are defined and used entirely within a predecessor are dead at
+      // its exit. Therefore, there is always room to reload a register that
+      // is not live across the edge.
 
       for (auto R : ReloadInPred) {
-        Register NewVReg = reloadAtEnd(*Pred, R);
-        rewriteUses(*Pred, R.getVReg(), NewVReg);
+        MachineInstr *ReloadMI = nullptr;
+        Register NewVReg = reloadAtEnd(*Pred, R, ReloadMI);
+        rewriteUses(*ReloadMI, R.getVReg(), NewVReg);
       }
-    }
-
-    LLVM_DEBUG(dbgs() << "\nPred [ MBB_" << Pred->getNumber() << "."
-                      << Pred->getName() << " ] SpillSet:\n";
-               dumpRegSet(PE.SpillSet));
-    for (auto S : set_intersection(set_difference(Entry.SpillSet, PE.SpillSet),
-                                   PE.ActiveSet)) {
-      spillAtEnd(*Pred, S);
-      PE.SpillSet.insert(S);
-      PE.ActiveSet.remove(S);
-      Entry.SpillSet.insert(S);
-      Entry.ActiveSet.remove(S);
     }
   }
 }
@@ -687,27 +717,29 @@ void AMDGPUSSASpiller::initActiveSetLoopHeader(MachineBasicBlock &MBB) {
              dumpRegSet(getBlockInfo(MBB).ActiveSet));
 }
 
-Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
-  return reloadBefore(MBB, MBB.getFirstInstrTerminator(), VMP);
+Register AMDGPUSSASpiller::reloadAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP,
+                                       MachineInstr *ReloadMI) {
+  return reloadBefore(*MBB.getFirstInstrTerminator(), VMP, ReloadMI);
 }
 
 void AMDGPUSSASpiller::spillAtEnd(MachineBasicBlock &MBB, VRegMaskPair VMP) {
   spillBefore(MBB, MBB.getFirstTerminator(), VMP);
 }
 
-Register AMDGPUSSASpiller::reloadBefore(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator InsertBefore,
-                                    VRegMaskPair VMP) {
+Register
+AMDGPUSSASpiller::reloadBefore(MachineBasicBlock::iterator InsertBefore,
+                               VRegMaskPair VMP, MachineInstr *&ReloadMI) {
+  MachineBasicBlock *MBB = InsertBefore->getParent();
   const TargetRegisterClass *RC = VMP.getRegClass(MRI, TRI);
   int FI = getStackSlot(VMP);
   Register NewVReg = MRI->createVirtualRegister(RC);
-  TII->loadRegFromStackSlot(MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg);
+  TII->loadRegFromStackSlot(*MBB, InsertBefore, NewVReg, FI, RC, TRI, NewVReg);
   // FIXME: dirty hack! To avoid further changing the TargetInstrInfo interface.
-  MachineInstr &ReloadMI = *(--InsertBefore);
-  LIS.InsertMachineInstrInMaps(ReloadMI);
+  ReloadMI = &*(--InsertBefore);
+  LIS.InsertMachineInstrInMaps(*ReloadMI);
 
   LIS.createAndComputeVirtRegInterval(NewVReg);
-  auto &Entry = getBlockInfo(MBB);
+  auto &Entry = getBlockInfo(*MBB);
   Entry.ActiveSet.insert({NewVReg, getFullMaskForRC(*RC, TRI)});
   return NewVReg;
 }
@@ -735,25 +767,21 @@ void AMDGPUSSASpiller::spillBefore(MachineBasicBlock &MBB,
   SpillPoints[VMP] = &Spill;
 }
 
-void AMDGPUSSASpiller::rewriteUses(MachineBasicBlock &MBB, Register OldVReg,
+void AMDGPUSSASpiller::rewriteUses(MachineInstr &I, Register OldVReg,
                                    Register NewVReg) {
-  MachineSSAUpdater SSAUpdater(*MBB.getParent());
+  MachineSSAUpdater SSAUpdater(*I.getParent()->getParent());
   SSAUpdater.Initialize(OldVReg);
-  SSAUpdater.AddAvailableValue(&MBB, NewVReg);
-  for (MachineOperand &UseOp : MRI->use_operands(OldVReg)) {
-    MachineInstr *UseMI = UseOp.getParent();
-    MachineBasicBlock *UseMBB = UseMI->getParent();
-
-    if (UseMBB->getNumber() == MBB.getNumber()) {
-      UseOp.setReg(NewVReg);
-      UseOp.setSubReg(AMDGPU::NoRegister);
-    } else {
-      // We skip rewriting if SSAUpdater already has a dominating def for
-      // this block
-      if (SSAUpdater.HasValueForBlock(UseMBB))
-        continue;
-      // This rewrites the use to a PHI result or correct value
-      SSAUpdater.RewriteUse(UseOp);
+  SSAUpdater.AddAvailableValue(I.getParent(), NewVReg);
+  for (auto &U : MRI->use_operands(OldVReg)) {
+    MachineInstr *UseMI = U.getParent();
+    if (MDT.dominates(&I, UseMI)) {
+      if (I.getParent() == UseMI->getParent()) {
+        // If the use is in the same block, just rewrite it.
+        U.setReg(NewVReg);
+        U.setSubReg(AMDGPU::NoRegister);
+      } else {
+        SSAUpdater.RewriteUse(U);
+      }
     }
   }
 }
@@ -929,7 +957,8 @@ llvm::AMDGPUSSASpillerPass::run(MachineFunction &MF,
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   AMDGPUNextUseAnalysis::Result &NU = MFAM.getResult<AMDGPUNextUseAnalysis>(MF);
-  AMDGPUSSASpiller Impl(LIS, LI, NU);
+  MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
+  AMDGPUSSASpiller Impl(LIS, LI, MDT, NU);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -957,6 +986,7 @@ public:
     AU.addPreservedID(MachineLoopInfoID);
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addRequired<AMDGPUNextUseAnalysisWrapper>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -966,7 +996,8 @@ bool AMDGPUSSASpillerLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   AMDGPUNextUseAnalysis::Result &NU =
       getAnalysis<AMDGPUNextUseAnalysisWrapper>().getNU();
-  AMDGPUSSASpiller Impl(LIS, LI, NU);
+  MachineDominatorTree &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  AMDGPUSSASpiller Impl(LIS, LI, MDT, NU);
   return Impl.run(MF);
 }
 
@@ -975,6 +1006,7 @@ INITIALIZE_PASS_BEGIN(AMDGPUSSASpillerLegacy, DEBUG_TYPE, "AMDGPU SSA Spiller",
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUNextUseAnalysisWrapper)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPUSSASpillerLegacy, DEBUG_TYPE, "AMDGPU SSA Spiller",
                     false, false)
 
