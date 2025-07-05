@@ -39,6 +39,12 @@ def AS_match {
   code global = [{
    return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
   }];
+  code const = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_CONST);
+  }];
+  code param = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_PARAM);
+  }];
 }
 
 // A node that will be replaced with the current PTX version.
@@ -744,35 +750,69 @@ foreach dim = [1, 2, 3, 4, 5] in {
   }
 }
 
-//Prefetch and Prefetchu 
+//Prefetchu and Prefetch
 
-class PREFETCH_INTRS<string InstName> :
+class PREFETCH_CONST_CHK<dag frag>
+          : PatFrag<!setdagop(frag, ops), frag, [{
+            auto *Addr = N->getOperand(2).getNode();
+            auto *MemNode = dyn_cast<MemSDNode>(Addr);
+            bool result = MemNode->getMemOperand()->getAddrSpace() == llvm::ADDRESS_SPACE_CONST;
+            return result;
+          }]>;
+
+
+class PREFETCH_GENERIC_CHK<dag frag>
+          : PatFrag<!setdagop(frag, ops), frag,  [{
+            auto *Addr = N->getOperand(2).getNode();
+            auto *MemNode = dyn_cast<MemSDNode>(Addr);
+            bool result= MemNode->getMemOperand()->getAddrSpace() == llvm::ADDRESS_SPACE_GENERIC;
+            return result;
+          }]>;
+
+
+class PREFETCH_PARAM_CHK<dag frag>
+          : PatFrag<!setdagop(frag, ops), frag, [{
+            auto *Addr = N->getOperand(2).getNode();
+            auto *MemNode = dyn_cast<MemSDNode>(Addr);
+            bool result = MemNode->getMemOperand()->getAddrSpace() == llvm::ADDRESS_SPACE_PARAM;
+            return result;
+          }]>;
+
+defvar frag_pat = (int_nvvm_prefetch_tensormap node:$addr);
+
+def prefetch_tensormap_const : PREFETCH_CONST_CHK<frag_pat>;
+def prefetch_tensormap_gen   : PREFETCH_GENERIC_CHK<frag_pat>;
+def prefetch_tensormap_param : PREFETCH_PARAM_CHK<frag_pat>;
+
+def PREFETCH_CONST_TENSORMAP : NVPTXInst<(outs), (ins ADDR:$addr),
+          "prefetch.const.tensormap [$addr];",
+          [(prefetch_tensormap_const addr:$addr)]>;
+
+def PREFETCH_GENERIC_TENSORMAP : NVPTXInst<(outs), (ins ADDR:$addr),
+          "prefetch.tensormap [$addr];",
+          [(prefetch_tensormap_gen addr:$addr)]>; 
+
+def PREFETCH_PARAM_TENSORMAP : NVPTXInst<(outs), (ins ADDR:$addr),
+          "prefetch.param.tensormap [$addr];",
+          [(prefetch_tensormap_param addr:$addr)]>; 
+
+  
+class PREFETCH_INTRS<string InstName, Intrinsic Intr> :
           BasicNVPTXInst<(outs), (ins ADDR:$addr),
           InstName,
-          [(!cast<Intrinsic>(!strconcat("int_nvvm_",
-          !subst(".", "_", InstName))) addr:$addr)]>,
-          Requires<[hasPTX<80>, hasSM<90>]>;
-   
+          [(Intr addr:$addr)]>;
 
-def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1">;
-def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2">;
-def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1">;
-def PREFETCH_LOCAL_L1  : PREFETCH_INTRS<"prefetch.local.L1">;
-def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2">;
-def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2">;
-
-def PREFETCH_GLOBAL_L2_EVICT_NORMAL : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-                                      "prefetch.global.L2::evict_normal",
-                                      [(int_nvvm_prefetch_global_L2_evict_normal addr:$addr)]>,
-                                      Requires<[hasPTX<80>, hasSM<90>]>;
-
-def PREFETCH_GLOBAL_L2_EVICT_LAST   : BasicNVPTXInst<(outs), (ins ADDR:$addr),
-                                      "prefetch.global.L2::evict_last",
-                                      [(int_nvvm_prefetch_global_L2_evict_last addr:$addr)]>,
-                                      Requires<[hasPTX<80>, hasSM<90>]>;
-
-
-def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1">;
+def PREFETCHU_L1 : PREFETCH_INTRS<"prefetchu.L1", int_nvvm_prefetchu_L1>;   
+def PREFETCH_L1 : PREFETCH_INTRS<"prefetch.L1", int_nvvm_prefetch_L1>;
+def PREFETCH_L2 : PREFETCH_INTRS<"prefetch.L2", int_nvvm_prefetch_L2>;
+def PREFETCH_GLOBAL_L1 : PREFETCH_INTRS<"prefetch.global.L1", int_nvvm_prefetch_global_L1>;
+def PREFETCH_LOCAL_L1 : PREFETCH_INTRS<"prefetch.local.L1", int_nvvm_prefetch_local_L1>;
+def PREFETCH_GLOBAL_L2 : PREFETCH_INTRS<"prefetch.global.L2", int_nvvm_prefetch_global_L2>;
+def PREFETCH_LOCAL_L2 : PREFETCH_INTRS<"prefetch.local.L2", int_nvvm_prefetch_local_L2>;
+def PREFETCH_GLOBAL_L2_EVICT_NORMAL : PREFETCH_INTRS<"prefetch.global.L2::evict_normal", 
+                                      int_nvvm_prefetch_global_L2_evict_normal>;
+def PREFETCH_GLOBAL_L2_EVICT_LAST : PREFETCH_INTRS<"prefetch.global.L2::evict_last", 
+                                    int_nvvm_prefetch_global_L2_evict_last>;
 
 //Applypriority intrinsics
 class APPLYPRIORITY_L2_INTRS<string addrspace> :
