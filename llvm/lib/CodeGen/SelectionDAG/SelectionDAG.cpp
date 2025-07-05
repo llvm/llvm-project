@@ -2520,7 +2520,7 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
   unsigned NumResults = Node->getNumValues();
 
   const char *LCName = TLI->getLibcallName(LC);
-  if (!LC || !LCName)
+  if (!LCName)
     return false;
 
   auto getVecDesc = [&]() -> VecDesc const * {
