@@ -63,7 +63,7 @@ MCFixupKindInfo CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
          "Not all fixup kinds added to Infos array");
 
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
   return Infos[Kind];
