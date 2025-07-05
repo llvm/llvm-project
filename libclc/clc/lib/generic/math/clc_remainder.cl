@@ -226,7 +226,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remainder(double x, double y) {
 
 // Forward the half version of this builtin onto the float one
 #define __HALF_ONLY
-#define __CLC_FUNCTION __clc_remainder
+#define FUNCTION __clc_remainder
 #define __CLC_BODY <clc/math/binary_def_via_fp32.inc>
 #include <clc/math/gentype.inc>
 
