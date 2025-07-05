@@ -169,9 +169,8 @@ public:
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
-  std::optional<bool> evaluateFixup(MCFixup &Fixup, MCValue &Target,
-                                    uint64_t &Value) override;
-
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
+                                    uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   MutableArrayRef<char> Data, uint64_t Value,
                   bool IsResolved) override;
@@ -686,8 +685,9 @@ static unsigned getFixupKindSize(unsigned Kind) {
 
 // Adjust PC-relative fixup offsets, which are calculated from the start of the
 // next instruction.
-std::optional<bool>
-X86AsmBackend::evaluateFixup(MCFixup &Fixup, MCValue &Target, uint64_t &Value) {
+std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
+                                                 MCFixup &Fixup,
+                                                 MCValue &Target, uint64_t &) {
   if (Fixup.isPCRel()) {
     switch (Fixup.getTargetKind()) {
     case FK_Data_1:
