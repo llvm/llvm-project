@@ -6681,6 +6681,31 @@ TEST_F(FormatTest, EscapedNewlines) {
                "  int x(int a);",
                AlignLeft);
 
+  // Escaped with a trigraph.
+  verifyFormat("#define A \\\n"
+               "  int i;  \\\n"
+               "  int j;",
+               "#define A \?\?/\n"
+               "int i;\?\?/\n"
+               "  int j;",
+               Narrow);
+  verifyFormat("#define A \\\r\n"
+               "  int i;  \\\r\n"
+               "  int j;",
+               "#define A \?\?/\r\n"
+               "int i;\?\?/\r\n"
+               "  int j;",
+               Narrow);
+  verifyFormat("#define A int i;", "#define A \?\?/\n"
+                                   "int i;");
+  verifyFormat("#define A int i;", "#define A \?\?/\r\n"
+                                   "int i;");
+  // In a language that does not support the trigraph, the program should not
+  // crash.
+  verifyNoCrash("#define A \?\?/\n"
+                "int i;",
+                getGoogleStyle(FormatStyle::LK_CSharp));
+
   // CRLF line endings
   verifyFormat("#define A \\\r\n  int i;  \\\r\n  int j;",
                "#define A \\\r\nint i;\\\r\n  int j;", Narrow);
