@@ -1731,7 +1731,7 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
       continue;
     }
     if (XOpenMPTargetNoTriple && XOpenMPTargetArg &&
-        Args.getAllArgValues(options::OPT_fopenmp_targets_EQ).size() != 1) {
+        Args.getAllArgValues(options::OPT_offload_targets_EQ).size() != 1) {
       getDriver().Diag(diag::err_drv_Xopenmp_target_missing_triple);
       continue;
     }

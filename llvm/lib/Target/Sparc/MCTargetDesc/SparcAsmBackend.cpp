@@ -182,15 +182,15 @@ std::optional<MCFixupKind> SparcAsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // clang-format off
   const static MCFixupKindInfo InfosBE[Sparc::NumTargetFixupKinds] = {
-    // name                    offset bits  flags
-    { "fixup_sparc_call30",     2,     30,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_sparc_13",        19,     13,  0 },
+      // name                    offset bits flags
+      {"fixup_sparc_call30",     2,     30,  0},
+      {"fixup_sparc_13",        19,     13,  0},
   };
 
   const static MCFixupKindInfo InfosLE[Sparc::NumTargetFixupKinds] = {
-    // name                    offset bits  flags
-    { "fixup_sparc_call30",     0,     30,  MCFixupKindInfo::FKF_IsPCRel },
-    { "fixup_sparc_13",         0,     13,  0 },
+      // name                    offset bits flags
+      {"fixup_sparc_call30",     0,     30,  0},
+      {"fixup_sparc_13",         0,     13,  0},
   };
   // clang-format on
 
@@ -208,22 +208,22 @@ MCFixupKindInfo SparcAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   MCFixupKindInfo Info{};
   switch (uint16_t(Kind)) {
   case ELF::R_SPARC_PC10:
-    Info = {"", 22, 10, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 22, 10, 0};
     break;
   case ELF::R_SPARC_PC22:
-    Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 10, 22, 0};
     break;
   case ELF::R_SPARC_WDISP10:
-    Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 0, 32, 0};
     break;
   case ELF::R_SPARC_WDISP16:
-    Info = {"", 0, 32, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 0, 32, 0};
     break;
   case ELF::R_SPARC_WDISP19:
-    Info = {"", 13, 19, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 13, 19, 0};
     break;
   case ELF::R_SPARC_WDISP22:
-    Info = {"", 10, 22, MCFixupKindInfo::FKF_IsPCRel};
+    Info = {"", 10, 22, 0};
     break;
 
   case ELF::R_SPARC_HI22:

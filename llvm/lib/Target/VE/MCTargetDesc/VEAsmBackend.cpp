@@ -96,22 +96,14 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[VE::NumTargetFixupKinds] = {
         // name, offset, bits, flags
-        {"fixup_ve_reflong", 0, 32, 0},
-        {"fixup_ve_srel32", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"fixup_ve_hi32", 0, 32, 0},
-        {"fixup_ve_lo32", 0, 32, 0},
-        {"fixup_ve_pc_hi32", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"fixup_ve_pc_lo32", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"fixup_ve_got_hi32", 0, 32, 0},
-        {"fixup_ve_got_lo32", 0, 32, 0},
-        {"fixup_ve_gotoff_hi32", 0, 32, 0},
-        {"fixup_ve_gotoff_lo32", 0, 32, 0},
-        {"fixup_ve_plt_hi32", 0, 32, 0},
-        {"fixup_ve_plt_lo32", 0, 32, 0},
-        {"fixup_ve_tls_gd_hi32", 0, 32, 0},
-        {"fixup_ve_tls_gd_lo32", 0, 32, 0},
-        {"fixup_ve_tpoff_hi32", 0, 32, 0},
-        {"fixup_ve_tpoff_lo32", 0, 32, 0},
+        {"fixup_ve_reflong", 0, 32, 0},     {"fixup_ve_srel32", 0, 32, 0},
+        {"fixup_ve_hi32", 0, 32, 0},        {"fixup_ve_lo32", 0, 32, 0},
+        {"fixup_ve_pc_hi32", 0, 32, 0},     {"fixup_ve_pc_lo32", 0, 32, 0},
+        {"fixup_ve_got_hi32", 0, 32, 0},    {"fixup_ve_got_lo32", 0, 32, 0},
+        {"fixup_ve_gotoff_hi32", 0, 32, 0}, {"fixup_ve_gotoff_lo32", 0, 32, 0},
+        {"fixup_ve_plt_hi32", 0, 32, 0},    {"fixup_ve_plt_lo32", 0, 32, 0},
+        {"fixup_ve_tls_gd_hi32", 0, 32, 0}, {"fixup_ve_tls_gd_lo32", 0, 32, 0},
+        {"fixup_ve_tpoff_hi32", 0, 32, 0},  {"fixup_ve_tpoff_lo32", 0, 32, 0},
     };
 
     if (Kind < FirstTargetFixupKind)

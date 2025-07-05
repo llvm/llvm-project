@@ -2092,12 +2092,13 @@ ParseStatus RISCVAsmParser::parseOperandWithSpecifier(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
+  SMLoc Loc = getLoc();
   if (getLexer().getKind() != AsmToken::Identifier)
-    return Error(getLoc(), "expected '%' relocation specifier");
+    return TokError("expected '%' relocation specifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   auto Spec = RISCV::parseSpecifierName(Identifier);
   if (!Spec)
-    return Error(getLoc(), "invalid relocation specifier");
+    return TokError("invalid relocation specifier");
 
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
@@ -2107,7 +2108,7 @@ bool RISCVAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   if (getParser().parseParenExpression(SubExpr, E))
     return true;
 
-  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), SubExpr->getLoc());
+  Res = MCSpecifierExpr::create(SubExpr, Spec, getContext(), Loc);
   return false;
 }
 

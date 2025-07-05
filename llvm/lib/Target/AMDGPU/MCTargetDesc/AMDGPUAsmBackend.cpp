@@ -175,8 +175,8 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
-    // name                   offset bits  flags
-    { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
+      // name                   offset bits  flags
+      {"fixup_si_sopp_br", 0, 16, 0},
   };
 
   if (mc::isRelocation(Kind))

@@ -70,44 +70,34 @@ MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // ARMFixupKinds.h.
       //
       // Name                      Offset (bits) Size (bits)     Flags
-      {"fixup_arm_ldst_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_arm_ldst_pcrel_12", 0, 32, 0},
       {"fixup_t2_ldst_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_pcrel_10", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_pcrel_9", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_pcrel_10_unscaled", 0, 32, 0},
+      {"fixup_arm_pcrel_10", 0, 32, 0},
+      {"fixup_t2_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_pcrel_9", 0, 32, 0},
+      {"fixup_t2_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 0, 8,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_adr_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_adr_pcrel_12", 0, 32, 0},
       {"fixup_t2_adr_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_condbranch", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_uncondbranch", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_condbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_uncondbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_br", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_uncondbl", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_condbl", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_blx", 0, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_bl", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_condbranch", 0, 24, 0},
+      {"fixup_arm_uncondbranch", 0, 24, 0},
+      {"fixup_t2_condbranch", 0, 32, 0},
+      {"fixup_t2_uncondbranch", 0, 32, 0},
+      {"fixup_arm_thumb_br", 0, 16, 0},
+      {"fixup_arm_uncondbl", 0, 24, 0},
+      {"fixup_arm_condbl", 0, 24, 0},
+      {"fixup_arm_blx", 0, 24, 0},
+      {"fixup_arm_thumb_bl", 0, 32, 0},
       {"fixup_arm_thumb_blx", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_thumb_cb", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_cp", 0, 8,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_thumb_bcc", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_thumb_cb", 0, 16, 0},
+      {"fixup_arm_thumb_cp", 0, 8, MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_thumb_bcc", 0, 8, 0},
       // movw / movt: 16-bits immediate but scattered into two chunks 0 - 12, 16
       // - 19.
       {"fixup_arm_movt_hi16", 0, 20, 0},
@@ -120,56 +110,47 @@ MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_thumb_lower_0_7", 0, 8, 0},
       {"fixup_arm_mod_imm", 0, 12, 0},
       {"fixup_t2_so_imm", 0, 26, 0},
-      {"fixup_bf_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_bf_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_bfl_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bf_branch", 0, 32, 0},
+      {"fixup_bf_target", 0, 32, 0},
+      {"fixup_bfl_target", 0, 32, 0},
+      {"fixup_bfc_target", 0, 32, 0},
       {"fixup_bfcsel_else_target", 0, 32, 0},
-      {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}};
+      {"fixup_wls", 0, 32, 0},
+      {"fixup_le", 0, 32, 0},
+  };
   const static MCFixupKindInfo InfosBE[ARM::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // ARMFixupKinds.h.
       //
       // Name                      Offset (bits) Size (bits)     Flags
-      {"fixup_arm_ldst_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_arm_ldst_pcrel_12", 0, 32, 0},
       {"fixup_t2_ldst_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_pcrel_10_unscaled", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_pcrel_10", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_pcrel_9", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_pcrel_10_unscaled", 0, 32, 0},
+      {"fixup_arm_pcrel_10", 0, 32, 0},
+      {"fixup_t2_pcrel_10", 0, 32, MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_pcrel_9", 0, 32, 0},
+      {"fixup_t2_pcrel_9", 0, 32, MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_arm_ldst_abs_12", 0, 32, 0},
       {"fixup_thumb_adr_pcrel_10", 8, 8,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_adr_pcrel_12", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_adr_pcrel_12", 0, 32, 0},
       {"fixup_t2_adr_pcrel_12", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_condbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_uncondbranch", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_condbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_t2_uncondbranch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_br", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_uncondbl", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_condbl", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_blx", 8, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_bl", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_condbranch", 8, 24, 0},
+      {"fixup_arm_uncondbranch", 8, 24, 0},
+      {"fixup_t2_condbranch", 0, 32, 0},
+      {"fixup_t2_uncondbranch", 0, 32, 0},
+      {"fixup_arm_thumb_br", 0, 16, 0},
+      {"fixup_arm_uncondbl", 8, 24, 0},
+      {"fixup_arm_condbl", 8, 24, 0},
+      {"fixup_arm_blx", 8, 24, 0},
+      {"fixup_arm_thumb_bl", 0, 32, 0},
       {"fixup_arm_thumb_blx", 0, 32,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_thumb_cb", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_arm_thumb_cp", 8, 8,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_arm_thumb_bcc", 8, 8, MCFixupKindInfo::FKF_IsPCRel},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_thumb_cb", 0, 16, 0},
+      {"fixup_arm_thumb_cp", 8, 8, MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_arm_thumb_bcc", 8, 8, 0},
       // movw / movt: 16-bits immediate but scattered into two chunks 0 - 12, 16
       // - 19.
       {"fixup_arm_movt_hi16", 12, 20, 0},
@@ -182,13 +163,14 @@ MCFixupKindInfo ARMAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_arm_thumb_lower_0_7", 24, 8, 0},
       {"fixup_arm_mod_imm", 20, 12, 0},
       {"fixup_t2_so_imm", 26, 6, 0},
-      {"fixup_bf_branch", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_bf_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_bfl_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_bfc_target", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_bf_branch", 0, 32, 0},
+      {"fixup_bf_target", 0, 32, 0},
+      {"fixup_bfl_target", 0, 32, 0},
+      {"fixup_bfc_target", 0, 32, 0},
       {"fixup_bfcsel_else_target", 0, 32, 0},
-      {"fixup_wls", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_le", 0, 32, MCFixupKindInfo::FKF_IsPCRel}};
+      {"fixup_wls", 0, 32, 0},
+      {"fixup_le", 0, 32, 0},
+  };
 
   // Fixup kinds from .reloc directive are like R_ARM_NONE. They do not require
   // any extra processing.

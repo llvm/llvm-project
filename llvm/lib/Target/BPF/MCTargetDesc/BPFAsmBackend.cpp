@@ -44,7 +44,7 @@ public:
 
 MCFixupKindInfo BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[BPF::NumTargetFixupKinds] = {
-    { "FK_BPF_PCRel_4",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
+      {"FK_BPF_PCRel_4", 0, 32, 0},
   };
 
   if (Kind < FirstTargetFixupKind)

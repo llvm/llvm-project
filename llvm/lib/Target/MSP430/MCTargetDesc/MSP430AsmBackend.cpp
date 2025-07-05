@@ -46,21 +46,23 @@ public:
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+    // clang-format off
     const static MCFixupKindInfo Infos[MSP430::NumTargetFixupKinds] = {
       // This table must be in the same order of enum in MSP430FixupKinds.h.
       //
       // name            offset bits flags
       {"fixup_32",            0, 32, 0},
-      {"fixup_10_pcrel",      0, 10, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_10_pcrel",      0, 10, 0},
       {"fixup_16",            0, 16, 0},
-      {"fixup_16_pcrel",      0, 16, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_16_pcrel",      0, 16, 0},
       {"fixup_16_byte",       0, 16, 0},
-      {"fixup_16_pcrel_byte", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_2x_pcrel",      0, 10, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_rl_pcrel",      0, 16, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_16_pcrel_byte", 0, 16, 0},
+      {"fixup_2x_pcrel",      0, 10, 0},
+      {"fixup_rl_pcrel",      0, 16, 0},
       {"fixup_8",             0,  8, 0},
       {"fixup_sym_diff",      0, 32, 0},
     };
+    // clang-format on
     static_assert((std::size(Infos)) == MSP430::NumTargetFixupKinds,
                   "Not all fixup kinds added to Infos array");
 

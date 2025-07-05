@@ -200,7 +200,6 @@ public:
 private:
   bool doPeepholeSExtW(SDNode *Node);
   bool doPeepholeMaskedRVV(MachineSDNode *Node);
-  bool doPeepholeMergeVVMFold();
   bool doPeepholeNoRegPassThru();
   bool performCombineVMergeAndVOps(SDNode *N);
   bool selectImm64IfCheaper(int64_t Imm, int64_t OrigImm, SDValue N,

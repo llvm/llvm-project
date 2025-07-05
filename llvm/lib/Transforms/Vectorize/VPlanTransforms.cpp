@@ -3251,6 +3251,12 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       return L;
     }
 
+    if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
+      assert(RepR->isSingleScalar() &&
+             isa<LoadInst>(RepR->getUnderlyingInstr()) &&
+             "must be a single scalar load");
+      return RepR;
+    }
     auto *WideLoad = cast<VPWidenLoadRecipe>(R);
 
     // Narrow wide load to uniform scalar load, as transformed VPlan will only

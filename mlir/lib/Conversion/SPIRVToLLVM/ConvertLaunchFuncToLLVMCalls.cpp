@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
-
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"

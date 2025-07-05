@@ -7912,6 +7912,8 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
+  case Intrinsic::pow:
+  case Intrinsic::powi:
   case Intrinsic::canonicalize:
   case Intrinsic::sqrt:
     return true;
