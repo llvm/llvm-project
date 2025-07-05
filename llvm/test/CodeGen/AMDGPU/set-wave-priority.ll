@@ -72,13 +72,14 @@ entry:
 
 a:
   %v2 = call <2 x float> @llvm.amdgcn.struct.ptr.buffer.load.v2f32(ptr addrspace(8) %p, i32 0, i32 0, i32 1, i32 0)
+  %v3 = fadd <2 x float> %v1, %v2
   %v20 = extractelement <2 x float> %v2, i32 0
   %v21 = extractelement <2 x float> %v2, i32 1
   %cond2 = fcmp ult float %v20, %v21
   br i1 %cond2, label %b, label %c
 
 b:
-  ret <2 x float> %v2
+  ret <2 x float> %v3
 
 c:
   %v4 = fadd <2 x float> %v1, %v1
