@@ -1593,7 +1593,10 @@ def : Pat<(vector_insert v8i32:$xd, GRLenVT:$rj, uimm3:$imm),
           (XVINSGR2VR_W v8i32:$xd, GRLenVT:$rj, uimm3:$imm)>;
 def : Pat<(vector_insert v4i64:$xd, GRLenVT:$rj, uimm2:$imm),
           (XVINSGR2VR_D v4i64:$xd, GRLenVT:$rj, uimm2:$imm)>;
-
+def : Pat<(vector_insert v8f32:$vd, (loongarch_movgr2fr_w_la64 GPR:$rj), uimm3:$imm),
+          (XVINSGR2VR_W $vd, $rj, uimm3:$imm)>;
+def : Pat<(vector_insert v4f64:$vd, (f64 (bitconvert i64:$rj)), uimm2:$imm),
+          (XVINSGR2VR_D $vd, $rj, uimm2:$imm)>;
 def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
           (XVINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm3:$imm)>;
 def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
@@ -1789,6 +1792,12 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
   defm : StPat<store, XVST, LASX256, vt>;
   def  : RegRegStPat<store, XVSTX, LASX256, vt>;
 }
+
+// Bitcast float/double element extracted from vector to integer.
+def : Pat<(loongarch_movfr2gr_s_la64 (f32 (vector_extract v8f32:$xj, uimm3:$imm))),
+          (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm)>;
+def : Pat<(i64 (bitconvert (f64 (vector_extract v4f64:$xj, uimm2:$imm)))),
+          (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm)>;
 
 // Vector extraction with constant index.
 def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
