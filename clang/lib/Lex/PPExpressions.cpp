@@ -593,11 +593,13 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
-  if (PP.getPreprocessorOpts().SingleFileParseMode && IncludedUndefinedIds) {
-    // The single-file parse mode behavior kicks in as soon as single identifier
-    // is undefined. If we've already seen one, there's no point in continuing
-    // with the rest of the expression. Besides saving work, this also prevents
-    // calling undefined function-like macros.
+  if ((PP.getPreprocessorOpts().SingleFileParseMode ||
+       PP.getPreprocessorOpts().SingleModuleParseMode) &&
+      IncludedUndefinedIds) {
+    // The single-{file,module}-parse mode behavior kicks in as soon as single
+    // identifier is undefined. If we've already seen one, there's no point in
+    // continuing with the rest of the expression. Besides saving work, this
+    // also prevents calling undefined function-like macros.
     PP.DiscardUntilEndOfDirective(PeekTok);
     return true;
   }
