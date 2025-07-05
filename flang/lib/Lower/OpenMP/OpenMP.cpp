@@ -2391,6 +2391,122 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+static mlir::FlatSymbolRefAttr getOrGenImplicitDefaultDeclareMapper(
+    lower::AbstractConverter &converter, mlir::Location loc,
+    fir::RecordType recordType, llvm::StringRef mapperNameStr) {
+  if (converter.getModuleOp().lookupSymbol(mapperNameStr))
+    return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                        mapperNameStr);
+
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // Save current insertion point before moving to the module scope to create
+  // the DeclareMapperOp.
+  mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+
+  firOpBuilder.setInsertionPointToStart(converter.getModuleOp().getBody());
+  auto declMapperOp = firOpBuilder.create<mlir::omp::DeclareMapperOp>(
+      loc, mapperNameStr, recordType);
+  auto &region = declMapperOp.getRegion();
+  firOpBuilder.createBlock(&region);
+  auto mapperArg = region.addArgument(firOpBuilder.getRefType(recordType), loc);
+
+  auto declareOp =
+      firOpBuilder.create<hlfir::DeclareOp>(loc, mapperArg, /*uniq_name=*/"");
+
+  const auto genBoundsOps = [&](mlir::Value mapVal,
+                                llvm::SmallVectorImpl<mlir::Value> &bounds) {
+    fir::ExtendedValue extVal =
+        hlfir::translateToExtendedValue(mapVal.getLoc(), firOpBuilder,
+                                        hlfir::Entity{mapVal},
+                                        /*contiguousHint=*/true)
+            .first;
+    fir::factory::AddrAndBoundsInfo info = fir::factory::getDataOperandBaseAddr(
+        firOpBuilder, mapVal, /*isOptional=*/false, mapVal.getLoc());
+    bounds = fir::factory::genImplicitBoundsOps<mlir::omp::MapBoundsOp,
+                                                mlir::omp::MapBoundsType>(
+        firOpBuilder, info, extVal,
+        /*dataExvIsAssumedSize=*/false, mapVal.getLoc());
+  };
+
+  // Return a reference to the contents of a derived type with one field.
+  // Also return the field type.
+  const auto getFieldRef =
+      [&](mlir::Value rec, llvm::StringRef fieldName, mlir::Type fieldTy,
+          mlir::Type recType) -> std::tuple<mlir::Value, mlir::Type> {
+    mlir::Value field = firOpBuilder.create<fir::FieldIndexOp>(
+        loc, fir::FieldType::get(recType.getContext()), fieldName, recType,
+        fir::getTypeParams(rec));
+    return {firOpBuilder.create<fir::CoordinateOp>(
+                loc, firOpBuilder.getRefType(fieldTy), rec, field),
+            fieldTy};
+  };
+
+  mlir::omp::DeclareMapperInfoOperands clauseOps;
+  llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
+  llvm::SmallVector<mlir::Value> memberMapOps;
+
+  llvm::omp::OpenMPOffloadMappingFlags mapFlag =
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM |
+      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+  mlir::omp::VariableCaptureKind captureKind =
+      mlir::omp::VariableCaptureKind::ByRef;
+
+  // Populate the declareMapper region with the map information.
+  for (const auto &entry : llvm::enumerate(
+           mlir::dyn_cast<fir::RecordType>(recordType).getTypeList())) {
+    const auto &memberName = entry.value().first;
+    const auto &memberType = entry.value().second;
+    auto [ref, type] =
+        getFieldRef(declareOp.getBase(), memberName, memberType, recordType);
+    mlir::FlatSymbolRefAttr mapperId;
+    if (auto recType = mlir::dyn_cast<fir::RecordType>(memberType)) {
+      std::string mapperIdName =
+          recType.getName().str() + llvm::omp::OmpDefaultMapperName;
+      if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
+        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+      else if (auto *sym = converter.getCurrentScope().FindSymbol(memberName))
+        mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+
+      mapperId = getOrGenImplicitDefaultDeclareMapper(converter, loc, recType,
+                                                      mapperIdName);
+    }
+
+    llvm::SmallVector<mlir::Value> bounds;
+    genBoundsOps(ref, bounds);
+    mlir::Value mapOp = createMapInfoOp(
+        firOpBuilder, loc, ref, /*varPtrPtr=*/mlir::Value{}, /*name=*/"",
+        bounds,
+        /*members=*/{},
+        /*membersIndex=*/mlir::ArrayAttr{},
+        static_cast<
+            std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+            mapFlag),
+        captureKind, ref.getType(), /*partialMap=*/false, mapperId);
+    memberMapOps.emplace_back(mapOp);
+    memberPlacementIndices.emplace_back(
+        llvm::SmallVector<int64_t>{(int64_t)entry.index()});
+  }
+
+  llvm::SmallVector<mlir::Value> bounds;
+  genBoundsOps(declareOp.getOriginalBase(), bounds);
+  mlir::omp::MapInfoOp mapOp = createMapInfoOp(
+      firOpBuilder, loc, declareOp.getOriginalBase(),
+      /*varPtrPtr=*/mlir::Value(), /*name=*/"", bounds, memberMapOps,
+      firOpBuilder.create2DI64ArrayAttr(memberPlacementIndices),
+      static_cast<std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
+          mapFlag),
+      captureKind, declareOp.getType(0),
+      /*partialMap=*/true);
+
+  clauseOps.mapVars.emplace_back(mapOp);
+
+  firOpBuilder.create<mlir::omp::DeclareMapperInfoOp>(loc, clauseOps.mapVars);
+  return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                      mapperNameStr);
+}
+
 static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::StatementContext &stmtCtx,
@@ -2467,15 +2583,25 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       name << sym.name().ToString();
 
       mlir::FlatSymbolRefAttr mapperId;
-      if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived) {
+      if (sym.GetType()->category() == semantics::DeclTypeSpec::TypeDerived &&
+          defaultMaps.empty()) {
         auto &typeSpec = sym.GetType()->derivedTypeSpec();
         std::string mapperIdName =
             typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
         if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName))
           mapperIdName = converter.mangleName(mapperIdName, sym->owner());
+        else
+          mapperIdName =
+              converter.mangleName(mapperIdName, *typeSpec.GetScope());
+
         if (converter.getModuleOp().lookupSymbol(mapperIdName))
           mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
                                                   mapperIdName);
+        mapperId = getOrGenImplicitDefaultDeclareMapper(
+            converter, loc,
+            mlir::cast<fir::RecordType>(
+                converter.genType(sym.GetType()->derivedTypeSpec())),
+            mapperIdName);
       }
 
       fir::factory::AddrAndBoundsInfo info =
