@@ -750,6 +750,8 @@ Bug Fixes in This Version
 - Fixed an infinite recursion when checking constexpr destructors. (#GH141789)
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
+- Fixed a crash caused by deferred diagnostics under ``-fopenmp``,
+  which resulted in passing invalid asm statements to codegen. (#GH140375)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
