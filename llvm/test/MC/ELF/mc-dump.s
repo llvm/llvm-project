@@ -15,8 +15,8 @@
 # CHECK-NEXT:3 Relaxable Size:2 <MCInst #1996 <MCOperand Expr:.Ltmp0>>
 # CHECK-NEXT:  Fixup @1 Value:.Ltmp0-1 Kind:4001
 # CHECK-NEXT:5 Data Size:16 [48,8b,04,25,00,00,00,00,48,8b,04,25,00,00,00,00]
-# CHECK-NEXT:  Fixup @4 Value:f0@<variant 11> Kind:4021
-# CHECK-NEXT:  Fixup @12 Value:_start@<variant 11> Kind:4021
+# CHECK-NEXT:  Fixup @4 Value:f0@<variant 11> Kind:4017
+# CHECK-NEXT:  Fixup @12 Value:_start@<variant 11> Kind:4017
 # CHECK-NEXT:  Symbol @16 .Ltmp0 Temporary
 # CHECK-NEXT:MCSection Name:.data
 # CHECK-NEXT:0 Data Size:0 []
@@ -30,8 +30,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t -debug-only=mc-dump -save-temp-labels -g 2>&1 | FileCheck %s --check-prefix=CHECK2
 
 #      CHECK2:5 Data Size:16 [48,8b,04,25,00,00,00,00,48,8b,04,25,00,00,00,00]
-# CHECK2-NEXT:  Fixup @4 Value:f0@<variant 11> Kind:4021
-# CHECK2-NEXT:  Fixup @12 Value:_start@<variant 11> Kind:4021
+# CHECK2-NEXT:  Fixup @4 Value:f0@<variant 11> Kind:4017
+# CHECK2-NEXT:  Fixup @12 Value:_start@<variant 11> Kind:4017
 # CHECK2-NEXT:  Symbol @16 .Ltmp1
 # CHECK2-NEXT:  Symbol @0 .Ltmp3 Temporary
 # CHECK2-NEXT:  Symbol @8 .Ltmp4 Temporary
