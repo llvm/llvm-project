@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Disassembler.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameAnalyzer.h"
+#include "llvm/DWARFCFIChecker/DWARFCFIFunctionFrameStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -38,6 +40,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
+#include <memory>
 
 using namespace llvm;
 
@@ -210,6 +213,10 @@ static cl::opt<bool> LexMotorolaIntegers(
 
 static cl::opt<bool> NoExecStack("no-exec-stack",
                                  cl::desc("File doesn't need an exec stack"),
+                                 cl::cat(MCCategory));
+
+static cl::opt<bool> ValidateCFI("validate-cfi",
+                                 cl::desc("Validate the CFI directives"),
                                  cl::cat(MCCategory));
 
 enum ActionType {
@@ -520,7 +527,13 @@ int main(int argc, char **argv) {
   assert(MCII && "Unable to create instruction info!");
 
   std::unique_ptr<MCInstPrinter> IP;
-  if (FileType == OFT_AssemblyFile) {
+  if (ValidateCFI) {
+    assert(FileType == OFT_Null);
+    auto FFA = std::make_unique<CFIFunctionFrameAnalyzer>(Ctx, *MCII);
+    auto FFS = std::make_unique<CFIFunctionFrameStreamer>(Ctx, std::move(FFA));
+    TheTarget->createNullTargetStreamer(*FFS);
+    Str = std::move(FFS);
+  } else if (FileType == OFT_AssemblyFile) {
     IP.reset(TheTarget->createMCInstPrinter(
         Triple(TripleName), OutputAsmVariant, *MAI, *MCII, *MRI));
 
