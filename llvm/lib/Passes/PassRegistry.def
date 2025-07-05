@@ -634,6 +634,12 @@ FUNCTION_PASS_WITH_PARAMS(
     },
     parseMergedLoadStoreMotionOptions, "no-split-footer-bb;split-footer-bb")
 FUNCTION_PASS_WITH_PARAMS(
+  "packed-integer-combine", "PackedIntegerCombinePass",
+  [](PackedIntegerCombineOptions Options) {
+    return PackedIntegerCombinePass(Options);
+  },
+  parsePackedIntegerCombineOptions, "max-iterations=N;aggressive")
+FUNCTION_PASS_WITH_PARAMS(
     "print<access-info>", "LoopAccessInfoPrinterPass",
     [](bool AllowPartial) {
       return LoopAccessInfoPrinterPass(errs(), AllowPartial);
