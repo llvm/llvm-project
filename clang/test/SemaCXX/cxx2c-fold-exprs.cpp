@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++2c -verify %s
 
-template <class T> concept A = true;
+template <class T> concept A = (T(), true);
 template <class T> concept C = A<T> && true;
 template <class T> concept D = A<T> && __is_same(T, int);
 
@@ -40,13 +40,23 @@ constexpr int i(T...) { return 1; }; // expected-note {{candidate}}
 static_assert(i(0) == 1); // expected-error {{call to 'i' is ambiguous}}
 
 
-template <class... T> requires (A<T> || ... || true)
-constexpr int j(T...) { return 0; };
-template <class... T> requires (C<T> && ... && true)
-constexpr int j(T...) { return 1; };
+template <class... T> requires (A<T> || ... || true) constexpr int j(T...) { return 0; }; // #j1
+template <class... T> requires (C<T> && ... && true) constexpr int j(T...) { return 1; }; // #j2
 
 static_assert(j(0) == 1);
+// expected-error@-1 {{call to 'j' is ambiguous}}
+// expected-note@#j1 {{candidate function [with T = <int>]}}
+// expected-note@#j2 {{candidate function [with T = <int>]}}
+// expected-note@#j2 {{imilar constraint expressions not considered equivalent}}
+// expected-note@#j1 {{similar constraint expression here}}
+
+
 static_assert(j() == 1);
+// expected-error@-1 {{call to 'j' is ambiguous}}
+// expected-note@#j1 {{candidate function [with T = <>]}}
+// expected-note@#j2 {{candidate function [with T = <>]}}
+// expected-note@#j2 {{imilar constraint expressions not considered equivalent}}
+// expected-note@#j1 {{similar constraint expression here}}
 
 
 
@@ -145,50 +155,41 @@ static_assert(And1<>() == 1);
 static_assert(And1<S>() == 1);
 static_assert(And1<S, S>() == 1);
 static_assert(And1<int>() == 1); // expected-error {{no matching function for call to 'And1'}}
-                                 // expected-note@#and1 {{candidate template ignored: constraints not satisfied}}
-                                 // expected-note@#and1 {{because substituted constraint expression is ill-formed}}
+                                 // expected-note@#and1 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And1<S, int>() == 1); // expected-error {{no matching function for call to 'And1'}}
-                                   // expected-note@#and1 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and1 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and1 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And1<int, S>() == 1); // expected-error {{no matching function for call to 'And1'}}
-                                   // expected-note@#and1 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and1 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and1 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And2<S>() == 2);
 static_assert(And2<S, S>() == 2);
-static_assert(And2<int>() == 2);
+static_assert(And2<int>() == 2);  // expected-error {{no matching function for call to 'And2'}} \
+                                  // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And2<int, int>() == 2);  // expected-error {{no matching function for call to 'And2'}}
-                                      // expected-note@#and2 {{candidate template ignored: constraints not satisfied}}
-                                     // expected-note@#and2 {{because substituted constraint expression is ill-formed}}
+                                      // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And2<S, int>() == 2); // expected-error {{no matching function for call to 'And2'}}
-                                   // expected-note@#and2 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and2 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And2<int, S>() == 2); // expected-error {{no matching function for call to 'And2'}}
-                                   // expected-note@#and2 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and2 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and2 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And3<S>() == 3);
 static_assert(And3<S, S>() == 3);
 static_assert(And3<int>() == 3);   // expected-error {{no matching function for call to 'And3'}}
-                                   // expected-note@#and3 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and3 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And3<int, int>() == 3);  // expected-error {{no matching function for call to 'And3'}}
-                                      // expected-note@#and3 {{candidate template ignored: constraints not satisfied}}
-                                     // expected-note@#and3 {{because substituted constraint expression is ill-formed}}
+                                      // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And3<S, int>() == 3); // expected-error {{no matching function for call to 'And3'}}
-                                   // expected-note@#and3 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and3 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
 
 static_assert(And3<int, S>() == 3); // expected-error {{no matching function for call to 'And3'}}
-                                   // expected-note@#and3 {{candidate template ignored: constraints not satisfied}}
-                                   // expected-note@#and3 {{because substituted constraint expression is ill-formed}}
+                                   // expected-note@#and3 {{candidate template ignored: failed template argument deduction}}
 
 
 static_assert(Or1<>() == 1); // expected-error {{no matching function for call to 'Or1'}}
@@ -198,25 +199,20 @@ static_assert(Or1<int, S>() == 1);
 static_assert(Or1<S, int>() == 1);
 static_assert(Or1<S, S>() == 1);
 static_assert(Or1<int>() == 1); // expected-error {{no matching function for call to 'Or1'}}
-                                // expected-note@#or1 {{candidate template ignored: constraints not satisfied}} \
-                                // expected-note@#or1 {{because substituted constraint expression is ill-formed}}
-
+                                // expected-note@#or1 {{candidate template ignored: constraints not satisfied}}
 
 static_assert(Or2<S>() == 2);
 static_assert(Or2<int, S>() == 2);
 static_assert(Or2<S, int>() == 2);
 static_assert(Or2<S, S>() == 2);
 static_assert(Or2<int>() == 2); // expected-error {{no matching function for call to 'Or2'}}
-                                // expected-note@#or2 {{candidate template ignored: constraints not satisfied}} \
-                                // expected-note@#or2 {{because substituted constraint expression is ill-formed}}
-
+                                // expected-note@#or2 {{candidate template ignored: failed template argument deduction}}
 static_assert(Or3<S>() == 3);
 static_assert(Or3<int, S>() == 3);
 static_assert(Or3<S, int>() == 3);
 static_assert(Or3<S, S>() == 3);
 static_assert(Or3<int>() == 3); // expected-error {{no matching function for call to 'Or3'}}
-                                // expected-note@#or3 {{candidate template ignored: constraints not satisfied}} \
-                                // expected-note@#or3 {{because substituted constraint expression is ill-formed}}
+                                // expected-note@#or3 {{candidate template ignored: constraints not satisfied}}
 }
 
 namespace bool_conversion_break {
@@ -269,9 +265,7 @@ struct S {
 
 static_assert(S<int>::f<int>() == 2);
 
-static_assert(S<int>::g<int>() == 2); // expected-error {{call to 'g' is ambiguous}}
-                                      // expected-note@#nested-ambiguous-g1 {{candidate}}
-                                      // expected-note@#nested-ambiguous-g2 {{candidate}}
+static_assert(S<int>::g<int>() == 2);
 
 
 }
@@ -383,4 +377,47 @@ struct LazyLitMatrix<index_by<Indices...>, init> {
 
 }
 
+}
+
+namespace GH135190 {
+template <typename T>
+concept A = __is_same_as(T, int) || __is_same_as(T, double) ;
+
+template <typename T>
+concept B = A<T> && __is_same_as(T, double);
+
+template <class... Ts>
+requires(A<Ts> && ...)
+constexpr int g() {
+    return 1;
+}
+
+template <class... Ts>
+requires(B<Ts> && ...)
+constexpr int g() {
+    return 2;
+}
+
+static_assert(g<double>() == 2);
+
+
+template <class... Ts>
+concept all_A = (A<Ts> && ...);
+
+template <class... Ts>
+concept all_B = (B<Ts> && ...);
+
+template <class... Ts>
+requires all_A<Ts...>
+constexpr int h() {
+    return 1;
+}
+
+template <class... Ts>
+requires all_B<Ts...>
+constexpr int h() {
+    return 2;
+}
+
+static_assert(h<double>() == 2);
 }

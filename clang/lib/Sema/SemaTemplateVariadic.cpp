@@ -822,6 +822,8 @@ bool Sema::CheckParameterPacksForExpansion(
         continue;
       }
 
+      // TemplateArgs(Depth, Index).dump();
+
       // Determine the size of the argument pack.
       ArrayRef<TemplateArgument> Pack =
           TemplateArgs(Depth, Index).getPackAsArray();
