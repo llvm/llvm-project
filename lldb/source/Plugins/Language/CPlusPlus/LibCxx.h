@@ -81,9 +81,6 @@ SyntheticChildrenFrontEnd *
 LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                          lldb::ValueObjectSP);
 
-bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                    const TypeSummaryOptions &options);
-
 /// Formatter for libc++ std::span<>.
 bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
                                const TypeSummaryOptions &options);
