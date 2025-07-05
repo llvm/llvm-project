@@ -8600,6 +8600,19 @@ def source_date_epoch : Separate<["-"], "source-date-epoch">,
 
 } // let Visibility = [CC1Option]
 
+def stdlib_hardening_EQ : Joined<["-"], "fstdlib-hardening=">,
+  Values<"none,fast,extensive,debug">,
+  NormalizedValues<["STDLIB_HARDENING_MODE_NONE", "STDLIB_HARDENING_MODE_FAST", "STDLIB_HARDENING_MODE_EXTENSIVE", "STDLIB_HARDENING_MODE_DEBUG"]>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"standard library hardening mode">,
+  NormalizedValuesScope<"LangOptions">,
+  DocBrief<"Enable libc++ harderning:"
+  " none (the default mode that doesn’t compromise any runtime performance to check for undefined behavior) |"
+  " fast (contains a minimal set of low-overhead checks deemed security-critical) |"
+  " extensive (extends the hardened mode with additional low-overhead checks that are not security-critical) |"
+  " debug (extends the extensive mode with checks that might impose significant overhead, for example, might change the complexity of algorithms)">,
+  MarshallingInfoEnum<LangOpts<"StdlibHardeningMode">, "STDLIB_HARDENING_MODE_NOT_SPECIFIED">;
+
 //===----------------------------------------------------------------------===//
 // CUDA Options
 //===----------------------------------------------------------------------===//
