@@ -67,7 +67,7 @@ public:
     // Fixup kinds from raw relocation types and .reloc directives force
     // relocations and do not need these fields.
     if (mc::isRelocation(Kind))
-      return MCAsmBackend::getFixupKindInfo(FK_NONE);
+      return {};
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
