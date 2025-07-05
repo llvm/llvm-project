@@ -49,6 +49,7 @@ using namespace ast_matchers;
 using llvm::IsStringMapEntry;
 using ::testing::DescribeMatcher;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::NotNull;
 using ::testing::Test;
 using ::testing::UnorderedElementsAre;
@@ -691,6 +692,87 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
                         "p", HoldsFunctionCallLattice(HasCalledFunctions(
                                  UnorderedElementsAre("baz", "foo"))))));
   // FIXME: Called functions at point `p` should contain only "foo".
+}
+
+class AnalyzerNoreturnTest : public Test {
+protected:
+  template <typename Matcher>
+  void runDataflow(llvm::StringRef Code, Matcher Expectations) {
+    tooling::FileContentMappings FilesContents;
+    FilesContents.push_back(std::make_pair<std::string, std::string>(
+        "noreturn_test_defs.h", R"(
+      void assertionHandler() __attribute__((analyzer_noreturn));
+
+      void assertionTrampoline() {
+        assertionHandler();
+      }
+
+      void trap() {}
+    )"));
+
+    ASSERT_THAT_ERROR(
+        test::checkDataflow<FunctionCallAnalysis>(
+            AnalysisInputs<FunctionCallAnalysis>(
+                Code, ast_matchers::hasName("target"),
+                [](ASTContext &C, Environment &) {
+                  return FunctionCallAnalysis(C);
+                })
+                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
+                .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
+            /*VerifyResults=*/
+            [&Expectations](
+                const llvm::StringMap<
+                    DataflowAnalysisState<FunctionCallLattice>> &Results,
+                const AnalysisOutputs &) {
+              EXPECT_THAT(Results, Expectations);
+            }),
+        llvm::Succeeded());
+  }
+};
+
+TEST_F(AnalyzerNoreturnTest,
+       Breathing) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap"))))));
+}
+
+TEST_F(AnalyzerNoreturnTest, DirectNoReturnCall) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      assertionHandler();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap")))))));
+}
+
+TEST_F(AnalyzerNoreturnTest, IndirectNoReturnCall) {
+  std::string Code = R"(
+    #include "noreturn_test_defs.h"
+
+    void target() {
+      assertionTrampoline();
+      trap();
+      // [[p]]
+    }
+  )";
+  runDataflow(Code, Not(UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsFunctionCallLattice(HasCalledFunctions(
+                                 UnorderedElementsAre("trap")))))));
 }
 
 // Models an analysis that uses flow conditions.
