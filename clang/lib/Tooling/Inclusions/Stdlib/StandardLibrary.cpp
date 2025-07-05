@@ -36,9 +36,9 @@ struct SymbolHeaderMapping {
     const char *Data;  // std::vector
     unsigned ScopeLen; // ~~~~~
     unsigned NameLen;  //      ~~~~~~
-    Version CurrentVersion;
+    std::optional<LangFeatures> CurrentVersion;
 
-    Version version() const { return CurrentVersion; }
+    std::optional<LangFeatures> version() const { return CurrentVersion; }
     StringRef scope() const { return StringRef(Data, ScopeLen); }
     StringRef name() const { return StringRef(Data + ScopeLen, NameLen); }
     StringRef qualifiedName() const {
@@ -135,17 +135,17 @@ static int initialize(Lang Language) {
       ++SymIndex;
     } // Else use the same index.
 
-    Version CurrentVersion = llvm::StringSwitch<Version>(Ver)
-                                 .Case("c++11", CPlusPlus11)
-                                 .Case("c++14", CPlusPlus14)
-                                 .Case("c++17", CPlusPlus17)
-                                 .Case("c++20", CPlusPlus20)
-                                 .Case("c++23", CPlusPlus23)
-                                 .Case("c++26", CPlusPlus26)
-                                 .Case("c99", C99)
-                                 .Case("c11", C11)
-                                 .Case("unknown", Unknown)
-                                 .Default(Unknown);
+    std::optional<LangFeatures> CurrentVersion =
+        llvm::StringSwitch<std::optional<LangFeatures>>(Ver)
+            .Case("c++11", std::make_optional(CPlusPlus11))
+            .Case("c++14", std::make_optional(CPlusPlus14))
+            .Case("c++17", std::make_optional(CPlusPlus17))
+            .Case("c++20", std::make_optional(CPlusPlus20))
+            .Case("c++23", std::make_optional(CPlusPlus23))
+            .Case("c++26", std::make_optional(CPlusPlus26))
+            .Case("c99", std::make_optional(C99))
+            .Case("c11", std::make_optional(C11))
+            .Default(std::nullopt);
 
     Mapping->SymbolNames[SymIndex] = {
         QName.data(), NSLen, static_cast<unsigned int>(QName.size() - NSLen),
@@ -248,7 +248,7 @@ llvm::StringRef Symbol::name() const {
 llvm::StringRef Symbol::qualifiedName() const {
   return getMappingPerLang(Language)->SymbolNames[ID].qualifiedName();
 }
-Version Symbol::version() const {
+std::optional<LangFeatures> Symbol::version() const {
   return getMappingPerLang(Language)->SymbolNames[ID].version();
 }
 std::optional<Symbol> Symbol::named(llvm::StringRef Scope, llvm::StringRef Name,
@@ -346,29 +346,6 @@ std::optional<Symbol> Recognizer::operator()(const Decl *D) {
   if (It == Symbols->end())
     return std::nullopt;
   return Symbol(It->second, L);
-}
-
-llvm::StringRef GetAsString(Version Ver) {
-  switch (Ver) {
-  case tooling::stdlib::CPlusPlus11:
-    return "c++11";
-  case tooling::stdlib::CPlusPlus14:
-    return "c++14";
-  case tooling::stdlib::CPlusPlus17:
-    return "c++17";
-  case tooling::stdlib::CPlusPlus20:
-    return "c++20";
-  case tooling::stdlib::CPlusPlus23:
-    return "c++23";
-  case tooling::stdlib::CPlusPlus26:
-    return "c++26";
-  case tooling::stdlib::C99:
-    return "c99";
-  case tooling::stdlib::C11:
-    return "c11";
-  default:
-    llvm_unreachable("other optinos shouldn't be possible!");
-  }
 }
 } // namespace stdlib
 } // namespace tooling

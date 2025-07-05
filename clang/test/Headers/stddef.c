@@ -10,20 +10,20 @@ struct astruct { char member; };
 
 ptrdiff_t p0; // c99-error{{unknown type name 'ptrdiff_t'}} c11-error{{unknown type}} c23-error{{unknown type}} \
                  c99-modules-error{{unknown type}} c11-modules-error{{unknown type}} c23-modules-error{{unknown type}} \
-                 c99-note {{maybe try to include <stddef.h>; 'ptrdiff_t' is defined in <stddef.h>}} \
-                 c11-note {{maybe try to include <stddef.h>; 'ptrdiff_t' is defined in <stddef.h>}} \
-                 c23-note {{maybe try to include <stddef.h>; 'ptrdiff_t' is defined in <stddef.h>}} \
-                 c99-modules-note {{maybe try to include <stddef.h>; 'ptrdiff_t' is defined in <stddef.h>}} \
-                 c11-modules-note {{maybe try to include <stddef.h>; 'ptrdiff_t' is defined in <stddef.h>}} \
-                 c23-modules-note {{maybe try to include <stddef.h>; 'ptrdiff_t' is defined in <stddef.h>}}
+                 c99-note {{'ptrdiff_t' is defined in <stddef.h>}} \
+                 c11-note {{'ptrdiff_t' is defined in <stddef.h>}} \
+                 c23-note {{'ptrdiff_t' is defined in <stddef.h>}} \
+                 c99-modules-note {{'ptrdiff_t' is defined in <stddef.h>}} \
+                 c11-modules-note {{'ptrdiff_t' is defined in <stddef.h>}} \
+                 c23-modules-note {{'ptrdiff_t' is defined in <stddef.h>}}
 size_t s0; // c99-error{{unknown type name 'size_t'}} c11-error{{unknown type}} c23-error{{unknown type}} \
               c99-modules-error{{unknown type}} c11-modules-error{{unknown type}} c23-modules-error{{unknown type}} \
-              c99-note {{maybe try}} \
-              c11-note {{maybe try}} \
-              c23-note {{maybe try}} \
-              c99-modules-note {{maybe try to include <stddef.h>; 'size_t' is defined in <stddef.h>}} \
-              c11-modules-note {{maybe try to include <stddef.h>; 'size_t' is defined in <stddef.h>}} \
-              c23-modules-note {{maybe try to include <stddef.h>; 'size_t' is defined in <stddef.h>}}
+              c99-note {{'size_t' is defined in}} \
+              c11-note {{'size_t' is defined in}} \
+              c23-note {{'size_t' is defined in}} \
+              c99-modules-note {{'size_t' is defined in <stddef.h>}} \
+              c11-modules-note {{'size_t' is defined in <stddef.h>}} \
+              c23-modules-note {{'size_t' is defined in <stddef.h>}}
 rsize_t r0; // c99-error{{unknown type name 'rsize_t'}} c11-error{{unknown type}} c23-error{{unknown type}} \
                c99-modules-error{{unknown type}} c11-modules-error{{unknown type}} c23-modules-error{{unknown type}}
 wchar_t wc0; // c99-error{{unknown type name 'wchar_t'}} c11-error{{unknown type}} c23-error{{unknown type}} \
@@ -36,17 +36,17 @@ static void f0(void) { unreachable(); } // c99-error{{call to undeclared functio
                                            c99-modules-error{{undeclared function}} c11-modules-error{{undeclared function}} c23-modules-error{{undeclared identifier}}
 max_align_t m0; // c99-error{{unknown type name 'max_align_t'}} c11-error{{unknown type}} c23-error{{unknown type}} \
                    c99-modules-error{{unknown type}} c11-modules-error{{unknown type}} c23-modules-error{{unknown type}} \
-                   c99-note {{maybe try}} \
+                   c99-note {{'max_align_t' is defined in}} \
                    c99-note {{'max_align_t' is a c11 feature}} \
-                   c11-note {{maybe try}} \
+                   c11-note {{'max_align_t' is defined in}} \
                    c11-note {{'max_align_t' is a c11 feature}} \
-                   c23-note {{maybe try}} \
+                   c23-note {{'max_align_t' is defined in}} \
                    c23-note {{'max_align_t' is a c11 feature}} \
-                   c99-modules-note {{maybe try to include <stddef.h>; 'max_align_t' is defined in <stddef.h>}} \
+                   c99-modules-note {{'max_align_t' is defined in <stddef.h>}} \
                    c99-modules-note {{'max_align_t' is a c11 feature}} \
-                   c11-modules-note {{maybe try to include <stddef.h>; 'max_align_t' is defined in <stddef.h>}} \
+                   c11-modules-note {{'max_align_t' is defined in <stddef.h>}} \
                    c11-modules-note {{'max_align_t' is a c11 feature}} \
-                   c23-modules-note {{maybe try to include <stddef.h>; 'max_align_t' is defined in <stddef.h>}} \
+                   c23-modules-note {{'max_align_t' is defined in <stddef.h>}} \
                    c23-modules-note {{'max_align_t' is a c11 feature}}
 size_t o0 = offsetof(struct astruct, member); // c99-error{{unknown type name 'size_t'}} c99-error{{call to undeclared function 'offsetof'}} c99-error{{expected expression}} c99-error{{use of undeclared identifier 'member'}} \
                                                  c11-error{{unknown type}} c11-error{{undeclared function}} c11-error{{expected expression}} c11-error{{undeclared identifier}} \
@@ -54,12 +54,12 @@ size_t o0 = offsetof(struct astruct, member); // c99-error{{unknown type name 's
                                                  c99-modules-error{{unknown type}} c99-modules-error{{undeclared function}} c99-modules-error{{expected expression}} c99-modules-error{{undeclared identifier}} \
                                                  c11-modules-error{{unknown type}} c11-modules-error{{undeclared function}} c11-modules-error{{expected expression}} c11-modules-error{{undeclared identifier}} \
                                                  c23-modules-error{{unknown type}} c23-modules-error{{undeclared identifier}} c23-modules-error{{expected expression}} c23-modules-error{{undeclared identifier}} \
-                                                 c99-note {{maybe try}} \
-                                                 c11-note {{maybe try}} \
-                                                 c23-note {{maybe try}} \
-                                                 c99-modules-note {{maybe try}} \
-                                                 c11-modules-note {{maybe try}} \
-                                                 c23-modules-note {{maybe try}}
+                                                 c99-note {{'size_t' is defined in}} \
+                                                 c11-note {{'size_t' is defined in}} \
+                                                 c23-note {{'size_t' is defined in}} \
+                                                 c99-modules-note {{'size_t' is defined in}} \
+                                                 c11-modules-note {{'size_t' is defined in}} \
+                                                 c23-modules-note {{'size_t' is defined in}}
 wint_t wi0; // c99-error{{unknown type name 'wint_t'}} c11-error{{unknown type}} c23-error{{unknown type}} \
                c99-modules-error{{unknown type name 'wint_t'}} c11-modules-error{{unknown type}} c23-modules-error{{unknown type}}
 
@@ -79,7 +79,7 @@ static void f1(void) { unreachable(); } // c99-error{{undeclared function}} c11-
                                            c99-modules-error{{undeclared function}} c11-modules-error{{undeclared function}}
 max_align_t m1; // c99-error{{unknown type}} c99-modules-error{{'max_align_t' must be declared before it is used}} \
                    c99-modules-note@__stddef_max_align_t.h:*{{declaration here is not visible}} \
-                   c99-note {{maybe try}} \
+                   c99-note {{'max_align_t' is defined in}} \
                    c99-note {{'max_align_t' is a c11 feature}}
 size_t o1 = offsetof(struct astruct, member);
 wint_t wi1; // c99-error{{unknown type}} c11-error{{unknown type}} c23-error{{unknown type}} \
@@ -98,7 +98,7 @@ nullptr_t n2; // c99-error{{unknown type}} c11-error{{unknown type}} \
 static void f2(void) { unreachable(); } // c99-error{{undeclared function}} c11-error{{undeclared function}} \
                                            c99-modules-error{{undeclared function}} c11-modules-error{{undeclared function}}
 max_align_t m2; // c99-error{{unknown type}} \
-                   c99-note {{maybe try}} \
+                   c99-note {{'max_align_t' is defined in}} \
                    c99-note {{'max_align_t' is a c11 feature}}
 size_t o2 = offsetof(struct astruct, member);
 wint_t wi2; // c99-error{{unknown type}} c11-error{{unknown type}} c23-error{{unknown type}} \

@@ -814,6 +814,29 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
     NoteStandardIncludes(II->getName(), IILoc, SS);
 }
 
+static unsigned int GetLangFeatureDiagNum(LangFeatures Feature) {
+  switch (Feature) {
+  case C99:
+    return diag::StandardVersion::C99;
+  case C11:
+    return diag::StandardVersion::C11;
+  case CPlusPlus11:
+    return diag::StandardVersion::CPlusPlus11;
+  case CPlusPlus14:
+    return diag::StandardVersion::CPlusPlus14;
+  case CPlusPlus17:
+    return diag::StandardVersion::CPlusPlus17;
+  case CPlusPlus20:
+    return diag::StandardVersion::CPlusPlus20;
+  case CPlusPlus23:
+    return diag::StandardVersion::CPlusPlus23;
+  case CPlusPlus26:
+    return diag::StandardVersion::CPlusPlus26;
+  default:
+    llvm_unreachable("Invalid LangFeatures options.");
+  }
+}
+
 void Sema::NoteStandardIncludes(StringRef SymbolName, SourceLocation IILoc,
                                 StringRef Namespace) {
   using clang::tooling::stdlib::Lang;
@@ -828,15 +851,12 @@ void Sema::NoteStandardIncludes(StringRef SymbolName, SourceLocation IILoc,
     if (auto Header = StdSym->header()) {
       HeaderName = Header->name();
       Diag(IILoc, diag::note_standard_lib_include_suggestion)
-          << HeaderName << (Namespace + SymbolName).str();
+          << HeaderName << Namespace << SymbolName;
 
       // Noting the C/C++ version as well
-      if (StdSym->version() != tooling::stdlib::Unknown) {
-        llvm::StringRef CPlusPlusVersion =
-            tooling::stdlib::GetAsString(StdSym->version());
-
+      if (auto LangVersion = StdSym->version()) {
         Diag(IILoc, diag::note_standard_lib_version)
-            << (Namespace + SymbolName).str() << CPlusPlusVersion;
+            << Namespace << SymbolName << GetLangFeatureDiagNum(*LangVersion);
       }
     }
   }

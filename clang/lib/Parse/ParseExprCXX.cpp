@@ -226,11 +226,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     HasScopeSpecifier = true;
   }
 
-  // If `FailedNestedNameBuilding` is true, attempt to suggest the standard
-  // include file corresponding to the current `FullNamespace` and symbol.
-  std::string FullNamespace = "";
-  bool FailedNesatedNameBuilding = false;
-
   // Preferred type might change when parsing qualifiers, we need the original.
   auto SavedType = PreferredType;
   while (true) {
@@ -459,9 +454,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       // We have an identifier followed by a '::'. Lookup this name
       // as the name in a nested-name-specifier.
       Token Identifier = Tok;
-      FullNamespace += Identifier.getIdentifierInfo()->getName();
-      FullNamespace += "::";
-
       SourceLocation IdLoc = ConsumeToken();
       assert(Tok.isOneOf(tok::coloncolon, tok::colon) &&
              "NextToken() not working properly!");
@@ -473,7 +465,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
       if (Actions.ActOnCXXNestedNameSpecifier(
               getCurScope(), IdInfo, EnteringContext, SS, CorrectionFlagPtr,
               OnlyNamespace)) {
-        FailedNesatedNameBuilding = true;
         // Identifier is not recognized as a nested name, but we can have
         // mistyped '::' instead of ':'.
         if (CorrectionFlagPtr && IsCorrectedToColon) {
@@ -561,11 +552,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     // We don't have any tokens that form the beginning of a
     // nested-name-specifier, so we're done.
     break;
-  }
-
-  if (FailedNesatedNameBuilding && Tok.getKind() == tok::identifier) {
-    Actions.NoteStandardIncludes(Tok.getIdentifierInfo()->getName(),
-                                 Tok.getLocation(), FullNamespace);
   }
 
   // Even if we didn't see any pieces of a nested-name-specifier, we

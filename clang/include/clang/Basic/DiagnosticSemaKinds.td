@@ -5991,9 +5991,11 @@ def err_template_expansion_into_fixed_list : Error<
 def note_parameter_type : Note<
   "parameter of type %0 is declared here">;
 def note_standard_lib_include_suggestion : Note<
-  "maybe try to include %0; '%1' is defined in %0">;
+  "'%1%2' is defined in %0; did you mean to include it?">;
 def note_standard_lib_version : Note<
-  "'%0' is a %1 feature">;
+  "'%0%1' is a %enum_select<StandardVersion>{%CPlusPlus11{c++11}|%CPlusPlus14{c++14}|"
+  "%CPlusPlus17{c++17}|%CPlusPlus20{c++20}|%CPlusPlus23{c++23}|"
+  "%CPlusPlus26{c++26}|%C99{c99}|%C11{c11}}2 feature">;
 
 // C++11 Variadic Templates
 def err_template_param_pack_default_arg : Error<

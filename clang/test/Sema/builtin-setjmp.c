@@ -36,12 +36,12 @@ void use(void) {
   #if NO_SETJMP
   // cxx-error@-2 {{undeclared identifier 'setjmp'}}
   // c-error@-3 {{call to undeclared function 'setjmp'; ISO C99 and later do not support implicit function declarations}}
-  // cxx-note@-4 {{maybe try to include <csetjmp>; 'setjmp' is defined in <csetjmp>}}
+  // cxx-note@-4 {{defined in}}
   #elif ONLY_JMP_BUF
   // cxx-error@-6 {{undeclared identifier 'setjmp'}}
   // c-error@-7 {{call to undeclared library function 'setjmp' with type 'int (jmp_buf)' (aka 'int (int *)'); ISO C99 and later do not support implicit function declarations}}
   // c-note@-8 {{include the header <setjmp.h> or explicitly provide a declaration for 'setjmp'}}
-  // cxx-note@-9 {{maybe try to include <csetjmp>; 'setjmp' is defined in <csetjmp>}}
+  // cxx-note@-9 {{defined in}}
   #else
   // cxx-no-diagnostics
   #endif

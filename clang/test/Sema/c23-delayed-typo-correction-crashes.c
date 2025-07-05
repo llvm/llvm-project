@@ -14,6 +14,6 @@ void GH137867_test() {
   _Atomic(struct GH137867) t;
   while (!atomic_load(&t.value)->value) // expected-error {{use of undeclared identifier 'atomic_load'}} \
                                            expected-error {{accessing a member of an atomic structure or union is undefined behavior}} \
-                                           expected-note {{maybe try to include <stdatomic.h>; 'atomic_load' is defined in <stdatomic.h>}}
+                                           expected-note {{'atomic_load' is defined in <stdatomic.h>}}
     ;
 }

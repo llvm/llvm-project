@@ -16,7 +16,7 @@ size_t size = 0;
 #undef NULL
 #include <stddef.h>
 
-void *anotherPointer = NULL; // expected-error{{use of undeclared identifier 'NULL'}} expected-note {{maybe try to include <cstddef>; 'NULL' is defined in <cstddef>}}
+void *anotherPointer = NULL; // expected-error{{use of undeclared identifier 'NULL'}} expected-note {{'NULL' is defined in <cstddef>}}
 
 // stddef.h needs to be a `textual` header to support clients doing things like
 // this.

@@ -33,7 +33,7 @@ __declspec(__noreturn__) void f7(void); /* expected-warning {{__declspec attribu
 #ifdef MSVCCOMPAT
 size_t x;
 #else
-size_t x; // expected-error {{unknown type name 'size_t'}} expected-note {{maybe try to include <stddef.h>; 'size_t' is defined in <stddef.h>}}
+size_t x; // expected-error {{unknown type name 'size_t'}} expected-note {{'size_t' is defined in}}
 #endif
 
 /* Microsoft allows inline, __inline, and __forceinline to appear on a typedef

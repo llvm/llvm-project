@@ -238,7 +238,7 @@ namespace PR7402 {
 
 // Don't crash. Lots of questionable recovery here;  errors can change.
 namespace test3 {
-  class A : public std::exception {}; // expected-error {{undeclared identifier}} expected-error {{expected class name}} expected-note {{maybe try to include <exception>; 'std::exception' is defined in <exception>}}
+  class A : public std::exception {}; // expected-error {{undeclared identifier}} expected-error {{expected class name}}
   // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable}}
 #if __cplusplus >= 201103L // C++11 or later
   // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable}}
