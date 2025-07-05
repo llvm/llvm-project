@@ -3,20 +3,54 @@
 
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; AARCH-LABEL: muloti_test:
-; AARCH:       // %bb.0: // %start
+; AARCH:       // %bb.0: // %overflow.entry
+; AARCH-NEXT:    cbz x1, .LBB0_3
+; AARCH-NEXT:  // %bb.1: // %overflow.lhs
+; AARCH-NEXT:    cbz x3, .LBB0_5
+; AARCH-NEXT:  // %bb.2: // %overflow
 ; AARCH-NEXT:    mul x9, x3, x0
 ; AARCH-NEXT:    cmp x1, #0
 ; AARCH-NEXT:    ccmp x3, #0, #4, ne
-; AARCH-NEXT:    umulh x8, x1, x2
-; AARCH-NEXT:    umulh x10, x3, x0
+; AARCH-NEXT:    umulh x10, x1, x2
+; AARCH-NEXT:    umulh x8, x3, x0
 ; AARCH-NEXT:    madd x9, x1, x2, x9
-; AARCH-NEXT:    ccmp xzr, x8, #0, eq
-; AARCH-NEXT:    umulh x11, x0, x2
 ; AARCH-NEXT:    ccmp xzr, x10, #0, eq
+; AARCH-NEXT:    umulh x11, x0, x2
+; AARCH-NEXT:    ccmp xzr, x8, #0, eq
 ; AARCH-NEXT:    mul x0, x0, x2
 ; AARCH-NEXT:    cset w8, ne
 ; AARCH-NEXT:    adds x1, x11, x9
-; AARCH-NEXT:    csinc w2, w8, wzr, lo
+; AARCH-NEXT:    csinc w8, w8, wzr, lo
+; AARCH-NEXT:    and w2, w8, #0x1
+; AARCH-NEXT:    ret
+; AARCH-NEXT:  .LBB0_3: // %overflow.no.lhs
+; AARCH-NEXT:    umulh x8, x0, x2
+; AARCH-NEXT:    cbz x3, .LBB0_7
+; AARCH-NEXT:  // %bb.4: // %overflow.no.lhs.only
+; AARCH-NEXT:    madd x8, x1, x2, x8
+; AARCH-NEXT:    umulh x9, x0, x3
+; AARCH-NEXT:    mul x10, x0, x3
+; AARCH-NEXT:    mul x11, x1, x3
+; AARCH-NEXT:    mul x0, x0, x2
+; AARCH-NEXT:    b .LBB0_6
+; AARCH-NEXT:  .LBB0_5: // %overflow.no.rhs.only
+; AARCH-NEXT:    umulh x8, x2, x0
+; AARCH-NEXT:    umulh x9, x2, x1
+; AARCH-NEXT:    madd x8, x3, x0, x8
+; AARCH-NEXT:    mul x10, x2, x1
+; AARCH-NEXT:    mul x11, x3, x1
+; AARCH-NEXT:    mul x0, x2, x0
+; AARCH-NEXT:  .LBB0_6: // %overflow.res
+; AARCH-NEXT:    adds x1, x8, x10
+; AARCH-NEXT:    adcs xzr, x9, x11
+; AARCH-NEXT:    cset w8, ne
+; AARCH-NEXT:    and w2, w8, #0x1
+; AARCH-NEXT:    ret
+; AARCH-NEXT:  .LBB0_7: // %overflow.no
+; AARCH-NEXT:    madd x8, x0, x3, x8
+; AARCH-NEXT:    mul x0, x0, x2
+; AARCH-NEXT:    madd x1, x1, x2, x8
+; AARCH-NEXT:    and w2, wzr, #0x1
 ; AARCH-NEXT:    ret
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2
@@ -34,46 +68,133 @@ start:
 
 define i128 @__muloti4(i128 %0, i128 %1, ptr nocapture nonnull writeonly align 4 %2) #2 {
 ; AARCH-LABEL: __muloti4:
-; AARCH:       // %bb.0: // %Entry
-; AARCH-NEXT:    asr x11, x1, #63
-; AARCH-NEXT:    asr x9, x3, #63
-; AARCH-NEXT:    umulh x12, x0, x2
-; AARCH-NEXT:    mov x8, x1
+; AARCH:       // %bb.0: // %overflow.entry
+; AARCH-NEXT:    asr x8, x2, #63
+; AARCH-NEXT:    cmp x1, x0, asr #63
 ; AARCH-NEXT:    str wzr, [x4]
-; AARCH-NEXT:    mul x13, x1, x2
-; AARCH-NEXT:    umulh x10, x1, x2
-; AARCH-NEXT:    mul x11, x11, x2
-; AARCH-NEXT:    adds x12, x13, x12
-; AARCH-NEXT:    mul x15, x0, x3
-; AARCH-NEXT:    umulh x14, x0, x3
-; AARCH-NEXT:    adc x10, x10, x11
-; AARCH-NEXT:    mul x9, x0, x9
-; AARCH-NEXT:    mul x16, x1, x3
-; AARCH-NEXT:    adds x1, x15, x12
-; AARCH-NEXT:    asr x12, x10, #63
-; AARCH-NEXT:    smulh x11, x8, x3
-; AARCH-NEXT:    adc x9, x14, x9
-; AARCH-NEXT:    asr x13, x9, #63
-; AARCH-NEXT:    adds x9, x10, x9
-; AARCH-NEXT:    asr x10, x1, #63
+; AARCH-NEXT:    b.eq .LBB1_3
+; AARCH-NEXT:  // %bb.1: // %overflow.lhs
+; AARCH-NEXT:    cmp x3, x8
+; AARCH-NEXT:    b.eq .LBB1_5
+; AARCH-NEXT:  // %bb.2: // %overflow
+; AARCH-NEXT:    asr x9, x1, #63
+; AARCH-NEXT:    umulh x10, x0, x2
+; AARCH-NEXT:    asr x13, x3, #63
+; AARCH-NEXT:    mul x11, x1, x2
+; AARCH-NEXT:    umulh x8, x1, x2
+; AARCH-NEXT:    mul x9, x9, x2
+; AARCH-NEXT:    adds x10, x11, x10
+; AARCH-NEXT:    mul x14, x0, x3
+; AARCH-NEXT:    umulh x12, x0, x3
+; AARCH-NEXT:    adc x9, x8, x9
+; AARCH-NEXT:    mul x13, x0, x13
+; AARCH-NEXT:    adds x8, x14, x10
+; AARCH-NEXT:    mul x15, x1, x3
+; AARCH-NEXT:    smulh x10, x1, x3
+; AARCH-NEXT:    adc x11, x12, x13
+; AARCH-NEXT:    asr x12, x9, #63
+; AARCH-NEXT:    asr x13, x11, #63
 ; AARCH-NEXT:    mul x0, x0, x2
+; AARCH-NEXT:    adds x9, x9, x11
+; AARCH-NEXT:    asr x11, x8, #63
 ; AARCH-NEXT:    adc x12, x12, x13
-; AARCH-NEXT:    adds x9, x16, x9
-; AARCH-NEXT:    adc x11, x11, x12
-; AARCH-NEXT:    cmp x9, x10
-; AARCH-NEXT:    ccmp x11, x10, #0, eq
+; AARCH-NEXT:    adds x9, x15, x9
+; AARCH-NEXT:    adc x10, x10, x12
+; AARCH-NEXT:    cmp x9, x11
+; AARCH-NEXT:    ccmp x10, x11, #0, eq
+; AARCH-NEXT:    b .LBB1_7
+; AARCH-NEXT:  .LBB1_3: // %overflow.no.lhs
+; AARCH-NEXT:    cmp x3, x8
+; AARCH-NEXT:    b.eq .LBB1_8
+; AARCH-NEXT:  // %bb.4: // %overflow.no.lhs.only
+; AARCH-NEXT:    asr x8, x1, #63
+; AARCH-NEXT:    asr x10, x3, #63
+; AARCH-NEXT:    eor x9, x0, x8
+; AARCH-NEXT:    eor x11, x1, x8
+; AARCH-NEXT:    eor x12, x2, x10
+; AARCH-NEXT:    subs x9, x9, x8
+; AARCH-NEXT:    sbc x8, x11, x8
+; AARCH-NEXT:    cmp x1, #0
+; AARCH-NEXT:    eor x11, x3, x10
+; AARCH-NEXT:    cset w13, lt
+; AARCH-NEXT:    csel x8, x8, x1, lt
+; AARCH-NEXT:    csel x9, x9, x0, lt
+; AARCH-NEXT:    subs x12, x12, x10
+; AARCH-NEXT:    sbc x10, x11, x10
+; AARCH-NEXT:    cmp x3, #0
+; AARCH-NEXT:    csel x11, x12, x2, lt
+; AARCH-NEXT:    csel x10, x10, x3, lt
+; AARCH-NEXT:    umulh x12, x9, x11
+; AARCH-NEXT:    mul x15, x8, x10
+; AARCH-NEXT:    madd x8, x8, x11, x12
+; AARCH-NEXT:    cset w12, lt
+; AARCH-NEXT:    mul x14, x9, x11
+; AARCH-NEXT:    mul x11, x9, x10
+; AARCH-NEXT:    umulh x9, x9, x10
+; AARCH-NEXT:    eor w10, w12, w13
+; AARCH-NEXT:    b .LBB1_6
+; AARCH-NEXT:  .LBB1_5: // %overflow.no.rhs.only
+; AARCH-NEXT:    asr x8, x3, #63
+; AARCH-NEXT:    asr x10, x1, #63
+; AARCH-NEXT:    eor x9, x2, x8
+; AARCH-NEXT:    eor x11, x3, x8
+; AARCH-NEXT:    eor x12, x0, x10
+; AARCH-NEXT:    subs x9, x9, x8
+; AARCH-NEXT:    sbc x8, x11, x8
+; AARCH-NEXT:    cmp x3, #0
+; AARCH-NEXT:    eor x11, x1, x10
+; AARCH-NEXT:    cset w13, lt
+; AARCH-NEXT:    csel x8, x8, x3, lt
+; AARCH-NEXT:    csel x9, x9, x2, lt
+; AARCH-NEXT:    subs x12, x12, x10
+; AARCH-NEXT:    sbc x10, x11, x10
+; AARCH-NEXT:    cmp x1, #0
+; AARCH-NEXT:    csel x11, x12, x0, lt
+; AARCH-NEXT:    csel x10, x10, x1, lt
+; AARCH-NEXT:    umulh x12, x9, x11
+; AARCH-NEXT:    mul x14, x9, x11
+; AARCH-NEXT:    mul x15, x8, x10
+; AARCH-NEXT:    madd x8, x8, x11, x12
+; AARCH-NEXT:    cset w12, lt
+; AARCH-NEXT:    mul x11, x9, x10
+; AARCH-NEXT:    umulh x9, x9, x10
+; AARCH-NEXT:    eor w10, w13, w12
+; AARCH-NEXT:  .LBB1_6: // %overflow.res
+; AARCH-NEXT:    sbfx x12, x10, #0, #1
+; AARCH-NEXT:    adds x8, x8, x11
+; AARCH-NEXT:    adc x9, x9, x15
+; AARCH-NEXT:    eor x13, x14, x12
+; AARCH-NEXT:    eor x8, x8, x12
+; AARCH-NEXT:    eor x9, x9, x12
+; AARCH-NEXT:    add x0, x13, x10
+; AARCH-NEXT:    cmp x0, x10
+; AARCH-NEXT:    cset w10, lo
+; AARCH-NEXT:    cinc x8, x8, lo
+; AARCH-NEXT:    cmp x8, x10
+; AARCH-NEXT:    cinc x9, x9, lo
+; AARCH-NEXT:    cmp x9, #0
+; AARCH-NEXT:  .LBB1_7: // %overflow.res
 ; AARCH-NEXT:    cset w9, ne
-; AARCH-NEXT:    tbz x8, #63, .LBB1_2
-; AARCH-NEXT:  // %bb.1: // %Entry
-; AARCH-NEXT:    eor x8, x3, #0x8000000000000000
-; AARCH-NEXT:    orr x8, x2, x8
-; AARCH-NEXT:    cbz x8, .LBB1_3
-; AARCH-NEXT:  .LBB1_2: // %Else2
-; AARCH-NEXT:    cbz w9, .LBB1_4
-; AARCH-NEXT:  .LBB1_3: // %Then7
-; AARCH-NEXT:    mov w8, #1 // =0x1
-; AARCH-NEXT:    str w8, [x4]
-; AARCH-NEXT:  .LBB1_4: // %Block9
+; AARCH-NEXT:    tbnz x1, #63, .LBB1_9
+; AARCH-NEXT:    b .LBB1_10
+; AARCH-NEXT:  .LBB1_8: // %overflow.no
+; AARCH-NEXT:    umulh x8, x0, x2
+; AARCH-NEXT:    mov w9, wzr
+; AARCH-NEXT:    madd x8, x0, x3, x8
+; AARCH-NEXT:    mul x0, x0, x2
+; AARCH-NEXT:    madd x8, x1, x2, x8
+; AARCH-NEXT:    tbz x1, #63, .LBB1_10
+; AARCH-NEXT:  .LBB1_9: // %overflow.res
+; AARCH-NEXT:    eor x10, x3, #0x8000000000000000
+; AARCH-NEXT:    orr x10, x2, x10
+; AARCH-NEXT:    cbz x10, .LBB1_11
+; AARCH-NEXT:  .LBB1_10: // %Else2
+; AARCH-NEXT:    tbz w9, #0, .LBB1_12
+; AARCH-NEXT:  .LBB1_11: // %Then7
+; AARCH-NEXT:    mov w9, #1 // =0x1
+; AARCH-NEXT:    str w9, [x4]
+; AARCH-NEXT:  .LBB1_12: // %Block9
+; AARCH-NEXT:    mov x1, x8
 ; AARCH-NEXT:    ret
 Entry:
   store i32 0, ptr %2, align 4

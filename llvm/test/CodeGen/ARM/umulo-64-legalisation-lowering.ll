@@ -4,12 +4,18 @@
 
 define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; ARMV6-LABEL: mulodi_test:
-; ARMV6:       @ %bb.0: @ %start
+; ARMV6:       @ %bb.0: @ %overflow.entry
 ; ARMV6-NEXT:    push {r4, r5, r11, lr}
-; ARMV6-NEXT:    umull r12, lr, r1, r2
-; ARMV6-NEXT:    umull r4, r5, r3, r0
-; ARMV6-NEXT:    cmp lr, #0
-; ARMV6-NEXT:    movne lr, #1
+; ARMV6-NEXT:    cmp r1, #0
+; ARMV6-NEXT:    beq .LBB0_3
+; ARMV6-NEXT:  @ %bb.1: @ %overflow.lhs
+; ARMV6-NEXT:    cmp r3, #0
+; ARMV6-NEXT:    beq .LBB0_5
+; ARMV6-NEXT:  @ %bb.2: @ %overflow
+; ARMV6-NEXT:    umull r12, r4, r1, r2
+; ARMV6-NEXT:    umull lr, r5, r3, r0
+; ARMV6-NEXT:    cmp r4, #0
+; ARMV6-NEXT:    movne r4, #1
 ; ARMV6-NEXT:    cmp r3, #0
 ; ARMV6-NEXT:    movne r3, #1
 ; ARMV6-NEXT:    cmp r1, #0
@@ -17,38 +23,105 @@ define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; ARMV6-NEXT:    movne r1, #1
 ; ARMV6-NEXT:    and r1, r1, r3
 ; ARMV6-NEXT:    cmp r5, #0
-; ARMV6-NEXT:    orr r1, r1, lr
+; ARMV6-NEXT:    orr r1, r1, r4
 ; ARMV6-NEXT:    movne r5, #1
 ; ARMV6-NEXT:    orr r3, r1, r5
-; ARMV6-NEXT:    add r1, r12, r4
+; ARMV6-NEXT:    add r1, r12, lr
 ; ARMV6-NEXT:    adds r1, r2, r1
 ; ARMV6-NEXT:    mov r5, #0
 ; ARMV6-NEXT:    adc r2, r5, #0
-; ARMV6-NEXT:    orr r2, r3, r2
+; ARMV6-NEXT:    orr r12, r3, r2
+; ARMV6-NEXT:    and r2, r12, #1
+; ARMV6-NEXT:    pop {r4, r5, r11, pc}
+; ARMV6-NEXT:  .LBB0_3: @ %overflow.no.lhs
+; ARMV6-NEXT:    cmp r3, #0
+; ARMV6-NEXT:    beq .LBB0_7
+; ARMV6-NEXT:  @ %bb.4: @ %overflow.no.lhs.only
+; ARMV6-NEXT:    mov lr, r0
+; ARMV6-NEXT:    umull r0, r4, r0, r2
+; ARMV6-NEXT:    mov r12, r1
+; ARMV6-NEXT:    mla r1, r1, r2, r4
+; ARMV6-NEXT:    mul r12, r12, r3
+; ARMV6-NEXT:    umlal r1, r12, lr, r3
+; ARMV6-NEXT:    b .LBB0_6
+; ARMV6-NEXT:  .LBB0_5: @ %overflow.no.rhs.only
+; ARMV6-NEXT:    mov r12, r0
+; ARMV6-NEXT:    umull r0, lr, r2, r0
+; ARMV6-NEXT:    mov r4, r1
+; ARMV6-NEXT:    mla r1, r3, r12, lr
+; ARMV6-NEXT:    mul r12, r3, r4
+; ARMV6-NEXT:    umlal r1, r12, r2, r4
+; ARMV6-NEXT:  .LBB0_6: @ %overflow.res
+; ARMV6-NEXT:    cmp r12, #0
+; ARMV6-NEXT:    movne r12, #1
+; ARMV6-NEXT:    and r2, r12, #1
+; ARMV6-NEXT:    pop {r4, r5, r11, pc}
+; ARMV6-NEXT:  .LBB0_7: @ %overflow.no
+; ARMV6-NEXT:    mov r12, r0
+; ARMV6-NEXT:    umull r0, r4, r0, r2
+; ARMV6-NEXT:    mla r3, r12, r3, r4
+; ARMV6-NEXT:    mov r12, #0
+; ARMV6-NEXT:    mla r1, r1, r2, r3
+; ARMV6-NEXT:    and r2, r12, #1
 ; ARMV6-NEXT:    pop {r4, r5, r11, pc}
 ;
 ; ARMV7-LABEL: mulodi_test:
-; ARMV7:       @ %bb.0: @ %start
+; ARMV7:       @ %bb.0: @ %overflow.entry
 ; ARMV7-NEXT:    push {r4, r5, r11, lr}
-; ARMV7-NEXT:    umull r12, lr, r3, r0
+; ARMV7-NEXT:    cmp r1, #0
+; ARMV7-NEXT:    beq .LBB0_3
+; ARMV7-NEXT:  @ %bb.1: @ %overflow.lhs
+; ARMV7-NEXT:    cmp r3, #0
+; ARMV7-NEXT:    beq .LBB0_5
+; ARMV7-NEXT:  @ %bb.2: @ %overflow
+; ARMV7-NEXT:    umull lr, r4, r3, r0
 ; ARMV7-NEXT:    cmp r3, #0
 ; ARMV7-NEXT:    movwne r3, #1
 ; ARMV7-NEXT:    cmp r1, #0
-; ARMV7-NEXT:    umull r0, r4, r0, r2
+; ARMV7-NEXT:    umull r0, r12, r0, r2
 ; ARMV7-NEXT:    umull r2, r5, r1, r2
 ; ARMV7-NEXT:    movwne r1, #1
 ; ARMV7-NEXT:    and r1, r1, r3
 ; ARMV7-NEXT:    cmp r5, #0
 ; ARMV7-NEXT:    movwne r5, #1
-; ARMV7-NEXT:    cmp lr, #0
+; ARMV7-NEXT:    cmp r4, #0
 ; ARMV7-NEXT:    orr r1, r1, r5
-; ARMV7-NEXT:    movwne lr, #1
-; ARMV7-NEXT:    orr r3, r1, lr
-; ARMV7-NEXT:    add r1, r2, r12
+; ARMV7-NEXT:    movwne r4, #1
+; ARMV7-NEXT:    orr r3, r1, r4
+; ARMV7-NEXT:    add r1, r2, lr
 ; ARMV7-NEXT:    mov r2, #0
-; ARMV7-NEXT:    adds r1, r4, r1
+; ARMV7-NEXT:    adds r1, r12, r1
 ; ARMV7-NEXT:    adc r2, r2, #0
-; ARMV7-NEXT:    orr r2, r3, r2
+; ARMV7-NEXT:    orr r12, r3, r2
+; ARMV7-NEXT:    and r2, r12, #1
+; ARMV7-NEXT:    pop {r4, r5, r11, pc}
+; ARMV7-NEXT:  .LBB0_3: @ %overflow.no.lhs
+; ARMV7-NEXT:    mov r5, r0
+; ARMV7-NEXT:    umull r0, r4, r0, r2
+; ARMV7-NEXT:    cmp r3, #0
+; ARMV7-NEXT:    beq .LBB0_7
+; ARMV7-NEXT:  @ %bb.4: @ %overflow.no.lhs.only
+; ARMV7-NEXT:    mul r12, r1, r3
+; ARMV7-NEXT:    mla r1, r1, r2, r4
+; ARMV7-NEXT:    umlal r1, r12, r5, r3
+; ARMV7-NEXT:    b .LBB0_6
+; ARMV7-NEXT:  .LBB0_5: @ %overflow.no.rhs.only
+; ARMV7-NEXT:    mov lr, r0
+; ARMV7-NEXT:    umull r0, r4, r2, r0
+; ARMV7-NEXT:    mov r5, r1
+; ARMV7-NEXT:    mul r12, r3, r1
+; ARMV7-NEXT:    mla r1, r3, lr, r4
+; ARMV7-NEXT:    umlal r1, r12, r2, r5
+; ARMV7-NEXT:  .LBB0_6: @ %overflow.res
+; ARMV7-NEXT:    cmp r12, #0
+; ARMV7-NEXT:    movwne r12, #1
+; ARMV7-NEXT:    and r2, r12, #1
+; ARMV7-NEXT:    pop {r4, r5, r11, pc}
+; ARMV7-NEXT:  .LBB0_7: @ %overflow.no
+; ARMV7-NEXT:    mla r3, r5, r3, r4
+; ARMV7-NEXT:    mov r12, #0
+; ARMV7-NEXT:    mla r1, r1, r2, r3
+; ARMV7-NEXT:    and r2, r12, #1
 ; ARMV7-NEXT:    pop {r4, r5, r11, pc}
 start:
   %0 = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %l, i64 %r) #2
