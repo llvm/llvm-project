@@ -3456,7 +3456,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
         for (auto *P : Func->parameters())
           FuncParams.push_back(P->getType().getUnqualifiedType());
         if (std::equal(FuncParams.begin(), FuncParams.end(), Params.begin(),
-                       Params.end(), [&](auto &LT, auto &RT) {
+                       Params.end(), [&](QualType LT, QualType RT) {
                          return Context.getCanonicalType(LT) ==
                                 Context.getCanonicalType(RT);
                        })) {
