@@ -455,6 +455,9 @@ def SPIRV_DotOp : SPIRV_Op<"Dot",
 
   let assemblyFormat = "operands attr-dict `:` type($vector1) `->` type($result)";
 
+  // Require dynamic availability specification based on operand/result type.
+  bit autogenAvailability = 0;
+
   let hasVerifier = 0;
 }
 
