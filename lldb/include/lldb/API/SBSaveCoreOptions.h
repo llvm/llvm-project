@@ -12,6 +12,7 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBMemoryRegionInfoList.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
@@ -119,6 +120,13 @@ public:
   ///   an empty collection will be returned.
   SBThreadCollection GetThreadsToSave() const;
 
+  /// Get an unsorted copy of all memory regions to save
+  ///
+  /// \returns
+  ///   An unsorted copy of all memory regions to save. If no process or style
+  ///   is specified an empty collection will be returned.
+  SBMemoryRegionInfoList GetMemoryRegionsToSave();
+
   /// Get the current total number of bytes the core is expected to have
   /// excluding the overhead of the core file format. Requires a Process and
   /// Style to be specified.
@@ -131,6 +139,14 @@ public:
   /// \returns
   ///   The expected size of the data contained in the core in bytes.
   uint64_t GetCurrentSizeInBytes(SBError &error);
+
+  /// Add a flag to be consumed by the specified plugin, null or empty flags
+  /// will be ignored.
+  ///
+  /// \note
+  ///   This API is currently only used for testing, with forcing Minidumps to
+  ///   to 64b memory list the reason this api was added
+  void AddFlag(const char *flag);
 
   /// Reset all options.
   void Clear();
