@@ -183,8 +183,8 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         assert(Opcode == WebAssembly::TRY_TABLE_S);
         FixupKind = MCFixupKind(WebAssembly::fixup_uleb128_i32);
       }
-      Fixups.push_back(MCFixup::create(OS.tell() - Start, MO.getExpr(),
-                                       FixupKind, MI.getLoc()));
+      Fixups.push_back(
+          MCFixup::create(OS.tell() - Start, MO.getExpr(), FixupKind));
       ++MCNumFixups;
       encodeULEB128(0, OS, PaddedSize);
     } else {

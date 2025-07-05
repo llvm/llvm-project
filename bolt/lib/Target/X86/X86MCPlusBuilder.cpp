@@ -2444,7 +2444,7 @@ public:
     const uint64_t RelOffset = Fixup.getOffset();
 
     uint32_t RelType;
-    if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
         return std::nullopt;

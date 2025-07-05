@@ -623,17 +623,17 @@ std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
       // clang-format off
-      {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_movq_load_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax_evex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte", 0, 32, 0},
+      {"reloc_riprel_4byte_movq_load", 0, 32, 0},
+      {"reloc_riprel_4byte_movq_load_rex2", 0, 32, 0},
+      {"reloc_riprel_4byte_relax", 0, 32, 0},
+      {"reloc_riprel_4byte_relax_rex", 0, 32, 0},
+      {"reloc_riprel_4byte_relax_rex2", 0, 32, 0},
+      {"reloc_riprel_4byte_relax_evex", 0, 32, 0},
       {"reloc_signed_4byte", 0, 32, 0},
       {"reloc_signed_4byte_relax", 0, 32, 0},
       {"reloc_global_offset_table", 0, 32, 0},
-      {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_branch_4byte_pcrel", 0, 32, 0},
       // clang-format on
   };
 
@@ -657,15 +657,12 @@ static unsigned getFixupKindSize(unsigned Kind) {
     llvm_unreachable("invalid fixup kind!");
   case FK_NONE:
     return 0;
-  case FK_PCRel_1:
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
-  case FK_PCRel_2:
   case FK_SecRel_2:
   case FK_Data_2:
     return 2;
-  case FK_PCRel_4:
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
   case X86::reloc_riprel_4byte_relax_rex:
@@ -680,7 +677,6 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case FK_SecRel_4:
   case FK_Data_4:
     return 4;
-  case FK_PCRel_8:
   case FK_SecRel_8:
   case FK_Data_8:
     return 8;

@@ -27,7 +27,8 @@ namespace hlsl {
 
 class RootSignatureParser {
 public:
-  RootSignatureParser(SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
+  RootSignatureParser(llvm::dxbc::RootSignatureVersion Version,
+                      SmallVector<llvm::hlsl::rootsig::RootElement> &Elements,
                       RootSignatureLexer &Lexer, clang::Preprocessor &PP);
 
   /// Consumes tokens from the Lexer and constructs the in-memory
@@ -187,6 +188,7 @@ private:
   bool tryConsumeExpectedToken(ArrayRef<RootSignatureToken::Kind> Expected);
 
 private:
+  llvm::dxbc::RootSignatureVersion Version;
   SmallVector<llvm::hlsl::rootsig::RootElement> &Elements;
   RootSignatureLexer &Lexer;
 
