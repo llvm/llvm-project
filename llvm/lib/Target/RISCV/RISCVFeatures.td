@@ -1701,6 +1701,10 @@ foreach nf = {2-8} in
                        "true", "vlseg"#nf#"eN.v and vsseg"#nf#"eN.v are "
                        "implemented as a wide memory op and shuffle">;
 
+def TuneMinimizeVL
+    : SubtargetFeature<"minimize-vl", "MinimizeVL", "true",
+                       "Prefer reducing vl even it requires more vsetvli instructions">;
+
 def Experimental
    : SubtargetFeature<"experimental", "HasExperimental",
                       "true", "Experimental intrinsics">;
