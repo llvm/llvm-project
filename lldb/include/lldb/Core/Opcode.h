@@ -200,6 +200,7 @@ public:
   }
 
   int Dump(Stream *s, uint32_t min_byte_width);
+  int DumpRISCV(Stream *s, uint32_t min_byte_width);
 
   const void *GetOpcodeBytes() const {
     return ((m_type == Opcode::eTypeBytes) ? m_data.inst.bytes : nullptr);

@@ -61,6 +61,8 @@ public:
 
   uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
                      lldb::addr_t pc, llvm::MCInst &mc_inst) const;
+  bool GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
+                 lldb::addr_t pc, llvm::MCInst &mc_inst, size_t &size) const;
   void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
                    std::string &inst_string, std::string &comments_string);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
@@ -524,11 +526,11 @@ public:
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
 
-          const size_t inst_size =
-              mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-          if (inst_size == 0)
-            m_opcode.Clear();
-          else {
+          size_t inst_size = 0;
+          m_is_valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
+                                                pc, inst, inst_size);
+          m_opcode.Clear();
+          if (inst_size != 0) {
             m_opcode.SetOpcodeBytes(opcode_data, inst_size);
             m_is_valid = true;
           }
@@ -604,10 +606,11 @@ public:
         const uint8_t *opcode_data = data.GetDataStart();
         const size_t opcode_data_len = data.GetByteSize();
         llvm::MCInst inst;
-        size_t inst_size =
-            mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-
-        if (inst_size > 0) {
+        size_t inst_size = 0;
+        bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc,
+                                             inst, inst_size);
+ 
+        if (valid && inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
 
           const bool saved_use_color = mc_disasm_ptr->GetUseColor();
@@ -1206,9 +1209,10 @@ protected:
     const uint8_t *opcode_data = data.GetDataStart();
     const size_t opcode_data_len = data.GetByteSize();
     llvm::MCInst inst;
-    const size_t inst_size =
-        mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-    if (inst_size == 0)
+    size_t inst_size = 0;
+    const bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
+                                                pc, inst, inst_size);
+    if (!valid)
       return;
 
     m_has_visited_instruction = true;
@@ -1337,19 +1341,18 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
          m_asm_info_up && m_context_up && m_disasm_up && m_instr_printer_up);
 }
 
-uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
+bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
     const uint8_t *opcode_data, size_t opcode_data_len, lldb::addr_t pc,
-    llvm::MCInst &mc_inst) const {
+    llvm::MCInst &mc_inst, size_t &size) const {
   llvm::ArrayRef<uint8_t> data(opcode_data, opcode_data_len);
   llvm::MCDisassembler::DecodeStatus status;
 
-  uint64_t new_inst_size;
-  status = m_disasm_up->getInstruction(mc_inst, new_inst_size, data, pc,
+  status = m_disasm_up->getInstruction(mc_inst, size, data, pc,
                                        llvm::nulls());
   if (status == llvm::MCDisassembler::Success)
-    return new_inst_size;
+    return true;
   else
-    return 0;
+    return false;
 }
 
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
