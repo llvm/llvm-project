@@ -7518,7 +7518,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     // vector as a scalar and use the splat value.
     APInt Constant = APInt::getZero(1);
     if (const ConstantSDNode *C = isConstOrConstSplat(
-            N1, /*AllowUndef=*/false, /*AllowTruncation=*/true)) {
+            N1, /*AllowUndefs=*/false, /*AllowTruncation=*/true)) {
       Constant = C->getAPIntValue();
     } else if (BuildVectorSDNode *Vector = dyn_cast<BuildVectorSDNode>(N1)) {
       unsigned EltBitWidth = Vector->getValueType(0).getScalarSizeInBits();

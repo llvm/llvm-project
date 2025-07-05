@@ -57,9 +57,9 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // LoongArchFixupKinds.h.
       //
       // {name, offset, bits, flags}
-      {"fixup_loongarch_b16", 10, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_b21", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_b26", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_b16", 10, 16, 0},
+      {"fixup_loongarch_b21", 0, 26, 0},
+      {"fixup_loongarch_b26", 0, 26, 0},
       {"fixup_loongarch_abs_hi20", 5, 20, 0},
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
@@ -72,7 +72,7 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -290,7 +290,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
   const MCExpr &Expr = LF.getValue();
   if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
   return std::make_pair(true, true);
 }
 

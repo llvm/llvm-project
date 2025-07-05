@@ -34150,7 +34150,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (VT.isVector() && Subtarget.hasFP16() &&
+    if (VT.isVector() && Subtarget.hasFP16() && Subtarget.hasVLX() &&
         SrcVT.getVectorElementType() == MVT::f16) {
       EVT EleVT = VT.getVectorElementType();
       EVT ResVT = EleVT == MVT::i32 ? MVT::v4i32 : MVT::v8i16;
@@ -34164,10 +34164,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       }
 
       if (IsStrict) {
+        Opc = IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
         Res =
             DAG.getNode(Opc, dl, {ResVT, MVT::Other}, {N->getOperand(0), Src});
         Chain = Res.getValue(1);
       } else {
+        Opc = IsSigned ? X86ISD::CVTTP2SI : X86ISD::CVTTP2UI;
         Res = DAG.getNode(Opc, dl, ResVT, Src);
       }
 

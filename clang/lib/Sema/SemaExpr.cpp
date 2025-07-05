@@ -20636,6 +20636,7 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
     break;
 
   case ConditionKind::ConstexprIf:
+    // Note: this might produce a FullExpr
     Cond = CheckBooleanCondition(Loc, SubExpr, true);
     break;
 
@@ -20648,13 +20649,13 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
                               {SubExpr}, PreferredConditionType(CK));
     if (!Cond.get())
       return ConditionError();
-  }
-  // FIXME: FullExprArg doesn't have an invalid bit, so check nullness instead.
-  FullExprArg FullExpr = MakeFullExpr(Cond.get(), Loc);
-  if (!FullExpr.get())
+  } else if (Cond.isUsable() && !isa<FullExpr>(Cond.get()))
+    Cond = ActOnFinishFullExpr(Cond.get(), Loc, /*DiscardedValue*/ false);
+
+  if (!Cond.isUsable())
     return ConditionError();
 
-  return ConditionResult(*this, nullptr, FullExpr,
+  return ConditionResult(*this, nullptr, Cond,
                          CK == ConditionKind::ConstexprIf);
 }
 
