@@ -1690,6 +1690,8 @@ void ConversionPatternRewriterImpl::notifyMatchFailure(
     if (config.notifyCallback)
       config.notifyCallback(diag);
   });
+  if (config.listener)
+    config.listener->notifyMatchFailure(loc, reasonCallback);
 }
 
 //===----------------------------------------------------------------------===//
