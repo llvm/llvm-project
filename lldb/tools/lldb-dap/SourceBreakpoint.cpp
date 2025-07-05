@@ -12,6 +12,7 @@
 #include "JSONUtils.h"
 #include "ProtocolUtils.h"
 #include "lldb/API/SBBreakpoint.h"
+#include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBInstruction.h"
@@ -115,6 +116,8 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(int64_
 }
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(const protocol::PersistenceData &persistence_data) {
+  lldb::SBFileSpec file_spec(persistence_data.module.c_str());
+  m_bp = m_dap.target.BreakpointCreateByFileAddress(file_spec, persistence_data.file_addr);
   return llvm::Error::success();
 }
 

@@ -9,13 +9,13 @@ bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,
               llvm::json::Path P) {
   json::ObjectMapper O(Params, P);
   return O && O.mapOptional("module", PD.module) &&
-         O.mapOptional("symbol_mangled_name", PD.symbol_mangled_name);
+         O.mapOptional("file_addr", PD.file_addr);
 }
 
 llvm::json::Value toJSON(const PersistenceData &PD) {
   json::Object result{
       {"module", PD.module},
-      {"symbol_mangled_name", PD.symbol_mangled_name},
+      {"file_addr", PD.file_addr},
   };
 
   return result;
