@@ -161,38 +161,26 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
     return true;
   }
 
-  unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
   bool IsResolved = false;
-  if (auto State = getBackend().evaluateFixup(Fixup, Target, Value)) {
+  if (auto State = getBackend().evaluateFixup(F, Fixup, Target, Value)) {
     IsResolved = *State;
   } else {
     const MCSymbol *Add = Target.getAddSym();
     const MCSymbol *Sub = Target.getSubSym();
-    Value = Target.getConstant();
+    Value += Target.getConstant();
     if (Add && Add->isDefined())
       Value += getSymbolOffset(*Add);
     if (Sub && Sub->isDefined())
       Value -= getSymbolOffset(*Sub);
 
-    bool ShouldAlignPC =
-        FixupFlags & MCFixupKindInfo::FKF_IsAlignedDownTo32Bits;
     if (Fixup.isPCRel()) {
-      uint64_t Offset = getFragmentOffset(F) + Fixup.getOffset();
-
-      // A number of ARM fixups in Thumb mode require that the effective PC
-      // address be determined as the 32-bit aligned version of the actual
-      // offset.
-      if (ShouldAlignPC)
-        Offset &= ~0x3;
-      Value -= Offset;
-
+      Value -= getFragmentOffset(F) + Fixup.getOffset();
       if (Add && !Sub && !Add->isUndefined() && !Add->isAbsolute()) {
         IsResolved = getWriter().isSymbolRefDifferenceFullyResolvedImpl(
             *Add, F, false, true);
       }
     } else {
       IsResolved = Target.isAbsolute();
-      assert(!ShouldAlignPC && "FKF_IsAlignedDownTo32Bits must be PC-relative");
     }
   }
 
