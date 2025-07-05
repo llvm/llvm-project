@@ -75,8 +75,7 @@ class MCFixup {
 
   /// True if this is a PC-relative fixup. The relocatable expression is
   /// typically resolved When SymB is nullptr and SymA is a local symbol defined
-  /// within the current section. While MCAssembler currently sets this based on
-  /// FKF_IsPCRel, targets should ideally set it at creation.
+  /// within the current section.
   bool PCRel = false;
 
   /// Used by RISC-V style linker relaxation. Whether the fixup is
