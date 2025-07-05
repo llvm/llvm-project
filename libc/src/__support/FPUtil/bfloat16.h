@@ -34,10 +34,6 @@ struct BFloat16 {
     }
   }
 
-  constexpr bool operator==(const BFloat16 other) const {
-    return bits == other.bits;
-  }
-
   constexpr float as_float() const {
     uint32_t x_bits = static_cast<uint32_t>(bits) << 16U;
     return cpp::bit_cast<float>(x_bits);
