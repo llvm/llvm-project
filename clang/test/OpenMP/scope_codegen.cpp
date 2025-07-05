@@ -1584,7 +1584,7 @@ int main() {
 // CHECK5-NEXT:    [[TMP1:%.*]] = load i8, ptr [[A]], align 1, !dbg [[DBG42:![0-9]+]]
 // CHECK5-NEXT:    store i8 [[TMP1]], ptr [[A1]], align 1, !dbg [[DBG42]]
 // CHECK5-NEXT:    invoke void @_ZN9TestClassC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[C2]], ptr noundef nonnull align 4 dereferenceable(4) @tc)
-// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG43:![0-9]+]]
+// CHECK5-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG42]]
 // CHECK5:       invoke.cont:
 // CHECK5-NEXT:    store ptr [[C2]], ptr [[TMP]], align 8, !dbg [[DBG44:![0-9]+]]
 // CHECK5-NEXT:    invoke void @_ZN9TestClassC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) [[TC]], ptr noundef nonnull align 4 dereferenceable(4) @tc)
@@ -1623,7 +1623,7 @@ int main() {
 // CHECK5-NEXT:    ret i32 [[CONV]], !dbg [[DBG50:![0-9]+]]
 // CHECK5:       terminate.lpad:
 // CHECK5-NEXT:    [[TMP4:%.*]] = landingpad { ptr, i32 }
-// CHECK5-NEXT:            catch ptr null, !dbg [[DBG43]]
+// CHECK5-NEXT:            catch ptr null, !dbg [[DBG43:![0-9]+]]
 // CHECK5-NEXT:    [[TMP5:%.*]] = extractvalue { ptr, i32 } [[TMP4]], 0, !dbg [[DBG43]]
 // CHECK5-NEXT:    call void @__clang_call_terminate(ptr [[TMP5]]) #[[ATTR10:[0-9]+]], !dbg [[DBG43]]
 // CHECK5-NEXT:    unreachable, !dbg [[DBG43]]
