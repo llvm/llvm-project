@@ -2010,7 +2010,7 @@ public:
       return {nullptr, nullptr};
 
     AddedAnyChecks = true;
-    return {SCEVCheckCond , SCEVCheckBlock};
+    return {SCEVCheckCond, SCEVCheckBlock};
   }
 
   /// Retrieves the MemCheckCond and MemCheckBlock that were generated as IR

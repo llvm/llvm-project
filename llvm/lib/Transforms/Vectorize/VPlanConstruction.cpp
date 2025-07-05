@@ -602,29 +602,29 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-    VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
-    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
-    VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
-    CheckBlockVPBB->swapSuccessors();
+  VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
+  VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
+  VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
+  CheckBlockVPBB->swapSuccessors();
 
-    // We just connected a new block to the scalar preheader. Update all
-    // VPPhis by adding an incoming value for it, replicating the last value.
-    unsigned NumPredecessors = ScalarPH->getNumPredecessors();
-    for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
-      assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
-      assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
-             "must have incoming values for all operands");
-      R.addOperand(R.getOperand(NumPredecessors - 2));
-    }
+  // We just connected a new block to the scalar preheader. Update all
+  // VPPhis by adding an incoming value for it, replicating the last value.
+  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
+  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
+    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
+    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
+           "must have incoming values for all operands");
+    R.addOperand(R.getOperand(NumPredecessors - 2));
+  }
 
-    VPIRMetadata VPBranchWeights;
-    auto *Term = VPBuilder(CheckBlockVPBB)
-                     .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
-                                   Plan.getCanonicalIV()->getDebugLoc());
-    if (AddBranchWeights) {
-      MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
-      MDNode *BranchWeights =
-          MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
-      Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
-    }
+  VPIRMetadata VPBranchWeights;
+  auto *Term = VPBuilder(CheckBlockVPBB)
+                   .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
+                                 Plan.getCanonicalIV()->getDebugLoc());
+  if (AddBranchWeights) {
+    MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
+    MDNode *BranchWeights =
+        MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
+    Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
+  }
 }
