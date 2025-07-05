@@ -13,6 +13,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/RoundingModeUtils.h"
 
 #include <stdint.h>
@@ -167,6 +168,18 @@ public:
         mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
     mpfr_init2(value, mpfr_precision);
     mpfr_set_sj(value, x, mpfr_rounding);
+  }
+
+  // BFloat16
+  template <typename XType,
+            cpp::enable_if_t<cpp::is_same_v<bfloat16, XType>, int> = 0>
+  explicit MPFRNumber(XType x, unsigned int precision = 8,
+                      RoundingMode rounding = RoundingMode::Nearest)
+      : mpfr_precision(precision),
+        mpfr_rounding(get_mpfr_rounding_mode(rounding)) {
+    mpfr_init2(value, mpfr_precision);
+    // BFloat16::as_float() requires no rounding
+    mpfr_set_flt(value, x.as_float(), mpfr_rounding);
   }
 
   MPFRNumber(const MPFRNumber &other);
