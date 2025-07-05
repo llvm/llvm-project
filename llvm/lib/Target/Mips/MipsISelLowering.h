@@ -698,9 +698,8 @@ class TargetRegisterClass;
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
-                            const AttributeList &FuncAttributes,
-                            LLVMContext *Context = nullptr) const override;
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
+                            const AttributeList &FuncAttributes) const override;
 
     /// isFPImmLegal - Returns true if the target can instruction select the
     /// specified FP immediate natively. If false, the legalizer will

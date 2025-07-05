@@ -23779,11 +23779,8 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
 }
 
 EVT RISCVTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes,
-    LLVMContext *Context) const {
-  if (!Context)
-    llvm_unreachable("LLVMContext must not be null here");
-
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (!Subtarget.hasVInstructions())
     return MVT::Other;
 
@@ -23819,8 +23816,8 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
     if (Op.size() > 8 * MinVLenInBytes)
       return MVT::Other;
     if (Op.size() % 8 == 0)
-      return EVT::getVectorVT(*Context, MVT::i64, Op.size() / 8);
-    return EVT::getVectorVT(*Context, MVT::i8, Op.size());
+      return EVT::getVectorVT(Context, MVT::i64, Op.size() / 8);
+    return EVT::getVectorVT(Context, MVT::i8, Op.size());
   }
 
   // Prefer i8 for non-zero memset as it allows us to avoid materializing

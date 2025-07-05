@@ -1088,9 +1088,8 @@ namespace llvm {
 
     /// It returns EVT::Other if the type should be determined using generic
     /// target-independent logic.
-    EVT getOptimalMemOpType(const MemOp &Op,
-                            const AttributeList &FuncAttributes,
-                            LLVMContext *Context = nullptr) const override;
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
+                            const AttributeList &FuncAttributes) const override;
 
     /// Is unaligned memory access allowed for the given type, and is it fast
     /// relative to software emulation.
