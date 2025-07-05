@@ -2414,9 +2414,14 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
     auto Kind = F.getKind();
     if (mc::isRelocation(Kind))
       OS << ", relocation type: " << Kind;
-    else
-      OS << ", kind: "
-         << getAssembler().getBackend().getFixupKindInfo(Kind).Name;
+    else {
+      OS << ", kind: ";
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
+      if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
+        OS << "FK_PCRel_" << (Info.TargetSize / 8);
+      else
+        OS << Info.Name;
+    }
     OS << '\n';
   }
 }

@@ -34,10 +34,6 @@ enum MCFixupKind : uint16_t {
   FK_Data_4,      ///< A four-byte fixup.
   FK_Data_8,      ///< A eight-byte fixup.
   FK_Data_leb128, ///< A leb128 fixup.
-  FK_PCRel_1,     ///< A one-byte pc relative fixup.
-  FK_PCRel_2,     ///< A two-byte pc relative fixup.
-  FK_PCRel_4,     ///< A four-byte pc relative fixup.
-  FK_PCRel_8,     ///< A eight-byte pc relative fixup.
   FK_SecRel_1,    ///< A one-byte section relative fixup.
   FK_SecRel_2,    ///< A two-byte section relative fixup.
   FK_SecRel_4,    ///< A four-byte section relative fixup.
