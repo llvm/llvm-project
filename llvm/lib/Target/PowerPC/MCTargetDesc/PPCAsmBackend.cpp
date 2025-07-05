@@ -14,7 +14,6 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"

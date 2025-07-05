@@ -338,16 +338,28 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
-/// Compute an integer that can be used to compare this pointer to
-/// another one.
 size_t Pointer::computeOffsetForComparison() const {
+  if (isIntegralPointer())
+    return asIntPointer().Value + Offset;
+  if (isTypeidPointer())
+    return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
+
   if (!isBlockPointer())
     return Offset;
 
   size_t Result = 0;
   Pointer P = *this;
-  while (!P.isRoot()) {
-    if (P.isArrayRoot()) {
+  while (true) {
+
+    if (P.isVirtualBaseClass()) {
+      Result += getInlineDesc()->Offset;
+      P = P.getBase();
+      continue;
+    }
+
+    if (P.isBaseClass()) {
+      if (P.getRecord()->getNumVirtualBases() > 0)
+        Result += P.getInlineDesc()->Offset;
       P = P.getBase();
       continue;
     }
@@ -358,14 +370,26 @@ size_t Pointer::computeOffsetForComparison() const {
       continue;
     }
 
+    if (P.isRoot()) {
+      if (P.isOnePastEnd())
+        ++Result;
+      break;
+    }
+
     if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
       // Direct child of a union - all have offset 0.
       P = P.getBase();
       continue;
     }
 
+    // Fields, etc.
     Result += P.getInlineDesc()->Offset;
+    if (P.isOnePastEnd())
+      ++Result;
+
     P = P.getBase();
+    if (P.isRoot())
+      break;
   }
 
   return Result;
