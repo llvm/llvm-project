@@ -345,6 +345,22 @@ private:
   /// @return True if region is profitable to optimize, false otherwise.
   bool isProfitableRegion(DetectionContext &Context) const;
 
+  /// Check if an expanded region is profitable to optimize.
+  ///
+  /// An expanded region may add basic blocks that do not belong to any loop of
+  /// the expanded region. These blocks may contain unrelated memory accesses
+  /// that add complexity for building scop, compute optimization schedule and
+  /// build runtime alias checks. However if there are loops added due to region
+  /// expansion following these unprofitable blocks, we still want the expanded
+  /// region to encourage loop fusion. Otherwise such expansion is not
+  /// profitable and should not replace original unexpanded region.
+  ///
+  /// @param ExpandedRegion The expanded region to check.
+  ///
+  /// @return True if the expanded region is profitable to optimize.
+  bool isRegionExpansionProfitable(const Region &ExpandedRegion,
+                                   LoopInfo &LI) const;
+
   /// Check if a region is a Scop.
   ///
   /// @param Context The context of scop detection.
