@@ -1564,7 +1564,7 @@ static bool interp__builtin_operator_new(InterpState &S, CodePtr OpPC,
   Block *B = Allocator.allocate(Desc, S.getContext().getEvalID(),
                                 DynamicAllocator::Form::Operator);
   assert(B);
-  S.Stk.push<Pointer>(Pointer(B).atIndex(0));
+  S.Stk.push<Pointer>(Pointer(B).atIndex(0).narrow());
   return true;
 }
 
