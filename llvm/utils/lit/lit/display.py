@@ -2,7 +2,7 @@ import sys
 
 
 def create_display(opts, tests, total_tests, workers):
-    if opts.quiet:
+    if opts.quiet and not (opts.showOutput or opts.showAllOutput):
         return NopDisplay()
 
     num_tests = len(tests)
@@ -97,6 +97,7 @@ class Display(object):
         show_result = (
             test.isFailure()
             or self.opts.showAllOutput
+            or self.opts.showOutput
             or (not self.opts.quiet and not self.opts.succinct)
         )
         if show_result:
