@@ -10,6 +10,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/TargetInfo.h"
 
 using namespace clang::ast_matchers;
 
@@ -18,45 +19,121 @@ namespace clang::tidy::portability {
 AvoidPlatformSpecificFundamentalTypesCheck::
     AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
                                                ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {}
+    : ClangTidyCheck(Name, Context),
+      WarnOnFloats(Options.get("WarnOnFloats", false)),
+      IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
+                                               utils::IncludeSorter::IS_LLVM),
+                      areDiagsSelfContained()) {}
+
+void AvoidPlatformSpecificFundamentalTypesCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  IncludeInserter.registerPreprocessor(PP);
+}
+
+void AvoidPlatformSpecificFundamentalTypesCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "WarnOnFloats", WarnOnFloats);
+  Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
+}
+
+std::string AvoidPlatformSpecificFundamentalTypesCheck::getFloatReplacement(
+    const BuiltinType *BT, ASTContext &Context) const {
+  const TargetInfo &Target = Context.getTargetInfo();
+
+  auto GetReplacementType = [](unsigned Width) {
+    switch (Width) {
+    // This is ambiguous by default since it could be bfloat16 or float16
+    case 16U:
+      return "";
+    case 32U:
+      return "float32_t";
+    case 64U:
+      return "float64_t";
+    case 128U:
+      return "float128_t";
+    default:
+      return "";
+    }
+  };
+
+  switch (BT->getKind()) {
+  // Not an ambiguous type
+  case BuiltinType::BFloat16:
+    return "bfloat16_t";
+  case BuiltinType::Half:
+    return GetReplacementType(Target.getHalfWidth());
+  case BuiltinType::Float:
+    return GetReplacementType(Target.getFloatWidth());
+  case BuiltinType::Double:
+    return GetReplacementType(Target.getDoubleWidth());
+  default:
+    return "";
+  }
+}
 
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
-  // Create a matcher for platform-specific fundamental integer types
-  // This should only match direct uses of builtin types, not typedefs
+  // Build the list of type strings to match
+  std::vector<std::string> TypeStrings = {"short",
+                                          "short int",
+                                          "signed short",
+                                          "signed short int",
+                                          "unsigned short",
+                                          "unsigned short int",
+                                          "int",
+                                          "signed",
+                                          "signed int",
+                                          "unsigned",
+                                          "unsigned int",
+                                          "long",
+                                          "long int",
+                                          "signed long",
+                                          "signed long int",
+                                          "unsigned long",
+                                          "unsigned long int",
+                                          "long long",
+                                          "long long int",
+                                          "signed long long",
+                                          "signed long long int",
+                                          "unsigned long long",
+                                          "unsigned long long int"};
+
+  // Add float types if the option is enabled
+  if (WarnOnFloats) {
+    TypeStrings.push_back("half");
+    TypeStrings.push_back("__bf16");
+    TypeStrings.push_back("float");
+    TypeStrings.push_back("double");
+    TypeStrings.push_back("long double");
+  }
+
+  // Create the matcher dynamically
+  auto TypeMatcher = asString(TypeStrings[0]);
+  for (size_t i = 1; i < TypeStrings.size(); ++i) {
+    TypeMatcher = anyOf(TypeMatcher, asString(TypeStrings[i]));
+  }
+
   auto PlatformSpecificFundamentalType = qualType(allOf(
       // Must be a builtin type directly (not through typedef)
       builtinType(),
-      // Only match the specific fundamental integer types we care about
-      anyOf(asString("short"), asString("short int"), asString("signed short"),
-            asString("signed short int"), asString("unsigned short"),
-            asString("unsigned short int"), asString("int"), asString("signed"),
-            asString("signed int"), asString("unsigned"),
-            asString("unsigned int"), asString("long"), asString("long int"),
-            asString("signed long"), asString("signed long int"),
-            asString("unsigned long"), asString("unsigned long int"),
-            asString("long long"), asString("long long int"),
-            asString("signed long long"), asString("signed long long int"),
-            asString("unsigned long long"),
-            asString("unsigned long long int"))));
+      // Match the specific fundamental types we care about
+      TypeMatcher));
 
-  // Match variable declarations with platform-specific fundamental integer
-  // types
+  // Match variable declarations with platform-specific fundamental types
   Finder->addMatcher(
       varDecl(hasType(PlatformSpecificFundamentalType)).bind("var_decl"), this);
 
-  // Match function declarations with platform-specific fundamental integer
-  // return types
+  // Match function declarations with platform-specific fundamental return types
   Finder->addMatcher(
       functionDecl(returns(PlatformSpecificFundamentalType)).bind("func_decl"),
       this);
 
-  // Match function parameters with platform-specific fundamental integer types
+  // Match function parameters with platform-specific fundamental types
   Finder->addMatcher(
       parmVarDecl(hasType(PlatformSpecificFundamentalType)).bind("param_decl"),
       this);
 
-  // Match field declarations with platform-specific fundamental integer types
+  // Match field declarations with platform-specific fundamental types
   Finder->addMatcher(
       fieldDecl(hasType(PlatformSpecificFundamentalType)).bind("field_decl"),
       this);
@@ -79,29 +156,48 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     const MatchFinder::MatchResult &Result) {
   SourceLocation Loc;
   QualType QT;
+  SourceRange TypeRange;
 
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var_decl")) {
     Loc = VD->getLocation();
     QT = VD->getType();
+    if (VD->getTypeSourceInfo()) {
+      TypeRange = VD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
   } else if (const auto *FD =
                  Result.Nodes.getNodeAs<FunctionDecl>("func_decl")) {
     Loc = FD->getLocation();
     QT = FD->getReturnType();
+    if (FD->getTypeSourceInfo()) {
+      TypeRange = FD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
   } else if (const auto *PD =
                  Result.Nodes.getNodeAs<ParmVarDecl>("param_decl")) {
     Loc = PD->getLocation();
     QT = PD->getType();
+    if (PD->getTypeSourceInfo()) {
+      TypeRange = PD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
   } else if (const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("field_decl")) {
     Loc = FD->getLocation();
     QT = FD->getType();
+    if (FD->getTypeSourceInfo()) {
+      TypeRange = FD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
   } else if (const auto *TD =
                  Result.Nodes.getNodeAs<TypedefDecl>("typedef_decl")) {
     Loc = TD->getLocation();
     QT = TD->getUnderlyingType();
+    if (TD->getTypeSourceInfo()) {
+      TypeRange = TD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
   } else if (const auto *AD =
                  Result.Nodes.getNodeAs<TypeAliasDecl>("alias_decl")) {
     Loc = AD->getLocation();
     QT = AD->getUnderlyingType();
+    if (AD->getTypeSourceInfo()) {
+      TypeRange = AD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
   } else {
     return;
   }
@@ -109,9 +205,42 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   // Get the type name for the diagnostic
   std::string TypeName = QT.getAsString();
 
-  diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
-            "consider using a typedef or fixed-width type instead")
-      << TypeName;
+  // Check if this is a floating point type
+  const auto *BT = QT->getAs<BuiltinType>();
+  bool IsFloatingPoint = BT && (BT->getKind() == BuiltinType::Half ||
+                                BT->getKind() == BuiltinType::BFloat16 ||
+                                BT->getKind() == BuiltinType::Float ||
+                                BT->getKind() == BuiltinType::Double ||
+                                BT->getKind() == BuiltinType::LongDouble);
+
+  if (IsFloatingPoint) {
+    // Handle floating point types
+    std::string Replacement = getFloatReplacement(BT, *Result.Context);
+    if (!Replacement.empty()) {
+      auto Diag =
+          diag(Loc, "avoid using platform-dependent floating point type '%0'; "
+                    "consider using '%1' instead")
+          << TypeName << Replacement;
+
+      if (TypeRange.isValid()) {
+        Diag << FixItHint::CreateReplacement(TypeRange, Replacement);
+      }
+
+      if (auto IncludeFixit = IncludeInserter.createIncludeInsertion(
+              Result.SourceManager->getFileID(Loc), "<stdfloat>")) {
+        Diag << *IncludeFixit;
+      }
+    } else {
+      diag(Loc, "avoid using platform-dependent floating point type '%0'; "
+                "consider using a typedef or fixed-width type instead")
+          << TypeName;
+    }
+  } else {
+    // Handle integer types
+    diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
+              "consider using a typedef or fixed-width type instead")
+        << TypeName;
+  }
 }
 
 } // namespace clang::tidy::portability

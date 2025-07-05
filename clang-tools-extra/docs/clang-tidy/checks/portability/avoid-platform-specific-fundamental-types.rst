@@ -121,3 +121,37 @@ The following types are intentionally not flagged:
 
 ``bool`` is excluded because it can only be true or false, and is not vulnerable to overflow or
 narrowing issues that occur as a result of using implementation-defined types.
+
+Options
+-------
+
+.. option:: WarnOnFloats
+
+   When `true`, the check will warn about floating point types (``float`` and ``double``).
+   When `false` (default), floating point types are not flagged.
+
+   Floating point types can have platform-dependent behavior:
+   
+   - ``float`` is typically 32-bit IEEE754, but can vary on some platforms
+   - ``double`` is typically 64-bit IEEE754, but on some microcontrollers without
+     a 64-bit FPU it can be 32 bits
+   
+   When this option is enabled, the check will suggest using ``float32_t`` and ``float64_t``
+   instead of ``float`` and ``double`` respectively, when the target platform supports
+   standard IEEE754 sizes.
+
+   Example with ``WarnOnFloats`` enabled:
+
+   .. code-block:: c++
+
+     // Bad: platform-dependent floating point types
+     float pi = 3.14f;
+     double e = 2.71828;
+
+   .. code-block:: c++
+
+     // Good: use fixed-width floating point types
+     #include <stdfloat>  // C++23
+     
+     float32_t pi = 3.14f;
+     float64_t e = 2.71828;
