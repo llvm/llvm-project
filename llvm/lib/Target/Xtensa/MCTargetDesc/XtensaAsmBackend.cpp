@@ -135,7 +135,7 @@ static unsigned getSize(unsigned Kind) {
   switch (Kind) {
   default:
     return 3;
-  case MCFixupKind::FK_Data_4:
+  case FK_Data_4:
     return 4;
   case Xtensa::fixup_xtensa_branch_6:
     return 2;
