@@ -623,7 +623,7 @@ After posting a major proposal, it is common to receive lots of conflicting
 feedback from different parties, or no feedback at all, leaving authors without
 clear next steps. As a community, we are aiming for `"rough consensus"
 <https://en.wikipedia.org/wiki/Rough_consensus>`_, similar in spirit to what is
-desribed in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
+described in `IETF RFC7282 <https://datatracker.ietf.org/doc/html/rfc7282>`_.
 This requires considering and addressing all of the objections to the RFC, and
 confirming that we can all live with the tradeoffs embodied in the proposal.
 
