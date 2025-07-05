@@ -1,10 +1,12 @@
-//===--- AvoidPlatformSpecificFundamentalTypesCheck.h - clang-tidy -------*- C++ -*-===//
+// clang-format off
+//===--- AvoidPlatformSpecificFundamentalTypesCheck.h - clang-tidy -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-------------------------------------------------------------------------------===//
+//===-------------------------------------------------------------------------===//
+// clang-format on
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPLATFORMSPECIFICFUNDAMENTALTYPESCHECK_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_AVOIDPLATFORMSPECIFICFUNDAMENTALTYPESCHECK_H
@@ -43,7 +45,8 @@ public:
 private:
   const bool WarnOnFloats;
   utils::IncludeInserter IncludeInserter;
-  std::string getFloatReplacement(const BuiltinType *BT, ASTContext &Context) const;
+  std::string getFloatReplacement(const BuiltinType *BT,
+                                  ASTContext &Context) const;
 };
 
 } // namespace clang::tidy::portability
