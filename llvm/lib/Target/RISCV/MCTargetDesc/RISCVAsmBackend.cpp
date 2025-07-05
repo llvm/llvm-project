@@ -655,7 +655,8 @@ static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   return nullptr;
 }
 
-std::optional<bool> RISCVAsmBackend::evaluateFixup(MCFixup &Fixup,
+std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
+                                                   MCFixup &Fixup,
                                                    MCValue &Target,
                                                    uint64_t &Value) {
   const MCFixup *AUIPCFixup;
