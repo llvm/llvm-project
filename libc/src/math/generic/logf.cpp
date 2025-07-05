@@ -132,6 +132,11 @@ LLVM_LIBC_FUNCTION(float, logf, (float x)) {
         return FPBits::quiet_nan().get_val();
       }
       // x is +inf or nan
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+
       return x;
     }
   }

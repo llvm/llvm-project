@@ -74,7 +74,7 @@
 .set max_neg_number, max(neg_one)
 
 // ASM: .set max_with_subexpr, 3
-// ASM: .set max_as_subexpr, 1+(max(4, 3, five))
+// ASM: .set max_as_subexpr, 1+max(4, 3, five)
 // ASM: .set max_recursive_subexpr, max(max(1, four), 3, max_expression_all)
 
 .set max_with_subexpr, max(((one | 3) << 3) / 8)
@@ -112,7 +112,7 @@
 .set or_with_or_sym, or(or, 4, 3, one, two)
 
 // ASM: .set or_with_subexpr, 3
-// ASM: .set or_as_subexpr, 1+(or(4, 3, five))
+// ASM: .set or_as_subexpr, 1+or(4, 3, five)
 // ASM: .set or_recursive_subexpr, or(or(1, four), 3, or_expression_all)
 
 .set or_with_subexpr, or(((one | 3) << 3) / 8)

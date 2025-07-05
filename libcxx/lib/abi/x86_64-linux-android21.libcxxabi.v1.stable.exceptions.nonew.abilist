@@ -1144,6 +1144,7 @@
 {'is_defined': True, 'name': '_ZNSt6__ndk117bad_function_callD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk117bad_function_callD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk117bad_function_callD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt6__ndk117bad_function_call4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk117iostream_categoryEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk117moneypunct_bynameIcLb0EE4initEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt6__ndk117moneypunct_bynameIcLb1EE4initEPKc', 'type': 'FUNC'}

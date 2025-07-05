@@ -157,7 +157,7 @@ void CrtpConstructorAccessibilityCheck::check(
   }
 
   for (auto &&Ctor : CRTPDeclaration->ctors()) {
-    if (Ctor->getAccess() == AS_private)
+    if (Ctor->getAccess() == AS_private || Ctor->isDeleted())
       continue;
 
     const bool IsPublic = Ctor->getAccess() == AS_public;

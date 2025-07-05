@@ -77,6 +77,7 @@ end program
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: AssumedRankOpConversion
+! ALL-NEXT: LowerRepackArraysPass
 ! ALL-NEXT: SimplifyFIROperations
 
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']

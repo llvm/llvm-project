@@ -1417,15 +1417,12 @@ define <vscale x 2 x i32> @vwaddu_vv_disjoint_or_add(<vscale x 2 x i8> %x.i8, <v
   ret <vscale x 2 x i32> %add
 }
 
-; TODO: We could select vwaddu.vv, but when both arms of the or are the same
-; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
 define <vscale x 2 x i32> @vwaddu_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
 ; CHECK-LABEL: vwaddu_vv_disjoint_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vor.vv v9, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vzext.vf2 v8, v9
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %x.i32 = zext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
   %y.i32 = zext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
@@ -1433,18 +1430,45 @@ define <vscale x 2 x i32> @vwaddu_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vsc
   ret <vscale x 2 x i32> %or
 }
 
-; TODO: We could select vwadd.vv, but when both arms of the or are the same
-; DAGCombiner::hoistLogicOpWithSameOpcodeHands moves the zext above the or.
 define <vscale x 2 x i32> @vwadd_vv_disjoint_or(<vscale x 2 x i16> %x.i16, <vscale x 2 x i16> %y.i16) {
 ; CHECK-LABEL: vwadd_vv_disjoint_or:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vor.vv v9, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vwadd.vv v10, v8, v9
+; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
   %x.i32 = sext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
   %y.i32 = sext <vscale x 2 x i16> %y.i16 to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwaddu_vx_disjoint_or(<vscale x 2 x i16> %x.i16, i16 %y.i16) {
+; CHECK-LABEL: vwaddu_vx_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwaddu.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = zext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.head = insertelement <vscale x 2 x i16> poison, i16 %y.i16, i32 0
+  %y.splat = shufflevector <vscale x 2 x i16> %y.head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %y.i32 = zext <vscale x 2 x i16> %y.splat to <vscale x 2 x i32>
+  %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
+  ret <vscale x 2 x i32> %or
+}
+
+define <vscale x 2 x i32> @vwadd_vx_disjoint_or(<vscale x 2 x i16> %x.i16, i16 %y.i16) {
+; CHECK-LABEL: vwadd_vx_disjoint_or:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vwadd.vx v9, v8, a0
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+  %x.i32 = sext <vscale x 2 x i16> %x.i16 to <vscale x 2 x i32>
+  %y.head = insertelement <vscale x 2 x i16> poison, i16 %y.i16, i32 0
+  %y.splat = shufflevector <vscale x 2 x i16> %y.head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %y.i32 = sext <vscale x 2 x i16> %y.splat to <vscale x 2 x i32>
   %or = or disjoint <vscale x 2 x i32> %x.i32, %y.i32
   ret <vscale x 2 x i32> %or
 }
@@ -1516,12 +1540,11 @@ define <vscale x 8 x i32> @vwadd_vx_splat_zext_i1(<vscale x 8 x i1> %va, i16 %b)
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srli a0, a0, 48
-; RV64-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; RV64-NEXT:    vmv.v.x v12, a0
+; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vwaddu.vx v8, v12, a0, v0.t
 ; RV64-NEXT:    ret
   %zb = zext i16 %b to i32
@@ -1591,12 +1614,11 @@ define <vscale x 8 x i32> @vwadd_vx_splat_sext_i1(<vscale x 8 x i1> %va, i16 %b)
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    srai a0, a0, 48
-; RV64-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
-; RV64-NEXT:    vmv.v.x v12, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; RV64-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
-; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; RV64-NEXT:    vmv.v.x v12, a0
+; RV64-NEXT:    li a0, 1
 ; RV64-NEXT:    vwsub.vx v8, v12, a0, v0.t
 ; RV64-NEXT:    ret
   %sb = sext i16 %b to i32

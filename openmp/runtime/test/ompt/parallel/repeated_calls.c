@@ -36,7 +36,7 @@ int main() {
 
   // First call to foo
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin
-  // CHECK-SAME: {{.*}}codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]
+  // CHECK-SAME: {{.*}}codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]
 
   // Call to bar
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin

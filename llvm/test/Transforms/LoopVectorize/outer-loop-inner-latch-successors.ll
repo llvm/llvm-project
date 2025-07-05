@@ -4,7 +4,6 @@
 @A = common global [1024 x i64] zeroinitializer, align 16
 @B = common global [1024 x i64] zeroinitializer, align 16
 
-; FIXME: The exit condition of the inner loop is incorrect when vectorizing.
 define void @inner_latch_header_first_successor(i64 %N, i32 %c, i64 %M) {
 ; CHECK-LABEL: define void @inner_latch_header_first_successor(
 ; CHECK-SAME: i64 [[N:%.*]], i32 [[C:%.*]], i64 [[M:%.*]]) {
@@ -34,9 +33,9 @@ define void @inner_latch_header_first_successor(i64 %N, i32 %c, i64 %M) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[WIDE_MASKED_GATHER5]], [[VEC_PHI4]]
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[TMP2]], [[VEC_PHI4]]
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[VEC_PHI]], splat (i64 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i64> [[TMP4]], [[BROADCAST_SPLAT2]]
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i1> [[TMP5]], i32 0
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[VECTOR_LATCH]], label %[[INNER3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT2]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_LATCH]], label %[[INNER3]]
 ; CHECK:       [[VECTOR_LATCH]]:
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i64> [ [[TMP3]], %[[INNER3]] ]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> [[VEC_PHI6]], <4 x ptr> [[TMP0]], i32 4, <4 x i1> splat (i1 true))

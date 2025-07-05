@@ -101,6 +101,7 @@ public:
 
   virtual void applyJumpInstrMod(uint8_t *loc, JumpModType type,
                                  JumpModType val) const {}
+  virtual void applyBranchToBranchOpt() const {}
 
   virtual ~TargetInfo();
 

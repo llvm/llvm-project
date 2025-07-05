@@ -44,6 +44,7 @@
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Target/TargetMachine.h"
@@ -53,41 +54,41 @@
 
 namespace llvm {
 template <typename T> class ArrayRef;
-  class LLVMContext;
-  class DiagnosticInfo;
-  class Linker;
-  class Mangler;
-  class MemoryBuffer;
-  class TargetLibraryInfo;
-  class TargetMachine;
-  class raw_ostream;
-  class raw_pwrite_stream;
+class LLVMContext;
+class DiagnosticInfo;
+class Linker;
+class Mangler;
+class MemoryBuffer;
+class TargetLibraryInfo;
+class TargetMachine;
+class raw_ostream;
+class raw_pwrite_stream;
 
 /// Enable global value internalization in LTO.
-extern cl::opt<bool> EnableLTOInternalization;
+LLVM_ABI extern cl::opt<bool> EnableLTOInternalization;
 
 //===----------------------------------------------------------------------===//
 /// C++ class which implements the opaque lto_code_gen_t type.
 ///
 struct LTOCodeGenerator {
-  static const char *getVersionString();
+  LLVM_ABI static const char *getVersionString();
 
-  LTOCodeGenerator(LLVMContext &Context);
-  ~LTOCodeGenerator();
+  LLVM_ABI LTOCodeGenerator(LLVMContext &Context);
+  LLVM_ABI ~LTOCodeGenerator();
 
   /// Merge given module.  Return true on success.
   ///
   /// Resets \a HasVerifiedInput.
-  bool addModule(struct LTOModule *);
+  LLVM_ABI bool addModule(struct LTOModule *);
 
   /// Set the destination module.
   ///
   /// Resets \a HasVerifiedInput.
-  void setModule(std::unique_ptr<LTOModule> M);
+  LLVM_ABI void setModule(std::unique_ptr<LTOModule> M);
 
-  void setAsmUndefinedRefs(struct LTOModule *);
-  void setTargetOptions(const TargetOptions &Options);
-  void setDebugInfo(lto_debug_model);
+  LLVM_ABI void setAsmUndefinedRefs(struct LTOModule *);
+  LLVM_ABI void setTargetOptions(const TargetOptions &Options);
+  LLVM_ABI void setDebugInfo(lto_debug_model);
   void setCodePICModel(std::optional<Reloc::Model> Model) {
     Config.RelocModel = Model;
   }
@@ -100,7 +101,7 @@ struct LTOCodeGenerator {
   void setAttrs(std::vector<std::string> MAttrs) {
     Config.MAttrs = std::move(MAttrs);
   }
-  void setOptLevel(unsigned OptLevel);
+  LLVM_ABI void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
   void setShouldEmbedUselists(bool Value) { ShouldEmbedUselists = Value; }
@@ -132,20 +133,20 @@ struct LTOCodeGenerator {
   /// name is misleading).  This function should be called before
   /// LTOCodeGenerator::compilexxx(), and
   /// LTOCodeGenerator::writeMergedModules().
-  void setCodeGenDebugOptions(ArrayRef<StringRef> Opts);
+  LLVM_ABI void setCodeGenDebugOptions(ArrayRef<StringRef> Opts);
 
   /// Parse the options set in setCodeGenDebugOptions.
   ///
   /// Like \a setCodeGenDebugOptions(), this must be called before
   /// LTOCodeGenerator::compilexxx() and
   /// LTOCodeGenerator::writeMergedModules().
-  void parseCodeGenDebugOptions();
+  LLVM_ABI void parseCodeGenDebugOptions();
 
   /// Write the merged module to the file specified by the given path.  Return
   /// true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool writeMergedModules(StringRef Path);
+  LLVM_ABI bool writeMergedModules(StringRef Path);
 
   /// Compile the merged module into a *single* output file; the path to output
   /// file is returned to the caller via argument "name". Return true on
@@ -154,7 +155,7 @@ struct LTOCodeGenerator {
   /// \note It is up to the linker to remove the intermediate output file.  Do
   /// not try to remove the object file in LTOCodeGenerator's destructor as we
   /// don't who (LTOCodeGenerator or the output file) will last longer.
-  bool compile_to_file(const char **Name);
+  LLVM_ABI bool compile_to_file(const char **Name);
 
   /// As with compile_to_file(), this function compiles the merged module into
   /// single output file. Instead of returning the output file path to the
@@ -162,17 +163,17 @@ struct LTOCodeGenerator {
   /// to the caller. This function should delete the intermediate file once
   /// its content is brought to memory. Return NULL if the compilation was not
   /// successful.
-  std::unique_ptr<MemoryBuffer> compile();
+  LLVM_ABI std::unique_ptr<MemoryBuffer> compile();
 
   /// Optimizes the merged module.  Returns true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool optimize();
+  LLVM_ABI bool optimize();
 
   /// Compiles the merged optimized module into a single output file. It brings
   /// the output to a buffer, and returns the buffer to the caller. Return NULL
   /// if the compilation was not successful.
-  std::unique_ptr<MemoryBuffer> compileOptimized();
+  LLVM_ABI std::unique_ptr<MemoryBuffer> compileOptimized();
 
   /// Compile the merged optimized module \p ParallelismLevel output files each
   /// representing a linkable partition of the module. If out contains more
@@ -181,7 +182,8 @@ struct LTOCodeGenerator {
   /// created using the \p AddStream callback. Returns true on success.
   ///
   /// Calls \a verifyMergedModuleOnce().
-  bool compileOptimized(AddStreamFn AddStream, unsigned ParallelismLevel);
+  LLVM_ABI bool compileOptimized(AddStreamFn AddStream,
+                                 unsigned ParallelismLevel);
 
   /// Enable the Freestanding mode: indicate that the optimizer should not
   /// assume builtins are present on the target.
@@ -191,12 +193,12 @@ struct LTOCodeGenerator {
 
   void setDebugPassManager(bool Enabled) { Config.DebugPassManager = Enabled; }
 
-  void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
+  LLVM_ABI void setDiagnosticHandler(lto_diagnostic_handler_t, void *);
 
   LLVMContext &getContext() { return Context; }
 
   void resetMergedModule() { MergedModule.reset(); }
-  void DiagnosticHandler(const DiagnosticInfo &DI);
+  LLVM_ABI void DiagnosticHandler(const DiagnosticInfo &DI);
 
 private:
   /// Verify the merged module on first call.
@@ -252,6 +254,6 @@ private:
 
 /// A convenience function that calls cl::ParseCommandLineOptions on the given
 /// set of options.
-void parseCommandLineOptions(std::vector<std::string> &Options);
-}
+LLVM_ABI void parseCommandLineOptions(std::vector<std::string> &Options);
+} // namespace llvm
 #endif

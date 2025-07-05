@@ -63,5 +63,20 @@ mlir::Value genGetCwd(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genHostnm(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value res);
 
+/// Generate a call to the Perror runtime function which implements
+/// the PERROR GNU intrinsic.
+void genPerror(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Value string);
+
+/// Generate a call to the runtime function which implements the PUTENV
+/// intrinsic.
+mlir::Value genPutEnv(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value str, mlir::Value strLength);
+
+/// Generate a call to the Unlink runtime function which implements
+/// the UNLINK intrinsic.
+mlir::Value genUnlink(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value path, mlir::Value pathLength);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_COMMAND_H

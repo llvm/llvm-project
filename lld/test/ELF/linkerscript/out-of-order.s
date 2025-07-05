@@ -31,6 +31,18 @@
 # CHECK-NEXT:   5 .hash         00000010 000000000000201c
 # CHECK-NEXT:   6 .text         00000008 000000000000202c
 
+# RUN: ld.lld -e 0 -o %t --script %t.script %t.o --fatal-warnings
+# RUN: llvm-readelf -Sl %t | FileCheck %s --check-prefix=CHECK1
+
+# CHECK1:       Name              Type            Address          Off    Size   ES Flg Lk Inf Al
+# CHECK1-NEXT:                    NULL            0000000000000000 000000 000000 00      0   0  0
+# CHECK1-NEXT:  .text             PROGBITS        0000000000000000 001000 000008 00  AX  0   0  4
+# CHECK1-NEXT:  .data             PROGBITS        0000000000004000 002000 000008 00  WA  0   0  1
+# CHECK1:     Program Headers:
+# CHECK1-NEXT:  Type           Offset   VirtAddr           PhysAddr           FileSiz  MemSiz   Flg Align
+# CHECK1-NEXT:  LOAD           0x001000 0x0000000000000000 0x0000000000000000 0x000008 0x000008 R E 0x1000
+# CHECK1-NEXT:  LOAD           0x002000 0x0000000000004000 0x0000000000004000 0x000008 0x000008 RW  0x1000
+
 .quad 0
 .data
 .quad 0

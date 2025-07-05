@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Protocol/ProtocolBase.h"
-#include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -32,8 +31,11 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
 
 namespace lldb_dap::protocol {
 
-FLAGS_ENUM(MessageType){eMessageTypeRequest, eMessageTypeResponse,
-                        eMessageTypeEvent};
+enum MessageType : unsigned {
+  eMessageTypeRequest,
+  eMessageTypeResponse,
+  eMessageTypeEvent
+};
 
 bool fromJSON(const json::Value &Params, MessageType &M, json::Path P) {
   auto rawType = Params.getAsString();
@@ -161,11 +163,6 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  if (seq != 0) {
-    P.field("seq").report("expected to be '0'");
-    return false;
-  }
-
   if (R.command.empty()) {
     P.field("command").report("expected to not be ''");
     return false;
@@ -176,7 +173,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
     return false;
   }
 
-  return O.map("success", R.success) && O.mapOptional("message", R.message) &&
+  return O.map("success", R.success) && O.map("message", R.message) &&
          mapRaw(Params, "body", R.body, P);
 }
 
@@ -282,6 +279,7 @@ bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
     PM = std::move(evt);
     return true;
   }
+  llvm_unreachable("unhandled message type request.");
 }
 
 json::Value toJSON(const Message &M) {

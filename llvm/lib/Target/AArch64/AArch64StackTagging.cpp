@@ -309,9 +309,7 @@ public:
       : FunctionPass(ID),
         MergeInit(ClMergeInit.getNumOccurrences() ? ClMergeInit : !IsOptNone),
         UseStackSafety(ClUseStackSafety.getNumOccurrences() ? ClUseStackSafety
-                                                            : !IsOptNone) {
-    initializeAArch64StackTaggingPass(*PassRegistry::getPassRegistry());
-  }
+                                                            : !IsOptNone) {}
 
   void tagAlloca(AllocaInst *AI, Instruction *InsertBefore, Value *Ptr,
                  uint64_t Size);
@@ -371,8 +369,7 @@ Instruction *AArch64StackTagging::collectInitializers(Instruction *StartInst,
 
   unsigned Count = 0;
   for (; Count < ClScanLimit && !BI->isTerminator(); ++BI) {
-    if (!isa<DbgInfoIntrinsic>(*BI))
-      ++Count;
+    ++Count;
 
     if (isNoModRef(AA->getModRefInfo(&*BI, AllocaLoc)))
       continue;

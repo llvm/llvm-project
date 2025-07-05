@@ -8,7 +8,7 @@
 ! CHECK:           fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:           omp.parallel {
-! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %{{.*}}, @{{.*}} %{{.*}} -> %[[VAL_17:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>) {
+! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %{{.*}}, @{{.*}} %{{.*}} -> %[[VAL_17:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>) private_barrier {
 ! CHECK:               omp.loop_nest
 ! CHECK:                   %[[VAL_16:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:                   %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)

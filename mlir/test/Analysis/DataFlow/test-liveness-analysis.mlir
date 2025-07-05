@@ -59,16 +59,49 @@ func.func @test_3_BranchOpInterface_type_1.b(%arg0: i32, %arg1: memref<i32>, %ar
 
 // -----
 
+// Positive test: Type(1.c) "is a non-forwarded branch operand and its branch
+// op could result in different result"
+// CHECK-LABEL: test_tag: cond_br:
+// CHECK-NEXT:  operand #0: live
+// CHECK-NEXT:  operand #1: live
+// CHECK-NEXT:  operand #2: live
+func.func @test_branch_result_in_different_result_1.c(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : i1) -> tensor<f32> {
+  cf.cond_br %arg2, ^bb1(%arg0 : tensor<f32>), ^bb2(%arg1 : tensor<f32>) {tag = "cond_br"}
+^bb1(%0 : tensor<f32>):
+  cf.br ^bb3(%0 : tensor<f32>)
+^bb2(%1 : tensor<f32>):
+  cf.br ^bb3(%1 : tensor<f32>)
+^bb3(%2 : tensor<f32>):
+  return %2 : tensor<f32>
+}
+
+// -----
+
+// Positive test: Type(1.c) "is a non-forwarded branch operand and its branch
+// op could result in different result"
+// CHECK-LABEL: test_tag: region_branch:
+// CHECK-NEXT:  operand #0: live
+func.func @test_region_branch_result_in_different_result_1.c(%arg0 : tensor<f32>, %arg1 : tensor<f32>, %arg2 : i1) -> tensor<f32> {
+  %0 = scf.if %arg2 -> tensor<f32> {
+    scf.yield %arg0 : tensor<f32>
+  } else {
+    scf.yield %arg1 : tensor<f32>
+  } {tag="region_branch"}
+  return %0 : tensor<f32>
+}
+
+// -----
+
 func.func private @private(%arg0 : i32, %arg1 : i32) {
   func.return
 }
 
-// Positive test: Type (1.c) "is a non-forwarded call operand"
+// Positive test: Type (1.d) "is a non-forwarded call operand"
 // CHECK-LABEL: test_tag: call
 // CHECK-LABEL:  operand #0: not live
 // CHECK-LABEL:  operand #1: not live
 // CHECK-LABEL:  operand #2: live
-func.func @test_4_type_1.c(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
+func.func @test_4_type_1.d(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32>) {
   test.call_on_device @private(%arg0, %arg1), %device {tag = "call"} : (i32, i32, i32) -> ()
   return
 }

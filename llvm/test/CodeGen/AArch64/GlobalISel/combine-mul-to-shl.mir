@@ -13,11 +13,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: mul_to_shl
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK: $x0 = COPY [[SHL]](s64)
-    ; CHECK: RET_ReallyLR implicit-def $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit-def $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 4
     %2:_(s64) = G_MUL %0, %1(s64)
@@ -36,11 +37,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: mul_to_shl_16
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-    ; CHECK: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
-    ; CHECK: $x0 = COPY [[SHL]](s64)
-    ; CHECK: RET_ReallyLR implicit-def $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s64)
+    ; CHECK-NEXT: $x0 = COPY [[SHL]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit-def $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 16
     %2:_(s64) = G_MUL %0, %1(s64)
@@ -60,12 +62,13 @@ body:             |
     ; Currently not implemented.
     ; CHECK-LABEL: name: mul_to_shl_vector_16
     ; CHECK: liveins: $q0
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK: [[MUL:%[0-9]+]]:_(<4 x s32>) = G_MUL [[COPY]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[MUL]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit-def $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(<4 x s32>) = G_MUL [[COPY]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[MUL]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit-def $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(s32) = G_CONSTANT i32 16
     %2:_(<4 x s32>) = G_BUILD_VECTOR %1(s32), %1(s32), %1(s32), %1(s32)
@@ -85,11 +88,12 @@ body:             |
     liveins: $x0
     ; CHECK-LABEL: name: mul_to_shl_non_pow2
     ; CHECK: liveins: $x0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[C]]
-    ; CHECK: $x0 = COPY [[MUL]](s64)
-    ; CHECK: RET_ReallyLR implicit-def $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 10
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[COPY]], [[C]]
+    ; CHECK-NEXT: $x0 = COPY [[MUL]](s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit-def $x0
     %0:_(s64) = COPY $x0
     %1:_(s64) = G_CONSTANT i64 10
     %2:_(s64) = G_MUL %0, %1(s64)

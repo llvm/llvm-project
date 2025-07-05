@@ -571,7 +571,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Compare, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS set {
+class set {
 public:
   // types:
   typedef _Key key_type;
@@ -609,9 +609,9 @@ public:
 #  endif
 
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 
   _LIBCPP_HIDE_FROM_ABI set() _NOEXCEPT_(
       is_nothrow_default_constructible<allocator_type>::value&& is_nothrow_default_constructible<key_compare>::value&&
@@ -662,14 +662,10 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI set(const set& __s) : __tree_(__s.__tree_) { insert(__s.begin(), __s.end()); }
 
-  _LIBCPP_HIDE_FROM_ABI set& operator=(const set& __s) {
-    __tree_ = __s.__tree_;
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI set& operator=(const set& __s) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI set(set&& __s) noexcept(is_nothrow_move_constructible<__base>::value)
-      : __tree_(std::move(__s.__tree_)) {}
+  _LIBCPP_HIDE_FROM_ABI set(set&& __s) noexcept(is_nothrow_move_constructible<__base>::value) = default;
 #  endif // _LIBCPP_CXX03_LANG
 
   _LIBCPP_HIDE_FROM_ABI explicit set(const allocator_type& __a) : __tree_(__a) {}
@@ -1030,10 +1026,12 @@ struct __container_traits<set<_Key, _Compare, _Allocator> > {
   // For associative containers, if an exception is thrown by any operation from within
   // an insert or emplace function inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };
 
 template <class _Key, class _Compare, class _Allocator>
-class _LIBCPP_TEMPLATE_VIS multiset {
+class multiset {
 public:
   // types:
   typedef _Key key_type;
@@ -1070,9 +1068,9 @@ public:
 #  endif
 
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class _Key2, class _Compare2, class _Alloc2>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 
   // construct/copy/destroy:
   _LIBCPP_HIDE_FROM_ABI multiset() _NOEXCEPT_(
@@ -1127,14 +1125,10 @@ public:
     insert(__s.begin(), __s.end());
   }
 
-  _LIBCPP_HIDE_FROM_ABI multiset& operator=(const multiset& __s) {
-    __tree_ = __s.__tree_;
-    return *this;
-  }
+  _LIBCPP_HIDE_FROM_ABI multiset& operator=(const multiset& __s) = default;
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) noexcept(is_nothrow_move_constructible<__base>::value)
-      : __tree_(std::move(__s.__tree_)) {}
+  _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s) noexcept(is_nothrow_move_constructible<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI multiset(multiset&& __s, const allocator_type& __a);
 #  endif // _LIBCPP_CXX03_LANG
@@ -1499,6 +1493,8 @@ struct __container_traits<multiset<_Key, _Compare, _Allocator> > {
   // For associative containers, if an exception is thrown by any operation from within
   // an insert or emplace function inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
+
+  static _LIBCPP_CONSTEXPR const bool __reservable = false;
 };
 
 _LIBCPP_END_NAMESPACE_STD

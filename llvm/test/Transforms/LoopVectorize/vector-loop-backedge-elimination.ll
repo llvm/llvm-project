@@ -62,15 +62,14 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 0
-; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; VF8UF2-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 8
+; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i32 0
+; VF8UF2-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[A]], i32 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP3]], align 1
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = add nsw <8 x i8> [[WIDE_LOAD]], splat (i8 10)
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = add nsw <8 x i8> [[WIDE_LOAD1]], splat (i8 10)
-; VF8UF2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; VF8UF2-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 8
+; VF8UF2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[A]], i32 0
+; VF8UF2-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i32 8
 ; VF8UF2-NEXT:    store <8 x i8> [[TMP4]], ptr [[TMP6]], align 1
 ; VF8UF2-NEXT:    store <8 x i8> [[TMP5]], ptr [[TMP7]], align 1
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -106,11 +105,10 @@ define void @test_tc_less_than_16(ptr %A, i64 %N) {
 ; VF16UF1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[A]], i64 [[N_VEC]]
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 0
-; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
+; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i32 0
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP2]], align 1
 ; VF16UF1-NEXT:    [[TMP3:%.*]] = add nsw <16 x i8> [[WIDE_LOAD]], splat (i8 10)
-; VF16UF1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
+; VF16UF1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i32 0
 ; VF16UF1-NEXT:    store <16 x i8> [[TMP3]], ptr [[TMP4]], align 1
 ; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
@@ -163,7 +161,6 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF8UF1-NEXT:    [[TMP1:%.*]] = add i64 2, [[N_VEC]]
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -227,9 +224,9 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF1:       [[PRED_STORE_CONTINUE14]]:
 ; VF8UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
-; VF8UF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF8UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 2, %[[ENTRY]] ]
+; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
 ; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -251,7 +248,6 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF8UF2-NEXT:    [[TMP1:%.*]] = add i64 2, [[N_VEC]]
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -372,9 +368,9 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF2:       [[PRED_STORE_CONTINUE30]]:
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
-; VF8UF2-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF8UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF2:       [[SCALAR_PH]]:
-; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 2, %[[ENTRY]] ]
+; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF2:       [[LOOP]]:
 ; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -396,7 +392,6 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP0]], 1
-; VF16UF1-NEXT:    [[TMP1:%.*]] = add i64 2, [[N_VEC]]
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT1]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -516,9 +511,9 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF16UF1:       [[PRED_STORE_CONTINUE30]]:
 ; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
-; VF16UF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF16UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF16UF1:       [[SCALAR_PH]]:
-; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ 2, %[[ENTRY]] ]
+; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF16UF1:       [[LOOP]]:
 ; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -597,7 +592,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:  [[ENTRY:.*]]:
 ; VF8UF2-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; VF8UF2:       [[OUTER_HEADER]]:
-; VF8UF2-NEXT:    [[OUTER_IV:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; VF8UF2-NEXT:    [[TMP0:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; VF8UF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; VF8UF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8UF2:       [[VECTOR_PH]]:
@@ -605,14 +600,12 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[OUTER_IV]], i64 0
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP2]], align 1
-; VF8UF2-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 0
-; VF8UF2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 0
-; VF8UF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP3]], i32 8
+; VF8UF2-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i32 0
+; VF8UF2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i32 8
 ; VF8UF2-NEXT:    store <8 x i8> [[WIDE_LOAD]], ptr [[TMP4]], align 1
 ; VF8UF2-NEXT:    store <8 x i8> [[WIDE_LOAD1]], ptr [[TMP5]], align 1
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
@@ -624,7 +617,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:    br label %[[INNER:.*]]
 ; VF8UF2:       [[INNER]]:
 ; VF8UF2-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; VF8UF2-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[OUTER_IV]], i64 [[INNER_IV]]
+; VF8UF2-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[INNER_IV]]
 ; VF8UF2-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC]], align 1
 ; VF8UF2-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INNER_IV]]
 ; VF8UF2-NEXT:    store i8 [[L]], ptr [[GEP_DST]], align 1
@@ -632,7 +625,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF8UF2-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; VF8UF2-NEXT:    br i1 [[C_1]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF8UF2:       [[OUTER_LATCH]]:
-; VF8UF2-NEXT:    [[OUTER_IV_NEXT]] = getelementptr i8, ptr [[OUTER_IV]], i64 1
+; VF8UF2-NEXT:    [[OUTER_IV_NEXT]] = getelementptr i8, ptr [[TMP0]], i64 1
 ; VF8UF2-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; VF8UF2-NEXT:    br i1 [[C_2]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; VF8UF2:       [[EXIT]]:
@@ -643,7 +636,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF16UF1-NEXT:  [[ENTRY:.*]]:
 ; VF16UF1-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; VF16UF1:       [[OUTER_HEADER]]:
-; VF16UF1-NEXT:    [[OUTER_IV:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; VF16UF1-NEXT:    [[TMP0:%.*]] = phi ptr [ [[SRC]], %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
 ; VF16UF1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; VF16UF1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF16UF1:       [[VECTOR_PH]]:
@@ -651,11 +644,9 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[OUTER_IV]], i64 0
 ; VF16UF1-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 0
 ; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1
-; VF16UF1-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 0
-; VF16UF1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i32 0
+; VF16UF1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i32 0
 ; VF16UF1-NEXT:    store <16 x i8> [[WIDE_LOAD]], ptr [[TMP3]], align 1
 ; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
@@ -666,7 +657,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF16UF1-NEXT:    br label %[[INNER:.*]]
 ; VF16UF1:       [[INNER]]:
 ; VF16UF1-NEXT:    [[INNER_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
-; VF16UF1-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[OUTER_IV]], i64 [[INNER_IV]]
+; VF16UF1-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[TMP0]], i64 [[INNER_IV]]
 ; VF16UF1-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC]], align 1
 ; VF16UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INNER_IV]]
 ; VF16UF1-NEXT:    store i8 [[L]], ptr [[GEP_DST]], align 1
@@ -674,7 +665,7 @@ define void @remove_loop_region_outer_loop(i64 range(i64 8, 17) %N, ptr noalias 
 ; VF16UF1-NEXT:    [[C_1:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; VF16UF1-NEXT:    br i1 [[C_1]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF16UF1:       [[OUTER_LATCH]]:
-; VF16UF1-NEXT:    [[OUTER_IV_NEXT]] = getelementptr i8, ptr [[OUTER_IV]], i64 1
+; VF16UF1-NEXT:    [[OUTER_IV_NEXT]] = getelementptr i8, ptr [[TMP0]], i64 1
 ; VF16UF1-NEXT:    [[C_2:%.*]] = call i1 @cond()
 ; VF16UF1-NEXT:    br i1 [[C_2]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
 ; VF16UF1:       [[EXIT]]:
@@ -725,7 +716,6 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 8
 ; VF8UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF8UF1-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[STEP]]
 ; VF8UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -813,9 +803,9 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1:       [[PRED_STORE_CONTINUE14]]:
 ; VF8UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF1:       [[MIDDLE_BLOCK]]:
-; VF8UF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF8UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF1:       [[SCALAR_PH]]:
-; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
 ; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -842,7 +832,6 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF8UF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF8UF2-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF8UF2-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[STEP]]
 ; VF8UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF8UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1011,9 +1000,9 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2:       [[PRED_STORE_CONTINUE30]]:
 ; VF8UF2-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
-; VF8UF2-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF8UF2-NEXT:    br label %[[EXIT:.*]]
 ; VF8UF2:       [[SCALAR_PH]]:
-; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF2:       [[LOOP]]:
 ; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
@@ -1040,7 +1029,6 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], 16
 ; VF16UF1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; VF16UF1-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[TMP1]], 1
-; VF16UF1-NEXT:    [[TMP2:%.*]] = mul i64 [[N_VEC]], [[STEP]]
 ; VF16UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; VF16UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1208,9 +1196,9 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1:       [[PRED_STORE_CONTINUE30]]:
 ; VF16UF1-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
-; VF16UF1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; VF16UF1-NEXT:    br label %[[EXIT:.*]]
 ; VF16UF1:       [[SCALAR_PH]]:
-; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP2]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF16UF1:       [[LOOP]]:
 ; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]

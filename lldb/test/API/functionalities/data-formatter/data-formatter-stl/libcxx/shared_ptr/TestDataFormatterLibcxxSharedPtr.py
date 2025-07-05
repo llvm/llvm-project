@@ -2,7 +2,6 @@
 Test lldb data formatter for libc++ std::shared_ptr.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,7 +14,7 @@ class TestCase(TestBase):
         """Test `frame variable` output for `std::shared_ptr` types."""
         self.build()
 
-        lldbutil.run_to_source_breakpoint(
+        (_, process, _, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
         )
 
@@ -38,7 +37,7 @@ class TestCase(TestBase):
             type="std::shared_ptr<int>",
             children=[ValueCheck(name="__ptr_")],
         )
-        self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
+        self.assertRegex(valobj.summary, r"^10( strong=1)? weak=0$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         valobj = self.expect_var_path(
@@ -46,7 +45,7 @@ class TestCase(TestBase):
             type="std::shared_ptr<int> &",
             children=[ValueCheck(name="__ptr_")],
         )
-        self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
+        self.assertRegex(valobj.summary, r"^10( strong=1)? weak=0$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         valobj = self.expect_var_path(
@@ -54,7 +53,7 @@ class TestCase(TestBase):
             type="std::shared_ptr<int> &&",
             children=[ValueCheck(name="__ptr_")],
         )
-        self.assertRegex(valobj.summary, r"^10( strong=1)? weak=1$")
+        self.assertRegex(valobj.summary, r"^10( strong=1)? weak=0$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
@@ -69,12 +68,12 @@ class TestCase(TestBase):
             type="std::shared_ptr<" + string_type + ">",
             children=[ValueCheck(name="__ptr_", summary='"hello"')],
         )
-        self.assertRegex(valobj.summary, r'^"hello"( strong=1)? weak=1$')
+        self.assertRegex(valobj.summary, r'^"hello"( strong=1)? weak=0$')
 
         valobj = self.expect_var_path("sp_user", type="std::shared_ptr<User>")
         self.assertRegex(
             valobj.summary,
-            "^std(::__[^:]*)?::shared_ptr<User>::element_type @ 0x0*[1-9a-f][0-9a-f]+( strong=1)? weak=1",
+            "^std(::__[^:]*)?::shared_ptr<User>::element_type @ 0x0*[1-9a-f][0-9a-f]+( strong=1)? weak=0",
         )
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
@@ -90,3 +89,29 @@ class TestCase(TestBase):
 
         self.expect_var_path("sp_user->id", type="int", value="30")
         self.expect_var_path("sp_user->name", type="std::string", summary='"steph"')
+
+        valobj = self.expect_var_path(
+            "si", type="std::shared_ptr<int>", summary="47 strong=2 weak=0"
+        )
+
+        valobj = self.expect_var_path(
+            "sie", type="std::shared_ptr<int>", summary="nullptr strong=2 weak=0"
+        )
+
+        lldbutil.continue_to_breakpoint(process, bkpt)
+
+        valobj = self.expect_var_path(
+            "si", type="std::shared_ptr<int>", summary="47 strong=2 weak=2"
+        )
+        valobj = self.expect_var_path(
+            "sie", type="std::shared_ptr<int>", summary="nullptr strong=2 weak=2"
+        )
+        valobj = self.expect_var_path(
+            "wie", type="std::weak_ptr<int>", summary="nullptr strong=2 weak=2"
+        )
+
+        self.runCmd("settings set target.experimental.use-DIL true")
+        self.expect_var_path("ptr_node->value", value="1")
+        self.expect_var_path("ptr_node->next->value", value="2")
+        self.expect_var_path("(*ptr_node).value", value="1")
+        self.expect_var_path("(*(*ptr_node).next).value", value="2")

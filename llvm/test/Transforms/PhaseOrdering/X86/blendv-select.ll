@@ -473,6 +473,57 @@ define <8 x i64> @x86_pblendvb_v64i8_v32i8(<8 x i64> %a, <8 x i64> %b, <8 x i64>
   ret <8 x i64> %res
 }
 
+define <2 x i64> @PR66513(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c, <2 x i64> %src) {
+; CHECK-LABEL: @PR66513(
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x i64> [[A:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[CMP_I23:%.*]] = icmp sgt <4 x i32> [[I]], zeroinitializer
+; CHECK-NEXT:    [[I2:%.*]] = bitcast <2 x i64> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[CMP_I21:%.*]] = icmp sgt <4 x i32> [[I2]], zeroinitializer
+; CHECK-NEXT:    [[I4:%.*]] = bitcast <2 x i64> [[C:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp sgt <4 x i32> [[I4]], zeroinitializer
+; CHECK-NEXT:    [[NARROW:%.*]] = select <4 x i1> [[CMP_I21]], <4 x i1> [[CMP_I23]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[XOR_I_INNER1:%.*]] = xor <4 x i1> [[NARROW]], [[CMP_I]]
+; CHECK-NEXT:    [[NARROW3:%.*]] = select <4 x i1> [[CMP_I23]], <4 x i1> [[XOR_I_INNER1]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[AND_I25_INNER2:%.*]] = and <4 x i1> [[XOR_I_INNER1]], [[CMP_I21]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i64> [[SRC:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <4 x i1> [[NARROW]], <4 x i32> [[TMP1]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[A]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[NARROW3]], <4 x i32> [[TMP3]], <4 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[B]] to <4 x i32>
+; CHECK-NEXT:    [[SEXT_I:%.*]] = select <4 x i1> [[AND_I25_INNER2]], <4 x i32> [[TMP5]], <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[I5:%.*]] = bitcast <4 x i32> [[SEXT_I]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[I5]]
+;
+  %i = bitcast <2 x i64> %a to <4 x i32>
+  %cmp.i23 = icmp sgt <4 x i32> %i, zeroinitializer
+  %sext.i24 = sext <4 x i1> %cmp.i23 to <4 x i32>
+  %i1 = bitcast <4 x i32> %sext.i24 to <2 x i64>
+  %i2 = bitcast <2 x i64> %b to <4 x i32>
+  %cmp.i21 = icmp sgt <4 x i32> %i2, zeroinitializer
+  %sext.i22 = sext <4 x i1> %cmp.i21 to <4 x i32>
+  %i3 = bitcast <4 x i32> %sext.i22 to <2 x i64>
+  %i4 = bitcast <2 x i64> %c to <4 x i32>
+  %cmp.i = icmp sgt <4 x i32> %i4, zeroinitializer
+  %sext.i = sext <4 x i1> %cmp.i to <4 x i32>
+  %i5 = bitcast <4 x i32> %sext.i to <2 x i64>
+  %and.i27 = and <2 x i64> %i1, %i3
+  %xor.i = xor <2 x i64> %and.i27, %i5
+  %and.i26 = and <2 x i64> %xor.i, %i1
+  %and.i25 = and <2 x i64> %xor.i, %i3
+  %and.i = and <2 x i64> %src, %and.i27
+  %i6 = bitcast <2 x i64> %and.i to <16 x i8>
+  %i7 = bitcast <2 x i64> %a to <16 x i8>
+  %i8 = bitcast <2 x i64> %and.i26 to <16 x i8>
+  %i9 = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %i6, <16 x i8> %i7, <16 x i8> %i8)
+  %i10 = bitcast <16 x i8> %i9 to <2 x i64>
+  %i11 = bitcast <2 x i64> %i10 to <16 x i8>
+  %i12 = bitcast <2 x i64> %b to <16 x i8>
+  %i13 = bitcast <2 x i64> %and.i25 to <16 x i8>
+  %i14 = call <16 x i8> @llvm.x86.sse41.pblendvb(<16 x i8> %i11, <16 x i8> %i12, <16 x i8> %i13)
+  %i15 = bitcast <16 x i8> %i14 to <2 x i64>
+  ret <2 x i64> %i15
+}
+
 ;
 ; Negative Tests
 ;

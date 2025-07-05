@@ -32,7 +32,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   bool GetSummary(Stream &stream, const TypeSummaryOptions &options);
 
@@ -139,15 +139,16 @@ LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
   return 1;
 }
 
-size_t LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+llvm::Expected<size_t>
+LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "ptr" || name == "pointer")
     return 0;
   if (name == "del" || name == "deleter")
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return UINT32_MAX;
+  return llvm::createStringError("Type has no child named '%s'",
+                                 name.AsCString());
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
@@ -155,14 +156,8 @@ bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(
   if (!m_ptr_obj)
     return false;
 
-  bool success;
-  uint64_t ptr_value = m_ptr_obj->GetValueAsUnsigned(0, &success);
-  if (!success)
-    return false;
-  if (ptr_value == 0)
-    stream.Printf("nullptr");
-  else
-    stream.Printf("0x%" PRIx64, ptr_value);
+  DumpCxxSmartPtrPointerSummary(stream, *m_ptr_obj, options);
+
   return true;
 }
 

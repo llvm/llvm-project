@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cstddef>
@@ -98,7 +99,7 @@ public:
     return Info.Flags & wasm::WASM_SYMBOL_VISIBILITY_MASK;
   }
 
-  void print(raw_ostream &Out) const;
+  LLVM_ABI void print(raw_ostream &Out) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -123,7 +124,7 @@ struct WasmSegment {
   wasm::WasmDataSegment Data;
 };
 
-class WasmObjectFile : public ObjectFile {
+class LLVM_ABI WasmObjectFile : public ObjectFile {
 
 public:
   WasmObjectFile(MemoryBufferRef Object, Error &Err);
@@ -353,9 +354,11 @@ public:
   };
 
   // Sections that may or may not be present, but cannot be predecessors
-  static int DisallowedPredecessors[WASM_NUM_SEC_ORDERS][WASM_NUM_SEC_ORDERS];
+  LLVM_ABI static int DisallowedPredecessors[WASM_NUM_SEC_ORDERS]
+                                            [WASM_NUM_SEC_ORDERS];
 
-  bool isValidSectionOrder(unsigned ID, StringRef CustomSectionName = "");
+  LLVM_ABI bool isValidSectionOrder(unsigned ID,
+                                    StringRef CustomSectionName = "");
 
 private:
   bool Seen[WASM_NUM_SEC_ORDERS] = {}; // Sections that have been seen already
