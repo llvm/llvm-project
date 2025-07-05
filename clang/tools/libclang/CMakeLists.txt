@@ -163,13 +163,15 @@ if(ENABLE_SHARED)
       VERSION ${LIBCLANG_LIBRARY_VERSION}
       DEFINE_SYMBOL _CINDEX_LIB_)
     if (CYGWIN)
-      # On Cygwin environment, a library target generates "cyg${OUTPUT_NAME}-${VERSION}.dll" and "lib${OUTPUT_NAME}.dll.a" but
-      # don't provide link "cyg${OUTPUT_NAME}.dll" differs from expected as other Unix platforms.
-      # Although, to dlopen(), usually "cyg${OUTPUT_NAME}.dll" will be passed (or "lib${OUTPUT_NAME}.dll" and "lib${OUTPUT_NAME}.so"
-      # are also viable as Cygwin runtime replaces those prefix and suffix), which is same manner to other Unix platforms,
-      # and clang-python does so.
-      # Thus, put a copy of dll named without version suffix to convinience to use of dlopen(). A symbolic link can't be
-      # viable here as the path passed to dlopen() will be passed directly to LoadLibraryExW, so it must be a real file.
+      # On Cygwin, a shared library target generates "cyg${OUTPUT_NAME}-${VERSION}.dll"
+      # and "lib${OUTPUT_NAME}.dll.a", but does not generate an unversioned symlink
+      # "cyg${OUTPUT_NAME}.dll" as is common on other Unix platforms.
+      # However, tools like clang-python or direct dlopen() calls usually expect the
+      # unversioned form (e.g. "cygclang.dll"). While Cygwin can resolve some alternate
+      # names (e.g. "libclang.so", "libclang.dll"), LoadLibraryExW used under the hood
+      # doesn't follow Cygwin-style symlinks, so a real file is required.
+      # This copies the versioned DLL to an unversioned name to improve compatibility
+      # with such tools.
       set(UNPAINTED_TARGET_NAME "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
       add_custom_command(TARGET libclang POST_BUILD
                          COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:libclang>" "${UNPAINTED_TARGET_NAME}")
