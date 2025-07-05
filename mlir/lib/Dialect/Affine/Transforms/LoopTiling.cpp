@@ -121,7 +121,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   // If the cache size is zero, set the minimum valid tile size. No good reason
   // to pick another specific size over this.
   if (cacheSizeInKiB == 0) {
-    std::fill(tileSizes->begin(), tileSizes->end(), 1);
+    llvm::fill(*tileSizes, 1);
     return;
   }
 
@@ -136,8 +136,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   std::optional<int64_t> fp = getMemoryFootprintBytes(band[0], 0);
   if (!fp) {
     // Fill with default tile sizes if footprint is unknown.
-    std::fill(tileSizes->begin(), tileSizes->end(),
-              LoopTiling::kDefaultTileSize);
+    llvm::fill(*tileSizes, LoopTiling::kDefaultTileSize);
     if (avoidMaxMinBounds)
       adjustToDivisorsOfTripCounts(band, tileSizes);
     LLVM_DEBUG(
@@ -151,7 +150,7 @@ void LoopTiling::getTileSizes(ArrayRef<AffineForOp> band,
   uint64_t excessFactor = llvm::divideCeil(*fp, cacheSizeBytes);
   if (excessFactor <= 1) {
     // No need of any tiling - set tile size to 1.
-    std::fill(tileSizes->begin(), tileSizes->end(), 1);
+    llvm::fill(*tileSizes, 1);
     return;
   }
 
