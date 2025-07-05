@@ -1426,6 +1426,10 @@ uint64_t TargetTransformInfo::getFeatureMask(const Function &F) const {
   return TTIImpl->getFeatureMask(F);
 }
 
+uint64_t TargetTransformInfo::getPriorityMask(const Function &F) const {
+  return TTIImpl->getPriorityMask(F);
+}
+
 bool TargetTransformInfo::isMultiversionedFunction(const Function &F) const {
   return TTIImpl->isMultiversionedFunction(F);
 }
