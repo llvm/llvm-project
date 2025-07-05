@@ -18,6 +18,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+constexpr int MAX_UTF8_LENGTH = 4;
+
 class CharacterConverter {
 private:
   mbstate *state;
