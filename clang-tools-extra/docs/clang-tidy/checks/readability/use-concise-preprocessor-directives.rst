@@ -1,7 +1,7 @@
 .. title:: clang-tidy - readability-use-concise-preprocessor-directives
 
 readability-use-concise-preprocessor-directives
-=============================================
+===============================================
 
 Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef`` and,
 since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
