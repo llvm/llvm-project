@@ -199,15 +199,17 @@ class AArch64AuthMCExpr final : public MCSpecifierExpr {
   AArch64PACKey::ID Key;
 
   explicit AArch64AuthMCExpr(const MCExpr *Expr, uint16_t Discriminator,
-                             AArch64PACKey::ID Key, bool HasAddressDiversity)
-      : MCSpecifierExpr(Expr, HasAddressDiversity ? AArch64::S_AUTHADDR
-                                                  : AArch64::S_AUTH),
+                             AArch64PACKey::ID Key, bool HasAddressDiversity,
+                             SMLoc Loc)
+      : MCSpecifierExpr(
+            Expr, HasAddressDiversity ? AArch64::S_AUTHADDR : AArch64::S_AUTH,
+            Loc),
         Discriminator(Discriminator), Key(Key) {}
 
 public:
   static const AArch64AuthMCExpr *
   create(const MCExpr *Expr, uint16_t Discriminator, AArch64PACKey::ID Key,
-         bool HasAddressDiversity, MCContext &Ctx);
+         bool HasAddressDiversity, MCContext &Ctx, SMLoc Loc = SMLoc());
 
   AArch64PACKey::ID getKey() const { return Key; }
   uint16_t getDiscriminator() const { return Discriminator; }

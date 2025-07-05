@@ -6115,18 +6115,26 @@ bool LLParser::parseDILocalVariable(MDNode *&Result, bool IsDistinct) {
 }
 
 /// parseDILabel:
-///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7)
+///   ::= !DILabel(scope: !0, name: "foo", file: !1, line: 7, column: 4)
 bool LLParser::parseDILabel(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(scope, MDField, (/* AllowNull */ false));                           \
   REQUIRED(name, MDStringField, );                                             \
   REQUIRED(file, MDField, );                                                   \
-  REQUIRED(line, LineField, );
+  REQUIRED(line, LineField, );                                                 \
+  OPTIONAL(column, ColumnField, );                                             \
+  OPTIONAL(isArtificial, MDBoolField, );                                       \
+  OPTIONAL(coroSuspendIdx, MDUnsignedField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
+  std::optional<unsigned> CoroSuspendIdx =
+      coroSuspendIdx.Seen ? std::optional<unsigned>(coroSuspendIdx.Val)
+                          : std::nullopt;
+
   Result = GET_OR_DISTINCT(DILabel,
-                           (Context, scope.Val, name.Val, file.Val, line.Val));
+                           (Context, scope.Val, name.Val, file.Val, line.Val,
+                            column.Val, isArtificial.Val, CoroSuspendIdx));
   return false;
 }
 

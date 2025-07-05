@@ -1,4 +1,4 @@
-; Tests whether resume function would remain dbg.value infomation.
+; Tests whether resume function retains dbg.value information.
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.

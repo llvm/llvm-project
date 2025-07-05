@@ -15,12 +15,12 @@ a:
 
 # CHECK:      data-reloc-error.s:10:7: error: 1-byte data relocation is not supported
 # CHECK-NEXT: .byte _GLOBAL_OFFSET_TABLE_
-# CHECK:      data-reloc-error.s:11:7: error: 1-byte pc-relative data relocation is not supported
+# CHECK:      data-reloc-error.s:11:29: error: 1-byte pc-relative data relocation is not supported
 # CHECK-NEXT: .byte _GLOBAL_OFFSET_TABLE_ - .
 # CHECK:      data-reloc-error.s:12:8: error: 2-byte data relocation is not supported
 # CHECK-NEXT: .2byte _GLOBAL_OFFSET_TABLE_
-# CHECK:      data-reloc-error.s:13:8: error: 2-byte pc-relative data relocation is not supported
+# CHECK:      data-reloc-error.s:13:30: error: 2-byte pc-relative data relocation is not supported
 # CHECK-NEXT: .2byte _GLOBAL_OFFSET_TABLE_ - .
-# CHECK:      data-reloc-error.s:14:8: error: 8-byte pc-relative data relocation is not supported
+# CHECK:      data-reloc-error.s:14:30: error: 8-byte pc-relative data relocation is not supported
 # CHECK-NEXT: .8byte _GLOBAL_OFFSET_TABLE_ - .
 

@@ -4357,7 +4357,8 @@ Sema::ConditionResult Sema::ActOnConditionVariable(Decl *ConditionVar,
       CheckConditionVariable(cast<VarDecl>(ConditionVar), StmtLoc, CK);
   if (E.isInvalid())
     return ConditionError();
-  return ConditionResult(*this, ConditionVar, MakeFullExpr(E.get(), StmtLoc),
+  E = ActOnFinishFullExpr(E.get(), /*DiscardedValue*/ false);
+  return ConditionResult(*this, ConditionVar, E,
                          CK == ConditionKind::ConstexprIf);
 }
 
@@ -4415,6 +4416,12 @@ ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr) {
 
   ExprResult E = PerformContextuallyConvertToBool(CondExpr);
   if (!IsConstexpr || E.isInvalid() || E.get()->isValueDependent())
+    return E;
+
+  E = ActOnFinishFullExpr(E.get(), E.get()->getExprLoc(),
+                          /*DiscardedValue*/ false,
+                          /*IsConstexpr*/ true);
+  if (E.isInvalid())
     return E;
 
   // FIXME: Return this value to the caller so they don't need to recompute it.

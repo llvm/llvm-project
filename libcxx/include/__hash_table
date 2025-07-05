@@ -207,12 +207,12 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
 
   _LIBCPP_HIDE_FROM_ABI static key_type const& __get_key(__container_value_type const& __v) { return __v.first; }
 
-  template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __node_value_type>::value, int> = 0>
+  template <class _Up, __enable_if_t<is_same<__remove_cvref_t<_Up>, __node_value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(_Up& __t) {
     return __t.__get_value();
   }
 
-  template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, int> = 0>
+  template <class _Up, __enable_if_t<is_same<__remove_cvref_t<_Up>, __container_value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(_Up& __t) {
     return __t;
   }
@@ -856,7 +856,7 @@ public:
     return __emplace_unique_key_args(_NodeTypes::__get_key(__x), std::move(__x));
   }
 
-  template <class _Pp, __enable_if_t<!__is_same_uncvref<_Pp, __container_value_type>::value, int> = 0>
+  template <class _Pp, __enable_if_t<!is_same<__remove_cvref_t<_Pp>, __container_value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __insert_unique(_Pp&& __x) {
     return __emplace_unique(std::forward<_Pp>(__x));
   }

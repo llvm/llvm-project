@@ -149,30 +149,32 @@ public:
 } // end anonymous namespace
 
 MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
   const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_ppc_br24", 6, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_br24_notoc", 6, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_brcond14", 16, 14, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24", 6, 24, 0},
+      {"fixup_ppc_br24_notoc", 6, 24, 0},
+      {"fixup_ppc_brcond14", 16, 14, 0},
       {"fixup_ppc_br24abs", 6, 24, 0},
       {"fixup_ppc_brcond14abs", 16, 14, 0},
       {"fixup_ppc_half16", 0, 16, 0},
       {"fixup_ppc_half16ds", 0, 14, 0},
-      {"fixup_ppc_pcrel34", 0, 34, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_pcrel34", 0, 34, 0},
       {"fixup_ppc_imm34", 0, 34, 0},
       {"fixup_ppc_nofixup", 0, 0, 0}};
   const static MCFixupKindInfo InfosLE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
-      {"fixup_ppc_br24", 2, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_br24_notoc", 2, 24, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_ppc_brcond14", 2, 14, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_br24", 2, 24, 0},
+      {"fixup_ppc_br24_notoc", 2, 24, 0},
+      {"fixup_ppc_brcond14", 2, 14, 0},
       {"fixup_ppc_br24abs", 2, 24, 0},
       {"fixup_ppc_brcond14abs", 2, 14, 0},
       {"fixup_ppc_half16", 0, 16, 0},
       {"fixup_ppc_half16ds", 2, 14, 0},
-      {"fixup_ppc_pcrel34", 0, 34, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_ppc_pcrel34", 0, 34, 0},
       {"fixup_ppc_imm34", 0, 34, 0},
       {"fixup_ppc_nofixup", 0, 0, 0}};
+  // clang-format on
 
   // Fixup kinds from .reloc directive are like R_PPC_NONE/R_PPC64_NONE. They
   // do not require any extra processing.

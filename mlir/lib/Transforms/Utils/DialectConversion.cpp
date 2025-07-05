@@ -2711,8 +2711,7 @@ legalizeUnresolvedMaterialization(RewriterBase &rewriter,
 }
 
 LogicalResult OperationConverter::convertOperations(ArrayRef<Operation *> ops) {
-  if (ops.empty())
-    return success();
+  assert(!ops.empty() && "expected at least one operation");
   const ConversionTarget &target = opLegalizer.getTarget();
 
   // Compute the set of operations and blocks to convert.
@@ -3415,6 +3414,38 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
+/// This is the type of Action that is dispatched when a conversion is applied.
+class ApplyConversionAction
+    : public tracing::ActionImpl<ApplyConversionAction> {
+public:
+  using Base = tracing::ActionImpl<ApplyConversionAction>;
+  ApplyConversionAction(ArrayRef<IRUnit> irUnits) : Base(irUnits) {}
+  static constexpr StringLiteral tag = "apply-conversion";
+  static constexpr StringLiteral desc =
+      "Encapsulate the application of a dialect conversion";
+
+  void print(raw_ostream &os) const override { os << tag; }
+};
+
+static LogicalResult applyConversion(ArrayRef<Operation *> ops,
+                                     const ConversionTarget &target,
+                                     const FrozenRewritePatternSet &patterns,
+                                     ConversionConfig config,
+                                     OpConversionMode mode) {
+  if (ops.empty())
+    return success();
+  MLIRContext *ctx = ops.front()->getContext();
+  LogicalResult status = success();
+  SmallVector<IRUnit> irUnits(ops.begin(), ops.end());
+  ctx->executeAction<ApplyConversionAction>(
+      [&] {
+        OperationConverter opConverter(target, patterns, config, mode);
+        status = opConverter.convertOperations(ops);
+      },
+      irUnits);
+  return status;
+}
+
 //===----------------------------------------------------------------------===//
 // Partial Conversion
 //===----------------------------------------------------------------------===//
@@ -3422,9 +3453,8 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 LogicalResult mlir::applyPartialConversion(
     ArrayRef<Operation *> ops, const ConversionTarget &target,
     const FrozenRewritePatternSet &patterns, ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Partial);
-  return opConverter.convertOperations(ops);
+  return applyConversion(ops, target, patterns, config,
+                         OpConversionMode::Partial);
 }
 LogicalResult
 mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
@@ -3441,9 +3471,7 @@ LogicalResult mlir::applyFullConversion(ArrayRef<Operation *> ops,
                                         const ConversionTarget &target,
                                         const FrozenRewritePatternSet &patterns,
                                         ConversionConfig config) {
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Full);
-  return opConverter.convertOperations(ops);
+  return applyConversion(ops, target, patterns, config, OpConversionMode::Full);
 }
 LogicalResult mlir::applyFullConversion(Operation *op,
                                         const ConversionTarget &target,
@@ -3510,9 +3538,8 @@ LogicalResult mlir::applyAnalysisConversion(
   // Convert the cloned operations. The original IR will remain unchanged.
   SmallVector<Operation *> opsToConvert = llvm::map_to_vector(
       ops, [&](Operation *op) { return mapping.lookup(op); });
-  OperationConverter opConverter(target, patterns, config,
-                                 OpConversionMode::Analysis);
-  LogicalResult status = opConverter.convertOperations(opsToConvert);
+  LogicalResult status = applyConversion(opsToConvert, target, patterns, config,
+                                         OpConversionMode::Analysis);
 
   // Remap `legalizableOps`, so that they point to the original ops and not the
   // cloned ops.

@@ -996,7 +996,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
                                         /*SpecificToolchain=*/true);
   } else if (IsHIP && !UseLLVMOffload) {
     if (auto *OMPTargetArg =
-            C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
+            C.getInputArgs().getLastArg(options::OPT_offload_targets_EQ)) {
       Diag(clang::diag::err_drv_unsupported_opt_for_language_mode)
           << OMPTargetArg->getSpelling() << "HIP";
       return;
@@ -1030,7 +1030,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       ((IsCuda || IsHIP) && UseLLVMOffload) ||
       (C.getInputArgs().hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                                 options::OPT_fno_openmp, false) &&
-       (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ) ||
+       (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ) ||
         C.getInputArgs().hasArg(options::OPT_offload_arch_EQ)));
   if (IsOpenMPOffloading) {
     // We expect that -fopenmp-targets is always used in conjunction with the
@@ -1046,7 +1046,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     // valid triple. Otherwise, if only --offload-arch= was specified we instead
     // attempt to derive the appropriate toolchains from the arguments.
     if (Arg *OpenMPTargets =
-            C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
+            C.getInputArgs().getLastArg(options::OPT_offload_targets_EQ)) {
       if (OpenMPTargets && !OpenMPTargets->getNumValues()) {
         Diag(clang::diag::warn_drv_empty_joined_argument)
             << OpenMPTargets->getAsString(C.getInputArgs());
@@ -1124,7 +1124,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
         Diag(clang::diag::err_drv_failed_to_deduce_target_from_arch)
             << "native";
     }
-  } else if (C.getInputArgs().hasArg(options::OPT_fopenmp_targets_EQ)) {
+  } else if (C.getInputArgs().hasArg(options::OPT_offload_targets_EQ)) {
     Diag(clang::diag::err_drv_expecting_fopenmp_with_fopenmp_targets);
     return;
   }

@@ -5316,8 +5316,9 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
   StringRef Name = D->getName();
 
   // Create the descriptor for the label.
-  auto *L =
-      DBuilder.createLabel(Scope, Name, Unit, Line, CGM.getLangOpts().Optimize);
+  auto *L = DBuilder.createLabel(
+      Scope, Name, Unit, Line, Column, /*IsArtificial=*/false,
+      /*CoroSuspendIdx=*/std::nullopt, CGM.getLangOpts().Optimize);
 
   // Insert an llvm.dbg.label into the current block.
   DBuilder.insertLabel(L,

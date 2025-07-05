@@ -57,7 +57,7 @@ public:
     assert(MO.isExpr() && "Unexpected MO type.");
 
     MCFixupKind Kind = getTargetFixup(MO.getExpr());
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -110,7 +110,7 @@ public:
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -125,7 +125,7 @@ public:
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -140,7 +140,7 @@ public:
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -154,7 +154,7 @@ public:
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 
@@ -168,7 +168,7 @@ public:
     if (MO.getExpr()->getKind() == MCExpr::Specifier)
       Kind = getTargetFixup(MO.getExpr());
 
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind));
     return 0;
   }
 

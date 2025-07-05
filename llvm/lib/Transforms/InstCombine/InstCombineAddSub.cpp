@@ -2164,10 +2164,14 @@ Value *InstCombinerImpl::OptimizePointerDifference(Value *LHS, Value *RHS,
 
   // If this is a single inbounds GEP and the original sub was nuw,
   // then the final multiplication is also nuw.
-  if (auto *I = dyn_cast<Instruction>(Result))
+  if (auto *I = dyn_cast<OverflowingBinaryOperator>(Result))
     if (IsNUW && match(Offset2, m_Zero()) && Base.LHSNW.isInBounds() &&
-        I->getOpcode() == Instruction::Mul)
-      I->setHasNoUnsignedWrap();
+        (I->use_empty() || I->hasOneUse()) && I->hasNoSignedWrap() &&
+        !I->hasNoUnsignedWrap() &&
+        ((I->getOpcode() == Instruction::Mul &&
+          match(I->getOperand(1), m_NonNegative())) ||
+         I->getOpcode() == Instruction::Shl))
+      cast<Instruction>(I)->setHasNoUnsignedWrap();
 
   // If we have a 2nd GEP of the same base pointer, subtract the offsets.
   // If both GEPs are inbounds, then the subtract does not have signed overflow.

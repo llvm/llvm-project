@@ -868,7 +868,7 @@ public:
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -940,7 +940,7 @@ public:
   std::optional<bool> CompareInit(unsigned Opc, const Init *LHS,
                                   const Init *RHS) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec) const;
 
@@ -990,7 +990,7 @@ public:
   const Init *getMHS() const { return MHS; }
   const Init *getRHS() const { return RHS; }
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec) const;
 
@@ -1096,7 +1096,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec) const;
 
@@ -1129,7 +1129,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold() const;
 
@@ -1163,7 +1163,7 @@ public:
 
   void Profile(FoldingSetNodeID &ID) const;
 
-  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -1412,8 +1412,8 @@ public:
   }
 };
 
-/// (v a, b) - Represent a DAG tree value.  DAG inits are required
-/// to have at least one value then a (possibly empty) list of arguments.  Each
+/// (v a, b) - Represent a DAG tree value. DAG inits are required
+/// to have at least one value then a (possibly empty) list of arguments. Each
 /// argument can have a name associated with it.
 class DagInit final
     : public TypedInit,

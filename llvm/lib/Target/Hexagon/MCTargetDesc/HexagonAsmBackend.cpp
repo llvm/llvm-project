@@ -84,14 +84,15 @@ public:
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override {
+    // clang-format off
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
       // This table *must* be in same the order of fixup_* kinds in
       // HexagonFixupKinds.h.
       //
       // namei                          offset  bits    flags
-      { "fixup_Hexagon_B22_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B22_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B15_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B7_PCREL",       0,      32,     0 },
       { "fixup_Hexagon_LO16",           0,      32,     0 },
       { "fixup_Hexagon_HI16",           0,      32,     0 },
       { "fixup_Hexagon_32",             0,      32,     0 },
@@ -102,15 +103,15 @@ public:
       { "fixup_Hexagon_GPREL16_2",      0,      32,     0 },
       { "fixup_Hexagon_GPREL16_3",      0,      32,     0 },
       { "fixup_Hexagon_HL16",           0,      32,     0 },
-      { "fixup_Hexagon_B13_PCREL",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B13_PCREL",      0,      32,     0 },
+      { "fixup_Hexagon_B9_PCREL",       0,      32,     0 },
+      { "fixup_Hexagon_B32_PCREL_X",    0,      32,     0 },
       { "fixup_Hexagon_32_6_X",         0,      32,     0 },
-      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_B22_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B15_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B13_PCREL_X",    0,      32,     0 },
+      { "fixup_Hexagon_B9_PCREL_X",     0,      32,     0 },
+      { "fixup_Hexagon_B7_PCREL_X",     0,      32,     0 },
       { "fixup_Hexagon_16_X",           0,      32,     0 },
       { "fixup_Hexagon_12_X",           0,      32,     0 },
       { "fixup_Hexagon_11_X",           0,      32,     0 },
@@ -119,12 +120,12 @@ public:
       { "fixup_Hexagon_8_X",            0,      32,     0 },
       { "fixup_Hexagon_7_X",            0,      32,     0 },
       { "fixup_Hexagon_6_X",            0,      32,     0 },
-      { "fixup_Hexagon_32_PCREL",       0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_32_PCREL",       0,      32,     0 },
       { "fixup_Hexagon_COPY",           0,      32,     0 },
       { "fixup_Hexagon_GLOB_DAT",       0,      32,     0 },
       { "fixup_Hexagon_JMP_SLOT",       0,      32,     0 },
       { "fixup_Hexagon_RELATIVE",       0,      32,     0 },
-      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_PLT_B22_PCREL",  0,      32,     0 },
       { "fixup_Hexagon_GOTREL_LO16",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_HI16",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_32",      0,      32,     0 },
@@ -137,8 +138,8 @@ public:
       { "fixup_Hexagon_DTPREL_HI16",    0,      32,     0 },
       { "fixup_Hexagon_DTPREL_32",      0,      32,     0 },
       { "fixup_Hexagon_DTPREL_16",      0,      32,     0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_GD_PLT_B22_PCREL",0,     32,     0 },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL",0,     32,     0 },
       { "fixup_Hexagon_GD_GOT_LO16",    0,      32,     0 },
       { "fixup_Hexagon_GD_GOT_HI16",    0,      32,     0 },
       { "fixup_Hexagon_GD_GOT_32",      0,      32,     0 },
@@ -159,7 +160,7 @@ public:
       { "fixup_Hexagon_TPREL_HI16",     0,      32,     0 },
       { "fixup_Hexagon_TPREL_32",       0,      32,     0 },
       { "fixup_Hexagon_TPREL_16",       0,      32,     0 },
-      { "fixup_Hexagon_6_PCREL_X",      0,      32,     MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_Hexagon_6_PCREL_X",      0,      32,     0 },
       { "fixup_Hexagon_GOTREL_32_6_X",  0,      32,     0 },
       { "fixup_Hexagon_GOTREL_16_X",    0,      32,     0 },
       { "fixup_Hexagon_GOTREL_11_X",    0,      32,     0 },
@@ -183,11 +184,12 @@ public:
       { "fixup_Hexagon_TPREL_32_6_X",   0,      32,     0 },
       { "fixup_Hexagon_TPREL_16_X",     0,      32,     0 },
       { "fixup_Hexagon_TPREL_11_X",     0,      32,     0 },
-      { "fixup_Hexagon_GD_PLT_B22_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_GD_PLT_B32_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B22_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_Hexagon_LD_PLT_B32_PCREL_X",0,     32,     MCFixupKindInfo::FKF_IsPCRel }
+      { "fixup_Hexagon_GD_PLT_B22_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_GD_PLT_B32_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_LD_PLT_B22_PCREL_X", 0,  32,     0 },
+      { "fixup_Hexagon_LD_PLT_B32_PCREL_X", 0,  32,     0 },
     };
+    // clang-format on
 
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);

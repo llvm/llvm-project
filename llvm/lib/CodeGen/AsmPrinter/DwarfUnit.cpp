@@ -442,49 +442,53 @@ void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute,
   addBlock(Die, Attribute, Block->BestForm(), Block);
 }
 
-void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, const DIFile *File) {
+void DwarfUnit::addSourceLine(DIE &Die, unsigned Line, unsigned Column,
+                              const DIFile *File) {
   if (Line == 0)
     return;
 
   unsigned FileID = getOrCreateSourceID(File);
   addUInt(Die, dwarf::DW_AT_decl_file, std::nullopt, FileID);
   addUInt(Die, dwarf::DW_AT_decl_line, std::nullopt, Line);
+
+  if (Column != 0)
+    addUInt(Die, dwarf::DW_AT_decl_column, std::nullopt, Column);
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DILocalVariable *V) {
   assert(V);
 
-  addSourceLine(Die, V->getLine(), V->getFile());
+  addSourceLine(Die, V->getLine(), /*Column*/ 0, V->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIGlobalVariable *G) {
   assert(G);
 
-  addSourceLine(Die, G->getLine(), G->getFile());
+  addSourceLine(Die, G->getLine(), /*Column*/ 0, G->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DISubprogram *SP) {
   assert(SP);
 
-  addSourceLine(Die, SP->getLine(), SP->getFile());
+  addSourceLine(Die, SP->getLine(), /*Column*/ 0, SP->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DILabel *L) {
   assert(L);
 
-  addSourceLine(Die, L->getLine(), L->getFile());
+  addSourceLine(Die, L->getLine(), L->getColumn(), L->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIType *Ty) {
   assert(Ty);
 
-  addSourceLine(Die, Ty->getLine(), Ty->getFile());
+  addSourceLine(Die, Ty->getLine(), /*Column*/ 0, Ty->getFile());
 }
 
 void DwarfUnit::addSourceLine(DIE &Die, const DIObjCProperty *Ty) {
   assert(Ty);
 
-  addSourceLine(Die, Ty->getLine(), Ty->getFile());
+  addSourceLine(Die, Ty->getLine(), /*Column*/ 0, Ty->getFile());
 }
 
 void DwarfUnit::addConstantFPValue(DIE &Die, const ConstantFP *CFP) {

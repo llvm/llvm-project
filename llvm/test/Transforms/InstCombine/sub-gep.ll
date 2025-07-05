@@ -1089,3 +1089,72 @@ define <2 x i64> @splat_geps_multiple(ptr %base, i64 %idx0, <2 x i64> %idx1, <2 
   %d = sub <2 x i64> %gep2.int, %gep1.int
   ret <2 x i64> %d
 }
+
+define i64 @nuw_ptrdiff_shl_nsw(ptr %base, i64 %idx) {
+; CHECK-LABEL: @nuw_ptrdiff_shl_nsw(
+; CHECK-NEXT:    [[OFFSET:%.*]] = shl nuw nsw i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %offset = shl nsw i64 %idx, 3
+  %gep = getelementptr inbounds i8, ptr %base, i64 %offset
+  %lhs = ptrtoint ptr %gep to i64
+  %rhs = ptrtoint ptr %base to i64
+  %diff = sub nuw i64 %lhs, %rhs
+  ret i64 %diff
+}
+
+define i64 @nuw_ptrdiff_shl_nonsw(ptr %base, i64 %idx) {
+; CHECK-LABEL: @nuw_ptrdiff_shl_nonsw(
+; CHECK-NEXT:    [[OFFSET:%.*]] = shl i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %offset = shl i64 %idx, 3
+  %gep = getelementptr inbounds i8, ptr %base, i64 %offset
+  %lhs = ptrtoint ptr %gep to i64
+  %rhs = ptrtoint ptr %base to i64
+  %diff = sub nuw i64 %lhs, %rhs
+  ret i64 %diff
+}
+
+define i64 @nuw_ptrdiff_mul_nsw_nneg_scale(ptr %base, i64 %idx) {
+; CHECK-LABEL: @nuw_ptrdiff_mul_nsw_nneg_scale(
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul nuw nsw i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %offset = mul nsw i64 %idx, 3
+  %gep = getelementptr inbounds i8, ptr %base, i64 %offset
+  %lhs = ptrtoint ptr %gep to i64
+  %rhs = ptrtoint ptr %base to i64
+  %diff = sub nuw i64 %lhs, %rhs
+  ret i64 %diff
+}
+
+define i64 @nuw_ptrdiff_mul_nsw_unknown_scale(ptr %base, i64 %idx, i64 %scale) {
+; CHECK-LABEL: @nuw_ptrdiff_mul_nsw_unknown_scale(
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul nsw i64 [[IDX:%.*]], [[SCALE:%.*]]
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %offset = mul nsw i64 %idx, %scale
+  %gep = getelementptr inbounds i8, ptr %base, i64 %offset
+  %lhs = ptrtoint ptr %gep to i64
+  %rhs = ptrtoint ptr %base to i64
+  %diff = sub nuw i64 %lhs, %rhs
+  ret i64 %diff
+}
+
+declare void @usei64(i64)
+
+define i64 @nuw_ptrdiff_mul_nsw_nneg_scale_multiuse(ptr %base, i64 %idx) {
+; CHECK-LABEL: @nuw_ptrdiff_mul_nsw_nneg_scale_multiuse(
+; CHECK-NEXT:    [[OFFSET:%.*]] = mul nsw i64 [[IDX:%.*]], 3
+; CHECK-NEXT:    call void @usei64(i64 [[OFFSET]])
+; CHECK-NEXT:    ret i64 [[OFFSET]]
+;
+  %offset = mul nsw i64 %idx, 3
+  call void @usei64(i64 %offset)
+  %gep = getelementptr inbounds i8, ptr %base, i64 %offset
+  %lhs = ptrtoint ptr %gep to i64
+  %rhs = ptrtoint ptr %base to i64
+  %diff = sub nuw i64 %lhs, %rhs
+  ret i64 %diff
+}

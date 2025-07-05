@@ -23,6 +23,6 @@ int f2(void) {
 
 // CHECK: distinct !DISubprogram(name: "f1", {{.*}}, retainedNodes: [[ELEMENTS:!.*]])
 // CHECK: [[ELEMENTS]] = !{{{.*}}, [[LABEL_METADATA]]}
-// CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 8)
+// CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 8, column: 1)
 // CHECK: [[INLINEDAT:!.*]] = distinct !DILocation(line: 18,
 // CHECK: [[LABEL_LOCATION]] = !DILocation(line: 8, {{.*}}, inlinedAt: [[INLINEDAT]])

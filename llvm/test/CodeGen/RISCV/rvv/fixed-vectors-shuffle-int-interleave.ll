@@ -598,43 +598,54 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZIP-NEXT:    addi sp, sp, -16
 ; ZIP-NEXT:    .cfi_def_cfa_offset 16
 ; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    slli a0, a0, 5
-; ZIP-NEXT:    sub sp, sp, a0
-; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
+; ZIP-NEXT:    li a1, 40
 ; ZIP-NEXT:    mul a0, a0, a1
+; ZIP-NEXT:    sub sp, sp, a0
+; ZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x28, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 40 * vlenb
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    slli a0, a0, 5
 ; ZIP-NEXT:    add a0, sp, a0
 ; ZIP-NEXT:    addi a0, a0, 16
 ; ZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZIP-NEXT:    addi a0, sp, 16
 ; ZIP-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZIP-NEXT:    vslidedown.vi v24, v8, 16
 ; ZIP-NEXT:    li a0, 32
-; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZIP-NEXT:    ri.vzip2a.vv v16, v24, v0
-; ZIP-NEXT:    csrr a1, vlenb
-; ZIP-NEXT:    li a2, 24
-; ZIP-NEXT:    mul a1, a1, a2
-; ZIP-NEXT:    add a1, sp, a1
-; ZIP-NEXT:    addi a1, a1, 16
-; ZIP-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZIP-NEXT:    vslidedown.vi v24, v24, 16
-; ZIP-NEXT:    csrr a1, vlenb
-; ZIP-NEXT:    slli a1, a1, 4
-; ZIP-NEXT:    add a1, sp, a1
-; ZIP-NEXT:    addi a1, a1, 16
-; ZIP-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
-; ZIP-NEXT:    lui a1, 699051
-; ZIP-NEXT:    addi a1, a1, -1366
-; ZIP-NEXT:    vmv.s.x v0, a1
+; ZIP-NEXT:    vslidedown.vi v16, v8, 16
+; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; ZIP-NEXT:    ri.vzip2a.vv v8, v16, v0
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    slli a1, a1, 3
 ; ZIP-NEXT:    add a1, sp, a1
 ; ZIP-NEXT:    addi a1, a1, 16
 ; ZIP-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    slli a1, a1, 5
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; ZIP-NEXT:    vslidedown.vi v16, v16, 16
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    li a2, 24
+; ZIP-NEXT:    mul a1, a1, a2
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    lui a1, 699051
+; ZIP-NEXT:    addi a1, a1, -1366
+; ZIP-NEXT:    vmv.s.x v0, a1
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    slli a1, a1, 4
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
+; ZIP-NEXT:    csrr a1, vlenb
+; ZIP-NEXT:    li a2, 24
+; ZIP-NEXT:    mul a1, a1, a2
+; ZIP-NEXT:    add a1, sp, a1
+; ZIP-NEXT:    addi a1, a1, 16
+; ZIP-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    csrr a1, vlenb
 ; ZIP-NEXT:    slli a1, a1, 4
 ; ZIP-NEXT:    add a1, sp, a1
@@ -646,19 +657,21 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZIP-NEXT:    addi a1, a1, 16
 ; ZIP-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; ZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
-; ZIP-NEXT:    ri.vzip2a.vv v16, v8, v24, v0.t
-; ZIP-NEXT:    csrr a0, vlenb
-; ZIP-NEXT:    li a1, 24
-; ZIP-NEXT:    mul a0, a0, a1
-; ZIP-NEXT:    add a0, sp, a0
-; ZIP-NEXT:    addi a0, a0, 16
-; ZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    addi a0, sp, 16
-; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
-; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v24
-; ZIP-NEXT:    vmv.v.v v8, v0
+; ZIP-NEXT:    ri.vzip2a.vv v8, v24, v16, v0.t
+; ZIP-NEXT:    vmv.v.v v24, v8
 ; ZIP-NEXT:    csrr a0, vlenb
 ; ZIP-NEXT:    slli a0, a0, 5
+; ZIP-NEXT:    add a0, sp, a0
+; ZIP-NEXT:    addi a0, a0, 16
+; ZIP-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    addi a0, sp, 16
+; ZIP-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; ZIP-NEXT:    ri.vzip2a.vv v0, v8, v16
+; ZIP-NEXT:    vmv.v.v v8, v0
+; ZIP-NEXT:    vmv.v.v v16, v24
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    li a1, 40
+; ZIP-NEXT:    mul a0, a0, a1
 ; ZIP-NEXT:    add sp, sp, a0
 ; ZIP-NEXT:    .cfi_def_cfa sp, 16
 ; ZIP-NEXT:    addi sp, sp, 16

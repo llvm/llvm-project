@@ -41,8 +41,7 @@ PressureTracker::PressureTracker(const MCSchedModel &Model)
   }
 
   ResourceUsers.resize(NextResourceUsersIdx);
-  std::fill(ResourceUsers.begin(), ResourceUsers.end(),
-            std::make_pair<unsigned, unsigned>(~0U, 0U));
+  llvm::fill(ResourceUsers, std::make_pair<unsigned, unsigned>(~0U, 0U));
 }
 
 void PressureTracker::getResourceUsers(uint64_t ResourceMask,

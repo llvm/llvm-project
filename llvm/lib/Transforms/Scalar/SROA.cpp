@@ -4070,18 +4070,27 @@ private:
   //   => select cond, gep(ptr1, idx), gep(ptr2, idx)
   // and  gep ptr, (select cond, idx1, idx2)
   //   => select cond, gep(ptr, idx1), gep(ptr, idx2)
+  // We also allow for i1 zext indices, which are equivalent to selects.
   bool unfoldGEPSelect(GetElementPtrInst &GEPI) {
     // Check whether the GEP has exactly one select operand and all indices
     // will become constant after the transform.
-    SelectInst *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
+    Instruction *Sel = dyn_cast<SelectInst>(GEPI.getPointerOperand());
     for (Value *Op : GEPI.indices()) {
       if (auto *SI = dyn_cast<SelectInst>(Op)) {
         if (Sel)
           return false;
 
         Sel = SI;
-        if (!isa<ConstantInt>(Sel->getTrueValue()) ||
-            !isa<ConstantInt>(Sel->getFalseValue()))
+        if (!isa<ConstantInt>(SI->getTrueValue()) ||
+            !isa<ConstantInt>(SI->getFalseValue()))
+          return false;
+        continue;
+      }
+      if (auto *ZI = dyn_cast<ZExtInst>(Op)) {
+        if (Sel)
+          return false;
+        Sel = ZI;
+        if (!ZI->getSrcTy()->isIntegerTy(1))
           return false;
         continue;
       }
@@ -4107,8 +4116,16 @@ private:
       return NewOps;
     };
 
-    Value *True = Sel->getTrueValue();
-    Value *False = Sel->getFalseValue();
+    Value *Cond, *True, *False;
+    if (auto *SI = dyn_cast<SelectInst>(Sel)) {
+      Cond = SI->getCondition();
+      True = SI->getTrueValue();
+      False = SI->getFalseValue();
+    } else {
+      Cond = Sel->getOperand(0);
+      True = ConstantInt::get(Sel->getType(), 1);
+      False = ConstantInt::get(Sel->getType(), 0);
+    }
     SmallVector<Value *> TrueOps = GetNewOps(True);
     SmallVector<Value *> FalseOps = GetNewOps(False);
 
@@ -4123,8 +4140,8 @@ private:
         IRB.CreateGEP(Ty, FalseOps[0], ArrayRef(FalseOps).drop_front(),
                       False->getName() + ".sroa.gep", NW);
 
-    Value *NSel = IRB.CreateSelect(Sel->getCondition(), NTrue, NFalse,
-                                   Sel->getName() + ".sroa.sel");
+    Value *NSel =
+        IRB.CreateSelect(Cond, NTrue, NFalse, Sel->getName() + ".sroa.sel");
     Visited.erase(&GEPI);
     GEPI.replaceAllUsesWith(NSel);
     GEPI.eraseFromParent();

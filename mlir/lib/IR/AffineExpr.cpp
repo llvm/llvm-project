@@ -793,6 +793,33 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   return nullptr;
 }
 
+/// Get the canonical order of two commutative exprs arguments.
+static std::pair<AffineExpr, AffineExpr>
+orderCommutativeArgs(AffineExpr expr1, AffineExpr expr2) {
+  auto sym1 = dyn_cast<AffineSymbolExpr>(expr1);
+  auto sym2 = dyn_cast<AffineSymbolExpr>(expr2);
+  // Try to order by symbol/dim position first.
+  if (sym1 && sym2)
+    return sym1.getPosition() < sym2.getPosition() ? std::pair{expr1, expr2}
+                                                   : std::pair{expr2, expr1};
+
+  auto dim1 = dyn_cast<AffineDimExpr>(expr1);
+  auto dim2 = dyn_cast<AffineDimExpr>(expr2);
+  if (dim1 && dim2)
+    return dim1.getPosition() < dim2.getPosition() ? std::pair{expr1, expr2}
+                                                   : std::pair{expr2, expr1};
+
+  // Put dims before symbols.
+  if (dim1 && sym2)
+    return {dim1, sym2};
+
+  if (sym1 && dim2)
+    return {dim2, sym1};
+
+  // Otherwise, keep original order.
+  return {expr1, expr2};
+}
+
 AffineExpr AffineExpr::operator+(int64_t v) const {
   return *this + getAffineConstantExpr(v, getContext());
 }
@@ -800,9 +827,11 @@ AffineExpr AffineExpr::operator+(AffineExpr other) const {
   if (auto simplified = simplifyAdd(*this, other))
     return simplified;
 
+  auto [lhs, rhs] = orderCommutativeArgs(*this, other);
+
   StorageUniquer &uniquer = getContext()->getAffineUniquer();
   return uniquer.get<AffineBinaryOpExprStorage>(
-      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Add), *this, other);
+      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Add), lhs, rhs);
 }
 
 /// Simplify a multiply expression. Return nullptr if it can't be simplified.
@@ -865,9 +894,11 @@ AffineExpr AffineExpr::operator*(AffineExpr other) const {
   if (auto simplified = simplifyMul(*this, other))
     return simplified;
 
+  auto [lhs, rhs] = orderCommutativeArgs(*this, other);
+
   StorageUniquer &uniquer = getContext()->getAffineUniquer();
   return uniquer.get<AffineBinaryOpExprStorage>(
-      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Mul), *this, other);
+      /*initFn=*/{}, static_cast<unsigned>(AffineExprKind::Mul), lhs, rhs);
 }
 
 // Unary minus, delegate to operator*.

@@ -14,7 +14,7 @@
 // CHECK:    %[[VAL5:.*]] = llvm.alloca %[[CONST_VAL4]] x i32 {bindc_name = "a"} : (i64) -> !llvm.ptr
 // CHECK:    %[[CONST_VAL5:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    %[[VAL6:.*]] = llvm.load %[[VAL1]] : !llvm.ptr -> i32
-// CHECK:    omp.simd nontemporal(%[[VAL5]], %[[VAL3]] : !llvm.ptr, !llvm.ptr) private(@_QFtestEi_private_i32 %[[VAL2]] -> %arg0 : !llvm.ptr) {
+// CHECK:    omp.simd nontemporal(%[[VAL5]], %[[VAL3]] : !llvm.ptr, !llvm.ptr) {
 // CHECK:      omp.loop_nest (%{{.*}}) : i32 = (%[[CONST_VAL5]]) to (%[[VAL6]]) inclusive step (%[[CONST_VAL5]]) {
 // CHECK:        llvm.store %{{.*}}, %{{.*}} : i32, !llvm.ptr
 // CHECK:        %[[VAL8:.*]] = llvm.load %[[VAL5]] {nontemporal} : !llvm.ptr -> i32
@@ -33,9 +33,9 @@
     %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtestEi"}
     %4 = fir.alloca i32 {bindc_name = "n", uniq_name = "_QFtestEn"}
     %5 = fir.load %4 : !fir.ref<i32>
-    omp.simd nontemporal(%0, %2 : !fir.ref<i32>, !fir.ref<i32>) private(@_QFtestEi_private_i32 %3 -> %arg0 : !fir.ref<i32>) {
+    omp.simd nontemporal(%0, %2 : !fir.ref<i32>, !fir.ref<i32>) {
       omp.loop_nest (%arg1) : i32 = (%c1_i32) to (%5) inclusive step (%c1_i32) {
-        fir.store %arg1 to %arg0 : !fir.ref<i32>
+        fir.store %arg1 to %3 : !fir.ref<i32>
         %6 = fir.load %0 {nontemporal}: !fir.ref<i32>
         %7 = fir.load %1 : !fir.ref<i32>
         %8 = arith.addi %6, %7 : i32
@@ -52,12 +52,12 @@
 // CHECK:    %[[IDX_VAL:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    %[[CONST_VAL1:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:    %[[END_IDX:.*]] = llvm.mlir.constant(100 : i32) : i32
-// CHECK:    omp.simd nontemporal(%[[ARG0:.*]] : !llvm.ptr) private(@_QFsimd_nontemporal_allocatableEi_private_i32 %[[ALLOCA2]] -> %[[ARG2:.*]] : !llvm.ptr) {
+// CHECK:    omp.simd nontemporal(%[[ARG0:.*]] : !llvm.ptr) {
 // CHECK:      omp.loop_nest (%[[ARG3:.*]]) : i32 = (%[[IDX_VAL]]) to (%[[END_IDX]]) inclusive step (%[[IDX_VAL]]) {
-// CHECK:        llvm.store %[[ARG3]], %[[ARG2]] : i32, !llvm.ptr
+// CHECK:        llvm.store %[[ARG3]], %{{.*}} : i32, !llvm.ptr
 // CHECK:        %[[CONST_VAL2:.*]] = llvm.mlir.constant(48 : i32) : i32
 // CHECK:        "llvm.intr.memcpy"(%[[ALLOCA1:.*]], %[[ARG0]], %[[CONST_VAL2]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-// CHECK:        %[[VAL1:.*]] = llvm.load %[[ARG2]] : !llvm.ptr -> i32
+// CHECK:        %[[VAL1:.*]] = llvm.load %{{.*}} : !llvm.ptr -> i32
 // CHECK:        %[[VAL2:.*]] = llvm.sext %[[VAL1]] : i32 to i64
 // CHECK:        %[[VAL3:.*]] = llvm.getelementptr %[[ALLOCA1]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 // CHECK:        %[[VAL4:.*]] = llvm.load %[[VAL3]] : !llvm.ptr -> !llvm.ptr
@@ -91,11 +91,11 @@
     %1 = fir.allocmem !fir.array<?xi32>, %c100 {fir.must_be_heap = true, uniq_name = "_QFsimd_nontemporal_allocatableEx.alloc"}
     %2 = fircg.ext_embox %1(%c100) : (!fir.heap<!fir.array<?xi32>>, index) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
     fir.store %2 to %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-    omp.simd nontemporal(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) private(@_QFsimd_nontemporal_allocatableEi_private_i32 %0 -> %arg2 : !fir.ref<i32>) {
+    omp.simd nontemporal(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
       omp.loop_nest (%arg3) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
-        fir.store %arg3 to %arg2 : !fir.ref<i32>
+        fir.store %arg3 to %0 : !fir.ref<i32>
         %7 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-        %8 = fir.load %arg2 : !fir.ref<i32>
+        %8 = fir.load %0 : !fir.ref<i32>
         %9 = fir.convert %8 : (i32) -> i64
         %10 = fir.box_addr %7 : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
         %11:3 = fir.box_dims %7, %c0 : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)

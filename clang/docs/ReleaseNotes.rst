@@ -899,6 +899,7 @@ Bug Fixes to C++ Support
 - Fixed a crash when constant evaluating some explicit object member assignment operators. (#GH142835)
 - Fixed an access checking bug when substituting into concepts (#GH115838)
 - Fix a bug where private access specifier of overloaded function not respected. (#GH107629)
+- Correctly handle allocations in the condition of a ``if constexpr``.(#GH120197) (#GH134820)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

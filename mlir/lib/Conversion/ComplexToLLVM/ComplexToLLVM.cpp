@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTCOMPLEXTOLLVMPASS

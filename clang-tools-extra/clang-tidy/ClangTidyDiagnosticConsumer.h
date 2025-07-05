@@ -292,6 +292,11 @@ public:
   void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
                         const Diagnostic &Info) override;
 
+  void BeginSourceFile(const LangOptions &LangOpts,
+                       const Preprocessor *PP = nullptr) override;
+
+  void EndSourceFile() override;
+
   // Retrieve the diagnostics that were captured.
   std::vector<ClangTidyError> take();
 
@@ -326,6 +331,11 @@ private:
   bool LastErrorRelatesToUserCode = false;
   bool LastErrorPassesLineFilter = false;
   bool LastErrorWasIgnored = false;
+  /// Tracks whether we're currently inside a
+  /// `BeginSourceFile()/EndSourceFile()` pair. Outside of a source file, we
+  /// should only receive diagnostics that have to source location, such as
+  /// command-line warnings.
+  bool InSourceFile = false;
 };
 
 } // end namespace tidy

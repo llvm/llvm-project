@@ -17,11 +17,11 @@ func.func @_QPsimd_with_nontemporal_clause(%arg0: !fir.ref<i32> {fir.bindc_name 
     %8 = fir.declare %7 {uniq_name = "_QFsimd_with_nontemporal_clauseEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
     %9 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QFsimd_with_nontemporal_clauseEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
     %10 = fir.load %9 : !fir.ref<i32>
-    // CHECK: omp.simd nontemporal(%[[A_DECL]], %[[C_DECL]] : !fir.ref<i32>, !fir.ref<i32>) private(@_QFsimd_with_nontemporal_clauseEi_private_i32 %8 -> %arg1 : !fir.ref<i32>) {
+    // CHECK: omp.simd nontemporal(%[[A_DECL]], %[[C_DECL]] : !fir.ref<i32>, !fir.ref<i32>) {
     // CHECK-NEXT: omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
-    omp.simd nontemporal(%2, %6 : !fir.ref<i32>, !fir.ref<i32>) private(@_QFsimd_with_nontemporal_clauseEi_private_i32 %8 -> %arg1 : !fir.ref<i32>) {
+    omp.simd nontemporal(%2, %6 : !fir.ref<i32>, !fir.ref<i32>) {
       omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%10) inclusive step (%c1_i32) {
-        %11 = fir.declare %arg1 {uniq_name = "_QFsimd_with_nontemporal_clauseEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+        %11 = fir.declare %8 {uniq_name = "_QFsimd_with_nontemporal_clauseEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
         fir.store %arg2 to %11 : !fir.ref<i32>
         // CHECK:  %[[LOAD:.*]] = fir.load %[[A_DECL]] {nontemporal} : !fir.ref<i32>
         %12 = fir.load %2 : !fir.ref<i32>
@@ -56,11 +56,11 @@ func.func @_QPsimd_nontemporal_allocatable(%arg0: !fir.ref<!fir.box<!fir.heap<!f
     %9 = fir.shape %7 : (index) -> !fir.shape<1>
     %10 = fir.embox %8(%9) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xi32>>>
     fir.store %10 to %3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-    // CHECK:  omp.simd nontemporal(%[[X_DECL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) private(@_QFsimd_nontemporal_allocatableEi_private_i32 %2 -> %arg2 : !fir.ref<i32>) {
+    // CHECK:  omp.simd nontemporal(%[[X_DECL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
     // CHECK:   omp.loop_nest (%{{.*}}) : i32 = (%{{.*}}) to (%{{.*}}) inclusive step (%{{.*}}) {
-    omp.simd nontemporal(%3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) private(@_QFsimd_nontemporal_allocatableEi_private_i32 %2 -> %arg2 : !fir.ref<i32>) {
+    omp.simd nontemporal(%3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) {
       omp.loop_nest (%arg3) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
-        %16 = fir.declare %arg2 {uniq_name = "_QFsimd_nontemporal_allocatableEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+        %16 = fir.declare %2 {uniq_name = "_QFsimd_nontemporal_allocatableEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
         fir.store %arg3 to %16 : !fir.ref<i32>
         // CHECK:  %[[VAL1:.*]] = fir.load %[[X_DECL]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
         %17 = fir.load %3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>

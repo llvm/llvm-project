@@ -1171,7 +1171,7 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
     SmallVector<int, 32> ShuffleMask(VF);
     for (unsigned stride = 1; stride < VF; stride <<= 1) {
       // Initialise the mask with undef.
-      std::fill(ShuffleMask.begin(), ShuffleMask.end(), -1);
+      llvm::fill(ShuffleMask, -1);
       for (unsigned j = 0; j < VF; j += stride << 1) {
         ShuffleMask[j] = j + stride;
       }

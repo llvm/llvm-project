@@ -90,7 +90,7 @@ define i8 @uadd_scalar_undef(i8 %a) {
 
 define i8 @uadd_scalar_poison(i8 %a) {
 ; CHECK-LABEL: @uadd_scalar_poison(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 poison
 ;
   %x5 = call i8 @llvm.uadd.sat.i8(i8 %a, i8 poison)
   ret i8 %x5
@@ -106,7 +106,7 @@ define <2 x i8> @uadd_vector_undef(<2 x i8> %a) {
 
 define <2 x i8> @uadd_vector_poison(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_poison(
-; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x5v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 poison, i8 poison>)
   ret <2 x i8> %x5v
@@ -122,7 +122,7 @@ define i8 @uadd_scalar_undef_commute(i8 %a) {
 
 define i8 @uadd_scalar_poison_commute(i8 %a) {
 ; CHECK-LABEL: @uadd_scalar_poison_commute(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 poison
 ;
   %x6 = call i8 @llvm.uadd.sat.i8(i8 poison, i8 %a)
   ret i8 %x6
@@ -138,7 +138,7 @@ define <2 x i8> @uadd_vector_undef_commute(<2 x i8> %a) {
 
 define <2 x i8> @uadd_vector_poison_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_poison_commute(
-; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x5v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> poison, <2 x i8> %a)
   ret <2 x i8> %x5v
@@ -222,7 +222,7 @@ define i8 @sadd_scalar_undef(i8 %a) {
 
 define i8 @sadd_scalar_poison(i8 %a) {
 ; CHECK-LABEL: @sadd_scalar_poison(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 poison
 ;
   %y5 = call i8 @llvm.sadd.sat.i8(i8 %a, i8 poison)
   ret i8 %y5
@@ -238,7 +238,7 @@ define <2 x i8> @sadd_vector_undef(<2 x i8> %a) {
 
 define <2 x i8> @sadd_vector_poison(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_poison(
-; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %y5v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> poison)
   ret <2 x i8> %y5v
@@ -254,7 +254,7 @@ define i8 @sadd_scalar_undef_commute(i8 %a) {
 
 define i8 @sadd_scalar_poison_commute(i8 %a) {
 ; CHECK-LABEL: @sadd_scalar_poison_commute(
-; CHECK-NEXT:    ret i8 -1
+; CHECK-NEXT:    ret i8 poison
 ;
   %y6 = call i8 @llvm.sadd.sat.i8(i8 poison, i8 %a)
   ret i8 %y6
@@ -270,7 +270,7 @@ define <2 x i8> @sadd_vector_undef_commute(<2 x i8> %a) {
 
 define <2 x i8> @sadd_vector_poison_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_poison_commute(
-; CHECK-NEXT:    ret <2 x i8> splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %y6v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> poison, <2 x i8> %a)
   ret <2 x i8> %y6v
@@ -334,7 +334,7 @@ define i8 @usub_scalar_undef(i8 %a) {
 
 define i8 @usub_scalar_poison(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_poison(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    ret i8 poison
 ;
   %x4 = call i8 @llvm.usub.sat.i8(i8 %a, i8 poison)
   ret i8 %x4
@@ -350,7 +350,7 @@ define <2 x i8> @usub_vector_undef(<2 x i8> %a) {
 
 define <2 x i8> @usub_vector_poison(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_poison(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x4v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 poison, i8 poison>)
   ret <2 x i8> %x4v
@@ -366,7 +366,7 @@ define i8 @usub_scalar_undef_commute(i8 %a) {
 
 define i8 @usub_scalar_poison_commute(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_poison_commute(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    ret i8 poison
 ;
   %x5 = call i8 @llvm.usub.sat.i8(i8 poison, i8 %a)
   ret i8 %x5
@@ -382,7 +382,7 @@ define <2 x i8> @usub_vector_undef_commute(<2 x i8> %a) {
 
 define <2 x i8> @usub_vector_poison_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_poison_commute(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %x5v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 poison, i8 poison>, <2 x i8> %a)
   ret <2 x i8> %x5v
@@ -466,7 +466,7 @@ define i8 @ssub_scalar_undef(i8 %a) {
 
 define i8 @ssub_scalar_poison(i8 %a) {
 ; CHECK-LABEL: @ssub_scalar_poison(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    ret i8 poison
 ;
   %y4 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 poison)
   ret i8 %y4
@@ -482,7 +482,7 @@ define <2 x i8> @ssub_vector_undef(<2 x i8> %a) {
 
 define <2 x i8> @ssub_vector_poison(<2 x i8> %a) {
 ; CHECK-LABEL: @ssub_vector_poison(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %y4v = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> poison)
   ret <2 x i8> %y4v
@@ -498,7 +498,7 @@ define i8 @ssub_scalar_undef_commute(i8 %a) {
 
 define i8 @ssub_scalar_poison_commute(i8 %a) {
 ; CHECK-LABEL: @ssub_scalar_poison_commute(
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    ret i8 poison
 ;
   %y5 = call i8 @llvm.ssub.sat.i8(i8 poison, i8 %a)
   ret i8 %y5
@@ -514,7 +514,7 @@ define <2 x i8> @ssub_vector_undef_commute(<2 x i8> %a) {
 
 define <2 x i8> @ssub_vector_poison_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @ssub_vector_poison_commute(
-; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %y5v = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> <i8 poison, i8 poison>, <2 x i8> %a)
   ret <2 x i8> %y5v

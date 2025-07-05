@@ -2557,7 +2557,7 @@ public:
     else if (Fixup.getKind() ==
              MCFixupKind(AArch64::fixup_aarch64_pcrel_branch26))
       RelType = ELF::R_AARCH64_JUMP26;
-    else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+    else if (Fixup.isPCRel()) {
       switch (FKI.TargetSize) {
       default:
         return std::nullopt;

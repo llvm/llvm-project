@@ -40,12 +40,12 @@ bar:
   .text
 ## Branches to defined out-of-range symbols should report an error
 test_defined_out_of_range:
-  bne a0, a1, 1f # CHECK: :[[#@LINE]]:3: error: fixup value out of range
+  bne a0, a1, 1f # CHECK: :[[#@LINE]]:15: error: fixup value out of range
   .skip (1 << 12)
 1:
-  c.beqz a0, 1f # CHECK: :[[#@LINE]]:3: error: fixup value out of range
+  c.beqz a0, 1f # CHECK: :[[#@LINE]]:14: error: fixup value out of range
   .skip (1 << 8)
 1:
-  c.j 1f # CHECK: :[[#@LINE]]:3: error: fixup value out of range
+  c.j 1f # CHECK: :[[#@LINE]]:7: error: fixup value out of range
   .skip (1 << 11)
 1:

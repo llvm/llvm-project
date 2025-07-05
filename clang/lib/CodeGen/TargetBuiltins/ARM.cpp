@@ -845,8 +845,8 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP0(vrndiq_v),
   NEONMAP1(vrndm_v, floor, Add1ArgType),
   NEONMAP1(vrndmq_v, floor, Add1ArgType),
-  NEONMAP1(vrndn_v, arm_neon_vrintn, Add1ArgType),
-  NEONMAP1(vrndnq_v, arm_neon_vrintn, Add1ArgType),
+  NEONMAP1(vrndn_v, roundeven, Add1ArgType),
+  NEONMAP1(vrndnq_v, roundeven, Add1ArgType),
   NEONMAP1(vrndp_v, ceil, Add1ArgType),
   NEONMAP1(vrndpq_v, ceil, Add1ArgType),
   NEONMAP1(vrndq_v, trunc, Add1ArgType),
@@ -3132,7 +3132,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vrndns_f32: {
     Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *Tys[] = {Arg->getType()};
-    Function *F = CGM.getIntrinsic(Intrinsic::arm_neon_vrintn, Tys);
+    Function *F = CGM.getIntrinsic(Intrinsic::roundeven, Tys);
     return Builder.CreateCall(F, {Arg}, "vrndn"); }
 
   case NEON::BI__builtin_neon_vset_lane_i8:

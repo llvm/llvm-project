@@ -623,17 +623,17 @@ std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
 MCFixupKindInfo X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
       // clang-format off
-      {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_movq_load_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax_rex2", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"reloc_riprel_4byte_relax_evex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte", 0, 32, 0},
+      {"reloc_riprel_4byte_movq_load", 0, 32, 0},
+      {"reloc_riprel_4byte_movq_load_rex2", 0, 32, 0},
+      {"reloc_riprel_4byte_relax", 0, 32, 0},
+      {"reloc_riprel_4byte_relax_rex", 0, 32, 0},
+      {"reloc_riprel_4byte_relax_rex2", 0, 32, 0},
+      {"reloc_riprel_4byte_relax_evex", 0, 32, 0},
       {"reloc_signed_4byte", 0, 32, 0},
       {"reloc_signed_4byte_relax", 0, 32, 0},
       {"reloc_global_offset_table", 0, 32, 0},
-      {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_branch_4byte_pcrel", 0, 32, 0},
       // clang-format on
   };
 
