@@ -554,9 +554,12 @@ analyzeModule(Module &M) {
 
 AnalysisKey RootSignatureAnalysis::Key;
 
-RootSignatureBindingInfo RootSignatureAnalysis::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
-  return RootSignatureBindingInfo(analyzeModule(M));
+RootSignatureAnalysis::Result
+RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
+  if (!AnalysisResult)
+    AnalysisResult = std::make_unique<RootSignatureBindingInfo>(
+        RootSignatureBindingInfo(analyzeModule(M)));
+  return *AnalysisResult;
 }
 
 //===----------------------------------------------------------------------===//
