@@ -66,6 +66,7 @@
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/lldb-types.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 
@@ -944,6 +945,19 @@ SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool hardware = false;
     sb_bp = target_sp->CreateBreakpoint(sb_address.ref(), false, hardware);
+  }
+
+  return sb_bp;
+}
+
+SBBreakpoint SBTarget::BreakpointCreateByFileAddress(const SBFileSpec &file_spec, addr_t file_addr) {
+  LLDB_INSTRUMENT_VA(this, file_spec, file_addr);
+
+  SBBreakpoint sb_bp;
+  if (TargetSP target_sp = GetSP()) {
+    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+    const bool hardware = false;
+    sb_bp = target_sp->CreateAddressInModuleBreakpoint(file_addr, false, *file_spec.get(), hardware);
   }
 
   return sb_bp;

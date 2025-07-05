@@ -31,8 +31,8 @@ struct PersistenceData {
   /// The source module path.
   std::string module;
 
-  /// The symbol unique name.
-  std::string symbol_mangled_name;
+  /// The file address inside the module.
+  lldb::addr_t file_addr;
 };
 bool fromJSON(const llvm::json::Value &, PersistenceData &,
               llvm::json::Path);

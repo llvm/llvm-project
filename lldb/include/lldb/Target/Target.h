@@ -723,7 +723,7 @@ public:
   lldb::BreakpointSP CreateBreakpoint(lldb::addr_t load_addr, bool internal,
                                       bool request_hardware);
 
-  // Use this to create a breakpoint from a load address and a module file spec
+  // Use this to create a breakpoint from a file address and a module file spec
   lldb::BreakpointSP CreateAddressInModuleBreakpoint(lldb::addr_t file_addr,
                                                      bool internal,
                                                      const FileSpec &file_spec,
