@@ -11,8 +11,7 @@ define void @test() {
 ; CHECK-NEXT:    br label %[[START:.*]]
 ; CHECK:       [[START]]:
 ; CHECK-NEXT:    [[VAL1:%.*]] = phi ptr [ [[TMP0]], %[[ENTRY]] ], [ [[VAL1]], %[[START]] ]
-; CHECK-NEXT:    [[VAL2:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[VAL2]], %[[START]] ]
-; CHECK-NEXT:    [[SUNKADDR2:%.*]] = bitcast ptr [[VAL2]] to ptr
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[SUNKADDR2]], %[[START]] ]
 ; CHECK-NEXT:    [[LOADX:%.*]] = load i64, ptr [[SUNKADDR2]], align 8
 ; CHECK-NEXT:    br label %[[START]]
 ;

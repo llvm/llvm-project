@@ -84,7 +84,7 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 42
   ; GCN-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p1) from %ir.out.kernarg.offset1, align 16, addrspace 4)
+  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p1) from %ir.test_call_external_i32_func_i32_imm.kernarg.segment, align 16, addrspace 4)
   ; GCN-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; GCN-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_i32_func_i32
   ; GCN-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -2957,7 +2957,7 @@ define amdgpu_kernel void @test_call_external_v33i32_func_v33i32_i32(ptr addrspa
   ; GCN-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; GCN-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p1) from %ir.p.kernarg.offset1, align 16, addrspace 4)
+  ; GCN-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[INT]](p4) :: (dereferenceable invariant load (p1) from %ir.test_call_external_v33i32_func_v33i32_i32.kernarg.segment, align 16, addrspace 4)
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; GCN-NEXT:   %18:_(p4) = nuw nusw G_PTR_ADD [[INT]], [[C]](s64)
   ; GCN-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD %18(p4) :: (dereferenceable invariant load (s32) from %ir.idx.kernarg.offset, align 8, addrspace 4)

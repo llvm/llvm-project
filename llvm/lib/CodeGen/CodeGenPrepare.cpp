@@ -8720,6 +8720,13 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 
+    // Remove noop bitcasts
+    if (isa<BitCastInst>(I) && I->getType() == I->getOperand(0)->getType()) {
+      replaceAllUsesWith(I, I->getOperand(0), FreshBBs, IsHugeFunc);
+      I->eraseFromParent();
+      return true;
+    }
+
     if (OptimizeNoopCopyExpression(CI, *TLI, *DL))
       return true;
 

@@ -18,7 +18,7 @@
 ; DBGDAG-DAG: [[BASEPTR:t[0-9]+]]: i64,ch = CopyFromReg [[ENTRYTOKEN]],
 ; DBGDAG-DAG: [[ADDPTR:t[0-9]+]]: i64 = add {{(nuw )?}}[[BASEPTR]], Constant:i64<2>
 
-; DBGDAG-DAG: [[LD2:t[0-9]+]]: i16,ch = load<(load (s16) from %ir.tmp81, align 1)> [[ENTRYTOKEN]], [[BASEPTR]], undef:i64
+; DBGDAG-DAG: [[LD2:t[0-9]+]]: i16,ch = load<(load (s16) from %ir.tmp, align 1)> [[ENTRYTOKEN]], [[BASEPTR]], undef:i64
 ; DBGDAG-DAG: [[LD1:t[0-9]+]]: i8,ch = load<(load (s8) from %ir.tmp12)> [[ENTRYTOKEN]], [[ADDPTR]], undef:i64
 
 ; DBGDAG-DAG: [[ST1:t[0-9]+]]: ch = store<(store (s8) into %ir.tmp14)> [[ENTRYTOKEN]], [[LD1]], t{{[0-9]+}}, undef:i64

@@ -10,9 +10,8 @@ declare <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr>, i32 immarg, <4 x i
 define <4 x float> @foo(ptr %p) {
 ; CHECK-LABEL: define <4 x float> @foo
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[P]] to ptr
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP1]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> [[TMP2]], i32 0, <4 x i1> zeroinitializer, <4 x float> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[P]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> [[TMP1]], i32 0, <4 x i1> zeroinitializer, <4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x float> [[GATHER]]
 ;
   %base.splatinsert = insertelement <4 x ptr> poison, ptr %p, i32 0

@@ -22,22 +22,22 @@ define i32 @main() {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
-; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm7
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm2
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm3
 ; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm1
+; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
 ; CHECK-NEXT:    vmovups %ymm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm7, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm3, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm2, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm7, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovups %ymm1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm5
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm4
+; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    vmovups %ymm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm5, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups %ymm4, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vzeroupper
