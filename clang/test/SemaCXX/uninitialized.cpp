@@ -162,12 +162,16 @@ void test_const_ptr() {
   int a;
   int b;  // expected-note {{initialize the variable 'b' to silence this warning}}
   foo(&a);
-  bar(&b);
-  b = a + b; // expected-warning {{variable 'b' is uninitialized when used here}}
+  bar(&b); // expected-warning {{variable 'b' is uninitialized when used here}}
+  b = a + b;
   int *ptr;  //expected-note {{initialize the variable 'ptr' to silence this warning}}
   const int *ptr2;
   foo(ptr); // expected-warning {{variable 'ptr' is uninitialized when used here}}
   foobar(&ptr2);
+  int *ptr3; // expected-note {{initialize the variable 'ptr3' to silence this warning}}
+  const int *ptr4; // expected-note {{initialize the variable 'ptr4' to silence this warning}}
+  bar(ptr3); // expected-warning {{variable 'ptr3' is uninitialized when used here}}
+  bar(ptr4); // expected-warning {{variable 'ptr4' is uninitialized when used here}}
 }
 }
 
