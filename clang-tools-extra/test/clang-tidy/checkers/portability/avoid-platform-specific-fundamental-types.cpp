@@ -8,8 +8,11 @@ typedef unsigned long long uint64_t;
 typedef long long int64_t;
 
 // Mock standard library semantic types
-typedef unsigned long size_t;
 typedef long ptrdiff_t;
+// MSVC defines size_t automatically
+#ifndef _MSC_VER
+typedef unsigned long size_t;
+#endif
 // NOLINTEND(portability-avoid-platform-specific-fundamental-types)
 
 // Test fundamental integer types that should trigger warnings
