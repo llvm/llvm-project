@@ -71,11 +71,11 @@ def Inst3 : TestInstruction {
   let AsmString = "Inst3";
 }
 
-// CHECK-LABEL: DecodeStatus decodeFn0(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
-// CHECK-LABEL: DecodeStatus decodeFn1(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
-// CHECK-LABEL: DecodeStatus decodeFn2(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
-// CHECK-LABEL: DecodeStatus decodeFn3(DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
-// CHECK-LABEL: decodeToMCInst(unsigned Idx, DecodeStatus S, InsnType insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn0(DecodeStatus S, const InsnType &insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn1(DecodeStatus S, const InsnType &insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn2(DecodeStatus S, const InsnType &insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: DecodeStatus decodeFn3(DecodeStatus S, const InsnType &insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
+// CHECK-LABEL: decodeToMCInst(unsigned Idx, DecodeStatus S, const InsnType &insn, MCInst &MI, uint64_t Address, const MCDisassembler *Decoder, bool &DecodeComplete)
 // CHECK: static constexpr DecodeFnTy decodeFnTable[]
 // CHECK-NEXT: decodeFn0,
 // CHECK-NEXT: decodeFn1,

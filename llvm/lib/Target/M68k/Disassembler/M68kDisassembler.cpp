@@ -111,13 +111,13 @@ static DecodeStatus DecodeFPCSCRegisterClass(MCInst &Inst, uint64_t RegNo,
 }
 #define DecodeFPICRegisterClass DecodeFPCSCRegisterClass
 
-static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, APInt &Insn,
+static DecodeStatus DecodeCCRCRegisterClass(MCInst &Inst, const APInt &Insn,
                                             uint64_t Address,
                                             const void *Decoder) {
   llvm_unreachable("unimplemented");
 }
 
-static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst, APInt &Insn,
+static DecodeStatus DecodeSRCRegisterClass(MCInst &Inst, const APInt &Insn,
                                            uint64_t Address,
                                            const void *Decoder) {
   llvm_unreachable("unimplemented");

@@ -1137,6 +1137,15 @@ class OptionalDefOperand<ValueType ty, dag OpTypes, dag defaultops>
   let MIOperandInfo = OpTypes;
 }
 
+// InstrDecoderOption - This class is used to provide some options to the
+// TableGen DecoderEmitter backend.
+class InstrDecoderOption<string ty, list<int> bws> {
+  string CPPType = ty;       // C++ type for generating non-templated code.
+  list<int> Bitwidths = bws; // List of bitwidths supported by the above type.
+
+  assert !not(!empty(CPPType)), "CPP type cannot be empty";
+  assert !not(!empty(Bitwidths)), "Bitwidths cannot be empty";
+}
 
 // InstrInfo - This class should only be instantiated once to provide parameters
 // which are global to the target machine.
@@ -1158,6 +1167,17 @@ class InstrInfo {
   //
   // This option is a temporary migration help. It will go away.
   bit guessInstructionProperties = true;
+
+  // This is a list of instruction decoder options for this target. When non
+  // empty, it should list all the C++ types and associated bitwidths that this
+  // target intends to use to call the TableGen generated `decodeInstruction`
+  // function. If this list is empty, the decoder emitter will generate
+  // templated code. However, if a target intends to call this function with
+  // more than one `InsnType`, it may be beneficial to provide these decoder
+  // options to generate non-templated form of `decodeInstruction` and
+  // associated helper functions and avoid some code duplication in the
+  // `decodeToMCInst` function.
+  list<InstrDecoderOption> DecoderOptions = [];
 }
 
 // Standard Pseudo Instructions.
