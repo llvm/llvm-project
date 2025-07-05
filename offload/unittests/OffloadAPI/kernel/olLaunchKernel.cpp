@@ -52,6 +52,21 @@ struct olLaunchKernelNoArgsTest : LaunchKernelTestBase {
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelNoArgsTest);
 
+struct olLaunchKernelLocalMemTest : LaunchKernelTestBase {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(LaunchKernelTestBase::SetUpKernel("localmem"));
+  }
+};
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelLocalMemTest);
+
+struct olLaunchKernelLocalMemReductionTest : LaunchKernelTestBase {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(
+        LaunchKernelTestBase::SetUpKernel("localmem_reduction"));
+  }
+};
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchKernelLocalMemReductionTest);
+
 TEST_P(olLaunchKernelTest, Success) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
@@ -96,6 +111,54 @@ TEST_P(olLaunchKernelTest, SuccessSynchronous) {
   for (uint32_t i = 0; i < 64; i++) {
     ASSERT_EQ(Data[i], i);
   }
+
+  ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelLocalMemTest, Success) {
+  LaunchArgs.NumGroups.x = 4;
+  LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
+
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x *
+                                sizeof(uint32_t),
+                            &Mem));
+  struct {
+    void *Mem;
+  } Args{Mem};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.GroupSize.x * LaunchArgs.NumGroups.x; i++)
+    ASSERT_EQ(Data[i], (i % 64) * 2);
+
+  ASSERT_SUCCESS(olMemFree(Mem));
+}
+
+TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
+  LaunchArgs.NumGroups.x = 4;
+  LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
+
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.NumGroups.x * sizeof(uint32_t), &Mem));
+  struct {
+    void *Mem;
+  } Args{Mem};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
+                                &LaunchArgs, nullptr));
+
+  ASSERT_SUCCESS(olWaitQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
+    ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
 
   ASSERT_SUCCESS(olMemFree(Mem));
 }
