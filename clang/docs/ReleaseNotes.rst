@@ -672,6 +672,8 @@ Improvements to Clang's diagnostics
   are currently recognized.
 
 
+- Clang now suggests a fix-it to correct ``template`` in a template-template parameter with a missing ``<`` to ``typename``
+
 Improvements to Clang's time-trace
 ----------------------------------
 
