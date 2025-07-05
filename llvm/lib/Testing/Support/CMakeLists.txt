@@ -20,6 +20,23 @@ add_llvm_library(LLVMTestingSupport
 
 target_link_libraries(LLVMTestingSupport PRIVATE llvm_gtest)
 
+add_llvm_library(LLVMTestingSupportStatic
+  Error.cpp
+  SupportHelpers.cpp
+
+  ${BUILDTREE_ONLY}
+
+  ADDITIONAL_HEADER_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Testing/Support
+
+  LINK_COMPONENTS
+  Support
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
+  )
+
+target_link_libraries(LLVMTestingSupportStatic PRIVATE llvm_gtest)
+
 # This is to avoid the error in gtest-death-test-internal.h
 # (150,16): error: 'Create' overrides a member function but
 # is not marked 'override' [-Werror,-Wsuggest-override]
