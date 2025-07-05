@@ -1904,8 +1904,7 @@ define i1 @icmp_slt_offset_with_common_divisor(i64 %x, i64 %y) {
 ; CHECK-LABEL: @icmp_slt_offset_with_common_divisor(
 ; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
 ; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
-; CHECK-NEXT:    [[SHLX_OFFSET:%.*]] = add nsw i64 [[SHLX]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[SHLX_OFFSET]], [[SHLY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[SHLX]], [[SHLY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlx = shl i64 %x, 4
@@ -1919,8 +1918,7 @@ define i1 @icmp_slt_offset_with_smaller_common_divisor(i64 %x, i64 %y) {
 ; CHECK-LABEL: @icmp_slt_offset_with_smaller_common_divisor(
 ; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
 ; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
-; CHECK-NEXT:    [[SHLX_OFFSET:%.*]] = add nsw i64 [[SHLX]], -8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[SHLX_OFFSET]], [[SHLY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[SHLX]], [[SHLY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlx = shl i64 %x, 4
@@ -1934,8 +1932,7 @@ define i1 @icmp_sle_offset_with_common_divisor(i64 %x, i64 %y) {
 ; CHECK-LABEL: @icmp_sle_offset_with_common_divisor(
 ; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
 ; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
-; CHECK-NEXT:    [[SHLX_OFFSET:%.*]] = add nsw i64 [[SHLX]], 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[SHLX_OFFSET]], [[SHLY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[SHLX]], [[SHLY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlx = shl i64 %x, 4
@@ -1949,8 +1946,7 @@ define i1 @icmp_ule_offset_with_common_divisor(i64 %x, i64 %y) {
 ; CHECK-LABEL: @icmp_ule_offset_with_common_divisor(
 ; CHECK-NEXT:    [[SHLX:%.*]] = shl i64 [[X:%.*]], 4
 ; CHECK-NEXT:    [[SHLY:%.*]] = shl i64 [[Y:%.*]], 4
-; CHECK-NEXT:    [[SHLX_OFFSET:%.*]] = add nuw i64 [[SHLX]], 16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[SHLX_OFFSET]], [[SHLY]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SHLX]], [[SHLY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlx = shl i64 %x, 4
