@@ -196,9 +196,9 @@ define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
 ; CHECK-NEXT:    mov     x17, x0
 ; CHECK-NEXT:    movk    x17, #6503, lsl #48
 ; CHECK-NEXT:    autda   x16, x17
-; CHECK-NEXT:    ldr     x8, [x16]
+; CHECK-NEXT:    ldr     x9, [x16]
 ; CHECK-NEXT:    movk    x16, #34646, lsl #48
-; CHECK-NEXT:    blraa   x8, x16
+; CHECK-NEXT:    blraa   x9, x16
 ; CHECK-NEXT:    mov     w0, #42
 ; DARWIN-NEXT:   ldp     x29, x30, [sp], #16
 ; ELF-NEXT:      ldr     x30, [sp], #16

@@ -347,40 +347,6 @@ static bool isZeroingInactiveLanes(SDValue Op) {
   }
 }
 
-static std::tuple<SDValue, SDValue>
-extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
-  SDLoc DL(Disc);
-  SDValue AddrDisc;
-  SDValue ConstDisc;
-
-  // If this is a blend, remember the constant and address discriminators.
-  // Otherwise, it's either a constant discriminator, or a non-blended
-  // address discriminator.
-  if (Disc->getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-      Disc->getConstantOperandVal(0) == Intrinsic::ptrauth_blend) {
-    AddrDisc = Disc->getOperand(1);
-    ConstDisc = Disc->getOperand(2);
-  } else {
-    ConstDisc = Disc;
-  }
-
-  // If the constant discriminator (either the blend RHS, or the entire
-  // discriminator value) isn't a 16-bit constant, bail out, and let the
-  // discriminator be computed separately.
-  const auto *ConstDiscN = dyn_cast<ConstantSDNode>(ConstDisc);
-  if (!ConstDiscN || !isUInt<16>(ConstDiscN->getZExtValue()))
-    return std::make_tuple(DAG->getTargetConstant(0, DL, MVT::i64), Disc);
-
-  // If there's no address discriminator, use NoRegister, which we'll later
-  // replace with XZR, or directly use a Z variant of the inst. when available.
-  if (!AddrDisc)
-    AddrDisc = DAG->getRegister(AArch64::NoRegister, MVT::i64);
-
-  return std::make_tuple(
-      DAG->getTargetConstant(ConstDiscN->getZExtValue(), DL, MVT::i64),
-      AddrDisc);
-}
-
 AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                                              const AArch64Subtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -3124,6 +3090,10 @@ void AArch64TargetLowering::fixupBlendComponents(
                isUInt<16>(MaybeBlend->getOperand(1).getImm())) {
       AddrDisc = AArch64::NoRegister;
       IntDisc = MaybeBlend->getOperand(1).getImm();
+    } else if (MaybeBlend->getOpcode() == AArch64::COPY &&
+               MaybeBlend->getOperand(1).getReg() == AArch64::XZR) {
+      AddrDisc = AArch64::NoRegister;
+      IntDisc = 0;
     }
   }
 
@@ -3253,6 +3223,22 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case AArch64::AUTPAC:
     fixupBlendComponents(MI, BB, MI.getOperand(1), MI.getOperand(2),
                          &AArch64::GPR64noipRegClass);
+    fixupBlendComponents(MI, BB, MI.getOperand(4), MI.getOperand(5),
+                         &AArch64::GPR64noipRegClass);
+    return BB;
+  case AArch64::AUTH_TCRETURN:
+    fixupBlendComponents(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                         &AArch64::tcGPR64RegClass);
+    return BB;
+  case AArch64::AUTH_TCRETURN_BTI:
+    fixupBlendComponents(MI, BB, MI.getOperand(3), MI.getOperand(4),
+                         &AArch64::tcGPRnotx16x17RegClass);
+    return BB;
+  case AArch64::BLRA:
+    fixupBlendComponents(MI, BB, MI.getOperand(2), MI.getOperand(3),
+                         &AArch64::GPR64noipRegClass);
+    return BB;
+  case AArch64::BLRA_RVMARKER:
     fixupBlendComponents(MI, BB, MI.getOperand(4), MI.getOperand(5),
                          &AArch64::GPR64noipRegClass);
     return BB;
@@ -9508,18 +9494,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert((Key == AArch64PACKey::IA || Key == AArch64PACKey::IB) &&
            "Invalid auth call key");
 
-    // Split the discriminator into address/integer components.
-    SDValue AddrDisc, IntDisc;
-    std::tie(IntDisc, AddrDisc) =
-        extractPtrauthBlendDiscriminators(CLI.PAI->Discriminator, &DAG);
-
     if (Opc == AArch64ISD::CALL_RVMARKER)
       Opc = AArch64ISD::AUTH_CALL_RVMARKER;
     else
       Opc = IsTailCall ? AArch64ISD::AUTH_TC_RETURN : AArch64ISD::AUTH_CALL;
     Ops.push_back(DAG.getTargetConstant(Key, DL, MVT::i32));
-    Ops.push_back(IntDisc);
-    Ops.push_back(AddrDisc);
+    Ops.push_back(DAG.getTargetConstant(/*IntDisc=*/0, DL, MVT::i64));
+    Ops.push_back(CLI.PAI->Discriminator);
   }
 
   // Add argument registers to the end of the list so that they are known live
