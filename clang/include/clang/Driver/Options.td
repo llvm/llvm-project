@@ -3242,10 +3242,10 @@ def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
 
 def fmodules_driver : Flag<["-"], "fmodules-driver">,
   Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Enable support for explicit module builds from the driver (experimental)">;
+  HelpText<"Enable support for driver managed module builds (experimental)">;
 def fno_modules_driver : Flag<["-"], "fno-modules-driver">,
   Group<f_Group>, Visibility<[ClangOption]>,
-  HelpText<"Disable support for explicit module builds from the driver (experimental)">;
+  HelpText<"Disable support for driver managed module builds (experimental)">;
 
 def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;

@@ -580,8 +580,8 @@ def err_drv_reduced_module_output_overrided : Warning<
 def remark_found_cxx20_module_usage : Remark<
   "found C++20 module usage in file '%0'">,
   InGroup<ModulesDriver>;
-def remark_performing_explicit_module_build : Remark<
-  "performing explicit module build">,
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">,
   InGroup<ModulesDriver>;
 def warn_modules_driver_unsupported_standard : Warning<
   "'-fmodules-driver' is not supported before C++20">,

@@ -4606,7 +4606,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       UsesCXXModules = *ErrOrScanResult;
     }
     if (UsesCXXModules)
-      BuildExplicitModuleBuildActions(C, Args, Inputs, Actions);
+      BuildDriverManagedModuleBuildActions(C, Args, Inputs, Actions);
     return;
   }
 
@@ -4896,11 +4896,10 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
 }
 
-void Driver::BuildExplicitModuleBuildActions(Compilation &C,
-                                             llvm::opt::DerivedArgList &Args,
-                                             const InputList &Inputs,
-                                             ActionList &Actions) const {
-  Diags.Report(diag::remark_performing_explicit_module_build);
+void Driver::BuildDriverManagedModuleBuildActions(
+    Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
+    ActionList &Actions) const {
+  Diags.Report(diag::remark_performing_driver_managed_module_build);
   return;
 }
 
