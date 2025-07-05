@@ -1,6 +1,6 @@
-; Test usage of VBLEND on arch15.
+; Test usage of VBLEND on z17.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch15 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z17 | FileCheck %s
 
 define <16 x i8> @f1(<16 x i8> %val1, <16 x i8> %val2, <16 x i8> %val3) {
 ; CHECK-LABEL: f1:

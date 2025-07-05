@@ -17,6 +17,7 @@
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/type_traits.h"
 #include <cstddef>
@@ -77,6 +78,10 @@ public:
       : DenseSetImpl(PowerOf2Ceil(Elems.size())) {
     insert(Elems.begin(), Elems.end());
   }
+
+  template <typename Range>
+  DenseSetImpl(llvm::from_range_t, Range &&R)
+      : DenseSetImpl(adl_begin(R), adl_end(R)) {}
 
   bool empty() const { return TheMap.empty(); }
   size_type size() const { return TheMap.size(); }

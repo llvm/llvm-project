@@ -27,11 +27,9 @@ public:
   TargetEnv() {}
   explicit TargetEnv(const SmallVectorImpl<Profile> &profiles,
                      const SmallVectorImpl<Extension> &extensions) {
-    for (Profile prof : profiles)
-      enabledProfiles.insert(prof);
+    enabledProfiles.insert_range(profiles);
 
-    for (Extension ext : extensions)
-      enabledExtensions.insert(ext);
+    enabledExtensions.insert_range(extensions);
   }
 
   void addProfile(Profile p) { enabledProfiles.insert(p); }
@@ -45,32 +43,22 @@ public:
   bool allows(Profile prof) const { return enabledProfiles.count(prof) != 0; }
 
   bool allowsAnyOf(ArrayRef<Profile> profs) const {
-    const auto *chosen = llvm::find_if(
-        profs, [this](tosa::Profile prof) { return allows(prof); });
-    return chosen != profs.end() ? true : false;
+    return llvm::any_of(profs, [&](Profile prof) { return allows(prof); });
   }
 
   bool allowsAllOf(ArrayRef<Profile> profs) const {
-    bool is_allowed = true;
-    llvm::for_each(profs,
-                   [&](tosa::Profile prof) { is_allowed &= allows(prof); });
-    return is_allowed;
+    return llvm::all_of(profs, [&](Profile prof) { return allows(prof); });
   }
 
   // Returns true if the given extension is allowed.
   bool allows(Extension ext) const { return enabledExtensions.count(ext) != 0; }
 
   bool allowsAnyOf(ArrayRef<Extension> exts) const {
-    const auto *chosen = llvm::find_if(
-        exts, [this](tosa::Extension ext) { return allows(ext); });
-    return chosen != exts.end() ? true : false;
+    return llvm::any_of(exts, [&](Extension ext) { return allows(ext); });
   }
 
   bool allowsAllOf(ArrayRef<Extension> exts) const {
-    bool is_allowed = true;
-    llvm::for_each(exts,
-                   [&](tosa::Extension ext) { is_allowed &= allows(ext); });
-    return is_allowed;
+    return llvm::all_of(exts, [&](Extension ext) { return allows(ext); });
   }
 
 private:

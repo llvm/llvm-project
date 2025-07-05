@@ -25,6 +25,7 @@
 // CHECK-NEXT: core.DereferenceModeling
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
+// CHECK-NEXT: core.FixedAddressDereference
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
@@ -41,7 +42,6 @@
 // CHECK-NEXT: core.uninitialized.CapturedBlockVariable
 // CHECK-NEXT: core.uninitialized.UndefReturn
 // CHECK-NEXT: deadcode.DeadStores
-// CHECK-NEXT: nullability.NullabilityBase
 // CHECK-NEXT: nullability.NullPassedToNonnull
 // CHECK-NEXT: nullability.NullReturnedFromNonnull
 // CHECK-NEXT: security.insecureAPI.SecuritySyntaxChecker

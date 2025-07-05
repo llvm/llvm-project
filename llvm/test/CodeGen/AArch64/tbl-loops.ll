@@ -31,12 +31,12 @@ define void @loop1(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    add x13, x13, #32
 ; CHECK-NEXT:    fcmgt v3.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v4.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-NEXT:    fcmlt v6.4s, v2.4s, #0.0
-; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
-; CHECK-NEXT:    bit v2.16b, v0.16b, v4.16b
-; CHECK-NEXT:    bic v1.16b, v1.16b, v5.16b
-; CHECK-NEXT:    bic v2.16b, v2.16b, v6.16b
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bsl v4.16b, v0.16b, v2.16b
+; CHECK-NEXT:    fcmlt v1.4s, v1.4s, #0.0
+; CHECK-NEXT:    fcmlt v2.4s, v2.4s, #0.0
+; CHECK-NEXT:    bic v1.16b, v3.16b, v1.16b
+; CHECK-NEXT:    bic v2.16b, v4.16b, v2.16b
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
@@ -346,7 +346,6 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:  .LBB2_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
-; CHECK-NEXT:    add x13, x0, #8
 ; CHECK-NEXT:    subs x12, x12, #4
 ; CHECK-NEXT:    fcmgt v5.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    fcmgt v6.4s, v3.4s, v0.4s
@@ -367,8 +366,10 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    xtn v6.4h, v4.4s
 ; CHECK-NEXT:    xtn v7.4h, v2.4s
 ; CHECK-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
-; CHECK-NEXT:    st1 { v2.s }[2], [x13]
-; CHECK-NEXT:    str d2, [x0], #12
+; CHECK-NEXT:    mov s3, v2.s[2]
+; CHECK-NEXT:    str d2, [x0]
+; CHECK-NEXT:    str s3, [x0, #8]
+; CHECK-NEXT:    add x0, x0, #12
 ; CHECK-NEXT:    b.ne .LBB2_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10

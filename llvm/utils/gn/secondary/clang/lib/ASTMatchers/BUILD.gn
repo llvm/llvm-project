@@ -10,5 +10,6 @@ static_library("ASTMatchers") {
     "ASTMatchFinder.cpp",
     "ASTMatchersInternal.cpp",
     "GtestMatchers.cpp",
+    "LowLevelHelpers.cpp",
   ]
 }

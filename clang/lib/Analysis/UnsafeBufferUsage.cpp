@@ -20,6 +20,8 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/ASTMatchers/LowLevelHelpers.h"
+#include "clang/Analysis/Support/FixitUtil.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -28,14 +30,12 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <cstddef>
 #include <optional>
 #include <queue>
 #include <set>
 #include <sstream>
 
-using namespace llvm;
 using namespace clang;
 
 #ifndef NDEBUG
@@ -114,6 +114,10 @@ private:
   llvm::StringMap<DynTypedNode> Nodes;
 };
 } // namespace
+
+#define SIZED_CONTAINER_OR_VIEW_LIST                                           \
+  "span", "array", "vector", "basic_string_view", "basic_string",              \
+      "initializer_list",
 
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
@@ -300,98 +304,6 @@ static void findStmtsInUnspecifiedLvalueContext(
     OnResult(BO->getLHS());
 }
 
-/// Note: Copied and modified from ASTMatchers.
-/// Matches all arguments and their respective types for a \c CallExpr.
-/// It is very similar to \c forEachArgumentWithParam but
-/// it works on calls through function pointers as well.
-///
-/// The difference is, that function pointers do not provide access to a
-/// \c ParmVarDecl, but only the \c QualType for each argument.
-///
-/// Given
-/// \code
-///   void f(int i);
-///   int y;
-///   f(y);
-///   void (*f_ptr)(int) = f;
-///   f_ptr(y);
-/// \endcode
-/// callExpr(
-///   forEachArgumentWithParamType(
-///     declRefExpr(to(varDecl(hasName("y")))),
-///     qualType(isInteger()).bind("type)
-/// ))
-///   matches f(y) and f_ptr(y)
-/// with declRefExpr(...)
-///   matching int y
-/// and qualType(...)
-///   matching int
-static void forEachArgumentWithParamType(
-    const CallExpr &Node,
-    const llvm::function_ref<void(QualType /*Param*/, const Expr * /*Arg*/)>
-        OnParamAndArg) {
-  // The first argument of an overloaded member operator is the implicit object
-  // argument of the method which should not be matched against a parameter, so
-  // we skip over it here.
-  unsigned ArgIndex = 0;
-  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(&Node)) {
-    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
-    if (MD && !MD->isExplicitObjectMemberFunction()) {
-      // This is an overloaded operator call.
-      // We need to skip the first argument, which is the implicit object
-      // argument of the method which should not be matched against a
-      // parameter.
-      ++ArgIndex;
-    }
-  }
-
-  const FunctionProtoType *FProto = nullptr;
-
-  if (const auto *Call = dyn_cast<CallExpr>(&Node)) {
-    if (const auto *Value =
-            dyn_cast_or_null<ValueDecl>(Call->getCalleeDecl())) {
-      QualType QT = Value->getType().getCanonicalType();
-
-      // This does not necessarily lead to a `FunctionProtoType`,
-      // e.g. K&R functions do not have a function prototype.
-      if (QT->isFunctionPointerType())
-        FProto = QT->getPointeeType()->getAs<FunctionProtoType>();
-
-      if (QT->isMemberFunctionPointerType()) {
-        const auto *MP = QT->getAs<MemberPointerType>();
-        assert(MP && "Must be member-pointer if its a memberfunctionpointer");
-        FProto = MP->getPointeeType()->getAs<FunctionProtoType>();
-        assert(FProto &&
-               "The call must have happened through a member function "
-               "pointer");
-      }
-    }
-  }
-
-  unsigned ParamIndex = 0;
-  unsigned NumArgs = Node.getNumArgs();
-  if (FProto && FProto->isVariadic())
-    NumArgs = std::min(NumArgs, FProto->getNumParams());
-
-  const auto GetParamType =
-      [&FProto, &Node](unsigned int ParamIndex) -> std::optional<QualType> {
-    if (FProto && FProto->getNumParams() > ParamIndex) {
-      return FProto->getParamType(ParamIndex);
-    }
-    const auto *FD = Node.getDirectCallee();
-    if (FD && FD->getNumParams() > ParamIndex) {
-      return FD->getParamDecl(ParamIndex)->getType();
-    }
-    return std::nullopt;
-  };
-
-  for (; ArgIndex < NumArgs; ++ArgIndex, ++ParamIndex) {
-    auto ParamType = GetParamType(ParamIndex);
-    if (ParamType)
-      OnParamAndArg(*ParamType, Node.getArg(ArgIndex)->IgnoreParenCasts());
-  }
-}
-
 // Finds any expression `e` such that `InnerMatcher` matches `e` and
 // `e` is in an Unspecified Pointer Context (UPC).
 static void findStmtsInUnspecifiedPointerContext(
@@ -408,7 +320,7 @@ static void findStmtsInUnspecifiedPointerContext(
     if (const auto *FnDecl = CE->getDirectCallee();
         FnDecl && FnDecl->hasAttr<UnsafeBufferUsageAttr>())
       return;
-    forEachArgumentWithParamType(
+    ast_matchers::matchEachArgumentWithParamType(
         *CE, [&InnerMatcher](QualType Type, const Expr *Arg) {
           if (Type->isAnyPointerType())
             InnerMatcher(Arg);
@@ -555,6 +467,8 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
+//   7. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST.
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
@@ -564,7 +478,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   auto HaveEqualConstantValues = [&Ctx](const Expr *E0, const Expr *E1) {
     if (auto E0CV = E0->getIntegerConstantExpr(Ctx))
       if (auto E1CV = E1->getIntegerConstantExpr(Ctx)) {
-        return APSInt::compareValues(*E0CV, *E1CV) == 0;
+        return llvm::APSInt::compareValues(*E0CV, *E1CV) == 0;
       }
     return false;
   };
@@ -575,7 +489,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       }
     return false;
   };
-  std::optional<APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
+  std::optional<llvm::APSInt> Arg1CV = Arg1->getIntegerConstantExpr(Ctx);
 
   if (Arg1CV && Arg1CV->isZero())
     // Check form 5:
@@ -618,10 +532,10 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
   QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
 
   if (auto *ConstArrTy = Ctx.getAsConstantArrayType(Arg0Ty)) {
-    const APSInt ConstArrSize = APSInt(ConstArrTy->getSize());
+    const llvm::APSInt ConstArrSize = llvm::APSInt(ConstArrTy->getSize());
 
     // Check form 4:
-    return Arg1CV && APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
+    return Arg1CV && llvm::APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
   }
   // Check form 6:
   if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
@@ -652,6 +566,32 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
         }
     }
   }
+  // Check form 7:
+  auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
+    if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
+      const auto *MD = MC->getMethodDecl();
+      const auto *RD = MC->getRecordDecl();
+
+      if (RD && MD)
+        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+            II && RD->isInStdNamespace())
+          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                    II->getName()) &&
+                 MD->getName() == MethodName;
+    }
+    return false;
+  };
+
+  if (IsMethodCallToSizedObject(Arg0, "begin") &&
+      IsMethodCallToSizedObject(Arg1, "end"))
+    return AreSameDRE(
+        // We know Arg0 and Arg1 are `CXXMemberCallExpr`s:
+        cast<CXXMemberCallExpr>(Arg0)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts(),
+        cast<CXXMemberCallExpr>(Arg1)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts());
   return false;
 }
 
@@ -690,11 +630,26 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   } else if (const auto *BE = dyn_cast<BinaryOperator>(IndexExpr)) {
     // For an integer expression `e` and an integer constant `n`, `e & n` and
     // `n & e` are bounded by `n`:
-    if (BE->getOpcode() != BO_And)
+    if (BE->getOpcode() != BO_And && BE->getOpcode() != BO_Rem)
       return false;
 
     const Expr *LHS = BE->getLHS();
     const Expr *RHS = BE->getRHS();
+
+    if (BE->getOpcode() == BO_Rem) {
+      // If n is a negative number, then n % const can be greater than const
+      if (!LHS->getType()->isUnsignedIntegerType()) {
+        return false;
+      }
+
+      if (!RHS->isValueDependent() && RHS->EvaluateAsInt(EVResult, Ctx)) {
+        llvm::APSInt result = EVResult.Val.getInt();
+        if (result.isNonNegative() && result.getLimitedValue() <= limit)
+          return true;
+      }
+
+      return false;
+    }
 
     if ((!LHS->isValueDependent() &&
          LHS->EvaluateAsInt(EVResult, Ctx)) || // case: `n & e`
@@ -765,7 +720,7 @@ static bool isNullTermPointer(const Expr *Ptr) {
     const CXXMethodDecl *MD = MCE->getMethodDecl();
     const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
 
-    if (MD && RD && RD->isInStdNamespace())
+    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
       if (MD->getName() == "c_str" && RD->getName() == "basic_string")
         return true;
   }
@@ -1135,8 +1090,7 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
     return false; // not an snprintf call
 
   // Pattern 1:
-  static StringRef SizedObjs[] = {"span", "array", "vector",
-                                  "basic_string_view", "basic_string"};
+  static StringRef SizedObjs[] = {SIZED_CONTAINER_OR_VIEW_LIST};
   Buf = Buf->IgnoreParenImpCasts();
   Size = Size->IgnoreParenImpCasts();
   if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
@@ -1174,9 +1128,10 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
       // explicit cast will be needed, which will make this check unreachable.
       // Therefore, the array extent is same as its' bytewise size.
       if (Size->EvaluateAsInt(ER, Ctx)) {
-        APSInt EVal = ER.Val.getInt(); // Size must have integer type
+        llvm::APSInt EVal = ER.Val.getInt(); // Size must have integer type
 
-        return APSInt::compareValues(EVal, APSInt(CAT->getSize(), true)) != 0;
+        return llvm::APSInt::compareValues(
+                   EVal, llvm::APSInt(CAT->getSize(), true)) != 0;
       }
     }
   }
@@ -1253,6 +1208,8 @@ public:
   virtual void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                                      bool IsRelatedToDecl,
                                      ASTContext &Ctx) const = 0;
+
+  virtual SmallVector<const Expr *, 1> getUnsafePtrs() const = 0;
 };
 
 /// Fixable gadgets correspond to code patterns that aren't always unsafe but
@@ -1335,6 +1292,10 @@ public:
 
     return std::move(Uses);
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Op->getSubExpr()->IgnoreParenImpCasts()};
+  }
 };
 
 /// A decrement of a pointer-type value is unsafe as it may run the pointer
@@ -1377,6 +1338,10 @@ public:
     }
 
     return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Op->getSubExpr()->IgnoreParenImpCasts()};
   }
 };
 
@@ -1426,6 +1391,10 @@ public:
     }
 
     return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {ASE->getBase()->IgnoreParenImpCasts()};
   }
 };
 
@@ -1490,6 +1459,11 @@ public:
 
     return {};
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Ptr->IgnoreParenImpCasts()};
+  }
+
   // FIXME: pointer adding zero should be fine
   // FIXME: this gadge will need a fix-it
 };
@@ -1547,6 +1521,8 @@ public:
     }
     return {};
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 /// A pointer initialization expression of the form:
@@ -1779,6 +1755,8 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 /// A call of a constructor that performs unchecked buffer operations
@@ -1817,6 +1795,8 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 // Warning gadget for unsafe invocation of span::data method.
@@ -1877,12 +1857,13 @@ private:
     auto *method = cast<CXXMethodDecl>(callee);
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
-        (method->getParent()->getName() == "span" ||
-         method->getParent()->getName() == "array" ||
-         method->getParent()->getName() == "vector"))
+        llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                           method->getParent()->getName()))
       return true;
     return false;
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 class UnsafeLibcFunctionCallGadget : public WarningGadget {
@@ -1986,6 +1967,8 @@ public:
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 // Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
@@ -2194,8 +2177,8 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = SmallSet<const DeclRefExpr *, 16>;
-  using DefMapTy = DenseMap<const VarDecl *, const DeclStmt *>;
+  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.
   std::unique_ptr<UseSetTy> Uses{std::make_unique<UseSetTy>()};
@@ -2557,6 +2540,52 @@ template <typename NodeTy> struct CompareNode {
   }
 };
 
+std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
+  class MockReporter : public UnsafeBufferUsageHandler {
+  public:
+    MockReporter() {}
+    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
+    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
+                              const Expr *UnsafeArg = nullptr) override {}
+    void handleUnsafeOperationInContainer(const Stmt *, bool,
+                                          ASTContext &) override {}
+    void handleUnsafeVariableGroup(const VarDecl *,
+                                   const VariableGroupsManager &, FixItList &&,
+                                   const Decl *,
+                                   const FixitStrategy &) override {}
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    std::string getUnsafeBufferUsageAttributeTextAt(
+        SourceLocation, StringRef WSSuffix = "") const override {
+      return "";
+    }
+  };
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  MockReporter IgnoreHandler;
+
+  findGadgets(FD->getBody(), FD->getASTContext(), IgnoreHandler, false,
+              FixableGadgets, WarningGadgets, Tracker);
+
+  std::set<const Expr *> Result;
+  for (auto &G : WarningGadgets) {
+    for (const Expr *E : G->getUnsafePtrs()) {
+      Result.insert(E);
+    }
+  }
+
+  return Result;
+}
+
 struct WarningGadgetSets {
   std::map<const VarDecl *, std::set<const WarningGadget *>,
            // To keep keys sorted by their locations in the map so that the
@@ -2810,67 +2839,6 @@ getEndCharLoc(const NodeTy *Node, const SourceManager &SM,
   return std::nullopt;
 }
 
-// Return the source location just past the last character of the AST `Node`.
-template <typename NodeTy>
-static std::optional<SourceLocation> getPastLoc(const NodeTy *Node,
-                                                const SourceManager &SM,
-                                                const LangOptions &LangOpts) {
-  SourceLocation Loc =
-      Lexer::getLocForEndOfToken(Node->getEndLoc(), 0, SM, LangOpts);
-  if (Loc.isValid())
-    return Loc;
-  return std::nullopt;
-}
-
-// Return text representation of an `Expr`.
-static std::optional<StringRef> getExprText(const Expr *E,
-                                            const SourceManager &SM,
-                                            const LangOptions &LangOpts) {
-  std::optional<SourceLocation> LastCharLoc = getPastLoc(E, SM, LangOpts);
-
-  if (LastCharLoc)
-    return Lexer::getSourceText(
-        CharSourceRange::getCharRange(E->getBeginLoc(), *LastCharLoc), SM,
-        LangOpts);
-
-  return std::nullopt;
-}
-
-// Returns the literal text in `SourceRange SR`, if `SR` is a valid range.
-static std::optional<StringRef> getRangeText(SourceRange SR,
-                                             const SourceManager &SM,
-                                             const LangOptions &LangOpts) {
-  bool Invalid = false;
-  CharSourceRange CSR = CharSourceRange::getCharRange(SR);
-  StringRef Text = Lexer::getSourceText(CSR, SM, LangOpts, &Invalid);
-
-  if (!Invalid)
-    return Text;
-  return std::nullopt;
-}
-
-// Returns the begin location of the identifier of the given variable
-// declaration.
-static SourceLocation getVarDeclIdentifierLoc(const VarDecl *VD) {
-  // According to the implementation of `VarDecl`, `VD->getLocation()` actually
-  // returns the begin location of the identifier of the declaration:
-  return VD->getLocation();
-}
-
-// Returns the literal text of the identifier of the given variable declaration.
-static std::optional<StringRef>
-getVarDeclIdentifierText(const VarDecl *VD, const SourceManager &SM,
-                         const LangOptions &LangOpts) {
-  SourceLocation ParmIdentBeginLoc = getVarDeclIdentifierLoc(VD);
-  SourceLocation ParmIdentEndLoc =
-      Lexer::getLocForEndOfToken(ParmIdentBeginLoc, 0, SM, LangOpts);
-
-  if (ParmIdentEndLoc.isMacroID() &&
-      !Lexer::isAtEndOfMacroExpansion(ParmIdentEndLoc, SM, LangOpts))
-    return std::nullopt;
-  return getRangeText({ParmIdentBeginLoc, ParmIdentEndLoc}, SM, LangOpts);
-}
-
 // We cannot fix a variable declaration if it has some other specifiers than the
 // type specifier.  Because the source ranges of those specifiers could overlap
 // with the source range that is being replaced using fix-its.  Especially when
@@ -2906,84 +2874,6 @@ static SourceRange getSourceRangeToTokenEnd(const Decl *D,
       Lexer::getLocForEndOfToken(D->getEndLoc(), 0, SM, LangOpts);
 
   return SourceRange(Begin, End);
-}
-
-// Returns the text of the pointee type of `T` from a `VarDecl` of a pointer
-// type. The text is obtained through from `TypeLoc`s.  Since `TypeLoc` does not
-// have source ranges of qualifiers ( The `QualifiedTypeLoc` looks hacky too me
-// :( ), `Qualifiers` of the pointee type is returned separately through the
-// output parameter `QualifiersToAppend`.
-static std::optional<std::string>
-getPointeeTypeText(const VarDecl *VD, const SourceManager &SM,
-                   const LangOptions &LangOpts,
-                   std::optional<Qualifiers> *QualifiersToAppend) {
-  QualType Ty = VD->getType();
-  QualType PteTy;
-
-  assert(Ty->isPointerType() && !Ty->isFunctionPointerType() &&
-         "Expecting a VarDecl of type of pointer to object type");
-  PteTy = Ty->getPointeeType();
-
-  TypeLoc TyLoc = VD->getTypeSourceInfo()->getTypeLoc().getUnqualifiedLoc();
-  TypeLoc PteTyLoc;
-
-  // We only deal with the cases that we know `TypeLoc::getNextTypeLoc` returns
-  // the `TypeLoc` of the pointee type:
-  switch (TyLoc.getTypeLocClass()) {
-  case TypeLoc::ConstantArray:
-  case TypeLoc::IncompleteArray:
-  case TypeLoc::VariableArray:
-  case TypeLoc::DependentSizedArray:
-  case TypeLoc::Decayed:
-    assert(isa<ParmVarDecl>(VD) && "An array type shall not be treated as a "
-                                   "pointer type unless it decays.");
-    PteTyLoc = TyLoc.getNextTypeLoc();
-    break;
-  case TypeLoc::Pointer:
-    PteTyLoc = TyLoc.castAs<PointerTypeLoc>().getPointeeLoc();
-    break;
-  default:
-    return std::nullopt;
-  }
-  if (PteTyLoc.isNull())
-    // Sometimes we cannot get a useful `TypeLoc` for the pointee type, e.g.,
-    // when the pointer type is `auto`.
-    return std::nullopt;
-
-  SourceLocation IdentLoc = getVarDeclIdentifierLoc(VD);
-
-  if (!(IdentLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
-    // We are expecting these locations to be valid. But in some cases, they are
-    // not all valid. It is a Clang bug to me and we are not responsible for
-    // fixing it.  So we will just give up for now when it happens.
-    return std::nullopt;
-  }
-
-  // Note that TypeLoc.getEndLoc() returns the begin location of the last token:
-  SourceLocation PteEndOfTokenLoc =
-      Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts);
-
-  if (!PteEndOfTokenLoc.isValid())
-    // Sometimes we cannot get the end location of the pointee type, e.g., when
-    // there are macros involved.
-    return std::nullopt;
-  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, IdentLoc)) {
-    // We only deal with the cases where the source text of the pointee type
-    // appears on the left-hand side of the variable identifier completely,
-    // including the following forms:
-    // `T ident`,
-    // `T ident[]`, where `T` is any type.
-    // Examples of excluded cases are `T (*ident)[]` or `T ident[][n]`.
-    return std::nullopt;
-  }
-  if (PteTy.hasQualifiers()) {
-    // TypeLoc does not provide source ranges for qualifiers (it says it's
-    // intentional but seems fishy to me), so we cannot get the full text
-    // `PteTy` via source ranges.
-    *QualifiersToAppend = PteTy.getQualifiers();
-  }
-  return getRangeText({PteTyLoc.getBeginLoc(), PteEndOfTokenLoc}, SM, LangOpts)
-      ->str();
 }
 
 // Returns the text of the name (with qualifiers) of a `FunctionDecl`.
@@ -3779,7 +3669,7 @@ static FixItList fixVarDeclWithArray(const VarDecl *D, const ASTContext &Ctx,
     }
 
     SmallString<32> Replacement;
-    raw_svector_ostream OS(Replacement);
+    llvm::raw_svector_ostream OS(Replacement);
     OS << "std::array<" << ElemTypeTxt << ", " << ArraySizeTxt << "> "
        << IdentText->str();
 
@@ -4203,7 +4093,8 @@ static void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
 #endif
 
   // Fixpoint iteration for pointer assignments
-  using DepMapTy = DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
+  using DepMapTy =
+      llvm::DenseMap<const VarDecl *, llvm::SetVector<const VarDecl *>>;
   DepMapTy DependenciesMap{};
   DepMapTy PtrAssignmentGraph{};
 
@@ -4298,7 +4189,7 @@ static void applyGadgets(const Decl *D, FixableGadgetList FixableGadgets,
           HasParm = true;
       }
       if (HasParm)
-        GrpsUnionForParms.insert(VarGroup.begin(), VarGroup.end());
+        GrpsUnionForParms.insert_range(VarGroup);
     }
   }
 

@@ -32,6 +32,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
     return mpfrInput.acos();
   case Operation::Acosh:
     return mpfrInput.acosh();
+  case Operation::Acospi:
+    return mpfrInput.acospi();
   case Operation::Asin:
     return mpfrInput.asin();
   case Operation::Asinh:
@@ -455,6 +457,8 @@ explain_ternary_operation_one_output_error(Operation,
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<float16> &, float16, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float16, double, RoundingMode);
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, float16, double, RoundingMode);
@@ -672,6 +676,9 @@ compare_ternary_operation_one_output(Operation,
                                      long double, double, RoundingMode);
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
+template bool
+compare_ternary_operation_one_output(Operation, const TernaryInput<float16> &,
+                                     float16, double, RoundingMode);
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<float> &,
                                                    float16, double,

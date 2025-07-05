@@ -1284,7 +1284,7 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
 
     bool fromSparseConst = false;
     if (auto constOp = op.getSource().getDefiningOp<arith::ConstantOp>())
-      if (dyn_cast<SparseElementsAttr>(constOp.getValue()))
+      if (isa<SparseElementsAttr>(constOp.getValue()))
         fromSparseConst = true;
 
     const AffineMapAttr foreachOrder =
@@ -1537,7 +1537,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
 
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
-        loc, src, std::nullopt,
+        loc, src, ValueRange(),
         [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
             ValueRange reduc) {
           for (Dimension d = 0; d < dimRank; d++) {

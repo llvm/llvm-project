@@ -3,6 +3,7 @@ import("//third-party/unittest/unittest.gni")
 unittest("LLVMFrontendTests") {
   deps = [
     "//llvm/lib/Analysis",
+    "//llvm/lib/Frontend/HLSL",
     "//llvm/lib/Frontend/OpenACC",
     "//llvm/lib/Frontend/OpenMP",
     "//llvm/lib/IR",
@@ -12,10 +13,14 @@ unittest("LLVMFrontendTests") {
     "//llvm/lib/Testing/Support",
   ]
   sources = [
+    "HLSLRootSignatureDumpTest.cpp",
+    "HLSLRootSignatureRangesTest.cpp",
     "OpenACCTest.cpp",
     "OpenMPCompositionTest.cpp",
     "OpenMPContextTest.cpp",
     "OpenMPDecompositionTest.cpp",
+    "OpenMPDirectiveNameParserTest.cpp",
+    "OpenMPDirectiveNameTest.cpp",
     "OpenMPIRBuilderTest.cpp",
     "OpenMPParsingTest.cpp",
   ]

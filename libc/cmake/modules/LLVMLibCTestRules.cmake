@@ -1,15 +1,22 @@
 function(_get_common_test_compile_options output_var c_test flags)
   _get_compile_options_from_flags(compile_flags ${flags})
+  _get_compile_options_from_config(config_flags)
 
   # Remove -fno-math-errno if it was added.
   if(LIBC_ADD_FNO_MATH_ERRNO)
-    list(REMOVE_ITEM compile_options "-fno-math-errno")
+    list(REMOVE_ITEM compile_flags "-fno-math-errno")
+  endif()
+
+  # Death test executor is only available in Linux for now.
+  if(NOT ${LIBC_TARGET_OS} STREQUAL "linux")
+    list(REMOVE_ITEM config_flags "-DLIBC_ADD_NULL_CHECKS")
   endif()
 
   set(compile_options
       ${LIBC_COMPILE_OPTIONS_DEFAULT}
       ${LIBC_TEST_COMPILE_OPTIONS_DEFAULT}
-      ${compile_flags})
+      ${compile_flags}
+      ${config_flags})
 
   if(LLVM_LIBC_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
@@ -57,7 +64,6 @@ function(_get_common_test_compile_options output_var c_test flags)
       list(APPEND compile_options "-Wnewline-eof")
       list(APPEND compile_options "-Wnonportable-system-include-path")
       list(APPEND compile_options "-Wthread-safety")
-      # list(APPEND compile_options "-Wglobal-constructors")
     endif()
   endif()
   set(${output_var} ${compile_options} PARENT_SCOPE)
@@ -65,6 +71,11 @@ endfunction()
 
 function(_get_hermetic_test_compile_options output_var)
   _get_common_test_compile_options(compile_options "" "")
+
+  # null check tests are death tests, remove from hermetic tests for now.
+  if(LIBC_ADD_NULL_CHECKS)
+    list(REMOVE_ITEM compile_options "-DLIBC_ADD_NULL_CHECKS")
+  endif()
 
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
@@ -157,10 +168,6 @@ function(get_object_files_for_test result skipped_entrypoints_list)
           endif()
           list(APPEND dep_obj ${object_file_raw})
         endif()
-      elseif(${dep_type} STREQUAL ${ENTRYPOINT_OBJ_VENDOR_TARGET_TYPE})
-        # Skip tests for externally implemented entrypoints.
-        list(APPEND dep_skip ${dep})
-        list(REMOVE_ITEM dep_obj ${dep})
       endif()
 
       set_target_properties(${dep} PROPERTIES
@@ -191,6 +198,7 @@ endfunction(get_object_files_for_test)
 #      SRCS  <list of .cpp files for the test>
 #      HDRS  <list of .h files for the test>
 #      DEPENDS <list of dependencies>
+#      ENV <list of environment variables to set before running the test>
 #      COMPILE_OPTIONS <list of special compile options for this target>
 #      LINK_LIBRARIES <list of linking libraries for this target>
 #    )
@@ -203,7 +211,7 @@ function(create_libc_unittest fq_target_name)
     "LIBC_UNITTEST"
     "NO_RUN_POSTBUILD;C_TEST" # Optional arguments
     "SUITE;CXX_STANDARD" # Single value arguments
-    "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;FLAGS" # Multi-value arguments
     ${ARGN}
   )
   if(NOT LIBC_UNITTEST_SRCS)
@@ -319,8 +327,9 @@ function(create_libc_unittest fq_target_name)
   if(NOT LIBC_UNITTEST_NO_RUN_POSTBUILD)
     add_custom_target(
       ${fq_target_name}
-      COMMAND ${fq_build_target_name}
+      COMMAND ${LIBC_UNITTEST_ENV} ${CMAKE_CROSSCOMPILING_EMULATOR} ${fq_build_target_name}
       COMMENT "Running unit test ${fq_target_name}"
+      DEPENDS ${fq_build_target_name}
     )
   endif()
 
@@ -642,8 +651,8 @@ function(add_libc_hermetic test_name)
   endif()
   cmake_parse_arguments(
     "HERMETIC_TEST"
-    "IS_GPU_BENCHMARK" # Optional arguments
-    "SUITE" # Single value arguments
+    "IS_GPU_BENCHMARK;NO_RUN_POSTBUILD" # Optional arguments
+    "SUITE;CXX_STANDARD" # Single value arguments
     "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS;LINK_LIBRARIES;LOADER_ARGS" # Multi-value arguments
     ${ARGN}
   )
@@ -713,17 +722,26 @@ function(add_libc_hermetic test_name)
   set_target_properties(${fq_target_name}.__libc__
       PROPERTIES ARCHIVE_OUTPUT_NAME ${fq_target_name}.libc)
 
-  set(fq_build_target_name ${fq_target_name}.__build__)
+  if(HERMETIC_TEST_NO_RUN_POSTBUILD)
+    set(fq_build_target_name ${fq_target_name})
+  else()
+    set(fq_build_target_name ${fq_target_name}.__build__)
+  endif()
+
   add_executable(
     ${fq_build_target_name}
     EXCLUDE_FROM_ALL
     ${HERMETIC_TEST_SRCS}
     ${HERMETIC_TEST_HDRS}
   )
+
+  if(NOT HERMETIC_TEST_CXX_STANDARD)
+    set(HERMETIC_TEST_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
   set_target_properties(${fq_build_target_name}
     PROPERTIES
       RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      #OUTPUT_NAME ${fq_target_name}
+      CXX_STANDARD ${HERMETIC_TEST_CXX_STANDARD}
   )
 
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
@@ -790,26 +808,28 @@ function(add_libc_hermetic test_name)
     get_target_property(gpu_loader_exe libc.utils.gpu.loader "EXECUTABLE")
   endif()
 
-  set(test_cmd ${HERMETIC_TEST_ENV}
-      $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
-      $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
-  add_custom_target(
-    ${fq_target_name}
-    DEPENDS ${fq_target_name}-cmd
-  )
+  if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
+    set(test_cmd ${HERMETIC_TEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+        $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
+    add_custom_target(
+      ${fq_target_name}
+      DEPENDS ${fq_target_name}.__cmd__
+    )
 
-  add_custom_command(
-    OUTPUT ${fq_target_name}-cmd
-    COMMAND ${test_cmd}
-    COMMAND_EXPAND_LISTS
-    COMMENT "Running hermetic test ${fq_target_name}"
-    ${LIBC_HERMETIC_TEST_JOB_POOL}
-  )
+    add_custom_command(
+      OUTPUT ${fq_target_name}.__cmd__
+      COMMAND ${test_cmd}
+      COMMAND_EXPAND_LISTS
+      COMMENT "Running hermetic test ${fq_target_name}"
+      ${LIBC_HERMETIC_TEST_JOB_POOL}
+    )
 
-  set_source_files_properties(${fq_target_name}-cmd
-    PROPERTIES
-      SYMBOLIC "TRUE"
-  )
+    set_source_files_properties(${fq_target_name}.__cmd__
+      PROPERTIES
+        SYMBOLIC "TRUE"
+    )
+  endif()
 
   add_dependencies(${HERMETIC_TEST_SUITE} ${fq_target_name})
   if(NOT ${HERMETIC_TEST_IS_GPU_BENCHMARK})

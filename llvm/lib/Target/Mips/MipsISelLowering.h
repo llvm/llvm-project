@@ -592,6 +592,7 @@ class TargetRegisterClass;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
@@ -705,6 +706,9 @@ class TargetRegisterClass;
     /// materialize the FP immediate as a load from a constant pool.
     bool isFPImmLegal(const APFloat &Imm, EVT VT,
                       bool ForCodeSize) const override;
+
+    bool isLegalICmpImmediate(int64_t Imm) const override;
+    bool isLegalAddImmediate(int64_t Imm) const override;
 
     unsigned getJumpTableEncoding() const override;
     SDValue getPICJumpTableRelocBase(SDValue Table,

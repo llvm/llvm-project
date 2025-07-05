@@ -11,12 +11,10 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -25,7 +23,6 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 
 #include <deque>
 #include <iterator>
@@ -200,7 +197,7 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
       continue;
 
     // If this is a single block region, just collect the nested regions.
-    if (std::next(region->begin()) == region->end()) {
+    if (region->hasOneBlock()) {
       for (Operation &op : region->front())
         for (Region &region : op.getRegions())
           worklist.push_back(&region);
@@ -489,6 +486,7 @@ LogicalResult mlir::runRegionDCE(RewriterBase &rewriter,
 
 //===----------------------------------------------------------------------===//
 // BlockEquivalenceData
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class contains the information for comparing the equivalencies of two
@@ -557,6 +555,7 @@ unsigned BlockEquivalenceData::getOrderOf(Value value) const {
 
 //===----------------------------------------------------------------------===//
 // BlockMergeCluster
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents a cluster of blocks to be merged together.
@@ -1092,7 +1091,9 @@ LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
     return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
   };
   llvm::SetVector<Operation *> slice;
-  getBackwardSlice(op, &slice, options);
+  LogicalResult result = getBackwardSlice(op, &slice, options);
+  assert(result.succeeded() && "expected a backward slice");
+  (void)result;
 
   // If the slice contains `insertionPoint` cannot move the dependencies.
   if (slice.contains(insertionPoint)) {
@@ -1157,7 +1158,9 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   };
   llvm::SetVector<Operation *> slice;
   for (auto value : prunedValues) {
-    getBackwardSlice(value, &slice, options);
+    LogicalResult result = getBackwardSlice(value, &slice, options);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
   }
 
   // If the slice contains `insertionPoint` cannot move the dependencies.

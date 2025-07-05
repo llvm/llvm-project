@@ -39,7 +39,13 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   bool relaxOnce(int pass) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   void finalizeRelax(int passes) const override;
+
+private:
+  void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // end anonymous namespace
 
@@ -53,8 +59,11 @@ enum Op {
   ADDI_W = 0x02800000,
   ADDI_D = 0x02c00000,
   ANDI = 0x03400000,
+  ORI = 0x03800000,
+  LU12I_W = 0x14000000,
   PCADDI = 0x18000000,
   PCADDU12I = 0x1c000000,
+  PCALAU12I = 0x1a000000,
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
   JIRL = 0x4c000000,
@@ -66,6 +75,7 @@ enum Reg {
   R_ZERO = 0,
   R_RA = 1,
   R_TP = 2,
+  R_A0 = 4,
   R_T0 = 12,
   R_T1 = 13,
   R_T2 = 14,
@@ -766,9 +776,12 @@ static bool isPairRelaxable(ArrayRef<Relocation> relocs, size_t i) {
 // Relax code sequence.
 // From:
 //   pcalau12i     $a0, %pc_hi20(sym) | %ld_pc_hi20(sym)  | %gd_pc_hi20(sym)
+//                    | %desc_pc_hi20(sym)
 //   addi.w/d $a0, $a0, %pc_lo12(sym) | %got_pc_lo12(sym) | %got_pc_lo12(sym)
+//                    | %desc_pc_lo12(sym)
 // To:
-//   pcaddi $a0, %pc_lo12(sym) | %got_pc_lo12(sym) | %got_pc_lo12(sym)
+//   pcaddi        $a0, %pc_lo12(sym) | %got_pc_lo12(sym) | %got_pc_lo12(sym)
+//                    | %desc_pcrel_20(sym)
 //
 // From:
 //   pcalau12i $a0, %got_pc_hi20(sym_got)
@@ -786,7 +799,9 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
         (rHi20.type == R_LARCH_TLS_GD_PC_HI20 &&
          rLo12.type == R_LARCH_GOT_PC_LO12) ||
         (rHi20.type == R_LARCH_TLS_LD_PC_HI20 &&
-         rLo12.type == R_LARCH_GOT_PC_LO12)))
+         rLo12.type == R_LARCH_GOT_PC_LO12) ||
+        (rHi20.type == R_LARCH_TLS_DESC_PC_HI20 &&
+         rLo12.type == R_LARCH_TLS_DESC_PC_LO12)))
     return;
 
   // GOT references to absolute symbols can't be relaxed to use pcaddi in
@@ -808,6 +823,8 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     dest = rHi20.sym->getVA(ctx);
   else if (rHi20.expr == RE_LOONGARCH_TLSGD_PAGE_PC)
     dest = ctx.in.got->getGlobalDynAddr(*rHi20.sym);
+  else if (rHi20.expr == RE_LOONGARCH_TLSDESC_PAGE_PC)
+    dest = ctx.in.got->getTlsDescAddr(*rHi20.sym);
   else {
     Err(ctx) << getErrorLoc(ctx, (const uint8_t *)loc) << "unknown expr ("
              << rHi20.expr << ") against symbol " << rHi20.sym
@@ -841,6 +858,8 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_GD_PCREL20_S2;
   else if (rHi20.type == R_LARCH_TLS_LD_PC_HI20)
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_LD_PCREL20_S2;
+  else if (rHi20.type == R_LARCH_TLS_DESC_PC_HI20)
+    sec.relaxAux->relocTypes[i + 2] = R_LARCH_TLS_DESC_PCREL20_S2;
   else
     sec.relaxAux->relocTypes[i + 2] = R_LARCH_PCREL20_S2;
   sec.relaxAux->writes.push_back(insn(PCADDI, getD5(nextInsn), 0, 0));
@@ -947,8 +966,10 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_LARCH_GOT_PC_HI20:
     case R_LARCH_TLS_GD_PC_HI20:
     case R_LARCH_TLS_LD_PC_HI20:
+    case R_LARCH_TLS_DESC_PC_HI20:
       // The overflow check for i+2 will be carried out in isPairRelaxable.
-      if (isPairRelaxable(relocs, i))
+      if (r.expr != RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC &&
+          r.expr != R_RELAX_TLS_GD_TO_LE && isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
       break;
     case R_LARCH_CALL36:
@@ -960,6 +981,11 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     case R_LARCH_TLS_LE_LO12_R:
       if (relaxable(relocs, i))
         relaxTlsLe(ctx, sec, i, loc, r, remove);
+      break;
+    case R_LARCH_TLS_IE_PC_HI20:
+      if (relaxable(relocs, i) && r.expr == R_RELAX_TLS_IE_TO_LE &&
+          isUInt<12>(r.sym->getVA(ctx, r.addend)))
+        remove = 4;
       break;
     }
 
@@ -990,6 +1016,230 @@ static bool relax(Ctx &ctx, InputSection &sec) {
     Fatal(ctx) << "section size decrease is too large: " << delta;
   sec.bytesDropped = delta;
   return changed;
+}
+
+// Convert TLS IE to LE in the normal or medium code model.
+// Original code sequence:
+//  * pcalau12i $a0, %ie_pc_hi20(sym)
+//  * ld.d      $a0, $a0, %ie_pc_lo12(sym)
+//
+// The code sequence converted is as follows:
+//  * lu12i.w   $a0, %le_hi20(sym)      # le_hi20 != 0, otherwise NOP
+//  * ori       $a0, src, %le_lo12(sym) # le_hi20 != 0, src = $a0,
+//                                      # otherwise,    src = $zero
+//
+// When relaxation enables, redundant NOPs can be removed.
+static void tlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
+  assert(isInt<32>(val) &&
+         "val exceeds the range of medium code model in tlsIeToLe");
+
+  bool isUInt12 = isUInt<12>(val);
+  const uint32_t currInsn = read32le(loc);
+  switch (rel.type) {
+  case R_LARCH_TLS_IE_PC_HI20:
+    if (isUInt12)
+      write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+    else
+      write32le(loc, insn(LU12I_W, getD5(currInsn), extractBits(val, 31, 12),
+                          0)); // lu12i.w $a0, %le_hi20
+    break;
+  case R_LARCH_TLS_IE_PC_LO12:
+    if (isUInt12)
+      write32le(loc, insn(ORI, getD5(currInsn), R_ZERO,
+                          val)); // ori $a0, $zero, %le_lo12
+    else
+      write32le(loc, insn(ORI, getD5(currInsn), getJ5(currInsn),
+                          lo12(val))); // ori $a0, $a0, %le_lo12
+    break;
+  }
+}
+
+// Convert TLSDESC GD/LD to IE.
+// In normal or medium code model, there are two forms of code sequences:
+//  * pcalau12i  $a0, %desc_pc_hi20(sym_desc)
+//  * addi.d     $a0, $a0, %desc_pc_lo12(sym_desc)
+//  * ld.d       $ra, $a0, %desc_ld(sym_desc)
+//  * jirl       $ra, $ra, %desc_call(sym_desc)
+//  ------
+//  * pcaddi $a0, %desc_pcrel_20(a)
+//  * load $ra, $a0, %desc_ld(a)
+//  * jirl $ra, $ra, %desc_call(a)
+//
+// The code sequence obtained is as follows:
+//  * pcalau12i $a0, %ie_pc_hi20(sym_ie)
+//  * ld.[wd]   $a0, $a0, %ie_pc_lo12(sym_ie)
+//
+// Simplicity, whether tlsdescToIe or tlsdescToLe, we always tend to convert the
+// preceding instructions to NOPs, due to both forms of code sequence
+// (corresponding to relocation combinations:
+// R_LARCH_TLS_DESC_PC_HI20+R_LARCH_TLS_DESC_PC_LO12 and
+// R_LARCH_TLS_DESC_PCREL20_S2) have same process.
+//
+// When relaxation enables, redundant NOPs can be removed.
+void LoongArch::tlsdescToIe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
+  switch (rel.type) {
+  case R_LARCH_TLS_DESC_PC_HI20:
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+    break;
+  case R_LARCH_TLS_DESC_LD:
+    write32le(loc, insn(PCALAU12I, R_A0, 0, 0)); // pcalau12i $a0, %ie_pc_hi20
+    relocateNoSym(loc, R_LARCH_TLS_IE_PC_HI20, val);
+    break;
+  case R_LARCH_TLS_DESC_CALL:
+    write32le(loc, insn(ctx.arg.is64 ? LD_D : LD_W, R_A0, R_A0,
+                        0)); // ld.[wd] $a0, $a0, %ie_pc_lo12
+    relocateNoSym(loc, R_LARCH_TLS_IE_PC_LO12, val);
+    break;
+  default:
+    llvm_unreachable("unsupported relocation for TLSDESC to IE");
+  }
+}
+
+// Convert TLSDESC GD/LD to LE.
+// The code sequence obtained in the normal or medium code model is as follows:
+//  * lu12i.w   $a0, %le_hi20(sym)      # le_hi20 != 0, otherwise NOP
+//  * ori       $a0, src, %le_lo12(sym) # le_hi20 != 0, src = $a0,
+//                                      # otherwise,    src = $zero
+// See the comment in tlsdescToIe for detailed information.
+void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
+  assert(isInt<32>(val) &&
+         "val exceeds the range of medium code model in tlsdescToLe");
+
+  bool isUInt12 = isUInt<12>(val);
+  switch (rel.type) {
+  case R_LARCH_TLS_DESC_PC_HI20:
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+    break;
+  case R_LARCH_TLS_DESC_LD:
+    if (isUInt12)
+      write32le(loc, insn(ANDI, R_ZERO, R_ZERO, 0)); // nop
+    else
+      write32le(loc, insn(LU12I_W, R_A0, extractBits(val, 31, 12),
+                          0)); // lu12i.w $a0, %le_hi20
+    break;
+  case R_LARCH_TLS_DESC_CALL:
+    if (isUInt12)
+      write32le(loc, insn(ORI, R_A0, R_ZERO, val)); // ori $a0, $zero, %le_lo12
+    else
+      write32le(loc,
+                insn(ORI, R_A0, R_A0, lo12(val))); // ori $a0, $a0, %le_lo12
+    break;
+  default:
+    llvm_unreachable("unsupported relocation for TLSDESC to LE");
+  }
+}
+
+// During TLSDESC GD_TO_IE, the converted code sequence always includes an
+// instruction related to the Lo12 relocation (ld.[wd]). To obtain correct val
+// in `getRelocTargetVA`, expr of this instruction should be adjusted to
+// R_RELAX_TLS_GD_TO_IE_ABS, while expr of other instructions related to the
+// Hi20 relocation (pcalau12i) should be adjusted to
+// RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC. Specifically, in the normal or
+// medium code model, the instruction with relocation R_LARCH_TLS_DESC_CALL is
+// the candidate of Lo12 relocation.
+RelExpr LoongArch::adjustTlsExpr(RelType type, RelExpr expr) const {
+  if (expr == R_RELAX_TLS_GD_TO_IE) {
+    if (type != R_LARCH_TLS_DESC_CALL)
+      return RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC;
+    return R_RELAX_TLS_GD_TO_IE_ABS;
+  }
+  return expr;
+}
+
+void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  const unsigned bits = ctx.arg.is64 ? 64 : 32;
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
+  bool isExtreme = false, isRelax = false;
+  const MutableArrayRef<Relocation> relocs = sec.relocs();
+  for (size_t i = 0, size = relocs.size(); i != size; ++i) {
+    Relocation &rel = relocs[i];
+    uint8_t *loc = buf + rel.offset;
+    uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset), bits);
+
+    switch (rel.expr) {
+    case R_RELAX_HINT:
+      continue;
+    case R_RELAX_TLS_IE_TO_LE:
+      if (rel.type == R_LARCH_TLS_IE_PC_HI20) {
+        // LoongArch does not support IE to LE optimization in the extreme code
+        // model. In this case, the relocs are as follows:
+        //
+        //  * i   -- R_LARCH_TLS_IE_PC_HI20
+        //  * i+1 -- R_LARCH_TLS_IE_PC_LO12
+        //  * i+2 -- R_LARCH_TLS_IE64_PC_LO20
+        //  * i+3 -- R_LARCH_TLS_IE64_PC_HI12
+        isExtreme =
+            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_IE64_PC_LO20;
+      }
+      if (isExtreme) {
+        rel.expr = getRelExpr(rel.type, *rel.sym, loc);
+        val = SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset),
+                           bits);
+        relocateNoSym(loc, rel.type, val);
+      } else {
+        isRelax = relaxable(relocs, i);
+        if (isRelax && rel.type == R_LARCH_TLS_IE_PC_HI20 && isUInt<12>(val))
+          continue;
+        tlsIeToLe(loc, rel, val);
+      }
+      continue;
+    case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
+      if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
+        // LoongArch does not support TLSDESC GD/LD to LE/IE optimization in the
+        // extreme code model. In these cases, the relocs are as follows:
+        //
+        //  * i   -- R_LARCH_TLS_DESC_PC_HI20
+        //  * i+1 -- R_LARCH_TLS_DESC_PC_LO12
+        //  * i+2 -- R_LARCH_TLS_DESC64_PC_LO20
+        //  * i+3 -- R_LARCH_TLS_DESC64_PC_HI12
+        isExtreme =
+            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20;
+      }
+      [[fallthrough]];
+    case R_RELAX_TLS_GD_TO_IE_ABS:
+      if (isExtreme) {
+        if (rel.type == R_LARCH_TLS_DESC_CALL)
+          continue;
+        rel.expr = getRelExpr(rel.type, *rel.sym, loc);
+        val = SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset),
+                           bits);
+        relocateNoSym(loc, rel.type, val);
+      } else {
+        tlsdescToIe(loc, rel, val);
+      }
+      continue;
+    case R_RELAX_TLS_GD_TO_LE:
+      if (rel.type == R_LARCH_TLS_DESC_PC_HI20) {
+        isExtreme =
+            i + 2 < size && relocs[i + 2].type == R_LARCH_TLS_DESC64_PC_LO20;
+      }
+      if (isExtreme) {
+        if (rel.type == R_LARCH_TLS_DESC_CALL)
+          continue;
+        rel.expr = getRelExpr(rel.type, *rel.sym, loc);
+        val = SignExtend64(sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset),
+                           bits);
+        relocateNoSym(loc, rel.type, val);
+      } else {
+        tlsdescToLe(loc, rel, val);
+      }
+      continue;
+    default:
+      break;
+    }
+    relocate(loc, rel, val);
+  }
 }
 
 // When relaxing just R_LARCH_ALIGN, relocDeltas is usually changed only once in
@@ -1080,6 +1330,11 @@ void LoongArch::finalizeRelax(int passes) const {
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
             r.expr = R_TLSGD_PC;
+            break;
+          case R_LARCH_TLS_DESC_PCREL20_S2:
+            skip = 4;
+            write32le(p, aux.writes[writesIdx++]);
+            r.expr = R_TLSDESC_PC;
             break;
           default:
             llvm_unreachable("unsupported type");

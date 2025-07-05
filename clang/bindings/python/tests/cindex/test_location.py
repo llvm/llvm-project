@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from clang.cindex import (
     Config,
@@ -16,7 +17,9 @@ import unittest
 
 from .util import get_cursor, get_tu
 
-base_input = "int one;\nint two;\n"
+INPUTS_DIR = Path(__file__).parent / "INPUTS"
+
+BASE_INPUT = "int one;\nint two;\n"
 
 
 class TestLocation(unittest.TestCase):
@@ -26,7 +29,7 @@ class TestLocation(unittest.TestCase):
         self.assertEqual(loc.offset, offset)
 
     def test_location(self):
-        tu = get_tu(base_input)
+        tu = get_tu(BASE_INPUT)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
@@ -37,7 +40,7 @@ class TestLocation(unittest.TestCase):
         self.assert_location(two.location, line=2, column=5, offset=13)
 
         # adding a linebreak at top should keep columns same
-        tu = get_tu("\n" + base_input)
+        tu = get_tu("\n" + BASE_INPUT)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
@@ -48,7 +51,7 @@ class TestLocation(unittest.TestCase):
         self.assert_location(two.location, line=3, column=5, offset=14)
 
         # adding a space should affect column on first line only
-        tu = get_tu(" " + base_input)
+        tu = get_tu(" " + BASE_INPUT)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
@@ -57,7 +60,7 @@ class TestLocation(unittest.TestCase):
 
         # define the expected location ourselves and see if it matches
         # the returned location
-        tu = get_tu(base_input)
+        tu = get_tu(BASE_INPUT)
 
         file = File.from_name(tu, "t.c")
         location = SourceLocation.from_position(tu, file, 1, 5)
@@ -83,20 +86,20 @@ class TestLocation(unittest.TestCase):
         self.assertTrue(verified)
 
     def test_extent(self):
-        tu = get_tu(base_input)
+        tu = get_tu(BASE_INPUT)
         one = get_cursor(tu, "one")
         two = get_cursor(tu, "two")
 
         self.assert_location(one.extent.start, line=1, column=1, offset=0)
         self.assert_location(one.extent.end, line=1, column=8, offset=7)
         self.assertEqual(
-            base_input[one.extent.start.offset : one.extent.end.offset], "int one"
+            BASE_INPUT[one.extent.start.offset : one.extent.end.offset], "int one"
         )
 
         self.assert_location(two.extent.start, line=2, column=1, offset=9)
         self.assert_location(two.extent.end, line=2, column=8, offset=16)
         self.assertEqual(
-            base_input[two.extent.start.offset : two.extent.end.offset], "int two"
+            BASE_INPUT[two.extent.start.offset : two.extent.end.offset], "int two"
         )
 
         file = File.from_name(tu, "t.c")
@@ -151,3 +154,21 @@ int one;
         assert l_t1_12 < l_t2_13 < l_t1_14
         assert not l_t2_13 < l_t1_12
         assert not l_t1_14 < l_t2_13
+
+    def test_equality(self):
+        path = INPUTS_DIR / "testfile.c"
+        path_a = INPUTS_DIR / "a.inc"
+        tu = TranslationUnit.from_source(path)
+        main_file = File.from_name(tu, path)
+        a_file = File.from_name(tu, path_a)
+
+        location1 = SourceLocation.from_position(tu, main_file, 1, 3)
+        location2 = SourceLocation.from_position(tu, main_file, 2, 2)
+        location1_2 = SourceLocation.from_position(tu, main_file, 1, 3)
+        file2_location1 = SourceLocation.from_position(tu, a_file, 1, 3)
+
+        self.assertEqual(location1, location1)
+        self.assertEqual(location1, location1_2)
+        self.assertNotEqual(location1, location2)
+        self.assertNotEqual(location1, file2_location1)
+        self.assertNotEqual(location1, "foo")

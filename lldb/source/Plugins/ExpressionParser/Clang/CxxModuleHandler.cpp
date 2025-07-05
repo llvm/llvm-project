@@ -42,7 +42,7 @@ CxxModuleHandler::CxxModuleHandler(ASTImporter &importer, ASTContext *target)
       "allocator",
       "pair",
   };
-  m_supported_templates.insert(supported_names.begin(), supported_names.end());
+  m_supported_templates.insert_range(supported_names);
 }
 
 /// Builds a list of scopes that point into the given context.

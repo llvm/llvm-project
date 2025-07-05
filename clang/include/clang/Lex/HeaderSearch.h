@@ -241,7 +241,7 @@ class HeaderSearch {
   friend SearchDirIterator;
 
   /// Header-search options used to initialize this header search.
-  std::shared_ptr<const HeaderSearchOptions> HSOpts;
+  const HeaderSearchOptions &HSOpts;
 
   /// Mapping from SearchDir to HeaderSearchOptions::UserEntries indices.
   llvm::DenseMap<unsigned, unsigned> SearchDirToHSEntry;
@@ -332,12 +332,26 @@ class HeaderSearch {
   /// The mapping between modules and headers.
   mutable ModuleMap ModMap;
 
+  struct ModuleMapDirectoryState {
+    OptionalFileEntryRef ModuleMapFile;
+    enum {
+      Parsed,
+      Loaded,
+      Invalid,
+    } Status;
+  };
+
   /// Describes whether a given directory has a module map in it.
-  llvm::DenseMap<const DirectoryEntry *, bool> DirectoryHasModuleMap;
+  llvm::DenseMap<const DirectoryEntry *, ModuleMapDirectoryState>
+      DirectoryModuleMap;
 
   /// Set of module map files we've already loaded, and a flag indicating
   /// whether they were valid or not.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
+
+  /// Set of module map files we've already parsed, and a flag indicating
+  /// whether they were valid or not.
+  llvm::DenseMap<const FileEntry *, bool> ParsedModuleMaps;
 
   // A map of discovered headers with their associated include file name.
   llvm::DenseMap<const FileEntry *, llvm::SmallString<64>> IncludeNames;
@@ -359,15 +373,15 @@ class HeaderSearch {
   void indexInitialHeaderMaps();
 
 public:
-  HeaderSearch(std::shared_ptr<const HeaderSearchOptions> HSOpts,
-               SourceManager &SourceMgr, DiagnosticsEngine &Diags,
-               const LangOptions &LangOpts, const TargetInfo *Target);
+  HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
+               DiagnosticsEngine &Diags, const LangOptions &LangOpts,
+               const TargetInfo *Target);
   HeaderSearch(const HeaderSearch &) = delete;
   HeaderSearch &operator=(const HeaderSearch &) = delete;
 
   /// Retrieve the header-search options with which this header search
   /// was initialized.
-  const HeaderSearchOptions &getHeaderSearchOpts() const { return *HSOpts; }
+  const HeaderSearchOptions &getHeaderSearchOpts() const { return HSOpts; }
 
   FileManager &getFileMgr() const { return FileMgr; }
 
@@ -432,11 +446,6 @@ public:
 
   /// Retrieve the path to the module cache.
   StringRef getModuleCachePath() const { return ModuleCachePath; }
-
-  /// Consider modules when including files from this directory.
-  void setDirectoryHasModuleMap(const DirectoryEntry* Dir) {
-    DirectoryHasModuleMap[Dir] = true;
-  }
 
   /// Forget everything we know about headers so far.
   void ClearFileInfo() {
@@ -713,9 +722,10 @@ public:
   ///        used to resolve paths within the module (this is required when
   ///        building the module from preprocessed source).
   /// \returns true if an error occurred, false otherwise.
-  bool loadModuleMapFile(FileEntryRef File, bool IsSystem, FileID ID = FileID(),
-                         unsigned *Offset = nullptr,
-                         StringRef OriginalModuleMapFile = StringRef());
+  bool parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                                 FileID ID = FileID(),
+                                 unsigned *Offset = nullptr,
+                                 StringRef OriginalModuleMapFile = StringRef());
 
   /// Collect the set of all known, top-level modules.
   ///
@@ -915,26 +925,31 @@ public:
   size_t getTotalMemory() const;
 
 private:
-  /// Describes what happened when we tried to load a module map file.
-  enum LoadModuleMapResult {
-    /// The module map file had already been loaded.
-    LMM_AlreadyLoaded,
+  /// Describes what happened when we tried to load or parse a module map file.
+  enum ModuleMapResult {
+    /// The module map file had already been processed.
+    MMR_AlreadyProcessed,
 
-    /// The module map file was loaded by this invocation.
-    LMM_NewlyLoaded,
+    /// The module map file was processed by this invocation.
+    MMR_NewlyProcessed,
 
     /// There is was directory with the given name.
-    LMM_NoDirectory,
+    MMR_NoDirectory,
 
     /// There was either no module map file or the module map file was
     /// invalid.
-    LMM_InvalidModuleMap
+    MMR_InvalidModuleMap
   };
 
-  LoadModuleMapResult loadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
-                                            DirectoryEntryRef Dir,
-                                            FileID ID = FileID(),
-                                            unsigned *Offset = nullptr);
+  ModuleMapResult parseAndLoadModuleMapFileImpl(FileEntryRef File,
+                                                bool IsSystem,
+                                                DirectoryEntryRef Dir,
+                                                FileID ID = FileID(),
+                                                unsigned *Offset = nullptr);
+
+  ModuleMapResult parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
+                                         DirectoryEntryRef Dir,
+                                         FileID ID = FileID());
 
   /// Try to load the module map file in the given directory.
   ///
@@ -945,8 +960,8 @@ private:
   ///
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
-  LoadModuleMapResult loadModuleMapFile(StringRef DirName, bool IsSystem,
-                                        bool IsFramework);
+  ModuleMapResult parseAndLoadModuleMapFile(StringRef DirName, bool IsSystem,
+                                            bool IsFramework);
 
   /// Try to load the module map file in the given directory.
   ///
@@ -956,8 +971,13 @@ private:
   ///
   /// \returns The result of attempting to load the module map file from the
   /// named directory.
-  LoadModuleMapResult loadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
-                                        bool IsFramework);
+  ModuleMapResult parseAndLoadModuleMapFile(DirectoryEntryRef Dir,
+                                            bool IsSystem, bool IsFramework);
+
+  ModuleMapResult parseModuleMapFile(StringRef DirName, bool IsSystem,
+                                     bool IsFramework);
+  ModuleMapResult parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
+                                     bool IsFramework);
 };
 
 /// Apply the header search options to get given HeaderSearch object.

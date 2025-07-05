@@ -277,7 +277,6 @@ void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
     break;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     indexTypeLoc(NNS.getTypeLoc(), Parent, DC);
     break;
   }

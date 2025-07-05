@@ -414,15 +414,6 @@ private:
 
 LogicalResult PassManager::runWithCrashRecovery(Operation *op,
                                                 AnalysisManager am) {
-  // Notify the context to disable the use of thread-local storage while the
-  // pass manager is running in a crash recovery context thread. Re-enable the
-  // thread local storage upon function exit. This is required to persist any
-  // attribute storage allocated during passes beyond the lifetime of the
-  // recovery context thread.
-  MLIRContext *ctx = getContext();
-  ctx->disableThreadLocalStorage();
-  auto guard =
-      llvm::make_scope_exit([ctx]() { ctx->enableThreadLocalStorage(); });
   crashReproGenerator->initialize(getPasses(), op, verifyPasses);
 
   // Safely invoke the passes within a recovery context.
@@ -452,7 +443,8 @@ makeReproducerStreamFactory(StringRef outputFile) {
 
 void printAsTextualPipeline(
     raw_ostream &os, StringRef anchorName,
-    const llvm::iterator_range<OpPassManager::pass_iterator> &passes);
+    const llvm::iterator_range<OpPassManager::pass_iterator> &passes,
+    bool pretty = false);
 
 std::string mlir::makeReproducer(
     StringRef anchorName,

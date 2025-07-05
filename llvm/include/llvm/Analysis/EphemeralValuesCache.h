@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -23,14 +24,36 @@ class Function;
 class AssumptionCache;
 class Value;
 
+/// A cache of ephemeral values within a function.
+class EphemeralValuesCache {
+  SmallPtrSet<const Value *, 32> EphValues;
+  Function &F;
+  AssumptionCache &AC;
+  bool Collected = false;
+
+  LLVM_ABI void collectEphemeralValues();
+
+public:
+  EphemeralValuesCache(Function &F, AssumptionCache &AC) : F(F), AC(AC) {}
+  void clear() {
+    EphValues.clear();
+    Collected = false;
+  }
+  const SmallPtrSetImpl<const Value *> &ephValues() {
+    if (!Collected)
+      collectEphemeralValues();
+    return EphValues;
+  }
+};
+
 class EphemeralValuesAnalysis
     : public AnalysisInfoMixin<EphemeralValuesAnalysis> {
   friend AnalysisInfoMixin<EphemeralValuesAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
-  using Result = SmallPtrSet<const Value *, 32>;
-  Result run(Function &F, FunctionAnalysisManager &FAM);
+  using Result = EphemeralValuesCache;
+  LLVM_ABI Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm

@@ -17,8 +17,8 @@ define i32 @abs(i32 %a) {
   ret i32 %1
 }
 
-define i1 @slet(i32 %a, i32 %b) {
-; CHECK-LABEL: slet:
+define i1 @sle(i32 %a, i32 %b) {
+; CHECK-LABEL: sle:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.sle a0, a0, a1
 ; CHECK-NEXT:    ret
@@ -26,8 +26,8 @@ define i1 @slet(i32 %a, i32 %b) {
   ret i1 %1
 }
 
-define i1 @sletu(i32 %a, i32 %b) {
-; CHECK-LABEL: sletu:
+define i1 @sleu(i32 %a, i32 %b) {
+; CHECK-LABEL: sleu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.sleu a0, a0, a1
 ; CHECK-NEXT:    ret

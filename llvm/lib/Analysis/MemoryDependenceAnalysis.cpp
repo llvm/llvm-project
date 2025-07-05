@@ -188,9 +188,6 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
   // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
     Instruction *Inst = &*--ScanIt;
-    // Debug intrinsics don't cause dependences and should not affect Limit
-    if (isa<DbgInfoIntrinsic>(Inst))
-      continue;
 
     // Limit the amount of scanning we do so we don't end up with quadratic
     // running time on extreme testcases.
@@ -431,11 +428,6 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // Walk backwards through the basic block, looking for dependencies.
   while (ScanIt != BB->begin()) {
     Instruction *Inst = &*--ScanIt;
-
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst))
-      // Debug intrinsics don't (and can't) cause dependencies.
-      if (isa<DbgInfoIntrinsic>(II))
-        continue;
 
     // Limit the amount of scanning we do so we don't end up with quadratic
     // running time on extreme testcases.
@@ -1729,9 +1721,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(MemoryDependenceWrapperPass, "memdep",
                     "Memory Dependence Analysis", false, true)
 
-MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {
-  initializeMemoryDependenceWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+MemoryDependenceWrapperPass::MemoryDependenceWrapperPass() : FunctionPass(ID) {}
 
 MemoryDependenceWrapperPass::~MemoryDependenceWrapperPass() = default;
 

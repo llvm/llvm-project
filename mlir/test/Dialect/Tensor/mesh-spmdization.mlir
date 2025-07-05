@@ -1,5 +1,5 @@
 // RUN: mlir-opt \
-// RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-constant-fold))" \
+// RUN:   --pass-pipeline="builtin.module(func.func(mesh-spmdization,test-single-fold))" \
 // RUN:   %s | FileCheck %s
 
 mesh.mesh @mesh_1d_4(shape = 4)
@@ -41,5 +41,12 @@ func.func @tensor_empty_same_static_dims_sizes() -> () {
   %sharded= mesh.shard %b to %sharding : tensor<16x16xf32>
   // CHECK-NEXT:  tensor.empty() : tensor<4x16xf32>
 
+  return
+}
+
+// CHECK-LABEL: func @tensor_empty_0d
+func.func @tensor_empty_0d() -> () {
+  tensor.empty() : tensor<f32>
+  // CHECK-NEXT:  tensor.empty() : tensor<f32>
   return
 }

@@ -11,10 +11,10 @@
 ; CHECK-DAG: %[[#int32:]] = OpTypeInt 32
 ; CHECK-DAG: %[[#int16_2:]] = OpTypeVector %[[#int16]] 2
 ; CHECK-DAG: %[[#undef:]] = OpUndef %[[#int16_2]]
-; CHECK-DAG: %[[#const1:]] = OpConstant %[[#int16]] 4
-; CHECK-DAG: %[[#const2:]] = OpConstant %[[#int16]] 8
-; CHECK-NOT: %[[#idx1:]] = OpConstant %[[#int32]] 0
-; CHECK-NOT: %[[#idx2:]] = OpConstant %[[#int32]] 1
+; CHECK-DAG: %[[#const1:]] = OpConstant %[[#int16]] 4{{$}}
+; CHECK-DAG: %[[#const2:]] = OpConstant %[[#int16]] 8{{$}}
+; CHECK-NOT: %[[#idx1:]] = OpConstantNull %[[#int32]]
+; CHECK-NOT: %[[#idx2:]] = OpConstant %[[#int32]] 1{{$}}
 ; CHECK:     %[[#vec1:]] = OpCompositeInsert %[[#int16_2]] %[[#const1]] %[[#undef]] 0
 ; CHECK:     %[[#vec2:]] = OpCompositeInsert %[[#int16_2]] %[[#const2]] %[[#vec1]] 1
 ; CHECK:     %[[#res]] = OpVectorInsertDynamic %[[#int16_2]] %[[#vec2]] %[[#v]] %[[#index]]
