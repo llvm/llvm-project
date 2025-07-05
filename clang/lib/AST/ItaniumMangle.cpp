@@ -5466,6 +5466,14 @@ recurse:
       Diags.Report(E->getExprLoc(), DiagID) << getTraitSpelling(SAE->getKind());
       return;
     }
+    case UETT_PtrAuthHasAuthentication:
+    case UETT_PtrAuthSchemaKey:
+    case UETT_PtrAuthSchemaIsAddressDiscriminated:
+    case UETT_PtrAuthSchemaExtraDiscriminator:
+    case UETT_PtrAuthSchemaOptions: {
+      MangleExtensionBuiltin(SAE);
+      break;
+    }
     }
     break;
   }
