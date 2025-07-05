@@ -81,7 +81,7 @@ def _extract_cmake_settings(repository_ctx, llvm_cmake):
 
     # It would be easier to use external commands like sed(1) and python.
     # For portability, the parser should run on Starlark.
-    llvm_cmake_path = repository_ctx.path(Label("//:" + llvm_cmake))
+    llvm_cmake_path = repository_ctx.path(Label("@llvm-raw//:" + llvm_cmake))
     for line in repository_ctx.read(llvm_cmake_path).splitlines():
         # Extract "set ( FOO bar ... "
         setfoo = line.partition("(")
