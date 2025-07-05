@@ -306,6 +306,8 @@ C23 Feature Support
   which clarified how Clang is handling underspecified object declarations.
 - Clang now accepts single variadic parameter in type-name. It's a part of
   `WG14 N2975 <https://open-std.org/JTC1/SC22/WG14/www/docs/n2975.pdf>`_
+- Fixed a bug with handling the type operand form of ``typeof`` when it is used
+  to specify a fixed underlying type for an enumeration. #GH146351
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
