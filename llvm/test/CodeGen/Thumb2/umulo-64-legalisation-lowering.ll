@@ -3,15 +3,19 @@
 
 define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; THUMBV7-LABEL: mulodi_test:
-; THUMBV7:       @ %bb.0: @ %start
+; THUMBV7:       @ %bb.0: @ %overflow.entry
 ; THUMBV7-NEXT:    .save {r4, r5, r7, lr}
 ; THUMBV7-NEXT:    push {r4, r5, r7, lr}
-; THUMBV7-NEXT:    umull r12, lr, r3, r0
+; THUMBV7-NEXT:    cbz r1, .LBB0_3
+; THUMBV7-NEXT:  @ %bb.1: @ %overflow.lhs
+; THUMBV7-NEXT:    cbz r3, .LBB0_5
+; THUMBV7-NEXT:  @ %bb.2: @ %overflow
+; THUMBV7-NEXT:    umull lr, r4, r3, r0
 ; THUMBV7-NEXT:    cmp r3, #0
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r3, #1
 ; THUMBV7-NEXT:    cmp r1, #0
-; THUMBV7-NEXT:    umull r0, r4, r0, r2
+; THUMBV7-NEXT:    umull r0, r12, r0, r2
 ; THUMBV7-NEXT:    umull r2, r5, r1, r2
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r1, #1
@@ -20,15 +24,44 @@ define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r5, #1
 ; THUMBV7-NEXT:    orrs r1, r5
-; THUMBV7-NEXT:    cmp.w lr, #0
+; THUMBV7-NEXT:    cmp r4, #0
 ; THUMBV7-NEXT:    it ne
-; THUMBV7-NEXT:    movne.w lr, #1
-; THUMBV7-NEXT:    orr.w r3, r1, lr
-; THUMBV7-NEXT:    add.w r1, r2, r12
+; THUMBV7-NEXT:    movne r4, #1
+; THUMBV7-NEXT:    orr.w r3, r1, r4
+; THUMBV7-NEXT:    add.w r1, r2, lr
 ; THUMBV7-NEXT:    movs r2, #0
-; THUMBV7-NEXT:    adds r1, r1, r4
+; THUMBV7-NEXT:    adds.w r1, r1, r12
 ; THUMBV7-NEXT:    adc r2, r2, #0
-; THUMBV7-NEXT:    orrs r2, r3
+; THUMBV7-NEXT:    orr.w r12, r3, r2
+; THUMBV7-NEXT:    and r2, r12, #1
+; THUMBV7-NEXT:    pop {r4, r5, r7, pc}
+; THUMBV7-NEXT:  .LBB0_3: @ %overflow.no.lhs
+; THUMBV7-NEXT:    mov r5, r0
+; THUMBV7-NEXT:    umull r0, r4, r0, r2
+; THUMBV7-NEXT:    cbz r3, .LBB0_7
+; THUMBV7-NEXT:  @ %bb.4: @ %overflow.no.lhs.only
+; THUMBV7-NEXT:    mul r12, r1, r3
+; THUMBV7-NEXT:    mla r1, r1, r2, r4
+; THUMBV7-NEXT:    umlal r1, r12, r5, r3
+; THUMBV7-NEXT:    b .LBB0_6
+; THUMBV7-NEXT:  .LBB0_5: @ %overflow.no.rhs.only
+; THUMBV7-NEXT:    mov lr, r0
+; THUMBV7-NEXT:    umull r0, r4, r2, r0
+; THUMBV7-NEXT:    mov r5, r1
+; THUMBV7-NEXT:    mul r12, r3, r1
+; THUMBV7-NEXT:    mla r1, r3, lr, r4
+; THUMBV7-NEXT:    umlal r1, r12, r2, r5
+; THUMBV7-NEXT:  .LBB0_6: @ %overflow.res
+; THUMBV7-NEXT:    cmp.w r12, #0
+; THUMBV7-NEXT:    it ne
+; THUMBV7-NEXT:    movne.w r12, #1
+; THUMBV7-NEXT:    and r2, r12, #1
+; THUMBV7-NEXT:    pop {r4, r5, r7, pc}
+; THUMBV7-NEXT:  .LBB0_7: @ %overflow.no
+; THUMBV7-NEXT:    mla r3, r5, r3, r4
+; THUMBV7-NEXT:    mov.w r12, #0
+; THUMBV7-NEXT:    mla r1, r1, r2, r3
+; THUMBV7-NEXT:    and r2, r12, #1
 ; THUMBV7-NEXT:    pop {r4, r5, r7, pc}
 start:
   %0 = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %l, i64 %r) #2
