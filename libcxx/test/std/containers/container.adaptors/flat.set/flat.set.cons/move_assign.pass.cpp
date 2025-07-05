@@ -116,7 +116,7 @@ constexpr void test_move_assign_clears() {
     LIBCPP_ASSERT(m1.empty());
   }
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using M = std::flat_set<int, std::less<>, MoveAssignThrows>;
     M m1    = {1, 2, 3};
     M m2    = {1, 2};
@@ -239,7 +239,7 @@ constexpr bool test() {
   test_move_assign_clears<std::vector>();
 
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque>();

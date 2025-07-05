@@ -47,7 +47,7 @@ constexpr void test_one() {
   }
   {
     M m;
-    S s = std::is_constant_evaluated() ? 100 : 1000000;
+    S s = TEST_IS_CONSTANT_EVALUATED ? 100 : 1000000;
     for (auto i = 0u; i < s; ++i) {
       m.emplace(i);
     }
@@ -60,7 +60,7 @@ constexpr void test_one() {
 constexpr bool test() {
   test_one<std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
     test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();

@@ -78,7 +78,7 @@ constexpr bool test() {
   test_one<std::vector<int>>();
   test_one<std::vector<int>, std::greater<>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
     test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();

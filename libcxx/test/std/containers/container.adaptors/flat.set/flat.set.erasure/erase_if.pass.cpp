@@ -89,7 +89,7 @@ constexpr bool test() {
   test_one<std::flat_set<int, std::less<int>, std::vector<int, min_allocator<int>>>>();
   test_one<std::flat_set<int, std::greater<int>, std::vector<int, test_allocator<int>>>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test_one<std::flat_set<int, std::less<int>, std::deque<int, min_allocator<int>>>>();

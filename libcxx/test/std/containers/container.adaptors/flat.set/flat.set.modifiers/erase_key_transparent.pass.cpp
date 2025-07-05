@@ -98,7 +98,7 @@ constexpr void test_transparent_comparator() {
 constexpr bool test() {
   test_one<std::vector<int>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
     test_one<std::deque<int>>();
   test_one<MinSequenceContainer<int>>();
@@ -106,7 +106,7 @@ constexpr bool test() {
 
   test_transparent_comparator<std::vector<std::string>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
     test_transparent_comparator<std::deque<std::string>>();
   test_transparent_comparator<MinSequenceContainer<std::string>>();

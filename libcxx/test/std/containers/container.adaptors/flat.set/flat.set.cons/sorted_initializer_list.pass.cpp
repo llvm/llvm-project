@@ -49,7 +49,7 @@ constexpr void test() {
     M m2 = {std::sorted_unique, il1};
     assert(m2 == m);
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // flat_set(sorted_unique_t, initializer_list<value_type>, const key_compare&);
     using M = std::flat_set<int, std::function<bool(int, int)>, KeyContainer<int>>;
     auto m  = M(std::sorted_unique, il1, std::less<int>());
@@ -151,7 +151,7 @@ constexpr bool test() {
 
   test<std::vector>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
     test<std::deque>();
 

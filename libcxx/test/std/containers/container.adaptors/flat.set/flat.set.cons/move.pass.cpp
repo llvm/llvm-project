@@ -55,7 +55,7 @@ constexpr void test() {
     assert(mo.key_comp() == C(5));
     assert(std::move(mo).extract().get_allocator() == A());
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // A moved-from flat_set maintains its class invariant in the presence of moved-from comparators.
     using M = std::flat_set<int, std::function<bool(int, int)>, KeyContainer<int>>;
     M mo    = M({1, 2, 3}, std::less<int>());
@@ -115,7 +115,7 @@ constexpr void test_move_noexcept() {
     C d = std::move(c);
   }
 #if _LIBCPP_VERSION
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     // Container fails to be nothrow-move-constructible; this relies on libc++'s support for non-nothrow-copyable allocators
     using C = std::flat_set<int, std::less<int>, std::deque<int, ThrowingMoveAllocator<int>>>;
     static_assert(!std::is_nothrow_move_constructible_v<std::deque<int, ThrowingMoveAllocator<int>>>);
@@ -137,7 +137,7 @@ constexpr bool test() {
   test<std::vector>();
   test_move_noexcept<std::vector>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
   {
     test<std::deque>();

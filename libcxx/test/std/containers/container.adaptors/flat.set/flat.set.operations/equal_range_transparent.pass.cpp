@@ -90,7 +90,7 @@ constexpr void test_one() {
 constexpr bool test() {
   test_one<std::vector<std::string>>();
 #ifndef __cpp_lib_constexpr_deque
-  if (!std::is_constant_evaluated())
+  if (!TEST_IS_CONSTANT_EVALUATED)
 #endif
     test_one<std::deque<std::string>>();
   test_one<MinSequenceContainer<std::string>>();

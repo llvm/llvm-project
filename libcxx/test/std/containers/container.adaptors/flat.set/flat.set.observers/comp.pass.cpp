@@ -36,7 +36,7 @@ constexpr bool test() {
     assert(vc(1, 2));
     assert(!vc(2, 1));
   }
-  if (!std::is_constant_evaluated()) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     using Comp = std::function<bool(int, int)>;
     using M    = std::flat_set<int, Comp>;
     Comp comp  = std::greater<int>();
