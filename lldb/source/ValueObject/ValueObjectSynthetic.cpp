@@ -1,4 +1,4 @@
-//===-- ValueObjectSyntheticFilter.cpp ------------------------------------===//
+//===-- ValueObjectSynthetic.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/ValueObject/ValueObjectSyntheticFilter.h"
+#include "lldb/ValueObject/ValueObjectSynthetic.h"
 
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
