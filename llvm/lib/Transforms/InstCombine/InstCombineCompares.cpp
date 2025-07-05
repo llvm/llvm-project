@@ -5126,7 +5126,7 @@ static bool isMultipleOf(Value *X, const APInt &C, const SimplifyQuery &Q) {
   if (!C.isPowerOf2())
     return false;
 
-  return MaskedValueIsZero(X, C - 1, Q);
+  return C.isOne() || MaskedValueIsZero(X, C - 1, Q);
 }
 
 /// Try to fold icmp (binop), X or icmp X, (binop).
