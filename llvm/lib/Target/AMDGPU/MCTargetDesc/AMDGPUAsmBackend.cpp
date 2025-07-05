@@ -94,7 +94,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 2;
   case FK_SecRel_4:
   case FK_Data_4:
-  case FK_PCRel_4:
     return 4;
   case FK_SecRel_8:
   case FK_Data_8:
@@ -121,7 +120,6 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_2:
   case FK_Data_4:
   case FK_Data_8:
-  case FK_PCRel_4:
   case FK_SecRel_4:
     return Value;
   default:
@@ -175,8 +173,8 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
-    // name                   offset bits  flags
-    { "fixup_si_sopp_br",     0,     16,   MCFixupKindInfo::FKF_IsPCRel },
+      // name                   offset bits  flags
+      {"fixup_si_sopp_br", 0, 16, 0},
   };
 
   if (mc::isRelocation(Kind))
