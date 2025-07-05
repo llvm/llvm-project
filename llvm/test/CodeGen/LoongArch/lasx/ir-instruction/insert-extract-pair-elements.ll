@@ -9,13 +9,12 @@ define <32 x i8> @insert_extract_v32i8(<32 x i8> %a) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $fp, $sp, 64
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.b $a1, $sp, 31
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a0, 1
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.b $vr1, $a1, 1
+; CHECK-NEXT:    ld.b $a0, $sp, 31
+; CHECK-NEXT:    vpickve2gr.b $a1, $vr0, 15
+; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 1
+; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
+; CHECK-NEXT:    vinsgr2vr.b $vr1, $a0, 1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
@@ -38,13 +37,12 @@ define <16 x i16> @insert_extract_v16i16(<16 x i16> %a) nounwind {
 ; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $fp, $sp, 64
 ; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
 ; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    ld.h $a1, $sp, 30
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 1
-; CHECK-NEXT:    xvori.b $xr1, $xr0, 0
-; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a1, 1
+; CHECK-NEXT:    ld.h $a0, $sp, 30
+; CHECK-NEXT:    vpickve2gr.h $a1, $vr0, 7
+; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
+; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
+; CHECK-NEXT:    vinsgr2vr.h $vr1, $a0, 1
 ; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
 ; CHECK-NEXT:    addi.d $sp, $fp, -64
 ; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
