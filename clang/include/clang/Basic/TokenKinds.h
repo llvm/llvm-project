@@ -101,6 +101,13 @@ inline bool isLiteral(TokenKind K) {
          isStringLiteral(K) || K == tok::header_name || K == tok::binary_data;
 }
 
+/// Return true if this is a utf literal kind.
+inline bool isUTFLiteral(TokenKind K) {
+  return K == tok::utf8_char_constant || K == tok::utf8_string_literal ||
+         K == tok::utf16_char_constant || K == tok::utf16_string_literal ||
+         K == tok::utf32_char_constant || K == tok::utf32_string_literal;
+}
+
 /// Return true if this is any of tok::annot_* kinds.
 bool isAnnotation(TokenKind K);
 
