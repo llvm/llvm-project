@@ -76,7 +76,6 @@ static X86_64RelType getType64(MCFixupKind Kind, X86::Specifier &Specifier,
     IsPCRel = true;
     return RT64_32;
   case FK_Data_4:
-  case FK_PCRel_4:
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
   case X86::reloc_riprel_4byte_relax_rex:
@@ -88,10 +87,8 @@ static X86_64RelType getType64(MCFixupKind Kind, X86::Specifier &Specifier,
   case X86::reloc_branch_4byte_pcrel:
     Specifier = X86::S_PLT;
     return RT64_32;
-  case FK_PCRel_2:
   case FK_Data_2:
     return RT64_16;
-  case FK_PCRel_1:
   case FK_Data_1:
     return RT64_8;
   }
