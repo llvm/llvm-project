@@ -591,20 +591,21 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-// Likelyhood of bypassing the vectorized loop due to SCEV or memory runtime
-// checks.
+// Likelyhood of bypassing the vectorized loop due to a runtime check block,
+// including memory overlap checks block and wrapping/unit-stride checks block.
 static constexpr uint32_t CheckBypassWeights[] = {1, 127};
 
-void VPlanTransforms::connectCheckBlocks(
-    VPlan &Plan, ArrayRef<std::pair<VPValue *, VPIRBasicBlock *>> Checks,
-    bool AddBranchWeights) {
+void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
+                                       BasicBlock *CheckBlock,
+                                       bool AddBranchWeights) {
+  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
+  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
   VPBlockBase *ScalarPH = Plan.getScalarPreheader();
-  for (const auto &[Cond, CheckBlock] : Checks) {
     VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
-    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlock);
-    VPBlockUtils::connectBlocks(CheckBlock, ScalarPH);
-    CheckBlock->swapSuccessors();
+    VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
+    VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
+    CheckBlockVPBB->swapSuccessors();
 
     // We just connected a new block to the scalar preheader. Update all
     // VPPhis by adding an incoming value for it, replicating the last value.
@@ -617,8 +618,8 @@ void VPlanTransforms::connectCheckBlocks(
     }
 
     VPIRMetadata VPBranchWeights;
-    auto *Term = VPBuilder(CheckBlock)
-                     .createNaryOp(VPInstruction::BranchOnCond, {Cond},
+    auto *Term = VPBuilder(CheckBlockVPBB)
+                     .createNaryOp(VPInstruction::BranchOnCond, {CondVPV},
                                    Plan.getCanonicalIV()->getDebugLoc());
     if (AddBranchWeights) {
       MDBuilder MDB(Plan.getScalarHeader()->getIRBasicBlock()->getContext());
@@ -626,5 +627,4 @@ void VPlanTransforms::connectCheckBlocks(
           MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
       Term->addMetadata(LLVMContext::MD_prof, BranchWeights);
     }
-  }
 }

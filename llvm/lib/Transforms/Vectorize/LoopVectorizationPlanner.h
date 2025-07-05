@@ -564,8 +564,9 @@ private:
                                   VPRecipeBuilder &RecipeBuilder,
                                   ElementCount MinVF);
 
-  /// Add the runtime checks from \p RTChecks to \p VPlan.
-  void addRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks) const;
+  /// Attach the runtime checks of \p RTChecks to \p Plan.
+  void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
+                           bool HasBranchWeights) const;
 
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans

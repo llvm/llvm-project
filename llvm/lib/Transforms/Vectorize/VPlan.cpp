@@ -488,9 +488,9 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
       // Branches to VPIRBasicBlocks must have the same successors in VPlan as
-      // in the original IR, except if the predecessors is the entry block. This
-      // enables including SCEV and memory runtime check blocks in VPlan.
-      // TODO: Remove exception by modeling branch in the entry block using
+      // in the original IR, except when the predecessor is the entry block.
+      // This enables including SCEV and memory runtime check blocks in VPlan.
+      // TODO: Remove exception by modeling the terminator of entry block using
       // BranchOnCond.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       assert((TermBr && (!TermBr->getSuccessor(idx) ||
