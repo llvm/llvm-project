@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/ValueObject/DILEval.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/ValueObject/DILAST.h"
@@ -399,6 +401,409 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
+}
+
+static CompilerType GetBasicTypeFromCU(std::shared_ptr<StackFrame> ctx,
+                                       lldb::BasicType basic_type) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  auto language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  auto type_system =
+      symbol_context.module_sp->GetTypeSystemForLanguage(language);
+
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  CompilerType empty_type;
+  return empty_type;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const ScalarLiteralNode *node) {
+  CompilerType result_type =
+      GetBasicTypeFromCU(m_exe_ctx_scope, node->GetType());
+  Scalar value = node->GetValue();
+
+  // Scalar later could be float or bool
+  if (result_type.IsInteger() || result_type.IsNullPtrType() ||
+      result_type.IsPointerType()) {
+    llvm::APInt val = value.GetAPSInt();
+    return ValueObject::CreateValueObjectFromAPInt(m_target, val, result_type,
+                                                   "result");
+  }
+
+  return lldb::ValueObjectSP();
+}
+
+static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
+                                 lldb::BasicType basic_type) {
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  CompilerType empty_type;
+  return empty_type;
+}
+
+static CompilerType DoIntegralPromotion(CompilerType from,
+                                        std::shared_ptr<StackFrame> ctx) {
+  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
+    return from;
+
+  if (!from.IsPromotableIntegerType())
+    return from;
+
+  if (from.IsUnscopedEnumerationType())
+    return DoIntegralPromotion(from.GetEnumerationIntegerType(), ctx);
+  lldb::BasicType builtin_type =
+      from.GetCanonicalType().GetBasicTypeEnumeration();
+  lldb::TypeSystemSP type_system = from.GetTypeSystem().GetSharedPointer();
+
+  uint64_t from_size = 0;
+  if (builtin_type == lldb::eBasicTypeWChar ||
+      builtin_type == lldb::eBasicTypeSignedWChar ||
+      builtin_type == lldb::eBasicTypeUnsignedWChar ||
+      builtin_type == lldb::eBasicTypeChar16 ||
+      builtin_type == lldb::eBasicTypeChar32) {
+    // Find the type that can hold the entire range of values for our type.
+    bool is_signed = from.IsSigned();
+    if (auto temp = from.GetByteSize(ctx.get()))
+      from_size = *temp;
+
+    CompilerType promote_types[] = {
+        GetBasicType(type_system, lldb::eBasicTypeInt),
+        GetBasicType(type_system, lldb::eBasicTypeUnsignedInt),
+        GetBasicType(type_system, lldb::eBasicTypeLong),
+        GetBasicType(type_system, lldb::eBasicTypeUnsignedLong),
+        GetBasicType(type_system, lldb::eBasicTypeLongLong),
+        GetBasicType(type_system, lldb::eBasicTypeUnsignedLongLong),
+    };
+    for (auto &type : promote_types) {
+      uint64_t byte_size = 0;
+      if (auto temp = type.GetByteSize(ctx.get()))
+        byte_size = *temp;
+      if (from_size < byte_size ||
+          (from_size == byte_size &&
+           is_signed == (bool)(type.GetTypeInfo() & lldb::eTypeIsSigned))) {
+        return type;
+      }
+    }
+
+    llvm_unreachable("char type should fit into long long");
+  }
+
+  // Here we can promote only to "int" or "unsigned int".
+  CompilerType int_type = GetBasicType(type_system, lldb::eBasicTypeInt);
+  uint64_t int_byte_size = 0;
+  if (auto temp = int_type.GetByteSize(ctx.get()))
+    int_byte_size = *temp;
+
+  // Signed integer types can be safely promoted to "int".
+  if (from.IsSigned()) {
+    return int_type;
+  }
+  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
+  // their entire value range.
+  return (from_size == int_byte_size)
+             ? GetBasicType(type_system, lldb::eBasicTypeUnsignedInt)
+             : int_type;
+}
+
+static lldb::ValueObjectSP UnaryConversion(lldb::ValueObjectSP valobj,
+                                           std::shared_ptr<StackFrame> ctx) {
+  // Perform usual conversions for unary operators.
+  CompilerType in_type = valobj->GetCompilerType();
+  CompilerType result_type;
+
+  if (valobj->GetCompilerType().IsInteger() ||
+      valobj->GetCompilerType().IsUnscopedEnumerationType()) {
+    CompilerType promoted_type =
+        DoIntegralPromotion(valobj->GetCompilerType(), ctx);
+    if (!promoted_type.CompareTypes(valobj->GetCompilerType()))
+      return valobj->CastToBasicType(promoted_type);
+  }
+
+  return valobj;
+}
+
+static size_t ConversionRank(CompilerType type) {
+  // Get integer conversion rank
+  // https://eel.is/c++draft/conv.rank
+  switch (type.GetCanonicalType().GetBasicTypeEnumeration()) {
+  case lldb::eBasicTypeBool:
+    return 1;
+  case lldb::eBasicTypeChar:
+  case lldb::eBasicTypeSignedChar:
+  case lldb::eBasicTypeUnsignedChar:
+    return 2;
+  case lldb::eBasicTypeShort:
+  case lldb::eBasicTypeUnsignedShort:
+    return 3;
+  case lldb::eBasicTypeInt:
+  case lldb::eBasicTypeUnsignedInt:
+    return 4;
+  case lldb::eBasicTypeLong:
+  case lldb::eBasicTypeUnsignedLong:
+    return 5;
+  case lldb::eBasicTypeLongLong:
+  case lldb::eBasicTypeUnsignedLongLong:
+    return 6;
+
+    // The ranks of char16_t, char32_t, and wchar_t are equal to the
+    // ranks of their underlying types.
+  case lldb::eBasicTypeWChar:
+  case lldb::eBasicTypeSignedWChar:
+  case lldb::eBasicTypeUnsignedWChar:
+    return 3;
+  case lldb::eBasicTypeChar16:
+    return 3;
+  case lldb::eBasicTypeChar32:
+    return 4;
+
+  default:
+    break;
+  }
+  return 0;
+}
+
+static lldb::BasicType BasicTypeToUnsigned(lldb::BasicType basic_type) {
+  switch (basic_type) {
+  case lldb::eBasicTypeInt:
+    return lldb::eBasicTypeUnsignedInt;
+  case lldb::eBasicTypeLong:
+    return lldb::eBasicTypeUnsignedLong;
+  case lldb::eBasicTypeLongLong:
+    return lldb::eBasicTypeUnsignedLongLong;
+  default:
+    return basic_type;
+  }
+}
+
+static void PerformIntegerConversions(std::shared_ptr<StackFrame> ctx,
+                                      lldb::ValueObjectSP &lhs,
+                                      lldb::ValueObjectSP &rhs,
+                                      bool convert_lhs, bool convert_rhs) {
+  CompilerType l_type = lhs->GetCompilerType();
+  CompilerType r_type = rhs->GetCompilerType();
+  if (r_type.IsSigned() && !l_type.IsSigned()) {
+    uint64_t l_size = 0;
+    uint64_t r_size = 0;
+    if (auto temp = l_type.GetByteSize(ctx.get()))
+      l_size = *temp;
+    ;
+    if (auto temp = r_type.GetByteSize(ctx.get()))
+      r_size = *temp;
+    if (l_size <= r_size) {
+      if (r_size == l_size) {
+        lldb::TypeSystemSP type_system =
+            l_type.GetTypeSystem().GetSharedPointer();
+        auto r_type_unsigned = GetBasicType(
+            type_system,
+            BasicTypeToUnsigned(
+                r_type.GetCanonicalType().GetBasicTypeEnumeration()));
+        if (convert_rhs)
+          rhs = rhs->CastToBasicType(r_type_unsigned);
+      }
+    }
+  }
+  if (convert_lhs)
+    lhs = lhs->CastToBasicType(rhs->GetCompilerType());
+}
+
+static CompilerType ArithmeticConversions(lldb::ValueObjectSP &lhs,
+                                          lldb::ValueObjectSP &rhs,
+                                          std::shared_ptr<StackFrame> ctx) {
+  // Apply unary conversion (e.g. intergal promotion) for both operands.
+  lhs = UnaryConversion(lhs, ctx);
+  rhs = UnaryConversion(rhs, ctx);
+
+  CompilerType lhs_type = lhs->GetCompilerType();
+  CompilerType rhs_type = rhs->GetCompilerType();
+
+  if (lhs_type.CompareTypes(rhs_type))
+    return lhs_type;
+
+  // If either of the operands is not arithmetic (e.g. pointer), we're done.
+  if (!lhs_type.IsScalarType() || !rhs_type.IsScalarType()) {
+    CompilerType bad_type;
+    return bad_type;
+  }
+
+  // Removed floating point conversions
+  if (lhs_type.IsFloat() || rhs_type.IsFloat()) {
+    CompilerType bad_type;
+    return bad_type;
+  }
+
+  if (lhs_type.IsInteger() && rhs_type.IsInteger()) {
+    using Rank = std::tuple<size_t, bool>;
+    Rank l_rank = {ConversionRank(lhs_type), !lhs_type.IsSigned()};
+    Rank r_rank = {ConversionRank(rhs_type), !rhs_type.IsSigned()};
+
+    if (l_rank < r_rank) {
+      PerformIntegerConversions(ctx, lhs, rhs, true, true);
+    } else if (l_rank > r_rank) {
+      PerformIntegerConversions(ctx, rhs, lhs, true, true);
+    }
+  }
+
+  return rhs_type;
+}
+
+llvm::Error Interpreter::PrepareBinaryAddition(lldb::ValueObjectSP &lhs,
+                                               lldb::ValueObjectSP &rhs,
+                                               uint32_t location) {
+  // Operation '+' works for:
+  //
+  //  {scalar,unscoped_enum} <-> {scalar,unscoped_enum}
+  //  {integer,unscoped_enum} <-> pointer
+  //  pointer <-> {integer,unscoped_enum}
+  auto orig_lhs_type = lhs->GetCompilerType();
+  auto orig_rhs_type = rhs->GetCompilerType();
+  auto result_type = ArithmeticConversions(lhs, rhs, m_exe_ctx_scope);
+
+  if (result_type.IsScalarType())
+    return llvm::Error::success();
+
+  // Removed pointer arithmetics
+  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
+                                              location);
+}
+
+static lldb::ValueObjectSP EvaluateArithmeticOpInteger(lldb::TargetSP target,
+                                                       BinaryOpKind kind,
+                                                       lldb::ValueObjectSP lhs,
+                                                       lldb::ValueObjectSP rhs,
+                                                       CompilerType rtype) {
+  assert(lhs->GetCompilerType().IsInteger() &&
+         rhs->GetCompilerType().IsInteger() &&
+         "invalid ast: both operands must be integers");
+
+  auto wrap = [target, rtype](auto value) {
+    return ValueObject::CreateValueObjectFromAPInt(target, value, rtype,
+                                                   "result");
+  };
+
+  llvm::Expected<llvm::APSInt> l_value = lhs->GetValueAsAPSInt();
+  llvm::Expected<llvm::APSInt> r_value = rhs->GetValueAsAPSInt();
+
+  if (l_value && r_value) {
+    llvm::APSInt l = *l_value;
+    llvm::APSInt r = *r_value;
+
+    switch (kind) {
+    case BinaryOpKind::Add:
+      return wrap(l + r);
+
+    default:
+      assert(false && "invalid ast: invalid arithmetic operation");
+      return lldb::ValueObjectSP();
+    }
+  } else {
+    return lldb::ValueObjectSP();
+  }
+}
+
+static lldb::ValueObjectSP EvaluateArithmeticOp(lldb::TargetSP target,
+                                                BinaryOpKind kind,
+                                                lldb::ValueObjectSP lhs,
+                                                lldb::ValueObjectSP rhs,
+                                                CompilerType rtype) {
+  assert((rtype.IsInteger() || rtype.IsFloat()) &&
+         "invalid ast: result type must either integer or floating point");
+
+  // Evaluate arithmetic operation for two integral values.
+  if (rtype.IsInteger()) {
+    return EvaluateArithmeticOpInteger(target, kind, lhs, rhs, rtype);
+  }
+
+  // Removed floating point arithmetics
+
+  return lldb::ValueObjectSP();
+}
+
+llvm::Expected<lldb::ValueObjectSP> Interpreter::EvaluateBinaryAddition(
+    lldb::ValueObjectSP lhs, lldb::ValueObjectSP rhs, uint32_t location) {
+  // Addition of two arithmetic types.
+  if (lhs->GetCompilerType().IsScalarType() &&
+      rhs->GetCompilerType().IsScalarType()) {
+    return EvaluateArithmeticOp(m_target, BinaryOpKind::Add, lhs, rhs,
+                                lhs->GetCompilerType().GetCanonicalType());
+  }
+
+  // Removed pointer arithmetics
+  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
+                                              location);
+}
+
+lldb::ValueObjectSP
+Interpreter::ConvertValueObjectToTypeSystem(lldb::ValueObjectSP valobj,
+                                            lldb::TypeSystemSP type_system) {
+  auto apsint = valobj->GetValueAsAPSInt();
+  if (apsint) {
+    llvm::APInt value = *apsint;
+    if (type_system) {
+      lldb::BasicType basic_type = valobj->GetCompilerType()
+                                       .GetCanonicalType()
+                                       .GetBasicTypeEnumeration();
+      if (auto compiler_type =
+              type_system.get()->GetBasicTypeFromAST(basic_type)) {
+        valobj->GetValue().SetCompilerType(compiler_type);
+        return ValueObject::CreateValueObjectFromAPInt(m_target, value,
+                                                       compiler_type, "result");
+      }
+    }
+  }
+
+  return lldb::ValueObjectSP();
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const BinaryOpNode *node) {
+  auto lhs_or_err = Evaluate(node->GetLHS());
+  if (!lhs_or_err)
+    return lhs_or_err;
+  lldb::ValueObjectSP lhs = *lhs_or_err;
+  auto rhs_or_err = Evaluate(node->GetRHS());
+  if (!rhs_or_err)
+    return rhs_or_err;
+  lldb::ValueObjectSP rhs = *rhs_or_err;
+
+  lldb::TypeSystemSP lhs_system =
+      lhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+  lldb::TypeSystemSP rhs_system =
+      rhs->GetCompilerType().GetTypeSystem().GetSharedPointer();
+
+  // Is this a correct way to check if type systems are the same?
+  if (lhs_system != rhs_system) {
+    // If one of the nodes is a scalar const, convert it to the
+    // type system of another one
+    if (node->GetLHS()->GetKind() == NodeKind::eScalarLiteralNode)
+      lhs = ConvertValueObjectToTypeSystem(lhs, rhs_system);
+    else if (node->GetRHS()->GetKind() == NodeKind::eScalarLiteralNode)
+      rhs = ConvertValueObjectToTypeSystem(rhs, lhs_system);
+    else
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "incompatible type systems", node->GetLocation());
+  }
+
+  switch (node->GetKind()) {
+  case BinaryOpKind::Add:
+    if (auto err = PrepareBinaryAddition(lhs, rhs, node->GetLocation()))
+      return err;
+    return EvaluateBinaryAddition(lhs, rhs, node->GetLocation());
+
+    // Other ops
+
+  default:
+    break;
+  }
+
+  return llvm::make_error<DILDiagnosticError>(m_expr, "unimplemented",
+                                              node->GetLocation());
 }
 
 } // namespace lldb_private::dil

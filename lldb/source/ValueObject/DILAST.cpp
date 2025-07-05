@@ -11,6 +11,18 @@
 
 namespace lldb_private::dil {
 
+BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
+  switch (token_kind) {
+  case Token::minus:
+    return BinaryOpKind::Sub;
+  case Token::plus:
+    return BinaryOpKind::Add;
+  default:
+    break;
+  }
+  llvm_unreachable("Unknown binary operator kind.");
+}
+
 llvm::Expected<lldb::ValueObjectSP> ErrorNode::Accept(Visitor *v) const {
   llvm_unreachable("Attempting to Visit a DIL ErrorNode.");
 }
@@ -34,6 +46,15 @@ ArraySubscriptNode::Accept(Visitor *v) const {
 
 llvm::Expected<lldb::ValueObjectSP>
 BitFieldExtractionNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+ScalarLiteralNode::Accept(Visitor *v) const {
+  return v->Visit(this);
+}
+
+llvm::Expected<lldb::ValueObjectSP> BinaryOpNode::Accept(Visitor *v) const {
   return v->Visit(this);
 }
 

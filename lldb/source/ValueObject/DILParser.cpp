@@ -80,9 +80,30 @@ ASTNodeUP DILParser::Run() {
 // Parse an expression.
 //
 //  expression:
-//    unary_expression
+//    additive_expression
 //
-ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
+ASTNodeUP DILParser::ParseExpression() { return ParseAdditiveExpression(); }
+
+// Parse an additive_expression.
+//
+//  additive_expression:
+//    unary_expression {"+" unary_expression}
+//    unary_expression {"-" unary_expression}
+//
+ASTNodeUP DILParser::ParseAdditiveExpression() {
+  auto lhs = ParseUnaryExpression();
+
+  while (CurToken().IsOneOf({Token::plus, Token::minus})) {
+    Token token = CurToken();
+    m_dil_lexer.Advance();
+    auto rhs = ParseUnaryExpression();
+    lhs = std::make_unique<BinaryOpNode>(
+        token.GetLocation(), GetBinaryOpKindFromToken(token.GetKind()),
+        std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 // Parse an unary_expression.
 //
@@ -183,6 +204,8 @@ ASTNodeUP DILParser::ParsePostfixExpression() {
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
+  if (CurToken().Is(Token::numeric_constant))
+    return ParseNumericLiteral();
   if (CurToken().IsOneOf(
           {Token::coloncolon, Token::identifier, Token::l_paren})) {
     // Save the source location for the diagnostics message.
@@ -351,6 +374,7 @@ void DILParser::BailOut(const std::string &error, uint32_t loc,
 //  integer_literal:
 //    ? Integer constant ?
 //
+// Haven't removed this yet in order to not rewrite the array subscription
 std::optional<int64_t> DILParser::ParseIntegerConstant() {
   std::string number_spelling;
   if (CurToken().GetKind() == Token::minus) {
@@ -368,6 +392,52 @@ std::optional<int64_t> DILParser::ParseIntegerConstant() {
   }
 
   return std::nullopt;
+}
+
+// Parse a numeric_literal.
+//
+//  numeric_literal:
+//    ? Token::numeric_constant ?
+//
+ASTNodeUP DILParser::ParseNumericLiteral() {
+  Expect(Token::numeric_constant);
+  ASTNodeUP numeric_constant = ParseNumericConstant();
+  if (numeric_constant->GetKind() == NodeKind::eErrorNode) {
+    BailOut(llvm::formatv("Failed to parse token as numeric-constant: {0}",
+                          CurToken()),
+            CurToken().GetLocation(), CurToken().GetSpelling().length());
+    return std::make_unique<ErrorNode>();
+  }
+  m_dil_lexer.Advance();
+  return numeric_constant;
+}
+
+static constexpr std::pair<const char *, lldb::BasicType> type_suffixes[] = {
+    {"ull", lldb::eBasicTypeUnsignedLongLong},
+    {"ul", lldb::eBasicTypeUnsignedLong},
+    {"u", lldb::eBasicTypeUnsignedInt},
+    {"ll", lldb::eBasicTypeLongLong},
+    {"l", lldb::eBasicTypeLong},
+};
+
+ASTNodeUP DILParser::ParseNumericConstant() {
+  Token token = CurToken();
+  auto spelling = token.GetSpelling();
+  llvm::StringRef spelling_ref = spelling;
+  lldb::BasicType type = lldb::eBasicTypeInt;
+  for (auto [suffix, t] : type_suffixes) {
+    if (spelling_ref.consume_back_insensitive(suffix)) {
+      type = t;
+      break;
+    }
+  }
+  llvm::APInt raw_value;
+  if (!spelling_ref.getAsInteger(0, raw_value)) {
+    Scalar scalar_value(raw_value);
+    return std::make_unique<ScalarLiteralNode>(token.GetLocation(), type,
+                                               scalar_value);
+  }
+  return std::make_unique<ErrorNode>();
 }
 
 void DILParser::Expect(Token::Kind kind) {
