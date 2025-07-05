@@ -131,15 +131,12 @@ static bool fixupDllMain(COFFLinkerContext &ctx, llvm::object::Archive *file,
             file->getFileName() +
                 ": could not get the buffer for a child buffer of the archive");
   if (identify_magic(mb.getBuffer()) == file_magic::coff_import_library) {
-    if (ctx.config.warnExportedDllMain) {
-      // We won't place DllMain symbols in the symbol table if they are
-      // coming from a import library. This message can be ignored with the flag
-      // '/ignore:exporteddllmain'
-      Warn(ctx)
-          << file->getFileName()
-          << ": skipping exported DllMain symbol [exporteddllmain]\nNOTE: this "
-             "might be a mistake when the DLL/library was produced.";
-    }
+    // We won't place DllMain symbols in the symbol table if they are
+    // coming from a import library. This message can be ignored with the flag
+    // '/ignore:exporteddllmain'
+    Warn(ctx) << file->getFileName()
+              << ": skipping imported DllMain symbol\nNOTE: this "
+                 "might be a mistake when the DLL/library was produced.";
     skipDllMain = true;
     return true;
   }
