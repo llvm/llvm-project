@@ -1793,6 +1793,12 @@ foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32, v4f64] in {
   def  : RegRegStPat<store, XVSTX, LASX256, vt>;
 }
 
+// Bitcast float/double element extracted from vector to integer.
+def : Pat<(loongarch_movfr2gr_s_la64 (f32 (vector_extract v8f32:$xj, uimm3:$imm))),
+          (XVPICKVE2GR_W v8f32:$xj, uimm3:$imm)>;
+def : Pat<(i64 (bitconvert (f64 (vector_extract v4f64:$xj, uimm2:$imm)))),
+          (XVPICKVE2GR_D v4f64:$xj, uimm2:$imm)>;
+
 // Vector extraction with constant index.
 def : Pat<(i64 (vector_extract v32i8:$xj, uimm4:$imm)),
           (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
