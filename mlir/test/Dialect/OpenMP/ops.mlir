@@ -3197,3 +3197,16 @@ func.func @omp_workshare_loop_wrapper_attrs(%idx : index) {
   }
   return
 }
+
+// CHECK-LABEL: func @omp_workdistribute
+func.func @omp_workdistribute() {
+  // CHECK: omp.teams
+  omp.teams {
+  // CHECK: omp.workdistribute
+  omp.workdistribute {
+    omp.terminator
+  }
+  omp.terminator
+  }
+  return
+}
