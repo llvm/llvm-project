@@ -14,7 +14,6 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
 namespace llvm {

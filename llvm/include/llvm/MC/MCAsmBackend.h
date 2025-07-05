@@ -31,7 +31,6 @@ class MCSymbol;
 class MCAssembler;
 class MCContext;
 struct MCDwarfFrameInfo;
-struct MCFixupKindInfo;
 class MCInst;
 class MCObjectStreamer;
 class MCObjectTargetWriter;
