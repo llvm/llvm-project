@@ -672,13 +672,16 @@ public:
       m_synth_frontend_up->Update();
 
 #define COMPONENT(Name, PrettyName, ID)                                        \
-  auto index_or_err = m_synth_frontend_up->GetIndexOfChildWithName(g__##Name); \
-  if (!index_or_err) {                                                         \
-    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),  \
-                   "{0}");                                                     \
-    return ChildCacheState::eRefetch;                                          \
+  {                                                                            \
+    auto index_or_err =                                                        \
+        m_synth_frontend_up->GetIndexOfChildWithName(g__##Name);               \
+    if (!index_or_err) {                                                       \
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters),                          \
+                     index_or_err.takeError(), "{0}");                         \
+      return ChildCacheState::eRefetch;                                        \
+    }                                                                          \
+    m_##Name = m_synth_frontend_up->GetChildAtIndex(*index_or_err).get();      \
   }                                                                            \
-  m_##Name = m_synth_frontend_up->GetChildAtIndex(*index_or_err).get();        \
   if (m_##Name)                                                                \
     m_##Name->SetName(GetNameFor##Name());
 #include "URLComponents.def"
