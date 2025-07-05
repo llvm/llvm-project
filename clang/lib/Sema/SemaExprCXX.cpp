@@ -3397,8 +3397,7 @@ void Sema::DeclareGlobalNewDelete() {
   GlobalNewDeleteDeclared = true;
 
   QualType VoidPtr = Context.getPointerType(Context.VoidTy);
-  // FIXME: Why is 'Canonical'SizeType needed here?
-  QualType SizeT = Context.getCanonicalSizeType();
+  QualType SizeT = Context.getSizeType();
 
   auto DeclareGlobalAllocationFunctions = [&](OverloadedOperatorKind Kind,
                                               QualType Return, QualType Param) {
@@ -3455,9 +3454,12 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       if (Func->getNumParams() == Params.size()) {
         llvm::SmallVector<QualType, 3> FuncParams;
         for (auto *P : Func->parameters())
-          FuncParams.push_back(
-              Context.getCanonicalType(P->getType().getUnqualifiedType()));
-        if (llvm::ArrayRef(FuncParams) == Params) {
+          FuncParams.push_back(P->getType().getUnqualifiedType());
+        if (std::equal(FuncParams.begin(), FuncParams.end(), Params.begin(),
+                       Params.end(), [&](auto &LT, auto &RT) {
+                         return Context.getCanonicalType(LT) ==
+                                Context.getCanonicalType(RT);
+                       })) {
           // Make the function visible to name lookup, even if we found it in
           // an unimported module. It either is an implicitly-declared global
           // allocation function, or is suppressing that function.
