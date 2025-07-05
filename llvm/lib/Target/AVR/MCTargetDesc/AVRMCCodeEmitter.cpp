@@ -35,6 +35,17 @@
 
 namespace llvm {
 
+static void addFixup(SmallVectorImpl<MCFixup> &Fixups, uint32_t Offset,
+                     const MCExpr *Value, uint16_t Kind) {
+  bool PCRel = false;
+  switch (Kind) {
+  case AVR::fixup_7_pcrel:
+  case AVR::fixup_13_pcrel:
+    PCRel = true;
+  }
+  Fixups.push_back(MCFixup::create(Offset, Value, Kind, PCRel));
+}
+
 /// Performs a post-encoding step on a `LD` or `ST` instruction.
 ///
 /// The encoding of the LD/ST family of instructions is inconsistent w.r.t
@@ -110,7 +121,7 @@ AVRMCCodeEmitter::encodeRelCondBrTarget(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
 
   if (MO.isExpr()) {
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), MCFixupKind(Fixup)));
+    addFixup(Fixups, 0, MO.getExpr(), MCFixupKind(Fixup));
     return 0;
   }
 
@@ -155,8 +166,7 @@ unsigned AVRMCCodeEmitter::encodeMemri(const MCInst &MI, unsigned OpNo,
     OffsetBits = OffsetOp.getImm();
   } else if (OffsetOp.isExpr()) {
     OffsetBits = 0;
-    Fixups.push_back(
-        MCFixup::create(0, OffsetOp.getExpr(), MCFixupKind(AVR::fixup_6)));
+    addFixup(Fixups, 0, OffsetOp.getExpr(), MCFixupKind(AVR::fixup_6));
   } else {
     llvm_unreachable("Invalid value for offset");
   }
@@ -190,7 +200,7 @@ unsigned AVRMCCodeEmitter::encodeImm(const MCInst &MI, unsigned OpNo,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(Fixup);
-    Fixups.push_back(MCFixup::create(Offset, MO.getExpr(), FixupKind));
+    addFixup(Fixups, Offset, MO.getExpr(), FixupKind);
 
     return 0;
   }
@@ -206,7 +216,7 @@ unsigned AVRMCCodeEmitter::encodeCallTarget(const MCInst &MI, unsigned OpNo,
 
   if (MO.isExpr()) {
     MCFixupKind FixupKind = static_cast<MCFixupKind>(AVR::fixup_call);
-    Fixups.push_back(MCFixup::create(0, MO.getExpr(), FixupKind));
+    addFixup(Fixups, 0, MO.getExpr(), FixupKind);
     return 0;
   }
 
@@ -236,7 +246,7 @@ unsigned AVRMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
     }
 
     MCFixupKind FixupKind = static_cast<MCFixupKind>(AVRExpr->getFixupKind());
-    Fixups.push_back(MCFixup::create(0, AVRExpr, FixupKind));
+    addFixup(Fixups, 0, AVRExpr, FixupKind);
     return 0;
   }
 
