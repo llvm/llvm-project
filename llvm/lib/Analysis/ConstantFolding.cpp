@@ -1963,7 +1963,7 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
+static APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
