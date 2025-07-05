@@ -5123,10 +5123,13 @@ static Instruction *foldICmpXorXX(ICmpInst &I, const SimplifyQuery &Q,
 /// Return true if X is a multiple of C.
 /// TODO: Handle non-power-of-2 factors.
 static bool isMultipleOf(Value *X, const APInt &C, const SimplifyQuery &Q) {
+  if (C.isOne())
+    return true;
+
   if (!C.isPowerOf2())
     return false;
 
-  return C.isOne() || MaskedValueIsZero(X, C - 1, Q);
+  return MaskedValueIsZero(X, C - 1, Q);
 }
 
 /// Try to fold icmp (binop), X or icmp X, (binop).
