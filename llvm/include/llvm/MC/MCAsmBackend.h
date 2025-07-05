@@ -131,9 +131,12 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
-                                   uint64_t &Value) {
-    llvm_unreachable("Need to implement hook if target has custom fixups");
+  // Evaluate a fixup, returning std::nullopt to use default handling for
+  // `Value` and `IsResolved`. Otherwise, returns `IsResolved` with the
+  // expectation that the hook updates `Value`.
+  virtual std::optional<bool> evaluateFixup(MCFixup &Fixup, MCValue &Target,
+                                            uint64_t &Value) {
+    return {};
   }
 
   void maybeAddReloc(const MCFragment &, const MCFixup &, const MCValue &,
