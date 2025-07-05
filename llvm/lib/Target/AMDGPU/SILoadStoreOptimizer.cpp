@@ -839,8 +839,16 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
     Offset = I->getOperand(OffsetIdx).getImm();
   }
 
-  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE)
+  if (InstClass == TBUFFER_LOAD || InstClass == TBUFFER_STORE) {
     Format = LSO.TII->getNamedOperand(*I, AMDGPU::OpName::format)->getImm();
+    const AMDGPU::GcnBufferFormatInfo *Info =
+        AMDGPU::getGcnBufferFormatInfo(Format, *LSO.STM);
+
+    // TODO: Support merging 8-bit tbuffer load/store instructions
+    // Use 2-byte element size if the tbuffer format is 16-bit.
+    if (Info && Info->BitsPerComp == 16)
+      EltSize = 2;
+  }
 
   Width = getOpcodeWidth(*I, *LSO.TII);
 
@@ -1040,18 +1048,19 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   if (CI.Offset == Paired.Offset)
     return false;
 
+  unsigned EltSize = CI.EltSize;
+
   // This won't be valid if the offset isn't aligned.
-  if ((CI.Offset % CI.EltSize != 0) || (Paired.Offset % CI.EltSize != 0))
+  if ((CI.Offset % EltSize != 0) || (Paired.Offset % EltSize != 0))
     return false;
 
   if (CI.InstClass == TBUFFER_LOAD || CI.InstClass == TBUFFER_STORE) {
-
-    const llvm::AMDGPU::GcnBufferFormatInfo *Info0 =
-        llvm::AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
+    const AMDGPU::GcnBufferFormatInfo *Info0 =
+        AMDGPU::getGcnBufferFormatInfo(CI.Format, STI);
     if (!Info0)
       return false;
-    const llvm::AMDGPU::GcnBufferFormatInfo *Info1 =
-        llvm::AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
+    const AMDGPU::GcnBufferFormatInfo *Info1 =
+        AMDGPU::getGcnBufferFormatInfo(Paired.Format, STI);
     if (!Info1)
       return false;
 
@@ -1059,13 +1068,35 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
         Info0->NumFormat != Info1->NumFormat)
       return false;
 
-    // TODO: Should be possible to support more formats, but if format loads
-    // are not dword-aligned, the merged load might not be valid.
-    if (Info0->BitsPerComp != 32)
+    // Buffer instructions support up to 4 components per access (e.g., x, xy,
+    // xyz, xyzw).
+    unsigned NumCombinedComponents = CI.Width + Paired.Width;
+    if (NumCombinedComponents > 4)
       return false;
 
-    if (getBufferFormatWithCompCount(CI.Format, CI.Width + Paired.Width, STI) == 0)
+    if (getBufferFormatWithCompCount(CI.Format, NumCombinedComponents, STI) ==
+        0)
       return false;
+
+    // Merge only when the two access ranges are strictly back-to-back,
+    // any gap or overlap can over-write data or leave holes.
+    unsigned BytePerComp = Info0->BitsPerComp / 8;
+    unsigned ElemIndex0 = CI.Offset / BytePerComp;
+    unsigned ElemIndex1 = Paired.Offset / BytePerComp;
+    if (!(ElemIndex0 + CI.Width == ElemIndex1 ||
+          ElemIndex1 + Paired.Width == ElemIndex0))
+      return false;
+
+    // 1-byte formats require 1-byte alignment.
+    // 2-byte formats require 2-byte alignment.
+    // 4-byte and larger formats require 4-byte alignment.
+    unsigned MergedBytes = BytePerComp * NumCombinedComponents;
+    unsigned RequiredAlign = (MergedBytes >= 4) ? 4 : MergedBytes;
+    unsigned MinOff = std::min(CI.Offset, Paired.Offset);
+    if (MinOff % RequiredAlign != 0)
+      return false;
+
+    return true;
   }
 
   uint32_t EltOffset0 = CI.Offset / CI.EltSize;
@@ -1076,7 +1107,7 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
   // Handle all non-DS instructions.
   if ((CI.InstClass != DS_READ) && (CI.InstClass != DS_WRITE)) {
     if (EltOffset0 + CI.Width != EltOffset1 &&
-            EltOffset1 + Paired.Width != EltOffset0)
+        EltOffset1 + Paired.Width != EltOffset0)
       return false;
     if (CI.CPol != Paired.CPol)
       return false;
