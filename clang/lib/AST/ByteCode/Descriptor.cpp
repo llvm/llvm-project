@@ -502,6 +502,21 @@ SourceInfo Descriptor::getLoc() const {
   llvm_unreachable("Invalid descriptor type");
 }
 
+bool Descriptor::hasTrivialDtor() const {
+  if (isPrimitive() || isPrimitiveArray() || isDummy())
+    return true;
+
+  if (isRecord()) {
+    assert(ElemRecord);
+    const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+    return !Dtor || Dtor->isTrivial();
+  }
+
+  // Composite arrays.
+  assert(ElemDesc);
+  return ElemDesc->hasTrivialDtor();
+}
+
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }
 
 InitMap::InitMap(unsigned N)

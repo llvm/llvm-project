@@ -162,10 +162,6 @@ public:
 
 private:
   bool CheckAllowedClause(llvmOmpClause clause);
-  bool IsVariableListItem(const Symbol &sym);
-  bool IsExtendedListItem(const Symbol &sym);
-  bool IsCommonBlock(const Symbol &sym);
-  std::optional<bool> IsContiguous(const parser::OmpObject &object);
   void CheckVariableListItem(const SymbolSourceMap &symbols);
   void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -215,10 +211,6 @@ private:
       typename IterTy = decltype(std::declval<RangeTy>().begin())>
   std::optional<IterTy> FindDuplicate(RangeTy &&);
 
-  const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-  const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-  std::optional<parser::CharBlock> GetObjectSource(
-      const parser::OmpObject &object);
   void CheckDependList(const parser::DataRef &);
   void CheckDependArraySection(
       const common::Indirection<parser::ArrayElement> &, const parser::Name &);
