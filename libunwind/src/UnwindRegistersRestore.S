@@ -657,25 +657,51 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
   ldp    x28,x29, [x0, #0x0E0]
+#if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+#define __VOFFSET 0x118
+  // See the description in Registers_arm64
+  ldr    x30,     [x0, #0x100]    // __pc
+  mov    x17, x30
+  mov    x16,  x0                 // auth with the buffer's address
+  movk   x16, #0xface, lsl #48    // blinded with a constant
+  hint   0xc                      // autia1716
+  hint   0x7                      // xpaclri
+  cmp    x17, x30                 // check if the auth failed
+  b.ne   LauthError
+  mov    x1, x17
+  ldr    x30,     [x0, #0x110]    // __pc2
+  mov    x17, x30
+  ldr    x16,     [x0, #0x100]    // Auth the second part with the signed first part
+  hint   0xc                      // autia1716
+  hint   0x7                      // xpaclri
+  cmp    x17, x30                 // check if the auth failed
+  b.ne   LauthError
+  lsl    x17, x17, 32
+  orr    x30, x17, x1
+  mov    x16, xzr                 // clearup registers
+  mov    x17, xzr
+#else
+#define __VOFFSET 0x110
   ldr    x30,     [x0, #0x100]  // restore pc into lr
+#endif
 #if defined(__ARM_FP) && __ARM_FP != 0
-  ldp    d0, d1,  [x0, #0x110]
-  ldp    d2, d3,  [x0, #0x120]
-  ldp    d4, d5,  [x0, #0x130]
-  ldp    d6, d7,  [x0, #0x140]
-  ldp    d8, d9,  [x0, #0x150]
-  ldp    d10,d11, [x0, #0x160]
-  ldp    d12,d13, [x0, #0x170]
-  ldp    d14,d15, [x0, #0x180]
-  ldp    d16,d17, [x0, #0x190]
-  ldp    d18,d19, [x0, #0x1A0]
-  ldp    d20,d21, [x0, #0x1B0]
-  ldp    d22,d23, [x0, #0x1C0]
-  ldp    d24,d25, [x0, #0x1D0]
-  ldp    d26,d27, [x0, #0x1E0]
-  ldp    d28,d29, [x0, #0x1F0]
-  ldr    d30,     [x0, #0x200]
-  ldr    d31,     [x0, #0x208]
+  ldp    d0, d1,  [x0, #(__VOFFSET + 0x0)]
+  ldp    d2, d3,  [x0, #(__VOFFSET + 0x10)]
+  ldp    d4, d5,  [x0, #(__VOFFSET + 0x20)]
+  ldp    d6, d7,  [x0, #(__VOFFSET + 0x30)]
+  ldp    d8, d9,  [x0, #(__VOFFSET + 0x40)]
+  ldp    d10,d11, [x0, #(__VOFFSET + 0x50)]
+  ldp    d12,d13, [x0, #(__VOFFSET + 0x60)]
+  ldp    d14,d15, [x0, #(__VOFFSET + 0x70)]
+  ldp    d16,d17, [x0, #(__VOFFSET + 0x80)]
+  ldp    d18,d19, [x0, #(__VOFFSET + 0x90)]
+  ldp    d20,d21, [x0, #(__VOFFSET + 0xA0)]
+  ldp    d22,d23, [x0, #(__VOFFSET + 0xB0)]
+  ldp    d24,d25, [x0, #(__VOFFSET + 0xC0)]
+  ldp    d26,d27, [x0, #(__VOFFSET + 0xD0)]
+  ldp    d28,d29, [x0, #(__VOFFSET + 0xE0)]
+  ldr    d30,     [x0, #(__VOFFSET + 0xF0)]
+  ldr    d31,     [x0, #(__VOFFSET + 0xF8)]
 #endif
   // Finally, restore sp. This must be done after the last read from the
   // context struct, because it is allocated on the stack, and an exception
@@ -695,7 +721,11 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
 Lnogcs:
 #endif
   ret    x30                    // jump to pc
-
+#if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+LauthError:
+  mov x30, xzr
+  ret x30
+#endif
 #elif defined(__arm__) && !defined(__APPLE__)
 
 #if !defined(__ARM_ARCH_ISA_ARM)
