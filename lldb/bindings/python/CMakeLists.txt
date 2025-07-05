@@ -183,16 +183,21 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
                              DEPENDS ${python_scripts_target})
   endif()
 
-  # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
-  # lldb.exe or any other executables that were linked with liblldb.
-  if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
+  # Copy the custom Python DLL to the lldb binary dir so that Windows can find it when launching
+  # lldb.exe or any other executables that were linked with liblldb (both during development and when installing).
+  if (WIN32 AND NOT "${Python3_RUNTIME_LIBRARY}" STREQUAL "")
     # When using the Visual Studio CMake generator the lldb binaries end up in Release/bin, Debug/bin etc.
     file(TO_NATIVE_PATH "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin" LLDB_BIN_DIR)
-    file(TO_NATIVE_PATH "${PYTHON_DLL}" PYTHON_DLL_NATIVE_PATH)
+    file(TO_NATIVE_PATH "${Python3_RUNTIME_LIBRARY}" PYTHON_DLL_NATIVE_PATH)
     add_custom_command(
       TARGET ${swig_target}
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
       COMMENT "Copying Python DLL to LLDB binaries directory.")
+    install(
+      FILES "${Python3_RUNTIME_LIBRARY}"
+      TYPE BIN
+      COMPONENT lldb
+    )
   endif()
 endfunction()
