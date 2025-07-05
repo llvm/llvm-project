@@ -7048,6 +7048,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
 
+      // VPBlendRecipes are converted to selects and may have been simplified.
+      using namespace VPlanPatternMatch;
+      if (match(&R, m_VPInstruction<Instruction::Select>(
+                        m_VPValue(), m_VPValue(), m_VPValue())) &&
+          isa_and_nonnull<PHINode>(R.getVPSingleValue()->getUnderlyingValue()))
+        return true;
+
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
