@@ -388,8 +388,7 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
           llvm::Type::getFloatingPointTy(Context, *Target.LongDoubleFormat),
           Target.LongDoubleAlign);
   }
-  // FIXME: Wasm has a mismatch in f128 alignment between Clang and LLVM.
-  if (Target.hasFloat128Type() && !Triple.isWasm())
+  if (Target.hasFloat128Type())
     Check("__float128", llvm::Type::getFP128Ty(Context), Target.Float128Align);
   if (Target.hasIbm128Type())
     Check("__ibm128", llvm::Type::getPPC_FP128Ty(Context), Target.Ibm128Align);
