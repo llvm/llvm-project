@@ -161,10 +161,7 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
     return true;
   }
 
-  // TODO: Require targets to set PCRel at fixup creation time.
   unsigned FixupFlags = getBackend().getFixupKindInfo(Fixup.getKind()).Flags;
-  if (FixupFlags & MCFixupKindInfo::FKF_IsPCRel)
-    Fixup.setPCRel();
   bool IsResolved = false;
   if (FixupFlags & MCFixupKindInfo::FKF_IsTarget) {
     IsResolved = getBackend().evaluateTargetFixup(Fixup, Target, Value);
