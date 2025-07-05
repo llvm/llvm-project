@@ -80,6 +80,7 @@ public:
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
+  void outputFPFastMathDefaultInfo();
   bool isHidden() {
     return MF->getFunction()
         .getFnAttribute(SPIRV_BACKEND_SERVICE_FUN_NAME)
@@ -458,6 +459,7 @@ void SPIRVAsmPrinter::outputExecutionModeFromMDNode(
     unsigned ExpectMDOps, int64_t DefVal) {
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExecutionMode);
+
   Inst.addOperand(MCOperand::createReg(Reg));
   Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
   addOpsFromMDNode(Node, Inst, MAI);
@@ -497,11 +499,27 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
   NamedMDNode *Node = M.getNamedMetadata("spirv.ExecutionMode");
   if (Node) {
     for (unsigned i = 0; i < Node->getNumOperands(); i++) {
+      // If SPV_KHR_float_controls2 is enabled and we find any of
+      // FPFastMathDefault, ContractionOff or SignedZeroInfNanPreserve execution
+      // modes, skip it, it'll be done somewhere else.
+      if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+        const auto EM =
+            cast<ConstantInt>(
+                cast<ConstantAsMetadata>((Node->getOperand(i))->getOperand(1))
+                    ->getValue())
+                ->getZExtValue();
+        if (EM == SPIRV::ExecutionMode::FPFastMathDefault ||
+            EM == SPIRV::ExecutionMode::ContractionOff ||
+            EM == SPIRV::ExecutionMode::SignedZeroInfNanPreserve)
+          continue;
+      }
+
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpExecutionMode);
       addOpsFromMDNode(cast<MDNode>(Node->getOperand(i)), Inst, MAI);
       outputMCInst(Inst);
     }
+    outputFPFastMathDefaultInfo();
   }
   for (auto FI = M.begin(), E = M.end(); FI != E; ++FI) {
     const Function &F = *FI;
@@ -551,12 +569,85 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
     }
     if (ST->isKernel() && !M.getNamedMetadata("spirv.ExecutionMode") &&
         !M.getNamedMetadata("opencl.enable.FP_CONTRACT")) {
-      MCInst Inst;
-      Inst.setOpcode(SPIRV::OpExecutionMode);
-      Inst.addOperand(MCOperand::createReg(FReg));
-      unsigned EM = static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
-      Inst.addOperand(MCOperand::createImm(EM));
-      outputMCInst(Inst);
+      if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_float_controls2)) {
+        // When SPV_KHR_float_controls2 is enabled, ContractionOff is
+        // deprecated. We need to use FPFastMathDefault with the appropriate
+        // flags instead. Since FPFastMathDefault takes a target type, we need
+        // to emit it for each floating-point type to match the effect of
+        // ContractionOff. As of now, there are 4 FP types: fp16, fp32, fp64 and
+        // fp128.
+        constexpr size_t NumFPTypes = 4;
+        for (size_t i = 0; i < NumFPTypes; ++i) {
+          MCInst Inst;
+          Inst.setOpcode(SPIRV::OpExecutionMode);
+          Inst.addOperand(MCOperand::createReg(FReg));
+          unsigned EM =
+              static_cast<unsigned>(SPIRV::ExecutionMode::FPFastMathDefault);
+          Inst.addOperand(MCOperand::createImm(EM));
+
+          Type *TargetType = nullptr;
+          switch (i) {
+          case 0:
+            TargetType = Type::getHalfTy(M.getContext());
+            break;
+          case 1:
+            TargetType = Type::getFloatTy(M.getContext());
+            break;
+          case 2:
+            TargetType = Type::getDoubleTy(M.getContext());
+            break;
+          case 3:
+            TargetType = Type::getFP128Ty(M.getContext());
+            break;
+          }
+          assert(TargetType && "Invalid target type for FPFastMathDefault");
+
+          // Find the SPIRV type matching the target type. We'll go over all the
+          // TypeConstVars instructions in the SPIRV module and find the one
+          // that matches the target type. We know the target type is a
+          // floating-point type, so we can skip anything different than
+          // OpTypeFloat. Then, we need to check the bitwidth.
+          bool SPIRVTypeFound = false;
+          for (const MachineInstr *MI :
+               MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
+            // Skip if the instruction is not OpTypeFloat.
+            if (MI->getOpcode() != SPIRV::OpTypeFloat)
+              continue;
+
+            // Skip if TargetTy bitwidth doesn't match MI->getOperand(1), which
+            // is the SPIRV type bit width.
+            if (TargetType->getScalarSizeInBits() != MI->getOperand(1).getImm())
+              continue;
+
+            SPIRVTypeFound = true;
+            const MachineFunction *MF = MI->getMF();
+            MCRegister TypeReg =
+                MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
+            Inst.addOperand(MCOperand::createReg(TypeReg));
+          }
+
+          if (!SPIRVTypeFound) {
+            // The module does not contain this FP type, so we don't need to
+            // emit FPFastMathDefault for it.
+            continue;
+          }
+          // We only end up here because there is no "spirv.ExecutionMode"
+          // metadata, so that means no FPFastMathDefault. Therefore, we only
+          // need to make sure AllowContract is set to 0, as the rest of flags.
+          // We still need to emit the OpExecutionMode instruction, otherwise
+          // it's up to the client API to define the flags.
+          Inst.addOperand(MCOperand::createImm(SPIRV::FPFastMathMode::None));
+          outputMCInst(Inst);
+        }
+      } else {
+        MCInst Inst;
+        Inst.setOpcode(SPIRV::OpExecutionMode);
+        Inst.addOperand(MCOperand::createReg(FReg));
+        unsigned EM =
+            static_cast<unsigned>(SPIRV::ExecutionMode::ContractionOff);
+        Inst.addOperand(MCOperand::createImm(EM));
+        outputMCInst(Inst);
+      }
     }
   }
 }
@@ -603,6 +694,80 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
   }
 }
 
+void SPIRVAsmPrinter::outputFPFastMathDefaultInfo() {
+  for (const auto &[Func, FPFastMathDefaultInfoVec] :
+       MAI->FPFastMathDefaultInfoMap) {
+    for (const auto &FPFastMathDefaultInfo : FPFastMathDefaultInfoVec) {
+      MCInst Inst;
+      Inst.setOpcode(SPIRV::OpExecutionMode);
+      MCRegister FuncReg = MAI->getFuncReg(Func);
+      assert(FuncReg.isValid());
+      Inst.addOperand(MCOperand::createReg(FuncReg));
+      Inst.addOperand(
+          MCOperand::createImm(SPIRV::ExecutionMode::FPFastMathDefault));
+
+      // Find the SPIRV type matching the target type. We'll go over all the
+      // TypeConstVars instructions in the SPIRV module and find the one that
+      // matches the target type. We know the target type is a floating-point
+      // type, so we can skip anything different than OpTypeFloat. Then, we
+      // need to check the bitwidth.
+      const Type *TargetTy = FPFastMathDefaultInfo.Ty;
+      assert(TargetTy && "Expected target type");
+      bool SPIRVTypeFound = false;
+      for (const MachineInstr *MI : MAI->getMSInstrs(SPIRV::MB_TypeConstVars)) {
+        // Skip if the instruction is not OpTypeFloat.
+        if (MI->getOpcode() != SPIRV::OpTypeFloat)
+          continue;
+
+        // Skip if TargetTy bitwidth doesn't match MI->getOperand(1), which is
+        // the SPIRV type bit width.
+        if (TargetTy->getScalarSizeInBits() != MI->getOperand(1).getImm())
+          continue;
+
+        SPIRVTypeFound = true;
+        const MachineFunction *MF = MI->getMF();
+        MCRegister TypeReg =
+            MAI->getRegisterAlias(MF, MI->getOperand(0).getReg());
+        Inst.addOperand(MCOperand::createReg(TypeReg));
+      }
+      if (!SPIRVTypeFound) {
+        // The module does not contain this FP type, so we don't need to emit
+        // FPFastMathDefault for it.
+        continue;
+      }
+
+      unsigned Flags = FPFastMathDefaultInfo.FastMathFlags;
+      if (FPFastMathDefaultInfo.ContractionOff &&
+          (Flags & SPIRV::FPFastMathMode::AllowContract) &&
+          FPFastMathDefaultInfo.FPFastMathDefault)
+        report_fatal_error(
+            "Conflicting FPFastMathFlags: ContractionOff and AllowContract");
+
+      if (FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+          !(Flags &
+            (SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+             SPIRV::FPFastMathMode::NSZ))) {
+        if (FPFastMathDefaultInfo.FPFastMathDefault)
+          report_fatal_error("Conflicting FPFastMathFlags: "
+                             "SignedZeroInfNanPreserve but at least one of "
+                             "NotNaN/NotInf/NSZ is disabled.");
+
+        Flags |= SPIRV::FPFastMathMode::NotNaN | SPIRV::FPFastMathMode::NotInf |
+                 SPIRV::FPFastMathMode::NSZ;
+      }
+
+      // Don't emit if none of the execution modes was used.
+      if (Flags == SPIRV::FPFastMathMode::None &&
+          !FPFastMathDefaultInfo.ContractionOff &&
+          !FPFastMathDefaultInfo.SignedZeroInfNanPreserve &&
+          !FPFastMathDefaultInfo.FPFastMathDefault)
+        continue;
+      Inst.addOperand(MCOperand::createImm(Flags));
+      outputMCInst(Inst);
+    }
+  }
+}
+
 void SPIRVAsmPrinter::outputModuleSections() {
   const Module *M = MMI->getModule();
   // Get the global subtarget to output module-level info.
@@ -611,7 +776,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = &SPIRVModuleAnalysis::MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
   // Output instructions according to the Logical Layout of a Module:
-  // 1,2. All OpCapability instructions, then optional OpExtension instructions.
+  // 1,2. All OpCapability instructions, then optional OpExtension
+  // instructions.
   outputGlobalRequirements();
   // 3. Optional OpExtInstImport instructions.
   outputOpExtInstImports(*M);
@@ -619,7 +785,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   outputOpMemoryModel();
   // 5. All entry point declarations, using OpEntryPoint.
   outputEntryPoints();
-  // 6. Execution-mode declarations, using OpExecutionMode or OpExecutionModeId.
+  // 6. Execution-mode declarations, using OpExecutionMode or
+  // OpExecutionModeId.
   outputExecutionMode(*M);
   // 7a. Debug: all OpString, OpSourceExtension, OpSource, and
   // OpSourceContinued, without forward references.

@@ -218,7 +218,7 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
    * - ``SPV_INTEL_int4``
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
-     - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
+     - Adds execution modes and decorations to control floating-point computations in both kernels and shaders. It can be used on whole modules and individual instructions.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
