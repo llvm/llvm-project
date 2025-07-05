@@ -181,7 +181,17 @@ void EvaluateRequestHandler::operator()(
         expression = dap.last_nonempty_var_expression;
       else
         dap.last_nonempty_var_expression = expression;
+    } else {
+      // If this isn't a REPL context, trim leading pointer/reference characters
+      // to ensure we return the actual value of the expression.
+      // This can come up if you hover over a pointer or reference declaration
+      // like 'MyType *foo;' or `void fn(std::string &arg)`, which results in
+      // the hover request sending '*foo' or `&arg`. When we're not in the REPL,
+      // we should trim these characters to get to the actual variable, which
+      // should have the proper type encoded by the compiler.
+      expression = llvm::StringRef(expression).ltrim("*&").str();
     }
+
     // Always try to get the answer from the local variables if possible. If
     // this fails, then if the context is not "hover", actually evaluate an
     // expression using the expression parser.
