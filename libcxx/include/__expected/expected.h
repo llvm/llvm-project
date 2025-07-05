@@ -62,7 +62,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Err>
-class expected;
+class [[nodiscard]] expected;
 
 template <class _Tp>
 struct __is_std_expected : false_type {};
@@ -1377,7 +1377,7 @@ private:
 
 template <class _Tp, class _Err>
   requires is_void_v<_Tp>
-class expected<_Tp, _Err> : private __expected_void_base<_Err> {
+class [[nodiscard]] expected<_Tp, _Err> : private __expected_void_base<_Err> {
   static_assert(__valid_std_unexpected<_Err>::value,
                 "[expected.void.general] A program that instantiates expected<T, E> with a E that is not a "
                 "valid argument for unexpected<E> is ill-formed");
