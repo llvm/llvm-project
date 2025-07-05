@@ -209,10 +209,22 @@ bool Sema::RequireCompleteDeclContext(CXXScopeSpec &SS,
   SourceLocation loc = SS.getLastQualifierNameLoc();
   if (loc.isInvalid()) loc = SS.getRange().getBegin();
 
+  // If the DeclContext is a tag declaration, form a unique key
+  // from the TagDecl and the source location where the scope starts.
+  // If this key has already been diagnosed, skip emitting the error again.
+  const TagDecl *Tag = dyn_cast_or_null<TagDecl>(DC);
+  if (Tag) {
+    auto Key = std::make_pair(Tag, SS.getBeginLoc());
+    if (!DiagnosedIncompleteTypeSet.insert(Key).second)
+      return true; // Already diagnosed
+  }
+
+
   // The type must be complete.
   if (RequireCompleteType(loc, type, diag::err_incomplete_nested_name_spec,
                           SS.getRange())) {
     SS.SetInvalid(SS.getRange());
+
     return true;
   }
 

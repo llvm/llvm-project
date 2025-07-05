@@ -1555,6 +1555,12 @@ private:
   Sema(const Sema &) = delete;
   void operator=(const Sema &) = delete;
 
+  /// Tracks (TagDecl, SourceLocation) pairs that have already triggered
+  /// an "incomplete type in nested name specifier" diagnostic,
+  /// to prevent emitting duplicate errors in C++20 and later,
+  /// where the same scope may be processed multiple times.
+  llvm::DenseSet<std::pair<const clang::TagDecl *, clang::SourceLocation>> DiagnosedIncompleteTypeSet;
+
   /// The handler for the FileChanged preprocessor events.
   ///
   /// Used for diagnostics that implement custom semantic analysis for #include

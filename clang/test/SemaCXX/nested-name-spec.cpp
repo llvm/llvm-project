@@ -1,3 +1,10 @@
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify %s
+
+struct incomplete;
+incomplete::type var; // expected-error{{incomplete type 'incomplete' named in nested name specifier}}
+// expected-note@-2{{forward declaration of 'incomplete'}}
+
+
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify -fblocks %s
 namespace A {
   struct C {
