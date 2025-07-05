@@ -53,12 +53,7 @@ for header in headers:
 //--- {header}.pass.cpp
 {lit_header_restrictions.get(header, '')}
 {lit_header_undeprecations.get(header, '')}
-// SUPPORTED: clang-modules-build
 // UNSUPPORTED: c++03
-
-// Some of the functions' return type, reverse_iterator, is not exported from
-// these headers, so we need to include <iterator> explicitly, which defeats
-// the purpose of this test. So disable the test for clang modules.
 
 #include <{header}>
 #include <cassert>
