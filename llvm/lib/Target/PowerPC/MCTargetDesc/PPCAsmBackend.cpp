@@ -288,7 +288,7 @@ ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
 std::optional<MCFixupKind>
 XCOFFPPCAsmBackend::getFixupKind(StringRef Name) const {
   return StringSwitch<std::optional<MCFixupKind>>(Name)
-      .Case("R_REF", (MCFixupKind)PPC::fixup_ppc_nofixup)
+      .Case("R_REF", PPC::fixup_ppc_nofixup)
       .Default(std::nullopt);
 }
 

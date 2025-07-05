@@ -265,23 +265,17 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 6:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD6),
-                          MCFixupKind(ELF::R_LARCH_SUB6));
+    return std::make_pair(ELF::R_LARCH_ADD6, ELF::R_LARCH_SUB6);
   case 8:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD8),
-                          MCFixupKind(ELF::R_LARCH_SUB8));
+    return std::make_pair(ELF::R_LARCH_ADD8, ELF::R_LARCH_SUB8);
   case 16:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD16),
-                          MCFixupKind(ELF::R_LARCH_SUB16));
+    return std::make_pair(ELF::R_LARCH_ADD16, ELF::R_LARCH_SUB16);
   case 32:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD32),
-                          MCFixupKind(ELF::R_LARCH_SUB32));
+    return std::make_pair(ELF::R_LARCH_ADD32, ELF::R_LARCH_SUB32);
   case 64:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD64),
-                          MCFixupKind(ELF::R_LARCH_SUB64));
+    return std::make_pair(ELF::R_LARCH_ADD64, ELF::R_LARCH_SUB64);
   case 128:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD_ULEB128),
-                          MCFixupKind(ELF::R_LARCH_SUB_ULEB128));
+    return std::make_pair(ELF::R_LARCH_ADD_ULEB128, ELF::R_LARCH_SUB_ULEB128);
   }
 }
 
