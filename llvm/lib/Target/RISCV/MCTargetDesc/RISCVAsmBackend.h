@@ -47,8 +47,8 @@ public:
   bool shouldInsertFixupForCodeAlign(MCAssembler &Asm,
                                      MCAlignFragment &AF) override;
 
-  bool evaluateTargetFixup(const MCFixup &Fixup, const MCValue &Target,
-                           uint64_t &Value) override;
+  std::optional<bool> evaluateFixup(MCFixup &Fixup, MCValue &Target,
+                                    uint64_t &Value) override;
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved);

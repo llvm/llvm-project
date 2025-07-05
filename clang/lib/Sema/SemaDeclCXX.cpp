@@ -13638,7 +13638,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       Diag(SS.getBeginLoc(),
            diag::err_using_decl_nested_name_specifier_is_current_class)
           << SS.getRange();
-      return !getLangOpts().CPlusPlus20;
+      return true;
     }
 
     if (!cast<CXXRecordDecl>(NamedContext)->isInvalidDecl()) {
