@@ -2582,6 +2582,8 @@ are listed below.
 
     $ clang -fuse-ld=lld -Oz -Wl,--icf=safe -fcodegen-data-use code.cc
 
+.. option:: -f[no-]loop-interchange
+  Enable Loop Interchange transformation.
 .. _strict_aliasing:
 
 Strict Aliasing
