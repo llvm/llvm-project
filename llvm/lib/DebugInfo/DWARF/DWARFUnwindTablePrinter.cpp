@@ -32,8 +32,22 @@ static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
   OS << "reg" << RegNum;
 }
 
-void llvm::dwarf::printUnwindLocation(const UnwindLocation &UL, raw_ostream &OS,
-                                      DIDumpOptions DumpOpts) {
+/// Print an unwind location expression as text and use the register information
+/// if some is provided.
+///
+/// \param R the unwind location to print.
+///
+/// \param OS the stream to use for output.
+///
+/// \param MRI register information that helps emit register names insteead
+/// of raw register numbers.
+///
+/// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
+/// instead of from .debug_frame. This is needed for register number
+/// conversion because some register numbers differ between the two sections
+/// for certain architectures like x86.
+static void printUnwindLocation(const UnwindLocation &UL, raw_ostream &OS,
+                                DIDumpOptions DumpOpts) {
   if (UL.getDereference())
     OS << '[';
   switch (UL.getLocation()) {
@@ -86,9 +100,22 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
   return OS;
 }
 
-void llvm::dwarf::printRegisterLocations(const RegisterLocations &RL,
-                                         raw_ostream &OS,
-                                         DIDumpOptions DumpOpts) {
+/// Print all registers + locations that are currently defined in a register
+/// locations.
+///
+/// \param RL the register locations to print.
+///
+/// \param OS the stream to use for output.
+///
+/// \param MRI register information that helps emit register names insteead
+/// of raw register numbers.
+///
+/// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
+/// instead of from .debug_frame. This is needed for register number
+/// conversion because some register numbers differ between the two sections
+/// for certain architectures like x86.
+static void printRegisterLocations(const RegisterLocations &RL, raw_ostream &OS,
+                                   DIDumpOptions DumpOpts) {
   bool First = true;
   for (uint32_t Reg : RL.getRegisters()) {
     auto Loc = *RL.getRegisterLocation(Reg);
@@ -109,8 +136,24 @@ raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
   return OS;
 }
 
-void llvm::dwarf::printUnwindRow(const UnwindRow &Row, raw_ostream &OS,
-                                 DIDumpOptions DumpOpts, unsigned IndentLevel) {
+/// Print an UnwindRow to the stream.
+///
+/// \param Row the UnwindRow to print.
+///
+/// \param OS the stream to use for output.
+///
+/// \param MRI register information that helps emit register names insteead
+/// of raw register numbers.
+///
+/// \param IsEH true if the DWARF Call Frame Information is from .eh_frame
+/// instead of from .debug_frame. This is needed for register number
+/// conversion because some register numbers differ between the two sections
+/// for certain architectures like x86.
+///
+/// \param IndentLevel specify the indent level as an integer. The UnwindRow
+/// will be output to the stream preceded by 2 * IndentLevel number of spaces.
+static void printUnwindRow(const UnwindRow &Row, raw_ostream &OS,
+                           DIDumpOptions DumpOpts, unsigned IndentLevel) {
   OS.indent(2 * IndentLevel);
   if (Row.hasAddress())
     OS << format("0x%" PRIx64 ": ", Row.getAddress());
