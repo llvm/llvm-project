@@ -1553,6 +1553,7 @@ void DAP::RegisterRequests() {
   RegisterRequest<StepOutRequestHandler>();
   RegisterRequest<ThreadsRequestHandler>();
   RegisterRequest<VariablesRequestHandler>();
+  RegisterRequest<WriteMemoryRequestHandler>();
 
   // Custom requests
   RegisterRequest<CompileUnitsRequestHandler>();
