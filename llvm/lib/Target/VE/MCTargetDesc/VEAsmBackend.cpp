@@ -59,7 +59,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
     return 1;
   case FK_Data_2:
     return 2;
-    return 4;
   case FK_Data_4:
   case VE::fixup_ve_reflong:
   case VE::fixup_ve_srel32:
@@ -79,7 +78,6 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case VE::fixup_ve_tpoff_lo32:
     return 4;
   case FK_Data_8:
-  case FK_PCRel_8:
     return 8;
   }
 }

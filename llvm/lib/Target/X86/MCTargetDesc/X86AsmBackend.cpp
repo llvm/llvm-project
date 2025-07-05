@@ -658,15 +658,12 @@ static unsigned getFixupKindSize(unsigned Kind) {
     llvm_unreachable("invalid fixup kind!");
   case FK_NONE:
     return 0;
-  case FK_PCRel_1:
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
-  case FK_PCRel_2:
   case FK_SecRel_2:
   case FK_Data_2:
     return 2;
-  case FK_PCRel_4:
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:
   case X86::reloc_riprel_4byte_relax_rex:
@@ -681,7 +678,6 @@ static unsigned getFixupKindSize(unsigned Kind) {
   case FK_SecRel_4:
   case FK_Data_4:
     return 4;
-  case FK_PCRel_8:
   case FK_SecRel_8:
   case FK_Data_8:
     return 8;
@@ -692,31 +688,25 @@ static unsigned getFixupKindSize(unsigned Kind) {
 // next instruction.
 std::optional<bool>
 X86AsmBackend::evaluateFixup(MCFixup &Fixup, MCValue &Target, uint64_t &Value) {
-  switch (Fixup.getTargetKind()) {
-  case FK_PCRel_1:
-    Target.setConstant(Target.getConstant() - 1);
-    break;
-  case FK_PCRel_2:
-    Target.setConstant(Target.getConstant() - 2);
-    break;
-  case FK_PCRel_4:
-  case X86::reloc_riprel_4byte:
-  case X86::reloc_riprel_4byte_movq_load:
-  case X86::reloc_riprel_4byte_movq_load_rex2:
-  case X86::reloc_riprel_4byte_relax:
-  case X86::reloc_riprel_4byte_relax_rex:
-  case X86::reloc_riprel_4byte_relax_rex2:
-  case X86::reloc_branch_4byte_pcrel:
-  case X86::reloc_riprel_4byte_relax_evex: {
-    Target.setConstant(Target.getConstant() - 4);
-    auto *Add = Target.getAddSym();
-    // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
-    // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
-    // this needs to be a GOTPC32 relocation.
-    if (Add && Add->getName() == "_GLOBAL_OFFSET_TABLE_")
-      Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
-                              X86::reloc_global_offset_table);
-  } break;
+  if (Fixup.isPCRel()) {
+    switch (Fixup.getTargetKind()) {
+    case FK_Data_1:
+      Target.setConstant(Target.getConstant() - 1);
+      break;
+    case FK_Data_2:
+      Target.setConstant(Target.getConstant() - 2);
+      break;
+    default: {
+      Target.setConstant(Target.getConstant() - 4);
+      auto *Add = Target.getAddSym();
+      // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
+      // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
+      // this needs to be a GOTPC32 relocation.
+      if (Add && Add->getName() == "_GLOBAL_OFFSET_TABLE_")
+        Fixup = MCFixup::create(Fixup.getOffset(), Fixup.getValue(),
+                                X86::reloc_global_offset_table);
+    } break;
+    }
   }
   // Use default handling for `Value` and `IsResolved`.
   return {};
