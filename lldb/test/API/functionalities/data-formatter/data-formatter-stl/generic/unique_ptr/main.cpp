@@ -15,10 +15,19 @@ struct NodeU {
 // representation when the type of the second element is an empty class. So
 // we need a deleter class with a dummy data member to trigger the other path.
 struct NonEmptyIntDeleter {
-  void operator()(int* ptr) { delete ptr; }
+  void operator()(int *ptr) { delete ptr; }
 
   int dummy_ = 9999;
 };
+
+static void recursive() {
+  // Set up a structure where we have a loop in the unique_ptr chain.
+  NodeU *f1 = new NodeU{nullptr, 1};
+  NodeU *f2 = new NodeU{nullptr, 2};
+  f1->next.reset(f2);
+  f2->next.reset(f1);
+  std::puts("Set break point at this line.");
+}
 
 int main() {
   std::unique_ptr<int> up_empty;
@@ -33,5 +42,9 @@ int main() {
       std::unique_ptr<NodeU>(new NodeU{nullptr, 2});
   ptr_node = std::unique_ptr<NodeU>(new NodeU{std::move(ptr_node), 1});
 
-  return 0; // break here
+  std::puts("// break here");
+
+  recursive();
+
+  return 0;
 }
