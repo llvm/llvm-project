@@ -5,14 +5,15 @@ portability-avoid-platform-specific-fundamental-types
 
 Finds fundamental types and recommends using typedefs or fixed-width types instead.
 
-This check detects fundamental integer types (``int``, ``short``, ``long``, ``long long``, and their
-``unsigned`` variants) and warns against their use due to non-standard platform-dependent behavior.
-For example, ``long`` is 64 bits on Linux but 32 bits on Windows. There is no standard rationale or
+This check detects fundamental types (``int``, ``short``, ``long``, ``float``, 
+``char`` and their ``unsigned`` or ``signed`` variants) and warns against their 
+use due to non-standard platform-dependent behavior. For example, ``long`` is 
+64 bits on Linux but 32 bits on Windows. There is no standard rationale or 
 intent for the sizes of these types.
 
-Instead of fundamental types, use fixed-width types such as ``int32_t`` or implementation-defined
-types with standard semantics, e.g. ``int_fast32_t`` for the fastest integer type greater than or
-equal to 32 bits.
+Instead of fundamental types, use fixed-width types such as ``int32_t`` or 
+implementation-defined types with standard semantics, e.g. ``int_fast32_t`` for 
+the fastest integer type greater than or equal to 32 bits.
 
 Examples
 --------
@@ -61,7 +62,8 @@ Examples
     int64_t member_int64;
   };
 
-The check will also warn about typedef declarations that use fundamental types as their underlying type:
+The check will also warn about typedef declarations that use fundamental types
+as their underlying type:
 
 .. code-block:: c++
 
@@ -78,34 +80,44 @@ The check will also warn about typedef declarations that use fundamental types a
 Rationale
 ---------
 
-Fundamental integer types have platform-dependent sizes and behavior:
+Fundamental types have platform-dependent sizes and behavior:
 
-- ``int`` is typically 32 bits on modern platforms but is only guaranteed to be 16 bits by the spec
+- ``int`` is typically 32 bits on modern platforms but is only guaranteed to be
+  16 bits by the spec
 - ``long int`` is 32 bits on Windows but 64 bits on most Unix systems
+- ``double`` is typically 64-bit IEEE754, but on some microcontrollers without
+  a 64-bit FPU (e.g. certain Arduinos) it can be 32 bits
+- ``char`` is signed on ARM and unsigned on x86
 
-The C++ specification does not define these types beyond their minimum sizes. That means they can
-communicate intent in non-standard ways and are often needlessly incompatible. For example, ``int``
-was traditionally the word size of a given processor in 16-bit and 32-bit computing and was a
-reasonable default for performance. This is no longer true on modern 64-bit computers, but the size
-of ``int`` remains fixed at 32 bits for backwards compatibility with code that relied on a 32-bit
-implementation of ``int``.
+The C++ specification does not define these types beyond their minimum sizes. 
+That means they can communicate intent in non-standard ways and are often 
+needlessly incompatible. For example, ``int``was traditionally the word size of
+a given processor in 16-bit and 32-bit computing and was a reasonable default 
+for performance. This is no longer true on modern 64-bit computers, but the 
+size of ``int`` remains fixed at 32 bits for backwards compatibility with code 
+that relied on a 32-bit implementation of ``int``.
 
-If code is explicitly relying on the size of an ``int`` being 32 bits, it is better to say so in
-the typename with ``int32_t``. Otherwise, use an appropriate implementation-defined type that
-communicates your intent.
+If code is explicitly relying on the size of an ``int`` being 32 bits, it is 
+better to say so in the typename with ``int32_t``. Otherwise, use an 
+appropriate implementation-defined type such as ``fast_int32_t`` or 
+``least_int32_t`` that communicates the appropriate time/space tradeoff.
+
+Likewise, ``float`` and ``double`` should be replaced by ``float32_t`` and
+``float64_t`` which are guaranteed to be standard IEEE754 floats for a given
+size.
+
+``char`` should be replaced by ``char8_t`` when used in the representation of
+Unicode text. When used to represent a byte on a given platform, ``std::byte``
+is an appropriate replacement.
 
 Types Not Flagged
 -----------------
 
 The following types are intentionally not flagged:
 
-- ``char``, ``signed char``, ``unsigned char`` (character types)
 - ``bool`` (boolean type)
 - Standard library typedefs like ``size_t``, ``ptrdiff_t``, or ``uint32_t``.
 - Already typedef'd types, though the check will flag the typedef itself
-
-``char`` is excluded because it is implementation-defined to always be 1 byte, regardless of the
-platform's definition of a byte.
 
 ``bool`` is excluded because it can only be true or false, and is not vulnerable to overflow or
 narrowing issues that occur as a result of using implementation-defined types.
