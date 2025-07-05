@@ -1319,6 +1319,9 @@ module std [system] {
     export std.flat_map.sorted_unique
     export std.flat_map.sorted_equivalent
     export *
+    export std.algorithm.ranges_sort
+    export std.ranges.zip_view
+    export std.tuple
   }
 
   module format {

@@ -41,14 +41,6 @@ class raw_ostream;
 
 /// Target independent information on a fixup kind.
 struct MCFixupKindInfo {
-  enum FixupKindFlags {
-    /// Should this fixup kind force a 4-byte aligned effective PC value?
-    FKF_IsAlignedDownTo32Bits = (1 << 1),
-
-    /// Should this fixup be evaluated in a target dependent manner?
-    FKF_IsTarget = (1 << 2),
-  };
-
   /// A target specific name for the fixup kind. The names will be unique for
   /// distinct kinds on any given target.
   const char *Name;
@@ -134,8 +126,8 @@ public:
   // Evaluate a fixup, returning std::nullopt to use default handling for
   // `Value` and `IsResolved`. Otherwise, returns `IsResolved` with the
   // expectation that the hook updates `Value`.
-  virtual std::optional<bool> evaluateFixup(MCFixup &Fixup, MCValue &Target,
-                                            uint64_t &Value) {
+  virtual std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &,
+                                            MCValue &, uint64_t &) {
     return {};
   }
 
