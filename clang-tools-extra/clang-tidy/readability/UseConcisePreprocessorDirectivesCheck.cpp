@@ -12,7 +12,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -105,4 +105,4 @@ void UseConcisePreprocessorDirectivesCheck::registerPPCallbacks(
   PP->addPPCallbacks(std::make_unique<IfPreprocessorCallbacks>(*this, *PP));
 }
 
-} // namespace clang::tidy::modernize
+} // namespace clang::tidy::readability

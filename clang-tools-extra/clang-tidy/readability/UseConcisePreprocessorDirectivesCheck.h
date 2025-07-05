@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USECONCISEPREPROCESSORDIRECTIVESCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USECONCISEPREPROCESSORDIRECTIVESCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_USECONCISEPREPROCESSORDIRECTIVESCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_USECONCISEPREPROCESSORDIRECTIVESCHECK_H
 
 #include "../ClangTidyCheck.h"
 
-namespace clang::tidy::modernize {
+namespace clang::tidy::readability {
 
 /// Shortens `#if` preprocessor conditions:
 ///
@@ -24,7 +24,7 @@ namespace clang::tidy::modernize {
 /// #elif !defined(MEOW) -> #elifndef MEOW
 ///
 /// User-facing documentation:
-/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-concise-preprocessor-directives.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/use-concise-preprocessor-directives.html
 class UseConcisePreprocessorDirectivesCheck : public ClangTidyCheck {
 public:
   using ClangTidyCheck::ClangTidyCheck;
@@ -35,6 +35,6 @@ public:
   }
 };
 
-} // namespace clang::tidy::modernize
+} // namespace clang::tidy::readability
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USECONCISEPREPROCESSORDIRECTIVESCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_USECONCISEPREPROCESSORDIRECTIVESCHECK_H

@@ -31,7 +31,6 @@
 #include "UnaryStaticAssertCheck.h"
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
-#include "UseConcisePreprocessorDirectivesCheck.h"
 #include "UseConstraintsCheck.h"
 #include "UseDefaultMemberInitCheck.h"
 #include "UseDesignatedInitializersCheck.h"
@@ -77,8 +76,6 @@ public:
     CheckFactories.registerCheck<MinMaxUseInitializerListCheck>(
         "modernize-min-max-use-initializer-list");
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
-    CheckFactories.registerCheck<UseConcisePreprocessorDirectivesCheck>(
-        "modernize-use-concise-preprocessor-directives");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(

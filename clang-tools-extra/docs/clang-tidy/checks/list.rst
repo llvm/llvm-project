@@ -300,7 +300,6 @@ Clang-Tidy Checks
    :doc:`modernize-unary-static-assert <modernize/unary-static-assert>`, "Yes"
    :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
    :doc:`modernize-use-bool-literals <modernize/use-bool-literals>`, "Yes"
-   :doc:`modernize-use-concise-preprocessor-directives <modernize/use-concise-preprocessor-directives>`, "Yes"
    :doc:`modernize-use-constraints <modernize/use-constraints>`, "Yes"
    :doc:`modernize-use-default-member-init <modernize/use-default-member-init>`, "Yes"
    :doc:`modernize-use-designated-initializers <modernize/use-designated-initializers>`, "Yes"
@@ -411,6 +410,7 @@ Clang-Tidy Checks
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
+   :doc:`readability-use-concise-preprocessor-directives <readability/use-concise-preprocessor-directives>`, "Yes"
    :doc:`readability-use-std-min-max <readability/use-std-min-max>`, "Yes"
    :doc:`zircon-temporary-objects <zircon/temporary-objects>`,
 
