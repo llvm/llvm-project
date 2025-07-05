@@ -5604,6 +5604,15 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
                 "third argument should be an integer if present", Call);
         continue;
       }
+      if (Kind == Attribute::Dereferenceable) {
+        Check(ArgCount == 2,
+              "dereferenceable assumptions should have 2 arguments", Call);
+        Check(Call.getOperand(Elem.Begin)->getType()->isPointerTy(),
+              "first argument should be a pointer", Call);
+        Check(Call.getOperand(Elem.Begin + 1)->getType()->isIntegerTy(),
+              "second argument should be an integer", Call);
+        continue;
+      }
       Check(ArgCount <= 2, "too many arguments", Call);
       if (Kind == Attribute::None)
         break;
