@@ -53,6 +53,15 @@ class SemaObjC : public SemaBase {
 public:
   SemaObjC(Sema &S);
 
+  enum ObjCNameValidationResult {
+    ObjCNameUnprefixed = 0,
+    ObjCNameForbidden = -2,
+    ObjCNameNotAllowed = -1,
+    ObjCNameAllowed = 1
+  };
+  ObjCNameValidationResult ValidateObjCPublicName(StringRef Name);
+  ObjCNameValidationResult ValidateObjCForeignCategorySelector(Selector Sel);
+
   ExprResult CheckObjCForCollectionOperand(SourceLocation forLoc,
                                            Expr *collection);
   StmtResult ActOnObjCForCollectionStmt(SourceLocation ForColLoc, Stmt *First,
