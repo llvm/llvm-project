@@ -656,16 +656,11 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     //
     // .Ltmp1:
     //   s_add_u32 s2, s2, (extern_const_addrspace+16)-.Ltmp1
-    MCFixupKind Kind;
-    if (needsPCRel(MO.getExpr()))
-      Kind = FK_PCRel_4;
-    else
-      Kind = FK_Data_4;
-
+    bool PCRel = needsPCRel(MO.getExpr());
     const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
-    addFixup(Fixups, Offset, MO.getExpr(), Kind, Kind == FK_PCRel_4);
+    addFixup(Fixups, Offset, MO.getExpr(), FK_Data_4, PCRel);
   }
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
