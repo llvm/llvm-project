@@ -5203,6 +5203,10 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       TrackUse = true;
     return 0;
   }
+  if (A.getInfoCache().shouldTrackUse(&QueryingAA, AssociatedValue, U, I)) {
+    TrackUse = true;
+    return 0;
+  }
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
@@ -5501,7 +5505,32 @@ struct AAAlignCallSiteReturned final
   using Base = AACalleeToCallSite<AAAlign, AAAlignImpl>;
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
+  ChangeStatus updateImpl(Attributor &A) override {
+    SmallVector<AA::ValueAndContext> Values;
+    SmallVector<Attributor::AlignmentCallbackTy, 1> AligmentCBs =
+        A.getAlignmentCallback(getIRPosition());
 
+    for (Attributor::AlignmentCallbackTy CB : AligmentCBs)
+      CB(getIRPosition(), this, Values);
+
+    if (!Values.empty()) {
+      StateType T;
+      for (AA::ValueAndContext &VAC : Values) {
+        const AAAlign *AA = A.getAAFor<AAAlign>(
+            *this, IRPosition::value(*VAC.getValue()), DepClassTy::REQUIRED);
+        if (AA && this != AA) {
+          const AAAlign::StateType &DS = AA->getState();
+          T ^= DS;
+        }
+        if (!T.isValidState())
+          return indicatePessimisticFixpoint();
+      }
+
+      return clampStateAndIndicateChange(getState(), T);
+    }
+
+    return Base::updateImpl(A);
+  }
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };

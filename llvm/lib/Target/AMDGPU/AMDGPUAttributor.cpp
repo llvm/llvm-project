@@ -235,6 +235,16 @@ public:
     return ST.getMaxWavesPerEU();
   }
 
+  bool shouldTrackUse(const AbstractAttribute *QueryingAA,
+                      Value &AssociatedValue, const Use *U,
+                      const Instruction *I) const override {
+    if (const auto *II = dyn_cast<IntrinsicInst>(I)) {
+      if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc)
+        return true;
+    }
+    return false;
+  }
+
 private:
   /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
   /// local to flat. These casts may require the queue pointer.
@@ -1381,7 +1391,7 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAInstanceInfo::ID});
+       &AAInstanceInfo::ID, &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1432,6 +1442,26 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
       } else if (auto *CmpX = dyn_cast<AtomicCmpXchgInst>(&I)) {
         A.getOrCreateAAFor<AAAddressSpace>(
             IRPosition::value(*CmpX->getPointerOperand()));
+      } else if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (II->getIntrinsicID() == Intrinsic::amdgcn_make_buffer_rsrc) {
+          IRPosition IRP = IRPosition::value(*II);
+
+          Attributor::AlignmentCallbackTy ACB =
+              [](const IRPosition &IRP, const AbstractAttribute *AA,
+                 SmallVectorImpl<AA::ValueAndContext> &Values) {
+                Instruction *I = IRP.getCtxI();
+                if (!I)
+                  return;
+                if (auto *II = dyn_cast<IntrinsicInst>(I))
+                  if (II->getIntrinsicID() ==
+                      Intrinsic::amdgcn_make_buffer_rsrc)
+                    Values.push_back(
+                        AA::ValueAndContext{*I->getOperand(0), nullptr});
+              };
+          A.registerAlignmentCallback(IRP, ACB);
+
+          A.getOrCreateAAFor<AAAlign>(IRP);
+        }
       }
     }
   }
