@@ -11,15 +11,16 @@
 
 mlir::LLVM::TBAATagAttr
 fir::TBAATree::SubtreeState::getTag(llvm::StringRef uniqueName) const {
-  // mlir::LLVM::TBAATagAttr &tag = tagDedup[uniqueName];
-  // if (tag)
-  //   return tag;
   std::string id = (parentId + "/" + uniqueName).str();
   mlir::LLVM::TBAATypeDescriptorAttr type =
       mlir::LLVM::TBAATypeDescriptorAttr::get(
           context, id, mlir::LLVM::TBAAMemberAttr::get(parent, 0));
   return mlir::LLVM::TBAATagAttr::get(type, type, 0);
   // return tag;
+}
+
+mlir::LLVM::TBAATagAttr fir::TBAATree::SubtreeState::getTag() const {
+  return mlir::LLVM::TBAATagAttr::get(parent, parent, 0);
 }
 
 fir::TBAATree fir::TBAATree::buildTree(mlir::StringAttr func) {
@@ -53,9 +54,13 @@ fir::TBAATree fir::TBAATree::buildTree(mlir::StringAttr func) {
 fir::TBAATree::TBAATree(mlir::LLVM::TBAATypeDescriptorAttr anyAccess,
                         mlir::LLVM::TBAATypeDescriptorAttr dataRoot,
                         mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc)
-    : globalDataTree(dataRoot.getContext(), "global data", dataRoot),
-      allocatedDataTree(dataRoot.getContext(), "allocated data", dataRoot),
+    : targetDataTree(dataRoot.getContext(), "target data", dataRoot),
+      globalDataTree(dataRoot.getContext(), "global data",
+                     targetDataTree.getRoot()),
+      allocatedDataTree(dataRoot.getContext(), "allocated data",
+                        targetDataTree.getRoot()),
       dummyArgDataTree(dataRoot.getContext(), "dummy arg data", dataRoot),
-      directDataTree(dataRoot.getContext(), "direct data", dataRoot),
+      directDataTree(dataRoot.getContext(), "direct data",
+                     targetDataTree.getRoot()),
       anyAccessDesc(anyAccess), boxMemberTypeDesc(boxMemberTypeDesc),
       anyDataTypeDesc(dataRoot) {}

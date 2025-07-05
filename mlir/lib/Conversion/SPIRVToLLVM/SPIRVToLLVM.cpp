@@ -11,11 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
@@ -23,7 +21,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "spirv-to-llvm-pattern"
@@ -78,10 +75,9 @@ static unsigned getBitWidth(Type type) {
 
 /// Returns the bit width of LLVMType integer or vector.
 static unsigned getLLVMTypeBitWidth(Type type) {
-  return cast<IntegerType>((LLVM::isCompatibleVectorType(type)
-                                ? LLVM::getVectorElementType(type)
-                                : type))
-      .getWidth();
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    type = vecTy.getElementType();
+  return cast<IntegerType>(type).getWidth();
 }
 
 /// Creates `IntegerAttribute` with all bits set for given type
@@ -155,7 +151,7 @@ static Value broadcast(Location loc, Value toBroadcast, unsigned numElements,
   auto vectorType = VectorType::get(numElements, toBroadcast.getType());
   auto llvmVectorType = typeConverter.convertType(vectorType);
   auto llvmI32Type = typeConverter.convertType(rewriter.getIntegerType(32));
-  Value broadcasted = rewriter.create<LLVM::UndefOp>(loc, llvmVectorType);
+  Value broadcasted = rewriter.create<LLVM::PoisonOp>(loc, llvmVectorType);
   for (unsigned i = 0; i < numElements; ++i) {
     auto index = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type, rewriter.getI32IntegerAttr(i));
@@ -708,7 +704,7 @@ public:
 
     // Initialize the struct and set the execution mode value.
     rewriter.setInsertionPointToStart(block);
-    Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
+    Value structValue = rewriter.create<LLVM::PoisonOp>(loc, structType);
     Value executionMode = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI32Type,
         rewriter.getI32IntegerAttr(
@@ -840,7 +836,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     if (callOp.getNumResults() == 0) {
       auto newOp = rewriter.replaceOpWithNewOp<LLVM::CallOp>(
-          callOp, std::nullopt, adaptor.getOperands(), callOp->getAttrs());
+          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
       newOp.getProperties().operandSegmentSizes = {
           static_cast<int32_t>(adaptor.getOperands().size()), 0};
       newOp.getProperties().op_bundle_sizes = rewriter.getDenseI32ArrayAttr({});
@@ -1753,7 +1749,7 @@ public:
     auto componentsArray = components.getValue();
     auto *context = rewriter.getContext();
     auto llvmI32Type = IntegerType::get(context, 32);
-    Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
+    Value targetOp = rewriter.create<LLVM::PoisonOp>(loc, dstType);
     for (unsigned i = 0; i < componentsArray.size(); i++) {
       if (!isa<IntegerAttr>(componentsArray[i]))
         return op.emitError("unable to support non-constant component");

@@ -365,12 +365,10 @@ private:
       return getVBasesSlowCase();
     }
 
-    ArrayRef<CXXBaseSpecifier> bases() const {
-      return llvm::ArrayRef(getBases(), NumBases);
-    }
+    ArrayRef<CXXBaseSpecifier> bases() const { return {getBases(), NumBases}; }
 
     ArrayRef<CXXBaseSpecifier> vbases() const {
-      return llvm::ArrayRef(getVBases(), NumVBases);
+      return {getVBases(), NumVBases};
     }
 
   private:
@@ -1550,6 +1548,9 @@ public:
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
 
+  /// Returns the destructor decl for this class.
+  bool hasDeletedDestructor() const;
+
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }
@@ -1719,14 +1720,6 @@ public:
   /// implementing language semantics, but it may be appropriate for warnings,
   /// static analysis, or similar.
   bool hasMemberName(DeclarationName N) const;
-
-  /// Performs an imprecise lookup of a dependent name in this class.
-  ///
-  /// This function does not follow strict semantic rules and should be used
-  /// only when lookup rules can be relaxed, e.g. indexing.
-  std::vector<const NamedDecl *>
-  lookupDependentName(DeclarationName Name,
-                      llvm::function_ref<bool(const NamedDecl *ND)> Filter);
 
   /// Renders and displays an inheritance diagram
   /// for this C++ class and all of its base classes (transitively) using
@@ -1982,7 +1975,7 @@ private:
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
                         CXXConstructorDecl *Ctor, DeductionCandidate Kind,
-                        Expr *TrailingRequiresClause,
+                        const AssociatedConstraint &TrailingRequiresClause,
                         const CXXDeductionGuideDecl *GeneratedFrom,
                         SourceDeductionGuideKind SourceKind)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
@@ -2015,7 +2008,7 @@ public:
          TypeSourceInfo *TInfo, SourceLocation EndLocation,
          CXXConstructorDecl *Ctor = nullptr,
          DeductionCandidate Kind = DeductionCandidate::Normal,
-         Expr *TrailingRequiresClause = nullptr,
+         const AssociatedConstraint &TrailingRequiresClause = {},
          const CXXDeductionGuideDecl *SourceDG = nullptr,
          SourceDeductionGuideKind SK = SourceDeductionGuideKind::None);
 
@@ -2123,7 +2116,7 @@ protected:
                 QualType T, TypeSourceInfo *TInfo, StorageClass SC,
                 bool UsesFPIntrin, bool isInline,
                 ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-                Expr *TrailingRequiresClause = nullptr)
+                const AssociatedConstraint &TrailingRequiresClause = {})
       : FunctionDecl(DK, C, RD, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
                      isInline, ConstexprKind, TrailingRequiresClause) {
     if (EndLocation.isValid())
@@ -2136,7 +2129,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInline,
          ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-         Expr *TrailingRequiresClause = nullptr);
+         const AssociatedConstraint &TrailingRequiresClause = {});
 
   static CXXMethodDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
@@ -2604,15 +2597,12 @@ class CXXConstructorDecl final
                      bool UsesFPIntrin, bool isInline,
                      bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
                      InheritedConstructor Inherited,
-                     Expr *TrailingRequiresClause);
+                     const AssociatedConstraint &TrailingRequiresClause);
 
   void anchor() override;
 
   size_t numTrailingObjects(OverloadToken<InheritedConstructor>) const {
     return CXXConstructorDeclBits.IsInheritingConstructor;
-  }
-  size_t numTrailingObjects(OverloadToken<ExplicitSpecifier>) const {
-    return CXXConstructorDeclBits.HasTrailingExplicitSpecifier;
   }
 
   ExplicitSpecifier getExplicitSpecifierInternal() const {
@@ -2630,8 +2620,12 @@ class CXXConstructorDecl final
   };
 
   uint64_t getTrailingAllocKind() const {
-    return numTrailingObjects(OverloadToken<InheritedConstructor>()) |
-           (numTrailingObjects(OverloadToken<ExplicitSpecifier>()) << 1);
+    uint64_t Kind = 0;
+    if (CXXConstructorDeclBits.IsInheritingConstructor)
+      Kind |= TAKInheritsConstructor;
+    if (CXXConstructorDeclBits.HasTrailingExplicitSpecifier)
+      Kind |= TAKHasTailExplicit;
+    return Kind;
   }
 
 public:
@@ -2647,7 +2641,7 @@ public:
          ExplicitSpecifier ES, bool UsesFPIntrin, bool isInline,
          bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
          InheritedConstructor Inherited = InheritedConstructor(),
-         Expr *TrailingRequiresClause = nullptr);
+         const AssociatedConstraint &TrailingRequiresClause = {});
 
   void setExplicitSpecifier(ExplicitSpecifier ES) {
     assert((!ES.getExpr() ||
@@ -2866,7 +2860,7 @@ class CXXDestructorDecl : public CXXMethodDecl {
                     const DeclarationNameInfo &NameInfo, QualType T,
                     TypeSourceInfo *TInfo, bool UsesFPIntrin, bool isInline,
                     bool isImplicitlyDeclared, ConstexprSpecKind ConstexprKind,
-                    Expr *TrailingRequiresClause = nullptr)
+                    const AssociatedConstraint &TrailingRequiresClause = {})
       : CXXMethodDecl(CXXDestructor, C, RD, StartLoc, NameInfo, T, TInfo,
                       SC_None, UsesFPIntrin, isInline, ConstexprKind,
                       SourceLocation(), TrailingRequiresClause) {
@@ -2881,7 +2875,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          bool UsesFPIntrin, bool isInline, bool isImplicitlyDeclared,
          ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause = nullptr);
+         const AssociatedConstraint &TrailingRequiresClause = {});
   static CXXDestructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);
@@ -2927,7 +2921,7 @@ class CXXConversionDecl : public CXXMethodDecl {
                     TypeSourceInfo *TInfo, bool UsesFPIntrin, bool isInline,
                     ExplicitSpecifier ES, ConstexprSpecKind ConstexprKind,
                     SourceLocation EndLocation,
-                    Expr *TrailingRequiresClause = nullptr)
+                    const AssociatedConstraint &TrailingRequiresClause = {})
       : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
                       SC_None, UsesFPIntrin, isInline, ConstexprKind,
                       EndLocation, TrailingRequiresClause),
@@ -2945,7 +2939,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          bool UsesFPIntrin, bool isInline, ExplicitSpecifier ES,
          ConstexprSpecKind ConstexprKind, SourceLocation EndLocation,
-         Expr *TrailingRequiresClause = nullptr);
+         const AssociatedConstraint &TrailingRequiresClause = {});
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   ExplicitSpecifier getExplicitSpecifier() {
@@ -3301,7 +3295,7 @@ class LifetimeExtendedTemporaryDecl final
 
   mutable APValue *Value = nullptr;
 
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
   LifetimeExtendedTemporaryDecl(Expr *Temp, ValueDecl *EDecl, unsigned Mangling)
       : Decl(Decl::LifetimeExtendedTemporary, EDecl->getDeclContext(),
@@ -3869,8 +3863,7 @@ class UsingPackDecl final
                   InstantiatedFrom ? InstantiatedFrom->getDeclName()
                                    : DeclarationName()),
         InstantiatedFrom(InstantiatedFrom), NumExpansions(UsingDecls.size()) {
-    std::uninitialized_copy(UsingDecls.begin(), UsingDecls.end(),
-                            getTrailingObjects<NamedDecl *>());
+    llvm::uninitialized_copy(UsingDecls, getTrailingObjects());
   }
 
   void anchor() override;
@@ -3888,7 +3881,7 @@ public:
   /// Get the set of using declarations that this pack expanded into. Note that
   /// some of these may still be unresolved.
   ArrayRef<NamedDecl *> expansions() const {
-    return llvm::ArrayRef(getTrailingObjects<NamedDecl *>(), NumExpansions);
+    return getTrailingObjects(NumExpansions);
   }
 
   static UsingPackDecl *Create(ASTContext &C, DeclContext *DC,
@@ -4168,15 +4161,16 @@ public:
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.
-  ValueDecl *Decomp;
+  ValueDecl *Decomp = nullptr;
   /// The binding represented by this declaration. References to this
   /// declaration are effectively equivalent to this expression (except
   /// that it is only evaluated once at the point of declaration of the
   /// binding).
   Expr *Binding = nullptr;
 
-  BindingDecl(DeclContext *DC, SourceLocation IdLoc, IdentifierInfo *Id)
-      : ValueDecl(Decl::Binding, DC, IdLoc, Id, QualType()) {}
+  BindingDecl(DeclContext *DC, SourceLocation IdLoc, IdentifierInfo *Id,
+              QualType T)
+      : ValueDecl(Decl::Binding, DC, IdLoc, Id, T) {}
 
   void anchor() override;
 
@@ -4184,7 +4178,8 @@ public:
   friend class ASTDeclReader;
 
   static BindingDecl *Create(ASTContext &C, DeclContext *DC,
-                             SourceLocation IdLoc, IdentifierInfo *Id);
+                             SourceLocation IdLoc, IdentifierInfo *Id,
+                             QualType T);
   static BindingDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   /// Get the expression to which this declaration is bound. This may be null
@@ -4192,13 +4187,12 @@ public:
   /// decomposition declaration, and when the initializer is type-dependent.
   Expr *getBinding() const { return Binding; }
 
+  // Get the array of nested BindingDecls when the binding represents a pack.
+  ArrayRef<BindingDecl *> getBindingPackDecls() const;
+
   /// Get the decomposition declaration that this binding represents a
   /// decomposition of.
   ValueDecl *getDecomposedDecl() const { return Decomp; }
-
-  /// Get the variable (if any) that holds the value of evaluating the binding.
-  /// Only present for user-defined bindings for tuple-like types.
-  VarDecl *getHoldingVar() const;
 
   /// Set the binding for this BindingDecl, along with its declared type (which
   /// should be a possibly-cv-qualified form of the type of the binding, or a
@@ -4210,6 +4204,10 @@ public:
 
   /// Set the decomposed variable for this BindingDecl.
   void setDecomposedDecl(ValueDecl *Decomposed) { Decomp = Decomposed; }
+
+  /// Get the variable (if any) that holds the value of evaluating the binding.
+  /// Only present for user-defined bindings for tuple-like types.
+  VarDecl *getHoldingVar() const;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decl::Binding; }
@@ -4236,10 +4234,15 @@ class DecompositionDecl final
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
         NumBindings(Bindings.size()) {
-    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
-                            getTrailingObjects<BindingDecl *>());
-    for (auto *B : Bindings)
+    llvm::uninitialized_copy(Bindings, getTrailingObjects());
+    for (auto *B : Bindings) {
       B->setDecomposedDecl(this);
+      if (B->isParameterPack() && B->getBinding()) {
+        for (BindingDecl *NestedBD : B->getBindingPackDecls()) {
+          NestedBD->setDecomposedDecl(this);
+        }
+      }
+    }
   }
 
   void anchor() override;
@@ -4257,8 +4260,29 @@ public:
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned NumBindings);
 
+  // Provide the range of bindings which may have a nested pack.
   ArrayRef<BindingDecl *> bindings() const {
-    return llvm::ArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
+    return getTrailingObjects(NumBindings);
+  }
+
+  // Provide a flattened range to visit each binding.
+  auto flat_bindings() const {
+    ArrayRef<BindingDecl *> Bindings = bindings();
+    ArrayRef<BindingDecl *> PackBindings;
+
+    // Split the bindings into subranges split by the pack.
+    ArrayRef<BindingDecl *> BeforePackBindings = Bindings.take_until(
+        [](BindingDecl *BD) { return BD->isParameterPack(); });
+
+    Bindings = Bindings.drop_front(BeforePackBindings.size());
+    if (!Bindings.empty() && Bindings.front()->getBinding()) {
+      PackBindings = Bindings.front()->getBindingPackDecls();
+      Bindings = Bindings.drop_front();
+    }
+
+    return llvm::concat<BindingDecl *const>(std::move(BeforePackBindings),
+                                            std::move(PackBindings),
+                                            std::move(Bindings));
   }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;

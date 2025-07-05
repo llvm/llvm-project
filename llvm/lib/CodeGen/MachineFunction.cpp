@@ -187,12 +187,9 @@ void MachineFunction::handleChangeDesc(MachineInstr &MI,
 
 void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
-  Properties.set(MachineFunctionProperties::Property::IsSSA);
-  Properties.set(MachineFunctionProperties::Property::TracksLiveness);
-  if (STI->getRegisterInfo())
-    RegInfo = new (Allocator) MachineRegisterInfo(this);
-  else
-    RegInfo = nullptr;
+  Properties.setIsSSA();
+  Properties.setTracksLiveness();
+  RegInfo = new (Allocator) MachineRegisterInfo(this);
 
   MFInfo = nullptr;
 
@@ -262,6 +259,15 @@ MachineFunction::~MachineFunction() {
 
 void MachineFunction::clear() {
   Properties.reset();
+
+  // Clear JumpTableInfo first. Otherwise, every MBB we delete would do a
+  // linear search over the jump table entries to find and erase itself.
+  if (JumpTableInfo) {
+    JumpTableInfo->~MachineJumpTableInfo();
+    Allocator.Deallocate(JumpTableInfo);
+    JumpTableInfo = nullptr;
+  }
+
   // Don't call destructors on MachineInstr and MachineOperand. All of their
   // memory comes from the BumpPtrAllocator which is about to be purged.
   //
@@ -289,11 +295,6 @@ void MachineFunction::clear() {
 
   ConstantPool->~MachineConstantPool();
   Allocator.Deallocate(ConstantPool);
-
-  if (JumpTableInfo) {
-    JumpTableInfo->~MachineJumpTableInfo();
-    Allocator.Deallocate(JumpTableInfo);
-  }
 
   if (WinEHInfo) {
     WinEHInfo->~WinEHFuncInfo();
@@ -949,9 +950,7 @@ void MachineFunction::eraseAdditionalCallInfo(const MachineInstr *MI) {
   if (CSIt != CallSitesInfo.end())
     CallSitesInfo.erase(CSIt);
 
-  CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(CallMI);
-  if (CGIt != CalledGlobalsInfo.end())
-    CalledGlobalsInfo.erase(CGIt);
+  CalledGlobalsInfo.erase(CallMI);
 }
 
 void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
@@ -967,13 +966,13 @@ void MachineFunction::copyAdditionalCallInfo(const MachineInstr *Old,
   CallSiteInfoMap::iterator CSIt = getCallSiteInfo(OldCallMI);
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = CSIt->second;
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = CGIt->second;
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 
@@ -991,14 +990,14 @@ void MachineFunction::moveAdditionalCallInfo(const MachineInstr *Old,
   if (CSIt != CallSitesInfo.end()) {
     CallSiteInfo CSInfo = std::move(CSIt->second);
     CallSitesInfo.erase(CSIt);
-    CallSitesInfo[New] = CSInfo;
+    CallSitesInfo[New] = std::move(CSInfo);
   }
 
   CalledGlobalsMap::iterator CGIt = CalledGlobalsInfo.find(OldCallMI);
   if (CGIt != CalledGlobalsInfo.end()) {
     CalledGlobalInfo CGInfo = std::move(CGIt->second);
     CalledGlobalsInfo.erase(CGIt);
-    CalledGlobalsInfo[New] = CGInfo;
+    CalledGlobalsInfo[New] = std::move(CGInfo);
   }
 }
 

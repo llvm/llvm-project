@@ -16,6 +16,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -26,6 +27,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+
+#include "llvm/ADT/STLFunctionalExtras.h"
+
 #include <optional>
 
 namespace mlir {
@@ -100,6 +104,20 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 
 #include "mlir/Dialect/Linalg/IR/LinalgOpsEnums.h.inc"
 
+namespace mlir {
+namespace linalg {
+
+/// Converts the given `m` and `r` parameters to a WinogradConv2DFmr enumeration
+/// value.
+std::optional<WinogradConv2DFmr> getWinogradConv2DFmr(int64_t m, int64_t r);
+
+/// Converts the given WinogradConv2DFmr enumeration value to a pair of
+/// m and r parameters.
+std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr);
+
+} // namespace linalg
+} // namespace mlir
+
 //===----------------------------------------------------------------------===//
 // Linalg Attributes
 //===----------------------------------------------------------------------===//
@@ -122,5 +140,8 @@ OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value val,
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc"
+
+#define GET_OP_CLASSES
+#include "mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc"
 
 #endif // MLIR_DIALECT_LINALG_IR_LINALG_H

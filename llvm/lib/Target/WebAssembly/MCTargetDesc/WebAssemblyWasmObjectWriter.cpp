@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -65,36 +66,34 @@ static const MCSection *getTargetSection(const MCExpr *Expr) {
 unsigned WebAssemblyWasmObjectWriter::getRelocType(
     const MCValue &Target, const MCFixup &Fixup,
     const MCSectionWasm &FixupSection, bool IsLocRel) const {
-  const MCSymbolRefExpr *RefA = Target.getSymA();
-  assert(RefA);
-  auto& SymA = cast<MCSymbolWasm>(RefA->getSymbol());
-
-  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
-
-  switch (Modifier) {
-    case MCSymbolRefExpr::VK_GOT:
-    case MCSymbolRefExpr::VK_WASM_GOT_TLS:
-      return wasm::R_WASM_GLOBAL_INDEX_LEB;
-    case MCSymbolRefExpr::VK_WASM_TBREL:
-      assert(SymA.isFunction());
-      return is64Bit() ? wasm::R_WASM_TABLE_INDEX_REL_SLEB64
-                       : wasm::R_WASM_TABLE_INDEX_REL_SLEB;
-    case MCSymbolRefExpr::VK_WASM_TLSREL:
-      return is64Bit() ? wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64
-                       : wasm::R_WASM_MEMORY_ADDR_TLS_SLEB;
-    case MCSymbolRefExpr::VK_WASM_MBREL:
-      assert(SymA.isData());
-      return is64Bit() ? wasm::R_WASM_MEMORY_ADDR_REL_SLEB64
-                       : wasm::R_WASM_MEMORY_ADDR_REL_SLEB;
-    case MCSymbolRefExpr::VK_WASM_TYPEINDEX:
-      return wasm::R_WASM_TYPE_INDEX_LEB;
-    case MCSymbolRefExpr::VK_None:
-      break;
-    case MCSymbolRefExpr::VK_WASM_FUNCINDEX:
-      return wasm::R_WASM_FUNCTION_INDEX_I32;
-    default:
-      report_fatal_error("unknown VariantKind");
-      break;
+  auto &SymA = cast<MCSymbolWasm>(*Target.getAddSym());
+  auto Spec = WebAssembly::Specifier(Target.getSpecifier());
+  switch (Spec) {
+  case WebAssembly::S_GOT:
+    SymA.setUsedInGOT();
+    return wasm::R_WASM_GLOBAL_INDEX_LEB;
+  case WebAssembly::S_GOT_TLS:
+    SymA.setUsedInGOT();
+    SymA.setTLS();
+    return wasm::R_WASM_GLOBAL_INDEX_LEB;
+  case WebAssembly::S_TBREL:
+    assert(SymA.isFunction());
+    return is64Bit() ? wasm::R_WASM_TABLE_INDEX_REL_SLEB64
+                     : wasm::R_WASM_TABLE_INDEX_REL_SLEB;
+  case WebAssembly::S_TLSREL:
+    SymA.setTLS();
+    return is64Bit() ? wasm::R_WASM_MEMORY_ADDR_TLS_SLEB64
+                     : wasm::R_WASM_MEMORY_ADDR_TLS_SLEB;
+  case WebAssembly::S_MBREL:
+    assert(SymA.isData());
+    return is64Bit() ? wasm::R_WASM_MEMORY_ADDR_REL_SLEB64
+                     : wasm::R_WASM_MEMORY_ADDR_REL_SLEB;
+  case WebAssembly::S_TYPEINDEX:
+    return wasm::R_WASM_TYPE_INDEX_LEB;
+  case WebAssembly::S_None:
+    break;
+  case WebAssembly::S_FUNCINDEX:
+    return wasm::R_WASM_FUNCTION_INDEX_I32;
   }
 
   switch (unsigned(Fixup.getKind())) {

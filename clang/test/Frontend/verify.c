@@ -201,7 +201,7 @@ unexpected b; // expected-error@33 1-1 {{unknown type}}
 // foo-note {{}}
 
 //      CHECK11: error: 'foo-error' diagnostics seen but not expected:
-// CHECK11-NEXT:   Line 201: expected directive cannot follow 'foo-no-diagnostics' directive
+// CHECK11-NEXT:   Line 201: 'foo-note' directive cannot follow 'foo-no-diagnostics' directive
 // CHECK11-NEXT: 1 error generated.
 #endif
 

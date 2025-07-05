@@ -18,33 +18,31 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
     std::vector<bool> d = {true, false, false, true};
     assert(d.size() == 4);
     assert(d[0] == true);
     assert(d[1] == false);
     assert(d[2] == false);
     assert(d[3] == true);
-    }
-    {
+  }
+  {
     std::vector<bool, min_allocator<bool>> d = {true, false, false, true};
     assert(d.size() == 4);
     assert(d[0] == true);
     assert(d[1] == false);
     assert(d[2] == false);
     assert(d[3] == true);
-    }
+  }
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

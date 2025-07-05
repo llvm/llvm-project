@@ -2,7 +2,6 @@
 ; RUN: opt -mtriple=amdgcn-- -S -passes=structurizecfg,si-annotate-control-flow -simplifycfg-require-and-preserve-domtree=1 %s | FileCheck -check-prefix=OPT %s
 ; RUN: llc -mtriple=amdgcn -verify-machineinstrs -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck -check-prefix=GCN %s
 
-
 ; OPT-LABEL: @annotate_unreachable_noloop(
 ; OPT-NOT: call i1 @llvm.amdgcn.loop
 
@@ -19,7 +18,7 @@ bb1:                                              ; preds = %bb
   %tmp2 = sext i32 %tmp to i64
   %tmp3 = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i64 %tmp2
   %tmp4 = load <4 x float>, ptr addrspace(1) %tmp3, align 16
-  br i1 undef, label %bb5, label %bb3
+  br i1 poison, label %bb5, label %bb3
 
 bb3:                                              ; preds = %bb1
   %tmp6 = extractelement <4 x float> %tmp4, i32 2
@@ -53,7 +52,7 @@ bb1:                                              ; preds = %bb
   %tmp3 = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i64 %tmp2
   %tmp4 = load <4 x float>, ptr addrspace(1) %tmp3, align 16
   %tmp5 = extractelement <4 x float> %tmp4, i32 1
-  store volatile <4 x float> %tmp4, ptr addrspace(1) undef
+  store volatile <4 x float> %tmp4, ptr addrspace(1) poison
   %cmp = fcmp ogt float %tmp5, 1.0
   br i1 %cmp, label %bb5, label %bb3
 
@@ -84,7 +83,8 @@ bb1:                                              ; preds = %bb
   %tmp2 = sext i32 %tmp to i64
   %tmp3 = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i64 %tmp2
   %tmp4 = load <4 x float>, ptr addrspace(1) %tmp3, align 16
-  br i1 undef, label %bb5, label %bb3
+  %undef = freeze i1 poison
+  br i1 %undef, label %bb5, label %bb3
 
 bb3:                                              ; preds = %bb1
   %tmp6 = extractelement <4 x float> %tmp4, i32 2

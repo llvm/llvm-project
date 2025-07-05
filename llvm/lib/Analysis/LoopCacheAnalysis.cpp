@@ -224,7 +224,7 @@ IndexedReference::hasTemporalReuse(const IndexedReference &Other,
   }
 
   std::unique_ptr<Dependence> D =
-      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst, true);
+      DI.depends(&StoreOrLoadInst, &Other.StoreOrLoadInst);
 
   if (D == nullptr) {
     LLVM_DEBUG(dbgs().indent(2) << "No temporal reuse: no dependence\n");

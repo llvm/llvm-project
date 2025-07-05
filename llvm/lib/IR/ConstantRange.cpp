@@ -95,6 +95,17 @@ KnownBits ConstantRange::toKnownBits() const {
   return Known;
 }
 
+std::pair<ConstantRange, ConstantRange> ConstantRange::splitPosNeg() const {
+  uint32_t BW = getBitWidth();
+  APInt Zero = APInt::getZero(BW), One = APInt(BW, 1);
+  APInt SignedMin = APInt::getSignedMinValue(BW);
+  // There are no positive 1-bit values. The 1 would get interpreted as -1.
+  ConstantRange PosFilter =
+      BW == 1 ? getEmpty() : ConstantRange(One, SignedMin);
+  ConstantRange NegFilter(SignedMin, Zero);
+  return {intersectWith(PosFilter), intersectWith(NegFilter)};
+}
+
 ConstantRange ConstantRange::makeAllowedICmpRegion(CmpInst::Predicate Pred,
                                                    const ConstantRange &CR) {
   if (CR.isEmptySet())
@@ -159,11 +170,10 @@ ConstantRange ConstantRange::makeExactICmpRegion(CmpInst::Predicate Pred,
                                                  const APInt &C) {
   // Computes the exact range that is equal to both the constant ranges returned
   // by makeAllowedICmpRegion and makeSatisfyingICmpRegion. This is always true
-  // when RHS is a singleton such as an APInt and so the assert is valid.
-  // However for non-singleton RHS, for example ult [2,5) makeAllowedICmpRegion
-  // returns [0,4) but makeSatisfyICmpRegion returns [0,2).
+  // when RHS is a singleton such as an APInt. However for non-singleton RHS,
+  // for example ult [2,5) makeAllowedICmpRegion returns [0,4) but
+  // makeSatisfyICmpRegion returns [0,2).
   //
-  assert(makeAllowedICmpRegion(Pred, C) == makeSatisfyingICmpRegion(Pred, C));
   return makeAllowedICmpRegion(Pred, C);
 }
 
@@ -1356,20 +1366,14 @@ ConstantRange::udiv(const ConstantRange &RHS) const {
 }
 
 ConstantRange ConstantRange::sdiv(const ConstantRange &RHS) const {
+  APInt Zero = APInt::getZero(getBitWidth());
+  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
+
   // We split up the LHS and RHS into positive and negative components
   // and then also compute the positive and negative components of the result
   // separately by combining division results with the appropriate signs.
-  APInt Zero = APInt::getZero(getBitWidth());
-  APInt SignedMin = APInt::getSignedMinValue(getBitWidth());
-  // There are no positive 1-bit values. The 1 would get interpreted as -1.
-  ConstantRange PosFilter =
-      getBitWidth() == 1 ? getEmpty()
-                         : ConstantRange(APInt(getBitWidth(), 1), SignedMin);
-  ConstantRange NegFilter(SignedMin, Zero);
-  ConstantRange PosL = intersectWith(PosFilter);
-  ConstantRange NegL = intersectWith(NegFilter);
-  ConstantRange PosR = RHS.intersectWith(PosFilter);
-  ConstantRange NegR = RHS.intersectWith(NegFilter);
+  auto [PosL, NegL] = splitPosNeg();
+  auto [PosR, NegR] = RHS.splitPosNeg();
 
   ConstantRange PosRes = getEmpty();
   if (!PosL.isEmptySet() && !PosR.isEmptySet())

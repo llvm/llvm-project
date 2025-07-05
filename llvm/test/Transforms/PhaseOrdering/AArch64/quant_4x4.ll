@@ -8,7 +8,7 @@ target triple = "aarch64"
 
 define i32 @quant_4x4(ptr noundef %dct, ptr noundef %mf, ptr noundef %bias) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @quant_4x4
-; CHECK-SAME: (ptr nocapture noundef [[DCT:%.*]], ptr nocapture noundef readonly [[MF:%.*]], ptr nocapture noundef readonly [[BIAS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef captures(none) [[DCT:%.*]], ptr noundef readonly captures(none) [[MF:%.*]], ptr noundef readonly captures(none) [[BIAS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DCT]], i64 32
 ; CHECK-NEXT:    [[SCEVGEP23:%.*]] = getelementptr i8, ptr [[BIAS]], i64 32

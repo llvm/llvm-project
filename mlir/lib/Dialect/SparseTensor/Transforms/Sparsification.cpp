@@ -521,9 +521,8 @@ static Value genTensorLoad(CodegenEnv &env, OpBuilder &builder, ExprId exp) {
   Value ptr = genSubscript(env, builder, t, args);
   if (llvm::isa<TensorType>(ptr.getType())) {
     assert(env.options().sparseEmitStrategy ==
-               SparseEmitStrategy::kSparseIterator &&
-           args.size() == 1);
-    return builder.create<ExtractValOp>(loc, ptr, args.front());
+           SparseEmitStrategy::kSparseIterator);
+    return builder.create<ExtractValOp>(loc, ptr, llvm::getSingleElement(args));
   }
   return builder.create<memref::LoadOp>(loc, ptr, args);
 }
@@ -1129,7 +1128,7 @@ static bool startLoopSeq(CodegenEnv &env, OpBuilder &builder, ExprId exp,
     // TODO: remove this! The same tensor level might be added for multiple
     // times due to the special handling for all-dense "sparse" output tensor
     // (see L1038).
-    if (llvm::find(tidLvls, tl) != tidLvls.end())
+    if (llvm::is_contained(tidLvls, tl))
       return;
     tidLvls.emplace_back(tl);
   });

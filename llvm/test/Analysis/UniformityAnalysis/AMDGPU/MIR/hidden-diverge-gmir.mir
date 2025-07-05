@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
-# CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+# CHECK-LABEL: MachineUniformityInfo for function:  @hidden_diverge
 # CHECK-LABEL: BLOCK bb.0
 # CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
 # CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt)

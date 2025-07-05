@@ -13,13 +13,18 @@
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/Mutex.h"
+#include <cstdint>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -128,13 +133,18 @@ static std::optional<unsigned> findOneNVVMAnnotation(const GlobalValue *gv,
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if (AC.Cache.find(m) == AC.Cache.end())
+  auto ACIt = AC.Cache.find(m);
+  if (ACIt == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
+  else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
-  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
+  auto &KVP = AC.Cache[m][gv];
+  auto It = KVP.find(prop);
+  if (It == KVP.end())
     return std::nullopt;
-  return AC.Cache[m][gv][prop][0];
+  return It->second[0];
 }
 
 static bool findAllNVVMAnnotation(const GlobalValue *gv,
@@ -143,13 +153,18 @@ static bool findAllNVVMAnnotation(const GlobalValue *gv,
   auto &AC = getAnnotationCache();
   std::lock_guard<sys::Mutex> Guard(AC.Lock);
   const Module *m = gv->getParent();
-  if (AC.Cache.find(m) == AC.Cache.end())
+  auto ACIt = AC.Cache.find(m);
+  if (ACIt == AC.Cache.end())
     cacheAnnotationFromMD(m, gv);
-  else if (AC.Cache[m].find(gv) == AC.Cache[m].end())
+  else if (ACIt->second.find(gv) == ACIt->second.end())
     cacheAnnotationFromMD(m, gv);
-  if (AC.Cache[m][gv].find(prop) == AC.Cache[m][gv].end())
+  // Look up AC.Cache[m][gv] again because cacheAnnotationFromMD may have
+  // inserted the entry.
+  auto &KVP = AC.Cache[m][gv];
+  auto It = KVP.find(prop);
+  if (It == KVP.end())
     return false;
-  retval = AC.Cache[m][gv][prop];
+  retval = It->second;
   return true;
 }
 
@@ -179,17 +194,66 @@ static bool argHasNVVMAnnotation(const Value &Val,
   return false;
 }
 
-bool isParamGridConstant(const Value &V) {
-  if (const Argument *Arg = dyn_cast<Argument>(&V)) {
-    // "grid_constant" counts argument indices starting from 1
-    if (Arg->hasByValAttr() &&
-        argHasNVVMAnnotation(*Arg, "grid_constant",
-                             /*StartArgIndexAtOne*/ true)) {
-      assert(isKernelFunction(*Arg->getParent()) &&
-             "only kernel arguments can be grid_constant");
-      return true;
+static std::optional<unsigned> getFnAttrParsedInt(const Function &F,
+                                                  StringRef Attr) {
+  return F.hasFnAttribute(Attr)
+             ? std::optional(F.getFnAttributeAsParsedInteger(Attr))
+             : std::nullopt;
+}
+
+static SmallVector<unsigned, 3> getFnAttrParsedVector(const Function &F,
+                                                      StringRef Attr) {
+  SmallVector<unsigned, 3> V;
+  auto &Ctx = F.getContext();
+
+  if (F.hasFnAttribute(Attr)) {
+    // We expect the attribute value to be of the form "x[,y[,z]]", where x, y,
+    // and z are unsigned values.
+    StringRef S = F.getFnAttribute(Attr).getValueAsString();
+    for (unsigned I = 0; I < 3 && !S.empty(); I++) {
+      auto [First, Rest] = S.split(",");
+      unsigned IntVal;
+      if (First.trim().getAsInteger(0, IntVal))
+        Ctx.emitError("can't parse integer attribute " + First + " in " + Attr);
+
+      V.push_back(IntVal);
+      S = Rest;
     }
   }
+  return V;
+}
+
+static std::optional<uint64_t> getVectorProduct(ArrayRef<unsigned> V) {
+  if (V.empty())
+    return std::nullopt;
+
+  return std::accumulate(V.begin(), V.end(), 1, std::multiplies<uint64_t>{});
+}
+
+bool isParamGridConstant(const Argument &Arg) {
+  assert(isKernelFunction(*Arg.getParent()) &&
+         "only kernel arguments can be grid_constant");
+
+  if (!Arg.hasByValAttr())
+    return false;
+
+  // Lowering an argument as a grid_constant violates the byval semantics (and
+  // the C++ API) by reusing the same memory location for the argument across
+  // multiple threads. If an argument doesn't read memory and its address is not
+  // captured (its address is not compared with any value), then the tweak of
+  // the C++ API and byval semantics is unobservable by the program and we can
+  // lower the arg as a grid_constant.
+  if (Arg.onlyReadsMemory()) {
+    const auto CI = Arg.getAttributes().getCaptureInfo();
+    if (!capturesAddress(CI) && !capturesFullProvenance(CI))
+      return true;
+  }
+
+  // "grid_constant" counts argument indices starting from 1
+  if (argHasNVVMAnnotation(Arg, "grid_constant",
+                           /*StartArgIndexAtOne*/ true))
+    return true;
+
   return false;
 }
 
@@ -237,105 +301,55 @@ StringRef getSamplerName(const Value &V) {
   return V.getName();
 }
 
-std::optional<unsigned> getMaxNTIDx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidx");
+SmallVector<unsigned, 3> getMaxNTID(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.maxntid");
 }
 
-std::optional<unsigned> getMaxNTIDy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidy");
+SmallVector<unsigned, 3> getReqNTID(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.reqntid");
 }
 
-std::optional<unsigned> getMaxNTIDz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxntidz");
+SmallVector<unsigned, 3> getClusterDim(const Function &F) {
+  return getFnAttrParsedVector(F, "nvvm.cluster_dim");
 }
 
-std::optional<unsigned> getMaxNTID(const Function &F) {
+std::optional<uint64_t> getOverallMaxNTID(const Function &F) {
   // Note: The semantics here are a bit strange. The PTX ISA states the
   // following (11.4.2. Performance-Tuning Directives: .maxntid):
   //
   //  Note that this directive guarantees that the total number of threads does
   //  not exceed the maximum, but does not guarantee that the limit in any
   //  particular dimension is not exceeded.
-  std::optional<unsigned> MaxNTIDx = getMaxNTIDx(F);
-  std::optional<unsigned> MaxNTIDy = getMaxNTIDy(F);
-  std::optional<unsigned> MaxNTIDz = getMaxNTIDz(F);
-  if (MaxNTIDx || MaxNTIDy || MaxNTIDz)
-    return MaxNTIDx.value_or(1) * MaxNTIDy.value_or(1) * MaxNTIDz.value_or(1);
-  return std::nullopt;
+  const auto MaxNTID = getMaxNTID(F);
+  return getVectorProduct(MaxNTID);
 }
 
-std::optional<unsigned> getClusterDimx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_x");
+std::optional<uint64_t> getOverallReqNTID(const Function &F) {
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ReqNTID = getReqNTID(F);
+  return getVectorProduct(ReqNTID);
 }
 
-std::optional<unsigned> getClusterDimy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_y");
-}
+std::optional<uint64_t> getOverallClusterRank(const Function &F) {
+  // maxclusterrank and cluster_dim are mutually exclusive.
+  if (const auto ClusterRank = getMaxClusterRank(F))
+    return ClusterRank;
 
-std::optional<unsigned> getClusterDimz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "cluster_dim_z");
+  // Note: The semantics here are a bit strange. See getMaxNTID.
+  const auto ClusterDim = getClusterDim(F);
+  return getVectorProduct(ClusterDim);
 }
 
 std::optional<unsigned> getMaxClusterRank(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxclusterrank");
-}
-
-std::optional<unsigned> getReqNTIDx(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidx");
-}
-
-std::optional<unsigned> getReqNTIDy(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidy");
-}
-
-std::optional<unsigned> getReqNTIDz(const Function &F) {
-  return findOneNVVMAnnotation(&F, "reqntidz");
-}
-
-std::optional<unsigned> getReqNTID(const Function &F) {
-  // Note: The semantics here are a bit strange. See getMaxNTID.
-  std::optional<unsigned> ReqNTIDx = getReqNTIDx(F);
-  std::optional<unsigned> ReqNTIDy = getReqNTIDy(F);
-  std::optional<unsigned> ReqNTIDz = getReqNTIDz(F);
-  if (ReqNTIDx || ReqNTIDy || ReqNTIDz)
-    return ReqNTIDx.value_or(1) * ReqNTIDy.value_or(1) * ReqNTIDz.value_or(1);
-  return std::nullopt;
+  return getFnAttrParsedInt(F, "nvvm.maxclusterrank");
 }
 
 std::optional<unsigned> getMinCTASm(const Function &F) {
-  return findOneNVVMAnnotation(&F, "minctasm");
+  return getFnAttrParsedInt(F, "nvvm.minctasm");
 }
 
 std::optional<unsigned> getMaxNReg(const Function &F) {
-  return findOneNVVMAnnotation(&F, "maxnreg");
-}
-
-bool isKernelFunction(const Function &F) {
-  if (F.getCallingConv() == CallingConv::PTX_Kernel)
-    return true;
-
-  if (const auto X = findOneNVVMAnnotation(&F, "kernel"))
-    return (*X == 1);
-
-  return false;
-}
-
-MaybeAlign getAlign(const Function &F, unsigned Index) {
-  // First check the alignstack metadata
-  if (MaybeAlign StackAlign =
-          F.getAttributes().getAttributes(Index).getStackAlignment())
-    return StackAlign;
-
-  // If that is missing, check the legacy nvvm metadata
-  std::vector<unsigned> Vs;
-  bool retval = findAllNVVMAnnotation(&F, "align", Vs);
-  if (!retval)
-    return std::nullopt;
-  for (unsigned V : Vs)
-    if ((V >> 16) == Index)
-      return Align(V & 0xFFFF);
-
-  return std::nullopt;
+  return getFnAttrParsedInt(F, "nvvm.maxnreg");
 }
 
 MaybeAlign getAlign(const CallInst &I, unsigned Index) {
@@ -381,10 +395,6 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
   return F->doesNotReturn() &&
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
-}
-
-bool Isv2x16VT(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
 }
 
 } // namespace llvm

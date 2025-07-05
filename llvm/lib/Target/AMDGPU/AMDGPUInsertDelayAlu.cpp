@@ -23,21 +23,12 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUInsertDelayAlu : public MachineFunctionPass {
+class AMDGPUInsertDelayAlu {
 public:
-  static char ID;
-
   const SIInstrInfo *SII;
   const TargetRegisterInfo *TRI;
 
   const TargetSchedModel *SchedModel;
-
-  AMDGPUInsertDelayAlu() : MachineFunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
 
   // Return true if MI waits for all outstanding VALU instructions to complete.
   static bool instructionWaitsForVALU(const MachineInstr &MI) {
@@ -53,6 +44,21 @@ public:
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
         AMDGPU::DepCtr::decodeFieldVaVdst(MI.getOperand(0).getImm()) == 0)
       return true;
+    return false;
+  }
+
+  static bool instructionWaitsForSGPRWrites(const MachineInstr &MI) {
+    // These instruction types wait for VA_SDST==0 before issuing.
+    uint64_t MIFlags = MI.getDesc().TSFlags;
+    if (MIFlags & SIInstrFlags::SMRD)
+      return true;
+
+    if (MIFlags & SIInstrFlags::SALU) {
+      for (auto &Op : MI.operands()) {
+        if (Op.isReg())
+          return true;
+      }
+    }
     return false;
   }
 
@@ -150,10 +156,9 @@ public:
       SALUCycles = std::max(SALUCycles, RHS.SALUCycles);
     }
 
-    // Update this DelayInfo after issuing an instruction. IsVALU should be 1
-    // when issuing a (non-TRANS) VALU, else 0. IsTRANS should be 1 when issuing
-    // a TRANS, else 0. Cycles is the number of cycles it takes to issue the
-    // instruction.  Return true if there is no longer any useful delay info.
+    // Update this DelayInfo after issuing an instruction of the specified type.
+    // Cycles is the number of cycles it takes to issue the instruction.  Return
+    // true if there is no longer any useful delay info.
     bool advance(DelayType Type, unsigned Cycles) {
       bool Erase = true;
 
@@ -233,6 +238,16 @@ public:
         Next = std::next(I);
         if (I->second.advance(Type, Cycles))
           erase(I);
+      }
+    }
+
+    void advanceByVALUNum(unsigned VALUNum) {
+      iterator Next;
+      for (auto I = begin(), E = end(); I != E; I = Next) {
+        Next = std::next(I);
+        if (I->second.VALUNum >= VALUNum && I->second.VALUCycles > 0) {
+          erase(I);
+        }
       }
     }
 
@@ -340,6 +355,7 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
+    MCRegUnit LastSGPRFromVALU = 0;
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -353,6 +369,15 @@ public:
       }
 
       DelayType Type = getDelayType(MI.getDesc().TSFlags);
+
+      if (instructionWaitsForSGPRWrites(MI)) {
+        auto It = State.find(LastSGPRFromVALU);
+        if (It != State.end()) {
+          DelayInfo Info = It->getSecond();
+          State.advanceByVALUNum(Info.VALUNum);
+          LastSGPRFromVALU = 0;
+        }
+      }
 
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.
@@ -377,6 +402,17 @@ public:
             }
           }
         }
+
+        if (SII->isVALU(MI.getOpcode())) {
+          for (const auto &Op : MI.defs()) {
+            Register Reg = Op.getReg();
+            if (AMDGPU::isSGPR(Reg, TRI)) {
+              LastSGPRFromVALU = *TRI->regunits(Reg).begin();
+              break;
+            }
+          }
+        }
+
         if (Emit && !MI.isBundledWithPred()) {
           // TODO: For VALU->SALU delays should we use s_delay_alu or s_nop or
           // just ignore them?
@@ -409,17 +445,14 @@ public:
     if (Emit) {
       assert(State == BlockState[&MBB] &&
              "Basic block state should not have changed on final pass!");
-    } else if (State != BlockState[&MBB]) {
-      BlockState[&MBB] = std::move(State);
+    } else if (DelayState &BS = BlockState[&MBB]; State != BS) {
+      BS = std::move(State);
       Changed = true;
     }
     return Changed;
   }
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
+  bool run(MachineFunction &MF) {
     LLVM_DEBUG(dbgs() << "AMDGPUInsertDelayAlu running on " << MF.getName()
                       << "\n");
 
@@ -440,7 +473,7 @@ public:
       auto &MBB = *WorkList.pop_back_val();
       bool Changed = runOnMachineBasicBlock(MBB, false);
       if (Changed)
-        WorkList.insert(MBB.succ_begin(), MBB.succ_end());
+        WorkList.insert_range(MBB.successors());
     }
 
     LLVM_DEBUG(dbgs() << "Final pass over all BBs\n");
@@ -454,11 +487,39 @@ public:
   }
 };
 
+class AMDGPUInsertDelayAluLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  AMDGPUInsertDelayAluLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    AMDGPUInsertDelayAlu Impl;
+    return Impl.run(MF);
+  }
+};
 } // namespace
 
-char AMDGPUInsertDelayAlu::ID = 0;
+PreservedAnalyses
+AMDGPUInsertDelayAluPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  if (!AMDGPUInsertDelayAlu().run(MF))
+    return PreservedAnalyses::all();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+} // end namespace llvm
 
-char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAlu::ID;
+char AMDGPUInsertDelayAluLegacy::ID = 0;
 
-INITIALIZE_PASS(AMDGPUInsertDelayAlu, DEBUG_TYPE, "AMDGPU Insert Delay ALU",
-                false, false)
+char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAluLegacy::ID;
+
+INITIALIZE_PASS(AMDGPUInsertDelayAluLegacy, DEBUG_TYPE,
+                "AMDGPU Insert Delay ALU", false, false)

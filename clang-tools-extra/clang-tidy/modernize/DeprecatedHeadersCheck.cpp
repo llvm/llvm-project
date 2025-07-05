@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 
-#include <algorithm>
 #include <vector>
 
 using IncludeMarker =
@@ -199,10 +198,10 @@ void IncludeModernizePPCallbacks::InclusionDirective(
   // 2. Insert `using namespace std;` to the beginning of TU.
   // 3. Do nothing and let the user deal with the migration himself.
   SourceLocation DiagLoc = FilenameRange.getBegin();
-  if (CStyledHeaderToCxx.count(FileName) != 0) {
-    IncludesToBeProcessed.emplace_back(
-        IncludeMarker{CStyledHeaderToCxx[FileName], FileName,
-                      FilenameRange.getAsRange(), DiagLoc});
+  if (auto It = CStyledHeaderToCxx.find(FileName);
+      It != CStyledHeaderToCxx.end()) {
+    IncludesToBeProcessed.emplace_back(IncludeMarker{
+        It->second, FileName, FilenameRange.getAsRange(), DiagLoc});
   } else if (DeleteHeaders.count(FileName) != 0) {
     IncludesToBeProcessed.emplace_back(
         // NOLINTNEXTLINE(modernize-use-emplace) - false-positive

@@ -9,8 +9,8 @@ llvm.func @ctor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of ctors and the number of priorities}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = []}
+// expected-error@+1{{ctors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [], data = [#llvm.zero]
 
 // -----
 
@@ -18,20 +18,29 @@ llvm.func @dtor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of dtors and the number of priorities}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32, 32767 : i32]}
+// expected-error@+1{{dtors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32, 32767 : i32], data = [#llvm.zero]
 
 // -----
 
 // expected-error@+1{{'ctor' does not reference a valid LLVM function}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
 
 // -----
 
 llvm.func @dtor()
 
 // expected-error@+1{{'dtor' does not have a definition}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [#llvm.zero]
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// expected-error@+1{{data element must be symbol or #llvm.zero}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [0 : i32]
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -112,7 +121,7 @@ func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
 // -----
 
 func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.function, but found '!llvm.ptr'}}
   llvm.getelementptr %base[%pos] : !llvm.ptr
 }
 
@@ -235,6 +244,7 @@ func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func private @standard_func_callee()
 
 func.func @call_missing_ptr_type(%arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected direct call to have 1 trailing type}}
   llvm.call @standard_func_callee(%arg) : !llvm.ptr, (i8) -> (i8)
   llvm.return
@@ -251,6 +261,7 @@ func.func @call_non_pointer_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 // -----
 
 func.func @call_non_function_type(%callee : !llvm.ptr, %arg : i8) {
+  // expected-error@+2 {{expected '('}}
   // expected-error@+1 {{expected trailing function type}}
   llvm.call %callee(%arg) : !llvm.ptr, !llvm.func<i8 (i8)>
   llvm.return
@@ -504,21 +515,21 @@ func.func @extractvalue_wrong_nesting() {
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+2 {{expected an LLVM compatible vector type}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.shufflevector %arg2, %arg2 [0, 0, 0, 0, 7] : f32
 }
 
@@ -1189,6 +1200,14 @@ func.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 
 // -----
 
+func.func @mapa(%a: !llvm.ptr, %b : i32) {
+  // expected-error @below {{`res` and `a` should have the same type}}
+  %0 = nvvm.mapa %a, %b: !llvm.ptr -> !llvm.ptr<3>
+  return
+}
+
+// -----
+
 func.func @gep_struct_variable(%arg0: !llvm.ptr, %arg1: i32, %arg2: i32) {
   // expected-error @below {{op expected index 1 indexing a struct to be constant}}
   llvm.getelementptr %arg0[%arg1, %arg1] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(i32)>
@@ -1318,16 +1337,16 @@ func.func @invalid_bitcast_i64_to_ptr() {
 
 // -----
 
-func.func @invalid_bitcast_vec_to_ptr(%arg : !llvm.vec<4 x ptr>) {
+func.func @invalid_bitcast_vec_to_ptr(%arg : vector<4x!llvm.ptr>) {
   // expected-error@+1 {{cannot cast vector of pointers to pointer}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr> to !llvm.ptr
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr> to !llvm.ptr
 }
 
 // -----
 
 func.func @invalid_bitcast_ptr_to_vec(%arg : !llvm.ptr) {
   // expected-error@+1 {{cannot cast pointer to vector of pointers}}
-  %0 = llvm.bitcast %arg : !llvm.ptr to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : !llvm.ptr to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1339,9 +1358,9 @@ func.func @invalid_bitcast_addr_cast(%arg : !llvm.ptr<1>) {
 
 // -----
 
-func.func @invalid_bitcast_addr_cast_vec(%arg : !llvm.vec<4 x ptr<1>>) {
+func.func @invalid_bitcast_addr_cast_vec(%arg : vector<4x!llvm.ptr<1>>) {
   // expected-error@+1 {{cannot cast pointers of different address spaces, use 'llvm.addrspacecast' instead}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr<1>> to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr<1>> to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1683,6 +1702,15 @@ llvm.func @wrong_number_of_bundle_types() {
 
 // -----
 
+llvm.func @wrong_number_of_bundle_types_intrin(%arg0: i32) -> i32 {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  // expected-error@+1 {{expected 1 types for operand bundle operands for operand bundle #0, but actually got 2}}
+  %1 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["tag"(%0 : i32, i32)] : (i32 {llvm.signext}) -> (i32)
+  llvm.return %1 : i32
+}
+
+// -----
+
 llvm.func @foo()
 llvm.func @wrong_number_of_bundle_tags() {
   %0 = llvm.mlir.constant(0 : i32) : i32
@@ -1695,3 +1723,211 @@ llvm.func @wrong_number_of_bundle_tags() {
   } : (i32, i32) -> ()
   llvm.return
 }
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{expects type to be a valid element type for an LLVM global alias}}
+llvm.mlir.alias external @y : !llvm.label {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+// expected-error@+1 {{linkage not supported in aliases, available options}}
+llvm.mlir.alias appending @y2 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+// expected-error@+1 {{initializer region must always return a pointer}}
+llvm.mlir.alias external @y3 : i32 {
+  %c = llvm.mlir.constant(42 : i64) : i64
+  llvm.return %c : i64
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y4 : i32 {
+  %0 = llvm.mlir.addressof @x : !llvm.ptr
+  // expected-error@+1 {{ops with side effects are not allowed in alias initializers}}
+  %2 = llvm.load %0 : !llvm.ptr -> i32
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.mlir.global external @x(42 : i32) : i32
+
+llvm.mlir.alias external @y5 : i32 {
+  // expected-error@+1 {{pointer address space must match address space}}
+  %0 = llvm.mlir.addressof @x : !llvm.ptr<4>
+  llvm.return %0 : !llvm.ptr<4>
+}
+
+// -----
+
+module {
+  llvm.func @foo()
+
+  // expected-error@below {{only integer and string values are currently supported}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "yolo", @foo>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", [
+    "yo"
+  ]>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'CG Profile' key expects an array of '#llvm.cgprofile_entry'}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "CG Profile", 3 : i64>]
+}
+
+// -----
+
+module {
+  // expected-error@below {{'ProfileSummary' key expects a '#llvm.profile_summary' attribute}}
+  llvm.module_flags [#llvm.mlir.module_flag<append, "ProfileSummary", 3 : i64>]
+}
+
+// -----
+
+llvm.module_flags [#llvm.mlir.module_flag<error, "ProfileSummary",
+     // expected-error@below {{expected one of [SampleProfile, InstrProf, CSInstrProf] for LLVM ProfileSummary format kinds, got: YoloFmt}}
+     #llvm.profile_summary<format = "YoloFmt", total_count = 263646, max_count = 86427,
+     // expected-error@above {{failed to parse ModuleFlagProfileSummaryAttr parameter 'format' which is to be a `ProfileSummaryFormatKind`}}
+       max_internal_count = 86427, max_function_count = 4691,
+       num_counts = 3712, num_functions = 796,
+       is_partial_profile = 0,
+       partial_profile_ratio = 0.000000e+00 : f64,
+       detailed_summary =
+         <cut_off = 10000, min_count = 86427, num_counts = 1>,
+         <cut_off = 100000, min_count = 86427, num_counts = 1>
+      // expected-error@below {{failed to parse ModuleFlagAttr parameter}}
+>>]
+
+// -----
+
+llvm.func @t0() -> !llvm.ptr {
+  %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
+  llvm.blocktag <id = 1>
+  llvm.br ^bb1
+^bb1:
+  // expected-error@+1 {{duplicate block tag '1' in the same function}}
+  llvm.blocktag <id = 1>
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @t1() -> !llvm.ptr {
+  // expected-error@+1 {{expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @t1, tag = <id = 1>> : !llvm.ptr
+  llvm.br ^bb1
+^bb1:
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @gep_inbounds_flag_usage(%ptr: !llvm.ptr, %idx: i64) {
+  // expected-error@+1 {{'inbounds_flag' cannot be used directly}}
+  llvm.getelementptr inbounds_flag %ptr[%idx, 0, %idx] : (!llvm.ptr, i64, i64) -> !llvm.ptr, !llvm.struct<(array<10 x f32>)>
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_size() : !llvm.array<2x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op array attribute size does not match array type size in dimension 0: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[42 : i32, 1.000000e+00 : f32]]) : !llvm.array<2x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<2x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_nesting() : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested attribute for sub-array in dimension 1 at index 0 must be a zero, or undef, or array attribute}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+  llvm.return %0 : !llvm.array<1x!llvm.array<1x!llvm.array<1x!llvm.struct<(i32)>>>>
+}
+
+// -----
+
+llvm.mlir.global @bad_struct_array_init_elements() : !llvm.array<1x!llvm.struct<(i32, f32)>> {
+  // expected-error@below {{'llvm.mlir.constant' op nested array attribute size for struct element at index 0 must match struct size: 1 vs. 2}}
+  %0 = llvm.mlir.constant([[1 : i32]]) : !llvm.array<1x!llvm.struct<(i32, f32)>>
+  llvm.return %0 : !llvm.array<1x!llvm.struct<(i32, f32)>>
+}
+
+// -----
+
+llvm.mlir.global internal constant @bad_array_attr_simple_type() : !llvm.array<2 x f64> {
+  // expected-error@below {{'llvm.mlir.constant' op for array with an array attribute must have a struct element type}}
+  %0 = llvm.mlir.constant([2.5, 7.4]) : !llvm.array<2 x f64>
+  llvm.return %0 : !llvm.array<2 x f64>
+}
+
+// -----
+
+llvm.func @inlineAsmMustTail(%arg0: i32, %arg1 : !llvm.ptr) {
+  // expected-error@+1 {{op tail call kind 'musttail' is not supported}}
+  %8 = llvm.inline_asm tail_call_kind = <musttail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_prefetch(%arg0: !llvm.ptr) {
+  // expected-error@+1 {{op operand #0 must be LLVM pointer in address space 1 or LLVM pointer in address space 4}}
+  xevm.prefetch %arg0 <{cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_mma(%loaded_c_casted: vector<4xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>) -> vector<8xf32> {
+  // expected-error@+1 {{op type of C operand must match result type}}
+  %c_result = xevm.mma %loaded_a, %loaded_b_casted, %loaded_c_casted {shape = <m = 8, n = 16, k = 16>, types = <d = f32, a = f16, b = f16, c = f32>} : (vector<8xi16>, vector<8xi32>, vector<4xf32>) -> vector<8xf32>
+  llvm.return %c_result : vector<8xf32>
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_1(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+  // expected-error@+1 {{op expecting tile_width to be between 1 and 8}}
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=64 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_2(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i32, %base_pitch_c: i32, %x: i32, %y: i32, %c_result_casted: vector<8xi32>) {
+  // expected-error@+1 {{op expecting elem_size_in_bits to be 8, 16, 32, or 64}}
+  xevm.blockstore2d %c, %base_width_c, %base_height_c, %base_pitch_c, %x, %y, %c_result_casted <{elem_size_in_bits=18 : i32, tile_width=16 : i32, tile_height=8 : i32}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_xevm_matrix_3(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32, %base_pitch_a: i32, %x: i32, %y: i32) -> vector<8xi16> {
+  // expected-error@+1 {{op result size of 128 bits does not match the expected size of 208 bits}}
+  %loaded_a = xevm.blockload2d %a, %base_width_a, %base_height_a, %base_pitch_a, %x, %y <{elem_size_in_bits=16 : i32, tile_width=26 : i32, tile_height=8 : i32, v_blocks=1 : i32, transpose=false, pack_register=false, cache_control=#xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>, i32, i32, i32, i32, i32) -> vector<8xi16>
+  llvm.return %loaded_a : vector<8xi16>
+}
+

@@ -12,10 +12,9 @@ define void @uitofp_preserve_nneg(ptr %result, i32 %size, float %y) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX1:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX1]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = uitofp nneg <4 x i32> [[VEC_IND]] to <4 x float>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP0]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[INDEX:%.*]] = zext nneg i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[INDEX:%.*]] = zext nneg i32 [[INDEX1]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[RESULT:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i32 0
 ; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[TMP7]], align 4

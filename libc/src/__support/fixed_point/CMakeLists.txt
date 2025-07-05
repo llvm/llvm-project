@@ -16,9 +16,11 @@ add_header_library(
     .fx_rep
     libc.include.llvm-libc-macros.stdfix_macros
     libc.src.__support.macros.attributes
+    libc.src.__support.macros.null_check
     libc.src.__support.macros.optimization
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.math_extras
 )
 

@@ -105,7 +105,7 @@ define void @f17(ptr align 4 %0)
 }
 
 define void @f18(ptr nocapture %0)
-; CHECK: define void @f18(ptr nocapture %0)
+; CHECK: define void @f18(ptr captures(none) %0)
 {
         ret void;
 }
@@ -564,6 +564,11 @@ define void @initializes(ptr initializes((-4, 0), (4, 8)) %a) {
 
 ; CHECK: define void @captures(ptr captures(address) %p)
 define void @captures(ptr captures(address) %p) {
+  ret void
+}
+
+; CHECK: define void @dead_on_return(ptr dead_on_return %p)
+define void @dead_on_return(ptr dead_on_return %p) {
   ret void
 }
 

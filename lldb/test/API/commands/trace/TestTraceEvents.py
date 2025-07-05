@@ -45,6 +45,7 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
             ],
         )
 
+    @skipIfNoIntelPT
     @testSBAPIAndCommands
     def testPauseEvents(self):
         """
@@ -68,7 +69,7 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions -e -f",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
     0: \(event\) trace synchronization point \[offset \= 0x0xec0\]
     1: \(event\) hardware disabled tracing
   a.out`main \+ 23 at main.cpp:12
@@ -102,7 +103,7 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions -e --id 18",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`symbol stub for: foo\(\)
     18: {ADDRESS_REGEX}    jmpq .*
     17: \(event\) software disabled tracing

@@ -23,11 +23,11 @@ int main(int argc, char** argv) {
 }
 
 // CHECK:      * thread #1, {{.*}}stop reason = breakpoint 1
-// CHECK-NEXT:    frame #0: {{.*}}`main [inlined] bar(param=2)
+// CHECK-NEXT:    frame #0: {{.*}}`bar(param=2)
 // CHECK:      (lldb) expression param
 // CHECK-NEXT: (int) $0 = 2
 // CHECK:      * thread #1, {{.*}}stop reason = breakpoint 2
-// CHECK-NEXT:    frame #0: {{.*}}`main [inlined] foo(param=1)
+// CHECK-NEXT:    frame #0: {{.*}}`foo(param=1)
 // CHECK:      (lldb) expression param
 // CHECK-NEXT: (int) $1 = 1
 // CHECK-NEXT: (lldb) expression local

@@ -1,5 +1,5 @@
 ! Test lowering of variables to fir.declare
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,%if flang-supports-f128-math %{F128%} %else %{F64%}
 
 subroutine scalar_numeric(x)
   integer :: x
@@ -68,13 +68,16 @@ end subroutine
 ! CHECK:  %[[VAL_1:.*]] = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<intent_in, optional, target>, uniq_name = "_QFscalar_numeric_attributesEx"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 subroutine scalar_numeric_attributes_2(x)
-  real(16), value :: x(100)
+  integer, parameter :: rk = merge(16, 8, selected_real_kind(33, 4931)==16)
+  real(rk), value :: x(100)
 end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_numeric_attributes_2(
-! CHECK-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<100xf128>>
+! F128-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<100xf128>>
+! F64-SAME:    %[[VAL_0:.*]]: !fir.ref<!fir.array<100xf64>>
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 100 : index
 ! CHECK:  %[[VAL_2:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_3:.*]] = hlfir.declare %[[VAL_0]](%[[VAL_2]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFscalar_numeric_attributes_2Ex"} : (!fir.ref<!fir.array<100xf128>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf128>>, !fir.ref<!fir.array<100xf128>>)
+! F128:  %[[VAL_3:.*]] = hlfir.declare %[[VAL_0]](%[[VAL_2]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFscalar_numeric_attributes_2Ex"} : (!fir.ref<!fir.array<100xf128>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf128>>, !fir.ref<!fir.array<100xf128>>)
+! F64:  %[[VAL_3:.*]] = hlfir.declare %[[VAL_0]](%[[VAL_2]]) dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<value>, uniq_name = "_QFscalar_numeric_attributes_2Ex"} : (!fir.ref<!fir.array<100xf64>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<100xf64>>, !fir.ref<!fir.array<100xf64>>)
 
 subroutine scalar_numeric_attributes_3(x)
   real, intent(in) :: x

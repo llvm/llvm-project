@@ -37,12 +37,12 @@
 #include "resolve-labels.h"
 #include "resolve-names.h"
 #include "rewrite-parse-tree.h"
-#include "flang/Common/default-kinds.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/default-kinds.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -655,8 +655,10 @@ bool Semantics::Perform() {
 void Semantics::EmitMessages(llvm::raw_ostream &os) {
   // Resolve the CharBlock locations of the Messages to ProvenanceRanges
   // so messages from parsing and semantics are intermixed in source order.
+  const common::LanguageFeatureControl &features{context_.languageFeatures()};
   context_.messages().ResolveProvenances(context_.allCookedSources());
-  context_.messages().Emit(os, context_.allCookedSources());
+  context_.messages().Emit(
+      os, context_.allCookedSources(), /*echoSourceLine=*/true, &features);
 }
 
 void SemanticsContext::DumpSymbols(llvm::raw_ostream &os) {
@@ -731,6 +733,7 @@ void DoDumpSymbols(llvm::raw_ostream &os, const Scope &scope, int indent) {
     for (const auto &[pointee, pointer] : scope.crayPointers()) {
       os << " (" << pointer->name() << ',' << pointee << ')';
     }
+    os << '\n';
   }
   for (const auto &pair : scope.commonBlocks()) {
     const auto &symbol{*pair.second};

@@ -39,6 +39,7 @@ option(FLANG_PLUGIN_SUPPORT "Build Flang with plugin support." ON)
 
 # Enable support for plugins, which need access to symbols from flang
 if(FLANG_PLUGIN_SUPPORT)
+  set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_LIBRARY_DIR})
   export_executable_symbols_for_plugins(flang)
 endif()
 

@@ -31,7 +31,7 @@ using namespace llvm::yaml::bolt;
 
 namespace opts {
 
-cl::OptionCategory MergeFdataCategory("merge-fdata options");
+static cl::OptionCategory MergeFdataCategory("merge-fdata options");
 
 enum SortType : char {
   ST_NONE,
@@ -124,8 +124,8 @@ void mergeProfileHeaders(BinaryProfileHeader &MergedHeader,
   if (!MergedHeader.Flags)
     MergedHeader.Flags = Header.Flags;
 
-  constexpr auto Mask = llvm::bolt::BinaryFunction::PF_LBR |
-                        llvm::bolt::BinaryFunction::PF_SAMPLE;
+  constexpr auto Mask = llvm::bolt::BinaryFunction::PF_BRANCH |
+                        llvm::bolt::BinaryFunction::PF_BASIC;
   if ((MergedHeader.Flags & Mask) != (Header.Flags & Mask)) {
     errs() << "ERROR: cannot merge LBR profile with non-LBR profile\n";
     exit(1);

@@ -32,9 +32,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start = nullptr;
@@ -90,8 +88,12 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
   if (!m_element_type.IsValid())
     return lldb::ChildCacheState::eRefetch;
 
-  if (std::optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
-    m_element_size = *size;
+  llvm::Expected<uint64_t> size_or_err = m_element_type.GetByteSize(nullptr);
+  if (!size_or_err)
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), size_or_err.takeError(),
+                    "{0}");
+  else {
+    m_element_size = *size_or_err;
     // Store raw pointers or end up with a circular dependency.
     m_start = m_backend.GetChildMemberWithName("__begin_").get();
   }
@@ -99,16 +101,19 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
-size_t lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
+llvm::Expected<size_t>
+lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (!m_start)
-    return UINT32_MAX;
-  return ExtractIndexFromString(name.GetCString());
+  if (!m_start) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
+  if (!optional_idx) {
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
+  }
+  return *optional_idx;
 }
 
 lldb_private::SyntheticChildrenFrontEnd *

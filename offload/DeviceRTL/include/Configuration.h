@@ -27,7 +27,7 @@ uint32_t getNumDevices();
 /// Return the device number in the system for omp_get_device_num.
 uint32_t getDeviceNum();
 
-/// Return the user choosen debug level.
+/// Return the user chosen debug level.
 uint32_t getDebugKind();
 
 /// Return if teams oversubscription is assumed

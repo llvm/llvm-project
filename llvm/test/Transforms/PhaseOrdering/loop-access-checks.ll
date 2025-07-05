@@ -24,7 +24,8 @@ define void @test_fill_with_foreach([2 x i64] %elems.coerce) {
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_0_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[ELEMS_COERCE_FCA_0_EXTRACT]] to ptr
 ; CHECK-NEXT:    [[ELEMS_COERCE_FCA_1_EXTRACT:%.*]] = extractvalue [2 x i64] [[ELEMS_COERCE]], 1
-; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 [[ELEMS_COERCE_FCA_1_EXTRACT]]
+; CHECK-NEXT:    [[ADD_PTR_I_IDX:%.*]] = shl nsw i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 2
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 [[ADD_PTR_I_IDX]]
 ; CHECK-NEXT:    [[CMP_NOT_I_I_I_I:%.*]] = icmp slt i64 [[ELEMS_COERCE_FCA_1_EXTRACT]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT_I_I_I_I]], label [[ERROR:%.*]], label [[FOR_COND_PREHEADER_SPLIT:%.*]]
 ; CHECK:       for.cond.preheader.split:
@@ -131,7 +132,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #0 {
 ; CHECK-LABEL: define void @foo
-; CHECK-SAME: (ptr noalias nocapture noundef nonnull readonly align 8 dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noalias noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[TBAA0:![0-9]+]]
@@ -270,7 +271,7 @@ declare void @abort()
 
 define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferenceable(24) %vec) {
 ; CHECK-LABEL: define void @loop_with_signed_induction
-; CHECK-SAME: (ptr nocapture noundef nonnull readonly align 8 dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: (ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[TBAA0]]
@@ -343,7 +344,7 @@ for.end:
 
 define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-LABEL: define void @monkey
-; CHECK-SAME: (ptr nocapture noundef [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: (ptr noundef captures(none) [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt i32 [[LEN]], 1
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY4_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]

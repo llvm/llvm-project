@@ -9,7 +9,6 @@
 #ifndef FORTRAN_RUNTIME_CUDA_INIT_H_
 #define FORTRAN_RUNTIME_CUDA_INIT_H_
 
-#include "common.h"
 #include "flang/Runtime/entry-names.h"
 
 extern "C" {

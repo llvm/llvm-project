@@ -8,15 +8,13 @@
 
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTOPENACCTOSCF
+#define GEN_PASS_DEF_CONVERTOPENACCTOSCFPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -66,7 +64,7 @@ void mlir::populateOpenACCToSCFConversionPatterns(RewritePatternSet &patterns) {
 
 namespace {
 struct ConvertOpenACCToSCFPass
-    : public impl::ConvertOpenACCToSCFBase<ConvertOpenACCToSCFPass> {
+    : public impl::ConvertOpenACCToSCFPassBase<ConvertOpenACCToSCFPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -93,8 +91,4 @@ void ConvertOpenACCToSCFPass::runOnOperation() {
 
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertOpenACCToSCFPass() {
-  return std::make_unique<ConvertOpenACCToSCFPass>();
 }

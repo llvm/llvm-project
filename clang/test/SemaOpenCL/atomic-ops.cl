@@ -159,7 +159,7 @@ void memory_checks(atomic_int *Ap, int *p, int val) {
   (void)__opencl_atomic_compare_exchange_weak(Ap, p, val, memory_order_seq_cst, memory_order_relaxed, memory_scope_work_group);
 }
 
-void synchscope_checks(atomic_int *Ap, int scope) {
+void syncscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_item); // expected-error{{synchronization scope argument to atomic operation is invalid}}
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_work_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_device);
@@ -167,7 +167,7 @@ void synchscope_checks(atomic_int *Ap, int scope) {
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_all_devices);
 #if __OPENCL_C_VERSION__ < CL_VERSION_3_0
   // expected-error@-2{{use of undeclared identifier 'memory_scope_all_devices'}}
-  // expected-note@* {{'memory_scope_all_svm_devices' declared here}}
+  // expected-note@opencl-c-base.h:*{{'memory_scope_all_svm_devices' declared here}}
 #endif
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, memory_scope_sub_group);
   (void)__opencl_atomic_load(Ap, memory_order_relaxed, scope);

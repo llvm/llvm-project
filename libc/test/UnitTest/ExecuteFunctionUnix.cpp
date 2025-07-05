@@ -34,7 +34,7 @@ int ProcessStatus::get_fatal_signal() {
   return WTERMSIG(platform_defined);
 }
 
-ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
+ProcessStatus invoke_in_subprocess(FunctionCaller *func, int timeout_ms) {
   int pipe_fds[2];
   if (::pipe(pipe_fds) == -1) {
     delete func;

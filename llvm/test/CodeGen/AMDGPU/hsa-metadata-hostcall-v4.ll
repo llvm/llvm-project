@@ -286,7 +286,7 @@ define amdgpu_kernel void @test_kernel71(ptr addrspace(1) %sink) #2 {
 define amdgpu_kernel void @test_kernel72() #2 {
   %ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %gep = getelementptr inbounds i8, ptr addrspace(4) %ptr, i32 42
-  store ptr addrspace(4) %gep, ptr addrspace(1) undef, align 8
+  store ptr addrspace(4) %gep, ptr addrspace(1) poison, align 8
   ret void
 }
 

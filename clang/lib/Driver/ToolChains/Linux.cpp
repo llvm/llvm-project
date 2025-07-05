@@ -12,8 +12,8 @@
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -23,7 +23,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <system_error>
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -343,14 +342,7 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   }
 
   addPathIfExists(D, concat(SysRoot, "/usr/lib", MultiarchTriple), Paths);
-  // 64-bit OpenEmbedded sysroots may not have a /usr/lib dir. So they cannot
-  // find /usr/lib64 as it is referenced as /usr/lib/../lib64. So we handle
-  // this here.
-  if (Triple.getVendor() == llvm::Triple::OpenEmbedded &&
-      Triple.isArch64Bit())
-    addPathIfExists(D, concat(SysRoot, "/usr", OSLibDir), Paths);
-  else
-    addPathIfExists(D, concat(SysRoot, "/usr/lib/..", OSLibDir), Paths);
+  addPathIfExists(D, concat(SysRoot, "/usr", OSLibDir), Paths);
   if (IsRISCV) {
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     addPathIfExists(D, concat(SysRoot, "/", OSLibDir, ABIName), Paths);
@@ -751,9 +743,11 @@ void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
       Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 
   if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false))
-    CmdArgs.append(
-        {"-rpath", Args.MakeArgString(RocmInstallation->getLibPath())});
+                   options::OPT_fno_rtlib_add_rpath, false)) {
+    SmallString<0> p = RocmInstallation->getLibPath();
+    llvm::sys::path::remove_dots(p, true);
+    CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+  }
 
   CmdArgs.push_back("-lamdhip64");
 }

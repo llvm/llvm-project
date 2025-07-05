@@ -431,7 +431,7 @@ define <vscale x 16 x i8> @mla_i8_multiuse(<vscale x 16 x i8> %a, <vscale x 16 x
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    mul z1.b, p0/m, z1.b, z0.b
 ; CHECK-NEXT:    add z0.b, z2.b, z1.b
-; CHECK-NEXT:    st1b { z1.b }, p0, [x0]
+; CHECK-NEXT:    str z1, [x0]
 ; CHECK-NEXT:    ret
   %prod = mul <vscale x 16 x i8> %a, %b
   store <vscale x 16 x i8> %prod, ptr %p

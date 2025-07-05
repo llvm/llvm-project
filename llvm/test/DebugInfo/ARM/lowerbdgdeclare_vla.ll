@@ -1,5 +1,4 @@
 ; RUN: opt  -passes=instcombine %s -S | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators  -passes=instcombine %s -S | FileCheck %s
 ;
 ; Generate me from:
 ; clang -cc1 -triple thumbv7-apple-ios7.0.0 -S -target-abi apcs-gnu -gdwarf-2 -Os test.c -o test.ll -emit-llvm
@@ -20,9 +19,9 @@ target triple = "thumbv7-apple-ios8.0.0"
 ; Function Attrs: nounwind optsize readnone
 define void @run(float %r) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.declare(metadata float %r, metadata !11, metadata !DIExpression()), !dbg !22
+  tail call void @llvm.dbg.value(metadata float %r, metadata !11, metadata !DIExpression()), !dbg !22
   %conv = fptosi float %r to i32, !dbg !23
-  tail call void @llvm.dbg.declare(metadata i32 %conv, metadata !12, metadata !DIExpression()), !dbg !23
+  tail call void @llvm.dbg.value(metadata i32 %conv, metadata !12, metadata !DIExpression()), !dbg !23
   %vla = alloca float, i32 %conv, align 4, !dbg !24
   tail call void @llvm.dbg.declare(metadata ptr %vla, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !24
 ; The VLA alloca should be described by a dbg.declare:

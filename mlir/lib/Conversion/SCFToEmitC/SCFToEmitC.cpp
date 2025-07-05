@@ -12,13 +12,11 @@
 
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -31,6 +29,29 @@ namespace mlir {
 
 using namespace mlir;
 using namespace mlir::scf;
+
+namespace {
+
+/// Implement the interface to convert SCF to EmitC.
+struct SCFToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateEmitCSizeTTypeConversions(typeConverter);
+    populateSCFToEmitCConversionPatterns(patterns, typeConverter);
+  }
+};
+} // namespace
+
+void mlir::registerConvertSCFToEmitCInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
+    dialect->addInterfaces<SCFToEmitCDialectInterface>();
+  });
+}
 
 namespace {
 
@@ -319,10 +340,12 @@ void mlir::populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns,
 void SCFToEmitCPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   TypeConverter typeConverter;
-  // Fallback converter
-  // See note https://mlir.llvm.org/docs/DialectConversion/#type-converter
-  // Type converters are called most to least recently inserted
-  typeConverter.addConversion([](Type t) { return t; });
+  // Fallback for other types.
+  typeConverter.addConversion([](Type type) -> std::optional<Type> {
+    if (!emitc::isSupportedEmitCType(type))
+      return {};
+    return type;
+  });
   populateEmitCSizeTTypeConversions(typeConverter);
   populateSCFToEmitCConversionPatterns(patterns, typeConverter);
 

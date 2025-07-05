@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include <string>
 
@@ -45,6 +46,8 @@ public:
     return ModuleSpec(FileSpec(), UUID(), dataBuffer());
   }
 
+  llvm::Expected<llvm::sys::fs::TempFile> writeToTemporaryFile();
+
 private:
   TestFile(std::string &&Buffer) : Buffer(std::move(Buffer)) {}
 
@@ -56,6 +59,15 @@ private:
 
   std::string Buffer;
 };
+
+template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
+  llvm::json::Value value = toJSON(input);
+  llvm::json::Path::Root root;
+  T output;
+  if (!fromJSON(value, output, root))
+    return root.getError();
+  return output;
+}
 } // namespace lldb_private
 
 #endif

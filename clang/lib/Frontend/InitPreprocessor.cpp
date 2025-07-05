@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/FileManager.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/SourceManager.h"
@@ -32,7 +32,7 @@ using namespace clang;
 static bool MacroBodyEndsInBackslash(StringRef MacroBody) {
   while (!MacroBody.empty() && isWhitespace(MacroBody.back()))
     MacroBody = MacroBody.drop_back();
-  return !MacroBody.empty() && MacroBody.back() == '\\';
+  return MacroBody.ends_with('\\');
 }
 
 // Append a #define line to Buf for Macro.  Macro should be of the form XXX,
@@ -394,6 +394,10 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     // HLSL Version
     Builder.defineMacro("__HLSL_VERSION",
                         Twine((unsigned)LangOpts.getHLSLVersion()));
+    Builder.defineMacro("__HLSL_202x",
+                        Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202x));
+    Builder.defineMacro("__HLSL_202y",
+                        Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202y));
 
     if (LangOpts.NativeHalfType)
       Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
@@ -614,8 +618,10 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
     if (LangOpts.HIPStdPar) {
       Builder.defineMacro("__HIPSTDPAR__");
-      if (LangOpts.HIPStdParInterposeAlloc)
+      if (LangOpts.HIPStdParInterposeAlloc) {
         Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC__");
+        Builder.defineMacro("__HIPSTDPAR_INTERPOSE_ALLOC_V1__");
+      }
     }
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
@@ -664,7 +670,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_lambdas", "200907L");
     Builder.defineMacro("__cpp_constexpr", LangOpts.CPlusPlus26   ? "202406L"
                                            : LangOpts.CPlusPlus23 ? "202211L"
-                                           : LangOpts.CPlusPlus20 ? "201907L"
+                                           : LangOpts.CPlusPlus20 ? "202002L"
                                            : LangOpts.CPlusPlus17 ? "201603L"
                                            : LangOpts.CPlusPlus14 ? "201304L"
                                                                   : "200704");
@@ -720,7 +726,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_nested_namespace_definitions", "201411L");
     Builder.defineMacro("__cpp_variadic_using", "201611L");
     Builder.defineMacro("__cpp_aggregate_bases", "201603L");
-    Builder.defineMacro("__cpp_structured_bindings", "202403L");
+    Builder.defineMacro("__cpp_structured_bindings", "202411L");
     Builder.defineMacro("__cpp_nontype_template_args",
                         "201411L"); // (not latest)
     Builder.defineMacro("__cpp_fold_expressions", "201603L");
@@ -729,8 +735,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   }
   if (LangOpts.AlignedAllocation && !LangOpts.AlignedAllocationUnavailable)
     Builder.defineMacro("__cpp_aligned_new", "201606L");
-  if (LangOpts.RelaxedTemplateTemplateArgs)
-    Builder.defineMacro("__cpp_template_template_args", "201611L");
+
+  Builder.defineMacro("__cpp_template_template_args", "201611L");
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
@@ -768,10 +774,14 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_pack_indexing", "202311L");
   Builder.defineMacro("__cpp_deleted_function", "202403L");
   Builder.defineMacro("__cpp_variadic_friend", "202403L");
+  // Builder.defineMacro("__cpp_trivial_relocatability", "202502L");
 
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "202207L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
+
+  // TODO: Final number?
+  Builder.defineMacro("__cpp_type_aware_allocators", "202500L");
 }
 
 /// InitializeOpenCLFeatureTestMacros - Define OpenCL macros based on target
@@ -967,7 +977,6 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 
     if (LangOpts.ObjCRuntime.getKind() == ObjCRuntime::GNUstep) {
       auto version = LangOpts.ObjCRuntime.getVersion();
-      std::string versionString = "1";
       // Don't rely on the tuple argument, because we can be asked to target
       // later ABIs than we actually support, so clamp these values to those
       // currently supported
@@ -1466,8 +1475,14 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     case 50:
       Builder.defineMacro("_OPENMP", "201811");
       break;
+    case 51:
+      Builder.defineMacro("_OPENMP", "202011");
+      break;
     case 52:
       Builder.defineMacro("_OPENMP", "202111");
+      break;
+    case 60:
+      Builder.defineMacro("_OPENMP", "202411");
       break;
     default: // case 51:
       // Default version is OpenMP 5.1
@@ -1558,9 +1573,7 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   if (InitOpts.UsePredefines) {
     // FIXME: This will create multiple definitions for most of the predefined
     // macros. This is not the right way to handle this.
-    if ((LangOpts.CUDA || LangOpts.OpenMPIsTargetDevice ||
-         LangOpts.SYCLIsDevice) &&
-        PP.getAuxTargetInfo())
+    if ((LangOpts.CUDA || LangOpts.isTargetDevice()) && PP.getAuxTargetInfo())
       InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
                                  PP.getPreprocessorOpts(), Builder);
 
@@ -1632,4 +1645,11 @@ void clang::InitializePreprocessor(Preprocessor &PP,
 
   // Copy PredefinedBuffer into the Preprocessor.
   PP.setPredefines(std::move(PredefineBuffer));
+
+  // Match gcc behavior regarding gnu-line-directive diagnostics, assuming that
+  // '-x <*>-cpp-output' is analogous to '-fpreprocessed'.
+  if (FEOpts.DashX.isPreprocessed()) {
+    PP.getDiagnostics().setSeverity(diag::ext_pp_gnu_line_directive,
+                                    diag::Severity::Ignored, SourceLocation());
+  }
 }

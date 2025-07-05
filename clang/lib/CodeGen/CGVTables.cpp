@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CGCXXABI.h"
+#include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "clang/AST/Attr.h"
@@ -123,7 +124,7 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   auto *DIS = Fn->getSubprogram();
   if (!DIS)
     return;
-  auto *NewDIS = DIS->replaceWithDistinct(DIS->clone());
+  auto *NewDIS = llvm::MDNode::replaceWithDistinct(DIS->clone());
   VMap.MD()[DIS].reset(NewDIS);
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
@@ -771,6 +772,10 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_DeletingDtorPointer: {
     GlobalDecl GD = component.getGlobalDecl();
 
+    const bool IsThunk =
+        nextVTableThunkIndex < layout.vtable_thunks().size() &&
+        layout.vtable_thunks()[nextVTableThunkIndex].first == componentIndex;
+
     if (CGM.getLangOpts().CUDA) {
       // Emit NULL for methods we can't codegen on this
       // side. Otherwise we'd end up with vtable with unresolved
@@ -782,9 +787,12 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
           CGM.getLangOpts().CUDAIsDevice
               ? MD->hasAttr<CUDADeviceAttr>()
               : (MD->hasAttr<CUDAHostAttr>() || !MD->hasAttr<CUDADeviceAttr>());
-      if (!CanEmitMethod)
+      if (!CanEmitMethod) {
+        if (IsThunk)
+          nextVTableThunkIndex++;
         return builder.add(
             llvm::ConstantExpr::getNullValue(CGM.GlobalsInt8PtrTy));
+      }
       // Method is acceptable, continue processing as usual.
     }
 
@@ -830,9 +838,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       fnPtr = DeletedVirtualFn;
 
     // Thunks.
-    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
-               layout.vtable_thunks()[nextVTableThunkIndex].first ==
-                   componentIndex) {
+    } else if (IsThunk) {
       auto &thunkInfo = layout.vtable_thunks()[nextVTableThunkIndex].second;
 
       nextVTableThunkIndex++;
@@ -979,7 +985,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   assert(!VTable->isDeclaration() && "Shouldn't set properties on declaration");
   CGM.setGVProperties(VTable, RD);
 
-  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout.get());
+  CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout);
 
   if (UsingRelativeLayout) {
     RemoveHwasanMetadata(VTable);
@@ -1132,7 +1138,9 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
                  llvm::Function::InternalLinkage;
 
       case TSK_ExplicitInstantiationDeclaration:
-        llvm_unreachable("Should not have been asked to emit this");
+        return IsExternalDefinition
+                   ? llvm::GlobalVariable::AvailableExternallyLinkage
+                   : llvm::GlobalVariable::ExternalLinkage;
       }
   }
 
@@ -1395,9 +1403,8 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
       if (Comps[I].getKind() != VTableComponent::CK_FunctionPointer)
         continue;
       llvm::Metadata *MD = CreateMetadataIdentifierForVirtualMemPtrType(
-          Context.getMemberPointerType(
-              Comps[I].getFunctionDecl()->getType(),
-              Context.getRecordType(AP.Base).getTypePtr()));
+          Context.getMemberPointerType(Comps[I].getFunctionDecl()->getType(),
+                                       /*Qualifier=*/nullptr, AP.Base));
       VTable->addTypeMetadata((ComponentWidth * I).getQuantity(), MD);
     }
   }

@@ -32,7 +32,7 @@ define i32 @foo(ptr %arg, i1 %arg1) {
 ; CUSTOM-NEXT:    ret i32 [[I3]]
 ;
 ; O2-LABEL: define i32 @foo(
-; O2-SAME: ptr nocapture [[ARG:%.*]], i1 [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O2-SAME: ptr captures(none) [[ARG:%.*]], i1 [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O2-NEXT:  [[BB:.*:]]
 ; O2-NEXT:    [[TMP0:%.*]] = xor i1 [[ARG1]], true
 ; O2-NEXT:    tail call void @llvm.assume(i1 [[TMP0]])

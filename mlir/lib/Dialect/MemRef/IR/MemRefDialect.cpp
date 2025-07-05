@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
@@ -47,11 +48,13 @@ void mlir::memref::MemRefDialect::initialize() {
 #include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
       >();
   addInterfaces<MemRefInlinerInterface>();
+  declarePromisedInterface<ConvertToEmitCPatternInterface, MemRefDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, MemRefDialect>();
   declarePromisedInterfaces<bufferization::AllocationOpInterface, AllocOp,
                             AllocaOp, ReallocOp>();
-  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, ExpandShapeOp,
-                            LoadOp, ReinterpretCastOp, StoreOp, SubViewOp>();
+  declarePromisedInterfaces<RuntimeVerifiableOpInterface, AssumeAlignmentOp,
+                            AtomicRMWOp, CastOp, CopyOp, DimOp, ExpandShapeOp,
+                            GenericAtomicRMWOp, LoadOp, StoreOp, SubViewOp>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
                             DimOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<DestructurableTypeInterface, MemRefType>();

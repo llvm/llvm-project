@@ -46,6 +46,18 @@ bool isTopLevelValue(Value value, Region *region);
 /// trait `AffineScope`; `nullptr` if there is no such region.
 Region *getAffineScope(Operation *op);
 
+/// Returns the closest region enclosing `op` that is held by a non-affine
+/// operation; `nullptr` if there is no such region. This method is meant to
+/// be used by affine analysis methods (e.g. dependence analysis) which are
+/// only meaningful when performed among/between operations from the same
+/// analysis scope.
+Region *getAffineAnalysisScope(Operation *op);
+
+/// Return the product of `terms`, creating an `affine.apply` if any of them are
+/// non-constant values. If any of `terms` is `nullptr`, return `nullptr`.
+OpFoldResult computeProduct(Location loc, OpBuilder &builder,
+                            ArrayRef<OpFoldResult> terms);
+
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination
 /// memref need not be of the same dimensionality, but need to have the same
@@ -398,9 +410,11 @@ void canonicalizeSetAndOperands(IntegerSet *set,
 /// other AffineApplyOps supplying those operands. The operands of the resulting
 /// AffineApplyOp do not change the length of  AffineApplyOp chains.
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
-                                      ArrayRef<OpFoldResult> operands);
+                                      ArrayRef<OpFoldResult> operands,
+                                      bool composeAffineMin = false);
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
-                                      ArrayRef<OpFoldResult> operands);
+                                      ArrayRef<OpFoldResult> operands,
+                                      bool composeAffineMin = false);
 
 /// Constructs an AffineApplyOp that applies `map` to `operands` after composing
 /// the map with the maps of any other AffineApplyOp supplying the operands,
@@ -409,16 +423,19 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
 /// map.
 OpFoldResult makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                            AffineMap map,
-                                           ArrayRef<OpFoldResult> operands);
+                                           ArrayRef<OpFoldResult> operands,
+                                           bool composeAffineMin = false);
 /// Variant of `makeComposedFoldedAffineApply` that applies to an expression.
 OpFoldResult makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                            AffineExpr expr,
-                                           ArrayRef<OpFoldResult> operands);
+                                           ArrayRef<OpFoldResult> operands,
+                                           bool composeAffineMin = false);
 /// Variant of `makeComposedFoldedAffineApply` suitable for multi-result maps.
 /// Note that this may create as many affine.apply operations as the map has
 /// results given that affine.apply must be single-result.
 SmallVector<OpFoldResult> makeComposedFoldedMultiResultAffineApply(
-    OpBuilder &b, Location loc, AffineMap map, ArrayRef<OpFoldResult> operands);
+    OpBuilder &b, Location loc, AffineMap map, ArrayRef<OpFoldResult> operands,
+    bool composeAffineMin = false);
 
 /// Returns an AffineMinOp obtained by composing `map` and `operands` with
 /// AffineApplyOps supplying those operands.
@@ -447,7 +464,8 @@ OpFoldResult makeComposedFoldedAffineMax(OpBuilder &b, Location loc,
 /// terminal symbol, i.e., a symbol defined at the top level or a block/function
 /// argument.
 void fullyComposeAffineMapAndOperands(AffineMap *map,
-                                      SmallVectorImpl<Value> *operands);
+                                      SmallVectorImpl<Value> *operands,
+                                      bool composeAffineMin = false);
 
 } // namespace affine
 } // namespace mlir

@@ -132,25 +132,6 @@ public:
   virtual ~VariadicABIInfo() = default;
 };
 
-// Module implements getFunction() which returns nullptr on missing declaration
-// and getOrInsertFunction which creates one when absent. Intrinsics.h only
-// implements getDeclaration which creates one when missing. Checking whether
-// an intrinsic exists thus inserts it in the module and it then needs to be
-// deleted again to clean up.
-// The right name for the two functions on intrinsics would match Module::,
-// but doing that in a single change would introduce nullptr dereferences
-// where currently there are none. The minimal collateral damage approach
-// would split the change over a release to help downstream branches. As it
-// is unclear what approach will be preferred, implementing the trivial
-// function here in the meantime to decouple from that discussion.
-Function *getPreexistingDeclaration(Module *M, Intrinsic::ID Id,
-                                    ArrayRef<Type *> Tys = {}) {
-  if (Tys.empty())
-    return Intrinsic::getDeclarationIfExists(M, Id);
-  auto *FT = Intrinsic::getType(M->getContext(), Id, Tys);
-  return Intrinsic::getDeclarationIfExists(M, Id, Tys, FT);
-}
-
 class ExpandVariadics : public ModulePass {
 
   // The pass construction sets the default to optimize when called from middle
@@ -201,7 +182,7 @@ public:
     bool Changed = false;
     const DataLayout &DL = M.getDataLayout();
     if (Function *Intrinsic =
-            getPreexistingDeclaration(&M, ID, {IntrinsicArgType})) {
+            Intrinsic::getDeclarationIfExists(&M, ID, {IntrinsicArgType})) {
       for (User *U : make_early_inc_range(Intrinsic->users()))
         if (auto *I = dyn_cast<InstructionType>(U))
           Changed |= expandVAIntrinsicCall(Builder, DL, I);
@@ -508,7 +489,6 @@ ExpandVariadics::replaceAllUsesWithNewDeclaration(Module &M,
   Function *NF = Function::Create(FTy, F.getLinkage(), F.getAddressSpace());
 
   NF->setName(F.getName() + ".varargs");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
 
@@ -550,7 +530,6 @@ ExpandVariadics::deriveFixedArityReplacement(Module &M, IRBuilder<> &Builder,
   NF->setComdat(F.getComdat());
   F.getParent()->getFunctionList().insert(F.getIterator(), NF);
   NF->setName(F.getName() + ".valist");
-  NF->IsNewDbgInfoFormat = F.IsNewDbgInfoFormat;
 
   AttrBuilder ParamAttrs(Ctx);
 
@@ -604,9 +583,7 @@ ExpandVariadics::defineVariadicWrapper(Module &M, IRBuilder<> &Builder,
   Builder.CreateIntrinsic(Intrinsic::vastart, {DL.getAllocaPtrType(Ctx)},
                           {VaListInstance});
 
-  SmallVector<Value *> Args;
-  for (Argument &A : F.args())
-    Args.push_back(&A);
+  SmallVector<Value *> Args(llvm::make_pointer_range(F.args()));
 
   Type *ParameterType = ABI->vaListParameterType(M);
   if (ABI->vaListPassedInSSARegister())

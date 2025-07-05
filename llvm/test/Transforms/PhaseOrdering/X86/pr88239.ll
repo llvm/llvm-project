@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo(ptr noalias noundef %0, ptr noalias noundef %1) optsize {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr noalias nocapture noundef readonly [[TMP0:%.*]], ptr noalias nocapture noundef writeonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias noundef readonly captures(none) [[TMP0:%.*]], ptr noalias noundef writeonly captures(none) [[TMP1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 -28
 ; CHECK-NEXT:    br label [[TMP4:%.*]]

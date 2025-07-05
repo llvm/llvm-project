@@ -1,5 +1,6 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=x86_64-- -run-pass=greedy %s -debug-only=regalloc -huge-size-for-split=0 -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=greedy %s -debug-only=regalloc -huge-size-for-split=0 -o /dev/null 2>&1 | FileCheck %s
 # Check no global region split is needed because the live range to split is trivially rematerializable.
 # CHECK-NOT: Compact region bundles
 --- |
