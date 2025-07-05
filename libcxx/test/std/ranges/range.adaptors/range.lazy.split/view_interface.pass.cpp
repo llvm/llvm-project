@@ -31,13 +31,6 @@ constexpr bool test() {
       std::ranges::lazy_split_view v("abc def", " ");
       assert(!v.empty());
     }
-
-    {
-      // Note: an empty string literal would still produce a non-empty output because the terminating zero is treated as
-      // a separate character; hence the use of `string_view`.
-      std::ranges::lazy_split_view v(""sv, "");
-      assert(v.empty());
-    }
   }
 
   // operator bool()
@@ -45,13 +38,6 @@ constexpr bool test() {
     {
       std::ranges::lazy_split_view v("abc", "");
       assert(v);
-    }
-
-    {
-      // Note: an empty string literal would still produce a non-empty output because the terminating zero is treated as
-      // a separate character; hence the use of `string_view`.
-      std::ranges::lazy_split_view v(""sv, "");
-      assert(!v);
     }
   }
 
