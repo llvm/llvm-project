@@ -766,6 +766,67 @@ void mlir::spirv::AddressOfOp::getAsmResultNames(
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.EXTConstantCompositeReplicate
+//===----------------------------------------------------------------------===//
+
+ParseResult
+spirv::EXTConstantCompositeReplicateOp::parse(OpAsmParser &parser,
+                                              OperationState &result) {
+  OpAsmParser::UnresolvedOperand constOperand;
+  Type compositeType;
+  if (parser.parseOperand(constOperand) ||
+      parser.parseColonType(compositeType)) {
+    return failure();
+  }
+
+  if (llvm::isa<TensorType>(compositeType)) {
+    if (parser.parseColonType(compositeType))
+      return failure();
+  }
+
+  auto constType = cast<spirv::CompositeType>(compositeType).getElementType(0);
+  while (auto type = llvm::dyn_cast<spirv::ArrayType>(constType)) {
+    constType = type.getElementType();
+  }
+
+  if (parser.resolveOperand(constOperand, constType, result.operands))
+    return failure();
+
+  return parser.addTypeToList(compositeType, result.types);
+}
+
+void spirv::EXTConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
+  printer << ' ' << getConstant() << " : " << getType();
+}
+
+LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
+  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
+  if (!compositeType)
+    return emitError("result type must be a composite type, but provided ")
+           << getType();
+
+  auto constantDefiningOp = getConstant().getDefiningOp();
+  if (!constantDefiningOp)
+    return this->emitOpError("op defining the splat constant not found");
+
+  auto constantOp = dyn_cast_or_null<spirv::ConstantOp>(constantDefiningOp);
+  auto constantCompositeReplicateOp =
+      dyn_cast_or_null<spirv::EXTConstantCompositeReplicateOp>(
+          constantDefiningOp);
+
+  if (!constantOp && !constantCompositeReplicateOp)
+    return this->emitOpError(
+        "op defining the splat constant is not a spirv.Constant or a "
+        "spirv.EXT.ConstantCompositeReplicate");
+
+  if (constantOp)
+    return verifyConstantType(constantOp, constantOp.getValueAttr(),
+                              constantOp.getType());
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.ControlBarrierOp
 //===----------------------------------------------------------------------===//
 
@@ -1862,6 +1923,64 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
              << cType.getElementType(index) << ", but provided "
              << constituentSpecConstOp.getDefaultValue().getType();
   }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.EXTSpecConstantCompositeReplicateOp
+//===----------------------------------------------------------------------===//
+
+ParseResult
+spirv::EXTSpecConstantCompositeReplicateOp::parse(OpAsmParser &parser,
+                                                  OperationState &result) {
+
+  StringAttr compositeName;
+  const char *attrName = "spec_const";
+  FlatSymbolRefAttr specConstRef;
+  NamedAttrList attrs;
+  Type type;
+
+  if (parser.parseSymbolName(compositeName, SymbolTable::getSymbolAttrName(),
+                             result.attributes) ||
+      parser.parseLParen() ||
+      parser.parseAttribute(specConstRef, Type(), attrName, attrs) ||
+      parser.parseRParen() || parser.parseColonType(type))
+    return failure();
+
+  StringAttr compositeSpecConstituentName =
+      spirv::EXTSpecConstantCompositeReplicateOp::getConstituentAttrName(
+          result.name);
+  result.addAttribute(compositeSpecConstituentName, specConstRef);
+
+  StringAttr typeAttrName =
+      spirv::EXTSpecConstantCompositeReplicateOp::getTypeAttrName(result.name);
+  result.addAttribute(typeAttrName, TypeAttr::get(type));
+
+  return success();
+}
+
+void spirv::EXTSpecConstantCompositeReplicateOp::print(OpAsmPrinter &printer) {
+  printer << " ";
+  printer.printSymbolName(getSymName());
+  printer << " (" << this->getConstituent() << ") : " << getType();
+}
+
+LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
+  auto compositeType = dyn_cast<spirv::CompositeType>(getType());
+  if (!compositeType)
+    return emitError("result type must be a composite type, but provided ")
+           << getType();
+
+  auto constituentSpecConstOp =
+      dyn_cast<spirv::SpecConstantOp>(SymbolTable::lookupNearestSymbolFrom(
+          (*this)->getParentOp(), this->getConstituent()));
+
+  auto constituentType = constituentSpecConstOp.getDefaultValue().getType();
+  auto compositeElemType = compositeType.getElementType(0);
+  if (constituentType != compositeElemType)
+    return emitError("constituent has incorrect type: expected ")
+           << compositeElemType << ", but provided " << constituentType;
 
   return success();
 }
