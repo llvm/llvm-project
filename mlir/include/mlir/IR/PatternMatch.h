@@ -504,6 +504,11 @@ public:
   }
 
   /// This method erases an operation that is known to have no uses.
+  ///
+  /// If the current insertion point is before the erased operation, it is
+  /// adjusted to the following operation (or the end of the block). If the
+  /// current insertion point is within the erased operation, the insertion
+  /// point is left in an invalid state.
   virtual void eraseOp(Operation *op);
 
   /// This method erases all operations in a block.
