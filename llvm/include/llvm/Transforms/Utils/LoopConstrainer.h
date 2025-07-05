@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOP_CONSTRAINER_H
 
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 
@@ -190,6 +191,7 @@ private:
   Function &F;
   LLVMContext &Ctx;
   ScalarEvolution &SE;
+  TargetTransformInfo &TTI;
   DominatorTree &DT;
   LoopInfo &LI;
   function_ref<void(Loop *, bool)> LPMAddNewLoop;
@@ -216,7 +218,8 @@ public:
   LoopConstrainer(Loop &L, LoopInfo &LI,
                   function_ref<void(Loop *, bool)> LPMAddNewLoop,
                   const LoopStructure &LS, ScalarEvolution &SE,
-                  DominatorTree &DT, Type *T, SubRanges SR);
+                  TargetTransformInfo &TTI, DominatorTree &DT, Type *T,
+                  SubRanges SR);
 
   // Entry point for the algorithm.  Returns true on success.
   bool run();

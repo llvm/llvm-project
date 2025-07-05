@@ -285,7 +285,8 @@ static BranchInst *findSplitCandidate(const Loop &L, ScalarEvolution &SE,
 }
 
 static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
-                           ScalarEvolution &SE, LPMUpdater &U) {
+                           ScalarEvolution &SE, LPMUpdater &U,
+                           const TargetTransformInfo *TTI) {
   ConditionInfo SplitCandidateCond;
   ConditionInfo ExitingCond;
 
@@ -460,8 +461,8 @@ static bool splitLoopBound(Loop &L, DominatorTree &DT, LoopInfo &LI,
   SE.forgetLoop(&L);
 
   // Canonicalize loops.
-  simplifyLoop(&L, &DT, &LI, &SE, nullptr, nullptr, true);
-  simplifyLoop(PostLoop, &DT, &LI, &SE, nullptr, nullptr, true);
+  simplifyLoop(&L, &DT, &LI, &SE, nullptr, nullptr, TTI, true);
+  simplifyLoop(PostLoop, &DT, &LI, &SE, nullptr, nullptr, TTI, true);
 
   // Add new post-loop to loop pass manager.
   U.addSiblingLoops(PostLoop);
@@ -478,7 +479,9 @@ PreservedAnalyses LoopBoundSplitPass::run(Loop &L, LoopAnalysisManager &AM,
   LLVM_DEBUG(dbgs() << "Spliting bound of loop in " << F.getName() << ": " << L
                     << "\n");
 
-  if (!splitLoopBound(L, AR.DT, AR.LI, AR.SE, U))
+  auto &FAM = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR);
+  auto TTI = FAM.getCachedResult<TargetIRAnalysis>(F);
+  if (!splitLoopBound(L, AR.DT, AR.LI, AR.SE, U, TTI))
     return PreservedAnalyses::all();
 
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));

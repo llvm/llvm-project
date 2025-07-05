@@ -234,6 +234,7 @@ public:
 class InductiveRangeCheckElimination {
   ScalarEvolution &SE;
   BranchProbabilityInfo *BPI;
+  TargetTransformInfo &TTI;
   DominatorTree &DT;
   LoopInfo &LI;
 
@@ -248,9 +249,10 @@ class InductiveRangeCheckElimination {
 
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
-                                 BranchProbabilityInfo *BPI, DominatorTree &DT,
+                                 BranchProbabilityInfo *BPI,
+                                 TargetTransformInfo &TTI, DominatorTree &DT,
                                  LoopInfo &LI, GetBFIFunc GetBFI = std::nullopt)
-      : SE(SE), BPI(BPI), DT(DT), LI(LI), GetBFI(GetBFI) {}
+      : SE(SE), BPI(BPI), TTI(TTI), DT(DT), LI(LI), GetBFI(GetBFI) {}
 
   bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
 };
@@ -900,6 +902,7 @@ IntersectUnsignedRange(ScalarEvolution &SE,
 
 PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   // There are no loops in the function. Return before computing other expensive
   // analyses.
@@ -913,13 +916,13 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto getBFI = [&F, &AM ]()->BlockFrequencyInfo & {
     return AM.getResult<BlockFrequencyAnalysis>(F);
   };
-  InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI, { getBFI });
+  InductiveRangeCheckElimination IRCE(SE, &BPI, TTI, DT, LI, {getBFI});
 
   bool Changed = false;
   {
     bool CFGChanged = false;
     for (const auto &L : LI) {
-      CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
+      CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, &TTI,
                                  /*PreserveLCSSA=*/false);
       Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
     }
@@ -1080,7 +1083,7 @@ bool InductiveRangeCheckElimination::run(
     return false;
   }
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, TTI, DT,
                      SafeIterRange->getBegin()->getType(), *MaybeSR);
 
   if (LC.run()) {
