@@ -5440,16 +5440,15 @@ bool Sema::BuiltinComplex(CallExpr *TheCall) {
 
 /// BuiltinShuffleVector - Handle __builtin_shufflevector.
 // This is declared to take (...), so we have to check everything.
+// disable unary, vector mask: (lhs, mask)
+// allow binary, scalar mask: (lhs, rhs, index, ..., index)
 ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
-  if (TheCall->getNumArgs() < 2)
+  if (TheCall->getNumArgs() <= 2)
     return ExprError(Diag(TheCall->getEndLoc(),
                           diag::err_typecheck_call_too_few_args_at_least)
-                     << 0 /*function call*/ << 2 << TheCall->getNumArgs()
+                     << 0 /*function call*/ << 3 << TheCall->getNumArgs()
                      << /*is non object*/ 0 << TheCall->getSourceRange());
 
-  // Determine which of the following types of shufflevector we're checking:
-  // 1) unary, vector mask: (lhs, mask)
-  // 2) binary, scalar mask: (lhs, rhs, index, ..., index)
   QualType resType = TheCall->getArg(0)->getType();
   unsigned numElements = 0;
 
@@ -5468,19 +5467,8 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     numElements = LHSType->castAs<VectorType>()->getNumElements();
     unsigned numResElements = TheCall->getNumArgs() - 2;
 
-    // Check to see if we have a call with 2 vector arguments, the unary shuffle
-    // with mask.  If so, verify that RHS is an integer vector type with the
-    // same number of elts as lhs.
-    if (TheCall->getNumArgs() == 2) {
-      if (!RHSType->hasIntegerRepresentation() ||
-          RHSType->castAs<VectorType>()->getNumElements() != numElements)
-        return ExprError(Diag(TheCall->getBeginLoc(),
-                              diag::err_vec_builtin_incompatible_vector)
-                         << TheCall->getDirectCallee()
-                         << /*isMorethantwoArgs*/ false
-                         << SourceRange(TheCall->getArg(1)->getBeginLoc(),
-                                        TheCall->getArg(1)->getEndLoc()));
-    } else if (!Context.hasSameUnqualifiedType(LHSType, RHSType)) {
+
+    if (!Context.hasSameUnqualifiedType(LHSType, RHSType) ) {
       return ExprError(Diag(TheCall->getBeginLoc(),
                             diag::err_vec_builtin_incompatible_vector)
                        << TheCall->getDirectCallee()
