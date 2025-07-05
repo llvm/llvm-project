@@ -177,10 +177,10 @@ TEST(ELFObjectFileTest, MachineTestForPPC) {
 }
 
 TEST(ELFObjectFileTest, MachineTestForRISCV) {
-  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-littleriscv",
-                                      "elf64-littleriscv", "elf64-littleriscv"};
-  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32,
-                                           Triple::riscv64, Triple::riscv64};
+  std::array<StringRef, 4> Formats = {"elf32-littleriscv", "elf32-bigriscv",
+                                      "elf64-littleriscv", "elf64-bigriscv"};
+  std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32be,
+                                           Triple::riscv64, Triple::riscv64be};
   for (auto [Idx, Data] : enumerate(generateData(ELF::EM_RISCV)))
     checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
