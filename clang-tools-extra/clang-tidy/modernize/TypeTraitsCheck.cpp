@@ -124,9 +124,6 @@ static const llvm::StringSet<> ValueTraits = {
     "variant_size",
 };
 
-// FIXME: Add tuple_element_t and variant_alternative_t. These are recursively
-// defined type traits, so you'll have to ensure the check doesn't fire within
-// the trait's definition.
 static const llvm::StringSet<> TypeTraits = {
     "remove_cv",
     "remove_const",
@@ -159,6 +156,8 @@ static const llvm::StringSet<> TypeTraits = {
     "common_comparison_category",
     "unwrap_ref_decay",
     "unwrap_reference",
+    "tuple_element",
+    "variant_alternative",
 };
 
 static DeclarationName getName(const DependentScopeDeclRefExpr &D) {

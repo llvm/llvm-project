@@ -19,6 +19,11 @@ namespace std {
     using type = T;
   };
 
+  template <typename...>
+  struct common_type {
+    using type = int;
+  };
+
 inline namespace __std_lib_version1 {
   template<typename T>
   struct add_const {
@@ -65,6 +70,10 @@ std::enable_if<true>::type noTemplateOrTypename();
 using UsingNoTypename = std::enable_if<true>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use c++14 style type templates
 // CHECK-FIXES: using UsingNoTypename = std::enable_if_t<true>;
+
+using VariadicTrait = std::common_type<int, long, bool>::type;
+// CHECK-MESSAGES: :[[@LINE-1]]:23: warning: use c++14 style type templates
+// CHECK-FIXES: using VariadicTrait = std::common_type_t<int, long, bool>;
 
 using UsingSpace = std::enable_if <true>::type;
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use c++14 style type templates

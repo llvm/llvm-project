@@ -42,6 +42,6 @@ Options
 Limitations
 -----------
 
-Does not currently diagnose uses of ``std::chrono::is_clock``,
-``std::chrono::treat_as_floating_point``, ``std::tuple_element``,
-or ``std::variant_alternative``.
+Does not currently diagnose uses of type traits with nested name
+specifiers (e.g. ``std::chrono::is_clock``,
+``std::chrono::treat_as_floating_point``).
