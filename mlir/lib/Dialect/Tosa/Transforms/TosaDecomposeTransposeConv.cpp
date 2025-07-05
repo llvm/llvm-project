@@ -69,12 +69,15 @@ public:
     auto reverse2 = rewriter.create<tosa::ReverseOp>(
         loc, weightTy, reverse1, /* axis = */ rewriter.getI32IntegerAttr(2));
 
+    bool localBound = false;
+    if (auto localBoundAttr = op->getAttrOfType<BoolAttr>("local_bound"))
+      localBound = localBoundAttr.getValue();
     Value conv2d = rewriter.create<tosa::Conv2DOp>(
         loc, resultTy, input, reverse2, bias, op.getInputZp(), op.getWeightZp(),
         rewriter.getDenseI64ArrayAttr(convPad),
         rewriter.getDenseI64ArrayAttr(stride),
         rewriter.getDenseI64ArrayAttr({1, 1}),
-        /* acc_type = */ op.getAccType());
+        /* acc_type = */ op.getAccType(), localBound);
 
     rewriter.replaceOp(op, conv2d);
     return success();
@@ -238,13 +241,16 @@ public:
     }
 
     // Perform the convolution using the zero bias.
+    bool localBound = false;
+    if (auto localBoundAttr = op->getAttrOfType<BoolAttr>("local_bound"))
+      localBound = localBoundAttr.getValue();
     Value conv2d = CreateOpAndInferShape<tosa::Conv2DOp>(
                        rewriter, loc, UnrankedTensorType::get(resultETy), input,
                        weight, zeroBias, inputZp.value(), weightZp.value(),
                        /*pad=*/rewriter.getDenseI64ArrayAttr({0, 0, 0, 0}),
                        /*stride=*/rewriter.getDenseI64ArrayAttr({1, 1}),
                        /*dilation=*/rewriter.getDenseI64ArrayAttr({1, 1}),
-                       /* acc_type = */ op.getAccType())
+                       /* acc_type = */ op.getAccType(), localBound)
                        .getResult();
 
     // Factor the resulting width / height.
