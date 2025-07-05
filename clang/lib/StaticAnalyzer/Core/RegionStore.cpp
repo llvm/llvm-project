@@ -2190,6 +2190,11 @@ std::optional<SVal> RegionStoreManager::getBindingForDerivedDefaultValue(
     if (isa<nonloc::LazyCompoundVal, nonloc::CompoundVal>(val))
       return val;
 
+    // 'nonloc::ConcreteInt' values can arise from e.g. compound literals in
+    // designated initializers for bitfields in unions.
+    if (isa<nonloc::ConcreteInt>(val))
+      return val;
+
     llvm_unreachable("Unknown default value");
   }
 
