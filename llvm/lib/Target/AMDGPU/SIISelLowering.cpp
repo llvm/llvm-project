@@ -1983,7 +1983,8 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to

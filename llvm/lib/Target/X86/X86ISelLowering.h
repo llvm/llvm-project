@@ -1095,7 +1095,7 @@ namespace llvm {
     /// 4-byte boundaries.
     Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Returns true if it's safe to use load / store of the
