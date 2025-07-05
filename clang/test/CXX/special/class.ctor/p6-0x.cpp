@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx11-23 %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx26 %s -std=c++26
 
 // Implicitly-defined default constructors are constexpr if the implicit
 // definition would be.
@@ -15,8 +16,9 @@ constexpr NonConstexpr2a nc2a = NonConstexpr2a(); // ok, does not call construct
 constexpr int nc2_a = NonConstexpr2().nl.a; // ok
 constexpr int nc2a_a = NonConstexpr2a().a; // ok
 struct Helper {
-  friend constexpr NonConstexpr1::NonConstexpr1(); // expected-error {{follows non-constexpr declaration}}
-  friend constexpr NonConstexpr2::NonConstexpr2(); // expected-error {{follows non-constexpr declaration}}
+  friend constexpr NonConstexpr1::NonConstexpr1(); // cxx11-23-error {{follows non-constexpr declaration}} cxx26-error {{missing exception specification}}
+  friend constexpr NonConstexpr2::NonConstexpr2(); // cxx11-23-error {{follows non-constexpr declaration}} cxx26-error {{missing exception specification}}
+
 };
 
 struct Constexpr1 {};
@@ -31,14 +33,14 @@ constexpr Constexpr2 c2 = Constexpr2(); // ok
 
 int n;
 struct Member {
-  Member() : a(n) {}
+  Member() : a(n) {} // cxx26-note {{here}}
   constexpr Member(int&a) : a(a) {}
   int &a;
 };
-struct NonConstexpr4 { // expected-note {{here}}
+struct NonConstexpr4 { // cxx11-23-note {{here}} cxx26-note {{non-constexpr constructor}}
   Member m;
 };
-constexpr NonConstexpr4 nc4 = NonConstexpr4(); // expected-error {{constant expression}} expected-note {{non-constexpr constructor 'NonConstexpr4'}}
+constexpr NonConstexpr4 nc4 = NonConstexpr4(); // expected-error {{constant expression}} cxx11-23-note {{non-constexpr constructor 'NonConstexpr4'}} cxx26-note {{in call to}}
 struct Constexpr3 {
   constexpr Constexpr3() : m(n) {}
   Member m;
@@ -53,11 +55,11 @@ constexpr Constexpr4 c4 = Constexpr4(); // ok
 // This rule breaks some legal C++98 programs!
 struct A {}; // expected-note {{here}}
 struct B {
-  friend A::A(); // expected-error {{non-constexpr declaration of 'A' follows constexpr declaration}}
+  friend A::A(); // cxx11-23-error {{non-constexpr declaration of 'A' follows constexpr declaration}} cxx26-error {{missing exception specification}}
 };
 
 namespace UnionCtors {
-  union A { // expected-note {{here}}
+  union A { // cxx11-23-note {{here}}
     int a;
     int b;
   };
@@ -79,7 +81,7 @@ namespace UnionCtors {
       int d = 5;
     };
   };
-  struct E { // expected-note {{here}}
+  struct E { // cxx11-23-note {{here}}
     union {
       int a;
       int b;
@@ -87,11 +89,11 @@ namespace UnionCtors {
   };
 
   struct Test {
-    friend constexpr A::A() noexcept; // expected-error {{follows non-constexpr declaration}}
+    friend constexpr A::A() noexcept; // cxx11-23-error {{follows non-constexpr declaration}}
     friend constexpr B::B() noexcept;
     friend constexpr C::C() noexcept;
     friend constexpr D::D() noexcept;
-    friend constexpr E::E() noexcept; // expected-error {{follows non-constexpr declaration}}
+    friend constexpr E::E() noexcept; // cxx11-23-error {{follows non-constexpr declaration}}
   };
 }
 
@@ -122,6 +124,6 @@ namespace PR48763 {
 
   struct G { G(); };
   struct H : D { using D::D; H(int); G g; };
-  union V { H h; }; // expected-note {{field 'h' has a non-trivial default constructor}}
-  V v; // expected-error {{deleted}}
+  union V { H h; }; // cxx11-23-note {{field 'h' has a non-trivial default constructor}}
+  V v; // cxx11-23-error {{deleted}}
 }
