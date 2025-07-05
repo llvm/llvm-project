@@ -44,6 +44,7 @@ public:
   mlir::Value VisitBinComma(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
+  mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
   mlir::Value VisitImplicitCastExpr(ImplicitCastExpr *e);
@@ -159,6 +160,17 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
 
 mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
   return Visit(e->getChosenSubExpr());
+}
+
+mlir::Value
+ComplexExprEmitter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  QualType complexElemTy =
+      e->getType()->castAs<clang::ComplexType>()->getElementType();
+  mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
+  mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
+  auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
+  return builder.create<cir::ConstantOp>(loc, complexAttr);
 }
 
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
