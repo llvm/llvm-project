@@ -3,7 +3,7 @@
 // RUN: FileCheck --check-prefix=ERROR %s --implicit-check-not=error: < %t2
 
 .xword sym-.
-// ERROR: [[#@LINE-1]]:8: error: 8 byte PC relative data relocation is not supported in ILP32
+// ERROR: [[#@LINE-1]]:11: error: 8 byte PC relative data relocation is not supported in ILP32
 
 .xword sym+16
 // ERROR: [[#@LINE-1]]:[[#]]: error: 8 byte absolute data relocation is not supported in ILP32
@@ -15,7 +15,7 @@
 // ERROR: [[#@LINE-1]]:[[#]]: error: 8 byte absolute data relocation is not supported in ILP32
 
 movz x7, #:abs_g3:some_label
-// ERROR: [[#@LINE-1]]:1: error: absolute MOV relocation is not supported in ILP32
+// ERROR: [[#@LINE-1]]:11: error: absolute MOV relocation is not supported in ILP32
 // ERROR:        movz x7, #:abs_g3:some_label
 
 movz x3, #:abs_g2:some_label
@@ -89,7 +89,7 @@ ldr x24, [x23, :gottprel_lo12:sym]
 // ERROR: [[#@LINE-1]]:[[#]]: error: 64-bit load/store relocation is not supported in ILP32
 
 ldr x24, :got_auth:sym
-// ERROR: [[#@LINE-1]]:1: error: LDR AUTH relocation is not supported in ILP32
+// ERROR: [[#@LINE-1]]:10: error: LDR AUTH relocation is not supported in ILP32
 
 adr x24, :got_auth:sym
 // ERROR: [[#@LINE-1]]:[[#]]: error: ADR AUTH relocation is not supported in ILP32

@@ -71,8 +71,12 @@ class MCFixup {
 
   /// The target dependent kind of fixup item this is. The kind is used to
   /// determine how the operand value should be encoded into the instruction.
-  MCFixupKind Kind = FK_NONE;
+  uint16_t Kind = FK_NONE;
 
+  /// True if this is a PC-relative fixup. The relocatable expression is
+  /// typically resolved When SymB is nullptr and SymA is a local symbol defined
+  /// within the current section. While MCAssembler currently sets this based on
+  /// FKF_IsPCRel, targets should ideally set it at creation.
   bool PCRel = false;
 
   /// Used by RISC-V style linker relaxation. Whether the fixup is
@@ -81,24 +85,22 @@ class MCFixup {
 
   /// Consider bit fields if we need more flags.
 
-  /// The source location which gave rise to the fixup, if any.
-  SMLoc Loc;
 public:
-  static MCFixup create(uint32_t Offset, const MCExpr *Value,
-                        MCFixupKind Kind, SMLoc Loc = SMLoc()) {
+  static MCFixup create(uint32_t Offset, const MCExpr *Value, uint16_t Kind,
+                        bool PCRel = false) {
     MCFixup FI;
     FI.Value = Value;
     FI.Offset = Offset;
     FI.Kind = Kind;
-    FI.Loc = Loc;
+    FI.PCRel = PCRel;
     return FI;
   }
-  static MCFixup create(uint32_t Offset, const MCExpr *Value, unsigned Kind,
-                        SMLoc Loc = SMLoc()) {
-    return create(Offset, Value, MCFixupKind(Kind), Loc);
+  static MCFixup create(uint32_t Offset, const MCExpr *Value,
+                        MCFixupKind Kind) {
+    return create(Offset, Value, unsigned(Kind));
   }
 
-  MCFixupKind getKind() const { return Kind; }
+  MCFixupKind getKind() const { return MCFixupKind(Kind); }
 
   unsigned getTargetKind() const { return Kind; }
 
@@ -128,7 +130,7 @@ public:
     }
   }
 
-  SMLoc getLoc() const { return Loc; }
+  SMLoc getLoc() const;
 };
 
 namespace mc {

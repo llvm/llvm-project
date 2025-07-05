@@ -51,7 +51,7 @@ memcpy_spec1 = __GI_memcpy@PLT+1
 .ifdef ERR
 .text
 ## Note, GNU as emits a relocation for this erroneous fixup.
-# ERR: {{.*}}.s:[[#@LINE+2]]:1: error: expected relocatable expression
+# ERR: {{.*}}.s:[[#@LINE+2]]:6: error: expected relocatable expression
 memcpy_plus_1 = __GI_memcpy+1
 call memcpy_plus_1@PLT
 .endif
