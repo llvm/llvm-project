@@ -363,8 +363,10 @@ def FuncOp : Func_Op<"func", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : Func_Op<"return", [Pure, HasParent<"FuncOp">,
-                                MemRefsNormalizable, ReturnLike, Terminator]> {
+def ReturnOp : Func_Op<"return", [
+    Pure, HasParent<"FuncOp">, MemRefsNormalizable, ReturnLike, Terminator,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, ["getSuccessorRegions"]>]
+  > {
   let summary = "Function return operation";
   let description = [{
     The `func.return` operation represents a return operation within a function.
