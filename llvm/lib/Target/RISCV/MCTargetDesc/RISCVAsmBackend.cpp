@@ -70,8 +70,8 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_12_i", 20, 12, 0},
       {"fixup_riscv_lo12_s", 0, 32, 0},
       {"fixup_riscv_pcrel_hi20", 12, 20, 0},
-      {"fixup_riscv_pcrel_lo12_i", 20, 12, MCFixupKindInfo::FKF_IsTarget},
-      {"fixup_riscv_pcrel_lo12_s", 0, 32, MCFixupKindInfo::FKF_IsTarget},
+      {"fixup_riscv_pcrel_lo12_i", 20, 12, 0},
+      {"fixup_riscv_pcrel_lo12_s", 0, 32, 0},
       {"fixup_riscv_jal", 12, 20, 0},
       {"fixup_riscv_branch", 0, 32, 0},
       {"fixup_riscv_rvc_jump", 2, 11, 0},
@@ -655,15 +655,16 @@ static const MCFixup *getPCRelHiFixup(const MCSpecifierExpr &Expr,
   return nullptr;
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(const MCFixup &Fixup,
-                                          const MCValue &Target,
-                                          uint64_t &Value) {
+std::optional<bool> RISCVAsmBackend::evaluateFixup(MCFixup &Fixup,
+                                                   MCValue &Target,
+                                                   uint64_t &Value) {
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
   switch (Fixup.getTargetKind()) {
   default:
-    llvm_unreachable("Unexpected fixup kind!");
+    // Use default handling for `Value` and `IsResolved`.
+    return {};
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s: {
     AUIPCFixup =
