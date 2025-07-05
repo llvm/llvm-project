@@ -768,6 +768,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(Op, MVT::v8bf16, Expand);
   }
 
+  // Legalize fcanonicalize to circumvent default expansion
+  setOperationAction(ISD::FCANONICALIZE, {MVT::f32, MVT::f64}, Legal);
+  if (Subtarget->hasFullFP16()) {
+    setOperationAction(ISD::FCANONICALIZE, MVT::f16, Legal);
+  }
+
   // fpextend from f16 or bf16 to f32 is legal
   setOperationAction(ISD::FP_EXTEND, MVT::f32, Legal);
   setOperationAction(ISD::FP_EXTEND, MVT::v4f32, Legal);
