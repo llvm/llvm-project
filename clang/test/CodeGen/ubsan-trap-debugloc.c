@@ -1,3 +1,4 @@
+// CASE 1
 // RUN: %clang_cc1 -emit-llvm -disable-llvm-passes -O -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -fsanitize-merge=signed-integer-overflow %s -o - -debug-info-kind=line-tables-only | FileCheck %s
 
 
@@ -17,8 +18,11 @@ void bar(volatile int a) __attribute__((optnone)) {
 }
 
 // With optimisations enabled the traps are merged and need to share a debug location
-// CHECK: [[LOC]] = !DILocation(line: 0
+// CHECK: [[LOC]] = !DILocation(line: 0,
 
 // With optimisations disabled the traps are not merged and retain accurate debug locations
-// CHECK: [[LOC2]] = !DILocation(line: 15, column: 9
-// CHECK: [[LOC3]] = !DILocation(line: 16, column: 9
+ // CHECK-DAG: [[SRC2:![0-9]+]] = !DILocation(line: 16, column: 9,
+ // CHECK-DAG: [[SRC3:![0-9]+]] = !DILocation(line: 17, column: 9,
+ // CHECK-DAG: [[LOC2]] = !DILocation(line: 0, scope: [[SCOPE2:![0-9]+]], inlinedAt: [[SRC2]])
+ // CHECK-DAG: [[LOC3]] = !DILocation(line: 0, scope: [[SCOPE3:![0-9]+]], inlinedAt: [[SRC3]])
+
