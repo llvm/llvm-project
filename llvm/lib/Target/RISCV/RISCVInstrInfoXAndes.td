@@ -642,6 +642,17 @@ def : Sh2AddPat<NDS_LEA_W_ZE>;
 def : Sh3AddPat<NDS_LEA_D_ZE>;
 } // Predicates = [HasVendorXAndesPerf, IsRV64]
 
+let Predicates = [HasVendorXAndesPerf] in {
+def : Pat<(XLenVT (int_riscv_nds_ffb (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFB GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_ffzmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFZMISM GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_ffmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FFMISM GPR:$rs1, GPR:$rs2)>;
+def : Pat<(XLenVT (int_riscv_nds_flmism (XLenVT GPR:$rs1), (XLenVT GPR:$rs2))),
+          (NDS_FLMISM GPR:$rs1, GPR:$rs2)>;
+} // Predicates = [HasVendorXAndesPerf]
+
 let Predicates = [HasVendorXAndesVBFHCvt] in {
 defm PseudoNDS_VFWCVT_S_BF16 : VPseudoVWCVT_S_BF16;
 defm PseudoNDS_VFNCVT_BF16_S : VPseudoVNCVT_BF16_S;
