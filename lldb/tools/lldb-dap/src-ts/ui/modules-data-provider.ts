@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { DebugProtocol } from "@vscode/debugprotocol";
-import { DebugSessionTracker } from "../debug-session-tracker";
+import { DebugSessionTracker, LLDBModule } from "../debug-session-tracker";
 
 export interface ModuleProperty {
   key: string;
@@ -9,19 +9,19 @@ export interface ModuleProperty {
 
 /** Type to represent both Module and ModuleProperty since TreeDataProvider
  * expects one concrete type */
-type TreeData = DebugProtocol.Module | ModuleProperty;
+type TreeData = LLDBModule | ModuleProperty;
 
-function isModule(type: TreeData): type is DebugProtocol.Module {
-  return (type as DebugProtocol.Module).id !== undefined;
+function isModule(type: TreeData): type is LLDBModule {
+  return (type as LLDBModule).id !== undefined;
 }
 
 class ModuleItem extends vscode.TreeItem {
-  constructor(module: DebugProtocol.Module) {
+  constructor(module: LLDBModule) {
     super(module.name, vscode.TreeItemCollapsibleState.Collapsed);
     this.description = module.symbolStatus;
   }
 
-  static getProperties(module: DebugProtocol.Module): ModuleProperty[] {
+  static getProperties(module: LLDBModule): ModuleProperty[] {
     // does not include the name and symbol status as it is show in the parent.
     let children: ModuleProperty[] = [];
     children.push({ key: "id:", value: module.id.toString() });
@@ -40,6 +40,9 @@ class ModuleItem extends vscode.TreeItem {
     }
     if (module.symbolFilePath) {
       children.push({ key: "symbol filepath:", value: module.symbolFilePath });
+    }
+    if (module.debugInfoSize) {
+      children.push({ key: "debuginfo size: ", value: module.debugInfoSize });
     }
     return children;
   }

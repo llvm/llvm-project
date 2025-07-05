@@ -926,4 +926,29 @@ llvm::json::Value toJSON(const DisassembledInstruction &DI) {
   return result;
 }
 
+json::Value toJSON(const Module &M) {
+  json::Object result{{"id", M.id}, {"name", M.name}};
+
+  if (!M.path.empty())
+    result.insert({"path", M.path});
+  if (M.isOptimized)
+    result.insert({"isOptimized", *M.isOptimized});
+  if (M.isUserCode)
+    result.insert({"isUserCode", *M.isUserCode});
+  if (!M.version.empty())
+    result.insert({"version", M.version});
+  if (!M.symbolStatus.empty())
+    result.insert({"symbolStatus", M.symbolStatus});
+  if (!M.symbolFilePath.empty())
+    result.insert({"symbolFilePath", M.symbolFilePath});
+  if (!M.dateTimeStamp.empty())
+    result.insert({"dateTimeStamp", M.dateTimeStamp});
+  if (!M.addressRange.empty())
+    result.insert({"addressRange", M.addressRange});
+  if (!M.debugInfoSize.empty())
+    result.insert({"debugInfoSize", M.debugInfoSize});
+
+  return result;
+}
+
 } // namespace lldb_dap::protocol

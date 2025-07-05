@@ -25,6 +25,10 @@ function isEvent(
   );
 }
 
+export interface LLDBModule extends DebugProtocol.Module {
+    debugInfoSize?: string;
+}
+
 /** Tracks lldb-dap sessions for data visualizers. */
 export class DebugSessionTracker
   implements vscode.DebugAdapterTrackerFactory, vscode.Disposable
@@ -34,7 +38,7 @@ export class DebugSessionTracker
    *
    * The modules are kept in an array to maintain the load order of the modules.
    */
-  private modules = new Map<vscode.DebugSession, DebugProtocol.Module[]>();
+  private modules = new Map<vscode.DebugSession, LLDBModule[]>();
   private modulesChanged = new vscode.EventEmitter<
     vscode.DebugSession | undefined
   >();
@@ -73,7 +77,7 @@ export class DebugSessionTracker
    *
    * Modules are returned in load order.
    */
-  debugSessionModules(session: vscode.DebugSession): DebugProtocol.Module[] {
+  debugSessionModules(session: vscode.DebugSession): LLDBModule[] {
     return this.modules.get(session) ?? [];
   }
 

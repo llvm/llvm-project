@@ -20,6 +20,26 @@
 
 namespace lldb_dap {
 
+/// Converts a LLDB module to a DAP protocol module for use in `module events or
+/// request.
+///
+/// \param[in] target
+///     The target that has the module
+///
+/// \param[in] module
+///     A LLDB module object to convert into a protocol module
+///
+/// \param[in] id_only
+///     Only initialize the module ID in the return type. This is used when
+///     sending a "removed" module event.
+///
+/// \return
+///     A `protocol::Module` that follows the formal Module
+///     definition outlined by the DAP protocol.
+std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
+                                             lldb::SBModule &module,
+                                             bool id_only = false);
+
 /// Create a "Source" JSON object as described in the debug adapter definition.
 ///
 /// \param[in] file

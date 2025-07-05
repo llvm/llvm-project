@@ -1347,45 +1347,7 @@ void DAP::EventThread() {
           SendStdOutStdErr(*this, process);
         }
       } else if (lldb::SBTarget::EventIsTargetEvent(event)) {
-        if (event_mask & lldb::SBTarget::eBroadcastBitModulesLoaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitSymbolsLoaded ||
-            event_mask & lldb::SBTarget::eBroadcastBitSymbolsChanged) {
-          const uint32_t num_modules =
-              lldb::SBTarget::GetNumModulesFromEvent(event);
-          std::lock_guard<std::mutex> guard(modules_mutex);
-          for (uint32_t i = 0; i < num_modules; ++i) {
-            lldb::SBModule module =
-                lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
-            if (!module.IsValid())
-              continue;
-            llvm::StringRef module_id = module.GetUUIDString();
-            if (module_id.empty())
-              continue;
-
-            llvm::StringRef reason;
-            bool id_only = false;
-            if (modules.contains(module_id)) {
-              if (event_mask & lldb::SBTarget::eBroadcastBitModulesUnloaded) {
-                modules.erase(module_id);
-                reason = "removed";
-                id_only = true;
-              } else {
-                reason = "changed";
-              }
-            } else {
-              modules.insert(module_id);
-              reason = "new";
-            }
-
-            llvm::json::Object body;
-            body.try_emplace("reason", reason);
-            body.try_emplace("module", CreateModule(target, module, id_only));
-            llvm::json::Object module_event = CreateEventObject("module");
-            module_event.try_emplace("body", std::move(body));
-            SendJSON(llvm::json::Value(std::move(module_event)));
-          }
-        }
+        HandleTargetEvent(*this, event);
       } else if (lldb::SBBreakpoint::EventIsBreakpointEvent(event)) {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =

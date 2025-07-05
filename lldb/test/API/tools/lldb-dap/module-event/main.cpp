@@ -18,5 +18,5 @@ int main(int argc, char const *argv[]) {
   dlclose(handle);
   printf("after dlclose\n"); // breakpoint 3
 
-  return 0; // breakpoint 1
+  return 0;
 }
