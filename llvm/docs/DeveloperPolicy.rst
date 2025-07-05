@@ -42,7 +42,7 @@ upcoming projects, new designs, enhancements, and other community business.
 First and foremost is the `LLVM Discourse forums`_, which is the successor
 to our former mailing lists (llvm-dev@, cfe-dev@, lldb-dev@, etc). This is
 probably the most vital and active communication channel to our highly
-distributed open source project. It enables long-form asyncronous text
+distributed open source project. It enables long-form asynchronous text
 communication, and this is where people tend to propose major changes or
 propose new designs in the form of RFCs (Request For Comment), which are
 described later. Please be aware that the Discourse forums are public and
