@@ -2057,6 +2057,21 @@ public:
   /// overhead or too rigid restriction.
   virtual unsigned getMemOperandAACheckLimit() const { return 16; }
 
+  /// Return the maximum number of memory operands to check instruction for
+  /// memory-related properties.
+  ///
+  /// After MIR transformations like tail merging etc. memory operands are
+  /// united for the merged result instructions. Compiler might ends up with
+  /// thousands of memory operands for each instruction for tricky CFGs like
+  /// for switch construction.
+  ///
+  /// Even linear algorithms on instructions with thousands of memory operands
+  /// leads to significant compilation slowdown.
+  ///
+  /// Heuristic is designed to limit checks count for algorithms where
+  /// conservative answer like "I don't know" is possible.
+  virtual unsigned getMemOperandLinearCheckLimit() const { return 16; }
+
   /// Return an array that contains the ids of the target indices (used for the
   /// TargetIndex machine operand) and their names.
   ///
