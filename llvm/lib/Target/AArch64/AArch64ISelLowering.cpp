@@ -25523,6 +25523,9 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
     return SwapResult;
 
   SDValue N0 = N->getOperand(0);
+  SDValue IfTrue = N->getOperand(1);
+  SDValue IfFalse = N->getOperand(2);
+  EVT ResVT = N->getValueType(0);
   EVT CCVT = N0.getValueType();
 
   if (isAllActivePredicate(DAG, N0))
@@ -25530,6 +25533,22 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
 
   if (isAllInactivePredicate(N0))
     return N->getOperand(2);
+
+  if (isMergePassthruOpcode(IfTrue.getOpcode()) && IfTrue.hasOneUse()) {
+    // vselect A, (merge_pasthru_op all_active, B,{Bn,} -), C
+    // vselect A, (merge_pasthru_op -, B,{Bn,} undef), C
+    // vselect A, (merge_pasthru_op A, B,{Bn,} -), C
+    //   -> merge_pasthru_op A, B,{Bn,} C
+    if (isAllActivePredicate(DAG, IfTrue->getOperand(0)) ||
+        IfTrue->getOperand(IfTrue.getNumOperands() - 1).isUndef() ||
+        IfTrue->getOperand(0) == N0) {
+      SmallVector<SDValue, 4> Ops(IfTrue->op_values());
+      Ops[0] = N0;
+      Ops[IfTrue.getNumOperands() - 1] = IfFalse;
+
+      return DAG.getNode(IfTrue.getOpcode(), SDLoc(N), ResVT, Ops);
+    }
+  }
 
   // Check for sign pattern (VSELECT setgt, iN lhs, -1, 1, -1) and transform
   // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
@@ -25570,14 +25589,11 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
       CmpVT.getVectorElementType().isFloatingPoint())
     return SDValue();
 
-  EVT ResVT = N->getValueType(0);
   // Only combine when the result type is of the same size as the compared
   // operands.
   if (ResVT.getSizeInBits() != CmpVT.getSizeInBits())
     return SDValue();
 
-  SDValue IfTrue = N->getOperand(1);
-  SDValue IfFalse = N->getOperand(2);
   SetCC = DAG.getSetCC(SDLoc(N), CmpVT.changeVectorElementTypeToInteger(),
                        N0.getOperand(0), N0.getOperand(1),
                        cast<CondCodeSDNode>(N0.getOperand(2))->get());
