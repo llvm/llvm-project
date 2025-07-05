@@ -63,7 +63,8 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // at the start of the statement. Thus, we're not using MaybeParseAttributes
   // here because we don't want to allow arbitrary orderings.
   ParsedAttributes CXX11Attrs(AttrFactory);
-  MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
+  bool HasStdAttr =
+      MaybeParseCXX11Attributes(CXX11Attrs, /*MightBeObjCMessageSend*/ true);
   ParsedAttributes GNUOrMSAttrs(AttrFactory);
   if (getLangOpts().OpenCL)
     MaybeParseGNUAttributes(GNUOrMSAttrs);
@@ -79,6 +80,12 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
 
   assert((CXX11Attrs.empty() || Res.isInvalid() || Res.isUsable()) &&
          "attributes on empty statement");
+
+  if (HasStdAttr && getLangOpts().C23 &&
+      (StmtCtx & ParsedStmtContext::SecondaryBlockInC) != ParsedStmtContext{} &&
+      isa_and_present<NullStmt>(Res.get()))
+    Diag(Res.get()->getBeginLoc(),
+         diag::warn_expected_stmt_before_semi_in_secondary_block);
 
   if (CXX11Attrs.empty() || Res.isInvalid())
     return Res;
@@ -1491,6 +1498,10 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
   SourceLocation InnerStatementTrailingElseLoc;
   StmtResult ThenStmt;
+  ParsedStmtContext StmtCtx = getLangOpts().C99
+                                  ? ParsedStmtContext::SecondaryBlockInC
+                                  : ParsedStmtContext::SubStmt;
+
   {
     bool ShouldEnter = ConstexprCondition && !*ConstexprCondition;
     Sema::ExpressionEvaluationContext Context =
@@ -1503,7 +1514,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
-    ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
+    ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc, StmtCtx);
   }
 
   if (Tok.isNot(tok::kw_else))
@@ -1548,7 +1559,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
-    ElseStmt = ParseStatement();
+    ElseStmt = ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx);
 
     if (ElseStmt.isUsable())
       MIChecker.Check();
@@ -1684,8 +1695,11 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   if (C99orCXX)
     getCurScope()->decrementMSManglingNumber();
 
+  ParsedStmtContext StmtCtx = getLangOpts().C99
+                                  ? ParsedStmtContext::SecondaryBlockInC
+                                  : ParsedStmtContext::SubStmt;
   // Read the body statement.
-  StmtResult Body(ParseStatement(TrailingElseLoc));
+  StmtResult Body(ParseStatement(TrailingElseLoc, StmtCtx));
 
   // Pop the scopes.
   InnerScope.Exit();
@@ -1754,9 +1768,11 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
 
   MisleadingIndentationChecker MIChecker(*this, MSK_while, WhileLoc);
-
+  ParsedStmtContext StmtCtx = getLangOpts().C99
+                                  ? ParsedStmtContext::SecondaryBlockInC
+                                  : ParsedStmtContext::SubStmt;
   // Read the body statement.
-  StmtResult Body(ParseStatement(TrailingElseLoc));
+  StmtResult Body(ParseStatement(TrailingElseLoc, StmtCtx));
 
   if (Body.isUsable())
     MIChecker.Check();
@@ -1799,9 +1815,11 @@ StmtResult Parser::ParseDoStatement() {
   //
   bool C99orCXX = getLangOpts().C99 || getLangOpts().CPlusPlus;
   ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
-
+  ParsedStmtContext StmtCtx = getLangOpts().C99
+                                  ? ParsedStmtContext::SecondaryBlockInC
+                                  : ParsedStmtContext::SubStmt;
   // Read the body statement.
-  StmtResult Body(ParseStatement());
+  StmtResult Body(ParseStatement(/*TrailingElseLoc=*/nullptr, StmtCtx));
 
   // Pop the body scope if needed.
   InnerScope.Exit();
@@ -2221,9 +2239,11 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     getCurScope()->decrementMSManglingNumber();
 
   MisleadingIndentationChecker MIChecker(*this, MSK_for, ForLoc);
-
+  ParsedStmtContext StmtCtx = getLangOpts().C99
+                                  ? ParsedStmtContext::SecondaryBlockInC
+                                  : ParsedStmtContext::SubStmt;
   // Read the body statement.
-  StmtResult Body(ParseStatement(TrailingElseLoc));
+  StmtResult Body(ParseStatement(TrailingElseLoc, StmtCtx));
 
   if (Body.isUsable())
     MIChecker.Check();
