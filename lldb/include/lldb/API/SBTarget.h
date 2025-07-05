@@ -737,6 +737,9 @@ public:
 
   lldb::SBBreakpoint BreakpointCreateBySBAddress(SBAddress &address);
 
+  lldb::SBBreakpoint BreakpointCreateByFileAddress(const SBFileSpec &file_spec,
+                                                   addr_t file_addr);
+
   /// Create a breakpoint using a scripted resolver.
   ///
   /// \param[in] class_name
