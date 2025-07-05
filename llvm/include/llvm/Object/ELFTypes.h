@@ -917,8 +917,8 @@ struct BBAddrMap {
     uint32_t Size = 0;   // Size of the basic block.
     Metadata MD = {false, false, false, false,
                    false}; // Metdata for this basic block.
-    // Offsets of callsites (end of call instructions), relative to the basic
-    // block start.
+    // Offsets of callsites (beginning of call instructions), relative to the
+    // basic block start.
     SmallVector<uint32_t, 1> CallsiteOffsets;
 
     BBEntry(uint32_t ID, uint32_t Offset, uint32_t Size, Metadata MD,
