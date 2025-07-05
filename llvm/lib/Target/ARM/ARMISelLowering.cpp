@@ -5527,7 +5527,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ConstantSDNode *CFVal = dyn_cast<ConstantSDNode>(FalseVal);
   ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
-  if (Op.getValueType().isInteger()) {
+  if (LHS.getValueType() == MVT::i32 && RHS.getValueType() == MVT::i32) {
     // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
     // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
     // supported types.
