@@ -88,9 +88,10 @@ private:
       return;
 
     Check.diag(DirectiveLoc,
-               "preprocessor condition can be written more concisely")
+               "preprocessor condition can be written more concisely using #%0")
         << FixItHint::CreateReplacement(DirectiveLoc, Replacements[Inverted])
-        << FixItHint::CreateReplacement(ConditionRange, Macro);
+        << FixItHint::CreateReplacement(ConditionRange, Macro)
+        << Replacements[Inverted];
   }
 
   ClangTidyCheck &Check;
