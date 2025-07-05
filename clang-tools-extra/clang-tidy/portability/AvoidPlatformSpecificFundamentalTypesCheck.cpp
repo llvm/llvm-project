@@ -106,9 +106,6 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
     return;
   }
 
-  if (Loc.isInvalid() || QT.isNull())
-    return;
-
   // Get the type name for the diagnostic
   std::string TypeName = QT.getAsString();
 
