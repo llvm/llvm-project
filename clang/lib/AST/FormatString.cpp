@@ -362,7 +362,7 @@ static bool namedTypeToLengthModifierKind(ASTContext &Ctx, QualType QT,
     case Kind::PtrdiffT:
       K = LengthModifier::AsPtrDiff;
       return true;
-    case Kind::Max:
+    case Kind::NumElements:
       llvm_unreachable("unexpected kind");
     }
   }

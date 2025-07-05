@@ -5224,7 +5224,7 @@ QualType
 ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
   using Kind = PredefinedSugarType::Kind;
 
-  assert(KD != Kind::Max);
+  assert(KD != Kind::NumElements);
 
   if (auto *Target = PredefinedSugarTypes[llvm::to_underlying(KD)];
       Target != nullptr)
@@ -5243,7 +5243,7 @@ ASTContext::getPredefinedSugarType(PredefinedSugarType::Kind KD) const {
       return Ctx.getFromTargetType(Ctx.Target->getSignedSizeType());
     case Kind::PtrdiffT:
       return Ctx.getFromTargetType(Ctx.Target->getPtrDiffType(LangAS::Default));
-    case Kind::Max:;
+    case Kind::NumElements:;
     }
     llvm_unreachable("unexpected kind");
   };
