@@ -262,6 +262,37 @@ json::Value toJSON(const BreakpointLocationsResponseBody &BLRB) {
   return json::Object{{"breakpoints", BLRB.breakpoints}};
 }
 
+bool fromJSON(const json::Value &Params, Terminal &T, json::Path P) {
+  auto oldFormatTerminal = Params.getAsBoolean();
+  if (oldFormatTerminal) {
+    if (*oldFormatTerminal)
+      T = eIntegrated;
+    else
+      T = eConsole;
+    return true;
+  }
+  auto newFormatTerminal = Params.getAsString();
+  if (!newFormatTerminal) {
+    P.report("expected a string");
+    return false;
+  }
+
+  std::optional<Terminal> terminal =
+      StringSwitch<std::optional<Terminal>>(*newFormatTerminal)
+          .Case("console", eConsole)
+          .Case("integrated", eIntegrated)
+          .Case("external", eExternal)
+          .Default(std::nullopt);
+  if (!terminal) {
+    P.report(
+        "unexpected value, expected 'console', 'integrated' or 'external'");
+    return false;
+  }
+
+  T = *terminal;
+  return true;
+}
+
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
@@ -273,8 +304,7 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
          O.mapOptional("disableASLR", LRA.disableASLR) &&
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
-
-         O.mapOptional("runInTerminal", LRA.runInTerminal) &&
+         O.mapOptional("runInTerminal", LRA.terminal) &&
          parseEnv(Params, LRA.env, P);
 }
 
