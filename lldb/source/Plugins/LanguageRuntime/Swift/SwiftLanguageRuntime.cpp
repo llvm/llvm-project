@@ -1187,8 +1187,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
             if (target_context.symbol)
               fn_ptr_address = target_context.symbol->GetAddress();
             else if (target_context.function)
-              fn_ptr_address =
-                  target_context.function->GetAddressRange().GetBaseAddress();
+              fn_ptr_address = target_context.function->GetAddress();
           }
         }
       }
@@ -2700,9 +2699,11 @@ DoesContinuationPointToSameFunction(addr_t async_reg, SymbolContext &sc,
   Address continuation_addr;
   continuation_addr.SetLoadAddress(process.FixCodeAddress(*continuation_ptr),
                                    &process.GetTarget());
-  if (sc.function)
-    return sc.function->GetAddressRange().ContainsLoadAddress(
-        continuation_addr, &process.GetTarget());
+  if (sc.function) {
+    AddressRange unused_range;
+    return sc.function->GetRangeContainingLoadAddress(
+        continuation_addr.GetOffset(), process.GetTarget(), unused_range);
+  }
   assert(sc.symbol);
   return sc.symbol->ContainsFileAddress(continuation_addr.GetFileAddress());
 }
@@ -2736,8 +2737,7 @@ static llvm::Expected<bool> IsIndirectContext(Process &process,
   uint32_t prologue_size = sc.function ? sc.function->GetPrologueByteSize()
                                        : sc.symbol->GetPrologueByteSize();
   Address func_start_addr =
-      sc.function ? sc.function->GetAddressRange().GetBaseAddress()
-                  : sc.symbol->GetAddress();
+      sc.function ? sc.function->GetAddress() : sc.symbol->GetAddress();
   // Include one instruction after the prologue. This is where breakpoints
   // by function name are set, so it's important to get this point right. This
   // instruction is exactly at address "base + prologue", so adding 1
@@ -2788,7 +2788,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
   Address func_start_addr;
   ConstString mangled_name;
   if (sc.function) {
-    func_start_addr = sc.function->GetAddressRange().GetBaseAddress();
+    func_start_addr = sc.function->GetAddress();
     mangled_name = sc.function->GetMangled().GetMangledName();
   } else if (sc.symbol) {
     func_start_addr = sc.symbol->GetAddress();
