@@ -203,7 +203,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   }
 
   // Get the type name for the diagnostic
-  std::string TypeName = QT.getAsString();
+  const std::string TypeName = QT.getAsString();
 
   // Check if this is a floating point type
   const auto *BT = QT->getAs<BuiltinType>();
