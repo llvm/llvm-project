@@ -2580,7 +2580,7 @@ static llvm::Expected<uint32_t> GetFpRegisterNumber(UnwindPlan &unwind_plan,
 }
 
 struct FrameSetupInfo {
-  addr_t frame_setup_func_offset;
+  int64_t frame_setup_func_offset;
   int fp_cfa_offset;
 };
 
@@ -2621,7 +2621,7 @@ GetFrameSetupInfo(UnwindPlan &unwind_plan, RegisterContext &regctx) {
   // This is a frameless function, use large positive offset so that a PC can
   // still be compared against it.
   if (it == fp_locs.end())
-    return FrameSetupInfo{std::numeric_limits<addr_t>::max(), 0};
+    return FrameSetupInfo{std::numeric_limits<int64_t>::max(), 0};
 
   // This is an async function with a frame. The prologue roughly follows this
   // sequence of instructions:
@@ -2668,7 +2668,7 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
   // Is PC before the frame formation? If so, use async register directly.
   // This handles frameless functions, as frame_setup_func_offset is INT_MAX.
   addr_t pc_offset = pc.GetFileAddress() - func_start_addr.GetFileAddress();
-  if (pc_offset < frame_setup->frame_setup_func_offset)
+  if ((int64_t)pc_offset < frame_setup->frame_setup_func_offset)
     return ReadRegisterAsAddress(regctx, regnums.GetRegisterKind(),
                                  regnums.async_ctx_regnum);
 
