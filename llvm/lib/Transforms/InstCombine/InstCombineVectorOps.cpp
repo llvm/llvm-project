@@ -2599,9 +2599,10 @@ static Instruction *foldCastShuffle(ShuffleVectorInst &Shuf,
       ShufOpTy->getElementCount().getKnownMinValue())
     return nullptr;
 
-  // shuffle (cast X), Y, identity-with-extract-mask -->
-  // cast (shuffle X, Y, identity-with-extract-mask).
-  if (Cast0->hasOneUse() && Shuf.isIdentityWithExtract()) {
+  // shuffle (cast X), Poison, identity-with-extract-mask -->
+  // cast (shuffle X, Poison, identity-with-extract-mask).
+  if (Cast0->hasOneUse() && Shuf.isIdentityWithExtract() &&
+      isa<PoisonValue>(Shuf.getOperand(1))) {
     auto *NewIns = Builder.CreateShuffleVector(Cast0->getOperand(0),
                                                PoisonValue::get(CastSrcTy),
                                                Shuf.getShuffleMask());
