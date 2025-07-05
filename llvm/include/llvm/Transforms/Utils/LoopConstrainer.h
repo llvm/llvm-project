@@ -218,7 +218,8 @@ public:
   LoopConstrainer(Loop &L, LoopInfo &LI,
                   function_ref<void(Loop *, bool)> LPMAddNewLoop,
                   const LoopStructure &LS, ScalarEvolution &SE,
-                  TargetTransformInfo &TTI, DominatorTree &DT, Type *T, SubRanges SR);
+                  TargetTransformInfo &TTI, DominatorTree &DT, Type *T,
+                  SubRanges SR);
 
   // Entry point for the algorithm.  Returns true on success.
   bool run();

@@ -65,7 +65,8 @@ public:
 /// analyses if they're non-null, and LCSSA if \c PreserveLCSSA is true.
 LLVM_ABI bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                            ScalarEvolution *SE, AssumptionCache *AC,
-                           MemorySSAUpdater *MSSAU, const TargetTransformInfo *TTI, bool PreserveLCSSA);
+                           MemorySSAUpdater *MSSAU,
+                           const TargetTransformInfo *TTI, bool PreserveLCSSA);
 
 } // end namespace llvm
 
