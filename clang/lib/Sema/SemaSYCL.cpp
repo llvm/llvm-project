@@ -202,6 +202,25 @@ void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
   handleSimpleAttribute<DeviceKernelAttr>(*this, D, AL);
 }
 
+void SemaSYCL::handleExternalAttr(Decl *D, const ParsedAttr &AL) {
+  auto *FD = cast<FunctionDecl>(D);
+  if (!FD->isExternallyVisible()) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_invalid_linkage);
+    return;
+  }
+  std::string FunctionName = StringRef(FD->getNameInfo().getAsString()).lower();
+  if (FunctionName.find("main") != std::string::npos) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_main);
+    return;
+  }
+  if (FD->isDeletedAsWritten()) {
+    Diag(AL.getLoc(), diag::err_sycl_attribute_avoid_deleted_function);
+    return;
+  }
+
+  handleSimpleAttribute<SYCLExternalAttr>(*this, D, AL);
+}
+
 void SemaSYCL::handleKernelEntryPointAttr(Decl *D, const ParsedAttr &AL) {
   ParsedType PT = AL.getTypeArg();
   TypeSourceInfo *TSI = nullptr;
