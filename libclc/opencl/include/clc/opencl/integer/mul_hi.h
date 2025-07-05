@@ -6,9 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_INTEGER_MUL_HI_H__
+#define __CLC_OPENCL_INTEGER_MUL_HI_H__
+
+#include <clc/opencl/opencl-base.h>
+
 #define __CLC_FUNCTION mul_hi
 #define __CLC_BODY <clc/shared/binary_decl.inc>
 
 #include <clc/integer/gentype.inc>
 
 #undef __CLC_FUNCTION
+
+#endif // __CLC_OPENCL_INTEGER_MUL_HI_H__
