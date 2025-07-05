@@ -9,6 +9,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -209,36 +210,48 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   if (IsHost() || !m_remote_platform_sp)
     return PlatformLinux::GetFile(source, destination);
 
-  FileSpec source_spec(source.GetPath(false), FileSpec::Style::posix);
+  std::string source_path = source.GetPath(false);
+  if (source_path.empty())
+    return Status::FromErrorString("Source file path cannot be empty");
+
+  std::string destination_path = destination.GetPath(false);
+  if (destination_path.empty())
+    return Status::FromErrorString("Destination file path cannot be empty");
+
+  FileSpec source_spec(source_path, FileSpec::Style::posix);
   if (source_spec.IsRelative())
     source_spec = GetRemoteWorkingDirectory().CopyByAppendingPathComponent(
         source_spec.GetPathAsConstString(false).GetStringRef());
 
   Status error;
   auto sync_service = GetSyncService(error);
-  if (error.Fail())
-    return error;
+  
+  // If sync service is available, try to use it
+  if (error.Success() && sync_service) {
+    uint32_t mode = 0, size = 0, mtime = 0;
+    error = sync_service->Stat(source_spec, mode, size, mtime);
+    if (error.Success()) {
+      if (mode != 0)
+        return sync_service->PullFile(source_spec, destination);
+      
+      // mode == 0 can signify that adbd cannot access the file due security
+      // constraints - fall through to try "cat ..." as a fallback.
+      Log *log = GetLog(LLDBLog::Platform);
+      LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
+                source_spec.GetPath(false).c_str());
+    }
+  }
 
-  uint32_t mode = 0, size = 0, mtime = 0;
-  error = sync_service->Stat(source_spec, mode, size, mtime);
-  if (error.Fail())
-    return error;
-
-  if (mode != 0)
-    return sync_service->PullFile(source_spec, destination);
-
+  // Fallback to shell cat command if sync service failed or returned mode == 0
   std::string source_file = source_spec.GetPath(false);
 
   Log *log = GetLog(LLDBLog::Platform);
-  LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
-            source_file.c_str());
+  LLDB_LOGF(log, "Using shell cat fallback for '%s'", source_file.c_str());
 
   if (strchr(source_file.c_str(), '\'') != nullptr)
     return Status::FromErrorString(
         "Doesn't support single-quotes in filenames");
 
-  // mode == 0 can signify that adbd cannot access the file due security
-  // constraints - try "cat ..." as a fallback.
   AdbClientUP adb(GetAdbClient(error));
   if (error.Fail())
     return error;
@@ -275,12 +288,19 @@ Status PlatformAndroid::DownloadModuleSlice(const FileSpec &src_file_spec,
                                             const uint64_t src_offset,
                                             const uint64_t src_size,
                                             const FileSpec &dst_file_spec) {
+  std::string source_file = src_file_spec.GetPath(false);
+  if (source_file.empty())
+    return Status::FromErrorString("Source file path cannot be empty");
+
+  std::string destination_file = dst_file_spec.GetPath(false);
+  if (destination_file.empty())
+    return Status::FromErrorString("Destination file path cannot be empty");
+
   // In Android API level 23 and above, dynamic loader is able to load .so
   // file directly from APK. In that case, src_offset will be an non-zero.
   if (src_offset == 0) // Use GetFile for a normal file.
     return GetFile(src_file_spec, dst_file_spec);
 
-  std::string source_file = src_file_spec.GetPath(false);
   if (source_file.find('\'') != std::string::npos)
     return Status::FromErrorString(
         "Doesn't support single-quotes in filenames");
@@ -474,13 +494,12 @@ std::string PlatformAndroid::GetRunAs() {
   return run_as.str();
 }
 
-AdbClient::SyncService *PlatformAndroid::GetSyncService(Status &error) {
-  if (m_adb_sync_svc && m_adb_sync_svc->IsConnected())
-    return m_adb_sync_svc.get();
-
-  AdbClientUP adb(GetAdbClient(error));
-  if (error.Fail())
-    return nullptr;
-  m_adb_sync_svc = adb->GetSyncService(error);
-  return (error.Success()) ? m_adb_sync_svc.get() : nullptr;
+std::unique_ptr<AdbClient::SyncService>
+PlatformAndroid::GetSyncService(Status &error) {
+  auto conn = std::make_unique<ConnectionFileDescriptor>();
+  auto sync_service = std::make_unique<AdbClient::SyncService>(
+      std::move(conn), m_device_id);
+  
+  error.Clear();
+  return sync_service;
 }
