@@ -592,8 +592,8 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
 
-  template <class... Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(Args&&... args) : __value_{std::forward<Args>(args)...} {}
+  template <class... _Args>
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(Args&&... __args) : __value_{std::forward<Args>(__args)...} {}
   // TODO: libcxx26
   // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(__node_value_type &&  args): __value_{args} { }
   ~__tree_node()                             = delete;
@@ -1898,8 +1898,8 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
     )
     */
 
-    [[maybe_unused]] __node_base_pointer foo = static_cast<__node_base_pointer>(__h.get());
-    // [[maybe_unused]] __node_base_pointer foo2 = __node_base_pointer(__h.get());
+    [[maybe_unused]] __node_base_pointer __foo = static_cast<__node_base_pointer>(__h.get());
+    // [[maybe_unused]] __node_base_pointer __foo2 = __node_base_pointer(__h.get());
 
     /*
     note:
