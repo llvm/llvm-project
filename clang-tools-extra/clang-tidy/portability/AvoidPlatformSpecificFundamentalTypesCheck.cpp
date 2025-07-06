@@ -221,7 +221,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
 
   if (BT->isFloatingPoint()) {
     // Handle floating point types
-    std::string Replacement = getFloatReplacement(BT, *Result.Context);
+    const std::string Replacement = getFloatReplacement(BT, *Result.Context);
     if (!Replacement.empty()) {
       auto Diag =
           diag(Loc, "avoid using platform-dependent floating point type '%0'; "
