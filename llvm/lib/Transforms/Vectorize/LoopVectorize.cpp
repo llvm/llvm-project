@@ -9144,6 +9144,14 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
             CurrentLinkI->getFastMathFlags());
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
+      } else if (PhiR->isInLoop() && Kind == RecurKind::Add &&
+                 CurrentLinkI->getOpcode() == Instruction::Sub) {
+        Type *PhiTy = PhiR->getUnderlyingValue()->getType();
+        auto *Zero = Plan->getOrAddLiveIn(ConstantInt::get(PhiTy, 0));
+        VPWidenRecipe *Sub = new VPWidenRecipe(
+            *CurrentLinkI, {Zero, CurrentLink->getOperand(1)});
+        LinkVPBB->insert(Sub, CurrentLink->getIterator());
+        VecOp = Sub;
       } else {
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
           if (isa<VPWidenRecipe>(CurrentLink)) {
