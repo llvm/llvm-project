@@ -1681,7 +1681,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
     auto OffsetMIB =
         MIRBuilder.buildConstant(OffsetTy, Offset);
 
-    if (int64_t(Offset) >= 0 && cast<GEPOperator>(U).isInBounds())
+    if (Offset >= 0 && cast<GEPOperator>(U).isInBounds())
       Flags |= MachineInstr::MIFlag::NoUWrap;
 
     MIRBuilder.buildPtrAdd(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0),
