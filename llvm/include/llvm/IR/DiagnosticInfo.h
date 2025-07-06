@@ -247,7 +247,7 @@ public:
   /// \p The module that is concerned by this debug metadata version diagnostic.
   DiagnosticInfoIgnoringInvalidDebugMetadata(
       const Module &M, DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_DebugMetadataVersion, Severity), M(M) {}
+      : DiagnosticInfo(DK_DebugMetadataInvalid, Severity), M(M) {}
 
   const Module &getModule() const { return M; }
 
