@@ -2191,7 +2191,7 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
 /// operand.
 class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
                              public VPUnrollPartAccessor<2> {
-  /// Descriptor for the reduction.
+  /// The recurrence kind of the reduction.
   const RecurKind Kind;
 
   /// The phi is part of an in-loop reduction.
@@ -2205,8 +2205,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
   unsigned VFScaleFactor = 1;
 
 public:
-  /// Create a new VPReductionPHIRecipe for the reduction \p Phi described by \p
-  /// Kind.
+  /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
                        bool IsInLoop = false, bool IsOrdered = false,
                        unsigned VFScaleFactor = 1)
@@ -2218,7 +2217,6 @@ public:
   ~VPReductionPHIRecipe() override = default;
 
   VPReductionPHIRecipe *clone() override {
-
     auto *R = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
         *getOperand(0), IsInLoop, IsOrdered, VFScaleFactor);
@@ -2240,6 +2238,7 @@ public:
              VPSlotTracker &SlotTracker) const override;
 #endif
 
+  /// Returns the recurrence kind of the reduction.
   RecurKind getRecurrenceKind() const { return Kind; }
 
   /// Returns true, if the phi is part of an ordered reduction.

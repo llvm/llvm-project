@@ -751,7 +751,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     // and will be removed by breaking up the recipe further.
     auto *PhiR = cast<VPReductionPHIRecipe>(getOperand(0));
     // Get its reduction variable descriptor.
-    [[maybe_unused]] RecurKind RK = PhiR->getRecurrenceKind();
+    RecurKind RK = PhiR->getRecurrenceKind();
     assert(RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
            "Unexpected reduction kind");
     assert(!PhiR->isInLoop() &&

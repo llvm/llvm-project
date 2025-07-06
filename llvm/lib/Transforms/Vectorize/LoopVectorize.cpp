@@ -9171,6 +9171,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (CM.blockNeedsPredicationForAnyReason(CurrentLinkI->getParent()))
         CondOp = RecipeBuilder.getBlockInMask(CurrentLink->getParent());
 
+      // TODO: Retrieve FMFs from recipes directly.
       RecurrenceDescriptor RdxDesc = Legal->getRecurrenceDescriptor(
           cast<PHINode>(PhiR->getUnderlyingInstr()));
       // Non-FP RdxDescs will have all fast math flags set, so clear them.
@@ -9252,24 +9253,23 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
+    if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeFindIVResult,
                                {PhiR, Start, Sentinel, NewExitingVPV}, ExitDL);
-    } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
-                   RdxDesc.getRecurrenceKind())) {
+    } else if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       VPValue *Start = PhiR->getStartValue();
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeAnyOfResult,
                                {PhiR, Start, NewExitingVPV}, ExitDL);
     } else {
-      VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(
-                            RdxDesc.getRecurrenceKind())
-                            ? VPIRFlags(RdxDesc.getFastMathFlags())
-                            : VPIRFlags();
+      VPIRFlags Flags =
+          RecurrenceDescriptor::isFloatingPointRecurrenceKind(RecurrenceKind)
+              ? VPIRFlags(RdxDesc.getFastMathFlags())
+              : VPIRFlags();
       FinalReductionResult =
           Builder.createNaryOp(VPInstruction::ComputeReductionResult,
                                {PhiR, NewExitingVPV}, Flags, ExitDL);
@@ -9278,11 +9278,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // then extend the loop exit value to enable InstCombine to evaluate the
     // entire expression in the smaller type.
     if (MinVF.isVector() && PhiTy != RdxDesc.getRecurrenceType() &&
-        !RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+        !RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       assert(!PhiR->isInLoop() && "Unexpected truncated inloop reduction!");
-      assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(
-                 RdxDesc.getRecurrenceKind()) &&
+      assert(!RecurrenceDescriptor::isMinMaxRecurrenceKind(RecurrenceKind) &&
              "Unexpected truncated min-max recurrence!");
       Type *RdxTy = RdxDesc.getRecurrenceType();
       auto *Trunc =
@@ -9318,8 +9316,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // with a boolean reduction phi node to check if the condition is true in
     // any iteration. The final value is selected by the final
     // ComputeReductionResult.
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
+    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
       auto *Select = cast<VPRecipeBase>(*find_if(PhiR->users(), [](VPUser *U) {
         return isa<VPWidenSelectRecipe>(U) ||
                (isa<VPReplicateRecipe>(U) &&
