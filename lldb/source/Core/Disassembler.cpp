@@ -705,6 +705,8 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
   ss.PutCString(mnemonics);
 
+  const size_t annotation_column = 150;
+
   if (exe_ctx && exe_ctx->GetFramePtr()) {
     StackFrame *frame = exe_ctx->GetFramePtr();
     TargetSP target_sp = exe_ctx->GetTargetSP();
@@ -718,29 +720,45 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
         if (sc.function)
           func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
 
-        if (var_list_sp) {
-          for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
-            VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
-            if (!var_sp)
-              continue;
+        
+        if(ss.GetSizeOfLastLine() < annotation_column) {
 
-            const char *name = var_sp->GetName().AsCString();
-            auto &expr_list = var_sp->LocationExpressionList();
+          std::vector<std::string> annotations;
 
-            // Handle std::optional<DWARFExpressionEntry>.
-            if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
-              auto entry = *entryOrErr;
+          if (var_list_sp) {
+            for (size_t i = 0; i < var_list_sp->GetSize(); ++i) {
+              VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
+              if (!var_sp)
+                continue;
 
-              // Translate file-range to load-space start.
-              addr_t file_base = entry.file_range.GetBaseAddress().GetFileAddress();
-              addr_t start_load_addr = file_base + (func_load_addr - expr_list.GetFuncFileAddress());
+              const char *name = var_sp->GetName().AsCString();
+              auto &expr_list = var_sp->LocationExpressionList();
+              if (!expr_list.IsValid())
+                continue;
+              // Handle std::optional<DWARFExpressionEntry>.
+              if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
+                auto entry = *entryOrErr;
 
-              if (current_pc == start_load_addr) {
-                StreamString loc_str;
-                ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
-                entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi);
-                ss.FillLastLineToColumn(opcode_pos + opcode_column_width + operand_column_width, ' ');
-                ss.Printf(" ; %s = %s", name, loc_str.GetString().str().c_str());
+                // Translate file-range to load-space start.
+                addr_t file_base = entry.file_range.GetBaseAddress().GetFileAddress();
+                addr_t start_load_addr = file_base + (func_load_addr - expr_list.GetFuncFileAddress());
+
+                if (current_pc >= start_load_addr) {
+                  StreamString loc_str;
+                  ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
+                  entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi);
+                  annotations.push_back(llvm::formatv("{0} = {1}", name, loc_str.GetString()));
+                }
+              }
+            }
+
+            if (!annotations.empty()) {
+              ss.FillLastLineToColumn(annotation_column, ' ');
+              ss.PutCString(" ; ");
+              for (size_t i = 0; i < annotations.size(); ++i) {
+                if (i > 0)
+                  ss.PutCString(", ");
+                ss.PutCString(annotations[i]);
               }
             }
           }
