@@ -17,7 +17,7 @@
 #include "../types.h"
 
 // Test noexcept
-// Remarks: Let Is be the pack 0, 1, …, (sizeof...(Views)-1). The exception specification is equivalent to:
+// Remarks: Let Is be the pack 0, 1, ..., (sizeof...(Views)-1). The exception specification is equivalent to:
 //   noexcept(invoke(*parent_->fun_, *std::get<Is>(inner_.current_)...)).
 
 template <class ZipTransformView>
