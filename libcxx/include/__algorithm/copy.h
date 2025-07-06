@@ -19,6 +19,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/is_convertible.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
@@ -221,10 +222,71 @@ struct __copy_impl {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__bit_iterator<_Cp, _IsConst>, __bit_iterator<_Cp, false> >
   operator()(__bit_iterator<_Cp, _IsConst> __first,
              __bit_iterator<_Cp, _IsConst> __last,
-             __bit_iterator<_Cp, false> __result) const {
+             __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
     if (__first.__ctz_ == __result.__ctz_)
       return std::make_pair(__last, std::__copy_aligned(__first, __last, __result));
     return std::make_pair(__last, std::__copy_unaligned(__first, __last, __result));
+  }
+
+  template < class _InIter,
+             class _Cp,
+             __enable_if_t<!__is_segmented_iterator<_InIter>::value &&
+                               (__has_random_access_iterator_category<_InIter>::value ||
+                                __has_iterator_concept_convertible_to<_InIter, random_access_iterator_tag>::value) &&
+                               is_convertible<typename iterator_traits<_InIter>::value_type, bool>::value,
+                           int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_InIter, __bit_iterator<_Cp, false> >
+  operator()(_InIter __first, _InIter __last, __bit_iterator<_Cp, /* IsConst = */ false> __result) const {
+    using _It                      = __bit_iterator<_Cp, false>;
+    using __storage_type           = typename _It::__storage_type;
+    const unsigned __bits_per_word = _It::__bits_per_word;
+    __storage_type __n             = static_cast<__storage_type>(__last - __first);
+
+    if (__first != __last) {
+      // do first partial word, if present
+      if (__result.__ctz_ != 0) {
+        __storage_type __clz = static_cast<__storage_type>(__bits_per_word - __result.__ctz_);
+        __storage_type __dn  = std::min(__clz, __n);
+        __storage_type __w   = *__result.__seg_;
+        __storage_type __m   = std::__middle_mask<__storage_type>(__clz - __dn, __result.__ctz_);
+        __w &= ~__m;
+        for (__storage_type __i = 0; __i < __dn; ++__i, ++__first) {
+          if (*__first)
+            __w |= static_cast<__storage_type>(1) << (__result.__ctz_ + __i);
+        }
+        __result.__ctz_ += __dn;
+        *__result.__seg_ = __w;
+        if (__result.__ctz_ == __bits_per_word) {
+          __result.__ctz_ = 0;
+          ++__result.__seg_;
+        }
+        __n -= __dn;
+      }
+    }
+    // do middle whole words, if present
+    __storage_type __nw = __n / __bits_per_word;
+    __n -= __nw * __bits_per_word;
+    for (; __nw; --__nw) {
+      __storage_type __w = 0;
+      for (__storage_type __i = 0; __i < __bits_per_word; ++__i, ++__first) {
+        if (*__first)
+          __w |= static_cast<__storage_type>(1) << __i;
+      }
+      *__result.__seg_++ = __w;
+    }
+    // do last partial word, if present
+    if (__n) {
+      __storage_type __w = 0;
+      for (__storage_type __i = 0; __i < __n; ++__i, ++__first) {
+        if (*__first)
+          __w |= static_cast<__storage_type>(1) << __i;
+      }
+      __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
+      *__result.__seg_ &= ~__m;
+      *__result.__seg_ |= __w;
+      __result.__ctz_ = __n;
+    }
+    return std::make_pair(std::move(__first), std::move(__result));
   }
 
   // At this point, the iterators have been unwrapped so any `contiguous_iterator` has been unwrapped to a pointer.

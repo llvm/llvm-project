@@ -84,6 +84,11 @@ Improvements and New Features
 - The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
   to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
 
+- The ``std::copy`` and ``std::ranges::copy`` algorithms have been optimized for copying from ``random_access_iterator``s
+  to ``std::vector<bool>::iterator``, resulting in a performance improvement of up to 3x. As a result, range-based
+  operations of ``std::vector<bool>``, including construction, ``assign_range``, ``insert_range``, ``append_range``, and
+  their iterator-pair counterparts, have also benefited from a similar 3x speedup.
+
 Deprecations and Removals
 -------------------------
 
