@@ -5383,7 +5383,7 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
     ConvertToObjectEntity(symbol) || ConvertToProcEntity(symbol);
     symbol.set(
         Symbol::Flag::EntryDummyArgument, false); // forestall excessive errors
-    Initialization(name, *init, false);
+    Initialization(name, *init, /*inComponentDecl=*/false);
   } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
   }
@@ -6398,7 +6398,7 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
     SetCUDADataAttr(name.source, symbol, cudaDataAttr());
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
-        Initialization(name, *init, true);
+        Initialization(name, *init, /*inComponentDecl=*/true);
       }
     }
     currScope().symbol()->get<DerivedTypeDetails>().add_component(symbol);
@@ -8933,9 +8933,13 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
             // Defer analysis to the end of the specification part
             // so that forward references and attribute checks like SAVE
             // work better.
-            auto restorer{common::ScopedSet(deferImplicitTyping_, true)};
-            Walk(target);
-            ultimate.set(Symbol::Flag::InDataStmt);
+            if (inComponentDecl) {
+              PointerInitialization(name, target);
+            } else {
+              auto restorer{common::ScopedSet(deferImplicitTyping_, true)};
+              Walk(target);
+              ultimate.set(Symbol::Flag::InDataStmt);
+            }
           },
           [&](const std::list<Indirection<parser::DataStmtValue>> &values) {
             // Handled later in data-to-inits conversion
@@ -10351,11 +10355,6 @@ public:
     }
   }
   bool Pre(const parser::EntityDecl &decl) {
-    Init(std::get<parser::Name>(decl.t),
-        std::get<std::optional<parser::Initialization>>(decl.t));
-    return false;
-  }
-  bool Pre(const parser::ComponentDecl &decl) {
     Init(std::get<parser::Name>(decl.t),
         std::get<std::optional<parser::Initialization>>(decl.t));
     return false;

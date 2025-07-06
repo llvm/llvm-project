@@ -655,9 +655,6 @@ Improvements to Clang's diagnostics
   #GH69470, #GH59391, #GH58172, #GH46215, #GH45915, #GH45891, #GH44490,
   #GH36703, #GH32903, #GH23312, #GH69874.
 
-- A warning is now emitted when ``main`` is attached to a named module,
-  which can be turned off with ``-Wno-main-attached-to-named-module``. (#GH146247)
-
 - Clang now avoids issuing `-Wreturn-type` warnings in some cases where
   the final statement of a non-void function is a `throw` expression, or
   a call to a function that is trivially known to always throw (i.e., its
@@ -903,6 +900,7 @@ Bug Fixes to AST Handling
 - Fixed dependency calculation for TypedefTypes (#GH89774)
 - The ODR checker now correctly hashes the names of conversion operators. (#GH143152)
 - Fixed the right parenthesis source location of ``CXXTemporaryObjectExpr``. (#GH143711)
+- Fixed a crash when performing an ``IgnoreUnlessSpelledInSource`` traversal of ASTs containing ``catch(...)`` statements. (#GH146103)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
