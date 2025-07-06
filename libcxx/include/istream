@@ -295,7 +295,7 @@ public:
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
 #    if _LIBCPP_STD_VER >= 26
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& ignore(streamsize __n, char_type __delim)
+  _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim)
     requires is_same_v<char_type, char>
   {
     return this->ignore(__n, _Traits::to_int_type(__delim));
