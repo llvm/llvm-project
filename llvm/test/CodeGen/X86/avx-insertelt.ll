@@ -111,7 +111,7 @@ define <4 x double> @insert_f64_firstelt_of_high_subvector(<4 x double> %x, doub
 ; AVX-LABEL: insert_f64_firstelt_of_high_subvector:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = xmm1[0],xmm2[1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;

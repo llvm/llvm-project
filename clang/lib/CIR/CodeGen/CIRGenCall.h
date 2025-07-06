@@ -33,7 +33,8 @@ public:
   CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
                    clang::GlobalDecl calleeDecl)
       : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
-  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl) : calleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
+      : calleeProtoTy(nullptr), calleeDecl(calleeDecl) {}
 
   const clang::FunctionProtoType *getCalleeFunctionProtoType() const {
     return calleeProtoTy;
@@ -105,6 +106,12 @@ public:
   /// callee
   CIRGenCallee prepareConcreteCallee(CIRGenFunction &cgf) const;
 
+  CIRGenCalleeInfo getAbstractInfo() const {
+    assert(!cir::MissingFeatures::opCallVirtual());
+    assert(isOrdinary());
+    return abstractInfo;
+  }
+
   mlir::Operation *getFunctionPointer() const {
     assert(isOrdinary());
     return reinterpret_cast<mlir::Operation *>(kindOrFunctionPtr);
@@ -133,7 +140,15 @@ public:
   CallArg(RValue rv, clang::QualType ty)
       : rv(rv), hasLV(false), isUsed(false), ty(ty) {}
 
+  CallArg(LValue lv, clang::QualType ty)
+      : lv(lv), hasLV(true), isUsed(false), ty(ty) {}
+
   bool hasLValue() const { return hasLV; }
+
+  LValue getKnownLValue() const {
+    assert(hasLV && !isUsed);
+    return lv;
+  }
 
   RValue getKnownRValue() const {
     assert(!hasLV && !isUsed);
@@ -146,6 +161,10 @@ public:
 class CallArgList : public llvm::SmallVector<CallArg, 8> {
 public:
   void add(RValue rvalue, clang::QualType type) { emplace_back(rvalue, type); }
+
+  void addUncopiedAggregate(LValue lvalue, clang::QualType type) {
+    emplace_back(lvalue, type);
+  }
 
   /// Add all the arguments from another CallArgList to this one. After doing
   /// this, the old CallArgList retains its list of arguments, but must not
@@ -162,7 +181,15 @@ public:
 
 /// Contains the address where the return value of a function can be stored, and
 /// whether the address is volatile or not.
-class ReturnValueSlot {};
+class ReturnValueSlot {
+  Address addr = Address::invalid();
+
+public:
+  ReturnValueSlot() = default;
+  ReturnValueSlot(Address addr) : addr(addr) {}
+
+  Address getValue() const { return addr; }
+};
 
 } // namespace clang::CIRGen
 

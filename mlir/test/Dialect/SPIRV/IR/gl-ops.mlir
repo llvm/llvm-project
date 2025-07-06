@@ -50,6 +50,14 @@ func.func @exp(%arg0 : i32) -> () {
 
 // -----
 
+func.func @exp_bf16(%arg0 : bf16) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32-bit float or vector of 16/32-bit float values of length 2/3/4}}
+  %2 = spirv.GL.Exp %arg0 : bf16
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.GL.{F|S|U}{Max|Min}
 //===----------------------------------------------------------------------===//
@@ -87,6 +95,15 @@ func.func @iminmax(%arg0: i32, %arg1: i32) {
   %3 = spirv.GL.SMin %arg0, %arg1 : i32
   // CHECK: spirv.GL.UMin {{%.*}}, {{%.*}} : i32
   %4 = spirv.GL.UMin %arg0, %arg1 : i32
+  return
+}
+
+// -----
+
+func.func @fmaxminbf16vec(%arg0 : vector<3xbf16>, %arg1 : vector<3xbf16>) {
+  // expected-error @+1 {{operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values}}
+  %1 = spirv.GL.FMax %arg0, %arg1 : vector<3xbf16>
+  %2 = spirv.GL.FMin %arg0, %arg1 : vector<3xbf16>
   return
 }
 
@@ -981,5 +998,71 @@ func.func @unpack_half_2x16_vec_in(%arg0 : vector<2xf32>) -> () {
 func.func @unpack_half_2x16_scalar_out(%arg0 : i32) -> () {
   // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> f32
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Length
+//===----------------------------------------------------------------------===//
+
+func.func @length(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.Length {{%.*}} : f32 -> f32
+  %0 = spirv.GL.Length %arg0 : f32 -> f32
+  return
+}
+
+func.func @lengthvec(%arg0 : vector<3xf32>) -> () {
+  // CHECK: spirv.GL.Length {{%.*}} : vector<3xf32> -> f32
+  %0 = spirv.GL.Length %arg0 : vector<3xf32> -> f32
+  return
+}
+
+// -----
+
+func.func @length_i32_in(%arg0 : i32) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'i32'}}
+  %0 = spirv.GL.Length %arg0 : i32 -> f32
+  return
+}
+
+// -----
+
+func.func @length_f16_in(%arg0 : f16) -> () {
+  // expected-error @+1 {{op failed to verify that result type must match operand element type}}
+  %0 = spirv.GL.Length %arg0 : f16 -> f32
+  return
+}
+
+// -----
+
+func.func @length_i32vec_in(%arg0 : vector<3xi32>) -> () {
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  %0 = spirv.GL.Length %arg0 : vector<3xi32> -> f32
+  return
+}
+
+// -----
+
+func.func @length_f16vec_in(%arg0 : vector<3xf16>) -> () {
+  // expected-error @+1 {{op failed to verify that result type must match operand element type}}
+  %0 = spirv.GL.Length %arg0 : vector<3xf16> -> f32
+  return
+}
+
+// -----
+
+func.func @length_i32_out(%arg0 : vector<3xf32>) -> () {
+  // expected-error @+1 {{op result #0 must be 16/32/64-bit float, but got 'i32'}}
+  %0 = spirv.GL.Length %arg0 : vector<3xf32> -> i32
+  return
+}
+
+// -----
+
+func.func @length_vec_out(%arg0 : vector<3xf32>) -> () {
+  // expected-error @+1 {{op result #0 must be 16/32/64-bit float, but got 'vector<3xf32>'}}
+  %0 = spirv.GL.Length %arg0 : vector<3xf32> -> vector<3xf32>
   return
 }

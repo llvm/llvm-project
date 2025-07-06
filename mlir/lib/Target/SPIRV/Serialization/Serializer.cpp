@@ -523,6 +523,9 @@ LogicalResult Serializer::prepareBasicType(
   if (auto floatType = dyn_cast<FloatType>(type)) {
     typeEnum = spirv::Opcode::OpTypeFloat;
     operands.push_back(floatType.getWidth());
+    if (floatType.isBF16()) {
+      operands.push_back(static_cast<uint32_t>(spirv::FPEncoding::BFloat16KHR));
+    }
     return success();
   }
 
@@ -723,6 +726,54 @@ LogicalResult Serializer::prepareBasicType(
     }
     typeEnum = spirv::Opcode::OpTypeMatrix;
     llvm::append_values(operands, elementTypeID, matrixType.getNumColumns());
+    return success();
+  }
+
+  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type)) {
+    uint32_t elementTypeID = 0;
+    uint32_t rank = 0;
+    uint32_t shapeID = 0;
+    uint32_t rankID = 0;
+    if (failed(processTypeImpl(loc, tensorArmType.getElementType(),
+                               elementTypeID, serializationCtx))) {
+      return failure();
+    }
+    if (tensorArmType.hasRank()) {
+      ArrayRef<int64_t> dims = tensorArmType.getShape();
+      rank = dims.size();
+      rankID = prepareConstantInt(loc, mlirBuilder.getI32IntegerAttr(rank));
+      if (rankID == 0) {
+        return failure();
+      }
+
+      bool shaped = llvm::all_of(dims, [](const auto &dim) { return dim > 0; });
+      if (rank > 0 && shaped) {
+        auto I32Type = IntegerType::get(type.getContext(), 32);
+        auto shapeType = ArrayType::get(I32Type, rank);
+        if (rank == 1) {
+          SmallVector<uint64_t, 1> index(rank);
+          shapeID = prepareDenseElementsConstant(
+              loc, shapeType,
+              mlirBuilder.getI32TensorAttr(SmallVector<int32_t>(dims)), 0,
+              index);
+        } else {
+          shapeID = prepareArrayConstant(
+              loc, shapeType,
+              mlirBuilder.getI32ArrayAttr(SmallVector<int32_t>(dims)));
+        }
+        if (shapeID == 0) {
+          return failure();
+        }
+      }
+    }
+    typeEnum = spirv::Opcode::OpTypeTensorARM;
+    operands.push_back(elementTypeID);
+    if (rankID == 0)
+      return success();
+    operands.push_back(rankID);
+    if (shapeID == 0)
+      return success();
+    operands.push_back(shapeID);
     return success();
   }
 
@@ -1022,21 +1073,23 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
 
   auto resultID = getNextID();
   APFloat value = floatAttr.getValue();
+  const llvm::fltSemantics *semantics = &value.getSemantics();
 
   auto opcode =
       isSpec ? spirv::Opcode::OpSpecConstant : spirv::Opcode::OpConstant;
 
-  if (&value.getSemantics() == &APFloat::IEEEsingle()) {
+  if (semantics == &APFloat::IEEEsingle()) {
     uint32_t word = llvm::bit_cast<uint32_t>(value.convertToFloat());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
-  } else if (&value.getSemantics() == &APFloat::IEEEdouble()) {
+  } else if (semantics == &APFloat::IEEEdouble()) {
     struct DoubleWord {
       uint32_t word1;
       uint32_t word2;
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
     encodeInstructionInto(typesGlobalValues, opcode,
                           {typeID, resultID, words.word1, words.word2});
-  } else if (&value.getSemantics() == &APFloat::IEEEhalf()) {
+  } else if (semantics == &APFloat::IEEEhalf() ||
+             semantics == &APFloat::BFloat()) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});

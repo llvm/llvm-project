@@ -432,6 +432,10 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
   assert(ByteOffset <= DL.getTypeAllocSize(C->getType()) &&
          "Out of range access");
 
+  // Reading type padding, return zero.
+  if (ByteOffset >= DL.getTypeStoreSize(C->getType()))
+    return true;
+
   // If this element is zero or undefined, we can just return since *CurPtr is
   // zero initialized.
   if (isa<ConstantAggregateZero>(C) || isa<UndefValue>(C))
@@ -1959,7 +1963,7 @@ inline bool llvm_fenv_testexcept() {
   return false;
 }
 
-static const APFloat FTZPreserveSign(const APFloat &V) {
+static APFloat FTZPreserveSign(const APFloat &V) {
   if (V.isDenormal())
     return APFloat::getZero(V.getSemantics(), V.isNegative());
   return V;
@@ -2132,7 +2136,7 @@ static bool mayFoldConstrained(ConstrainedFPIntrinsic *CI,
 
   // If evaluation raised FP exception, the result can depend on rounding
   // mode. If the latter is unknown, folding is not possible.
-  if (ORM && *ORM == RoundingMode::Dynamic)
+  if (ORM == RoundingMode::Dynamic)
     return false;
 
   // If FP exceptions are ignored, fold the call, even if such exception is
@@ -2223,17 +2227,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     if (Operands[0]->isManifestConstant())
       return ConstantInt::getTrue(Ty->getContext());
     return nullptr;
-  }
-
-  if (isa<PoisonValue>(Operands[0])) {
-    // TODO: All of these operations should probably propagate poison.
-    switch (IntrinsicID) {
-    case Intrinsic::canonicalize:
-    case Intrinsic::sqrt:
-      return PoisonValue::get(Ty);
-    default:
-      break;
-    }
   }
 
   if (isa<UndefValue>(Operands[0])) {
@@ -2418,7 +2411,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
         if (IntrinsicID == Intrinsic::experimental_constrained_rint &&
             St == APFloat::opInexact) {
           std::optional<fp::ExceptionBehavior> EB = CI->getExceptionBehavior();
-          if (EB && *EB == fp::ebStrict)
+          if (EB == fp::ebStrict)
             return nullptr;
         }
       } else if (U.isSignaling()) {
@@ -2549,6 +2542,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::cosh:
         return ConstantFoldFP(cosh, APF, Ty);
       case Intrinsic::atan:
+        // Implement optional behavior from C's Annex F for +/-0.0.
+        if (U.isZero())
+          return ConstantFP::get(Ty->getContext(), U);
         return ConstantFoldFP(atan, APF, Ty);
       case Intrinsic::sqrt:
         return ConstantFoldFP(sqrt, APF, Ty);
@@ -2602,6 +2598,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
     case LibFunc_atan:
     case LibFunc_atanf:
+      // Implement optional behavior from C's Annex F for +/-0.0.
+      if (U.isZero())
+        return ConstantFP::get(Ty->getContext(), U);
       if (TLI->has(Func))
         return ConstantFoldFP(atan, APF, Ty);
       break;
@@ -3218,11 +3217,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     case Intrinsic::smin:
     case Intrinsic::umax:
     case Intrinsic::umin:
-      // This is the same as for binary ops - poison propagates.
-      // TODO: Poison handling should be consolidated.
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
@@ -3235,9 +3229,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
     case Intrinsic::scmp:
     case Intrinsic::ucmp:
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 || !C1)
         return ConstantInt::get(Ty, 0);
 
@@ -3304,11 +3295,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
     }
     case Intrinsic::uadd_sat:
     case Intrinsic::sadd_sat:
-      // This is the same as for binary ops - poison propagates.
-      // TODO: Poison handling should be consolidated.
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
@@ -3319,11 +3305,6 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
         return ConstantInt::get(Ty, C0->sadd_sat(*C1));
     case Intrinsic::usub_sat:
     case Intrinsic::ssub_sat:
-      // This is the same as for binary ops - poison propagates.
-      // TODO: Poison handling should be consolidated.
-      if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-        return PoisonValue::get(Ty);
-
       if (!C0 && !C1)
         return UndefValue::get(Ty);
       if (!C0 || !C1)
@@ -3582,11 +3563,6 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
 
   if (IntrinsicID == Intrinsic::smul_fix ||
       IntrinsicID == Intrinsic::smul_fix_sat) {
-    // poison * C -> poison
-    // C * poison -> poison
-    if (isa<PoisonValue>(Operands[0]) || isa<PoisonValue>(Operands[1]))
-      return PoisonValue::get(Ty);
-
     const APInt *C0, *C1;
     if (!getConstIntOrUndef(Operands[0], C0) ||
         !getConstIntOrUndef(Operands[1], C1))
@@ -3660,6 +3636,11 @@ static Constant *ConstantFoldScalarCall(StringRef Name,
                                         ArrayRef<Constant *> Operands,
                                         const TargetLibraryInfo *TLI,
                                         const CallBase *Call) {
+  if (IntrinsicID != Intrinsic::not_intrinsic &&
+      any_of(Operands, IsaPred<PoisonValue>) &&
+      intrinsicPropagatesPoison(IntrinsicID))
+    return PoisonValue::get(Ty);
+
   if (Operands.size() == 1)
     return ConstantFoldScalarCall1(Name, IntrinsicID, Ty, Operands, TLI, Call);
 
@@ -3990,31 +3971,30 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
     return ConstantStruct::get(StTy, SinResult, CosResult);
   }
   case Intrinsic::vector_deinterleave2: {
-    auto *Vec = dyn_cast<Constant>(Operands[0]);
-    if (!Vec)
+    auto *Vec = Operands[0];
+    auto *VecTy = cast<VectorType>(Vec->getType());
+
+    if (auto *EltC = Vec->getSplatValue()) {
+      ElementCount HalfEC = VecTy->getElementCount().divideCoefficientBy(2);
+      auto *HalfVec = ConstantVector::getSplat(HalfEC, EltC);
+      return ConstantStruct::get(StTy, HalfVec, HalfVec);
+    }
+
+    if (!isa<FixedVectorType>(Vec->getType()))
       return nullptr;
 
-    auto *VecTy = cast<VectorType>(Vec->getType());
-    unsigned NumElements = VecTy->getElementCount().getKnownMinValue() / 2;
-    if (isa<ConstantAggregateZero>(Vec)) {
-      auto *HalfVecTy = VectorType::getHalfElementsVectorType(VecTy);
-      return ConstantStruct::get(StTy, ConstantAggregateZero::get(HalfVecTy),
-                                 ConstantAggregateZero::get(HalfVecTy));
+    unsigned NumElements = VecTy->getElementCount().getFixedValue() / 2;
+    SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Constant *Elt0 = Vec->getAggregateElement(2 * I);
+      Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
+      if (!Elt0 || !Elt1)
+        return nullptr;
+      Res0[I] = Elt0;
+      Res1[I] = Elt1;
     }
-    if (isa<FixedVectorType>(Vec->getType())) {
-      SmallVector<Constant *, 4> Res0(NumElements), Res1(NumElements);
-      for (unsigned I = 0; I < NumElements; ++I) {
-        Constant *Elt0 = Vec->getAggregateElement(2 * I);
-        Constant *Elt1 = Vec->getAggregateElement(2 * I + 1);
-        if (!Elt0 || !Elt1)
-          return nullptr;
-        Res0[I] = Elt0;
-        Res1[I] = Elt1;
-      }
-      return ConstantStruct::get(StTy, ConstantVector::get(Res0),
-                                 ConstantVector::get(Res1));
-    }
-    return nullptr;
+    return ConstantStruct::get(StTy, ConstantVector::get(Res0),
+                               ConstantVector::get(Res1));
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does

@@ -143,10 +143,17 @@ mergeInfos(std::vector<std::unique_ptr<Info>> &Values) {
     return reduce<FunctionInfo>(Values);
   case InfoType::IT_typedef:
     return reduce<TypedefInfo>(Values);
-  default:
+  case InfoType::IT_concept:
+    return reduce<ConceptInfo>(Values);
+  case InfoType::IT_variable:
+    return reduce<VarInfo>(Values);
+  case InfoType::IT_friend:
+    return reduce<FriendInfo>(Values);
+  case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
   }
+  llvm_unreachable("unhandled enumerator");
 }
 
 bool CommentInfo::operator==(const CommentInfo &Other) const {
@@ -242,6 +249,15 @@ void Reference::merge(Reference &&Other) {
     Path = Other.Path;
 }
 
+bool FriendInfo::mergeable(const FriendInfo &Other) {
+  return Ref.USR == Other.Ref.USR && Ref.Name == Other.Ref.Name;
+}
+
+void FriendInfo::merge(FriendInfo &&Other) {
+  assert(mergeable(Other));
+  Ref.merge(std::move(Other.Ref));
+}
+
 void Info::mergeBase(Info &&Other) {
   assert(mergeable(Other));
   if (USR == EmptySID)
@@ -287,6 +303,8 @@ void NamespaceInfo::merge(NamespaceInfo &&Other) {
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
   reduceChildren(Children.Enums, std::move(Other.Children.Enums));
   reduceChildren(Children.Typedefs, std::move(Other.Children.Typedefs));
+  reduceChildren(Children.Concepts, std::move(Other.Children.Concepts));
+  reduceChildren(Children.Variables, std::move(Other.Children.Variables));
   mergeBase(std::move(Other));
 }
 
@@ -306,6 +324,8 @@ void RecordInfo::merge(RecordInfo &&Other) {
     Parents = std::move(Other.Parents);
   if (VirtualParents.empty())
     VirtualParents = std::move(Other.VirtualParents);
+  if (Friends.empty())
+    Friends = std::move(Other.Friends);
   // Reduce children if necessary.
   reduceChildren(Children.Records, std::move(Other.Children.Records));
   reduceChildren(Children.Functions, std::move(Other.Children.Functions));
@@ -351,6 +371,28 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
   SymbolInfo::merge(std::move(Other));
 }
 
+void ConceptInfo::merge(ConceptInfo &&Other) {
+  assert(mergeable(Other));
+  if (!IsType)
+    IsType = Other.IsType;
+  if (ConstraintExpression.empty())
+    ConstraintExpression = std::move(Other.ConstraintExpression);
+  if (Template.Constraints.empty())
+    Template.Constraints = std::move(Other.Template.Constraints);
+  if (Template.Params.empty())
+    Template.Params = std::move(Other.Template.Params);
+  SymbolInfo::merge(std::move(Other));
+}
+
+void VarInfo::merge(VarInfo &&Other) {
+  assert(mergeable(Other));
+  if (!IsStatic)
+    IsStatic = Other.IsStatic;
+  if (Type.Type.USR == EmptySID && Type.Type.Name == "")
+    Type = std::move(Other.Type);
+  SymbolInfo::merge(std::move(Other));
+}
+
 BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
@@ -386,6 +428,15 @@ llvm::SmallString<16> Info::extractName() const {
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_function:
     return llvm::SmallString<16>("@nonymous_function_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_concept:
+    return llvm::SmallString<16>("@nonymous_concept_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_variable:
+    return llvm::SmallString<16>("@nonymous_variable_" +
+                                 toHex(llvm::toStringRef(USR)));
+  case InfoType::IT_friend:
+    return llvm::SmallString<16>("@nonymous_friend_" +
                                  toHex(llvm::toStringRef(USR)));
   case InfoType::IT_default:
     return llvm::SmallString<16>("@nonymous_" + toHex(llvm::toStringRef(USR)));
@@ -452,6 +503,8 @@ void ScopeChildren::sort() {
   llvm::sort(Functions.begin(), Functions.end());
   llvm::sort(Enums.begin(), Enums.end());
   llvm::sort(Typedefs.begin(), Typedefs.end());
+  llvm::sort(Concepts.begin(), Concepts.end());
+  llvm::sort(Variables.begin(), Variables.end());
 }
 } // namespace doc
 } // namespace clang

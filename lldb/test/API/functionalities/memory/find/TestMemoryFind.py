@@ -56,10 +56,23 @@ class MemoryFindTestCase(TestBase):
         # Invalid expr is an error.
         self.expect(
             'memory find -e "not_a_symbol" `&bytedata[0]` `&bytedata[15]`',
+            substrs=[
+                "Expression evaluation failed:",
+                "use of undeclared identifier 'not_a_symbol'",
+            ],
             error=True,
-            substrs=["error: expression evaluation failed. pass a string instead"],
         )
 
+        self.expect(
+            'memory find -e "" `&bytedata[0]` `&bytedata[2]`',
+            substrs=[
+                "Expression evaluation failed:",
+                "No result returned from expression. Exit status: 1",
+            ],
+            error=True,
+        )
+
+        # Valid expressions/strings
         self.expect(
             'memory find -e "(uint8_t)0x22" `&bytedata[0]` `&bytedata[15]`',
             substrs=["data found at location: 0x", "22 33 44 55 66"],
