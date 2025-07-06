@@ -950,14 +950,19 @@ SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
   return sb_bp;
 }
 
-SBBreakpoint SBTarget::BreakpointCreateByFileAddress(const SBFileSpec &file_spec, addr_t file_addr, addr_t offset, addr_t instructions_offset) {
+SBBreakpoint
+SBTarget::BreakpointCreateByFileAddress(const SBFileSpec &file_spec,
+                                        addr_t file_addr, addr_t offset,
+                                        addr_t instructions_offset) {
   LLDB_INSTRUMENT_VA(this, file_spec, file_addr);
 
   SBBreakpoint sb_bp;
   if (TargetSP target_sp = GetSP()) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool hardware = false;
-    sb_bp = target_sp->CreateAddressInModuleBreakpoint(file_addr, false, *file_spec.get(), hardware, offset, instructions_offset);
+    sb_bp = target_sp->CreateAddressInModuleBreakpoint(
+        file_addr, false, *file_spec.get(), hardware, offset,
+        instructions_offset);
   }
 
   return sb_bp;
@@ -1969,8 +1974,8 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 
   if (TargetSP target_sp = GetSP()) {
     if (Address *addr_ptr = base_addr.get()) {
-      sb_instructions.SetDisassembler(target_sp->ReadInstructions(
-          *addr_ptr, count, flavor_string));
+      sb_instructions.SetDisassembler(
+          target_sp->ReadInstructions(*addr_ptr, count, flavor_string));
     }
   }
 
