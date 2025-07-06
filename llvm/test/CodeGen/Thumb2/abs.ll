@@ -205,3 +205,53 @@ define i128 @abs128(i128 %x) {
   ret i128 %abs
 }
 
+define dso_local void @pr147162(ptr %p, ptr %q) #0 {
+; CHECKT1-LABEL: pr147162:
+; CHECKT1:       @ %bb.0: @ %entry
+; CHECKT1-NEXT:    .save {r7, lr}
+; CHECKT1-NEXT:    push {r7, lr}
+; CHECKT1-NEXT:    .pad #8
+; CHECKT1-NEXT:    sub sp, #8
+; CHECKT1-NEXT:    mov r3, r0
+; CHECKT1-NEXT:    ldrb r0, [r0]
+; CHECKT1-NEXT:    ldrb r1, [r1]
+; CHECKT1-NEXT:    movs r2, #1
+; CHECKT1-NEXT:    str r2, [sp]
+; CHECKT1-NEXT:    subs r0, r0, r1
+; CHECKT1-NEXT:    asrs r1, r0, #31
+; CHECKT1-NEXT:    eors r0, r1
+; CHECKT1-NEXT:    subs r0, r0, r1
+; CHECKT1-NEXT:    movs r1, #2
+; CHECKT1-NEXT:    bl call
+; CHECKT1-NEXT:    add sp, #8
+; CHECKT1-NEXT:    pop {r7, pc}
+;
+; CHECKT2-LABEL: pr147162:
+; CHECKT2:       @ %bb.0: @ %entry
+; CHECKT2-NEXT:    .save {r7, lr}
+; CHECKT2-NEXT:    push {r7, lr}
+; CHECKT2-NEXT:    .pad #8
+; CHECKT2-NEXT:    sub sp, #8
+; CHECKT2-NEXT:    mov r3, r0
+; CHECKT2-NEXT:    ldrb r0, [r0]
+; CHECKT2-NEXT:    ldrb r1, [r1]
+; CHECKT2-NEXT:    movs r2, #1
+; CHECKT2-NEXT:    str r2, [sp]
+; CHECKT2-NEXT:    subs r0, r0, r1
+; CHECKT2-NEXT:    mov.w r1, #2
+; CHECKT2-NEXT:    it mi
+; CHECKT2-NEXT:    rsbmi r0, r0, #0
+; CHECKT2-NEXT:    bl call
+; CHECKT2-NEXT:    add sp, #8
+; CHECKT2-NEXT:    pop {r7, pc}
+entry:
+  %0 = load i8, ptr %p, align 1
+  %conv = zext i8 %0 to i32
+  %1 = load i8, ptr %q, align 1
+  %conv1 = zext i8 %1 to i32
+  %sub = sub nsw i32 %conv, %conv1
+  %2 = tail call i32 @llvm.abs.i32(i32 %sub, i1 true)
+  tail call void @call(i32 noundef %2, i32 noundef 2, i32 noundef 1, ptr noundef nonnull %p, i32 noundef 1)
+  ret void
+}
+declare void @call(i32, i32, i32, ptr, i32)

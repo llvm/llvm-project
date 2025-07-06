@@ -12383,6 +12383,11 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // fall through to SinkMBB
     RSBBB->addSuccessor(SinkBB);
 
+    // Set the call frame size on entry to the new basic blocks.
+    unsigned CallFrameSize = TII->getCallFrameSizeAt(MI);
+    RSBBB->setCallFrameSize(CallFrameSize);
+    SinkBB->setCallFrameSize(CallFrameSize);
+
     // insert a cmp at the end of BB
     BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
         .addReg(ABSSrcReg)
