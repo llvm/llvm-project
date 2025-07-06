@@ -123,7 +123,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
 
   // Create the matcher dynamically
   auto TypeMatcher = asString(TypeStrings.front());
-  for (const auto& TypeString : TypeStrings) {
+  for (const auto &TypeString : TypeStrings) {
     TypeMatcher = anyOf(TypeMatcher, asString(TypeString));
   }
 
@@ -172,8 +172,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   QualType QT;
   SourceRange TypeRange;
 
-  auto SetTypeRange = [&TypeRange](auto Decl){
-    if(Decl->getTypeSourceInfo()) {
+  auto SetTypeRange = [&TypeRange](auto Decl) {
+    if (Decl->getTypeSourceInfo()) {
       TypeRange = Decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
     }
   };
