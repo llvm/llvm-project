@@ -41,6 +41,10 @@ struct DiffTypeRange {
 struct Foo {};
 struct Bar {};
 
+struct RValueRefFn {
+  int&& operator()(auto&&...) const;
+};
+
 void test() {
   int buffer[] = {1, 2, 3, 4};
   {
@@ -154,5 +158,12 @@ void test() {
     std::ranges::zip_transform_view v{MakeTuple{}, foos, bars};
     using Iter = decltype(v.begin());
     static_assert(std::is_same_v<Iter::value_type, std::tuple<Foo, Bar>>);
+  }
+
+  // LWG3798 Rvalue reference and iterator_category
+  {
+    std::ranges::zip_transform_view v(RValueRefFn{}, buffer);
+    using Iter = decltype(v.begin());
+    static_assert(std::is_same_v<Iter::iterator_category, std::random_access_iterator_tag>);
   }
 }
