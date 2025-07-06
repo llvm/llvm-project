@@ -38,8 +38,10 @@ struct BFloat16 {
         }
       }
 
-      bits = fputil::DyadicFloat<16>(sign, 0, value)
-                 .as<bfloat16, /*ShouldSignalExceptions=*/true>()
+      bits = fputil::DyadicFloat<
+                 cpp::numeric_limits<cpp::make_unsigned_t<T>>::digits>(sign, 0,
+                                                                       value)
+                 .template as<bfloat16, /*ShouldSignalExceptions=*/true>()
                  .bits;
 
     } else {
