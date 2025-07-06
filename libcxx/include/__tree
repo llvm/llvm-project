@@ -1898,7 +1898,8 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
     )
     */
 
-    __maybe_unused__ __node_base_pointer __foo = static_cast<__node_base_pointer>(__h.get());
+    __node_base_pointer __foo = static_cast<__node_base_pointer>(__h.get());
+    (void)__foo;
     // __maybe_unused__ __node_base_pointer __foo2 = __node_base_pointer(__h.get());
 
     /*
