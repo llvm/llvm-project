@@ -2377,7 +2377,6 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
   if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
     return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
                         : Builder.CreateBinOp(Opcode, X, Res);
-
   return nullptr;
 }
 
@@ -3604,8 +3603,8 @@ struct DecomposedBitMaskMul {
   bool NUW;
   bool NSW;
 
-  bool isCombineableWith(DecomposedBitMaskMul Other) {
-    return X == Other.X && (Mask & Other.Mask).isZero() &&
+  bool isCombineableWith(const DecomposedBitMaskMul Other) {
+    return X == Other.X && !Mask.intersects(Other.Mask) &&
            Factor == Other.Factor;
   }
 };
@@ -3671,34 +3670,29 @@ static std::optional<DecomposedBitMaskMul> matchBitmaskMul(Value *V) {
 static Value *foldBitmaskMul(Value *Op0, Value *Op1,
                              InstCombiner::BuilderTy &Builder) {
   auto Decomp1 = matchBitmaskMul(Op1);
+  if (!Decomp1)
+    return nullptr;
 
-  if (Decomp1) {
-    auto Decomp0 = matchBitmaskMul(Op0);
+  auto Decomp0 = matchBitmaskMul(Op0);
+  if (!Decomp0)
+    return nullptr;
 
-    if (Decomp0) {
-      // If we have independent operands in the BitmaskMul chain, then just
-      // reassociate to encourage combining in future iterations.
+  if (Decomp0->isCombineableWith(*Decomp1)) {
+    Value *NewAnd = Builder.CreateAnd(
+        Decomp0->X,
+        ConstantInt::get(Decomp0->X->getType(), Decomp0->Mask + Decomp1->Mask));
 
-      if (Decomp0->isCombineableWith(*Decomp1)) {
-        auto NewAnd = Builder.CreateAnd(
-            Decomp0->X, ConstantInt::get(Decomp0->X->getType(),
-                                         (Decomp0->Mask + Decomp1->Mask)));
-
-        auto Res = Builder.CreateMul(
-            NewAnd, ConstantInt::get(NewAnd->getType(), Decomp1->Factor), "",
-            Decomp0->NUW && Decomp1->NUW, Decomp0->NSW && Decomp1->NSW);
-        return Res;
-      }
-    }
+    return Builder.CreateMul(
+        NewAnd, ConstantInt::get(NewAnd->getType(), Decomp1->Factor), "",
+        Decomp0->NUW && Decomp1->NUW, Decomp0->NSW && Decomp1->NSW);
   }
 
   return nullptr;
 }
 
 Value *InstCombinerImpl::foldDisjointOr(Value *LHS, Value *RHS) {
-  if (Value *Res = foldBitmaskMul(LHS, RHS, Builder)) {
+  if (Value *Res = foldBitmaskMul(LHS, RHS, Builder))
     return Res;
-  }
 
   return nullptr;
 }

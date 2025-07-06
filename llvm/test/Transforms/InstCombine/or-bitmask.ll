@@ -680,6 +680,202 @@ define i32 @unrelated_ops_nocombine1(i32 %in, i32 %in2, i32 %in3) {
   ret i32 %out
 }
 
+define i32 @unrelated_nondisjoint(i32 %in, i32 %in2) {
+; CHECK-LABEL: @unrelated_nondisjoint(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or i32 %temp3, %temp2
+  ret i32 %out
+}
+
+define i32 @unrelated_nondisjoint1(i32 %in, i32 %in2) {
+; CHECK-LABEL: @unrelated_nondisjoint1(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  ret i32 %out
+}
+
+define i32 @multi_use(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %out)
+  ret i32 %out
+}
+
+define i32 @multi_use1(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use1(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %temp3)
+  ret i32 %out
+}
+
+define i32 @multi_use2(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use2(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TEMP3:%.*]] = or disjoint i32 [[IN2:%.*]], [[TEMP]]
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TEMP3]], [[TEMP2]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %temp3)
+  ret i32 %out
+}
+
+define i32 @multi_use3(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use3(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN:%.*]], 12
+; CHECK-NEXT:    [[TEMP2:%.*]] = mul nuw nsw i32 [[AND1]], 72
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %temp2)
+  ret i32 %out
+}
+
+define i32 @multi_use4(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use4(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %temp)
+  ret i32 %out
+}
+
+define i32 @multi_use5(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use5(
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[IN:%.*]], 12
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %and1)
+  ret i32 %out
+}
+
+define i32 @multi_use6(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use6(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TEMP:%.*]] = mul nuw nsw i32 [[AND0]], 72
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %temp)
+  ret i32 %out
+}
+
+define i32 @multi_use7(i32 %in, i32 %in2) {
+; CHECK-LABEL: @multi_use7(
+; CHECK-NEXT:    [[AND0:%.*]] = and i32 [[IN:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN]], 15
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i32 [[TMP1]], 72
+; CHECK-NEXT:    [[OUT:%.*]] = or disjoint i32 [[TMP2]], [[IN2:%.*]]
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    ret i32 [[OUT]]
+;
+  %and0 = and i32 %in, 3
+  %temp = mul nuw nsw i32 %and0, 72
+  %and1 = and i32 %in, 12
+  %temp2 = mul nuw nsw i32 %and1, 72
+  %temp3 = or disjoint i32 %in2, %temp
+  %out = or disjoint i32 %temp3, %temp2
+  call void asm sideeffect "; use $0", "{}"(i32 %and0)
+  ret i32 %out
+}
+
 define i32 @no_chain(i32 %in, i32 %in2, i32 %in3) {
 ; CHECK-LABEL: @no_chain(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[IN:%.*]], 3
