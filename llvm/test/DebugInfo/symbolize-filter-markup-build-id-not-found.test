@@ -1,0 +1,10 @@
+RUN: split-file %s %t
+RUN: llvm-symbolizer --filter-markup < %t/log > /dev/null 2> %t.err
+RUN: FileCheck %s -input-file=%t.err --match-full-lines --strict-whitespace
+
+CHECK:error: could not find build ID for ELF module #0x0 "notfound"; BuildID=abad1d
+
+;--- log
+{{{module:0:notfound:elf:abad1d}}}
+{{{mmap:0x1000:0x1000:load:0:rx:0}}}
+{{{pc:0x1234}}}
