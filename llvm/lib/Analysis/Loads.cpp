@@ -111,7 +111,7 @@ static bool isDereferenceableAndAlignedPointer(
     // anyway.
     auto *I = dyn_cast<Instruction>(V);
     if (I && !isa<AllocaInst>(I))
-      return CtxI && isValidAssumeForContext(I, CtxI, DT);
+      return CtxI && isValidAssumeForContext(I, CtxI, DT, true);
     return true;
   };
   if (IsKnownDeref()) {
@@ -183,7 +183,7 @@ static bool isDereferenceableAndAlignedPointer(
     if (getKnowledgeForValue(
             V, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
             [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-              if (!isValidAssumeForContext(Assume, CtxI, DT))
+              if (!isValidAssumeForContext(Assume, CtxI, DT, true))
                 return false;
               if (RK.AttrKind == Attribute::Alignment)
                 AlignRK = std::max(AlignRK, RK);

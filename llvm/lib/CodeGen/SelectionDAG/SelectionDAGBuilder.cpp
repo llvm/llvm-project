@@ -4568,8 +4568,7 @@ static std::optional<ConstantRange> getRange(const Instruction &I) {
 }
 
 static void tryToImproveAlign(const DataLayout &DL, Type *Ty, Align &Alignment,
-                              const Value *&PtrV, const Value *&CxtI,
-                              int64_t &Offset) {
+                              const Value *&PtrV, int64_t &Offset) {
   Align PrefAlign = DL.getPrefTypeAlign(Ty);
   if (auto *GEP = dyn_cast<GetElementPtrInst>(PtrV);
       GEP && PrefAlign > Alignment && PrefAlign.previous() > Alignment) {
@@ -4588,7 +4587,6 @@ static void tryToImproveAlign(const DataLayout &DL, Type *Ty, Align &Alignment,
       Align BaseAlignment =
           getKnownAlignment(const_cast<Value *>(BasePtrV), DL, GEP);
       if (ExpandAlign > Alignment) {
-        CxtI = PtrV;
         PtrV = BasePtrV;
         Alignment = BaseAlignment;
         Offset = OffsetAccumulated.getSExtValue();
@@ -4637,8 +4635,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 
   // See visitStore comments.
   int64_t Offset = 0;
-  const Value *CxtI = nullptr;
-  tryToImproveAlign(DL, Ty, Alignment, SV, CxtI, Offset);
+  tryToImproveAlign(DL, Ty, Alignment, SV, Offset);
 
   SDValue Root;
   bool ConstantMemory = false;
@@ -4688,8 +4685,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
     // TODO: MachinePointerInfo only supports a fixed length offset.
     MachinePointerInfo PtrInfo =
         !Offsets[i].isScalable() || Offsets[i].isZero()
-            ? MachinePointerInfo(SV, Offsets[i].getKnownMinValue() + Offset, 0,
-                                 CxtI)
+            ? MachinePointerInfo(SV, Offsets[i].getKnownMinValue() + Offset, 0)
             : MachinePointerInfo();
 
     SDValue A = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
@@ -4824,8 +4820,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   // MPI: V = %p, Offset = 1
   // SDNode: store<(store (s32) into %p + 1, align 1, basealign 4)>
   int64_t Offset = 0;
-  const Value *CxtI = nullptr;
-  tryToImproveAlign(DL, SrcV->getType(), Alignment, PtrV, CxtI, Offset);
+  tryToImproveAlign(DL, SrcV->getType(), Alignment, PtrV, Offset);
 
   auto MMOFlags = TLI.getStoreMemOperandFlags(I, DL);
 
@@ -4843,7 +4838,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
     MachinePointerInfo PtrInfo =
         !Offsets[i].isScalable() || Offsets[i].isZero()
             ? MachinePointerInfo(PtrV, Offsets[i].getKnownMinValue() + Offset,
-                                 0, CxtI)
+                                 0)
             : MachinePointerInfo();
 
     SDValue Add = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
