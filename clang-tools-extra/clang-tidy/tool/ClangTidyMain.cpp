@@ -659,9 +659,10 @@ int clangTidyMain(int argc, const char **argv) {
   if (DumpConfig) {
     EffectiveOptions.CheckOptions =
         getCheckOptions(EffectiveOptions, AllowEnablingAnalyzerAlphaCheckers);
-    llvm::outs() << configurationAsText(ClangTidyOptions::getDefaults().merge(
-                        EffectiveOptions, 0))
-                 << "\n";
+    ClangTidyOptions OptionsToDump =
+        ClangTidyOptions::getDefaults().merge(EffectiveOptions, 0);
+    filterCheckOptions(OptionsToDump, EnabledChecks);
+    llvm::outs() << configurationAsText(OptionsToDump) << "\n";
     return 0;
   }
 
