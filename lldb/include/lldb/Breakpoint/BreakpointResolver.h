@@ -46,8 +46,7 @@ public:
   ///   The breakpoint that owns this resolver.
   /// \param[in] resolverType
   ///   The concrete breakpoint resolver type for this breakpoint.
-  BreakpointResolver(const lldb::BreakpointSP &bkpt,
-                     unsigned char resolverType,
+  BreakpointResolver(const lldb::BreakpointSP &bkpt, unsigned char resolverType,
                      lldb::addr_t offset = 0,
                      lldb::addr_t instructions_offset = 0);
 
@@ -223,7 +222,8 @@ private:
   lldb::BreakpointWP m_breakpoint; // This is the breakpoint we add locations to.
   lldb::addr_t m_offset;    // A random offset the user asked us to add to any
                             // breakpoints we set.
-  lldb::addr_t m_instructions_offset; // Number of instructions to add to the resolved breakpoint address.
+  lldb::addr_t m_instructions_offset; // Number of instructions to add to the
+                                      // resolved breakpoint address.
 
   // Subclass identifier (for llvm isa/dyn_cast)
   const unsigned char SubclassID;
