@@ -43,6 +43,7 @@ public:
   mlir::Value VisitBinAssign(const BinaryOperator *e);
   mlir::Value VisitBinComma(const BinaryOperator *e);
   mlir::Value VisitCallExpr(const CallExpr *e);
+  mlir::Value VisitCastExpr(CastExpr *e);
   mlir::Value VisitChooseExpr(ChooseExpr *e);
   mlir::Value VisitDeclRefExpr(DeclRefExpr *e);
   mlir::Value VisitGenericSelectionExpr(GenericSelectionExpr *e);
@@ -83,12 +84,13 @@ LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
   switch (ck) {
+  case CK_NoOp:
   case CK_LValueToRValue:
     return Visit(op);
   default:
-    cgf.cgm.errorNYI("ComplexType Cast");
     break;
   }
+  cgf.cgm.errorNYI("ComplexType Cast");
   return {};
 }
 
@@ -155,6 +157,21 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
     return emitLoadOfLValue(e);
 
   return cgf.emitCallExpr(e).getValue();
+}
+
+mlir::Value ComplexExprEmitter::VisitCastExpr(CastExpr *e) {
+  if (const auto *ece = dyn_cast<ExplicitCastExpr>(e)) {
+    // Bind VLAs in the cast type.
+    if (ece->getType()->isVariablyModifiedType()) {
+      cgf.cgm.errorNYI("VisitCastExpr Bind VLAs in the cast type");
+      return {};
+    }
+  }
+
+  if (e->changesVolatileQualification())
+    return emitLoadOfLValue(e);
+
+  return emitCast(e->getCastKind(), e->getSubExpr(), e->getType());
 }
 
 mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
