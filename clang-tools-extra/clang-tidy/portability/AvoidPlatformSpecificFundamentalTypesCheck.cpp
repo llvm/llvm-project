@@ -22,6 +22,7 @@ AvoidPlatformSpecificFundamentalTypesCheck::
     : ClangTidyCheck(Name, Context),
       WarnOnFloats(Options.get("WarnOnFloats", false)),
       WarnOnInts(Options.get("WarnOnInts", true)),
+      WarnOnChars(Options.get("WarnOnChars", false)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {}
@@ -35,6 +36,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnFloats", WarnOnFloats);
   Options.store(Opts, "WarnOnInts", WarnOnInts);
+  Options.store(Opts, "WarnOnChars", WarnOnChars);
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
@@ -114,6 +116,14 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
         "float",
         "double",
         "long double"});
+  }
+
+  // Add char types if the option is enabled
+  if (WarnOnChars) {
+    TypeStrings.insert(TypeStrings.end(), {
+        "char",
+        "signed char",
+        "unsigned char"});
   }
 
   // If no types are enabled, return early
@@ -213,7 +223,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   // Get the type name for the diagnostic
   const std::string TypeName = QT.getAsString();
 
-  // Check if this is a floating point type
+  // Check the type category
   const auto *BT = QT->getAs<BuiltinType>();
 
   if (BT->isFloatingPoint()) {
@@ -238,6 +248,14 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
                 "consider using a typedef or fixed-width type instead")
           << TypeName;
     }
+  } else if (BT->getKind() == BuiltinType::Char_S ||
+             BT->getKind() == BuiltinType::Char_U ||
+             BT->getKind() == BuiltinType::SChar ||
+             BT->getKind() == BuiltinType::UChar) {
+    // Handle char types
+    diag(Loc, "avoid using platform-dependent character type '%0'; "
+              "consider using char8_t for text or std::byte for bytes")
+        << TypeName;
   } else {
     // Handle integer types
     diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "

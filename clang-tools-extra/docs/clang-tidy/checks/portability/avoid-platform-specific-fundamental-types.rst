@@ -156,3 +156,35 @@ Options
      
      float32_t pi = 3.14f;
      float64_t e = 2.71828;
+
+.. option:: WarnOnChars
+
+   When `true`, the check will warn about character types (``char``, ``signed char``, and ``unsigned char``).
+   When `false` (default), character types are not flagged.
+
+   Character types can have platform-dependent behavior:
+   
+   - ``char`` can be either signed or unsigned depending on the platform (signed on ARM, unsigned on x86)
+   - The signedness of ``char`` affects comparisons and arithmetic operations
+   
+   When this option is enabled, the check will suggest using explicit signedness or typedefs
+   to make the intent clear and ensure consistent behavior across platforms.
+
+   Example with ``WarnOnChars`` enabled:
+
+   .. code-block:: c++
+
+     // Bad: platform-dependent character types
+     char buffer[256];
+     signed char byte_value = -1;
+     unsigned char raw_byte = 255;
+
+   .. code-block:: c++
+
+     // Good: use explicit types or typedefs
+     using byte_t = unsigned char;  // For raw byte data
+     using text_char_t = char;      // For text (when signedness doesn't matter)
+     
+     text_char_t buffer[256];       // For text storage
+     int8_t signed_byte = -1;       // For signed 8-bit values
+     uint8_t raw_byte = 255;        // For unsigned 8-bit values
