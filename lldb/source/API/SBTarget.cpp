@@ -950,14 +950,14 @@ SBBreakpoint SBTarget::BreakpointCreateBySBAddress(SBAddress &sb_address) {
   return sb_bp;
 }
 
-SBBreakpoint SBTarget::BreakpointCreateByFileAddress(const SBFileSpec &file_spec, addr_t file_addr) {
+SBBreakpoint SBTarget::BreakpointCreateByFileAddress(const SBFileSpec &file_spec, addr_t file_addr, addr_t offset, addr_t instructions_offset) {
   LLDB_INSTRUMENT_VA(this, file_spec, file_addr);
 
   SBBreakpoint sb_bp;
   if (TargetSP target_sp = GetSP()) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool hardware = false;
-    sb_bp = target_sp->CreateAddressInModuleBreakpoint(file_addr, false, *file_spec.get(), hardware);
+    sb_bp = target_sp->CreateAddressInModuleBreakpoint(file_addr, false, *file_spec.get(), hardware, offset, instructions_offset);
   }
 
   return sb_bp;
@@ -1969,29 +1969,8 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 
   if (TargetSP target_sp = GetSP()) {
     if (Address *addr_ptr = base_addr.get()) {
-      DataBufferHeap data(
-          target_sp->GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
-      bool force_live_memory = true;
-      lldb_private::Status error;
-      lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
-      const size_t bytes_read =
-          target_sp->ReadMemory(*addr_ptr, data.GetBytes(), data.GetByteSize(),
-                                error, force_live_memory, &load_addr);
-
-      const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
-      if (!flavor_string || flavor_string[0] == '\0') {
-        // FIXME - we don't have the mechanism in place to do per-architecture
-        // settings.  But since we know that for now we only support flavors on
-        // x86 & x86_64,
-        const llvm::Triple::ArchType arch =
-            target_sp->GetArchitecture().GetTriple().getArch();
-        if (arch == llvm::Triple::x86 || arch == llvm::Triple::x86_64)
-          flavor_string = target_sp->GetDisassemblyFlavor();
-      }
-      sb_instructions.SetDisassembler(Disassembler::DisassembleBytes(
-          target_sp->GetArchitecture(), nullptr, flavor_string,
-          target_sp->GetDisassemblyCPU(), target_sp->GetDisassemblyFeatures(),
-          *addr_ptr, data.GetBytes(), bytes_read, count, data_from_file));
+      sb_instructions.SetDisassembler(target_sp->ReadInstructions(
+          *addr_ptr, count, flavor_string));
     }
   }
 

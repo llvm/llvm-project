@@ -30,6 +30,12 @@ BreakpointResolverAddress::BreakpointResolverAddress(const BreakpointSP &bkpt,
     : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver),
       m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS) {}
 
+BreakpointResolverAddress::BreakpointResolverAddress(
+    const BreakpointSP &bkpt, const Address &addr, const FileSpec &module_spec, lldb::addr_t offset, lldb::addr_t instructions_offset)
+    : BreakpointResolver(bkpt, BreakpointResolver::AddressResolver, offset, instructions_offset),
+      m_addr(addr), m_resolved_addr(LLDB_INVALID_ADDRESS),
+      m_module_filespec(module_spec) {}
+
 BreakpointResolverSP BreakpointResolverAddress::CreateFromStructuredData(
     const StructuredData::Dictionary &options_dict, Status &error) {
   llvm::StringRef module_name;
