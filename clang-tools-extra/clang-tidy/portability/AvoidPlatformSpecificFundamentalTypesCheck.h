@@ -16,13 +16,11 @@
 
 namespace clang::tidy::portability {
 
-/// Find fundamental integer types and recommend using typedefs or fixed-width
-/// types.
+/// Find fundamental platform-dependent types and recommend using typedefs or 
+/// fixed-width types.
 ///
-/// Detects fundamental integer types (int, short, long, long long, and their
-/// unsigned variants) and warns against their use due to platform-dependent
-/// behavior. Excludes semantic types like char, bool, wchar_t, char16_t,
-/// char32_t, size_t, and ptrdiff_t.
+/// Detects fundamental types (int, short, long, long long, char, float, etc) 
+/// and warns against their use due to platform-dependent behavior.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/portability/avoid-platform-specific-fundamental-types.html
