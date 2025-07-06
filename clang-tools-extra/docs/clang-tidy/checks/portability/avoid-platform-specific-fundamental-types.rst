@@ -126,6 +126,43 @@ narrowing issues that occur as a result of using implementation-defined types.
 Options
 -------
 
+.. option:: WarnOnInts
+
+   When `true` (default), the check will warn about fundamental integer types (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and ``unsigned`` variants).
+   When `false`, integer types are not flagged.
+
+   Example with ``WarnOnInts`` enabled (default):
+
+   .. code-block:: c++
+
+     // Bad: platform-dependent integer types
+     #include <vector>
+
+     int counter = 0;
+     long timestamp = 12345L;
+     unsigned short port = 8080;
+
+     std::vector<uint32_t> vec;
+     // If int is 32 bits and (vec.size > 2^31 - 1), this overflows
+     for(int i = 0; i<vec.size();i++) {
+       vec[i];
+     }
+
+   .. code-block:: c++
+
+     // Good: use fixed-width or descriptive types
+     #include <cstdint>
+     #include <vector>
+     
+     int32_t counter = 0;           // When you need exactly 32 bits
+     int64_t timestamp = 12345L;    // When you need exactly 64 bits
+     uint16_t port = 8080;          // When you need exactly 16 unsigned bits
+     std::vector<uint32_t> vec;
+     // A size_t is the maximum size of an object on a given platform
+     for(size_t i = 0U; i<vec.size();i++) {
+       vec[i];
+     }
+
 .. option:: WarnOnFloats
 
    When `true`, the check will warn about floating point types (``float`` and ``double``).
