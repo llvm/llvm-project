@@ -106,8 +106,10 @@ protocol::Breakpoint Breakpoint::ToProtocolBreakpoint() {
         // in future sessions.
         std::optional<protocol::PersistenceData> persistence_data =
             GetPersistenceDataForAddress(start_address);
-        if (persistence_data)
-          source->adapterData->persistence_data = std::move(persistence_data);
+        if (persistence_data) {
+          source->adapterData =
+              protocol::SourceLLDBData{std::move(persistence_data)};
+        }
       }
     }
 
