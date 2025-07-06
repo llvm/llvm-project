@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARF_DWARFUNWINDTABLE_H
-#define LLVM_DEBUGINFO_DWARF_DWARFUNWINDTABLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFUNWINDTABLE_H
+#define LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFUNWINDTABLE_H
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFCFIProgram.h"
@@ -318,4 +318,4 @@ parseRows(const CFIProgram &CFIP, UnwindRow &CurrRow,
 
 } // end namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFUNWINDTABLE_H
