@@ -60,6 +60,9 @@ std::optional<size_t> ExtractIndexFromString(const char *item_name);
 void DumpCxxSmartPtrPointerSummary(Stream &stream, ValueObject &ptr,
                                    const TypeSummaryOptions &options);
 
+bool CxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
+                                 const TypeSummaryOptions &options);
+
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
 time_t GetOSXEpoch();
