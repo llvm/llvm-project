@@ -222,15 +222,15 @@ void UnaryOperators(int a, int *b) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'int' lvalue ParmVar 0x{{[^ ]*}} 'a' 'int'
 
   sizeof a;
-  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:10> 'unsigned long' sizeof
+  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:10> '__size_t':'unsigned long' sizeof
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:10> 'int' lvalue ParmVar 0x{{[^ ]*}} 'a' 'int'
 
   sizeof(int);
-  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> 'unsigned long' sizeof 'int'
+  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:13> '__size_t':'unsigned long' sizeof 'int'
 
   _Alignof(int);
   // FIXME: Uses C++ spelling for alignof in C mode.
-  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-2]]:3, col:15> 'unsigned long' alignof 'int'
+  // CHECK: UnaryExprOrTypeTraitExpr 0x{{[^ ]*}} <line:[[@LINE-2]]:3, col:15> '__size_t':'unsigned long' alignof 'int'
 }
 
 struct S {
