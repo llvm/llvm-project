@@ -144,20 +144,22 @@ std::vector<uint8_t> arm64_lc_thread_load_command() {
   return data;
 }
 
-std::vector<uint8_t> lc_segment(uint32_t fileoff) {
+std::vector<uint8_t> lc_segment(uint32_t fileoff,
+                                uint32_t lc_segment_data_size) {
   std::vector<uint8_t> data;
+  uint32_t start_vmaddr = 0x000e0000 - (lc_segment_data_size / 2);
   add_uint32(data, LC_SEGMENT);                     // segment_command.cmd
   add_uint32(data, sizeof(struct segment_command)); // segment_command.cmdsize
   for (int i = 0; i < 16; i++)
-    data.push_back(0);                // segment_command.segname[16]
-  add_uint32(data, 0x000e0000 - 512); // segment_command.vmaddr
-  add_uint32(data, 1024);             // segment_command.vmsize
-  add_uint32(data, fileoff);          // segment_command.fileoff
-  add_uint32(data, 1024);             // segment_command.filesize
-  add_uint32(data, 3);                // segment_command.maxprot
-  add_uint32(data, 3);                // segment_command.initprot
-  add_uint32(data, 0);                // segment_command.nsects
-  add_uint32(data, 0);                // segment_command.flags
+    data.push_back(0);                    // segment_command.segname[16]
+  add_uint32(data, start_vmaddr);         // segment_command.vmaddr
+  add_uint32(data, lc_segment_data_size); // segment_command.vmsize
+  add_uint32(data, fileoff);              // segment_command.fileoff
+  add_uint32(data, lc_segment_data_size); // segment_command.filesize
+  add_uint32(data, 3);                    // segment_command.maxprot
+  add_uint32(data, 3);                    // segment_command.initprot
+  add_uint32(data, 0);                    // segment_command.nsects
+  add_uint32(data, 0);                    // segment_command.flags
 
   return data;
 }
@@ -192,7 +194,7 @@ int main(int argc, char **argv) {
   // the load commands will actually be.
   if (arch == armv7) {
     load_commands.push_back(armv7_lc_thread_load_command());
-    load_commands.push_back(lc_segment(0));
+    load_commands.push_back(lc_segment(0, 0));
   } else if (arch == arm64) {
     load_commands.push_back(arm64_lc_thread_load_command());
   }
@@ -211,15 +213,17 @@ int main(int argc, char **argv) {
 
   int payload_fileoff = (header_and_load_cmd_room + 4096 - 1) & ~(4096 - 1);
 
+  const int lc_segment_data_size = 64;
   if (arch == armv7) {
     load_commands.push_back(armv7_lc_thread_load_command());
-    load_commands.push_back(lc_segment(payload_fileoff));
+    load_commands.push_back(lc_segment(payload_fileoff, lc_segment_data_size));
   } else if (arch == arm64) {
     load_commands.push_back(arm64_lc_thread_load_command());
   }
 
   if (arch == armv7)
-    for (int i = 0; i < 1024; i++) // from segment_command.filesize
+    for (int i = 0; i < lc_segment_data_size;
+         i++) // from segment_command.filesize
       payload.push_back(i);
 
   struct mach_header_64 mh;
