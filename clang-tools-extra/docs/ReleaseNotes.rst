@@ -266,6 +266,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
 
+- Improved :doc:`misc-unconventional-assign-operator
+  <clang-tidy/checks/misc/unconventional-assign-operator>` check by fixing
+  false positives when copy assignment operator function in a template class
+  returns the result of another assignment to ``*this`` (``return *this=...``).
+
 - Improved :doc:`misc-unused-using-decls
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
   on ``operator""`` with template parameters.
