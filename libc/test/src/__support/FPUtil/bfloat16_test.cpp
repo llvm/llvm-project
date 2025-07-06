@@ -24,7 +24,6 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80;
 
-
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
 // TODO: better naming?
@@ -32,7 +31,7 @@ TEST_F(LlvmLibcBfloat16ExhaustiveTest, PositiveRange) {
   for (uint16_t bits = POS_START; bits <= POS_STOP; bits++) {
     bfloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
-    
+
     // bfloat16 to float
     float mpfr_float = mpfr_num.as<float>();
     ASSERT_FP_EQ(mpfr_float, bf16_num.as_float());
@@ -43,13 +42,23 @@ TEST_F(LlvmLibcBfloat16ExhaustiveTest, PositiveRange) {
     bfloat16 mpfr_bfloat = mpfr_num_2.as<bfloat16>();
     ASSERT_FP_EQ(mpfr_bfloat, bf16_from_float);
   }
+
+  auto test_for_int = [&](const int x) {
+    const auto y = static_cast<float>(x);
+    EXPECT_FP_EQ(bfloat16{y}, bfloat16{x});
+  };
+
+  test_for_int(2);
+  test_for_int(17);
+  test_for_int(21);
+  test_for_int(16320);
 }
 
 TEST_F(LlvmLibcBfloat16ExhaustiveTest, NegativeRange) {
   for (uint16_t bits = NEG_START; bits <= NEG_STOP; bits++) {
     bfloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
-    
+
     // bfloat16 to float
     float mpfr_float = mpfr_num.as<float>();
     ASSERT_FP_EQ(mpfr_float, bf16_num.as_float());
@@ -60,4 +69,14 @@ TEST_F(LlvmLibcBfloat16ExhaustiveTest, NegativeRange) {
     bfloat16 mpfr_bfloat = mpfr_num_2.as<bfloat16>();
     ASSERT_FP_EQ(mpfr_bfloat, bf16_from_float);
   }
+
+  auto test_for_int = [&](const int x) {
+    const auto y = static_cast<float>(x);
+    EXPECT_FP_EQ(bfloat16{y}, bfloat16{x});
+  };
+
+  test_for_int(-2);
+  test_for_int(-17);
+  test_for_int(-21);
+  test_for_int(-16320);
 }
