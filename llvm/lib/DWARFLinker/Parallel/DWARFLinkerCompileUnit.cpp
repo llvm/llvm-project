@@ -101,10 +101,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
 
-  for (uint64_t &Offset : OutDieOffsetArray)
-    Offset = 0;
-  for (TypeEntry *&Name : TypeEntries)
-    Name = nullptr;
+  llvm::fill(OutDieOffsetArray, 0);
+  llvm::fill(TypeEntries, nullptr);
   eraseSections();
 
   setStage(Stage::CreatedNotLoaded);

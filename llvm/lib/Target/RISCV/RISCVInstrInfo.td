@@ -1615,6 +1615,10 @@ def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
 def : Pat<(riscv_seteq (XLenVT GPR:$rs1)), (SLTIU GPR:$rs1, 1)>;
 def : Pat<(riscv_setne (XLenVT GPR:$rs1)), (SLTU (XLenVT X0), GPR:$rs1)>;
 def : Pat<(XLenVT (setne (XLenVT GPR:$rs1), -1)), (SLTIU GPR:$rs1, -1)>;
+def : Pat<(XLenVT (seteq (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTIU (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))), 1)>;
+def : Pat<(XLenVT (setne (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
+          (SLTU (XLenVT X0), (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))))>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();

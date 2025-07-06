@@ -317,7 +317,6 @@ public:
       case FK_Data_1:
       case FK_Data_2:
       case FK_Data_4:
-      case FK_PCRel_4:
       case fixup_Hexagon_32:
         // Leave these relocations alone as they are used for EH.
         return false;
@@ -335,8 +334,7 @@ public:
         return 1;
       case FK_Data_2:
         return 2;
-      case FK_Data_4:         // this later gets mapped to R_HEX_32
-      case FK_PCRel_4:        // this later gets mapped to R_HEX_32_PCREL
+      case FK_Data_4: // this later gets mapped to R_HEX_32 or R_HEX_32_PCREL
       case fixup_Hexagon_32:
       case fixup_Hexagon_B32_PCREL_X:
       case fixup_Hexagon_B22_PCREL:

@@ -78,11 +78,11 @@ void BPFAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4],
                                      static_cast<uint32_t>(Value),
                                      Endian);
-  } else if (Fixup.getKind() == FK_Data_4) {
+  } else if (Fixup.getKind() == FK_Data_4 && !Fixup.isPCRel()) {
     support::endian::write<uint32_t>(&Data[Fixup.getOffset()], Value, Endian);
   } else if (Fixup.getKind() == FK_Data_8) {
     support::endian::write<uint64_t>(&Data[Fixup.getOffset()], Value, Endian);
-  } else if (Fixup.getKind() == FK_PCRel_4) {
+  } else if (Fixup.getKind() == FK_Data_4 && Fixup.isPCRel()) {
     Value = (uint32_t)((Value - 8) / 8);
     if (Endian == llvm::endianness::little) {
       Data[Fixup.getOffset() + 1] = 0x10;
@@ -97,7 +97,7 @@ void BPFAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4], Value,
                                      Endian);
   } else {
-    assert(Fixup.getKind() == FK_PCRel_2);
+    assert(Fixup.getKind() == FK_Data_2 && Fixup.isPCRel());
 
     int64_t ByteOff = (int64_t)Value - 8;
     if (ByteOff > INT16_MAX * 8 || ByteOff < INT16_MIN * 8)

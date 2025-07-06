@@ -107,14 +107,14 @@ unsigned BPFMCCodeEmitter::getMachineOpValue(const MCInst &MI,
 
   if (MI.getOpcode() == BPF::JAL)
     // func call name
-    addFixup(Fixups, 0, Expr, FK_PCRel_4, true);
+    addFixup(Fixups, 0, Expr, FK_Data_4, true);
   else if (MI.getOpcode() == BPF::LD_imm64)
     addFixup(Fixups, 0, Expr, FK_SecRel_8);
   else if (MI.getOpcode() == BPF::JMPL)
     addFixup(Fixups, 0, Expr, BPF::FK_BPF_PCRel_4, true);
   else
     // bb label
-    addFixup(Fixups, 0, Expr, FK_PCRel_2, true);
+    addFixup(Fixups, 0, Expr, FK_Data_2, true);
 
   return 0;
 }

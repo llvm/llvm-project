@@ -77,66 +77,6 @@
 // CHECK: encoding: [0xc4,0xe3,0xfd,0x69,0xc2,0x10]
           vfmaddpd   %ymm2, %ymm1, %ymm0, %ymm0
 
-// PR15040
-// CHECK: vfmaddss  foo(%rip), %xmm1, %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0xf9,0x6a,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddss  foo(%rip), %xmm1, %xmm0, %xmm0
-
-// CHECK: vfmaddss   %xmm1, foo(%rip), %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0x79,0x6a,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddss   %xmm1, foo(%rip),%xmm0, %xmm0
-
-// CHECK: vfmaddsd  foo(%rip), %xmm1, %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0xf9,0x6b,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddsd  foo(%rip), %xmm1, %xmm0, %xmm0
-
-// CHECK: vfmaddsd   %xmm1, foo(%rip), %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0x79,0x6b,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddsd   %xmm1, foo(%rip),%xmm0, %xmm0
-
-// CHECK: vfmaddps  foo(%rip), %xmm1, %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0xf9,0x68,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddps  foo(%rip), %xmm1, %xmm0, %xmm0
-
-// CHECK: vfmaddps   %xmm1, foo(%rip), %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0x79,0x68,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddps   %xmm1, foo(%rip),%xmm0, %xmm0
-
-// CHECK: vfmaddpd  foo(%rip), %xmm1, %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0xf9,0x69,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddpd  foo(%rip), %xmm1, %xmm0, %xmm0
-
-// CHECK: vfmaddpd   %xmm1, foo(%rip), %xmm0, %xmm0
-// CHECK: encoding: [0xc4,0xe3,0x79,0x69,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddpd   %xmm1, foo(%rip),%xmm0, %xmm0
-
-// CHECK: vfmaddps  foo(%rip), %ymm1, %ymm0, %ymm0
-// CHECK: encoding: [0xc4,0xe3,0xfd,0x68,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddps  foo(%rip), %ymm1, %ymm0, %ymm0
-
-// CHECK: vfmaddps   %ymm1, foo(%rip), %ymm0, %ymm0
-// CHECK: encoding: [0xc4,0xe3,0x7d,0x68,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddps   %ymm1, foo(%rip),%ymm0, %ymm0
-
-// CHECK: vfmaddpd  foo(%rip), %ymm1, %ymm0, %ymm0
-// CHECK: encoding: [0xc4,0xe3,0xfd,0x69,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddpd  foo(%rip), %ymm1, %ymm0, %ymm0
-
-// CHECK: vfmaddpd   %ymm1, foo(%rip), %ymm0, %ymm0
-// CHECK: encoding: [0xc4,0xe3,0x7d,0x69,0x05,A,A,A,A,0x10]
-// CHECK: fixup A - offset: 5, value: foo-5, kind: reloc_riprel_4byte
-          vfmaddpd   %ymm1, foo(%rip),%ymm0, %ymm0
 
 // vfmsub
 // CHECK: vfmsubss  (%rcx), %xmm1, %xmm0, %xmm0

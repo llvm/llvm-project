@@ -49,16 +49,18 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     MCContext &Ctx, const MCValue &Target, const MCFixup &Fixup,
     bool IsCrossSection, const MCAsmBackend &MAB) const {
   unsigned FixupKind = Fixup.getKind();
+  bool PCRel = Fixup.isPCRel();
   if (IsCrossSection) {
     // IMAGE_REL_ARM64_REL64 does not exist. We treat FK_Data_8 as FK_PCRel_4 so
     // that .xword a-b can lower to IMAGE_REL_ARM64_REL32. This allows generic
     // instrumentation to not bother with the COFF limitation. A negative value
     // needs attention.
-    if (FixupKind != FK_Data_4 && FixupKind != FK_Data_8) {
+    if (PCRel || (FixupKind != FK_Data_4 && FixupKind != FK_Data_8)) {
       Ctx.reportError(Fixup.getLoc(), "Cannot represent this expression");
       return COFF::IMAGE_REL_ARM64_ADDR32;
     }
-    FixupKind = FK_PCRel_4;
+    FixupKind = FK_Data_4;
+    PCRel = true;
   }
 
   auto Spec = Target.getSpecifier();
@@ -93,10 +95,9 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
     return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
   }
 
-  case FK_PCRel_4:
-    return COFF::IMAGE_REL_ARM64_REL32;
-
   case FK_Data_4:
+    if (PCRel)
+      return COFF::IMAGE_REL_ARM64_REL32;
     switch (Spec) {
     default:
       return COFF::IMAGE_REL_ARM64_ADDR32;
