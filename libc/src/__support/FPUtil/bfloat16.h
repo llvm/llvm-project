@@ -25,10 +25,43 @@ struct BFloat16 {
 
   constexpr explicit BFloat16(uint16_t bits) : bits(bits) {}
 
-  // TODO: verify this if correct for integers and similar types.
   template <typename T> constexpr explicit BFloat16(T value) {
     if constexpr (cpp::is_floating_point_v<T>) {
       bits = fputil::cast<bfloat16>(value).bits;
+    } else if constexpr (cpp::is_integral_v<T>) {
+      //  TODO: verify this
+      Sign sign = Sign::POS;
+
+      if constexpr (cpp::is_signed_v<T>) {
+        if (value < 0) {
+          sign = Sign::NEG;
+          value = -value;
+        }
+      }
+      cpp::make_unsigned_t<T> uvalue = value;
+
+      int msb = cpp::bit_width(uvalue) - 1;
+      int biased_exponent = msb + 127;
+
+      if (biased_exponent > 255) {
+        bits = fputil::FPBits<bfloat16>::inf(sign).get_val().bits;
+        return;
+      }
+
+      // TODO: currently, this is just truncation. need to handle rounding.
+      if (msb >= 7) {
+        uvalue >>= (msb - 7);
+      } else {
+        uvalue <<= (7 - msb);
+      }
+
+      const auto exp = static_cast<uint16_t>(biased_exponent << 7U);
+      const uint16_t mant = static_cast<uint16_t>(uvalue) & 0x7F;
+
+      bits = exp | mant;
+      if (sign.is_neg()) {
+        bits |= (1U << 15);
+      }
     } else {
       bits = fputil::cast<bfloat16>(static_cast<float>(value)).bits;
     }
