@@ -122,9 +122,9 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
   }
 
   // Create the matcher dynamically
-  auto TypeMatcher = asString(TypeStrings[0]);
-  for (size_t i = 1; i < TypeStrings.size(); ++i) {
-    TypeMatcher = anyOf(TypeMatcher, asString(TypeStrings[i]));
+  auto TypeMatcher = asString(TypeStrings.front());
+  for (const auto& TypeString : TypeStrings) {
+    TypeMatcher = anyOf(TypeMatcher, asString(TypeString));
   }
 
   auto PlatformSpecificFundamentalType = qualType(allOf(
