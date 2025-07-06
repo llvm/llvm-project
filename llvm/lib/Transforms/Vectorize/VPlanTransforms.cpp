@@ -2390,6 +2390,58 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   return true;
 }
 
+void VPlanTransforms::simplifyEVLIVs(VPlan &Plan) {
+  auto ConvertEVLPhi = [](VPlan &Plan, VPBasicBlock *Entry,
+                          VPEVLBasedIVPHIRecipe *EVLPhi) {
+    using namespace llvm::VPlanPatternMatch;
+    VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
+
+    // Convert EVLPhi to concrete recipe.
+    auto *ScalarR = VPBuilder(EVLPhi).createScalarPhi(
+        {EVLPhi->getStartValue(), EVLIncrement}, EVLPhi->getDebugLoc(),
+        "evl.based.iv");
+    EVLPhi->replaceAllUsesWith(ScalarR);
+    EVLPhi->eraseFromParent();
+
+    // Find the latch-exiting block and convert to variable-length stepping.
+    // Before: (branch-on-cond CanonicalIVInc, VectorTripCount)
+    // After: (branch-on-cond EVLIVInc, TripCount)
+    auto FindLatchExiting = [](VPBasicBlock *Entry) {
+      auto Range =
+          VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(Entry));
+      auto It = find_if(Range, [&](VPBasicBlock *VPBB) {
+        return any_of(VPBB->successors(),
+                      [&](VPBlockBase *Succ) { return Succ == Entry; });
+      });
+      return It != Range.end() ? *It : nullptr;
+    };
+    VPBasicBlock *LatchExiting = FindLatchExiting(Entry);
+    assert(LatchExiting && "LatchExiting is not found");
+    auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
+    VPValue *ScalarIVInc;
+    if (!LatchExitingBr ||
+        !match(LatchExitingBr,
+               m_BranchOnCount(m_VPValue(ScalarIVInc),
+                               m_Specific(&Plan.getVectorTripCount()))))
+      return;
+    LatchExitingBr->setOperand(1, Plan.getTripCount());
+    ScalarIVInc->replaceAllUsesWith(EVLIncrement);
+    VPRecipeBase *IVIncR = ScalarIVInc->getDefiningRecipe();
+    VPRecipeBase *ScalarIV = IVIncR->getOperand(0)->getDefiningRecipe();
+    IVIncR->eraseFromParent();
+    ScalarIV->eraseFromParent();
+  };
+
+  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry())))
+    for (VPRecipeBase &R : VPBB->phis())
+      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+        ConvertEVLPhi(Plan, VPBB, PhiR);
+        break;
+      }
+}
+
 void VPlanTransforms::dropPoisonGeneratingRecipes(
     VPlan &Plan,
     const std::function<bool(BasicBlock *)> &BlockNeedsPredication) {
@@ -2721,15 +2773,6 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
-        auto *ScalarR = VPBuilder(PhiR).createScalarPhi(
-            {PhiR->getStartValue(), PhiR->getBackedgeValue()},
-            PhiR->getDebugLoc(), "evl.based.iv");
-        PhiR->replaceAllUsesWith(ScalarR);
-        ToRemove.push_back(PhiR);
-        continue;
-      }
-
       if (auto *WidenIVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
         expandVPWidenIntOrFpInduction(WidenIVR, TypeInfo);
         ToRemove.push_back(WidenIVR);

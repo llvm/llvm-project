@@ -193,7 +193,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
-          if (I->getNumUsers() != 1) {
+          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
+          // More than two is unexpected.
+          if (I->getNumUsers() > 2) {
             errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
