@@ -148,6 +148,13 @@ New checks
   Finds uses of ``std::lock_guard`` and suggests replacing them with C++17's
   alternative ``std::scoped_lock``.
 
+- New :doc:`portability-avoid-platform-specific-fundamental-types
+  <clang-tidy/checks/portability/avoid-platform-specific-fundamental-types>` 
+  check.
+
+  Finds fundamental types (e.g. `int`, `float`) and recommends using typedefs 
+  or fixed-width types instead to improve portability across different platforms.
+
 - New :doc:`portability-avoid-pragma-once
   <clang-tidy/checks/portability/avoid-pragma-once>` check.
 
