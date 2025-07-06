@@ -577,8 +577,8 @@ public:
   }
 
   // template <typename... Args> constexpr __tree_node_base(Args && ... args) =default;
-  __tree_node_base()                                   = default;
-  ~__tree_node_base()                                  = default;
+  _LIBCPP_HIDE_FROM_ABI __tree_node_base()                                   = default;
+  _LIBCPP_HIDE_FROM_ABI ~__tree_node_base()                                  = default;
   __tree_node_base(__tree_node_base const&)            = delete;
   __tree_node_base& operator=(__tree_node_base const&) = delete;
 };
