@@ -117,7 +117,8 @@ llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithSourceReference(int64_
 
 llvm::Error SourceBreakpoint::CreateAssemblyBreakpointWithPersistenceData(const protocol::PersistenceData &persistence_data) {
   lldb::SBFileSpec file_spec(persistence_data.module.c_str());
-  m_bp = m_dap.target.BreakpointCreateByFileAddress(file_spec, persistence_data.file_addr);
+  m_bp = m_dap.target.BreakpointCreateByFileAddress(
+      file_spec, persistence_data.file_addr, 0, m_line - 1);
   return llvm::Error::success();
 }
 
