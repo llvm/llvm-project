@@ -111,14 +111,19 @@ define i1 @usubo_uge_i64_overflow_used(i64 %x, i64 %y, ptr %p) {
 define i1 @usubo_uge_i64_math_overflow_used(i64 %x, i64 %y, ptr %p) {
 ; CHECK-LABEL: usubo_uge_i64_math_overflow_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    pushl %esi
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, (%eax)
-; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movl %edx, 4(%eax)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    movl %edx, (%ecx)
+; CHECK-NEXT:    movl %esi, 4(%ecx)
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
   %s = sub i64 %x, %y
   store i64 %s, ptr %p
@@ -141,13 +146,11 @@ define i1 @usubo_ule_i32_overflow_used(i32 %x, i32 %y, ptr %p) {
 define i1 @usubo_ne_zero_i16_overflow_used(i16 %x, ptr %p) {
 ; CHECK-LABEL: usubo_ne_zero_i16_overflow_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    decl %edx
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    subw $1, %dx
+; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movw %dx, (%ecx)
-; CHECK-NEXT:    testw %ax, %ax
-; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retl
   %s = sub i16 %x, 1
   store i16 %s, ptr %p
@@ -158,11 +161,11 @@ define i1 @usubo_ne_zero_i16_overflow_used(i16 %x, ptr %p) {
 define i1 @usubo_eq_zero_i8_overflow_used(i8 %x, ptr %p) {
 ; CHECK-LABEL: usubo_eq_zero_i8_overflow_used:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    negb %cl
-; CHECK-NEXT:    movb %cl, (%eax)
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    subb {{[0-9]+}}(%esp), %dl
 ; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    movb %dl, (%ecx)
 ; CHECK-NEXT:    retl
   %s = sub i8 0, %x
   store i8 %s, ptr %p
