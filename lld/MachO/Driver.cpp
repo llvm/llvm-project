@@ -283,11 +283,11 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
-static InputFile *deferredAddFile(std::optional<MemoryBufferRef> buffer,
-                                  StringRef path, LoadType loadType,
-                                  bool isLazy = false, bool isExplicit = true,
-                                  bool isBundleLoader = false,
-                                  bool isForceHidden = false) {
+static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
+                              StringRef path, LoadType loadType,
+                              bool isLazy = false, bool isExplicit = true,
+                              bool isBundleLoader = false,
+                              bool isForceHidden = false) {
   if (!buffer)
     return nullptr;
   MemoryBufferRef mbref = *buffer;
@@ -446,8 +446,24 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                           bool isLazy = false, bool isExplicit = true,
                           bool isBundleLoader = false,
                           bool isForceHidden = false) {
-  return deferredAddFile(readFile(path), path, loadType, isLazy, isExplicit,
-                         isBundleLoader, isForceHidden);
+  return processFile(readFile(path), path, loadType, isLazy, isExplicit,
+                     isBundleLoader, isForceHidden);
+}
+
+typedef struct {
+  StringRef path;
+  LoadType loadType;
+  bool isLazy;
+  std::optional<MemoryBufferRef> buffer;
+} DeferredFile;
+
+static void deferFile(StringRef path, LoadType loadType, bool isLazy,
+                      std::vector<DeferredFile> &deferred) {
+  std::optional<MemoryBufferRef> buffer = readFile(path);
+  if (config->readThreads)
+    deferred.push_back({path, loadType, isLazy, buffer});
+  else
+    processFile(buffer, path, loadType, isLazy);
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
@@ -573,11 +589,6 @@ void macho::resolveLCLinkerOptions() {
   }
 }
 
-typedef struct {
-  StringRef path;
-  std::optional<MemoryBufferRef> buffer;
-} DeferredFile;
-
 static void addFileList(StringRef path, bool isLazy,
                         std::vector<DeferredFile> &deferredFiles) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
@@ -585,11 +596,7 @@ static void addFileList(StringRef path, bool isLazy,
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    if (config->readThreads) {
-      StringRef rrpath = rerootPath(path);
-      deferredFiles.push_back({rrpath, readFile(rrpath)});
-    } else
-      addFile(rerootPath(path), LoadType::CommandLine, isLazy);
+    deferFile(rerootPath(path), LoadType::CommandLine, isLazy, deferredFiles);
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
@@ -1239,43 +1246,44 @@ static void handleSymbolPatterns(InputArgList &args,
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageIn(std::vector<DeferredFile> &deferred, int nthreads) {
 #ifndef _WIN32
+#define MaxReadThreads 200
   typedef struct {
     std::vector<DeferredFile> &deferred;
-    size_t counter, total, pageSize;
+    size_t counter, bytes, total, pageSize;
     pthread_mutex_t mutex;
   } PageInState;
-  PageInState state = {deferred, 0, 0,
-                       llvm::sys::Process::getPageSizeEstimate(),
-                       pthread_mutex_t()};
+  PageInState state = {
+      deferred,         0, 0, 0, llvm::sys::Process::getPageSizeEstimate(),
+      pthread_mutex_t()};
   pthread_mutex_init(&state.mutex, NULL);
 
-  pthread_t running[200];
-  int maxthreads = sizeof running / sizeof running[0];
-  if (nthreads > maxthreads)
-    nthreads = maxthreads;
+  pthread_t running[MaxReadThreads];
+  if (nthreads > MaxReadThreads)
+    nthreads = MaxReadThreads;
 
   for (int t = 0; t < nthreads; t++)
     pthread_create(
         &running[t], nullptr,
         [](void *ptr) -> void * {
           PageInState &state = *(PageInState *)ptr;
-          static int total = 0;
           while (true) {
             pthread_mutex_lock(&state.mutex);
             if (state.counter >= state.deferred.size()) {
               pthread_mutex_unlock(&state.mutex);
               return nullptr;
             }
-            DeferredFile &add = state.deferred[state.counter];
+            DeferredFile &file = state.deferred[state.counter];
             state.counter += 1;
             pthread_mutex_unlock(&state.mutex);
 
+            const char *page = file.buffer->getBuffer().data(),
+                       *end = page + file.buffer->getBuffer().size();
+            state.bytes += end - page;
+
             int t = 0; // Reference each page to load it into memory.
-            for (const char *page = add.buffer->getBuffer().data(),
-                            *end = page + add.buffer->getBuffer().size();
-                 page < end; page += state.pageSize)
+            for (; page < end; page += state.pageSize)
               t += *page;
-            state.total += t; // Avoids whole section being optimised out.
+            state.total += t; // Avoids the loop being optimised out.
           }
         },
         &state);
@@ -1303,12 +1311,8 @@ void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      if (config->readThreads) {
-        StringRef rrpath = rerootPath(arg->getValue());
-        deferredFiles.push_back({rrpath, readFile(rrpath)});
-        break;
-      }
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy);
+      deferFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy,
+                deferredFiles);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -1377,8 +1381,8 @@ void createFiles(const InputArgList &args) {
 
   if (config->readThreads) {
     multiThreadedPageIn(deferredFiles, config->readThreads);
-    for (auto &add : deferredFiles)
-      deferredAddFile(add.buffer, add.path, LoadType::CommandLine, isLazy);
+    for (auto &file : deferredFiles)
+      processFile(file.buffer, file.path, file.loadType, file.isLazy);
   }
 }
 
