@@ -3504,6 +3504,9 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
     OffloadErrCode = ErrorCode::NOT_FOUND;
     break;
+  case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
+    OffloadErrCode = ErrorCode::INVALID_BINARY;
+    break;
   default:
     OffloadErrCode = ErrorCode::UNKNOWN;
   }

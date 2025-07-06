@@ -986,8 +986,10 @@ private:
   void join(AnnotatedLine &A, const AnnotatedLine &B) {
     assert(!A.Last->Next);
     assert(!B.First->Previous);
-    if (B.Affected)
+    if (B.Affected || B.LeadingEmptyLinesAffected) {
+      assert(B.Affected || A.Last->Children.empty());
       A.Affected = true;
+    }
     A.Last->Next = B.First;
     B.First->Previous = A.Last;
     B.First->CanBreakBefore = true;
