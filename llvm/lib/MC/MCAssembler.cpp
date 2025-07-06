@@ -196,9 +196,14 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   assert(getBackendPtr() && "Requires assembler backend");
   switch (F.getKind()) {
   case MCFragment::FT_Data:
-    return cast<MCDataFragment>(F).getContents().size();
   case MCFragment::FT_Relaxable:
-    return cast<MCRelaxableFragment>(F).getContents().size();
+  case MCFragment::FT_LEB:
+  case MCFragment::FT_Dwarf:
+  case MCFragment::FT_DwarfFrame:
+  case MCFragment::FT_CVInlineLines:
+  case MCFragment::FT_CVDefRange:
+  case MCFragment::FT_PseudoProbe:
+    return cast<MCEncodedFragment>(F).getContents().size();
   case MCFragment::FT_Fill: {
     auto &FF = cast<MCFillFragment>(F);
     int64_t NumValues = 0;
@@ -216,9 +221,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
 
   case MCFragment::FT_Nops:
     return cast<MCNopsFragment>(F).getNumBytes();
-
-  case MCFragment::FT_LEB:
-    return cast<MCLEBFragment>(F).getContents().size();
 
   case MCFragment::FT_BoundaryAlign:
     return cast<MCBoundaryAlignFragment>(F).getSize();
@@ -275,17 +277,6 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     }
     return Size;
   }
-
-  case MCFragment::FT_Dwarf:
-    return cast<MCDwarfLineAddrFragment>(F).getContents().size();
-  case MCFragment::FT_DwarfFrame:
-    return cast<MCDwarfCallFrameFragment>(F).getContents().size();
-  case MCFragment::FT_CVInlineLines:
-    return cast<MCCVInlineLineTableFragment>(F).getContents().size();
-  case MCFragment::FT_CVDefRange:
-    return cast<MCCVDefRangeFragment>(F).getContents().size();
-  case MCFragment::FT_PseudoProbe:
-    return cast<MCPseudoProbeAddrFragment>(F).getContents().size();
   }
 
   llvm_unreachable("invalid fragment kind");
@@ -543,6 +534,22 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   ++stats::EmittedFragments;
 
   switch (F.getKind()) {
+  case MCFragment::FT_Data:
+  case MCFragment::FT_Relaxable:
+  case MCFragment::FT_LEB:
+  case MCFragment::FT_Dwarf:
+  case MCFragment::FT_DwarfFrame:
+  case MCFragment::FT_CVInlineLines:
+  case MCFragment::FT_CVDefRange:
+  case MCFragment::FT_PseudoProbe: {
+    if (F.getKind() == MCFragment::FT_Data)
+      ++stats::EmittedDataFragments;
+    else if (F.getKind() == MCFragment::FT_Relaxable)
+      ++stats::EmittedRelaxableFragments;
+    const auto &EF = cast<MCEncodedFragment>(F);
+    OS << StringRef(EF.getContents().data(), EF.getContents().size());
+    break;
+  }
   case MCFragment::FT_Align: {
     ++stats::EmittedAlignFragments;
     const MCAlignFragment &AF = cast<MCAlignFragment>(F);
@@ -588,18 +595,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     }
     break;
   }
-
-  case MCFragment::FT_Data:
-    ++stats::EmittedDataFragments;
-    OS << StringRef(cast<MCDataFragment>(F).getContents().data(),
-                    cast<MCDataFragment>(F).getContents().size());
-    break;
-
-  case MCFragment::FT_Relaxable:
-    ++stats::EmittedRelaxableFragments;
-    OS << StringRef(cast<MCRelaxableFragment>(F).getContents().data(),
-                    cast<MCRelaxableFragment>(F).getContents().size());
-    break;
 
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
@@ -676,12 +671,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     break;
   }
 
-  case MCFragment::FT_LEB: {
-    const MCLEBFragment &LF = cast<MCLEBFragment>(F);
-    OS << StringRef(LF.getContents().data(), LF.getContents().size());
-    break;
-  }
-
   case MCFragment::FT_BoundaryAlign: {
     const MCBoundaryAlignFragment &BF = cast<MCBoundaryAlignFragment>(F);
     if (!Asm.getBackend().writeNopData(OS, FragmentSize, BF.getSubtargetInfo()))
@@ -706,31 +695,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     break;
   }
 
-  case MCFragment::FT_Dwarf: {
-    const MCDwarfLineAddrFragment &OF = cast<MCDwarfLineAddrFragment>(F);
-    OS << StringRef(OF.getContents().data(), OF.getContents().size());
-    break;
-  }
-  case MCFragment::FT_DwarfFrame: {
-    const MCDwarfCallFrameFragment &CF = cast<MCDwarfCallFrameFragment>(F);
-    OS << StringRef(CF.getContents().data(), CF.getContents().size());
-    break;
-  }
-  case MCFragment::FT_CVInlineLines: {
-    const auto &OF = cast<MCCVInlineLineTableFragment>(F);
-    OS << StringRef(OF.getContents().data(), OF.getContents().size());
-    break;
-  }
-  case MCFragment::FT_CVDefRange: {
-    const auto &DRF = cast<MCCVDefRangeFragment>(F);
-    OS << StringRef(DRF.getContents().data(), DRF.getContents().size());
-    break;
-  }
-  case MCFragment::FT_PseudoProbe: {
-    const MCPseudoProbeAddrFragment &PF = cast<MCPseudoProbeAddrFragment>(F);
-    OS << StringRef(PF.getContents().data(), PF.getContents().size());
-    break;
-  }
   }
 
   assert(OS.tell() - Start == FragmentSize &&
@@ -831,7 +795,8 @@ void MCAssembler::layout() {
   this->HasLayout = true;
   for (MCSection &Sec : *this)
     layoutSection(Sec);
-  while (relaxOnce())
+  unsigned FirstStable = Sections.size();
+  while ((FirstStable = relaxOnce(FirstStable)) > 0)
     if (getContext().hadError())
       return;
 
@@ -1163,17 +1128,15 @@ void MCAssembler::layoutSection(MCSection &Sec) {
   }
 }
 
-bool MCAssembler::relaxOnce() {
+unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
   ++stats::RelaxationSteps;
   PendingErrors.clear();
 
-  // Size of fragments in one section can depend on the size of fragments in
-  // another. If any fragment has changed size, we have to re-layout (and
-  // as a result possibly further relax) all sections.
-  bool ChangedAny = false;
-  for (MCSection &Sec : *this) {
+  unsigned Res = 0;
+  for (unsigned I = 0; I != FirstStable; ++I) {
     // Assume each iteration finalizes at least one extra fragment. If the
     // layout does not converge after N+1 iterations, bail out.
+    auto &Sec = *Sections[I];
     auto MaxIter = Sec.curFragList()->Tail->getLayoutOrder() + 1;
     for (;;) {
       bool Changed = false;
@@ -1181,13 +1144,20 @@ bool MCAssembler::relaxOnce() {
         if (relaxFragment(F))
           Changed = true;
 
-      ChangedAny |= Changed;
-      if (!Changed || --MaxIter == 0)
+      if (!Changed)
+        break;
+      // If any fragment changed size, it might impact the layout of subsequent
+      // sections. Therefore, we must re-evaluate all sections.
+      FirstStable = Sections.size();
+      Res = I;
+      if (--MaxIter == 0)
         break;
       layoutSection(Sec);
     }
   }
-  return ChangedAny;
+  // The subsequent relaxOnce call only needs to visit Sections [0,Res) if no
+  // change occurred.
+  return Res;
 }
 
 void MCAssembler::reportError(SMLoc L, const Twine &Msg) const {
