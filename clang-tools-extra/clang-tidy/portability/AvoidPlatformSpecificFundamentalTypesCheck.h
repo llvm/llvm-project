@@ -44,6 +44,7 @@ public:
 
 private:
   const bool WarnOnFloats;
+  const bool WarnOnInts;
   utils::IncludeInserter IncludeInserter;
   std::string getFloatReplacement(const BuiltinType *BT,
                                   ASTContext &Context) const;

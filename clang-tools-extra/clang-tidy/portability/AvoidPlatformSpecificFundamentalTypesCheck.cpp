@@ -21,6 +21,7 @@ AvoidPlatformSpecificFundamentalTypesCheck::
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       WarnOnFloats(Options.get("WarnOnFloats", false)),
+      WarnOnInts(Options.get("WarnOnInts", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {}
@@ -33,6 +34,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerPPCallbacks(
 void AvoidPlatformSpecificFundamentalTypesCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "WarnOnFloats", WarnOnFloats);
+  Options.store(Opts, "WarnOnInts", WarnOnInts);
   Options.store(Opts, "IncludeStyle", IncludeInserter.getStyle());
 }
 
@@ -74,37 +76,49 @@ std::string AvoidPlatformSpecificFundamentalTypesCheck::getFloatReplacement(
 void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
     MatchFinder *Finder) {
   // Build the list of type strings to match
-  std::vector<std::string> TypeStrings = {"short",
-                                          "short int",
-                                          "signed short",
-                                          "signed short int",
-                                          "unsigned short",
-                                          "unsigned short int",
-                                          "int",
-                                          "signed",
-                                          "signed int",
-                                          "unsigned",
-                                          "unsigned int",
-                                          "long",
-                                          "long int",
-                                          "signed long",
-                                          "signed long int",
-                                          "unsigned long",
-                                          "unsigned long int",
-                                          "long long",
-                                          "long long int",
-                                          "signed long long",
-                                          "signed long long int",
-                                          "unsigned long long",
-                                          "unsigned long long int"};
+  std::vector<std::string> TypeStrings;
+
+  // Add integer types if the option is enabled
+  if (WarnOnInts) {
+    TypeStrings.insert(TypeStrings.end(), {
+        "short",
+        "short int",
+        "signed short",
+        "signed short int",
+        "unsigned short",
+        "unsigned short int",
+        "int",
+        "signed",
+        "signed int",
+        "unsigned",
+        "unsigned int",
+        "long",
+        "long int",
+        "signed long",
+        "signed long int",
+        "unsigned long",
+        "unsigned long int",
+        "long long",
+        "long long int",
+        "signed long long",
+        "signed long long int",
+        "unsigned long long",
+        "unsigned long long int"});
+  }
 
   // Add float types if the option is enabled
   if (WarnOnFloats) {
-    TypeStrings.push_back("half");
-    TypeStrings.push_back("__bf16");
-    TypeStrings.push_back("float");
-    TypeStrings.push_back("double");
-    TypeStrings.push_back("long double");
+    TypeStrings.insert(TypeStrings.end(), {
+        "half",
+        "__bf16",
+        "float",
+        "double",
+        "long double"});
+  }
+
+  // If no types are enabled, return early
+  if (TypeStrings.empty()) {
+    return;
   }
 
   // Create the matcher dynamically
