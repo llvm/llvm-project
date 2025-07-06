@@ -164,15 +164,15 @@ struct TemplateTypeAlias {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: operator=() should return 'TemplateTypeAlias&' [misc-unconventional-assign-operator]
 };
 
-namespace issue143237 {
+namespace gh143237 {
 template<typename T>
-struct B {
-  explicit B(int) {
+struct TemplateAssignment {
+  explicit TemplateAssignment(int) {
   }
 
-  B& operator=(int n) {
+  TemplateAssignment& operator=(int n) {
     // No warning
-    return *this = B(n);
+    return *this = TemplateAssignment(n);
   }
 };
 }
