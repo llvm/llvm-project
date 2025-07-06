@@ -69,13 +69,19 @@ constexpr bool test() {
   }
 
   // input and forward
-  { constructorTest<InputCommonView, ForwardSizedView>(buffer, buffer2); }
+  {
+    constructorTest<InputCommonView, ForwardSizedView>(buffer, buffer2);
+  }
 
   // bidi and random_access
-  { constructorTest<BidiCommonView, SizedRandomAccessView>(buffer, buffer2); }
+  {
+    constructorTest<BidiCommonView, SizedRandomAccessView>(buffer, buffer2);
+  }
 
   // contiguous
-  { constructorTest<ContiguousCommonView, ContiguousCommonView>(buffer, buffer2); }
+  {
+    constructorTest<ContiguousCommonView, ContiguousCommonView>(buffer, buffer2);
+  }
 
   return true;
 }
