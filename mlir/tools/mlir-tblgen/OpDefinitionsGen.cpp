@@ -230,6 +230,14 @@ static const char *const opCommentHeader = R"(
 
 )";
 
+static const char *const inlineCreateBody = R"(
+  ::mlir::OperationState __state__({0}, getOperationName());
+  build(builder, __state__{1});
+  auto __res__ = ::llvm::dyn_cast<{2}>(builder.create(__state__));
+  assert(__res__ && "builder didn't return the right type");
+  return __res__;
+)";
+
 //===----------------------------------------------------------------------===//
 // Utility structs and functions
 //===----------------------------------------------------------------------===//
@@ -665,6 +673,7 @@ private:
   // Generates the build() method that takes each operand/attribute
   // as a stand-alone parameter.
   void genSeparateArgParamBuilder();
+  void genInlineCreateBody(const SmallVector<MethodParameter> &paramList);
 
   // Generates the build() method that takes each operand/attribute as a
   // stand-alone parameter. The generated build() method uses first operand's
@@ -2568,6 +2577,39 @@ static bool canInferType(const Operator &op) {
   return op.getTrait("::mlir::InferTypeOpInterface::Trait");
 }
 
+void OpEmitter::genInlineCreateBody(
+    const SmallVector<MethodParameter> &paramList) {
+  SmallVector<MethodParameter> createParamList;
+  SmallVector<llvm::StringRef, 4> nonBuilderStateArgsList;
+  createParamList.emplace_back("::mlir::OpBuilder &", "builder");
+  std::string locParamName = "location";
+  while (llvm::find_if(paramList, [&locParamName](const MethodParameter &p) {
+           return p.getName() == locParamName;
+         }) != paramList.end()) {
+    locParamName += "_";
+  }
+  createParamList.emplace_back("::mlir::Location", locParamName);
+
+  for (auto &param : paramList) {
+    if (param.getType() == "::mlir::OpBuilder &" ||
+        param.getType() == "::mlir::OperationState &")
+      continue;
+    createParamList.emplace_back(param.getType(), param.getName(),
+                                 param.getDefaultValue(), param.isOptional());
+    nonBuilderStateArgsList.push_back(param.getName());
+  }
+  auto *c = opClass.addStaticMethod(opClass.getClassName(), "create",
+                                    createParamList);
+  std::string nonBuilderStateArgs = "";
+  if (!nonBuilderStateArgsList.empty()) {
+    llvm::raw_string_ostream nonBuilderStateArgsOS(nonBuilderStateArgs);
+    interleaveComma(nonBuilderStateArgsList, nonBuilderStateArgsOS);
+    nonBuilderStateArgs = ", " + nonBuilderStateArgs;
+  }
+  c->body() << llvm::formatv(inlineCreateBody, locParamName,
+                             nonBuilderStateArgs, opClass.getClassName());
+}
+
 void OpEmitter::genSeparateArgParamBuilder() {
   SmallVector<AttrParamKind, 2> attrBuilderType;
   attrBuilderType.push_back(AttrParamKind::WrappedAttr);
@@ -2584,10 +2626,12 @@ void OpEmitter::genSeparateArgParamBuilder() {
     buildParamList(paramList, inferredAttributes, resultNames, paramKind,
                    attrType);
 
-    auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+    auto *m = opClass.addStaticMethod("void", "build", paramList);
     // If the builder is redundant, skip generating the method.
     if (!m)
       return;
+    genInlineCreateBody(paramList);
+
     auto &body = m->body();
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
@@ -2712,10 +2756,11 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder(
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
   auto &body = m->body();
 
   // Operands
@@ -2826,10 +2871,11 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
   auto &body = m->body();
 
   int numResults = op.getNumResults();
@@ -2906,10 +2952,11 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
     buildParamList(paramList, inferredAttributes, resultNames,
                    TypeParamKind::None, attrType);
 
-    auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+    auto *m = opClass.addStaticMethod("void", "build", paramList);
     // If the builder is redundant, skip generating the method
     if (!m)
       return;
+    genInlineCreateBody(paramList);
     auto &body = m->body();
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
@@ -2948,10 +2995,11 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(
                                  : "attributes";
   paramList.emplace_back("::llvm::ArrayRef<::mlir::NamedAttribute>",
                          attributesName, "{}");
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
 
   auto &body = m->body();
 
@@ -3114,10 +3162,11 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
   if (op.getNumVariadicRegions())
     paramList.emplace_back("unsigned", "numRegions");
 
-  auto *m = opClass.addStaticMethod("void", "build", std::move(paramList));
+  auto *m = opClass.addStaticMethod("void", "build", paramList);
   // If the builder is redundant, skip generating the method
   if (!m)
     return;
+  genInlineCreateBody(paramList);
   auto &body = m->body();
 
   // Operands
