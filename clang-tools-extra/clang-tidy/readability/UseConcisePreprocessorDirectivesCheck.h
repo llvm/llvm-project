@@ -13,15 +13,9 @@
 
 namespace clang::tidy::readability {
 
-/// Shortens `#if` preprocessor conditions:
-///
-/// #if  defined(MEOW) -> #ifdef  MEOW
-/// #if !defined(MEOW) -> #ifndef MEOW
-///
-/// And, since C23 and C++23, shortens `#elif` conditions too:
-///
-/// #elif  defined(MEOW) -> #elifdef  MEOW
-/// #elif !defined(MEOW) -> #elifndef MEOW
+/// Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef``
+/// and, since C23 and C++23, uses of ``#elif`` that can be simplified to
+/// ``#elifdef`` or ``#elifndef``.
 ///
 /// User-facing documentation:
 /// https://clang.llvm.org/extra/clang-tidy/checks/readability/use-concise-preprocessor-directives.html
