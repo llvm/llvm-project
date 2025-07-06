@@ -12,6 +12,8 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 
+#include <array>
+
 namespace clang::tidy::readability {
 
 namespace {
@@ -35,7 +37,7 @@ public:
 
 private:
   void impl(SourceLocation DirectiveLoc, SourceRange ConditionRange,
-            const llvm::StringLiteral (&Replacements)[2]) {
+            const std::array<llvm::StringLiteral, 2> &Replacements) {
     // Lexer requires its input range to be null-terminated.
     SmallString<128> Condition =
         Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
