@@ -13,8 +13,7 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using LlvmLibcBfloat16ExhaustiveTest =
-    LIBC_NAMESPACE::testing::FPTest<bfloat16>;
+using LlvmLibcBfloat16ToFloatTest = LIBC_NAMESPACE::testing::FPTest<bfloat16>;
 
 // range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
@@ -26,57 +25,47 @@ static constexpr uint16_t NEG_STOP = 0xff80;
 
 using MPFRNumber = LIBC_NAMESPACE::testing::mpfr::MPFRNumber;
 
-// TODO: better naming?
-TEST_F(LlvmLibcBfloat16ExhaustiveTest, PositiveRange) {
+TEST_F(LlvmLibcBfloat16ToFloatTest, PositiveRange) {
   for (uint16_t bits = POS_START; bits <= POS_STOP; bits++) {
     bfloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
 
     // bfloat16 to float
     float mpfr_float = mpfr_num.as<float>();
-    ASSERT_FP_EQ(mpfr_float, bf16_num.as_float());
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, bf16_num.as_float());
 
     // float to bfloat16
     bfloat16 bf16_from_float{mpfr_float};
     MPFRNumber mpfr_num_2{mpfr_float};
     bfloat16 mpfr_bfloat = mpfr_num_2.as<bfloat16>();
-    ASSERT_FP_EQ(mpfr_bfloat, bf16_from_float);
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, bf16_from_float);
   }
-
-  auto test_for_int = [&](const int x) {
-    const auto y = static_cast<float>(x);
-    EXPECT_FP_EQ(bfloat16{y}, bfloat16{x});
-  };
-
-  test_for_int(2);
-  test_for_int(17);
-  test_for_int(21);
-  test_for_int(16320);
 }
 
-TEST_F(LlvmLibcBfloat16ExhaustiveTest, NegativeRange) {
+TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
   for (uint16_t bits = NEG_START; bits <= NEG_STOP; bits++) {
     bfloat16 bf16_num{bits};
     MPFRNumber mpfr_num{bf16_num};
 
     // bfloat16 to float
     float mpfr_float = mpfr_num.as<float>();
-    ASSERT_FP_EQ(mpfr_float, bf16_num.as_float());
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_float, bf16_num.as_float());
 
     // float to bfloat16
     bfloat16 bf16_from_float{mpfr_float};
     MPFRNumber mpfr_num_2{mpfr_float};
     bfloat16 mpfr_bfloat = mpfr_num_2.as<bfloat16>();
-    ASSERT_FP_EQ(mpfr_bfloat, bf16_from_float);
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, bf16_from_float);
   }
+}
 
-  auto test_for_int = [&](const int x) {
-    const auto y = static_cast<float>(x);
-    EXPECT_FP_EQ(bfloat16{y}, bfloat16{x});
-  };
+TEST_F(LlvmLibcBfloat16ToFloatTest, SpecialIntegers) {
+  // FIXME: fails for range = 100000
 
-  test_for_int(-2);
-  test_for_int(-17);
-  test_for_int(-21);
-  test_for_int(-16320);
+  constexpr int RANGE = 10000;
+  for (int i = -RANGE; i <= RANGE; i++) {
+    bfloat16 mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
+    bfloat16 libc_bfloat{i};
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
+  }
 }
