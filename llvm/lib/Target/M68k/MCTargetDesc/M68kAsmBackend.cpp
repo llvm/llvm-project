@@ -107,8 +107,7 @@ void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 /// MI—Minus            VC—Overflow clear
 ///                     LE—Less than or equal
 /// NE—Not equal        VS—Overflow set
-static unsigned getRelaxedOpcodeBranch(const MCInst &Inst) {
-  unsigned Op = Inst.getOpcode();
+static unsigned getRelaxedOpcodeBranch(unsigned Op) {
   switch (Op) {
   default:
     return Op;
@@ -179,37 +178,17 @@ static unsigned getRelaxedOpcodeBranch(const MCInst &Inst) {
   }
 }
 
-static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
-  unsigned Op = Inst.getOpcode();
+static unsigned getRelaxedOpcode(unsigned Opcode) {
   // NOTE there will be some relaxations for PCD and ARD mem for x20
-  return Op;
-}
-
-static unsigned getRelaxedOpcode(const MCInst &Inst) {
-  unsigned R = getRelaxedOpcodeArith(Inst);
-  if (R != Inst.getOpcode())
-    return R;
-  return getRelaxedOpcodeBranch(Inst);
+  return getRelaxedOpcodeBranch(Opcode);
 }
 
 bool M68kAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                        const MCSubtargetInfo &STI) const {
   // Branches can always be relaxed in either mode.
-  if (getRelaxedOpcodeBranch(Inst) != Inst.getOpcode())
-    return true;
+  return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 
-  // Check if this instruction is ever relaxable.
-  if (getRelaxedOpcodeArith(Inst) == Inst.getOpcode())
-    return false;
-
-  // Check if the relaxable operand has an expression. For the current set of
-  // relaxable instructions, the relaxable operand is always the last operand.
   // NOTE will change for x20 mem
-  unsigned RelaxableOp = Inst.getNumOperands() - 1;
-  if (Inst.getOperand(RelaxableOp).isExpr())
-    return true;
-
-  return false;
 }
 
 bool M68kAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
@@ -242,7 +221,7 @@ bool M68kAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 // we can relax?
 void M68kAsmBackend::relaxInstruction(MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
-  unsigned RelaxedOp = getRelaxedOpcode(Inst);
+  unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
 
   if (RelaxedOp == Inst.getOpcode()) {
     SmallString<256> Tmp;
