@@ -192,7 +192,11 @@ public:
   /// instruction.
   /// \param STI the subtarget information for the associated instruction.
   virtual void relaxInstruction(MCInst &Inst,
-                                const MCSubtargetInfo &STI) const {};
+                                const MCSubtargetInfo &STI) const {
+    llvm_unreachable(
+        "Needed if fixupNeedsRelaxation/fixupNeedsRelaxationAdvanced may "
+        "return true");
+  }
 
   // Defined by linker relaxation targets.
   virtual bool relaxDwarfLineAddr(MCDwarfLineAddrFragment &DF,
