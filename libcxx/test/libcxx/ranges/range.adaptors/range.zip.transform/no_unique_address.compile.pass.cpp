@@ -29,10 +29,4 @@ struct Test {
   char c;
 };
 
-// [[no_unique_address]] applied to movable-box
-struct PredWithPadding : Pred {
-  alignas(128) char c;
-};
-
-static_assert(sizeof(Test<std::ranges::zip_transform_view<PredWithPadding, View>>) ==
-              sizeof(std::ranges::zip_transform_view<PredWithPadding, View>));
+static_assert(sizeof(std::ranges::zip_transform_view<Pred, View>) == 1);
