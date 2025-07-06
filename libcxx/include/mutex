@@ -434,7 +434,7 @@ public:
 };
 
 template <class _Mutex>
-class _LIBCPP_THREAD_SAFETY_ANNOTATION(scoped_lockable) scoped_lock<_Mutex> {
+class _LIBCPP_SCOPED_LOCKABLE scoped_lock<_Mutex> {
 public:
   typedef _Mutex mutex_type;
 
@@ -442,16 +442,15 @@ private:
   mutex_type& __m_;
 
 public:
-  [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(mutex_type& __m) _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability(__m))
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(mutex_type& __m) _LIBCPP_ACQUIRE_CAPABILITY(__m)
       : __m_(__m) {
     __m_.lock();
   }
 
-  ~scoped_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability()) { __m_.unlock(); }
+  _LIBCPP_RELEASE_CAPABILITY _LIBCPP_HIDE_FROM_ABI ~scoped_lock() { __m_.unlock(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t, mutex_type& __m)
-      _LIBCPP_THREAD_SAFETY_ANNOTATION(requires_capability(__m))
+  [[nodiscard]]
+  _LIBCPP_HIDE_FROM_ABI explicit scoped_lock(adopt_lock_t, mutex_type& __m) _LIBCPP_REQUIRES_CAPABILITY(__m)
       : __m_(__m) {}
 
   scoped_lock(scoped_lock const&)            = delete;

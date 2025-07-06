@@ -34,7 +34,7 @@
 #include <__memory/shared_count.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/unique_ptr.h>
-#include <__type_traits/add_lvalue_reference.h>
+#include <__type_traits/add_reference.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>

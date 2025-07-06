@@ -3179,13 +3179,15 @@ def TestOpWithProperties : TEST_Op<"with_properties"> {
     `b` `=` $b `,`
     `c` `=` $c `,`
     `flag` `=` $flag `,`
-    `array` `=` $array attr-dict}];
+    `array` `=` $array `,`
+    `array32` `=` $array32 attr-dict}];
   let arguments = (ins
     I64Prop:$a,
     StrAttr:$b, // Attributes can directly be used here.
     StringProp:$c,
     BoolProp:$flag,
-    IntArrayProp<I64Prop>:$array // example of an array
+    IntArrayProp<I64Prop>:$array, // Example of an array.
+    IntArrayProp<I32Prop>:$array32 // Example of an array.
   );
 }
 

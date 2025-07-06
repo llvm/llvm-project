@@ -52,15 +52,15 @@ class MCFragment {
 
 public:
   enum FragmentType : uint8_t {
-    FT_Align,
     FT_Data,
-    FT_Fill,
-    FT_Nops,
     FT_Relaxable,
+    FT_Align,
+    FT_Fill,
+    FT_LEB,
+    FT_Nops,
     FT_Org,
     FT_Dwarf,
     FT_DwarfFrame,
-    FT_LEB,
     FT_BoundaryAlign,
     FT_SymbolId,
     FT_CVInlineLines,

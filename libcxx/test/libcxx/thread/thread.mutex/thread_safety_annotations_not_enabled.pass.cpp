@@ -11,9 +11,8 @@
 
 // <mutex>
 
-// This test does not define _LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS so it
-// should compile without any warnings or errors even though this pattern is not
-// understood by the thread safety annotations.
+// This test does not set -Wthread-safety so it should compile without any warnings or errors even though this pattern
+// is not understood by the thread safety annotations.
 
 #include <mutex>
 

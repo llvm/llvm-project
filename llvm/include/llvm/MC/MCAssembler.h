@@ -113,9 +113,9 @@ private:
   bool fragmentNeedsRelaxation(const MCRelaxableFragment &) const;
 
   void layoutSection(MCSection &Sec);
-  /// Perform one layout iteration and return true if any offsets
-  /// were adjusted.
-  bool relaxOnce();
+  /// Perform one layout iteration and return the index of the first stable
+  /// section for subsequent optimization.
+  unsigned relaxOnce(unsigned FirstStable);
 
   /// Perform relaxation on a single fragment.
   bool relaxFragment(MCFragment &F);

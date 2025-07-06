@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ADD_RVALUE_REFERENCE_H
-#define _LIBCPP___TYPE_TRAITS_ADD_RVALUE_REFERENCE_H
+#ifndef _LIBCPP___TYPE_TRAITS_ADD_REFERENCE_H
+#define _LIBCPP___TYPE_TRAITS_ADD_REFERENCE_H
 
 #include <__config>
 
@@ -16,6 +16,24 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+
+template <class _Tp>
+struct _LIBCPP_NO_SPECIALIZATIONS add_lvalue_reference {
+  using type _LIBCPP_NODEBUG = __add_lvalue_reference(_Tp);
+};
+
+#ifdef _LIBCPP_COMPILER_GCC
+template <class _Tp>
+using __add_lvalue_reference_t _LIBCPP_NODEBUG = typename add_lvalue_reference<_Tp>::type;
+#else
+template <class _Tp>
+using __add_lvalue_reference_t _LIBCPP_NODEBUG = __add_lvalue_reference(_Tp);
+#endif
+
+#if _LIBCPP_STD_VER >= 14
+template <class _Tp>
+using add_lvalue_reference_t = __add_lvalue_reference_t<_Tp>;
+#endif
 
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS add_rvalue_reference {
@@ -37,4 +55,4 @@ using add_rvalue_reference_t = __add_rvalue_reference_t<_Tp>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ADD_RVALUE_REFERENCE_H
+#endif // _LIBCPP___TYPE_TRAITS_ADD_REFERENCE_H

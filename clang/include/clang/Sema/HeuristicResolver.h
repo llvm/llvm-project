@@ -20,6 +20,7 @@ class CXXBasePath;
 class CXXDependentScopeMemberExpr;
 class DeclarationName;
 class DependentScopeDeclRefExpr;
+class FunctionProtoTypeLoc;
 class NamedDecl;
 class Type;
 class UnresolvedUsingValueDecl;
@@ -92,6 +93,12 @@ public:
   // If `UnwrapPointer` is true, exactly only pointer type will be unwrapped
   // during simplification, and the operation fails if no pointer type is found.
   QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
+
+  // Given an expression `Fn` representing the callee in a function call,
+  // if the call is through a function pointer, try to find the declaration of
+  // the corresponding function pointer type, so that we can recover argument
+  // names from it.
+  FunctionProtoTypeLoc getFunctionProtoTypeLoc(const Expr *Fn) const;
 
 private:
   ASTContext &Ctx;

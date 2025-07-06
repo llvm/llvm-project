@@ -41,6 +41,11 @@ TEST_F(FormatTestSelective, RemovesTrailingWhitespaceOfFormattedLine) {
   EXPECT_EQ("int a;", format("int a;         ", 0, 0));
   EXPECT_EQ("int a;\n", format("int a;  \n   \n   \n ", 0, 0));
   EXPECT_EQ("int a;\nint b;    ", format("int a;  \nint b;    ", 0, 0));
+
+  EXPECT_EQ("void f() {}", format("void f() {\n"
+                                  "  \n"
+                                  "}",
+                                  11, 0));
 }
 
 TEST_F(FormatTestSelective, FormatsCorrectRegionForLeadingWhitespace) {

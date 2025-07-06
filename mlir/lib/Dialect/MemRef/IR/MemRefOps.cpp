@@ -3463,6 +3463,16 @@ LogicalResult ViewOp::verify() {
 
 Value ViewOp::getViewSource() { return getSource(); }
 
+OpFoldResult ViewOp::fold(FoldAdaptor adaptor) {
+  MemRefType sourceMemrefType = getSource().getType();
+  MemRefType resultMemrefType = getResult().getType();
+
+  if (resultMemrefType == sourceMemrefType && resultMemrefType.hasStaticShape())
+    return getViewSource();
+
+  return {};
+}
+
 namespace {
 
 struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {

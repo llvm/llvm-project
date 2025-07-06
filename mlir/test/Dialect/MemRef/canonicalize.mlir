@@ -1208,3 +1208,24 @@ func.func @fold_assume_alignment_chain(%0: memref<128xf32>) -> memref<128xf32> {
   // CHECK: return %[[ALIGN]]
   return %2 : memref<128xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_view_same_source_result_types
+func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128xi8> {
+  %c0 = arith.constant 0: index
+  // CHECK-NOT: memref.view
+  %res = memref.view %0[%c0][] : memref<128xi8> to memref<128xi8>
+  return %res : memref<128xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @non_fold_view_same_source_res_types
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
+func.func @non_fold_view_same_source_res_types(%0: memref<?xi8>, %arg0 : index) -> memref<?xi8> {
+  %c0 = arith.constant 0: index
+  // CHECK: memref.view
+  %res = memref.view %0[%c0][%arg0] : memref<?xi8> to memref<?xi8>
+  return %res : memref<?xi8>
+}
