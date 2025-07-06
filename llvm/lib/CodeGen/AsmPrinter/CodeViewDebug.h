@@ -306,8 +306,8 @@ private:
 
   // The UDTs we have seen while processing types; each entry is a pair of type
   // index and type name.
-  std::vector<std::pair<std::string, const DIType *>> LocalUDTs;
-  std::vector<std::pair<std::string, const DIType *>> GlobalUDTs;
+  MapVector<const DIType *, std::string> LocalUDTs;
+  MapVector<const DIType *, std::string> GlobalUDTs;
 
   using FileToFilepathMapTy = std::map<const DIFile *, std::string>;
   FileToFilepathMapTy FileToFilepathMap;
@@ -352,8 +352,7 @@ private:
 
   void emitDebugInfoForRetainedTypes();
 
-  void emitDebugInfoForUDTs(
-      const std::vector<std::pair<std::string, const DIType *>> &UDTs);
+  template <typename Range> void emitDebugInfoForUDTs(Range &&UDTs);
 
   void collectDebugInfoForGlobals();
   void emitDebugInfoForGlobals();

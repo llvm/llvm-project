@@ -11,16 +11,6 @@ define void @f2() !dbg !4 !dbg !4 {
   unreachable
 }
 
-; CHECK:      DISubprogram attached to more than one function
-define void @f3() !dbg !4 {
-  unreachable
-}
-
-; CHECK:      DISubprogram attached to more than one function
-define void @f4() !dbg !4 {
-  unreachable
-}
-
 ; CHECK-NOT:  !dbg
 ; CHECK:      function !dbg attachment must be a subprogram
 ; CHECK-NEXT: ptr @bar

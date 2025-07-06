@@ -336,9 +336,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Keep track of the metadata nodes that have been checked already.
   SmallPtrSet<const Metadata *, 32> MDNodes;
 
-  /// Keep track which DISubprogram is attached to which function.
-  DenseMap<const DISubprogram *, const Function *> DISubprogramAttachments;
-
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
 
@@ -485,7 +482,6 @@ public:
     verifyCompileUnits();
 
     verifyDeoptimizeCallingConvs();
-    DISubprogramAttachments.clear();
     return !Broken;
   }
 
@@ -3145,11 +3141,6 @@ void Verifier::visitFunction(const Function &F) {
                 "function definition may only have a distinct !dbg attachment",
                 &F);
 
-        auto *SP = cast<DISubprogram>(I.second);
-        const Function *&AttachedTo = DISubprogramAttachments[SP];
-        CheckDI(!AttachedTo || AttachedTo == &F,
-                "DISubprogram attached to more than one function", SP, &F);
-        AttachedTo = &F;
         AllowLocs = AreDebugLocsAllowed::Yes;
         break;
       }

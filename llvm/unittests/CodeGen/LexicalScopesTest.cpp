@@ -140,6 +140,7 @@ TEST_F(LexicalScopesTest, FlatLayout) {
   LS.resetFunction();
   EXPECT_EQ(LS.getCurrentFunctionScope(), nullptr);
 
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   EXPECT_FALSE(LS.empty());
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
@@ -183,6 +184,7 @@ TEST_F(LexicalScopesTest, BlockScopes) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   EXPECT_EQ(FuncScope->getDesc(), OurFunc);
@@ -218,6 +220,7 @@ TEST_F(LexicalScopesTest, InlinedScopes) {
   BuildMI(*MBB4, MBB4->end(), InlinedLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   auto &Children = FuncScope->getChildren();
@@ -253,6 +256,7 @@ TEST_F(LexicalScopesTest, FuncWithEmptyGap) {
   BuildMI(*MBB4, MBB4->end(), OutermostLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
 
@@ -274,6 +278,7 @@ TEST_F(LexicalScopesTest, FuncWithRealGap) {
   MachineInstr *LastI = BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
   ASSERT_NE(BlockScope, nullptr);
@@ -307,6 +312,7 @@ TEST_F(LexicalScopesTest, NotNested) {
   MachineInstr *FourthI = BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
@@ -345,6 +351,7 @@ TEST_F(LexicalScopesTest, TestDominates) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
@@ -387,6 +394,7 @@ TEST_F(LexicalScopesTest, TestGetBlocks) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
@@ -444,6 +452,7 @@ TEST_F(LexicalScopesTest, TestMetaInst) {
   BuildMI(*MBB4, MBB4->end(), InBlockLoc, BeanInst);
 
   LexicalScopes LS;
+  LS.initialize(Mod);
   LS.scanFunction(*MF);
   LexicalScope *FuncScope = LS.getCurrentFunctionScope();
   LexicalScope *BlockScope = LS.findLexicalScope(InBlockLoc.get());
@@ -475,9 +484,111 @@ TEST_F(LexicalScopesTest, TestFunctionScan) {
 
   LexicalScopes LS;
   LS.initialize(Mod);
-  ASSERT_EQ(LS.getFunction(OurFunc), &MF->getFunction());
-  ASSERT_EQ(LS.getFunction(Func2), &MF2->getFunction());
-  ASSERT_EQ(LS.getFunction(UnattachedFunc), nullptr);
+  auto Fs = LS.getFunctions(OurFunc);
+  ASSERT_NE(Fs, nullptr);
+  ASSERT_EQ(Fs->size(), 1u);
+  ASSERT_EQ(*Fs->begin(), &MF->getFunction());
+
+  Fs = LS.getFunctions(Func2);
+  ASSERT_NE(Fs, nullptr);
+  ASSERT_EQ(Fs->size(), 1u);
+  ASSERT_EQ(*Fs->begin(), &MF2->getFunction());
+
+  Fs = LS.getFunctions(UnattachedFunc);
+  ASSERT_EQ(Fs, nullptr);
+}
+
+// Test function map creation for subprogram attached to multiple functions.
+// Ensure that abstract lexical scopes for subprograms attached to multiple
+// functions are created.
+TEST_F(LexicalScopesTest, TestRepeatingSubprogram) {
+  BuildMI(*MBB1, MBB1->end(), InBlockLoc, BeanInst);
+
+  std::unique_ptr<MachineFunction> MF2 =
+      createMachineFunction(Ctx, Mod, "Test.1");
+  auto &F2 = MF2->getFunction();
+  F2.setSubprogram(OurFunc);
+  auto BB1_2 = BasicBlock::Create(Ctx, "a", &F2);
+  IRBuilder<> IRB1_2(BB1_2);
+  IRB1_2.CreateRetVoid();
+  auto *MBB1_2 = MF->CreateMachineBasicBlock(BB1_2);
+  MF2->insert(MF2->end(), MBB1_2);
+  BuildMI(*MBB1_2, MBB1_2->end(), InBlockLoc, BeanInst);
+
+  std::unique_ptr<MachineFunction> FooMF =
+      createMachineFunction(Ctx, Mod, "Foo");
+  auto BB = BasicBlock::Create(Ctx, "a", &FooMF->getFunction());
+  IRBuilder<> IRB(BB);
+  IRB.CreateRetVoid();
+  auto FooMBB = FooMF->CreateMachineBasicBlock(BB);
+  FooMF->insert(FooMF->end(), FooMBB);
+
+  DIBuilder DIB(Mod, true, OurCU);
+  auto OurSubT = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  DISubprogram *FooFunc =
+      DIB.createFunction(OurCU, "Foo", "", OurFile, 1, OurSubT, 1,
+                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
+  FooMF->getFunction().setSubprogram(FooFunc);
+  DIB.finalize();
+
+  BuildMI(*FooMBB, FooMBB->end(), DILocation::get(Ctx, 10, 20, FooFunc),
+          BeanInst);
+
+  LexicalScopes LS;
+  LS.initialize(Mod);
+
+  auto Fs = LS.getFunctions(OurFunc);
+  ASSERT_NE(Fs, nullptr);
+  ASSERT_EQ(Fs->size(), 2u);
+  ASSERT_TRUE(Fs->contains(&MF->getFunction()));
+  ASSERT_TRUE(Fs->contains(&MF2->getFunction()));
+
+  Fs = LS.getFunctions(FooFunc);
+  ASSERT_NE(Fs, nullptr);
+  ASSERT_EQ(Fs->size(), 1u);
+  ASSERT_TRUE(Fs->contains(&FooMF->getFunction()));
+
+  LS.scanFunction(*MF);
+  EXPECT_FALSE(LS.currentFunctionHasInlinedScopes());
+  EXPECT_EQ(LS.getAbstractScopesList().size(), 1u);
+  EXPECT_EQ(LS.getAbstractScopesList()[0]->getScopeNode(), OurFunc);
+
+  LS.scanFunction(*MF2);
+  EXPECT_FALSE(LS.currentFunctionHasInlinedScopes());
+  EXPECT_EQ(LS.getAbstractScopesList().size(), 1u);
+  EXPECT_EQ(LS.getAbstractScopesList()[0]->getScopeNode(), OurFunc);
+
+  LS.scanFunction(*FooMF);
+  EXPECT_FALSE(LS.currentFunctionHasInlinedScopes());
+  EXPECT_EQ(LS.getAbstractScopesList().size(), 0u);
+  EXPECT_NE(LS.findLexicalScope(FooFunc), nullptr);
+}
+
+// Test that if a DISubprogram is attached to two functions,
+// an abstract lexical block is created after scanning a first function.
+TEST_F(LexicalScopesTest, TestRepeatingLexicalBlocks) {
+  BuildMI(*MBB1, MBB1->end(), InBlockLoc, BeanInst);
+
+  std::unique_ptr<MachineFunction> MF2 = createMachineFunction(Ctx, Mod, "Foo");
+  auto BB = BasicBlock::Create(Ctx, "a", &MF2->getFunction());
+  IRBuilder<> IRB(BB);
+  IRB.CreateRetVoid();
+  auto MBB = MF2->CreateMachineBasicBlock(BB);
+  MF2->insert(MF2->end(), MBB);
+
+  MF2->getFunction().setSubprogram(OurFunc);
+
+  BuildMI(*MBB, MBB->end(), InBlockLoc, BeanInst);
+
+  LexicalScopes LS;
+  LS.initialize(Mod);
+  LS.scanFunction(*MF2);
+  EXPECT_NE(LS.findAbstractScope(OurFunc), nullptr);
+  EXPECT_NE(LS.findAbstractScope(OurBlock), nullptr);
+
+  LS.scanFunction(*MF);
+  EXPECT_NE(LS.findAbstractScope(OurFunc), nullptr);
+  EXPECT_NE(LS.findAbstractScope(OurBlock), nullptr);
 }
 
 } // anonymous namespace

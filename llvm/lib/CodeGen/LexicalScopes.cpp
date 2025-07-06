@@ -61,19 +61,28 @@ void LexicalScopes::initialize(const Module &M) {
   for (const Function &F : M) {
     DISubprogram *SP = F.getSubprogram();
     if (SP && (!SP->getUnit() || !skipUnit(SP->getUnit())))
-      FunctionMap[SP] = &F;
+      FunctionMap[SP].insert(&F);
   }
 }
 
 void LexicalScopes::scanFunction(const MachineFunction &Fn) {
   resetFunction();
   // Don't attempt any lexical scope creation for a NoDebug compile unit.
-  if (skipUnit(Fn.getFunction().getSubprogram()->getUnit()))
+  const Function &IRFunc = Fn.getFunction();
+  const DISubprogram *SP = IRFunc.getSubprogram();
+  if (skipUnit(SP->getUnit()))
     return;
+
+  // A new subprogram may be created during Codegen after module scan.
+  FunctionMap[SP].insert(&IRFunc);
+
   MF = &Fn;
   SmallVector<InsnRange, 4> MIRanges;
   DenseMap<const MachineInstr *, LexicalScope *> MI2ScopeMap;
   extractLexicalScopes(MIRanges, MI2ScopeMap);
+  // If no scopes were extracted, abstract scope is still needed
+  // for a subprogram attached to multiple functions.
+  ensureAbstractLexicalScopeIsCreated(SP);
   if (CurrentFnLexicalScope) {
     constructScopeNest(CurrentFnLexicalScope);
     assignInstructionRanges(MIRanges, MI2ScopeMap);
@@ -167,6 +176,8 @@ LexicalScope *LexicalScopes::getOrCreateLexicalScope(const DILocalScope *Scope,
     return getOrCreateInlinedScope(Scope, IA);
   }
 
+  // Parent DISubprogram may be attached by multiple functions.
+  ensureAbstractLexicalScopeIsCreated(Scope);
   return getOrCreateRegularScope(Scope);
 }
 

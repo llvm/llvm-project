@@ -1658,9 +1658,9 @@ void CodeViewDebug::addToUDTs(const DIType *Ty) {
       formatNestedName(ParentScopeNames, getPrettyScopeName(Ty));
 
   if (ClosestSubprogram == nullptr) {
-    GlobalUDTs.emplace_back(std::move(FullyQualifiedName), Ty);
+    GlobalUDTs[Ty] = std::move(FullyQualifiedName);
   } else if (ClosestSubprogram == CurrentSubprogram) {
-    LocalUDTs.emplace_back(std::move(FullyQualifiedName), Ty);
+    LocalUDTs[Ty] = std::move(FullyQualifiedName);
   }
 
   // TODO: What if the ClosestSubprogram is neither null or the current
@@ -2698,6 +2698,12 @@ TypeIndex CodeViewDebug::getTypeIndex(const DIType *Ty, const DIType *ClassTy) {
   if (!Ty)
     return TypeIndex::Void();
 
+  if (Ty->getTag() == dwarf::DW_TAG_typedef) {
+    // Ensure that UDT is added even if the (local) type has been translated
+    // during processing of the previous function.
+    addToUDTs(Ty);
+  }
+
   // Check if we've already translated this type. Don't try to do a
   // get-or-create style insertion that caches the hash lookup across the
   // lowerType call. It will update the TypeIndices map.
@@ -2786,6 +2792,10 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(const DIType *Ty) {
     if (CTy->isForwardDecl())
       return FwdDeclTI;
   }
+
+  // Ensure that UDT is added even if the (local) type has been translated
+  // during processing of the previous function.
+  addToUDTs(CTy);
 
   // Check if we've already translated the complete record type.
   // Insert the type with a null TypeIndex to signify that the type is currently
@@ -3217,20 +3227,19 @@ void CodeViewDebug::emitEndSymbolRecord(SymbolKind EndKind) {
   OS.emitInt16(uint16_t(EndKind)); // Record Kind
 }
 
-void CodeViewDebug::emitDebugInfoForUDTs(
-    const std::vector<std::pair<std::string, const DIType *>> &UDTs) {
+template <typename Range>
+void CodeViewDebug::emitDebugInfoForUDTs(Range &&UDTs) {
 #ifndef NDEBUG
   size_t OriginalSize = UDTs.size();
 #endif
-  for (const auto &UDT : UDTs) {
-    const DIType *T = UDT.second;
+  for (const auto &[T, Name] : UDTs) {
     assert(shouldEmitUdt(T));
     MCSymbol *UDTRecordEnd = beginSymbolRecord(SymbolKind::S_UDT);
     OS.AddComment("Type");
     OS.emitInt32(getCompleteTypeIndex(T).getIndex());
     assert(OriginalSize == UDTs.size() &&
            "getCompleteTypeIndex found new UDTs!");
-    emitNullTerminatedSymbolName(OS, UDT.first);
+    emitNullTerminatedSymbolName(OS, Name);
     endSymbolRecord(UDTRecordEnd);
   }
 }

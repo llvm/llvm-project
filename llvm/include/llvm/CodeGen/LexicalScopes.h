@@ -199,12 +199,18 @@ public:
     return I != LexicalScopeMap.end() ? &I->second : nullptr;
   }
 
+  bool currentFunctionHasInlinedScopes() {
+    return !InlinedLexicalScopeMap.empty();
+  }
+
   /// Find or create an abstract lexical scope.
   LLVM_ABI LexicalScope *getOrCreateAbstractScope(const DILocalScope *Scope);
 
-  /// Get function to which the given subprogram is attached, if exists.
-  const Function *getFunction(const DISubprogram *SP) const {
-    return FunctionMap.lookup(SP);
+  /// Get functions to which the given subprogram is attached.
+  const SmallPtrSet<const Function *, 1> *
+  getFunctions(const DISubprogram *SP) const {
+    auto I = FunctionMap.find(SP);
+    return I == FunctionMap.end() ? nullptr : &I->second;
   }
 
 private:
@@ -216,6 +222,15 @@ private:
   LexicalScope *getOrCreateLexicalScope(const DILocation *DL) {
     return DL ? getOrCreateLexicalScope(DL->getScope(), DL->getInlinedAt())
               : nullptr;
+  }
+
+  /// Create abstract lexical scope for local scopes used by multiple
+  /// functions, if needed.
+  void ensureAbstractLexicalScopeIsCreated(const DILocalScope *Scope) {
+    const DISubprogram *SP = Scope->getSubprogram();
+    const auto *Fns = getFunctions(SP);
+    if (!Fns || Fns->size() != 1)
+      getOrCreateAbstractScope(Scope);
   }
 
   /// Find or create a regular lexical scope.
@@ -237,7 +252,7 @@ private:
   const MachineFunction *MF = nullptr;
 
   /// Mapping between DISubprograms and IR functions.
-  DenseMap<const DISubprogram *, const Function *> FunctionMap;
+  DenseMap<const DISubprogram *, SmallPtrSet<const Function *, 1>> FunctionMap;
 
   /// Tracks the scopes in the current function.
   // Use an unordered_map to ensure value pointer validity over insertion.
