@@ -3271,7 +3271,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     StringRef Format = A->getValue();
 
     // FIXME: don't hardcode these values
-    if (Format == "yaml")
+    if (Format == "yaml" || Format == "binary")
       Opts.SummaryFormat = Format;
   };
 

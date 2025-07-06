@@ -986,7 +986,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     static const char *reducedCacheName =
         "reduced-summary-so-that-we-do-not-have-to-evaluate-it-every-time";
     const std::string summaryExtension =
-        '.' + CI.getFrontendOpts().SummaryFormat;
+        '.' + (CI.getFrontendOpts().SummaryFormat == "binary"
+                   ? "summary"
+                   : CI.getFrontendOpts().SummaryFormat);
 
     FileManager &FileMgr = CI.getFileManager();
     StringRef SummaryDirPath = CI.getFrontendOpts().ReadSummaryDir;

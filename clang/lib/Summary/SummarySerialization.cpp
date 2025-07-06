@@ -1,4 +1,5 @@
 #include "clang/Summary/SummarySerialization.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/JSON.h"
 
 namespace llvm {
@@ -177,4 +178,118 @@ void YAMLSummarySerializer::parse(StringRef Buffer) {
                               summary->getCalls(),
                               summary->callsOpaqueObject());
 }
+
+void BinarySummarySerializer::EmitBlock(unsigned ID, const char *Name) {
+  SmallVector<uint64_t, 64> Buffer;
+  Buffer.push_back(ID);
+  Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETBID, Buffer);
+
+  Buffer.clear();
+  while (*Name)
+    Buffer.push_back(*Name++);
+  Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_BLOCKNAME, Buffer);
+}
+
+void BinarySummarySerializer::EmitRecord(unsigned ID, const char *Name) {
+  SmallVector<uint64_t, 64> Buffer;
+  Buffer.push_back(ID);
+  while (*Name)
+    Buffer.push_back(*Name++);
+  Stream.EmitRecord(llvm::bitc::BLOCKINFO_CODE_SETRECORDNAME, Buffer);
+}
+
+void BinarySummarySerializer::EmitString(StringRef Str,
+                                         SmallVector<uint64_t, 64> &Buffer) {
+  Buffer.push_back(Str.size());
+  llvm::append_range(Buffer, Str);
+}
+
+// FIXME: clean this up
+void BinarySummarySerializer::serialize(
+    const std::vector<std::unique_ptr<FunctionSummary>> &, raw_ostream &OS) {
+  Stream.Emit((unsigned)'C', 8);
+  Stream.Emit((unsigned)'T', 8);
+  Stream.Emit((unsigned)'U', 8);
+  Stream.Emit((unsigned)'S', 8);
+
+  Stream.EnterBlockInfoBlock();
+  EmitBlock(ATTRIBUTE_BLOCK_ID, "ATTRIBUTES");
+  EmitRecord(ATTR, "ATTR");
+  EmitBlock(IDENTIFIER_BLOCK_ID, "IDENTIFIERS");
+  EmitRecord(IDENTIFIER, "IDENTIFIER");
+  EmitBlock(SUMMARY_BLOCK_ID, "SUMMARIES");
+  EmitRecord(FUNCTION, "FUNCTION");
+  Stream.ExitBlock();
+
+  Stream.EnterSubblock(ATTRIBUTE_BLOCK_ID, 5);
+  uint64_t ID = 0;
+  // FIXME: Should we concatenate these for smaller size?
+  for (auto &&Attr : SummaryCtx->Attributes) {
+    AttrIDs[Attr.get()] = ID++;
+    SmallVector<uint64_t, 64> Record;
+    EmitString(Attr->serialize(), Record);
+    Stream.EmitRecord(ATTR, Record);
+  }
+  Stream.ExitBlock();
+
+  Stream.EnterSubblock(IDENTIFIER_BLOCK_ID, 5);
+  ID = 0;
+  for (auto &&Summary : SummaryCtx->FunctionSummaries) {
+    FunctionIDs[Summary->getID()] = ID++;
+    SmallVector<uint64_t, 64> Record;
+    EmitString(Summary->getID(), Record);
+    Stream.EmitRecord(IDENTIFIER, Record);
+
+    for (auto &&Call : Summary->getCalls()) {
+      if (FunctionIDs.count(Call))
+        continue;
+
+      FunctionIDs[Call] = ID++;
+      SmallVector<uint64_t, 64> Record;
+      EmitString(Call, Record);
+      Stream.EmitRecord(IDENTIFIER, Record);
+    }
+  }
+  Stream.ExitBlock();
+
+  Stream.EnterSubblock(SUMMARY_BLOCK_ID, 5);
+  for (auto &&Summary : SummaryCtx->FunctionSummaries) {
+    SmallVector<uint64_t, 64> Record;
+
+    Record.push_back(FUNCTION);
+    Record.push_back(Summary->getAttributes().size());
+    Record.push_back(Summary->getCalls().size());
+    Record.push_back(Summary->callsOpaqueObject());
+
+    Record.push_back(1 + Summary->getAttributes().size() +
+                     Summary->getCalls().size());
+    Record.push_back(FunctionIDs[Summary->getID()]);
+    for (auto &&Attr : Summary->getAttributes())
+      Record.push_back(AttrIDs[Attr]);
+    for (auto &&Call : Summary->getCalls())
+      Record.push_back(FunctionIDs[Call]);
+
+    auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
+    Abv->Add(llvm::BitCodeAbbrevOp(FUNCTION));
+    // The number of attributes.
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 32));
+    // The number of callees.
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 32));
+    // Whether there are opaque callees or not.
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 1));
+    // An array of the following form: [ID, Attr0...AttrN, Callee0...CalleeN]
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
+    Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Fixed, 32));
+    unsigned Abbrev = Stream.EmitAbbrev(std::move(Abv));
+
+    Stream.EmitRecord(FUNCTION, Record, Abbrev);
+  }
+  Stream.ExitBlock();
+
+  Stream.FlushToWord();
+  OS << Buffer;
+  OS.flush();
+}
+
+void BinarySummarySerializer::parse(StringRef Buffer) {}
 } // namespace clang
