@@ -24,6 +24,13 @@ struct NotMoveConstructible {
   int operator()() const { return 5; }
 };
 
+struct NotCopyConstructible {
+  NotCopyConstructible()                            = default;
+  NotCopyConstructible(NotCopyConstructible&&)      = default;
+  NotCopyConstructible(const NotCopyConstructible&) = delete;
+  int operator()() const { return 5; }
+};
+
 struct NotInvocable {};
 
 template <class... Args>
@@ -34,6 +41,9 @@ struct Invocable {
 struct ReturnNotObject {
   void operator()() const {}
 };
+
+// LWG3773 views::zip_transform still requires F to be copy_constructible when empty pack
+static_assert(std::is_invocable_v<decltype((std::views::zip_transform)), NotCopyConstructible>);
 
 static_assert(!std::is_invocable_v<decltype((std::views::zip_transform))>);
 static_assert(!std::is_invocable_v<decltype((std::views::zip_transform)), NotMoveConstructible>);
