@@ -92,11 +92,11 @@ Fundamental types have platform-dependent sizes and behavior:
 
 The C++ specification does not define these types beyond their minimum sizes. 
 That means they can communicate intent in non-standard ways and are often 
-needlessly incompatible. For example, ``int``was traditionally the word size of
-a given processor in 16-bit and 32-bit computing and was a reasonable default 
-for performance. This is no longer true on modern 64-bit computers, but the 
-size of ``int`` remains fixed at 32 bits for backwards compatibility with code 
-that relied on a 32-bit implementation of ``int``.
+needlessly incompatible. For example, ``int`` was traditionally the word size
+of a given processor in 16-bit and 32-bit computing and was a reasonable
+default for performance. This is no longer true on modern 64-bit computers, but
+the size of ``int`` remains fixed at 32 bits for backwards compatibility with 
+code that relied on a 32-bit implementation of ``int``.
 
 If code is explicitly relying on the size of an ``int`` being 32 bits, it is 
 better to say so in the typename with ``int32_t``. Otherwise, use an 
