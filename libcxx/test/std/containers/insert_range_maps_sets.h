@@ -200,7 +200,7 @@ TestCaseMapSet<std::pair<K, V>> constexpr NElementsContainer_RangeWithDuplicates
         {16, 'D'}}};
 
 template <class Container, class T, class Iter, class Sent>
-void test_map_set_insert_range(bool allow_duplicates = false) {
+TEST_CONSTEXPR_CXX26 void test_map_set_insert_range(bool allow_duplicates = false) {
   auto test = [&](const TestCaseMapSet<T>& test_case, bool check_multi = false) {
     Container c(test_case.initial.begin(), test_case.initial.end());
     auto in = wrap_input<Iter, Sent>(test_case.input);

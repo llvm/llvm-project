@@ -212,6 +212,10 @@
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_memory
 #    error "__cpp_lib_constexpr_memory should not be defined before c++20"
 #  endif
@@ -1106,6 +1110,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -2104,6 +2112,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_memory
@@ -3348,6 +3360,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -4808,6 +4824,10 @@
 
 #  ifdef __cpp_lib_constexpr_list
 #    error "__cpp_lib_constexpr_list should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
@@ -6487,6 +6507,13 @@
 #  endif
 #  if __cpp_lib_constexpr_list != 202502L
 #    error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
+#  endif
+
+#  ifndef __cpp_lib_constexpr_map
+#    error "__cpp_lib_constexpr_map should be defined in c++26"
+#  endif
+#  if __cpp_lib_constexpr_map != 202502L
+#    error "__cpp_lib_constexpr_map should have the value 202502L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_memory
