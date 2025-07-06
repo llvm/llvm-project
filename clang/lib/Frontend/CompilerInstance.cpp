@@ -750,8 +750,10 @@ void CompilerInstance::createSummaryConsumer(FrontendInputFile Input) {
 
   llvm::SmallString<32> SummaryFile = EmitSummaryDir;
   llvm::sys::path::append(SummaryFile, Input.getFile());
+
+  StringRef Format = getFrontendOpts().SummaryFormat;
   llvm::sys::path::replace_extension(SummaryFile,
-                                     getFrontendOpts().SummaryFormat);
+                                     Format == "binary" ? "summary" : Format);
 
   std::error_code EC;
   SummaryOS.reset(new llvm::raw_fd_ostream(SummaryFile, EC,
@@ -778,6 +780,8 @@ void CompilerInstance::createSummarySerializer() {
 
   if (Format == "yaml")
     Serializer = new YAMLSummarySerializer(*getSummaryContext());
+  else if (Format == "binary")
+    Serializer = new BinarySummarySerializer(*getSummaryContext());
   else
     Serializer = new JSONSummarySerializer(*getSummaryContext());
 

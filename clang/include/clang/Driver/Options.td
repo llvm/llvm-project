@@ -5956,7 +5956,7 @@ def emit_summaries : Flag<["-", "--"], "emit-summaries">, Flags<[NoXarchOption]>
   HelpText<"Alias for --emit-summaries=cwd">;
 def summary_format_EQ : Joined<["-", "--"], "summary-format=">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"The format of the emitted summaries. Can be set to 'json' (default) or 'yaml'">;
+  HelpText<"The format of the emitted summaries. Can be set to 'json' (default), 'yaml', or 'binary'">;
 def save_stats_EQ : Joined<["-", "--"], "save-stats=">, Flags<[NoXarchOption]>,
   HelpText<"Save llvm statistics.">;
 def save_stats : Flag<["-", "--"], "save-stats">, Flags<[NoXarchOption]>,
