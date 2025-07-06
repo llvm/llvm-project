@@ -23182,6 +23182,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   auto *IndexC = dyn_cast<ConstantSDNode>(EltNo);
 
   // Insert into out-of-bounds element is undefined.
+  // Code below relies on that we handle this special case early.
   if (IndexC && VT.isFixedLengthVector() &&
       IndexC->getZExtValue() >= VT.getVectorNumElements())
     return DAG.getUNDEF(VT);
@@ -23192,13 +23193,27 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       InVec == InVal.getOperand(0) && EltNo == InVal.getOperand(1))
     return InVec;
 
-  if (!IndexC) {
-    // If this is variable insert to undef vector, it might be better to splat:
-    // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
-    if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT))
-      return DAG.getSplat(VT, DL, InVal);
-    return SDValue();
+  // If this is variable insert to undef vector, it might be better to splat:
+  // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
+  if (!IndexC && InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT))
+    return DAG.getSplat(VT, DL, InVal);
+
+  // Try to drop insert of UNDEF/POISON elements. This is also done in getNode,
+  // but we also do it as a DAG combine since for example simplifications into
+  // SPLAT_VECTOR/BUILD_VECTOR may turn poison elements into undef/zero etc, and
+  // then suddenly the InVec is guaranteed to not be poison.
+  if (InVal.isUndef()) {
+    if (IndexC && VT.isFixedLengthVector()) {
+      APInt EltMask = APInt::getOneBitSet(VT.getVectorNumElements(),
+                                          IndexC->getZExtValue());
+      if (DAG.isGuaranteedNotToBePoison(InVec, EltMask))
+        return InVec;
+    }
+    return DAG.getFreeze(InVec);
   }
+
+  if (!IndexC)
+    return SDValue();
 
   if (VT.isScalableVector())
     return SDValue();
@@ -27639,18 +27654,42 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   SDValue N2 = N->getOperand(2);
   uint64_t InsIdx = N->getConstantOperandVal(2);
 
-  // If inserting an UNDEF, just return the original vector.
-  if (N1.isUndef())
-    return N0;
+  // If inserting an UNDEF, just return the original vector (unless it makes the
+  // result more poisonous).
+  if (N1.isUndef()) {
+    if (N1.getOpcode() == ISD::POISON)
+      return N0;
+    if (VT.isFixedLengthVector()) {
+      unsigned SubVecNumElts = N1.getValueType().getVectorNumElements();
+      APInt EltMask = APInt::getBitsSet(VT.getVectorNumElements(), InsIdx,
+                                        InsIdx + SubVecNumElts);
+      if (DAG.isGuaranteedNotToBePoison(N0, EltMask))
+        return N0;
+    }
+    return DAG.getFreeze(N0);
+  }
 
-  // If this is an insert of an extracted vector into an undef vector, we can
-  // just use the input to the extract if the types match, and can simplify
+  // If this is an insert of an extracted vector into an undef/poison vector, we
+  // can just use the input to the extract if the types match, and can simplify
   // in some cases even if they don't.
   if (N0.isUndef() && N1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
       N1.getOperand(1) == N2) {
+    EVT N1VT = N1.getValueType();
     EVT SrcVT = N1.getOperand(0).getValueType();
-    if (SrcVT == VT)
-      return N1.getOperand(0);
+    if (SrcVT == VT) {
+      // Need to ensure that result isn't more poisonous if skipping both the
+      // extract+insert.
+      if (N0.getOpcode() == ISD::POISON)
+        return N1.getOperand(0);
+      if (VT.isFixedLengthVector() && N1VT.isFixedLengthVector()) {
+        unsigned SubVecNumElts = N1VT.getVectorNumElements();
+        APInt EltMask = APInt::getBitsSet(VT.getVectorNumElements(), InsIdx,
+                                          InsIdx + SubVecNumElts);
+        if (DAG.isGuaranteedNotToBePoison(N1.getOperand(0), ~EltMask))
+          return N1.getOperand(0);
+      } else if (DAG.isGuaranteedNotToBePoison(N1.getOperand(0)))
+        return N1.getOperand(0);
+    }
     // TODO: To remove the zero check, need to adjust the offset to
     // a multiple of the new src type.
     if (isNullConstant(N2)) {
