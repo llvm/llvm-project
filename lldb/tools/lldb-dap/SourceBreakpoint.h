@@ -52,8 +52,10 @@ public:
 
 protected:
   void CreatePathBreakpoint(const protocol::Source &source);
-  llvm::Error CreateAssemblyBreakpointWithSourceReference(int64_t source_reference);
-  llvm::Error CreateAssemblyBreakpointWithPersistenceData(const protocol::PersistenceData &persistence_data);
+  llvm::Error
+  CreateAssemblyBreakpointWithSourceReference(int64_t source_reference);
+  llvm::Error CreateAssemblyBreakpointWithPersistenceData(
+      const protocol::PersistenceData &persistence_data);
 
   // logMessage part can be either a raw text or an expression.
   struct LogMessagePart {
