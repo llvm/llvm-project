@@ -78,6 +78,8 @@ Breaking changes
   ``--image-base`` can be set at a lower address to fix the error.
   (`#140187 <https://github.com/llvm/llvm-project/pull/140187>`_)
 
+* The default extension for time trace files is now ``.time-trace.json``.
+
 COFF Improvements
 -----------------
 
