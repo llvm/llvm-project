@@ -9181,7 +9181,7 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
                                : FastMathFlags();
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
-          CM.useOrderedReductions(RdxDesc), CurrentLinkI->getDebugLoc());
+          PhiR->isOrdered(), CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
       // ensure that it comes after all of it's inputs, including CondOp.
       // Delete CurrentLink as it will be invalid if its operand is replaced
