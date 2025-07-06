@@ -291,6 +291,14 @@ void DeclInfo::fill() {
     TemplateParameters = CTPSD->getTemplateParameters();
     break;
   }
+  case Decl::VarTemplatePartialSpecialization: {
+    const VarTemplatePartialSpecializationDecl *VTPSD =
+        cast<VarTemplatePartialSpecializationDecl>(CommentDecl);
+    Kind = VariableKind;
+    TemplateKind = TemplatePartialSpecialization;
+    TemplateParameters = VTPSD->getTemplateParameters();
+    break;
+  }
   case Decl::ClassTemplateSpecialization:
     Kind = ClassKind;
     TemplateKind = TemplateSpecialization;
