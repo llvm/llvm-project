@@ -77,8 +77,7 @@ private:
   // objects are only destroyed when every shared pointer to any of them
   // is destroyed, so we must not store a shared pointer to any ValueObject
   // derived from our backend ValueObject (since we're in the same cluster).
-  ValueObject* m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
-  ValueObject* m_obj_obj = nullptr; // Underlying object (held, not owned)
+  ValueObject *m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
 };
 
 } // end of anonymous namespace
@@ -266,15 +265,20 @@ LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   if (idx == 0)
     return m_ptr_obj->GetSP();
+
   if (idx == 1) {
-    if (m_ptr_obj && !m_obj_obj) {
-      Status error;
-      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
-      if (error.Success())
-        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
-    }
-    if (m_obj_obj)
-      return m_obj_obj->GetSP();
+    ValueObjectSP valobj_sp = m_backend.GetSP();
+    if (!valobj_sp)
+      return nullptr;
+
+    Status status;
+    auto value_type_sp = valobj_sp->GetCompilerType()
+                             .GetTypeTemplateArgument(0)
+                             .GetPointerType();
+    ValueObjectSP cast_ptr_sp = m_ptr_obj->Cast(value_type_sp);
+    ValueObjectSP value_sp = cast_ptr_sp->Dereference(status);
+    if (status.Success())
+      return value_sp;
   }
   return lldb::ValueObjectSP();
 }
@@ -293,7 +297,6 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
     return lldb::ChildCacheState::eRefetch;
 
   m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
-  m_obj_obj = nullptr;
 
   return lldb::ChildCacheState::eRefetch;
 }
@@ -302,8 +305,10 @@ llvm::Expected<size_t>
 LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (name == "pointer")
     return 0;
+
   if (name == "object" || name == "$$dereference$$")
     return 1;
+
   return llvm::createStringError("Type has no child named '%s'",
                                  name.AsCString());
 }
