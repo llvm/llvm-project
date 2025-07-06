@@ -593,7 +593,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI __node_value_type& __get_value() { return __value_; }
 
   template <class... _Args>
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args) : __value_{std::forward<_Args>(__args)...} {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(_Args&&... __args) : __value_(std::forward<_Args>(__args)...) {}
   // TODO: libcxx26
   // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(__node_value_type &&  args): __value_{args} { }
   ~__tree_node()                             = delete;
@@ -1312,7 +1312,7 @@ private:
 
     if (__libcpp_is_constant_evaluated()) {
       using __node_value_type = __get_node_value_type_t<value_type>;
-      __get_node_value_type_t<value_type> __tmp{__rhs.first, __rhs.second};
+      __get_node_value_type_t<value_type> __tmp(__rhs.first, __rhs.second);
       // const_cast is not allowed at constexpr time.
       // we get around this by deleting and creating a new node value
       __lhs.~__node_value_type();
