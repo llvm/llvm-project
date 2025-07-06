@@ -47,7 +47,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -298,7 +297,7 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 }
 
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
-  llvm::ArrayRef<const Attr *> Attrs = Node->getAttrs();
+  ArrayRef<const Attr *> Attrs = Node->getAttrs();
   for (const auto *Attr : Attrs) {
     Attr->printPretty(OS, Policy);
     if (Attr != Attrs.back())

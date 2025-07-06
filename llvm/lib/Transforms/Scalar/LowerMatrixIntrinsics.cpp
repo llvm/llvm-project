@@ -1140,6 +1140,9 @@ public:
     // Fourth, pre-process all the PHINode's. The incoming values will be
     // assigned later in VisitPHI.
     for (Instruction *Inst : MatrixInsts) {
+      if (FusedInsts.count(Inst))
+        continue;
+
       auto *PHI = dyn_cast<PHINode>(Inst);
       if (!PHI)
         continue;
@@ -1557,9 +1560,9 @@ public:
         InstructionCost EmbedCost(0);
         // Roughly estimate the cost for embedding the columns into a vector.
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost +=
-              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 {}, TTI::TCK_RecipThroughput);
+          EmbedCost += TTI.getShuffleCost(
+              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -1579,9 +1582,9 @@ public:
         // vector.
         InstructionCost EmbedCost(0);
         for (unsigned I = 1; I < N; ++I)
-          EmbedCost -=
-              TTI.getShuffleCost(TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
-                                 {}, TTI::TCK_RecipThroughput);
+          EmbedCost -= TTI.getShuffleCost(
+              TTI::SK_Splice, FixedVectorType::get(EltTy, 1),
+              FixedVectorType::get(EltTy, 1), {}, TTI::TCK_RecipThroughput);
         return EmbedCost;
       }
 
@@ -2379,7 +2382,7 @@ public:
       llvm::copy(C.vectors(), std::back_inserter(CondV));
     } else {
       CondV.resize(A.getNumVectors());
-      std::fill(CondV.begin(), CondV.end(), Cond);
+      llvm::fill(CondV, Cond);
     }
 
     for (auto [CV, AV, BV] : llvm::zip_equal(CondV, A.vectors(), B.vectors()))

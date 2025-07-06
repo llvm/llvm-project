@@ -319,17 +319,22 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   const SCEV *MaxBECount =
       Predicates ? SE.getPredicatedConstantMaxBackedgeTakenCount(L, *Predicates)
                  : SE.getConstantMaxBackedgeTakenCount(L);
+  const SCEV *BECount = Predicates
+                            ? SE.getPredicatedBackedgeTakenCount(L, *Predicates)
+                            : SE.getBackedgeTakenCount(L);
   if (isa<SCEVCouldNotCompute>(MaxBECount))
     return false;
 
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), MaxBECount, &SE, nullptr);
+      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
 
   // Try to get the access size.
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
+  if (isa<SCEVCouldNotCompute>(PtrDiff))
+    return false;
   APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
 
   Value *Base = nullptr;

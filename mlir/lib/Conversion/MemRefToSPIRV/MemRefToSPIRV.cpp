@@ -21,7 +21,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
-#include "llvm/Support/Debug.h"
 #include <cassert>
 #include <optional>
 
@@ -928,7 +927,7 @@ LogicalResult ReinterpretCastPattern::matchAndRewrite(
   }();
 
   rewriter.replaceOpWithNewOp<spirv::InBoundsPtrAccessChainOp>(
-      op, src, offsetValue, std::nullopt);
+      op, src, offsetValue, ValueRange());
   return success();
 }
 
