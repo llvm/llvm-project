@@ -60,12 +60,21 @@ TEST_F(LlvmLibcBfloat16ToFloatTest, NegativeRange) {
 }
 
 TEST_F(LlvmLibcBfloat16ToFloatTest, SpecialIntegers) {
-  // FIXME: fails for range = 100000
+  const auto test_for_int = [&](const int i) {
+    const auto mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
+    const bfloat16 libc_bfloat{i};
+    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
+  };
 
   constexpr int RANGE = 10000;
   for (int i = -RANGE; i <= RANGE; i++) {
-    bfloat16 mpfr_bfloat = MPFRNumber(i).as<bfloat16>();
-    bfloat16 libc_bfloat{i};
-    EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
+    test_for_int(i);
   }
+
+  // FIXME: this test fails
+  test_for_int(90000);
+
+  // this can be accurately represented in bf16 type without rounding but the
+  // tests still seem to fail.
+  test_for_int(90112);
 }
