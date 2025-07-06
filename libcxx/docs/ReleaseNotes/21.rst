@@ -84,6 +84,10 @@ Improvements and New Features
 - The ``flat_map::insert`` and ``flat_set::insert_range`` have been optimized, resulting in a performance improvement of up
   to 10x for inserting elements into a ``flat_map`` when the input range is a ``flat_map`` or a ``zip_view``.
 
+- The ``std::distance`` and ``std::ranges::distance`` algorithms have been optimized for segmented iterators (e.g.,
+  ``std::join_view`` iterators), reducing the complexity from ``O(n)`` to ``O(n / segment_size)``. Benchmarks show
+  performance improvements of over 1600x in favorable cases with large segment sizes (e.g., 1024).
+
 Deprecations and Removals
 -------------------------
 
