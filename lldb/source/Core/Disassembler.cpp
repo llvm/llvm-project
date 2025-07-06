@@ -751,15 +751,38 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
                   
                   std::string loc_output = loc_str.GetString().str();
 
-                  // Remove ", <decoding error> ..." segments.
-                  std::regex decoding_err_re(", <decoding error>[^,]*");
-                  loc_output = std::regex_replace(loc_output, decoding_err_re, "");
+                  // // Remove ", <decoding error> ..." segments.
+                  // std::regex decoding_err_re(", <decoding error>[^,]*");
+                  // loc_output = std::regex_replace(loc_output, decoding_err_re, "");
 
-                  llvm::StringRef cleaned_output = llvm::StringRef(loc_output).trim();
+                  // llvm::StringRef cleaned_output = llvm::StringRef(loc_output).trim();
+
+                  // // Only keep this annotation if there is still something useful left.
+                  // if (!cleaned_output.empty()) {
+                  //   annotations.push_back(llvm::formatv("{0} = {1}", name, cleaned_output));
+                  // }
+
+                  llvm::SmallVector<llvm::StringRef, 4> parts;
+                  llvm::StringRef(loc_str.GetString()).split(parts, ", ");
+
+                  // Reconstruct the string without the decoding error chunks
+                  std::string cleaned_output;
+                  bool first = true;
+
+                  for (const auto &part : parts) {
+                    if (part.contains("<decoding error>"))
+                      continue;
+
+                    if (!first)
+                      cleaned_output += ", ";
+                    cleaned_output += part.str();
+                    first = false;
+                  }
 
                   // Only keep this annotation if there is still something useful left.
-                  if (!cleaned_output.empty()) {
-                    annotations.push_back(llvm::formatv("{0} = {1}", name, cleaned_output));
+                  llvm::StringRef cleaned_ref = llvm::StringRef(cleaned_output).trim();
+                  if (!cleaned_ref.empty()) {
+                    annotations.push_back(llvm::formatv("{0} = {1}", name, cleaned_ref));
                   }
                 }
               }
