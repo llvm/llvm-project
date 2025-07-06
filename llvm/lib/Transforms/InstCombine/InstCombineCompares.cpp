@@ -4482,8 +4482,8 @@ Instruction *InstCombinerImpl::foldSelectICmp(CmpPredicate Pred, SelectInst *SI,
                "Invertible Operand0 mismatch");
         auto *NewSI = Builder.CreateSelect(Cond, Values0->second,
                                            Values1->second, SI->getName());
-        return ICmpInst::Create(Instruction::ICmp, I.getPredicate(), NewSI,
-                                Values0->first, I.getName());
+        return ICmpInst::Create(Instruction::ICmp, Pred, NewSI, Values0->first,
+                                I.getName());
       }
     }
   }
