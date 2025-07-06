@@ -71,6 +71,8 @@ public:
   StringRef getName() const { return name; }
   /// Returns true if the parameter has a default value.
   bool hasDefaultValue() const { return !defaultValue.empty(); }
+  StringRef getDefaultValue() const { return defaultValue; }
+  bool isOptional() const { return optional; }
 
 private:
   /// The C++ type.
