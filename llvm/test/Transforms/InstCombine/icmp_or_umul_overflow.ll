@@ -8,11 +8,7 @@ declare void @use.i64i1({i64, i1} %x)
 define i1 @umul_greater_than_or_overflow_const(i64 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const(
 ; CHECK-SAME: i64 [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[IN]], i64 168)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP3]], -16
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[IN]], 109802048057794950
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %mwo = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %in, i64 168)
@@ -26,11 +22,7 @@ define i1 @umul_greater_than_or_overflow_const(i64 %in) {
 define i1 @umul_greater_than_or_overflow_const_i8(i8 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const_i8(
 ; CHECK-SAME: i8 [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[IN]], i8 24)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i8, i1 } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i8, i1 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i8 [[TMP3]], -16
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i8 [[IN]], 10
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %mwo = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %in, i8 24)
@@ -44,11 +36,7 @@ define i1 @umul_greater_than_or_overflow_const_i8(i8 %in) {
 define i1 @umul_greater_than_or_overflow_const_commuted(i64 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const_commuted(
 ; CHECK-SAME: i64 [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[IN]], i64 48)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP3]], 9223372036854775800
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[IN]], 192153584101141162
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %mwo = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %in, i64 48)
@@ -62,11 +50,7 @@ define i1 @umul_greater_than_or_overflow_const_commuted(i64 %in) {
 define i1 @umul_greater_than_or_overflow_const_disjoint(i64 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const_disjoint(
 ; CHECK-SAME: i64 [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[IN]], i64 40)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i64, i1 } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i1 } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i64 [[TMP3]], 9223372036854775800
-; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt i64 [[IN]], 230584300921369395
 ; CHECK-NEXT:    ret i1 [[TMP6]]
 ;
   %mwo = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %in, i64 40)
@@ -80,11 +64,8 @@ define i1 @umul_greater_than_or_overflow_const_disjoint(i64 %in) {
 define i1 @umul_greater_than_or_overflow_const_multiuse_mul(i64 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const_multiuse_mul(
 ; CHECK-SAME: i64 [[IN:%.*]]) {
-; CHECK-NEXT:    [[MWO:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[IN]], i64 48)
-; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i64, i1 } [[MWO]], 0
-; CHECK-NEXT:    [[OVF:%.*]] = extractvalue { i64, i1 } [[MWO]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MUL]], 9223372036854775800
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[OVF]], [[CMP]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[IN]], 48
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt i64 [[IN]], 192153584101141162
 ; CHECK-NEXT:    tail call void @use.i64(i64 [[MUL]])
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
@@ -100,11 +81,8 @@ define i1 @umul_greater_than_or_overflow_const_multiuse_mul(i64 %in) {
 define i1 @umul_greater_than_or_overflow_const_multiuse_overflow(i64 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const_multiuse_overflow(
 ; CHECK-SAME: i64 [[IN:%.*]]) {
-; CHECK-NEXT:    [[MWO:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[IN]], i64 48)
-; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i64, i1 } [[MWO]], 0
-; CHECK-NEXT:    [[OVF:%.*]] = extractvalue { i64, i1 } [[MWO]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MUL]], 9223372036854775800
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[OVF]], [[CMP]]
+; CHECK-NEXT:    [[OVF:%.*]] = icmp ugt i64 [[IN]], 384307168202282325
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt i64 [[IN]], 192153584101141162
 ; CHECK-NEXT:    tail call void @use.i1(i1 [[OVF]])
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
@@ -121,10 +99,7 @@ define i1 @umul_greater_than_or_overflow_const_multiuse_umul_call(i64 %in) {
 ; CHECK-LABEL: define i1 @umul_greater_than_or_overflow_const_multiuse_umul_call(
 ; CHECK-SAME: i64 [[IN:%.*]]) {
 ; CHECK-NEXT:    [[MWO:%.*]] = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[IN]], i64 48)
-; CHECK-NEXT:    [[MUL:%.*]] = extractvalue { i64, i1 } [[MWO]], 0
-; CHECK-NEXT:    [[OVF:%.*]] = extractvalue { i64, i1 } [[MWO]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MUL]], 9223372036854775800
-; CHECK-NEXT:    [[RET:%.*]] = or i1 [[OVF]], [[CMP]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp ugt i64 [[IN]], 192153584101141162
 ; CHECK-NEXT:    tail call void @use.i64i1({ i64, i1 } [[MWO]])
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
@@ -140,11 +115,7 @@ define i1 @umul_greater_than_or_overflow_const_multiuse_umul_call(i64 %in) {
 define <2 x i1> @umul_greater_than_or_overflow_const_vector_splat(<2 x i64> %in) {
 ; CHECK-LABEL: define <2 x i1> @umul_greater_than_or_overflow_const_vector_splat(
 ; CHECK-SAME: <2 x i64> [[IN:%.*]]) {
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call { <2 x i64>, <2 x i1> } @llvm.umul.with.overflow.v2i64(<2 x i64> [[IN]], <2 x i64> splat (i64 1424))
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <2 x i64>, <2 x i1> } [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt <2 x i64> [[TMP3]], splat (i64 9223372036854775800)
-; CHECK-NEXT:    [[TMP6:%.*]] = or <2 x i1> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ugt <2 x i64> [[IN]], splat (i64 6477087104532848)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP6]]
 ;
   %mwo = tail call { <2 x i64>, <2 x i1> } @llvm.umul.with.overflow.v2i64(<2 x i64> %in, <2 x i64> <i64 1424, i64 1424>)
