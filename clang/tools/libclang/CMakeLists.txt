@@ -167,14 +167,12 @@ if(ENABLE_SHARED)
       # and "lib${OUTPUT_NAME}.dll.a", but does not generate an unversioned symlink
       # "cyg${OUTPUT_NAME}.dll" as is common on other Unix platforms.
       # However, tools like clang-python or direct dlopen() calls usually expect the
-      # unversioned form (e.g. "cygclang.dll"). While Cygwin can resolve some alternate
-      # names (e.g. "libclang.so", "libclang.dll"), LoadLibraryExW used under the hood
-      # doesn't follow Cygwin-style symlinks, so a real file is required.
-      # This copies the versioned DLL to an unversioned name to improve compatibility
-      # with such tools.
+      # unversioned form (e.g. "cygclang.dll").
+      # Therefore, we create a symlink named without the version suffix to
+      # improve compatibility.
       set(UNPAINTED_TARGET_NAME "$<TARGET_FILE_DIR:libclang>/$<TARGET_FILE_PREFIX:libclang>clang$<TARGET_FILE_SUFFIX:libclang>")
       add_custom_command(TARGET libclang POST_BUILD
-                         COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:libclang>" "${UNPAINTED_TARGET_NAME}")
+                         COMMAND ${CMAKE_COMMAND} -E create_symlink "$<TARGET_FILE:libclang>" "${UNPAINTED_TARGET_NAME}")
       install(FILES "${UNPAINTED_TARGET_NAME}" DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT libclang)
     endif()
     # Avoid declaring clang c++ symbols that are statically linked into libclang as dllimport'ed.
