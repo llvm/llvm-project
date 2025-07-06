@@ -26,7 +26,9 @@ using namespace cir;
 void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
   for (auto *curStmt : s.body()) {
     if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-      getCIRGenModule().errorNYI(curStmt->getSourceRange(), "statement");
+      getCIRGenModule().errorNYI(curStmt->getSourceRange(),
+                                 std::string("emitCompoundStmtWithoutScope: ") +
+                                     curStmt->getStmtClassName());
   }
 }
 
@@ -389,7 +391,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // If this function returns a reference, take the address of the
     // expression rather than the value.
     RValue result = emitReferenceBindingToExpr(rv);
-    builder.createStore(loc, result.getScalarVal(), *fnRetAlloca);
+    builder.CIRBaseBuilderTy::createStore(loc, result.getValue(), *fnRetAlloca);
   } else {
     mlir::Value value = nullptr;
     switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
@@ -531,12 +533,6 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal),
                                   cir::IntAttr::get(condType, endVal)});
     kind = cir::CaseOpKind::Range;
-
-    // We don't currently fold case range statements with other case statements.
-    // TODO(cir): Add this capability. Folding these cases is going to be
-    // implemented in CIRSimplify when it is upstreamed.
-    assert(!cir::MissingFeatures::foldRangeCase());
-    assert(!cir::MissingFeatures::foldCascadingCases());
   } else {
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal)});
     kind = cir::CaseOpKind::Equal;

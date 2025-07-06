@@ -8,7 +8,6 @@
 
 #include "InterpFrame.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Function.h"
 #include "InterpStack.h"
 #include "InterpState.h"
@@ -133,11 +132,7 @@ static bool shouldSkipInBacktrace(const Function *F) {
 }
 
 void InterpFrame::describe(llvm::raw_ostream &OS) const {
-  // We create frames for builtin functions as well, but we can't reliably
-  // diagnose them. The 'in call to' diagnostics for them add no value to the
-  // user _and_ it doesn't generally work since the argument types don't always
-  // match the function prototype. Just ignore them.
-  // Similarly, for lambda static invokers, we would just print __invoke().
+  // For lambda static invokers, we would just print __invoke().
   if (const auto *F = getFunction(); F && shouldSkipInBacktrace(F))
     return;
 

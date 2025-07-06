@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Transforms/Passes.h"
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
@@ -27,20 +26,19 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
@@ -94,7 +92,8 @@ static Value getLaneId(ConversionPatternRewriter &rewriter, Location loc,
 }
 static constexpr StringLiteral amdgcnDataLayout =
     "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
-    "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:"
+    "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:"
+    "32-v32:"
     "32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:"
     "64-S32-A5-G1-ni:7:8:9";
 
@@ -197,8 +196,7 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value widthOrZeroIfOutside =
         rewriter.create<LLVM::AndOp>(loc, int32Type, add, negwidth);
     Value dstLane;
-    // TODO: Use ds_swizzle for XOR when step/offsets are constants for better
-    // perf.
+
     switch (op.getMode()) {
     case gpu::ShuffleMode::UP:
       dstLane = rewriter.create<LLVM::SubOp>(loc, int32Type, srcLaneId,
@@ -319,7 +317,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     {
       RewritePatternSet patterns(ctx);
       populateGpuRewritePatterns(patterns);
-      arith::populateExpandBFloat16Patterns(patterns);
+      populateGpuPromoteShuffleToAMDGPUPatterns(patterns);
       (void)applyPatternsGreedily(m, std::move(patterns));
     }
 

@@ -147,7 +147,57 @@ Example: 32-bit PTX for CUDA Driver API: ``nvptx-nvidia-cuda``
 
 Example: 64-bit PTX for CUDA Driver API: ``nvptx64-nvidia-cuda``
 
+.. _nvptx_arch_hierarchy:
 
+NVPTX Architecture Hierarchy and Ordering
+=========================================
+
+GPU architectures: sm_2Y/sm_3Y/sm_5Y/sm_6Y/sm_7Y/sm_8Y/sm_9Y/sm_10Y/sm_12Y
+('Y' represents version within the architecture)
+The architectures have name of form ``sm_XYz`` where ``X`` represent the generation
+number, ``Y`` represents the version within the architecture, and ``z`` represents
+the optional feature suffix.
+If ``X1Y1 <= X2Y2``, then GPU capabilities of ``sm_X1Y1`` are included in ``sm_X2Y2``.
+For example, take ``sm_90`` (9 represents ``X``, 0 represents ``Y``, and no feature
+suffix) and ``sm_103`` architectures (10 represents ``X``, 3 represents ``Y``, and no
+feature suffix). Since 90 <= 103, ``sm_90`` is compatible with ``sm_103``.
+
+The family-specific variants have ``f`` feature suffix and they follow
+following order:
+``sm_X{Y2}f > sm_X{Y1}f`` iff ``Y2 > Y1``
+``sm_XY{f} > sm_{XY}{}``
+
+For example, take ``sm_100f`` (10 represents ``X``, 0 represents ``Y``, and ``f``
+represents ``z``) and ``sm_103f`` (10 represents ``X``, 3 represents ``Y``, and ``f``
+represents ``z``) architecture variants. Since ``Y1 < Y2``, ``sm_100f`` is compatible with
+``sm_103f``. Similarly based on the second rule, ``sm_90`` is compatible with ``sm_103f``.
+
+Some counter examples, take ``sm_100f`` and ``sm_120f`` (12 represents ``X``, 0
+represents ``Y``, and ``f`` represents ``z``) architecture variants. Since both
+belongs to different family i.e. ``X1 != X2``, ``sm_100f`` is not compatible with
+``sm_120f``.
+
+The architecture-specific variants have ``a`` feature suffix and they follow
+following order:
+``sm_XY{a} > sm_XY{f} > sm_{XY}{}``
+
+For example, take ``sm_103a`` (10 represents ``X``, 3 represents ``Y``, and ``a``
+represents ``z``), ``sm_103f``, and ``sm_103`` architecture variants. The ``sm_103`` is
+compatible with ``sm_103a`` and ``sm_103f``, and ``sm_103f`` is compatible with ``sm_103a``.
+
+Encoding := Arch * 10 + 2 (for 'f') + 1 (for 'a')
+Arch := X * 10 + Y
+
+For example, ``sm_103f`` is encoded as 1032 (103 * 10 + 2) and ``sm_103a`` is
+encoded as 1033 (103 * 10 + 2 + 1).
+
+This encoding allows simple partial ordering of the architectures.
+
+* Compare Family and Arch by dividing FullSMVersion by 100 and 10
+  respectively before the comparison.
+* Compare within the family by comparing FullSMVersion, given both belongs to
+  the same family.
+* Detect ``a`` variants by checking FullSMVersion & 1.
 
 .. _nvptx_intrinsics:
 
@@ -199,21 +249,59 @@ map in the following way to CUDA builtins:
 Barriers
 --------
 
-'``llvm.nvvm.barrier0``'
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.nvvm.barrier.cta.*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.barrier0()
+  declare void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.sync.all(i32 %id)
+  declare void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %n)
+
+  declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %n)
+  declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %id)
+  declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %n)
 
 Overview:
 """""""""
 
-The '``@llvm.nvvm.barrier0()``' intrinsic emits a PTX ``bar.sync 0``
-instruction, equivalent to the ``__syncthreads()`` call in CUDA.
+The '``@llvm.nvvm.barrier.cta.*``' family of intrinsics perform barrier
+synchronization and communication within a CTA. They can be used by the threads
+within the CTA for synchronization and communication.
+
+Semantics:
+""""""""""
+
+Operand %id specifies a logical barrier resource and must fall within the range
+0 through 15. When present, operand %n specifies the number of threads
+participating in the barrier. When specifying a thread count, the value must be
+a multiple of the warp size. With the '``@llvm.nvvm.barrier.cta.sync.*``'
+variants, the '``.all``' suffix indicates that all threads in the CTA should
+participate in the barrier while the '``.count``' suffix indicates that only
+the threads specified by the %n operand should participate in the barrier.
+
+All forms of the '``@llvm.nvvm.barrier.cta.*``' intrinsic cause the executing
+thread to wait for all non-exited threads from its warp and then marks the
+warp's arrival at the barrier. In addition to signaling its arrival at the 
+barrier, the '``@llvm.nvvm.barrier.cta.sync.*``' intrinsics cause the executing
+thread to wait for non-exited threads of all other warps participating in the
+barrier to arrive. On the other hand, the '``@llvm.nvvm.barrier.cta.arrive.*``'
+intrinsic does not cause the executing thread to wait for threads of other
+participating warps.
+
+When a barrier completes, the waiting threads are restarted without delay,
+and the barrier is reinitialized so that it can be immediately reused.
+
+The '``@llvm.nvvm.barrier.cta.*``' intrinsic has an optional '``.aligned``'
+modifier to indicate textual alignment of the barrier. When specified, it
+indicates that all threads in the CTA will execute the same
+'``@llvm.nvvm.barrier.cta.*``' instruction. In conditionally executed code, an
+aligned '``@llvm.nvvm.barrier.cta.*``' instruction should only be used if it is
+known that all threads in the CTA evaluate the condition identically, otherwise
+behavior is undefined.
 
 Electing a thread
 -----------------
@@ -385,7 +473,7 @@ Semantics:
 """"""""""
 
 Before the absolute value is taken, the input is flushed to sign preserving
-zero if it is a subnormal. In addtion, unlike '``llvm.fabs.*``', a NaN input
+zero if it is a subnormal. In addition, unlike '``llvm.fabs.*``', a NaN input
 yields an unspecified NaN output.
 
 
@@ -473,7 +561,7 @@ Overview:
 
 The '``llvm.nvvm.fshl.clamp``' family of intrinsics performs a clamped funnel
 shift left. These intrinsics are very similar to '``llvm.fshl``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -501,7 +589,7 @@ Overview:
 
 The '``llvm.nvvm.fshr.clamp``' family of intrinsics perform a clamped funnel
 shift right. These intrinsics are very similar to '``llvm.fshr``', except the
-shift ammont is clamped at the integer width (instead of modulo it). Currently,
+shift amount is clamped at the integer width (instead of modulo it). Currently,
 only ``i32`` is supported.
 
 Semantics:
@@ -624,6 +712,126 @@ all bits set to 0 except for %b bits starting at bit position %a. For the
 '``clamp``' variants, the values of %a and %b are clamped to the range [0, 32],
 which in practice is equivalent to using them as is.
 
+'``llvm.nvvm.prmt``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt(i32 %lo, i32 %hi, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt``' constructs a permutation of the bytes of the first two
+operands, selecting based on the third operand.
+
+Semantics:
+""""""""""
+
+The bytes in the first two source operands are numbered from 0 to 7:
+{%hi, %lo} = {{b7, b6, b5, b4}, {b3, b2, b1, b0}}. For each byte in the target
+register, a 4-bit selection value is defined.
+
+The 3 lsbs of the selection value specify which of the 8 source bytes should be
+moved into the target position. The msb defines if the byte value should be
+copied, or if the sign (msb of the byte) should be replicated over all 8 bits
+of the target position (sign extend of the byte value); msb=0 means copy the
+literal value; msb=1 means replicate the sign.
+
+These 4-bit selection values are pulled from the lower 16-bits of the %selector
+operand, with the least significant selection value corresponding to the least
+significant byte of the destination.
+
+
+'``llvm.nvvm.prmt.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.prmt.f4e(i32 %lo, i32 %hi, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.b4e(i32 %lo, i32 %hi, i32 %selector)
+
+    declare i32 @llvm.nvvm.prmt.rc8(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecl(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.ecr(i32 %lo, i32 %selector)
+    declare i32 @llvm.nvvm.prmt.rc16(i32 %lo, i32 %selector)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.prmt.*``' family of intrinsics constructs a permutation of the
+bytes of the first one or two operands, selecting based on the 2 least
+significant bits of the final operand.
+
+Semantics:
+""""""""""
+
+As with the generic '``llvm.nvvm.prmt``' intrinsic, the bytes in the first one
+or two source operands are numbered. The first source operand (%lo) is numbered
+{b3, b2, b1, b0}, in the case of the '``f4e``' and '``b4e``' variants, the
+second source operand (%hi) is numbered {b7, b6, b5, b4}.
+
+Depending on the 2 least significant bits of the %selector operand, the result
+of the permutation is defined as follows:
+
++------------+----------------+--------------+
+|    Mode    | %selector[1:0] |    Output    |
++------------+----------------+--------------+
+| '``f4e``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {4, 3, 2, 1} |
+|            +----------------+--------------+
+|            | 2              | {5, 4, 3, 2} |
+|            +----------------+--------------+
+|            | 3              | {6, 5, 4, 3} |
++------------+----------------+--------------+
+| '``b4e``'  | 0              | {5, 6, 7, 0} |
+|            +----------------+--------------+
+|            | 1              | {6, 7, 0, 1} |
+|            +----------------+--------------+
+|            | 2              | {7, 0, 1, 2} |
+|            +----------------+--------------+
+|            | 3              | {0, 1, 2, 3} |
++------------+----------------+--------------+
+| '``rc8``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecl``'  | 0              | {3, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 1, 1} |
+|            +----------------+--------------+
+|            | 2              | {3, 2, 2, 2} |
+|            +----------------+--------------+
+|            | 3              | {3, 3, 3, 3} |
++------------+----------------+--------------+
+| '``ecr``'  | 0              | {0, 0, 0, 0} |
+|            +----------------+--------------+
+|            | 1              | {1, 1, 1, 0} |
+|            +----------------+--------------+
+|            | 2              | {2, 2, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 1, 0} |
++------------+----------------+--------------+
+| '``rc16``' | 0              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 1              | {3, 2, 3, 2} |
+|            +----------------+--------------+
+|            | 2              | {1, 0, 1, 0} |
+|            +----------------+--------------+
+|            | 3              | {3, 2, 3, 2} |
++------------+----------------+--------------+
+
 TMA family of Intrinsics
 ------------------------
 
@@ -672,6 +880,7 @@ Syntax:
 .. code-block:: llvm
 
   declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global(ptr addrspace(1) %dst, ptr addrspace(3) %src, i32 %size, i64 %ch, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.shared.cta.to.global.bytemask(..., i32 %size, i64 %ch, i1 %flag_ch, i16 %mask)
 
 Overview:
 """""""""
@@ -680,10 +889,13 @@ The '``@llvm.nvvm.cp.async.bulk.shared.cta.to.global``' intrinsic
 corresponds to the ``cp.async.bulk.global.shared::cta.*`` set of PTX
 instructions. These instructions initiate an asynchronous copy from
 shared::cta to global memory. The 32-bit operand ``%size`` specifies
-the amount of memory to be copied and it must be a multiple of 16.
+the amount of memory to be copied (in bytes) and it must be a multiple
+of 16. For the ``.bytemask`` variant, the 16-bit wide mask operand
+specifies whether the i-th byte of each 16-byte wide chunk of source
+data is copied to the destination.
 
-* The last argument to these intrinsics is a boolean flag
-  indicating support for cache_hint. This flag argument must
+* The ``i1 %flag_ch`` argument to these intrinsics is a boolean
+  flag indicating support for cache_hint. This flag argument must
   be a compile-time constant. When set, it indicates a valid
   cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.
@@ -854,7 +1066,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
@@ -872,18 +1084,26 @@ source tensor is preserved at the destination. The dimension of the
 tensor data ranges from 1d to 5d with the coordinates specified
 by the ``i32 %d0 ... i32 %d4`` arguments.
 
-* The last two arguments to these intrinsics are boolean flags
-  indicating support for cache_hint and/or multicast modifiers.
-  These flag arguments must be compile-time constants. The backend
-  looks through these flags and lowers the intrinsics appropriately.
+* The last three arguments to these intrinsics are flags
+  indicating support for multicast, cache_hint and cta_group::1/2
+  modifiers. These flag arguments must be compile-time constants.
+  The backend looks through these flags and lowers the intrinsics
+  appropriately.
 
-* The Nth argument (denoted by ``i1 flag_ch``) when set, indicates
+* The argument denoted by ``i1 %flag_ch`` when set, indicates
   a valid cache_hint (``i64 %ch``) and generates the ``.L2::cache_hint``
   variant of the PTX instruction.
 
-* The [N-1]th argument (denoted by ``i1 flag_mc``) when set, indicates
-  the presence of a multicast mask (``i16 %mc``) and generates the PTX
-  instruction with the ``.multicast::cluster`` modifier.
+* The argument denoted by ``i1 %flag_mc`` when set, indicates
+  the presence of a multicast mask (``i16 %mc``) and generates
+  the PTX instruction with the ``.multicast::cluster`` modifier.
+
+* The argument denoted by ``i32 %flag_cta_group`` takes values within
+  the range [0, 3) i.e. {0,1,2}. When the value of ``%flag_cta_group``
+  is not within the range, it may raise an error from the Verifier.
+  The default value is '0' with no cta_group modifier in the
+  instruction. The values of '1' and '2' lower to ``cta_group::1``
+  and ``cta_group::2`` variants of the PTX instruction respectively.
 
 For more information, refer PTX ISA
 `<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor>`_.
@@ -896,7 +1116,7 @@ Syntax:
 
 .. code-block:: llvm
 
-  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+  declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
   declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
@@ -912,8 +1132,8 @@ are unrolled into a single dimensional column at the destination. In this
 mode, the tensor has to be at least three-dimensional. Along with the tensor
 coordinates, im2col offsets are also specified (denoted by
 ``i16 im2col0...i16 %im2col2``). The number of im2col offsets is two less
-than the number of dimensions of the tensor operation. The last two arguments
-to these intrinsics are boolean flags, with the same functionality as described
+than the number of dimensions of the tensor operation. The last three arguments
+to these intrinsics are flags, with the same functionality as described
 in the ``tile`` mode intrinsics above.
 
 For more information, refer PTX ISA
@@ -1613,6 +1833,121 @@ The ``@llvm.nvvm.st.bulk.shared.cta`` and ``@llvm.nvvm.st.bulk`` intrinsics are
 similar but the latter uses generic addressing (see `Generic Addressing <https://docs.nvidia.com/cuda/parallel-thread-execution/#generic-addressing>`__).
 
 For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-st-bulk>`__.
+
+
+clusterlaunchcontrol Intrinsics
+-------------------------------
+
+'``llvm.nvvm.clusterlaunchcontrol.try_cancel*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+  declare void @llvm.nvvm.clusterlaunchcontrol.try_cancel.async.multicast.shared(ptr addrspace(3) %addr, ptr addrspace(3) %mbar)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.try_cancel`` intrinsics requests atomically cancelling
+the launch of a cluster that has not started running yet. It asynchronously non-atomically writes
+a 16-byte opaque response to shared memory, pointed to by 16-byte-aligned ``addr`` indicating whether the
+operation succeeded or failed. ``addr`` and 8-byte-aligned ``mbar`` must refer to ``shared::cta``
+otherwise the behavior is undefined. The completion of the asynchronous operation
+is tracked using the mbarrier completion mechanism at ``.cluster`` scope referenced
+by the shared memory pointer, ``mbar``. On success, the opaque response contains
+the CTA id of the first CTA of the canceled cluster; no other successful response
+from other ``clusterlaunchcontrol.try_cancel`` operations from the same grid will
+contain that id.
+
+The ``multicast`` variant specifies that the response is asynchronously non-atomically written to
+the corresponding shared memory location of each CTA in the requesting cluster.
+The completion of the write of each local response is tracked by independent
+mbarriers at the corresponding shared memory location of each CTA in the
+cluster.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel>`__.
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i1 @llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``llvm.nvvm.clusterlaunchcontrol.query_cancel.is_canceled`` intrinsic decodes the opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+The intrinsic returns ``0`` (false) if the request failed. If the request succeeded,
+it returns ``1`` (true). A true result indicates that:
+
+- the thread block cluster whose first CTA id matches that of the response
+  handle will not run, and
+- no other successful response of another ``try_cancel`` request in the grid will contain
+  the first CTA id of that cluster
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
+
+
+'``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.x(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.y(i128 %try_cancel_response)
+  declare i32 @llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.z(i128 %try_cancel_response)
+
+Overview:
+"""""""""
+
+The ``clusterlaunchcontrol.query_cancel.get_first_ctaid.*`` intrinsic can be
+used to decode the successful opaque response written by the
+``llvm.nvvm.clusterlaunchcontrol.try_cancel`` operation.
+
+If the request succeeded:
+
+- ``llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid.{x,y,z}`` returns
+  the coordinate of the first CTA in the canceled cluster, either x, y, or z.
+
+If the request failed, the behavior of these intrinsics is undefined.
+
+For more information, refer `PTX ISA <https://docs.nvidia.com/cuda/parallel-thread-execution/?a#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel>`__.
+
+Perf Monitor Event Intrinsics
+-----------------------------
+
+'``llvm.nvvm.pm.event.mask``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare void @llvm.nvvm.pm.event.mask(i16 immarg %mask_val)
+
+Overview:
+"""""""""
+
+The '``llvm.nvvm.pm.event.mask``' intrinsic triggers one or more
+performance monitor events. Each bit in the 16-bit immediate operand
+``%mask_val`` controls an event.
+
+For more information on the pmevent instructions, refer to the PTX ISA
+`<https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent>`_.
 
 Other Intrinsics
 ----------------

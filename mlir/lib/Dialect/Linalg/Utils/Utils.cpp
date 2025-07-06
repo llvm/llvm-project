@@ -59,7 +59,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
   TileCheck(ArrayRef<OpFoldResult> tileSizes) : tileSizes(tileSizes) {}
 
   void visitDimExpr(AffineDimExpr expr) {
-    isTiled |= !isZeroIndex(tileSizes[expr.getPosition()]);
+    isTiled |= !isZeroInteger(tileSizes[expr.getPosition()]);
   }
   void visitAffineBinaryOpExpr(AffineBinaryOpExpr expr) {
     visit(expr.getLHS());
@@ -244,11 +244,13 @@ bool isReductionIterator(utils::IteratorType iteratorType) {
 }
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
-                            Value source, Value pad, bool nofold) {
+                            Value source, Value pad, bool nofold,
+                            ValueRange typeDynDims) {
   // Exit if `source` is not defined by an ExtractSliceOp.
   auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Search the `source` use-def chain for padded LinalgOps.
   Value current = sliceOp.getSource();
@@ -264,24 +266,28 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
   // Exit if the search fails to match a tensor::PadOp at the end of the matched
   // LinalgOp sequence.
   if (!padOp)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the padded result type does not match.
   if (sliceOp.getSource().getType() != type)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the LinalgOps are not high padded.
   if (llvm::any_of(padOp.getMixedLowPad(), [](OpFoldResult ofr) {
         return getConstantIntValue(ofr) != static_cast<int64_t>(0);
       }))
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if `padOpSliceOp`, which defines the slice used by
   // `padOp`, is rank-reducing.
   auto padOpSliceOp = padOp.getSource().getDefiningOp<tensor::ExtractSliceOp>();
   if (!padOpSliceOp ||
       sliceOp.getMixedSizes().size() != padOpSliceOp.getMixedSizes().size())
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the sizes of the dynamic sizes of `sliceOp` do not match the size
   // of the slice padded by `padOp`.
@@ -290,14 +296,16 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
           [](std::tuple<OpFoldResult, OpFoldResult> it) {
             return !isEqualConstantIntOrValue(std::get<0>(it), std::get<1>(it));
           }))
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Exit if the padding values do not match.
   Attribute padOpPadAttr, padAttr;
   Value padOpPad = padOp.getConstantPaddingValue();
   if (!padOpPad || !matchPattern(padOpPad, m_Constant(&padOpPadAttr)) ||
       !matchPattern(pad, m_Constant(&padAttr)) || padOpPadAttr != padAttr)
-    return tensor::createPadHighOp(type, source, pad, nofold, loc, b);
+    return tensor::createPadHighOp(type, source, pad, nofold, loc, b,
+                                   typeDynDims);
 
   // Return the padded result if the padding values and sizes match.
   return sliceOp.getSource();
@@ -688,7 +696,7 @@ computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
     //    tensors with "0" dimensions would never be constructed.
     int64_t shapeSize = shape[r];
     std::optional<int64_t> sizeCst = getConstantIntValue(size);
-    auto hasTileSizeOne = sizeCst && *sizeCst == 1;
+    auto hasTileSizeOne = sizeCst == 1;
     auto dividesEvenly = sizeCst && !ShapedType::isDynamic(shapeSize) &&
                          ((shapeSize % *sizeCst) == 0);
     if (!hasTileSizeOne && !dividesEvenly) {
@@ -741,7 +749,7 @@ SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
   SmallVector<OpFoldResult> offsets;
   for (unsigned idx = 0, idxIvs = 0, e = tileSizes.size(); idx < e; ++idx) {
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for loop#" << idx << "\n");
-    bool isTiled = !isZeroIndex(tileSizes[idx]);
+    bool isTiled = !isZeroInteger(tileSizes[idx]);
     offsets.push_back(isTiled ? ivs[idxIvs++] : b.getIndexAttr(0));
     LLVM_DEBUG(llvm::dbgs()
                << "computeTileOffsets: " << offsets.back() << "\n");
@@ -754,7 +762,7 @@ SmallVector<OpFoldResult> computeTileSizes(OpBuilder &b, Location loc,
                                            ArrayRef<OpFoldResult> sizeBounds) {
   SmallVector<OpFoldResult> sizes;
   for (unsigned idx = 0, e = tileSizes.size(); idx < e; ++idx) {
-    bool isTiled = !isZeroIndex(tileSizes[idx]);
+    bool isTiled = !isZeroInteger(tileSizes[idx]);
     // Before composing, we need to make range a closed interval.
     OpFoldResult size = isTiled ? tileSizes[idx] : sizeBounds[idx];
     AffineExpr d0 = getAffineDimExpr(0, b.getContext());
@@ -810,7 +818,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
                           bool omitPartialTileCheck) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
-                           [](OpFoldResult v) { return !isZeroIndex(v); })) &&
+                           [](OpFoldResult v) { return !isZeroInteger(v); })) &&
          "expected as many ivs as non-zero sizes");
 
   // Construct (potentially temporary) mins and maxes on which to apply maps

@@ -46,7 +46,7 @@ AttrOrTypeDef::AttrOrTypeDef(const Record *def) : def(def) {
   const auto *builderList =
       dyn_cast_or_null<ListInit>(def->getValueInit("builders"));
   if (builderList && !builderList->empty()) {
-    for (const Init *init : builderList->getValues()) {
+    for (const Init *init : builderList->getElements()) {
       AttrOrTypeBuilder builder(cast<DefInit>(init)->getDef(), def->getLoc());
 
       // Ensure that all parameters have names.

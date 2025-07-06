@@ -1510,16 +1510,18 @@ bool Target::IgnoreWatchpointByID(lldb::watch_id_t watch_id,
 }
 
 ModuleSP Target::GetExecutableModule() {
-  // search for the first executable in the module list
-  for (size_t i = 0; i < m_images.GetSize(); ++i) {
-    ModuleSP module_sp = m_images.GetModuleAtIndex(i);
+  std::lock_guard<std::recursive_mutex> lock(m_images.GetMutex());
+
+  // Search for the first executable in the module list.
+  for (ModuleSP module_sp : m_images.ModulesNoLocking()) {
     lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
     if (obj == nullptr)
       continue;
     if (obj->GetType() == ObjectFile::Type::eTypeExecutable)
       return module_sp;
   }
-  // as fall back return the first module loaded
+
+  // If there is none, fall back return the first module loaded.
   return m_images.GetModuleAtIndex(0);
 }
 
@@ -1707,6 +1709,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
         if (PlatformSP arch_platform_sp =
                 GetDebugger().GetPlatformList().GetOrCreate(other, {},
                                                             &platform_arch)) {
+          arch_platform_sp->SetLocateModuleCallback(
+              platform_sp->GetLocateModuleCallback());
           SetPlatform(arch_platform_sp);
           if (platform_arch.IsValid())
             other = platform_arch;
@@ -3545,6 +3549,7 @@ llvm::Expected<TraceSP> Target::GetTraceOrCreate() {
 }
 
 Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
+  Progress attach_progress("Waiting to attach to process");
   m_stats.SetLaunchOrAttachTime();
   auto state = eStateInvalid;
   auto process_sp = GetProcessSP();

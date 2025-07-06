@@ -51,6 +51,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
@@ -209,46 +210,15 @@ static mlir::Value unwrapPassThroughOps(mlir::Value val) {
   return val;
 }
 
-/// Return true, if \p rebox operation keeps the input array
-/// continuous in the innermost dimension, if it is initially continuous
-/// in the innermost dimension.
-static bool reboxPreservesContinuity(fir::ReboxOp rebox) {
-  // If slicing is not involved, then the rebox does not affect
-  // the continuity of the array.
-  auto sliceArg = rebox.getSlice();
-  if (!sliceArg)
-    return true;
-
-  // A slice with step=1 in the innermost dimension preserves
-  // the continuity of the array in the innermost dimension.
-  if (auto sliceOp =
-          mlir::dyn_cast_or_null<fir::SliceOp>(sliceArg.getDefiningOp())) {
-    if (sliceOp.getFields().empty() && sliceOp.getSubstr().empty()) {
-      auto triples = sliceOp.getTriples();
-      if (triples.size() > 2)
-        if (auto innermostStep = fir::getIntIfConstant(triples[2]))
-          if (*innermostStep == 1)
-            return true;
-    }
-
-    LLVM_DEBUG(llvm::dbgs()
-               << "REBOX with slicing may produce non-contiguous array: "
-               << sliceOp << '\n'
-               << rebox << '\n');
-    return false;
-  }
-
-  LLVM_DEBUG(llvm::dbgs() << "REBOX with unknown slice" << sliceArg << '\n'
-                          << rebox << '\n');
-  return false;
-}
-
 /// if a value comes from a fir.rebox, follow the rebox to the original source,
 /// of the value, otherwise return the value
 static mlir::Value unwrapReboxOp(mlir::Value val) {
   while (fir::ReboxOp rebox = val.getDefiningOp<fir::ReboxOp>()) {
-    if (!reboxPreservesContinuity(rebox))
+    if (!fir::reboxPreservesContinuity(rebox, /*checkWhole=*/false)) {
+      LLVM_DEBUG(llvm::dbgs() << "REBOX may produce non-contiguous array: "
+                              << rebox << '\n');
       break;
+    }
     val = rebox.getBox();
   }
   return val;

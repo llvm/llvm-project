@@ -303,7 +303,7 @@ struct FoldAffineOp : public RewritePattern {
       }
       return failure();
     }
-    if (dyn_cast<AffineDimExpr>(expr) || dyn_cast<AffineSymbolExpr>(expr)) {
+    if (isa<AffineDimExpr, AffineSymbolExpr>(expr)) {
       rewriter.replaceOp(op, op->getOperand(0));
       return success();
     }

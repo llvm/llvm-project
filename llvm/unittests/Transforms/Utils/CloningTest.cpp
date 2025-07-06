@@ -1004,6 +1004,16 @@ protected:
         Function::Create(FuncType, GlobalValue::ExternalLinkage, "g", OldM);
     G->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
 
+    auto *NonEntryBlock = BasicBlock::Create(C, "", F);
+    IBuilder.SetInsertPoint(NonEntryBlock);
+    IBuilder.CreateRetVoid();
+
+    // Create a global that contains the block address in its initializer.
+    auto *BlockAddress = BlockAddress::get(NonEntryBlock);
+    new GlobalVariable(*OldM, BlockAddress->getType(), /*isConstant=*/true,
+                       GlobalVariable::ExternalLinkage, BlockAddress,
+                       "blockaddr");
+
     // Finalize the debug info
     DBuilder.finalize();
   }
@@ -1182,8 +1192,8 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
     !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
@@ -1264,6 +1274,15 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
   VM.clear();
   delete BB3;
 #undef EXPECT_ATOM
+}
+
+// Checks that block addresses in global initializers are properly cloned.
+TEST_F(CloneModule, GlobalWithBlockAddressesInitializer) {
+  auto *OriginalBa = cast<BlockAddress>(
+      OldM->getGlobalVariable("blockaddr")->getInitializer());
+  auto *ClonedBa = cast<BlockAddress>(
+      NewM->getGlobalVariable("blockaddr")->getInitializer());
+  ASSERT_NE(OriginalBa->getBasicBlock(), ClonedBa->getBasicBlock());
 }
 
 } // namespace

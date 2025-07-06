@@ -121,7 +121,7 @@ def FPR32INX : RegisterOperand<GPRF32> {
   let ParserMatchClass = GPRAsFPR32;
 }
 
-// Describes a combination of predicates from F/D/Zfh/Zfhmin or
+// Describes a combination of predicates from F/D/Q/Zfh/Zfhmin or
 // Zfinx/Zdinx/Zhinx/Zhinxmin that are applied to scalar FP instruction.
 // Contains the DAGOperand for the primary type for the predicates. The primary
 // type may be unset for combinations of predicates like Zfh+D.

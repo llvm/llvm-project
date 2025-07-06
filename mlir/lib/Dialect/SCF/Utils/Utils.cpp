@@ -301,19 +301,8 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
 /// constants, or optional otherwise. Trip count is computed as
 /// ceilDiv(highBound - lowBound, step).
 static std::optional<int64_t> getConstantTripCount(scf::ForOp forOp) {
-  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
-  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
-  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
-  if (!lbCstOp.has_value() || !ubCstOp.has_value() || !stepCstOp.has_value())
-    return {};
-
-  // Constant loop bounds computation.
-  int64_t lbCst = lbCstOp.value();
-  int64_t ubCst = ubCstOp.value();
-  int64_t stepCst = stepCstOp.value();
-  assert(lbCst >= 0 && ubCst >= 0 && stepCst > 0 &&
-         "expected positive loop bounds and step");
-  return llvm::divideCeilSigned(ubCst - lbCst, stepCst);
+  return constantTripCount(forOp.getLowerBound(), forOp.getUpperBound(),
+                           forOp.getStep());
 }
 
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
@@ -768,7 +757,7 @@ static void denormalizeInductionVariableForIndexType(RewriterBase &rewriter,
   // If an `affine.apply` operation is generated for denormalization, the use
   // of `origLb` in those ops must not be replaced. These arent not generated
   // when `origLb == 0` and `origStep == 1`.
-  if (!isConstantIntValue(origLb, 0) || !isConstantIntValue(origStep, 1)) {
+  if (!isZeroInteger(origLb) || !isOneInteger(origStep)) {
     if (Operation *preservedUse = denormalizedIvVal.getDefiningOp()) {
       preservedUses.insert(preservedUse);
     }
@@ -785,8 +774,8 @@ void mlir::denormalizeInductionVariable(RewriterBase &rewriter, Location loc,
   }
   Value denormalizedIv;
   SmallPtrSet<Operation *, 2> preserve;
-  bool isStepOne = isConstantIntValue(origStep, 1);
-  bool isZeroBased = isConstantIntValue(origLb, 0);
+  bool isStepOne = isOneInteger(origStep);
+  bool isZeroBased = isZeroInteger(origLb);
 
   Value scaled = normalizedIv;
   if (!isStepOne) {

@@ -111,12 +111,11 @@ private:
   std::optional<PtrCallback> PtrCB;
 
   /// Temporaries which require storage.
-  llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Locals;
+  llvm::SmallVector<std::unique_ptr<char[]>> Locals;
 
   Block *getLocal(unsigned Index) const {
-    auto It = Locals.find(Index);
-    assert(It != Locals.end() && "Missing local variable");
-    return reinterpret_cast<Block *>(It->second.get());
+    assert(Index < Locals.size());
+    return reinterpret_cast<Block *>(Locals[Index].get());
   }
 
   void updateGlobalTemporaries();

@@ -19,7 +19,7 @@
 #include "AArch64TargetObjectFile.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "TargetInfo/AArch64TargetInfo.h"
@@ -58,6 +58,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -467,7 +468,7 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
   PAuthABIVersion = (uint64_t(-1) == PAuthABIVersion) ? 0 : PAuthABIVersion;
 
   if (PAuthABIPlatform || PAuthABIVersion) {
-    TS->emitAtributesSubsection(
+    TS->emitAttributesSubsection(
         AArch64BuildAttributes::getVendorName(
             AArch64BuildAttributes::AEABI_PAUTHABI),
         AArch64BuildAttributes::SubsectionOptional::REQUIRED,
@@ -490,7 +491,7 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
       (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
 
   if (BTIValue || PACValue || GCSValue) {
-    TS->emitAtributesSubsection(
+    TS->emitAttributesSubsection(
         AArch64BuildAttributes::getVendorName(
             AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
         AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
@@ -909,15 +910,15 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // have a chance to save them.
       EmitToStreamer(MCInstBuilder(AArch64::ADRP)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_PAGE,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
                          .addReg(AArch64::X16)
                          .addReg(AArch64::X16)
-                         .addExpr(AArch64MCExpr::create(
-                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
-                             OutContext)));
+                         .addExpr(MCSpecifierExpr::create(HwasanTagMismatchRef,
+                                                          AArch64::S_GOT_LO12,
+                                                          OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -961,7 +962,7 @@ void AArch64AsmPrinter::emitEndOfAsmFile(Module &M) {
     // implementation of multiple entry points).  If this doesn't occur, the
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
-    OutStreamer->emitAssemblerFlag(MCAF_SubsectionsViaSymbols);
+    OutStreamer->emitSubsectionsViaSymbols();
   }
 
   if (TT.isOSBinFormatELF()) {
@@ -1344,10 +1345,12 @@ AArch64AsmPrinter::getCodeViewJumpTableInfo(int JTI,
 }
 
 void AArch64AsmPrinter::emitFunctionEntryLabel() {
-  if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
-      MF->getFunction().getCallingConv() ==
-          CallingConv::AArch64_SVE_VectorCall ||
-      MF->getInfo<AArch64FunctionInfo>()->isSVECC()) {
+  const Triple &TT = TM.getTargetTriple();
+  if (TT.isOSBinFormatELF() &&
+      (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
+       MF->getFunction().getCallingConv() ==
+           CallingConv::AArch64_SVE_VectorCall ||
+       MF->getInfo<AArch64FunctionInfo>()->isSVECC())) {
     auto *TS =
         static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitDirectiveVariantPCS(CurrentFnSym);
@@ -1355,8 +1358,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
 
   AsmPrinter::emitFunctionEntryLabel();
 
-  if (TM.getTargetTriple().isWindowsArm64EC() &&
-      !MF->getFunction().hasLocalLinkage()) {
+  if (TT.isWindowsArm64EC() && !MF->getFunction().hasLocalLinkage()) {
     // For ARM64EC targets, a function definition's name is mangled differently
     // from the normal symbol, emit required aliases here.
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
@@ -3272,6 +3274,32 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
                                      -MI->getOperand(2).getImm());
     return;
 
+  case AArch64::SEH_AllocZ:
+    assert(MI->getOperand(0).getImm() >= 0 &&
+           "AllocZ SEH opcode offset must be non-negative");
+    assert(MI->getOperand(0).getImm() <= 255 &&
+           "AllocZ SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFIAllocZ(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveZReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SaveZReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SaveZReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISaveZReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SavePReg:
+    assert(MI->getOperand(1).getImm() >= 0 &&
+           "SavePReg SEH opcode offset must be non-negative");
+    assert(MI->getOperand(1).getImm() <= 255 &&
+           "SavePReg SEH opcode offset must fit into 8 bits");
+    TS->emitARM64WinCFISavePReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
   case AArch64::BLR:
   case AArch64::BR: {
     recordIfImportCall(MI);
@@ -3504,10 +3532,11 @@ const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
 char AArch64AsmPrinter::ID = 0;
 
 INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
-                "AArch64 Assmebly Printer", false, false)
+                "AArch64 Assembly Printer", false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64AsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64AsmPrinter() {
   RegisterAsmPrinter<AArch64AsmPrinter> X(getTheAArch64leTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Y(getTheAArch64beTarget());
   RegisterAsmPrinter<AArch64AsmPrinter> Z(getTheARM64Target());

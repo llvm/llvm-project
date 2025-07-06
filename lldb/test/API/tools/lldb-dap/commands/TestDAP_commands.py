@@ -75,11 +75,12 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
         )
         command_abort_on_error = "settings set foo bar"
         program = self.build_and_create_debug_adapter_for_attach()
-        self.attach(
-            program,
+        resp = self.attach(
+            program=program,
             attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
             expectFailure=True,
         )
+        self.assertFalse(resp["success"], "expected 'attach' failure")
         full_output = self.collect_console(
             timeout_secs=1.0,
             pattern=command_abort_on_error,

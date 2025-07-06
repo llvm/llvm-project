@@ -194,7 +194,7 @@ void TestSubElementsAccessAttr::print(::mlir::AsmPrinter &printer) const {
 ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
   if (auto *blob = getHandle().getBlob())
     return blob->getDataAs<uint64_t>();
-  return std::nullopt;
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
@@ -495,6 +495,24 @@ getDynamicCustomAssemblyFormatAttr(TestDialect *testDialect) {
   return DynamicAttrDefinition::get("dynamic_custom_assembly_format",
                                     testDialect, std::move(verifier),
                                     std::move(parser), std::move(printer));
+}
+
+//===----------------------------------------------------------------------===//
+// SlashAttr
+//===----------------------------------------------------------------------===//
+
+Attribute SlashAttr::parse(AsmParser &parser, Type type) {
+  int lhs, rhs;
+
+  if (parser.parseLess() || parser.parseInteger(lhs) || parser.parseSlash() ||
+      parser.parseInteger(rhs) || parser.parseGreater())
+    return Attribute();
+
+  return SlashAttr::get(parser.getContext(), lhs, rhs);
+}
+
+void SlashAttr::print(AsmPrinter &printer) const {
+  printer << "<" << getLhs() << " / " << getRhs() << ">";
 }
 
 //===----------------------------------------------------------------------===//

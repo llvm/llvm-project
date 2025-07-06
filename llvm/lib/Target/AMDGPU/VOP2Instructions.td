@@ -211,6 +211,11 @@ multiclass VOP2Inst_e64_t16<string opName,
                         string revOp = opName> {
   let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in {
     defm NAME : VOP2Inst<opName, P, node, revOp>;
+    let SubtargetPredicate = isGFX10Only in {
+      // V_MAX_I16 etc use VOP3 encoding and allow OP_SEL
+      def _opsel_e64 : VOP3InstBase <opName#"_vop3", VOP3_Profile<P, VOP3_OPSEL>, node, 1>,
+                       Commutable_REV<revOp#"_vop3_e64", !eq(revOp, opName)>;
+    }
   }
   let SubtargetPredicate = UseRealTrue16Insts in {
     defm _t16 : VOP2Inst_e64<opName#"_t16", VOPProfile_True16<P>, node, revOp#"_t16">;
@@ -439,7 +444,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   // Src2 must accept the same operand types as vdst, namely VGPRs only
   let Src2RC64 = getVOP3VRegForVT<Src2VT, IsTrue16, !not(IsRealTrue16)>.ret;
   let Ins64 = getIns64<Src0RC64, Src1RC64, Src2RC64, 3,
-                       0, HasModifiers, HasModifiers, HasOMod,
+                       HasClamp, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
   let InsDPP = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
@@ -448,7 +453,7 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
                     DppBankMask:$bank_mask, DppBoundCtrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins Dpp16FI:$fi));
   let InsVOP3Base = getInsVOP3Base<Src0VOP3DPP, Src1VOP3DPP, RegisterOperand<VGPR_32>, 3,
-                       0, HasModifiers, HasModifiers, HasOMod,
+                       HasClamp, HasModifiers, HasModifiers, HasOMod,
                        Src0ModVOP3DPP, Src1ModVOP3DPP, Src2Mod, HasOpSel>.ret;
   // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
   let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
@@ -1945,6 +1950,14 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
     if !cast<VOP2_Pseudo>(NAME#"_e32").Pfl.HasExt32BitDPP then
     def _dpp8_gfx10 : VOP2_DPP8<op, !cast<VOP2_Pseudo>(NAME#"_e32")>;
   }
+  multiclass VOP2Only_Real_e32_gfx10<bits<6> op> {
+    let IsSingle = 1 in
+      defm NAME: VOP2_Real_e32_gfx10<op>;
+  }
+  multiclass VOP2_Real_e32_dpp_dpp8_gfx10<bits<6> op> :
+    VOP2Only_Real_e32_gfx10<op>,
+    VOP2_Real_dpp_gfx10<op>,
+    VOP2_Real_dpp8_gfx10<op>;
 
   //===------------------------- VOP2 (with name) -------------------------===//
   multiclass VOP2_Real_e32_gfx10_with_name<bits<6> op, string opName,
@@ -2168,10 +2181,7 @@ defm V_FMAAK_F16       : VOP2Only_Real_MADK_gfx10<0x038>;
 defm V_MAX_F16         : VOP2_Real_gfx10<0x039>;
 defm V_MIN_F16         : VOP2_Real_gfx10<0x03a>;
 defm V_LDEXP_F16       : VOP2_Real_gfx10<0x03b>;
-
-let IsSingle = 1 in {
-  defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx10<0x03c>;
-}
+defm V_PK_FMAC_F16     : VOP2_Real_e32_dpp_dpp8_gfx10<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
@@ -2560,6 +2570,7 @@ defm V_SUBBREV_CO_U32     : VOP2be_Real_e32e64_gfx9 <0x1e, "V_SUBBREV_U32", "v_s
 defm V_ADD_U32            : VOP2_Real_e32e64_gfx9 <0x34>;
 defm V_SUB_U32            : VOP2_Real_e32e64_gfx9 <0x35>;
 defm V_SUBREV_U32         : VOP2_Real_e32e64_gfx9 <0x36>;
+defm V_PK_FMAC_F16        : VOP2_Real_e32e64_gfx9<0x03c>;
 } // End AssemblerPredicate = isGFX9Only
 
 defm V_BFM_B32            : VOP2_Real_e64only_vi <0x293>;

@@ -645,7 +645,7 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       ReturnsVoid = CBody->getFallthroughHandler() != nullptr;
     else
       ReturnsVoid = FD->getReturnType()->isVoidType();
-    HasNoReturn = FD->isNoReturn();
+    HasNoReturn = FD->isNoReturn() || FD->hasAttr<InferredNoReturnAttr>();
   }
   else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     ReturnsVoid = MD->getReturnType()->isVoidType();
@@ -683,6 +683,28 @@ static void CheckFallThroughForBody(Sema &S, const Decl *D, const Stmt *Body,
       if (CD.diag_FallThrough_HasNoReturn)
         S.Diag(RBrace, CD.diag_FallThrough_HasNoReturn) << CD.FunKind;
     } else if (!ReturnsVoid && CD.diag_FallThrough_ReturnsNonVoid) {
+      // If the final statement is a call to an always-throwing function,
+      // don't warn about the fall-through.
+      if (D->getAsFunction()) {
+        if (const auto *CS = dyn_cast<CompoundStmt>(Body);
+            CS && !CS->body_empty()) {
+          const Stmt *LastStmt = CS->body_back();
+          // Unwrap ExprWithCleanups if necessary.
+          if (const auto *EWC = dyn_cast<ExprWithCleanups>(LastStmt)) {
+            LastStmt = EWC->getSubExpr();
+          }
+          if (const auto *CE = dyn_cast<CallExpr>(LastStmt)) {
+            if (const FunctionDecl *Callee = CE->getDirectCallee();
+                Callee && Callee->hasAttr<InferredNoReturnAttr>()) {
+              return; // Don't warn about fall-through.
+            }
+          }
+          // Direct throw.
+          if (isa<CXXThrowExpr>(LastStmt)) {
+            return; // Don't warn about fall-through.
+          }
+        }
+      }
       bool NotInAllControlPaths = FallThroughType == MaybeFallThrough;
       S.Diag(RBrace, CD.diag_FallThrough_ReturnsNonVoid)
           << CD.FunKind << NotInAllControlPaths;
@@ -1909,7 +1931,8 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
   void handleMutexHeldEndOfScope(StringRef Kind, Name LockName,
                                  SourceLocation LocLocked,
                                  SourceLocation LocEndOfScope,
-                                 LockErrorKind LEK) override {
+                                 LockErrorKind LEK,
+                                 bool ReentrancyMismatch) override {
     unsigned DiagID = 0;
     switch (LEK) {
       case LEK_LockedSomePredecessors:
@@ -1928,8 +1951,9 @@ class ThreadSafetyReporter : public clang::threadSafety::ThreadSafetyHandler {
     if (LocEndOfScope.isInvalid())
       LocEndOfScope = FunEndLocation;
 
-    PartialDiagnosticAt Warning(LocEndOfScope, S.PDiag(DiagID) << Kind
-                                                               << LockName);
+    PartialDiagnosticAt Warning(LocEndOfScope, S.PDiag(DiagID)
+                                                   << Kind << LockName
+                                                   << ReentrancyMismatch);
     Warnings.emplace_back(std::move(Warning),
                           makeLockedHereNote(LocLocked, Kind));
   }
