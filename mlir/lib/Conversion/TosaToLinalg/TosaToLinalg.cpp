@@ -757,7 +757,7 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
   // dimension greater than 1 with a different value is undefined behavior.
   for (auto operand : operands) {
     auto size = cast<RankedTensorType>(operand.getType()).getDimSize(dim);
-    if (!ShapedType::isDynamic(size) && size > 1)
+    if (ShapedType::isStatic(size) && size > 1)
       return {rewriter.getIndexAttr(size), operand};
   }
 
