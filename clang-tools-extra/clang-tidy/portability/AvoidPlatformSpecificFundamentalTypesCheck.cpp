@@ -215,13 +215,8 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
 
   // Check if this is a floating point type
   const auto *BT = QT->getAs<BuiltinType>();
-  bool IsFloatingPoint = BT && (BT->getKind() == BuiltinType::Half ||
-                                BT->getKind() == BuiltinType::BFloat16 ||
-                                BT->getKind() == BuiltinType::Float ||
-                                BT->getKind() == BuiltinType::Double ||
-                                BT->getKind() == BuiltinType::LongDouble);
 
-  if (IsFloatingPoint) {
+  if (BT->isFloatingPoint()) {
     // Handle floating point types
     std::string Replacement = getFloatReplacement(BT, *Result.Context);
     if (!Replacement.empty()) {
