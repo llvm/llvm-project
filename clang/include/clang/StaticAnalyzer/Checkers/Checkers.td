@@ -231,6 +231,9 @@ def NonnullGlobalConstantsChecker: Checker<"NonnilStringConstants">,
   Documentation<NotDocumented>,
   Hidden;
 
+def UnsequencedAccessChecker : Checker<"UnsequencedAccess">,
+   Documentation<NotDocumented>;
+
 } // end "core"
 
 let ParentPackage = CoreAlpha in {
