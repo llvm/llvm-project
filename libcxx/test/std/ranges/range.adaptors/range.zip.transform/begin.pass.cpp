@@ -50,16 +50,16 @@ constexpr bool test() {
 
   {
     // underlying const R is not a range
-    using View = std::ranges::zip_transform_view<MakeTuple, SimpleCommon, NoConstBeginView>;
-    static_assert(HasBegin<View>);
-    static_assert(!HasConstBegin<View>);
+    using ZTV = std::ranges::zip_transform_view<MakeTuple, SimpleCommon, NoConstBeginView>;
+    static_assert(HasBegin<ZTV>);
+    static_assert(!HasConstBegin<ZTV>);
   }
 
   {
     // Fn cannot be invoked on const range
-    using View = std::ranges::zip_transform_view<NonConstOnlyFn, ConstNonConstDifferentView>;
-    static_assert(HasBegin<View>);
-    static_assert(!HasConstBegin<View>);
+    using ZTV = std::ranges::zip_transform_view<NonConstOnlyFn, ConstNonConstDifferentView>;
+    static_assert(HasBegin<ZTV>);
+    static_assert(!HasConstBegin<ZTV>);
   }
   return true;
 }

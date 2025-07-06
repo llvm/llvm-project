@@ -102,10 +102,10 @@ constexpr bool test() {
     int buffer2[2] = {1, 2};
 
     std::ranges::zip_transform_view v{MakeTuple{}, InputCommonView(buffer1), InputCommonView(buffer2)};
-    using View = decltype(v);
-    static_assert(!std::ranges::forward_range<View>);
-    static_assert(std::ranges::input_range<View>);
-    static_assert(std::ranges::common_range<View>);
+    using ZTV = decltype(v);
+    static_assert(!std::ranges::forward_range<ZTV>);
+    static_assert(std::ranges::input_range<ZTV>);
+    static_assert(std::ranges::common_range<ZTV>);
 
     auto it1 = v.begin();
     auto it2 = v.end();
