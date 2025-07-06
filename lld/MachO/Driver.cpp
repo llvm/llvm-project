@@ -44,6 +44,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -282,11 +283,11 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
-static InputFile *addFile(StringRef path, LoadType loadType,
-                          bool isLazy = false, bool isExplicit = true,
-                          bool isBundleLoader = false,
-                          bool isForceHidden = false) {
-  std::optional<MemoryBufferRef> buffer = readFile(path);
+static InputFile *deferredAddFile(std::optional<MemoryBufferRef> buffer,
+                                  StringRef path, LoadType loadType,
+                                  bool isLazy = false, bool isExplicit = true,
+                                  bool isBundleLoader = false,
+                                  bool isForceHidden = false) {
   if (!buffer)
     return nullptr;
   MemoryBufferRef mbref = *buffer;
@@ -441,6 +442,14 @@ static InputFile *addFile(StringRef path, LoadType loadType,
   return newFile;
 }
 
+static InputFile *addFile(StringRef path, LoadType loadType,
+                          bool isLazy = false, bool isExplicit = true,
+                          bool isBundleLoader = false,
+                          bool isForceHidden = false) {
+  return deferredAddFile(readFile(path), path, loadType, isLazy, isExplicit,
+                         isBundleLoader, isForceHidden);
+}
+
 static std::vector<StringRef> missingAutolinkWarnings;
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isHidden, bool isExplicit,
@@ -564,13 +573,23 @@ void macho::resolveLCLinkerOptions() {
   }
 }
 
-static void addFileList(StringRef path, bool isLazy) {
+typedef struct {
+  StringRef path;
+  std::optional<MemoryBufferRef> buffer;
+} DeferredFile;
+
+static void addFileList(StringRef path, bool isLazy,
+                        std::vector<DeferredFile> &deferredFiles) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    addFile(rerootPath(path), LoadType::CommandLine, isLazy);
+    if (config->readThreads) {
+      StringRef rrpath = rerootPath(path);
+      deferredFiles.push_back({rrpath, readFile(rrpath)});
+    } else
+      addFile(rerootPath(path), LoadType::CommandLine, isLazy);
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
@@ -1215,13 +1234,68 @@ static void handleSymbolPatterns(InputArgList &args,
     parseSymbolPatternsFile(arg, symbolPatterns);
 }
 
-static void createFiles(const InputArgList &args) {
+// Most input files have been mapped but not yet paged in.
+// This code forces the page-ins on multiple threads so
+// the process is not stalled waiting on disk buffer i/o.
+void multiThreadedPageIn(std::vector<DeferredFile> &deferred, int nthreads) {
+#ifndef _WIN32
+  typedef struct {
+    std::vector<DeferredFile> &deferred;
+    size_t counter, total, pageSize;
+    pthread_mutex_t mutex;
+  } PageInState;
+  PageInState state = {deferred, 0, 0,
+                       llvm::sys::Process::getPageSizeEstimate(),
+                       pthread_mutex_t()};
+  pthread_mutex_init(&state.mutex, NULL);
+
+  pthread_t running[200];
+  int maxthreads = sizeof running / sizeof running[0];
+  if (nthreads > maxthreads)
+    nthreads = maxthreads;
+
+  for (int t = 0; t < nthreads; t++)
+    pthread_create(
+        &running[t], nullptr,
+        [](void *ptr) -> void * {
+          PageInState &state = *(PageInState *)ptr;
+          static int total = 0;
+          while (true) {
+            pthread_mutex_lock(&state.mutex);
+            if (state.counter >= state.deferred.size()) {
+              pthread_mutex_unlock(&state.mutex);
+              return nullptr;
+            }
+            DeferredFile &add = state.deferred[state.counter];
+            state.counter += 1;
+            pthread_mutex_unlock(&state.mutex);
+
+            int t = 0; // Reference each page to load it into memory.
+            for (const char *page = add.buffer->getBuffer().data(),
+                            *end = page + add.buffer->getBuffer().size();
+                 page < end; page += state.pageSize)
+              t += *page;
+            state.total += t; // Avoids whole section being optimised out.
+          }
+        },
+        &state);
+
+  for (int t = 0; t < nthreads; t++)
+    pthread_join(running[t], nullptr);
+
+  pthread_mutex_destroy(&state.mutex);
+#endif
+}
+
+void createFiles(const InputArgList &args) {
   TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
   bool isLazy = false;
   // If we've processed an opening --start-lib, without a matching --end-lib
   bool inLib = false;
+  std::vector<DeferredFile> deferredFiles;
+
   for (const Arg *arg : args) {
     const Option &opt = arg->getOption();
     warnIfDeprecatedOption(opt);
@@ -1229,6 +1303,11 @@ static void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
+      if (config->readThreads) {
+        StringRef rrpath = rerootPath(arg->getValue());
+        deferredFiles.push_back({rrpath, readFile(rrpath)});
+        break;
+      }
       addFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy);
       break;
     case OPT_needed_library:
@@ -1249,7 +1328,7 @@ static void createFiles(const InputArgList &args) {
         dylibFile->forceWeakImport = true;
       break;
     case OPT_filelist:
-      addFileList(arg->getValue(), isLazy);
+      addFileList(arg->getValue(), isLazy, deferredFiles);
       break;
     case OPT_force_load:
       addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
@@ -1294,6 +1373,12 @@ static void createFiles(const InputArgList &args) {
     default:
       break;
     }
+  }
+
+  if (config->readThreads) {
+    multiThreadedPageIn(deferredFiles, config->readThreads);
+    for (auto &add : deferredFiles)
+      deferredAddFile(add.buffer, add.path, LoadType::CommandLine, isLazy);
   }
 }
 
@@ -1687,6 +1772,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
   }
 
+  if (auto *arg = args.getLastArg(OPT_read_threads)) {
+    StringRef v(arg->getValue());
+    unsigned threads = 0;
+    if (!llvm::to_integer(v, threads, 0) || threads < 0)
+      error(arg->getSpelling() + ": expected a positive integer, but got '" +
+            arg->getValue() + "'");
+    config->readThreads = threads;
+  }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;

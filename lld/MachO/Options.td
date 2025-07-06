@@ -396,6 +396,9 @@ def dead_strip : Flag<["-"], "dead_strip">,
 def interposable : Flag<["-"], "interposable">,
     HelpText<"Indirects access to all exported symbols in an image">,
     Group<grp_opts>;
+def read_threads : Joined<["--"], "read-threads=">,
+    HelpText<"Number of threads to use paging in files.">,
+    Group<grp_lld>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
     HelpText<"Layout functions and data according to specification in <file>">,
