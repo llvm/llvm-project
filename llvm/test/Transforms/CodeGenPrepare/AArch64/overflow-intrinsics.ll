@@ -237,17 +237,21 @@ define i64 @uaddo6_xor_multi_use(i64 %a, i64 %b) {
 
 define i64 @uaddo1_overflow_used_neg(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @uaddo1_overflow_used_neg(
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[A]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo1_overflow_used_neg(
-; DEBUG-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]], !dbg [[DBG99:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[ADD]], [[META96:![0-9]+]], !DIExpression(), [[DBG99]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[A]], !dbg [[DBG100:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META97:![0-9]+]], !DIExpression(), [[DBG100]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG101:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]]), !dbg [[DBG99:![0-9]+]]
+; DEBUG-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0, !dbg [[DBG99]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG99]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG99]]
+; DEBUG-NEXT:      #dbg_value(i64 [[MATH]], [[META96:![0-9]+]], !DIExpression(), [[DBG99]])
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META97:![0-9]+]], !DIExpression(), [[META100:![0-9]+]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG101:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META98:![0-9]+]], !DIExpression(), [[DBG101]])
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG102:![0-9]+]]
 ;
@@ -259,20 +263,24 @@ define i64 @uaddo1_overflow_used_neg(i64 %a, i64 %b) nounwind ssp {
 
 define i64 @uaddo1_math_overflow_used_neg(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ; CHECK-LABEL: @uaddo1_math_overflow_used_neg(
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[A]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[RES:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo1_math_overflow_used_neg(
-; DEBUG-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]], !dbg [[DBG108:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[ADD]], [[META105:![0-9]+]], !DIExpression(), [[DBG108]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[A]], !dbg [[DBG109:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META106:![0-9]+]], !DIExpression(), [[DBG109]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG110:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]]), !dbg [[DBG108:![0-9]+]]
+; DEBUG-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0, !dbg [[DBG108]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG108]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG108]]
+; DEBUG-NEXT:      #dbg_value(i64 [[MATH]], [[META105:![0-9]+]], !DIExpression(), [[DBG108]])
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META106:![0-9]+]], !DIExpression(), [[META109:![0-9]+]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG110:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META107:![0-9]+]], !DIExpression(), [[DBG110]])
-; DEBUG-NEXT:    store i64 [[ADD]], ptr [[RES:%.*]], align 8, !dbg [[DBG111:![0-9]+]]
+; DEBUG-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]], align 8, !dbg [[DBG111:![0-9]+]]
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG112:![0-9]+]]
 ;
   %add = add i64 %b, %a
@@ -284,17 +292,21 @@ define i64 @uaddo1_math_overflow_used_neg(i64 %a, i64 %b, ptr %res) nounwind ssp
 
 define i64 @uaddo2_overflow_used_neg(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @uaddo2_overflow_used_neg(
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[B]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo2_overflow_used_neg(
-; DEBUG-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]], !dbg [[DBG118:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[ADD]], [[META115:![0-9]+]], !DIExpression(), [[DBG118]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[B]], !dbg [[DBG119:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META116:![0-9]+]], !DIExpression(), [[DBG119]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG120:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]]), !dbg [[DBG118:![0-9]+]]
+; DEBUG-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0, !dbg [[DBG118]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG118]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG118]]
+; DEBUG-NEXT:      #dbg_value(i64 [[MATH]], [[META115:![0-9]+]], !DIExpression(), [[DBG118]])
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META116:![0-9]+]], !DIExpression(), [[META119:![0-9]+]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG120:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META117:![0-9]+]], !DIExpression(), [[DBG120]])
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG121:![0-9]+]]
 ;
@@ -306,20 +318,24 @@ define i64 @uaddo2_overflow_used_neg(i64 %a, i64 %b) nounwind ssp {
 
 define i64 @uaddo2_math_overflow_used_neg(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ; CHECK-LABEL: @uaddo2_math_overflow_used_neg(
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[B]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[RES:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo2_math_overflow_used_neg(
-; DEBUG-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]], !dbg [[DBG127:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[ADD]], [[META124:![0-9]+]], !DIExpression(), [[DBG127]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp uge i64 [[ADD]], [[B]], !dbg [[DBG128:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META125:![0-9]+]], !DIExpression(), [[DBG128]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG129:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]]), !dbg [[DBG127:![0-9]+]]
+; DEBUG-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0, !dbg [[DBG127]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG127]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG127]]
+; DEBUG-NEXT:      #dbg_value(i64 [[MATH]], [[META124:![0-9]+]], !DIExpression(), [[DBG127]])
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META125:![0-9]+]], !DIExpression(), [[META128:![0-9]+]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG129:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META126:![0-9]+]], !DIExpression(), [[DBG129]])
-; DEBUG-NEXT:    store i64 [[ADD]], ptr [[RES:%.*]], align 8, !dbg [[DBG130:![0-9]+]]
+; DEBUG-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]], align 8, !dbg [[DBG130:![0-9]+]]
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG131:![0-9]+]]
 ;
   %add = add i64 %b, %a
@@ -331,17 +347,21 @@ define i64 @uaddo2_math_overflow_used_neg(i64 %a, i64 %b, ptr %res) nounwind ssp
 
 define i64 @uaddo3_overflow_used_neg(i64 %a, i64 %b) nounwind ssp {
 ; CHECK-LABEL: @uaddo3_overflow_used_neg(
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[B]], [[ADD]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo3_overflow_used_neg(
-; DEBUG-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]], !dbg [[DBG137:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[ADD]], [[META134:![0-9]+]], !DIExpression(), [[DBG137]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp ule i64 [[B]], [[ADD]], !dbg [[DBG138:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META135:![0-9]+]], !DIExpression(), [[DBG138]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG139:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]]), !dbg [[DBG137:![0-9]+]]
+; DEBUG-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0, !dbg [[DBG137]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG137]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG137]]
+; DEBUG-NEXT:      #dbg_value(i64 [[MATH]], [[META134:![0-9]+]], !DIExpression(), [[DBG137]])
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META135:![0-9]+]], !DIExpression(), [[META138:![0-9]+]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG139:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META136:![0-9]+]], !DIExpression(), [[DBG139]])
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG140:![0-9]+]]
 ;
@@ -353,20 +373,24 @@ define i64 @uaddo3_overflow_used_neg(i64 %a, i64 %b) nounwind ssp {
 
 define i64 @uaddo3_math_overflow_used_neg(i64 %a, i64 %b, ptr %res) nounwind ssp {
 ; CHECK-LABEL: @uaddo3_math_overflow_used_neg(
-; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[B]], [[ADD]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]])
+; CHECK-NEXT:    [[ADD:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[RES:%.*]], align 8
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo3_math_overflow_used_neg(
-; DEBUG-NEXT:    [[ADD:%.*]] = add i64 [[B:%.*]], [[A:%.*]], !dbg [[DBG146:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[ADD]], [[META143:![0-9]+]], !DIExpression(), [[DBG146]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp ule i64 [[B]], [[ADD]], !dbg [[DBG147:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META144:![0-9]+]], !DIExpression(), [[DBG147]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG148:![0-9]+]]
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[B:%.*]], i64 [[A:%.*]]), !dbg [[DBG146:![0-9]+]]
+; DEBUG-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0, !dbg [[DBG146]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG146]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG146]]
+; DEBUG-NEXT:      #dbg_value(i64 [[MATH]], [[META143:![0-9]+]], !DIExpression(), [[DBG146]])
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META144:![0-9]+]], !DIExpression(), [[META147:![0-9]+]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG148:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META145:![0-9]+]], !DIExpression(), [[DBG148]])
-; DEBUG-NEXT:    store i64 [[ADD]], ptr [[RES:%.*]], align 8, !dbg [[DBG149:![0-9]+]]
+; DEBUG-NEXT:    store i64 [[MATH]], ptr [[RES:%.*]], align 8, !dbg [[DBG149:![0-9]+]]
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG150:![0-9]+]]
 ;
   %add = add i64 %b, %a
@@ -380,17 +404,19 @@ define i64 @uaddo3_math_overflow_used_neg(i64 %a, i64 %b, ptr %res) nounwind ssp
 ; pattern as well.
 define i64 @uaddo6_xor_neg(i64 %a, i64 %b) {
 ; CHECK-LABEL: @uaddo6_xor_neg(
-; CHECK-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[X]], [[B:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo6_xor_neg(
-; DEBUG-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1, !dbg [[DBG156:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[X]], [[META153:![0-9]+]], !DIExpression(), [[DBG156]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp uge i64 [[X]], [[B:%.*]], !dbg [[DBG157:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META154:![0-9]+]], !DIExpression(), [[DBG157]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG158:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(i64 poison, [[META153:![0-9]+]], !DIExpression(), [[META156:![0-9]+]])
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]]), !dbg [[DBG157:![0-9]+]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG157]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG157]]
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META154:![0-9]+]], !DIExpression(), [[DBG157]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG158:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META155:![0-9]+]], !DIExpression(), [[DBG158]])
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG159:![0-9]+]]
 ;
@@ -402,17 +428,19 @@ define i64 @uaddo6_xor_neg(i64 %a, i64 %b) {
 
 define i64 @uaddo6_xor_commuted_neg(i64 %a, i64 %b) {
 ; CHECK-LABEL: @uaddo6_xor_commuted_neg(
-; CHECK-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[B:%.*]], [[X]]
-; CHECK-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42
 ; CHECK-NEXT:    ret i64 [[Q]]
 ;
 ; DEBUG-LABEL: @uaddo6_xor_commuted_neg(
-; DEBUG-NEXT:    [[X:%.*]] = xor i64 [[A:%.*]], -1, !dbg [[DBG165:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i64 [[X]], [[META162:![0-9]+]], !DIExpression(), [[DBG165]])
-; DEBUG-NEXT:    [[CMP:%.*]] = icmp ule i64 [[B:%.*]], [[X]], !dbg [[DBG166:![0-9]+]]
-; DEBUG-NEXT:      #dbg_value(i1 [[CMP]], [[META163:![0-9]+]], !DIExpression(), [[DBG166]])
-; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[CMP]], i64 [[B]], i64 42, !dbg [[DBG167:![0-9]+]]
+; DEBUG-NEXT:      #dbg_value(i64 poison, [[META162:![0-9]+]], !DIExpression(), [[META165:![0-9]+]])
+; DEBUG-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]]), !dbg [[DBG166:![0-9]+]]
+; DEBUG-NEXT:    [[OV:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1, !dbg [[DBG166]]
+; DEBUG-NEXT:    [[NOT:%.*]] = xor i1 [[OV]], true, !dbg [[DBG166]]
+; DEBUG-NEXT:      #dbg_value(i1 [[NOT]], [[META163:![0-9]+]], !DIExpression(), [[DBG166]])
+; DEBUG-NEXT:    [[Q:%.*]] = select i1 [[NOT]], i64 [[B]], i64 42, !dbg [[DBG167:![0-9]+]]
 ; DEBUG-NEXT:      #dbg_value(i64 [[Q]], [[META164:![0-9]+]], !DIExpression(), [[DBG167]])
 ; DEBUG-NEXT:    ret i64 [[Q]], !dbg [[DBG168:![0-9]+]]
 ;

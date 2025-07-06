@@ -196,12 +196,12 @@ define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ; CHECK-NEXT:    mov w22, #2 ; =0x2
 ; CHECK-NEXT:  LBB3_6: ; %for.cond
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cbz w22, LBB3_9
+; CHECK-NEXT:    subs w22, w22, #1
+; CHECK-NEXT:    b.lo LBB3_9
 ; CHECK-NEXT:  ; %bb.7: ; %for.body
 ; CHECK-NEXT:    ; in Loop: Header=BB3_6 Depth=1
-; CHECK-NEXT:    sub w22, w22, #1
-; CHECK-NEXT:    orr w9, w21, w20
 ; CHECK-NEXT:    ldr w10, [x19, w22, sxtw #2]
+; CHECK-NEXT:    orr w9, w21, w20
 ; CHECK-NEXT:    cmp w9, w10
 ; CHECK-NEXT:    b.eq LBB3_6
 ; CHECK-NEXT:  ; %bb.8: ; %if.then
@@ -238,12 +238,12 @@ define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ; OUTLINE-ATOMICS-NEXT:    cset w8, eq
 ; OUTLINE-ATOMICS-NEXT:  LBB3_1: ; %for.cond
 ; OUTLINE-ATOMICS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    cbz w22, LBB3_4
+; OUTLINE-ATOMICS-NEXT:    subs w22, w22, #1
+; OUTLINE-ATOMICS-NEXT:    b.lo LBB3_4
 ; OUTLINE-ATOMICS-NEXT:  ; %bb.2: ; %for.body
 ; OUTLINE-ATOMICS-NEXT:    ; in Loop: Header=BB3_1 Depth=1
-; OUTLINE-ATOMICS-NEXT:    sub w22, w22, #1
-; OUTLINE-ATOMICS-NEXT:    orr w9, w21, w20
 ; OUTLINE-ATOMICS-NEXT:    ldr w10, [x19, w22, sxtw #2]
+; OUTLINE-ATOMICS-NEXT:    orr w9, w21, w20
 ; OUTLINE-ATOMICS-NEXT:    cmp w9, w10
 ; OUTLINE-ATOMICS-NEXT:    b.eq LBB3_1
 ; OUTLINE-ATOMICS-NEXT:  ; %bb.3: ; %if.then
