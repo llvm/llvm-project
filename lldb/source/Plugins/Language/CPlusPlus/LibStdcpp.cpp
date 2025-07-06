@@ -9,8 +9,8 @@
 #include "LibStdcpp.h"
 #include "LibCxx.h"
 
-#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
