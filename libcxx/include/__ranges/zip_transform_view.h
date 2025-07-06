@@ -33,12 +33,12 @@
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_referenceable.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -53,7 +53,7 @@ namespace ranges {
 template <move_constructible _Fn, input_range... _Views>
   requires(view<_Views> && ...) &&
           (sizeof...(_Views) > 0) && is_object_v<_Fn> && regular_invocable<_Fn&, range_reference_t<_Views>...> &&
-          __can_reference<invoke_result_t<_Fn&, range_reference_t<_Views>...>>
+          __referenceable<invoke_result_t<_Fn&, range_reference_t<_Views>...>>
 class zip_transform_view : public view_interface<zip_transform_view<_Fn, _Views...>> {
   _LIBCPP_NO_UNIQUE_ADDRESS zip_view<_Views...> __zip_;
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Fn> __fun_;
@@ -61,8 +61,8 @@ class zip_transform_view : public view_interface<zip_transform_view<_Fn, _Views.
   using _InnerView = zip_view<_Views...>;
   template <bool _Const>
   using __ziperator = iterator_t<__maybe_const<_Const, _InnerView>>;
-  template <bool Const>
-  using __zentinel = sentinel_t<__maybe_const<Const, _InnerView>>;
+  template <bool _Const>
+  using __zentinel = sentinel_t<__maybe_const<_Const, _InnerView>>;
 
   template <bool>
   class __iterator;
@@ -153,7 +153,7 @@ public:
 template <move_constructible _Fn, input_range... _Views>
   requires(view<_Views> && ...) &&
           (sizeof...(_Views) > 0) && is_object_v<_Fn> && regular_invocable<_Fn&, range_reference_t<_Views>...> &&
-          __can_reference<invoke_result_t<_Fn&, range_reference_t<_Views>...>>
+          __referenceable<invoke_result_t<_Fn&, range_reference_t<_Views>...>>
 template <bool _Const>
 class zip_transform_view<_Fn, _Views...>::__iterator
     : public __zip_transform_iterator_category_base<_Const, _Fn, _Views...> {
@@ -285,7 +285,7 @@ public:
 template <move_constructible _Fn, input_range... _Views>
   requires(view<_Views> && ...) &&
           (sizeof...(_Views) > 0) && is_object_v<_Fn> && regular_invocable<_Fn&, range_reference_t<_Views>...> &&
-          __can_reference<invoke_result_t<_Fn&, range_reference_t<_Views>...>>
+          __referenceable<invoke_result_t<_Fn&, range_reference_t<_Views>...>>
 template <bool _Const>
 class zip_transform_view<_Fn, _Views...>::__sentinel {
   __zentinel<_Const> __inner_;
