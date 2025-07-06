@@ -1220,12 +1220,11 @@ static size_t countLeadingWhitespace(StringRef Text) {
         break;
       // Splice found, consume it.
       Cur = Lookahead + 1;
-    } else if (Cur[0] == '?' && Cur[1] == '?' && Cur[2] == '/' &&
-               (Cur[3] == '\n' || Cur[3] == '\r')) {
+    } else if (End - Cur >= 4u && Cur[0] == '?' && Cur[1] == '?' &&
+               Cur[2] == '/' && (Cur[3] == '\n' || Cur[3] == '\r')) {
       // Newlines can also be escaped by a '?' '?' '/' trigraph. By the way, the
       // characters are quoted individually in this comment because if we write
       // them together some compilers warn that we have a trigraph in the code.
-      assert(End - Cur >= 4);
       Cur += 4;
     } else {
       break;
@@ -1300,8 +1299,11 @@ FormatToken *FormatTokenLexer::getNextToken() {
       case '\\':
       case '?':
       case '/':
-        // The text was entirely whitespace when this loop was entered. Thus
-        // this has to be an escape sequence.
+        // The code preceding the loop and in the countLeadingWhitespace
+        // function guarantees that Text is entirely whitespace, not including
+        // comments but including escaped newlines which may be escaped with a
+        // trigraph. So if 1 of these characters show up, then it has to be in
+        // an escape sequence.
         assert(Text.substr(i, 4) == "\?\?/\r" ||
                Text.substr(i, 4) == "\?\?/\n" ||
                (i >= 1 && (Text.substr(i - 1, 4) == "\?\?/\r" ||
