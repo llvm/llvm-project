@@ -3036,14 +3036,12 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
         return isKnownNonZero(TI->getOperand(0), DemandedElts, Q, Depth);
     break;
 
+  // Iff x - y != 0, then x ^ y != 0
+  // Therefore we can do the same exact checks
+  case Instruction::Xor:
   case Instruction::Sub:
     return isNonZeroSub(DemandedElts, Q, BitWidth, I->getOperand(0),
                         I->getOperand(1), Depth);
-  case Instruction::Xor:
-    // (X ^ (X != 0)) is non zero
-    if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
-      return true;
-    break;
   case Instruction::Or:
     // (X | (X != 0)) is non zero
     if (matchOpWithOpEqZero(I->getOperand(0), I->getOperand(1)))
