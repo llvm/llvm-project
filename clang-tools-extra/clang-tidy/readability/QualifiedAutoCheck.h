@@ -32,6 +32,7 @@ public:
 private:
   const bool AddConstToQualified;
   const std::vector<StringRef> AllowedTypes;
+  const bool RespectOpaqueTypes;
 };
 
 } // namespace clang::tidy::readability
