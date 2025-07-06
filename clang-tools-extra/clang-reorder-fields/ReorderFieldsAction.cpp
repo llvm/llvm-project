@@ -302,10 +302,18 @@ static bool reorderFieldsInDefinition(
     const auto FieldIndex = Field->getFieldIndex();
     if (FieldIndex == NewFieldsOrder[FieldIndex])
       continue;
-    addReplacement(
-        getFullFieldSourceRange(*Field, Context),
-        getFullFieldSourceRange(*Fields[NewFieldsOrder[FieldIndex]], Context),
-        Context, Replacements);
+
+    const auto FromRange = getFullFieldSourceRange(*Field, Context);
+    const auto ToRange =
+        getFullFieldSourceRange(*Fields[NewFieldsOrder[FieldIndex]], Context);
+
+    if (FromRange.getBegin().isMacroID()) {
+      llvm::errs() << "Cannot reorder field `" << Field->getName()
+                   << "` defined within a macro expansion\n";
+      return false;
+    }
+
+    addReplacement(FromRange, ToRange, Context, Replacements);
   }
   return true;
 }
