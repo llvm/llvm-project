@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <functional>
 #include <type_traits>
 
 struct NotMoveConstructible {
