@@ -196,6 +196,10 @@ struct VPlanTransforms {
                                          VPBasicBlock *LatchVPBB,
                                          VFRange &Range);
 
+  /// Promote the early-exit branch in the middle.split to the loop level,
+  /// making the loop multiple exiting.
+  static void foldEarlyExitBranchIntoLoop(VPlan &Plan);
+
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 

@@ -2853,6 +2853,117 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
+void VPlanTransforms::foldEarlyExitBranchIntoLoop(VPlan &Plan) {
+  using namespace llvm::VPlanPatternMatch;
+
+  VPDominatorTree VPDT(Plan);
+  auto IsTargetLatchExiting = [&](VPBasicBlock *VPBB) {
+    // Looking for the following pattern:
+    //   IfFalse:
+    //     ...
+    //   VPBB:
+    //     EMIT vp<%4> = ...
+    //     EMIT vp<%6> = or vp<%4>, ...
+    //     EMIT branch-on-cond vp<%6>
+    //   Successor(s): IfTrue, IfFalse
+    //
+    //   IfTrue:
+    //     EMIT branch-on-cond vp<%4>
+    //   Successor(s): vector.early.exit, middle.block
+    //
+    // Checks that:
+    //   1. The terminator of VPBB is a conditional branch on a logical OR
+    //      result.
+    //   2. The terminator of IfTrue block is also a conditional branch
+    //      using the same operand from the logical OR.
+    //   3. The edge to IfFalse is a backedge.
+    if (isa<VPIRBasicBlock>(VPBB))
+      return false;
+
+    auto *CondBranch = cast_if_present<VPInstruction>(VPBB->getTerminator());
+    VPValue *EarlyExitCond;
+    VPValue *MainExitCond;
+
+    if (!CondBranch ||
+        !match(CondBranch, m_BranchOnCond(m_BinaryOr(m_VPValue(EarlyExitCond),
+                                                     m_VPValue(MainExitCond)))))
+      return false;
+
+    VPBasicBlock *MiddleSplit = VPBB->getSuccessors()[0]->getEntryBasicBlock();
+    auto *CondBranch2 =
+        cast_if_present<VPInstruction>(MiddleSplit->getTerminator());
+    if (!CondBranch2 ||
+        !match(CondBranch2, m_BranchOnCond((m_Specific(EarlyExitCond)))))
+      return false;
+
+    // Check if VPBB has a backedge to loop header.
+    VPBasicBlock *HeaderBB = VPBB->getSuccessors()[1]->getEntryBasicBlock();
+    if (!VPDT.dominates(HeaderBB, VPBB))
+      return false;
+    return true;
+  };
+
+  /// Promotes early-exit branch from middle.split to the loop level.
+  ///
+  /// Transforms the control flow from:
+  ///   LatchExiting:
+  ///       branch-on-cond (AltExit | MainExit) -> {MiddleSplit, LoopHeader}
+  ///   MiddleSplit:
+  ///       branch-on-cond (AltExit) -> {EarlyExit, Middle}
+  ///
+  /// To:
+  ///   EarlyExiting:
+  ///       branch-on-cond (AltExit) -> {EarlyExit, LatchExiting}
+  ///   LatchExiting:
+  ///       branch-on-cond (MainExit) -> {MiddleSplit, LoopHeader}
+  ///   MiddleSplit:
+  ///       direct-jump -> {Middle}
+
+  auto PromoteEarlyExit = [](VPBasicBlock *LatchExiting) {
+    auto *CondBranch = cast<VPInstruction>(LatchExiting->getTerminator());
+    VPBasicBlock *MiddleSplit =
+        LatchExiting->getSuccessors()[0]->getEntryBasicBlock();
+    VPBasicBlock *EarlyExit =
+        MiddleSplit->getSuccessors()[0]->getEntryBasicBlock();
+    VPBasicBlock *Middle =
+        MiddleSplit->getSuccessors()[1]->getEntryBasicBlock();
+
+    // Update the exit condition of LatchExiting.
+    VPValue *EarlyExitCond;
+    VPValue *MainExitCond;
+    VPValue *CombinedExitCond = CondBranch->getOperand(0);
+    match(CondBranch, m_BranchOnCond(m_BinaryOr(m_VPValue(EarlyExitCond),
+                                                m_VPValue(MainExitCond))));
+    CondBranch->setOperand(0, MainExitCond);
+
+    // Remove the successor and branch-on-cond in middle.split.
+    auto *CondBranch2 = cast<VPInstruction>(MiddleSplit->getTerminator());
+    DebugLoc DL = CondBranch2->getDebugLoc();
+    CondBranch2->eraseFromParent();
+    VPBlockUtils::disconnectBlocks(MiddleSplit, EarlyExit);
+    // TODO: Merge middle block into middle.split.
+
+    // Create an early-exiting block and branch-on-cond.
+    VPBasicBlock *EarlyExiting =
+        CombinedExitCond->getDefiningRecipe()->getParent();
+    VPBasicBlock *EarlyExitingSplit = EarlyExiting->splitAt(
+        std::prev(CombinedExitCond->getDefiningRecipe()->getIterator()));
+    auto *BOC =
+        new VPInstruction(VPInstruction::BranchOnCond, {EarlyExitCond}, DL);
+    EarlyExiting->appendRecipe(BOC);
+    VPBlockUtils::connectBlocks(EarlyExiting, EarlyExit);
+    EarlyExiting->swapSuccessors();
+    if (CombinedExitCond->getNumUsers() == 0)
+      CombinedExitCond->getDefiningRecipe()->eraseFromParent();
+  };
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry()))) {
+    if (IsTargetLatchExiting(VPBB))
+      PromoteEarlyExit(VPBB);
+  }
+}
+
 /// This function tries convert extended in-loop reductions to
 /// VPExpressionRecipe and clamp the \p Range if it is beneficial and
 /// valid. The created recipe must be decomposed to its constituent
