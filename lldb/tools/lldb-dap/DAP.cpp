@@ -31,6 +31,7 @@
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
@@ -1406,11 +1407,16 @@ void DAP::EventThread() {
             // avoids sending paths that should be source mapped. Note that
             // CreateBreakpoint doesn't apply source mapping and certain
             // implementation ignore the source part of this event anyway.
-            llvm::json::Value source_bp = bp.ToProtocolBreakpoint();
-            source_bp.getAsObject()->erase("source");
+            protocol::Breakpoint protocol_bp = bp.ToProtocolBreakpoint();
+            llvm::json::Value protocol_bp_value = toJSON(protocol_bp);
+
+            // "source" is not needed here, unless we add adapter data to be
+            // saved by the client.
+            if (protocol_bp.source && !protocol_bp.source->adapterData)
+              protocol_bp_value.getAsObject()->erase("source");
 
             llvm::json::Object body;
-            body.try_emplace("breakpoint", source_bp);
+            body.try_emplace("breakpoint", protocol_bp);
             body.try_emplace("reason", "changed");
 
             llvm::json::Object bp_event = CreateEventObject("breakpoint");
