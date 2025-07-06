@@ -4240,14 +4240,26 @@ SDValue TargetLowering::foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1,
 
   SelectionDAG &DAG = DCI.DAG;
   EVT OpVT = N0.getValueType();
-  if (!N0.hasOneUse() || !OpVT.isInteger() ||
+  if (N0.getOpcode() != ISD::OR || !OpVT.isInteger() ||
       (Cond != ISD::SETEQ && Cond != ISD::SETNE))
     return SDValue();
+
+  // (X | Y) != 0 --> zextOrTrunc(X | Y)
+  // iff everything but LSB is known zero:
+  if (Cond == ISD::SETNE && isNullConstant(N1) &&
+      (getBooleanContents(OpVT) == TargetLowering::UndefinedBooleanContent ||
+       getBooleanContents(OpVT) == TargetLowering::ZeroOrOneBooleanContent)) {
+    unsigned NumEltBits = OpVT.getScalarSizeInBits();
+    APInt UpperBits = APInt::getHighBitsSet(NumEltBits, NumEltBits - 1);
+    if (DAG.MaskedValueIsZero(N0, UpperBits))
+      return DAG.getBoolExtOrTrunc(N0, DL, VT, OpVT);
+  }
 
   // (X | Y) == Y
   // (X | Y) != Y
   SDValue X;
-  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(N1)) {
+  if (N0.hasOneUse() && sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) &&
+      hasAndNotCompare(N1)) {
     // If the target supports an 'and-not' or 'and-complement' logic operation,
     // try to use that to make a comparison operation more efficient.
 
@@ -4446,6 +4458,17 @@ SDValue TargetLowering::foldSetCCWithBinOp(EVT VT, SDValue N0, SDValue N1,
   SDValue Y = N0.getOperand(1);
   if (X == N1)
     return DAG.getSetCC(DL, VT, Y, DAG.getConstant(0, DL, OpVT), Cond);
+
+  // (X ^ Y) != 0 --> zextOrTrunc(X ^ Y)
+  // iff everything but LSB is known zero:
+  if (BOpcode == ISD::XOR && Cond == ISD::SETNE && isNullConstant(N1) &&
+      (getBooleanContents(OpVT) == TargetLowering::UndefinedBooleanContent ||
+       getBooleanContents(OpVT) == TargetLowering::ZeroOrOneBooleanContent)) {
+    unsigned NumEltBits = OpVT.getScalarSizeInBits();
+    APInt UpperBits = APInt::getHighBitsSet(NumEltBits, NumEltBits - 1);
+    if (DAG.MaskedValueIsZero(N0, UpperBits))
+      return DAG.getBoolExtOrTrunc(N0, DL, VT, OpVT);
+  }
 
   if (Y != N1)
     return SDValue();
