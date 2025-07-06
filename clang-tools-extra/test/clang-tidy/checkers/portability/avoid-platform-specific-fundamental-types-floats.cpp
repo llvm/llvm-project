@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: true}]}" -header-filter=.* -- -std=c++23
+// RUN: %check_clang_tidy %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, value: false}]}" -header-filter=.* -- -std=c++23
 
 // Mock fixed-width float types
 // In reality, these types are aliases to "extended floating point types", and
@@ -18,9 +18,6 @@ double global_double = 3.14159;
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: avoid using platform-dependent floating point type 'double'; consider using 'float64_t' instead [portability-avoid-platform-specific-fundamental-types]
 // CHECK-FIXES: float64_t global_double = 3.14159;
 
-// Test integer types that should still trigger warnings
-int global_int = 42;
-// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: avoid using platform-dependent fundamental integer type 'int'; consider using a typedef or fixed-width type instead [portability-avoid-platform-specific-fundamental-types]
 
 // Test function parameters with float types
 void function_with_float_param(float param) {
@@ -98,3 +95,10 @@ template<>
 void template_function<double>(double param) {
 // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: avoid using platform-dependent floating point type 'double'; consider using 'float64_t' instead [portability-avoid-platform-specific-fundamental-types]
 }
+
+// Test that integer and char types are NOT flagged when their options are disabled
+int should_not_warn_int = 42;
+long should_not_warn_long = 100L;
+char should_not_warn_char = 'a';
+signed char should_not_warn_signed_char = 'b';
+unsigned char should_not_warn_unsigned_char = 'c';

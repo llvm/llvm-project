@@ -20,9 +20,9 @@ AvoidPlatformSpecificFundamentalTypesCheck::
     AvoidPlatformSpecificFundamentalTypesCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      WarnOnFloats(Options.get("WarnOnFloats", false)),
+      WarnOnFloats(Options.get("WarnOnFloats", true)),
       WarnOnInts(Options.get("WarnOnInts", true)),
-      WarnOnChars(Options.get("WarnOnChars", false)),
+      WarnOnChars(Options.get("WarnOnChars", true)),
       IncludeInserter(Options.getLocalOrGlobal("IncludeStyle",
                                                utils::IncludeSorter::IS_LLVM),
                       areDiagsSelfContained()) {}

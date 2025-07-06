@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s portability-avoid-platform-specific-fundamental-types %t
+// RUN: %check_clang_tidy %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: false}]}" -header-filter=.* -- -std=c++11
 
 // Mock fixed-width integer types
 // NOLINTBEGIN(portability-avoid-platform-specific-fundamental-types)
@@ -40,12 +40,15 @@ unsigned long global_unsigned_long = 100UL;
 unsigned long long global_unsigned_long_long = 1000ULL;
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: avoid using platform-dependent fundamental integer type 'unsigned long long'; consider using a typedef or fixed-width type instead [portability-avoid-platform-specific-fundamental-types]
 
-// Test semantic types that should NOT trigger warnings
-char global_char = 'a';
-signed char global_signed_char = 'b';
-unsigned char global_unsigned_char = 'c';
+// Test integer  that should NEVER trigger warnings
 bool global_bool = true;
-wchar_t global_wchar = L'w';
+
+// Test that char and float types are NOT flagged when their options are disabled
+float should_not_warn_float = 3.14f;
+double should_not_warn_double = 2.71828;
+char should_not_warn_char = 'a';
+signed char should_not_warn_signed_char = 'b';
+unsigned char should_not_warn_unsigned_char = 'c';
 
 // Test fixed-width types that should NOT trigger warnings
 uint32_t global_uint32 = 42U;

@@ -165,8 +165,8 @@ Options
 
 .. option:: WarnOnFloats
 
-   When `true`, the check will warn about floating point types (``float`` and ``double``).
-   When `false` (default), floating point types are not flagged.
+   When `true` (default), the check will warn about floating point types (``float`` and ``double``).
+   When `false`, floating point types are not flagged.
 
    Floating point types can have platform-dependent behavior:
    
@@ -196,8 +196,8 @@ Options
 
 .. option:: WarnOnChars
 
-   When `true`, the check will warn about character types (``char``, ``signed char``, and ``unsigned char``).
-   When `false` (default), character types are not flagged.
+   When `true` (default), the check will warn about character types (``char``, ``signed char``, and ``unsigned char``).
+   When `false`, character types are not flagged.
 
    Character types can have platform-dependent behavior:
    

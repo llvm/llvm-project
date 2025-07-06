@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnChars, value: true}]}" -header-filter=.* -- -std=c++11
+// RUN: %check_clang_tidy %s portability-avoid-platform-specific-fundamental-types %t -- -config="{CheckOptions: [{key: portability-avoid-platform-specific-fundamental-types.WarnOnInts, value: false}, {key: portability-avoid-platform-specific-fundamental-types.WarnOnFloats, value: false}]}" -header-filter=.* -- -std=c++11
 
 // Test character types that should trigger warnings when WarnOnChars is enabled
 char global_char = 'a';
@@ -61,3 +61,9 @@ using signed_char_alias = signed char;
 
 using unsigned_char_alias = unsigned char;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: avoid using platform-dependent character type 'unsigned char'; consider using char8_t for text or std::byte for bytes [portability-avoid-platform-specific-fundamental-types]
+
+// Test that integer and float types are NOT flagged when their options are disabled
+int should_not_warn_int = 42;
+long should_not_warn_long = 100L;
+float should_not_warn_float = 3.14f;
+double should_not_warn_double = 2.71828;
