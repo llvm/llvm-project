@@ -376,9 +376,9 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
 
   auto info_or_err = GetAndValidateInfo(sc);
   if (!info_or_err) {
-    LLDB_LOG_ERROR(
-        GetLog(LLDBLog::Language), info_or_err.takeError(),
-        "Failed to handle ${{function.basename}} frame-format variable: {0}");
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Language), info_or_err.takeError(),
+                   "Failed to handle ${{function.formatted-arguments}} "
+                   "frame-format variable: {0}");
     return false;
   }
   auto [demangled_name, info] = *info_or_err;
@@ -1344,38 +1344,31 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       .SetShowMembersOneLiner(false)
       .SetHideItemNames(false);
 
-  lldb::TypeSummaryImplSP std_string_summary_sp(
-      new StringSummaryFormat(stl_summary_flags, "${var._M_dataplus._M_p}"));
-
-  lldb::TypeSummaryImplSP cxx11_string_summary_sp(new CXXFunctionSummaryFormat(
+  lldb::TypeSummaryImplSP string_summary_sp(new CXXFunctionSummaryFormat(
       stl_summary_flags, LibStdcppStringSummaryProvider,
-      "libstdc++ c++11 std::string summary provider"));
-  lldb::TypeSummaryImplSP cxx11_wstring_summary_sp(new CXXFunctionSummaryFormat(
-      stl_summary_flags, LibStdcppWStringSummaryProvider,
-      "libstdc++ c++11 std::wstring summary provider"));
+      "libstdc++ std::(w)string summary provider"));
 
   cpp_category_sp->AddTypeSummary("std::string", eFormatterMatchExact,
-                                  std_string_summary_sp);
+                                  string_summary_sp);
   cpp_category_sp->AddTypeSummary("std::basic_string<char>",
-                                  eFormatterMatchExact, std_string_summary_sp);
+                                  eFormatterMatchExact, string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::basic_string<char,std::char_traits<char>,std::allocator<char> >",
-      eFormatterMatchExact, std_string_summary_sp);
+      eFormatterMatchExact, string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::basic_string<char, std::char_traits<char>, std::allocator<char> >",
-      eFormatterMatchExact, std_string_summary_sp);
+      eFormatterMatchExact, string_summary_sp);
 
   cpp_category_sp->AddTypeSummary("std::__cxx11::string", eFormatterMatchExact,
-                                  cxx11_string_summary_sp);
+                                  string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::__cxx11::basic_string<char, std::char_traits<char>, "
       "std::allocator<char> >",
-      eFormatterMatchExact, cxx11_string_summary_sp);
+      eFormatterMatchExact, string_summary_sp);
   cpp_category_sp->AddTypeSummary("std::__cxx11::basic_string<unsigned char, "
                                   "std::char_traits<unsigned char>, "
                                   "std::allocator<unsigned char> >",
-                                  eFormatterMatchExact,
-                                  cxx11_string_summary_sp);
+                                  eFormatterMatchExact, string_summary_sp);
 
   // making sure we force-pick the summary for printing wstring (_M_p is a
   // wchar_t*)
@@ -1395,11 +1388,11 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       eFormatterMatchExact, std_wstring_summary_sp);
 
   cpp_category_sp->AddTypeSummary("std::__cxx11::wstring", eFormatterMatchExact,
-                                  cxx11_wstring_summary_sp);
+                                  string_summary_sp);
   cpp_category_sp->AddTypeSummary(
       "std::__cxx11::basic_string<wchar_t, std::char_traits<wchar_t>, "
       "std::allocator<wchar_t> >",
-      eFormatterMatchExact, cxx11_wstring_summary_sp);
+      eFormatterMatchExact, string_summary_sp);
 
   SyntheticChildren::Flags stl_synth_flags;
   stl_synth_flags.SetCascades(true).SetSkipPointers(false).SetSkipReferences(
