@@ -205,8 +205,6 @@ class ProfiledBinary {
   // The file offset of each executable segment.
   std::vector<uint64_t> TextSegmentOffsets;
 
-  std::vector<uint64_t> ReadOnlyDataSegmentOffsets;
-
   // Mutiple MC component info
   std::unique_ptr<const MCRegisterInfo> MRI;
   std::unique_ptr<const MCAsmInfo> AsmInfo;
@@ -367,7 +365,7 @@ public:
 
     /// Symbolize a given address as data and return a FunctionId.
   /// Strings are owned by this ProfiledBinary object.
-  FunctionId symbolizeDataAddress(uint64_t Address);
+  StringRef symbolizeDataAddress(uint64_t Address);
 
   void decodePseudoProbe();
 

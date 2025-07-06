@@ -35,17 +35,13 @@ void DataAccessPerfReader::parsePerfTrace(StringRef PerfTrace) {
     PerfScriptReader::MMapEvent MMap;
     if (Line.contains("PERF_RECORD_MMAP2")) {
       if (PerfScriptReader::extractMMapEventForBinary(Binary, Line, MMap)) {
-        // TODO: This is a hack to avoid mapping binary address for data section
-        // mappings.
-        if (MMap.Offset == 0 && Line.contains("r-xp")) {
-          updateBinaryAddress(MMap);
-          errs() << "Binary base address is "
-                 << format("0x%" PRIx64, Binary->getBaseAddress())
-                 << " and preferred base address is "
-                 << format("0x%" PRIx64, Binary->getPreferredBaseAddress())
-                 << " and first loadable address is "
-                 << format("0x%" PRIx64, Binary->getFirstLoadableAddress())
-                 << "\n";
+        if (!MMap.MemProtectionFlag.contains("x")) {
+          outs() << "PerfReader.cpp:469\tMMap: " << MMap.BinaryPath
+                 << " loaded at " << format("0x%" PRIx64, MMap.Address)
+                 << " with size " << format("0x%" PRIx64, MMap.Size)
+                 << " and offset " << format("0x%" PRIx64, MMap.Offset) << "\t"
+                 << "Protection: " << MMap.MemProtectionFlag << "\n";
+          MMapNonTextEvents.push_back(MMap);
         }
       }
       continue;
@@ -66,26 +62,23 @@ void DataAccessPerfReader::parsePerfTrace(StringRef PerfTrace) {
       uint64_t DataAddress = std::stoull(matches[4].str(), nullptr, 16);
 
       // Skip addresses out of the specified PT_LOAD section for data.
-      if (DataAddress < DataMMap.Address ||
-          DataAddress >= DataMMap.Address + DataMMap.Size)
+      if (!InRange(DataAddress))
         continue;
 
       int32_t PID = std::stoi(matches[1].str());
-      //  Check if the PID matches the filter.
-
       if (PIDFilter && *PIDFilter != PID) {
         continue;
       }
 
       uint64_t IP = std::stoull(matches[3].str(), nullptr, 16);
-      // Extract the address and count.
-      // uint64_t CanonicalDataAddress =
-      canonicalizeDataAddress(DataAddress, *Binary, DataMMap, DataSegment);
 
-          // uint64_t CanonicalIPAddress =
-          // Binary->canonicalizeVirtualAddress(IP);
+      StringRef DataSymbol = Binary->symbolizeDataAddress(DataAddress);
+      if (!DataSymbol.starts_with("_ZTV")) {
+        // Skip non-vtable data addresses.
+        continue;
+      }
 
-              AddressMap[IP][DataAddress] += 1;
+      AddressMap[IP][DataSymbol] += 1;
     }
   }
 }

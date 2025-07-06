@@ -396,7 +396,7 @@ using BranchSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // which is represented as the start and end offset pair.
 using RangeSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
 // <<inst-addr, data-addr>, count> map for data access samples.
-using DataAccessSample = std::map<std::pair<uint64_t, uint64_t>, uint64_t>;
+using DataAccessSample = std::map<std::pair<uint64_t, StringRef>, uint64_t>;
 // Wrapper for sample counters including range counter and branch counter
 struct SampleCounter {
   RangeSample RangeCounter;
@@ -410,9 +410,9 @@ struct SampleCounter {
   void recordBranchCount(uint64_t Source, uint64_t Target, uint64_t Repeat) {
     BranchCounter[{Source, Target}] += Repeat;
   }
-  void recordDataAccessCount(uint64_t InstAddr, uint64_t DataAddr,
+  void recordDataAccessCount(uint64_t InstAddr, StringRef DataSymbol,
                              uint64_t Repeat) {
-    DataAccessCounter[{InstAddr, DataAddr}] += Repeat;
+    DataAccessCounter[{InstAddr, DataSymbol}] += Repeat;
   }
 };
 
@@ -566,10 +566,11 @@ private:
 
 // For data access profiles.
 struct ProfiledInfo {
-  ProfiledInfo(uint64_t InstructionAddr, uint64_t DataAddr, uint64_t Count)
-      : InstructionAddr(InstructionAddr), DataAddr(DataAddr), Count(Count) {}
+  ProfiledInfo(uint64_t InstructionAddr, StringRef DataSymbol, uint64_t Count)
+      : InstructionAddr(InstructionAddr), DataSymbol(DataSymbol), Count(Count) {
+  }
   uint64_t InstructionAddr;
-  uint64_t DataAddr;
+  StringRef DataSymbol;
   uint64_t Count;
 };
 
@@ -589,7 +590,7 @@ public:
   // Entry of the reader to parse multiple perf traces
   virtual void parsePerfTraces() = 0;
   void recordDataAccessCountRef(
-      const DenseMap<uint64_t, DenseMap<uint64_t, uint64_t>> &In) {
+      const DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> &In) {
     DataAccessProfInfo.clear();
     for (const auto &[IpAddr, DataCount] : In) {
       for (const auto [DataAddr, Count] : DataCount) {
@@ -643,6 +644,7 @@ protected:
     uint64_t Address = 0;
     uint64_t Size = 0;
     uint64_t Offset = 0;
+    StringRef MemProtectionFlag;
     StringRef BinaryPath;
   };
 

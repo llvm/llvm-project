@@ -551,9 +551,9 @@ void ProfileGenerator::generateLineNumBasedProfile() {
   const auto &DataAccessCounters = SC.DataAccessCounter;
   for (const auto &Entry : DataAccessCounters) {
     uint64_t InstAddr = Entry.first.first;
-    uint64_t DataAddr = Entry.first.second;
+    StringRef DataSymbol = Entry.first.second;
 
-    FunctionId DataSymbolName = Binary->symbolizeDataAddress(DataAddr);
+    FunctionId DataSymbolName(DataSymbol);
     // If the symbol is not a valid address, skip it.
 
     // symbolize vtable here.

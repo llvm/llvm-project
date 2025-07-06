@@ -968,10 +968,6 @@ void PerfScriptReader::generateUnsymbolizedProfile() {
 
   SampleCounter &Counter = SampleCounters.begin()->second;
   for (const auto &[InstDataPair, Count] : DataAccessProfInfo) {
-    errs() << "\trecord data access count for "
-           << format("0x%" PRIx64, InstDataPair.first) << " -> "
-           << format("0x%" PRIx64, InstDataPair.second) << ": " << Count
-           << "\n";
     Counter.recordDataAccessCount(InstDataPair.first, InstDataPair.second,
                                   Count);
   }
@@ -1002,14 +998,14 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   constexpr static const char *const MMap2Pattern =
       "PERF_RECORD_MMAP2 (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
-      "(0x[a-f0-9]+|0) .*\\]: [-a-z]+ (.*)";
+      "(0x[a-f0-9]+|0) .*\\]: ([-a-z]+) (.*)";
   // Parse a MMap line like
   // PERF_RECORD_MMAP -1/0: [0xffffffff81e00000(0x3e8fa000) @ \
   //  0xffffffff81e00000]: x [kernel.kallsyms]_text
   constexpr static const char *const MMapPattern =
       "PERF_RECORD_MMAP (-?[0-9]+)/[0-9]+: "
       "\\[(0x[a-f0-9]+)\\((0x[a-f0-9]+)\\) @ "
-      "(0x[a-f0-9]+|0)\\]: [-a-z]+ (.*)";
+      "(0x[a-f0-9]+|0)\\]: ([-a-z]+) (.*)";
   // Field 0 - whole line
   // Field 1 - PID
   // Field 2 - base address
@@ -1022,11 +1018,12 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
     MMAPPED_ADDRESS = 2,
     MMAPPED_SIZE = 3,
     PAGE_OFFSET = 4,
-    BINARY_PATH = 5
+    MEM_PROTECTION_FLAG = 5,
+    BINARY_PATH = 6,
   };
 
   bool R = false;
-  SmallVector<StringRef, 6> Fields;
+  SmallVector<StringRef, 8> Fields;
   if (Line.contains("PERF_RECORD_MMAP2 ")) {
     Regex RegMmap2(MMap2Pattern);
     R = RegMmap2.match(Line, &Fields);
@@ -1047,6 +1044,7 @@ bool PerfScriptReader::extractMMapEventForBinary(ProfiledBinary *Binary,
   Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
   Fields[MMAPPED_SIZE].getAsInteger(0, MMap.Size);
   Fields[PAGE_OFFSET].getAsInteger(0, MMap.Offset);
+  MMap.MemProtectionFlag = Fields[MEM_PROTECTION_FLAG];
   MMap.BinaryPath = Fields[BINARY_PATH];
   if (ShowMmapEvents) {
     outs() << "Mmap: Binary " << MMap.BinaryPath << " loaded at "

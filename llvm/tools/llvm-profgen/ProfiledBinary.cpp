@@ -339,6 +339,7 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
         // Segments will always be loaded at a page boundary.
         PreferredTextSegmentAddresses.push_back(Phdr.p_vaddr &
                                                 ~(PageSize - 1U));
+
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
       }
     }
@@ -950,12 +951,12 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
   return CallStack;
 }
 
-FunctionId ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
+StringRef ProfiledBinary::symbolizeDataAddress(uint64_t Address) {
   DIGlobal DataDIGlobal = unwrapOrError(
       Symbolizer->symbolizeData(SymbolizerPath.str(), {Address, 0}),
       SymbolizerPath);
   auto It = NameStrings.insert(DataDIGlobal.Name);
-  return FunctionId(StringRef(*It.first));
+  return StringRef(*It.first);
 }
 
 void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,

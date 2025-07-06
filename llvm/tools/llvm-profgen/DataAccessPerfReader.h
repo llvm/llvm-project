@@ -25,29 +25,7 @@ public:
   DataAccessPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
                        std::optional<int32_t> PID)
       : PerfScriptReader(Binary, PerfTrace, PID), PerfTraceFilename(PerfTrace) {
-    hackMMapEventAndDataSegment(DataMMap, DataSegment, *Binary);
-  }
-
-  // The MMapEvent is hard-coded as a hack to illustrate the change.
-  static void
-  hackMMapEventAndDataSegment(PerfScriptReader::MMapEvent &MMap,
-                              DataSegment &DataSegment,
-                              const ProfiledBinary &ProfiledBinary) {
-    // The PERF_RECORD_MMAP2 event is
-    // 0 0x4e8 [0xa0]: PERF_RECORD_MMAP2 1849842/1849842:
-    // [0x55d977426000(0x1000) @ 0x1000 fd:01 20869534 0]: r--p /path/to/binary
-    MMap.PID = 256393; // Example PID
-    MMap.BinaryPath = ProfiledBinary.getPath();
-    MMap.Address = 0x00000000003b3e40;
-    MMap.Size = 0x00b1c0;
-    MMap.Offset = 0; // File Offset in the binary.
-
-    // TODO: Set binary fields to do address canonicalization, and compute
-    // static data address range.
-    DataSegment.FileOffset =
-        0xdb0; // The byte offset of the segment start in the binary.
-    DataSegment.VirtualAddress =
-        0x2db0; // The virtual address of the segment start in the binary.
+    // Assume this is non-pie binary.
   }
 
   uint64_t canonicalizeDataAddress(uint64_t Address,
@@ -82,26 +60,38 @@ public:
       if (Entry.Count == 0)
         continue; // Skip entries with zero count
       dbgs() << "Address: " << format("0x%llx", Entry.InstructionAddr)
-             << " Data Address: " << format("0x%llx", Entry.DataAddr)
+             << " Data Address: " << Entry.DataSymbol
              << " Count: " << Entry.Count << "\n";
     }
   }
 
-  const DenseMap<uint64_t, DenseMap<uint64_t, uint64_t>> &
+  const DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> &
 getAddressMap() const {
     return AddressMap;
   }
 
 
 private:
+  bool InRange(uint64_t Address, const MMapEvent &MMap) const {
+    return Address >= MMap.Address && Address < MMap.Address + MMap.Size;
+  }
+
+  bool InRange(uint64_t Address) const {
+    for (const auto &MMap : MMapNonTextEvents) {
+      if (InRange(Address, MMap))
+        return true;
+    }
+    return false;
+  }
   void parsePerfTrace(StringRef PerfTrace);
 
-  DenseMap<uint64_t, DenseMap<uint64_t, uint64_t>> AddressMap;
+  DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> AddressMap;
+
+  SmallVector<MMapEvent> MMapNonTextEvents;
 
   StringRef PerfTraceFilename;
 
   PerfScriptReader::MMapEvent DataMMap;
-  DataSegment DataSegment;
 };
 
 } // namespace llvm
