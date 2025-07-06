@@ -754,15 +754,7 @@ void X86AsmBackend::relaxInstruction(MCInst &Inst,
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
   bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
   unsigned RelaxedOp = getRelaxedOpcode(Inst, Is16BitMode);
-
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
-
+  assert(RelaxedOp != Inst.getOpcode());
   Inst.setOpcode(RelaxedOp);
 }
 

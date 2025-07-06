@@ -222,15 +222,7 @@ bool M68kAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 void M68kAsmBackend::relaxInstruction(MCInst &Inst,
                                       const MCSubtargetInfo &STI) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
-
-  if (RelaxedOp == Inst.getOpcode()) {
-    SmallString<256> Tmp;
-    raw_svector_ostream OS(Tmp);
-    Inst.dump_pretty(OS);
-    OS << "\n";
-    report_fatal_error("unexpected instruction to relax: " + OS.str());
-  }
-
+  assert(RelaxedOp != Inst.getOpcode());
   Inst.setOpcode(RelaxedOp);
 }
 
