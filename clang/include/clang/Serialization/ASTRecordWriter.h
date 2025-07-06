@@ -94,7 +94,7 @@ public:
   uint64_t Emit(unsigned Code) {
     uint64_t Offset = Writer->Stream.GetCurrentBitNo();
     PrepareToEmit(Offset);
-    Writer->Stream.EmitRecord(Code, *Record);
+    Writer->Stream.EmitRecordAutoAbbrev(Code, *Record);
     FlushStmts();
     return Offset;
   }
