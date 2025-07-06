@@ -28,6 +28,13 @@ template <class T>
 class auto_ptr {
 };
 
+namespace pmr {
+    template <typename TYPE = void>
+    class allocator {};
+}
+
+struct allocator_arg_t {} allocator_arg;
+
 } // namespace std
 
 void assert(int expression){};
@@ -538,6 +545,89 @@ public:
 
   Ty *getTy() const { return Ptr1; }
   Uy *getUy() const { return Ptr2; }
+};
+
+// Support "extended" copy/move constructors
+class AllocatorAwareClass {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClass(const AllocatorAwareClass& other) {
+    }
+
+    AllocatorAwareClass(const AllocatorAwareClass& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClass& operator=(const AllocatorAwareClass& other) {
+        AllocatorAwareClass tmp(other, get_allocator());
+        swap(tmp);
+        return *this;
+    }
+
+    void swap(AllocatorAwareClass& other) noexcept {
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+// Support "extended" copy/move constructors + std::swap
+class AllocatorAwareClassStdSwap {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassStdSwap(const AllocatorAwareClassStdSwap& other) {
+    }
+
+    AllocatorAwareClassStdSwap(const AllocatorAwareClassStdSwap& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassStdSwap& operator=(const AllocatorAwareClassStdSwap& other) {
+        using std::swap;
+        
+        AllocatorAwareClassStdSwap tmp(other, get_allocator());
+        swap(*this, tmp);
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+};
+
+// Support "extended" copy/move constructors + ADL swap
+class AllocatorAwareClassAdlSwap {
+  // pointer member to trigger bugprone-unhandled-self-assignment
+  void *foo = nullptr;
+
+  public:
+    using allocator_type = std::pmr::allocator<>;
+
+    AllocatorAwareClassAdlSwap(const AllocatorAwareClassAdlSwap& other) {
+    }
+
+    AllocatorAwareClassAdlSwap(const AllocatorAwareClassAdlSwap& other, const allocator_type& alloc) {
+    }
+
+    AllocatorAwareClassAdlSwap& operator=(const AllocatorAwareClassAdlSwap& other) {
+        AllocatorAwareClassAdlSwap tmp(other, get_allocator());
+        swap(*this, tmp);
+        return *this;
+    }
+
+    allocator_type get_allocator() const {
+        return allocator_type();
+    }
+    
+    friend void swap(AllocatorAwareClassAdlSwap&, AllocatorAwareClassAdlSwap&) {
+    }
 };
 
 ///////////////////////////////////////////////////////////////////
