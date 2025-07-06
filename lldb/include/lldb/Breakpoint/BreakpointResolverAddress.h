@@ -28,10 +28,8 @@ public:
                             const Address &addr,
                             const FileSpec &module_spec);
 
-  BreakpointResolverAddress(const lldb::BreakpointSP &bkpt,
-                            const Address &addr,
-                            const FileSpec &module_spec,
-                            lldb::addr_t offset,
+  BreakpointResolverAddress(const lldb::BreakpointSP &bkpt, const Address &addr,
+                            const FileSpec &module_spec, lldb::addr_t offset,
                             lldb::addr_t instructions_offset);
 
   ~BreakpointResolverAddress() override = default;

@@ -43,9 +43,11 @@ const char *BreakpointResolver::g_ty_to_name[] = {"FileAndLine", "Address",
 
 const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     BreakpointResolver::OptionNames::LastOptionName)] = {
-    "AddressOffset", "Exact",     "FileName",     "Inlines",     "Language",
-    "LineNumber",    "Column",    "ModuleName",   "NameMask",    "Offset",
-    "PythonClass",   "Regex",     "ScriptArgs",   "SectionName", "SearchDepth",
+    "AddressOffset", "Exact",       "FileName",
+    "Inlines",       "Language",    "LineNumber",
+    "Column",        "ModuleName",  "NameMask",
+    "Offset",        "PythonClass", "Regex",
+    "ScriptArgs",    "SectionName", "SearchDepth",
     "SkipPrologue",  "SymbolNames", "InstructionsOffset"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
@@ -68,7 +70,8 @@ BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,
                                        lldb::addr_t offset,
                                        lldb::addr_t instructions_offset)
-    : m_breakpoint(bkpt), m_offset(offset), m_instructions_offset(instructions_offset), SubclassID(resolverTy) {}
+    : m_breakpoint(bkpt), m_offset(offset),
+      m_instructions_offset(instructions_offset), SubclassID(resolverTy) {}
 
 BreakpointResolver::~BreakpointResolver() = default;
 
@@ -368,7 +371,8 @@ BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
   if (m_instructions_offset != 0) {
     Target &target = GetBreakpoint()->GetTarget();
-    const DisassemblerSP instructions = target.ReadInstructions(loc_addr, m_instructions_offset);
+    const DisassemblerSP instructions =
+        target.ReadInstructions(loc_addr, m_instructions_offset);
     loc_addr.Slide(instructions->GetInstructionList().GetTotalByteSize());
   }
 
