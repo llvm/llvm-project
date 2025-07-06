@@ -4676,7 +4676,7 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
         if (!Legal->isReductionVariable(PN))
           continue;
         const RecurrenceDescriptor &RdxDesc =
-            Legal->getReductionVars().find(PN)->second;
+            Legal->getRecurrenceDescriptor(PN);
         if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
             TTI.preferInLoopReduction(RdxDesc.getRecurrenceKind(),
                                       RdxDesc.getRecurrenceType()))
@@ -5476,7 +5476,7 @@ LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
     ReductionPhi = InLoopReductionImmediateChains.at(ReductionPhi);
 
   const RecurrenceDescriptor &RdxDesc =
-      Legal->getReductionVars().find(cast<PHINode>(ReductionPhi))->second;
+      Legal->getRecurrenceDescriptor(cast<PHINode>(ReductionPhi));
 
   InstructionCost BaseCost;
   RecurKind RK = RdxDesc.getRecurrenceKind();
@@ -8300,8 +8300,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
            "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = Operands[0];
     if (Legal->isReductionVariable(Phi)) {
-      const RecurrenceDescriptor &RdxDesc =
-          Legal->getReductionVars().find(Phi)->second;
+      const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(Phi);
       assert(RdxDesc.getRecurrenceStartValue() ==
              Phi->getIncomingValueForBlock(OrigLoop->getLoopPreheader()));
 
