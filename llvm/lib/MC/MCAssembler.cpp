@@ -795,7 +795,8 @@ void MCAssembler::layout() {
   this->HasLayout = true;
   for (MCSection &Sec : *this)
     layoutSection(Sec);
-  while (relaxOnce())
+  unsigned FirstStable = Sections.size();
+  while ((FirstStable = relaxOnce(FirstStable)) > 0)
     if (getContext().hadError())
       return;
 
@@ -1127,17 +1128,15 @@ void MCAssembler::layoutSection(MCSection &Sec) {
   }
 }
 
-bool MCAssembler::relaxOnce() {
+unsigned MCAssembler::relaxOnce(unsigned FirstStable) {
   ++stats::RelaxationSteps;
   PendingErrors.clear();
 
-  // Size of fragments in one section can depend on the size of fragments in
-  // another. If any fragment has changed size, we have to re-layout (and
-  // as a result possibly further relax) all sections.
-  bool ChangedAny = false;
-  for (MCSection &Sec : *this) {
+  unsigned Res = 0;
+  for (unsigned I = 0; I != FirstStable; ++I) {
     // Assume each iteration finalizes at least one extra fragment. If the
     // layout does not converge after N+1 iterations, bail out.
+    auto &Sec = *Sections[I];
     auto MaxIter = Sec.curFragList()->Tail->getLayoutOrder() + 1;
     for (;;) {
       bool Changed = false;
@@ -1145,13 +1144,20 @@ bool MCAssembler::relaxOnce() {
         if (relaxFragment(F))
           Changed = true;
 
-      ChangedAny |= Changed;
-      if (!Changed || --MaxIter == 0)
+      if (!Changed)
+        break;
+      // If any fragment changed size, it might impact the layout of subsequent
+      // sections. Therefore, we must re-evaluate all sections.
+      FirstStable = Sections.size();
+      Res = I;
+      if (--MaxIter == 0)
         break;
       layoutSection(Sec);
     }
   }
-  return ChangedAny;
+  // The subsequent relaxOnce call only needs to visit Sections [0,Res) if no
+  // change occurred.
+  return Res;
 }
 
 void MCAssembler::reportError(SMLoc L, const Twine &Msg) const {
