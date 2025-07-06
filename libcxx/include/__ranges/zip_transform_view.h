@@ -45,6 +45,8 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
@@ -59,11 +61,11 @@ class zip_transform_view : public view_interface<zip_transform_view<_Fn, _Views.
   _LIBCPP_NO_UNIQUE_ADDRESS zip_view<_Views...> __zip_;
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Fn> __fun_;
 
-  using _InnerView = zip_view<_Views...>;
+  using _InnerView _LIBCPP_NODEBUG = zip_view<_Views...>;
   template <bool _Const>
-  using __ziperator = iterator_t<__maybe_const<_Const, _InnerView>>;
+  using __ziperator _LIBCPP_NODEBUG = iterator_t<__maybe_const<_Const, _InnerView>>;
   template <bool _Const>
-  using __zentinel = sentinel_t<__maybe_const<_Const, _InnerView>>;
+  using __zentinel _LIBCPP_NODEBUG = sentinel_t<__maybe_const<_Const, _InnerView>>;
 
   template <bool>
   class __iterator;
@@ -130,7 +132,7 @@ template <bool _Const, class _Fn, class... _Views>
 struct __zip_transform_iterator_category_base<_Const, _Fn, _Views...> {
 private:
   template <class _View>
-  using __tag = typename iterator_traits<iterator_t<__maybe_const<_Const, _View>>>::iterator_category;
+  using __tag _LIBCPP_NODEBUG = typename iterator_traits<iterator_t<__maybe_const<_Const, _View>>>::iterator_category;
 
   static consteval auto __get_iterator_category() {
     if constexpr (!is_reference_v<invoke_result_t<__maybe_const<_Const, _Fn>&,
@@ -158,8 +160,8 @@ template <move_constructible _Fn, input_range... _Views>
 template <bool _Const>
 class zip_transform_view<_Fn, _Views...>::__iterator
     : public __zip_transform_iterator_category_base<_Const, _Fn, _Views...> {
-  using _Parent = __maybe_const<_Const, zip_transform_view>;
-  using _Base   = __maybe_const<_Const, _InnerView>;
+  using _Parent _LIBCPP_NODEBUG = __maybe_const<_Const, zip_transform_view>;
+  using _Base _LIBCPP_NODEBUG   = __maybe_const<_Const, _InnerView>;
 
   friend zip_transform_view<_Fn, _Views...>;
 
@@ -354,5 +356,7 @@ inline constexpr auto zip_transform = __zip_transform::__fn{};
 #endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_ZIP_TRANSFORM_VIEW_H

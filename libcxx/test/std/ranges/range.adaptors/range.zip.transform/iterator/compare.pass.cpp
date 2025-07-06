@@ -123,9 +123,9 @@ constexpr bool test() {
     int buffer1[1] = {1};
     int buffer2[2] = {1, 2};
     std::ranges::zip_transform_view v{MakeTuple{}, ForwardSizedView(buffer1), ForwardSizedView(buffer2)};
-    using View = decltype(v);
-    static_assert(std::ranges::common_range<View>);
-    static_assert(!std::ranges::bidirectional_range<View>);
+    using ZTV = decltype(v);
+    static_assert(std::ranges::common_range<ZTV>);
+    static_assert(!std::ranges::bidirectional_range<ZTV>);
 
     auto it1 = v.begin();
     auto it2 = v.end();
@@ -154,7 +154,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  //static_assert(test());
+  static_assert(test());
 
   return 0;
 }
