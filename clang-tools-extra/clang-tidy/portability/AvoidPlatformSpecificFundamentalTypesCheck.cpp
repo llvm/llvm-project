@@ -82,48 +82,41 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
 
   // Add integer types if the option is enabled
   if (WarnOnInts) {
-    TypeStrings.insert(TypeStrings.end(), {
-        "short",
-        "short int",
-        "signed short",
-        "signed short int",
-        "unsigned short",
-        "unsigned short int",
-        "int",
-        "signed",
-        "signed int",
-        "unsigned",
-        "unsigned int",
-        "long",
-        "long int",
-        "signed long",
-        "signed long int",
-        "unsigned long",
-        "unsigned long int",
-        "long long",
-        "long long int",
-        "signed long long",
-        "signed long long int",
-        "unsigned long long",
-        "unsigned long long int"});
+    TypeStrings.insert(TypeStrings.end(), {"short",
+                                           "short int",
+                                           "signed short",
+                                           "signed short int",
+                                           "unsigned short",
+                                           "unsigned short int",
+                                           "int",
+                                           "signed",
+                                           "signed int",
+                                           "unsigned",
+                                           "unsigned int",
+                                           "long",
+                                           "long int",
+                                           "signed long",
+                                           "signed long int",
+                                           "unsigned long",
+                                           "unsigned long int",
+                                           "long long",
+                                           "long long int",
+                                           "signed long long",
+                                           "signed long long int",
+                                           "unsigned long long",
+                                           "unsigned long long int"});
   }
 
   // Add float types if the option is enabled
   if (WarnOnFloats) {
-    TypeStrings.insert(TypeStrings.end(), {
-        "half",
-        "__bf16",
-        "float",
-        "double",
-        "long double"});
+    TypeStrings.insert(TypeStrings.end(),
+                       {"half", "__bf16", "float", "double", "long double"});
   }
 
   // Add char types if the option is enabled
   if (WarnOnChars) {
-    TypeStrings.insert(TypeStrings.end(), {
-        "char",
-        "signed char",
-        "unsigned char"});
+    TypeStrings.insert(TypeStrings.end(),
+                       {"char", "signed char", "unsigned char"});
   }
 
   // If no types are enabled, return early
