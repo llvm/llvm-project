@@ -66,6 +66,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -568,11 +569,13 @@ BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
 lldb::BreakpointSP
 Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
                                         const FileSpec &file_spec,
-                                        bool request_hardware) {
+                                        bool request_hardware,
+                                        lldb::addr_t offset,
+                                        lldb::addr_t instructions_offset) {
   SearchFilterSP filter_sp(
       new SearchFilterForUnconstrainedSearches(shared_from_this()));
   BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
-      nullptr, file_addr, file_spec));
+      nullptr, file_addr, file_spec, offset, instructions_offset));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }
@@ -2994,6 +2997,35 @@ lldb::addr_t Target::GetOpcodeLoadAddress(lldb::addr_t load_addr,
 lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
   auto arch_plugin = GetArchitecturePlugin();
   return arch_plugin ? arch_plugin->GetBreakableLoadAddress(addr, *this) : addr;
+}
+
+lldb::DisassemblerSP Target::ReadInstructions(const Address &start_addr, uint32_t count,
+                                             const char *flavor_string) {
+  if (!m_process_sp)
+    return lldb::DisassemblerSP();
+
+  DataBufferHeap data(GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
+  bool force_live_memory = true;
+  lldb_private::Status error;
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  const size_t bytes_read = ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(),
+                            error, force_live_memory, &load_addr);
+
+  const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
+  if (!flavor_string || flavor_string[0] == '\0') {
+    // FIXME - we don't have the mechanism in place to do per-architecture
+    // settings.  But since we know that for now we only support flavors on
+    // x86 & x86_64,
+    const llvm::Triple::ArchType arch =
+      GetArchitecture().GetTriple().getArch();
+    if (arch == llvm::Triple::x86 || arch == llvm::Triple::x86_64)
+      flavor_string = GetDisassemblyFlavor();
+  }
+
+  return Disassembler::DisassembleBytes(
+    GetArchitecture(), nullptr, flavor_string,
+    GetDisassemblyCPU(), GetDisassemblyFeatures(),
+    start_addr, data.GetBytes(), bytes_read, count, data_from_file);
 }
 
 SourceManager &Target::GetSourceManager() {

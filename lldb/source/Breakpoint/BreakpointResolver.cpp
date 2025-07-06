@@ -29,6 +29,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-forward.h"
 #include <optional>
 
 using namespace lldb_private;
@@ -45,7 +46,7 @@ const char *BreakpointResolver::g_option_names[static_cast<uint32_t>(
     "AddressOffset", "Exact",     "FileName",     "Inlines",     "Language",
     "LineNumber",    "Column",    "ModuleName",   "NameMask",    "Offset",
     "PythonClass",   "Regex",     "ScriptArgs",   "SectionName", "SearchDepth",
-    "SkipPrologue",  "SymbolNames"};
+    "SkipPrologue",  "SymbolNames", "InstructionsOffset"};
 
 const char *BreakpointResolver::ResolverTyToName(enum ResolverTy type) {
   if (type > LastKnownResolverType)
@@ -65,8 +66,9 @@ BreakpointResolver::NameToResolverTy(llvm::StringRef name) {
 
 BreakpointResolver::BreakpointResolver(const BreakpointSP &bkpt,
                                        const unsigned char resolverTy,
-                                       lldb::addr_t offset)
-    : m_breakpoint(bkpt), m_offset(offset), SubclassID(resolverTy) {}
+                                       lldb::addr_t offset,
+                                       lldb::addr_t instructions_offset)
+    : m_breakpoint(bkpt), m_offset(offset), m_instructions_offset(instructions_offset), SubclassID(resolverTy) {}
 
 BreakpointResolver::~BreakpointResolver() = default;
 
@@ -364,6 +366,12 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
 
 BreakpointLocationSP BreakpointResolver::AddLocation(Address loc_addr,
                                                      bool *new_location) {
+  if (m_instructions_offset != 0) {
+    Target &target = GetBreakpoint()->GetTarget();
+    const DisassemblerSP instructions = target.ReadInstructions(loc_addr, m_instructions_offset);
+    loc_addr.Slide(instructions->GetInstructionList().GetTotalByteSize());
+  }
+
   loc_addr.Slide(m_offset);
   return GetBreakpoint()->AddLocation(loc_addr, new_location);
 }

@@ -31,7 +31,7 @@ struct PersistenceData {
   /// The source module path.
   std::string module;
 
-  /// The file address inside the module.
+  /// The file address of the function.
   lldb::addr_t file_addr;
 };
 bool fromJSON(const llvm::json::Value &, PersistenceData &,
