@@ -1000,11 +1000,13 @@ public:
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  map(map&& __m) noexcept(is_nothrow_move_constructible<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map(map&& __m, const allocator_type& __a);
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map& operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map&
+  operator=(map&& __m) noexcept(is_nothrow_move_assignable<__base>::value) = default;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
   map(initializer_list<value_type> __il, const key_compare& __comp = key_compare())
