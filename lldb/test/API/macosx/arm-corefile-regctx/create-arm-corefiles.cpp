@@ -147,6 +147,7 @@ std::vector<uint8_t> arm64_lc_thread_load_command() {
 std::vector<uint8_t> lc_segment(uint32_t fileoff,
                                 uint32_t lc_segment_data_size) {
   std::vector<uint8_t> data;
+  // 0x000e0000 is the value of $sp in the armv7 LC_THREAD
   uint32_t start_vmaddr = 0x000e0000 - (lc_segment_data_size / 2);
   add_uint32(data, LC_SEGMENT);                     // segment_command.cmd
   add_uint32(data, sizeof(struct segment_command)); // segment_command.cmdsize
