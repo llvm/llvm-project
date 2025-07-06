@@ -173,7 +173,9 @@ enum AArch64MachineCombinerPattern : unsigned {
 
   FNMADD,
 
-  SPLIT_LD,
+  GATHER_i32,
+  GATHER_i16,
+  GATHER_i8
 };
 class AArch64InstrInfo final : public AArch64GenInstrInfo {
   const AArch64RegisterInfo RI;
