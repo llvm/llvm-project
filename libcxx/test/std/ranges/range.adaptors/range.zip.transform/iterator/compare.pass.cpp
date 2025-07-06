@@ -83,17 +83,14 @@ constexpr bool test() {
     int b[]    = {5, 6, 7, 8, 9};
     auto r     = std::views::zip_transform(MakeTuple{}, Subrange(It(a), It(a + 4)), Subrange(It(b), It(b + 5)));
     auto iter1 = r.begin();
-    using Iter = decltype(iter1);
-#ifndef _LIBCPP_VERSION
-    // libc++ hasn't implemented LWG-3692 "zip_transform_view::iterator's operator<=> is overconstrained"
     auto iter2 = iter1 + 1;
 
     compareOperatorTest(iter1, iter2);
+    using Iter = decltype(iter1);
     static_assert(std::three_way_comparable<Iter>);
     assert((iter1 <=> iter2) == std::strong_ordering::less);
     assert((iter1 <=> iter1) == std::strong_ordering::equal);
     assert((iter2 <=> iter1) == std::strong_ordering::greater);
-#endif
   }
 
   {

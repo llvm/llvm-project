@@ -24,13 +24,13 @@ void testCTAD() {
   static_assert(std::is_same_v<decltype(std::ranges::zip_transform_view(Fn{}, Container{})),
                                std::ranges::zip_transform_view<Fn, std::ranges::owning_view<Container>>>);
 
-  static_assert(std::is_same_v<decltype(std::ranges::zip_transform_view(Fn{}, Container{}, View{})),
-                               std::ranges::zip_transform_view<Fn, std::ranges::owning_view<Container>, View>>);
+  static_assert(std::is_same_v<decltype(std::ranges::zip_transform_view(Fn{}, Container{}, IntView{})),
+                               std::ranges::zip_transform_view<Fn, std::ranges::owning_view<Container>, IntView>>);
 
   Container c{};
   static_assert(
       std::is_same_v<
-          decltype(std::ranges::zip_transform_view(Fn{}, Container{}, View{}, c)),
+          decltype(std::ranges::zip_transform_view(Fn{}, Container{}, IntView{}, c)),
           std::ranges::
-              zip_transform_view<Fn, std::ranges::owning_view<Container>, View, std::ranges::ref_view<Container>>>);
+              zip_transform_view<Fn, std::ranges::owning_view<Container>, IntView, std::ranges::ref_view<Container>>>);
 }

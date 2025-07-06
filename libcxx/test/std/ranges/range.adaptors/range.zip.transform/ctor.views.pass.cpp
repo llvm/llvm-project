@@ -18,11 +18,11 @@ template <class T, class... Args>
 concept IsImplicitlyConstructible = requires(T val, Args... args) { val = {std::forward<Args>(args)...}; };
 
 // test constructor is explicit
-static_assert(std::constructible_from<std::ranges::zip_transform_view<Fn, View>, Fn, View>);
-static_assert(!IsImplicitlyConstructible<std::ranges::zip_transform_view<Fn, View>, Fn, View>);
+static_assert(std::constructible_from<std::ranges::zip_transform_view<Fn, IntView>, Fn, IntView>);
+static_assert(!IsImplicitlyConstructible<std::ranges::zip_transform_view<Fn, IntView>, Fn, IntView>);
 
-static_assert(std::constructible_from<std::ranges::zip_transform_view<Fn, View, View>, Fn, View, View>);
-static_assert(!IsImplicitlyConstructible<std::ranges::zip_transform_view<Fn, View, View>, Fn, View, View>);
+static_assert(std::constructible_from<std::ranges::zip_transform_view<Fn, IntView, IntView>, Fn, IntView, IntView>);
+static_assert(!IsImplicitlyConstructible<std::ranges::zip_transform_view<Fn, IntView, IntView>, Fn, IntView, IntView>);
 
 struct MoveAwareView : std::ranges::view_base {
   int moves                 = 0;
