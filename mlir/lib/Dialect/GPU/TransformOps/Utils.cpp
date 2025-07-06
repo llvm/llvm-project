@@ -156,6 +156,63 @@ static GpuIdBuilderFnType common3DIdBuilderFn(int64_t multiplicity = 1) {
   return res;
 }
 
+/// Create a lane id builder that takes the `originalBasis` and decompose
+/// it in the basis of `forallMappingSizes`. The linear id builder returns an
+/// n-D vector of ids for indexing and 1-D size + id for predicate generation.
+static GpuIdBuilderFnType laneIdBuilderFn(int64_t periodicity) {
+  auto res = [periodicity](RewriterBase &rewriter, Location loc,
+                           ArrayRef<int64_t> forallMappingSizes,
+                           ArrayRef<int64_t> originalBasis) {
+    SmallVector<OpFoldResult> originalBasisOfr =
+        getAsIndexOpFoldResult(rewriter.getContext(), originalBasis);
+    OpFoldResult linearId =
+        buildLinearId<ThreadIdOp>(rewriter, loc, originalBasisOfr);
+    AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
+    linearId = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, d0 % periodicity, {linearId});
+
+    // Sizes in [0 .. n] -> [n .. 0] order to properly compute strides in
+    // "row-major" order.
+    SmallVector<int64_t> reverseBasisSizes(llvm::reverse(forallMappingSizes));
+    SmallVector<int64_t> strides = computeStrides(reverseBasisSizes);
+    SmallVector<AffineExpr> delinearizingExprs = delinearize(d0, strides);
+    SmallVector<Value> ids;
+    // Reverse back to be in [0 .. n] order.
+    for (AffineExpr e : llvm::reverse(delinearizingExprs)) {
+      ids.push_back(
+          affine::makeComposedAffineApply(rewriter, loc, e, {linearId}));
+    }
+
+    // clang-format off
+      LLVM_DEBUG(llvm::interleaveComma(reverseBasisSizes,
+                                       DBGS() << "--delinearization basis: ");
+                 llvm::dbgs() << "\n";
+                 llvm::interleaveComma(strides,
+                                       DBGS() << "--delinearization strides: ");
+                 llvm::dbgs() << "\n";
+                 llvm::interleaveComma(delinearizingExprs,
+                                       DBGS() << "--delinearization exprs: ");
+                 llvm::dbgs() << "\n";
+                 llvm::interleaveComma(ids, DBGS() << "--ids: ");
+                 llvm::dbgs() << "\n";);
+    // clang-format on
+
+    // Return n-D ids for indexing and 1-D size + id for predicate generation.
+    return IdBuilderResult{
+        /*mappingIdOps=*/ids,
+        /*availableMappingSizes=*/
+        SmallVector<int64_t>{computeProduct(originalBasis)},
+        // `forallMappingSizes` iterate in the scaled basis, they need to be
+        // scaled back into the original basis to provide tight
+        // activeMappingSizes quantities for predication.
+        /*activeMappingSizes=*/
+        SmallVector<int64_t>{computeProduct(forallMappingSizes)},
+        /*activeIdOps=*/SmallVector<Value>{linearId.get<Value>()}};
+  };
+
+  return res;
+}
+
 namespace mlir {
 namespace transform {
 namespace gpu {
@@ -219,6 +276,16 @@ GpuThreadIdBuilder::GpuThreadIdBuilder(MLIRContext *ctx, bool useLinearMapping)
   idBuilder = useLinearMapping
                   ? commonLinearIdBuilderFn<ThreadIdOp>(/*multiplicity=*/1)
                   : common3DIdBuilderFn<ThreadIdOp>(/*multiplicity=*/1);
+}
+
+GpuLaneIdBuilder::GpuLaneIdBuilder(MLIRContext *ctx, int64_t warpSize,
+                                   bool unused)
+    : GpuIdBuilder(ctx, /*useLinearMapping=*/true,
+                   [](MLIRContext *ctx, MappingId id) {
+                     return GPULaneMappingAttr::get(ctx, id);
+                   }),
+      warpSize(warpSize) {
+  idBuilder = laneIdBuilderFn(/*periodicity=*/warpSize);
 }
 
 DiagnosedSilenceableFailure checkGpuLimits(TransformOpInterface transformOp,
