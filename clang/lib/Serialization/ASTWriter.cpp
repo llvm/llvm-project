@@ -305,27 +305,25 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
 }
 
 class ASTTypeWriter {
-  ASTWriter &Writer;
   ASTWriter::RecordData Record;
   ASTRecordWriter BasicWriter;
 
 public:
   ASTTypeWriter(ASTContext &Context, ASTWriter &Writer)
-      : Writer(Writer), BasicWriter(Context, Writer, Record) {}
+      : BasicWriter(Context, Writer, Record) {}
 
   uint64_t write(QualType T) {
     if (T.hasLocalNonFastQualifiers()) {
       Qualifiers Qs = T.getLocalQualifiers();
       BasicWriter.writeQualType(T.getLocalUnqualifiedType());
       BasicWriter.writeQualifiers(Qs);
-      return BasicWriter.Emit(TYPE_EXT_QUAL, Writer.getTypeExtQualAbbrev());
+      return BasicWriter.Emit(TYPE_EXT_QUAL);
     }
 
     const Type *typePtr = T.getTypePtr();
     serialization::AbstractTypeWriter<ASTRecordWriter> atw(BasicWriter);
     atw.write(typePtr);
-    return BasicWriter.Emit(getTypeCodeForTypeClass(typePtr->getTypeClass()),
-                            /*abbrev*/ 0);
+    return BasicWriter.Emit(getTypeCodeForTypeClass(typePtr->getTypeClass()));
   }
 };
 
@@ -711,7 +709,7 @@ void ASTWriter::WriteTypeAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(serialization::TYPE_EXT_QUAL));
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // Type
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 3));   // Quals
-  TypeExtQualAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1336,10 +1334,9 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
       auto Abbrev = std::make_shared<BitCodeAbbrev>();
       Abbrev->Add(BitCodeAbbrevOp(AST_BLOCK_HASH));
       Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-      unsigned ASTBlockHashAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+      Stream.EmitAbbrev(std::move(Abbrev));
 
-      Record.push_back(AST_BLOCK_HASH);
-      Stream.EmitRecordWithBlob(ASTBlockHashAbbrev, Record, Blob);
+      Stream.EmitRecordAutoAbbrev(AST_BLOCK_HASH, Record, Blob);
       ASTBlockHashOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
       Record.clear();
     }
@@ -1347,10 +1344,9 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(SIGNATURE));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned SignatureAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
-    Record.push_back(SIGNATURE);
-    Stream.EmitRecordWithBlob(SignatureAbbrev, Record, Blob);
+    Stream.EmitRecordAutoAbbrev(SIGNATURE, Record, Blob);
     SignatureOffset = Stream.GetCurrentBitNo() - Blob.size() * 8;
     Record.clear();
   }
@@ -1414,10 +1410,10 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
     Abbrev->Add(BitCodeAbbrevOp(HEADER_SEARCH_ENTRY_USAGE));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // Number of bits.
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // Bit vector.
-    unsigned HSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
-    RecordData::value_type Record[] = {HEADER_SEARCH_ENTRY_USAGE,
-                                       HSEntryUsage.size()};
-    Stream.EmitRecordWithBlob(HSUsageAbbrevCode, Record, bytes(HSEntryUsage));
+    Stream.EmitAbbrev(std::move(Abbrev));
+    RecordData::value_type Record[] = {HSEntryUsage.size()};
+    Stream.EmitRecordAutoAbbrev(HEADER_SEARCH_ENTRY_USAGE, Record,
+                                bytes(HSEntryUsage));
   }
 
   // VFS usage.
@@ -1427,9 +1423,9 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP) {
     Abbrev->Add(BitCodeAbbrevOp(VFS_USAGE));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // Number of bits.
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));      // Bit vector.
-    unsigned VFSUsageAbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
-    RecordData::value_type Record[] = {VFS_USAGE, VFSUsage.size()};
-    Stream.EmitRecordWithBlob(VFSUsageAbbrevCode, Record, bytes(VFSUsage));
+    Stream.EmitAbbrev(std::move(Abbrev));
+    RecordData::value_type Record[] = {VFSUsage.size()};
+    Stream.EmitRecordAutoAbbrev(VFS_USAGE, Record, bytes(VFSUsage));
   }
 
   // Leave the options block.
@@ -1460,21 +1456,16 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   MetadataAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Timestamps
   MetadataAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Errors
   MetadataAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // SVN branch/tag
-  unsigned MetadataAbbrevCode = Stream.EmitAbbrev(std::move(MetadataAbbrev));
+  Stream.EmitAbbrev(std::move(MetadataAbbrev));
   assert((!WritingModule || isysroot.empty()) &&
          "writing module as a relocatable PCH?");
   {
-    RecordData::value_type Record[] = {METADATA,
-                                       VERSION_MAJOR,
-                                       VERSION_MINOR,
-                                       CLANG_VERSION_MAJOR,
-                                       CLANG_VERSION_MINOR,
-                                       !isysroot.empty(),
-                                       isWritingStdCXXNamedModules(),
-                                       IncludeTimestamps,
-                                       ASTHasCompilerErrors};
-    Stream.EmitRecordWithBlob(MetadataAbbrevCode, Record,
-                              getClangFullRepositoryVersion());
+    RecordData::value_type Record[] = {
+        VERSION_MAJOR,       VERSION_MINOR,       CLANG_VERSION_MAJOR,
+        CLANG_VERSION_MINOR, !isysroot.empty(),   isWritingStdCXXNamedModules(),
+        IncludeTimestamps,   ASTHasCompilerErrors};
+    Stream.EmitRecordAutoAbbrev(METADATA, Record,
+                                getClangFullRepositoryVersion());
   }
 
   if (WritingModule) {
@@ -1482,9 +1473,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(MODULE_NAME));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-    unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
-    RecordData::value_type Record[] = {MODULE_NAME};
-    Stream.EmitRecordWithBlob(AbbrevCode, Record, WritingModule->Name);
+    Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitRecordAutoAbbrev(MODULE_NAME, ArrayRef<uint32_t>(),
+                                WritingModule->Name);
 
     auto BaseDir = [&]() -> std::optional<SmallString<128>> {
       if (PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) {
@@ -1512,10 +1503,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         auto Abbrev = std::make_shared<BitCodeAbbrev>();
         Abbrev->Add(BitCodeAbbrevOp(MODULE_DIRECTORY));
         Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Directory
-        unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+        Stream.EmitAbbrev(std::move(Abbrev));
 
-        RecordData::value_type Record[] = {MODULE_DIRECTORY};
-        Stream.EmitRecordWithBlob(AbbrevCode, Record, *BaseDir);
+        Stream.EmitRecordAutoAbbrev(MODULE_DIRECTORY, ArrayRef<uint32_t>(),
+                                    *BaseDir);
       }
 
       // Write out all other paths relative to the base directory if possible.
@@ -1567,7 +1558,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
-    unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
     SmallString<128> Blob;
 
@@ -1579,7 +1570,6 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       Record.clear();
       Blob.clear();
 
-      Record.push_back(IMPORT);
       Record.push_back((unsigned)M.Kind); // FIXME: Stable encoding
       AddSourceLocation(M.ImportLoc, Record);
       AddStringBlob(M.ModuleName, Record, Blob);
@@ -1602,7 +1592,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         AddPathBlob(M.FileName, Record, Blob);
       }
 
-      Stream.EmitRecordWithBlob(AbbrevCode, Record, Blob);
+      Stream.EmitRecordAutoAbbrev(IMPORT, Record, Blob);
     }
   }
 
@@ -1737,12 +1727,11 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     FileAbbrev->Add(BitCodeAbbrevOp(ORIGINAL_FILE));
     FileAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File ID
     FileAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // File name
-    unsigned FileAbbrevCode = Stream.EmitAbbrev(std::move(FileAbbrev));
+    Stream.EmitAbbrev(std::move(FileAbbrev));
 
     Record.clear();
-    Record.push_back(ORIGINAL_FILE);
     AddFileID(SourceMgr.getMainFileID(), Record);
-    EmitRecordWithPath(FileAbbrevCode, Record, MainFile->getName());
+    EmitRecordWithPath(ORIGINAL_FILE, Record, MainFile->getName());
   }
 
   Record.clear();
@@ -1822,14 +1811,14 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Module map
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // Name as req. len
   IFAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name as req. + name
-  unsigned IFAbbrevCode = Stream.EmitAbbrev(std::move(IFAbbrev));
+  Stream.EmitAbbrev(std::move(IFAbbrev));
 
   // Create input file hash abbreviation.
   auto IFHAbbrev = std::make_shared<BitCodeAbbrev>();
   IFHAbbrev->Add(BitCodeAbbrevOp(INPUT_FILE_HASH));
   IFHAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
   IFHAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
-  unsigned IFHAbbrevCode = Stream.EmitAbbrev(std::move(IFHAbbrev));
+  Stream.EmitAbbrev(std::move(IFHAbbrev));
 
   uint64_t InputFilesOffsetBase = Stream.GetCurrentBitNo();
 
@@ -1931,7 +1920,6 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
         Name.clear();
 
       RecordData::value_type Record[] = {
-          INPUT_FILE,
           InputFileOffsets.size(),
           (uint64_t)Entry.File.getSize(),
           (uint64_t)getTimestampForOutput(Entry.File),
@@ -1941,15 +1929,15 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
           Entry.IsModuleMap,
           NameAsRequested.size()};
 
-      Stream.EmitRecordWithBlob(IFAbbrevCode, Record,
-                                (NameAsRequested + Name).str());
+      Stream.EmitRecordAutoAbbrev(INPUT_FILE, Record,
+                                  (NameAsRequested + Name).str());
     }
 
     // Emit content hash for this file.
     {
-      RecordData::value_type Record[] = {INPUT_FILE_HASH, Entry.ContentHash[0],
+      RecordData::value_type Record[] = {Entry.ContentHash[0],
                                          Entry.ContentHash[1]};
-      Stream.EmitRecordWithAbbrev(IFHAbbrevCode, Record);
+      Stream.EmitRecordAutoAbbrev(INPUT_FILE_HASH, Record);
     }
   }
 
@@ -1962,12 +1950,12 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
   OffsetsAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // # non-system
                                                                 //   input files
   OffsetsAbbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Array
-  unsigned OffsetsAbbrevCode = Stream.EmitAbbrev(std::move(OffsetsAbbrev));
+  Stream.EmitAbbrev(std::move(OffsetsAbbrev));
 
   // Write input file offsets.
-  RecordData::value_type Record[] = {INPUT_FILE_OFFSETS,
-                                     InputFileOffsets.size(), UserFilesNum};
-  Stream.EmitRecordWithBlob(OffsetsAbbrevCode, Record, bytes(InputFileOffsets));
+  RecordData::value_type Record[] = {InputFileOffsets.size(), UserFilesNum};
+  Stream.EmitRecordAutoAbbrev(INPUT_FILE_OFFSETS, Record,
+                              bytes(InputFileOffsets));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1976,7 +1964,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
 
 /// Create an abbreviation for the SLocEntry that refers to a
 /// file.
-static unsigned CreateSLocFileAbbrev(llvm::BitstreamWriter &Stream) {
+static void CreateSLocFileAbbrev(llvm::BitstreamWriter &Stream) {
   using namespace llvm;
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -1990,12 +1978,12 @@ static unsigned CreateSLocFileAbbrev(llvm::BitstreamWriter &Stream) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // NumCreatedFIDs
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 24)); // FirstDeclIndex
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // NumDecls
-  return Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 }
 
 /// Create an abbreviation for the SLocEntry that refers to a
 /// buffer.
-static unsigned CreateSLocBufferAbbrev(llvm::BitstreamWriter &Stream) {
+static void CreateSLocBufferAbbrev(llvm::BitstreamWriter &Stream) {
   using namespace llvm;
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2005,13 +1993,13 @@ static unsigned CreateSLocBufferAbbrev(llvm::BitstreamWriter &Stream) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Characteristic
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Line directives
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Buffer name blob
-  return Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 }
 
 /// Create an abbreviation for the SLocEntry that refers to a
 /// buffer's blob.
-static unsigned CreateSLocBufferBlobAbbrev(llvm::BitstreamWriter &Stream,
-                                           bool Compressed) {
+static void CreateSLocBufferBlobAbbrev(llvm::BitstreamWriter &Stream,
+                                       bool Compressed) {
   using namespace llvm;
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2020,12 +2008,12 @@ static unsigned CreateSLocBufferBlobAbbrev(llvm::BitstreamWriter &Stream,
   if (Compressed)
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Uncompressed size
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Blob
-  return Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 }
 
 /// Create an abbreviation for the SLocEntry that refers to a macro
 /// expansion.
-static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
+static void CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
   using namespace llvm;
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -2036,7 +2024,7 @@ static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // End location
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Is token range
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Token length
-  return Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 }
 
 /// Emit key length and data length as ULEB-encoded data, and return them as a
@@ -2281,21 +2269,19 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-  unsigned TableAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   // Write the header search table
-  RecordData::value_type Record[] = {HEADER_SEARCH_TABLE, BucketOffset,
-                                     NumHeaderSearchEntries, TableData.size()};
-  Stream.EmitRecordWithBlob(TableAbbrev, Record, TableData);
+  RecordData::value_type Record[] = {BucketOffset, NumHeaderSearchEntries,
+                                     TableData.size()};
+  Stream.EmitRecordAutoAbbrev(HEADER_SEARCH_TABLE, Record, TableData);
 
   // Free all of the strings we had to duplicate.
   for (unsigned I = 0, N = SavedStrings.size(); I != N; ++I)
     free(const_cast<char *>(SavedStrings[I]));
 }
 
-static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
-                     unsigned SLocBufferBlobCompressedAbbrv,
-                     unsigned SLocBufferBlobAbbrv) {
+static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob) {
   using RecordDataType = ASTWriter::RecordData::value_type;
 
   // Compress the buffer if possible. We expect that almost all PCM
@@ -2304,22 +2290,21 @@ static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
   if (llvm::compression::zstd::isAvailable()) {
     llvm::compression::zstd::compress(
         llvm::arrayRefFromStringRef(Blob.drop_back(1)), CompressedBuffer, 9);
-    RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED, Blob.size() - 1};
-    Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
-                              llvm::toStringRef(CompressedBuffer));
+    RecordDataType Record[] = {Blob.size() - 1};
+    Stream.EmitRecordAutoAbbrev(SM_SLOC_BUFFER_BLOB_COMPRESSED, Record,
+                                llvm::toStringRef(CompressedBuffer));
     return;
   }
   if (llvm::compression::zlib::isAvailable()) {
     llvm::compression::zlib::compress(
         llvm::arrayRefFromStringRef(Blob.drop_back(1)), CompressedBuffer);
-    RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED, Blob.size() - 1};
-    Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
-                              llvm::toStringRef(CompressedBuffer));
+    RecordDataType Record[] = {Blob.size() - 1};
+    Stream.EmitRecordAutoAbbrev(SM_SLOC_BUFFER_BLOB_COMPRESSED, Record,
+                                llvm::toStringRef(CompressedBuffer));
     return;
   }
 
-  RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB};
-  Stream.EmitRecordWithBlob(SLocBufferBlobAbbrv, Record, Blob);
+  Stream.EmitRecordAutoAbbrev(SM_SLOC_BUFFER_BLOB, ArrayRef<uint32_t>(), Blob);
 }
 
 /// Writes the block containing the serialized form of the
@@ -2338,12 +2323,11 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
   const uint64_t SourceManagerBlockOffset = Stream.GetCurrentBitNo();
 
   // Abbreviations for the various kinds of source-location entries.
-  unsigned SLocFileAbbrv = CreateSLocFileAbbrev(Stream);
-  unsigned SLocBufferAbbrv = CreateSLocBufferAbbrev(Stream);
-  unsigned SLocBufferBlobAbbrv = CreateSLocBufferBlobAbbrev(Stream, false);
-  unsigned SLocBufferBlobCompressedAbbrv =
-      CreateSLocBufferBlobAbbrev(Stream, true);
-  unsigned SLocExpansionAbbrv = CreateSLocExpansionAbbrev(Stream);
+  CreateSLocFileAbbrev(Stream);
+  CreateSLocBufferAbbrev(Stream);
+  CreateSLocBufferBlobAbbrev(Stream, false);
+  CreateSLocBufferBlobAbbrev(Stream, true);
+  CreateSLocExpansionAbbrev(Stream);
 
   // Write out the source location entry table. We skip the first
   // entry, which is always the same dummy entry.
@@ -2372,7 +2356,6 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
     } else
       Code = SM_SLOC_EXPANSION_ENTRY;
     Record.clear();
-    Record.push_back(Code);
 
     if (SLoc->isFile()) {
       const SrcMgr::FileInfo &File = SLoc->getFile();
@@ -2407,7 +2390,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
           Record.push_back(0);
         }
 
-        Stream.EmitRecordWithAbbrev(SLocFileAbbrv, Record);
+        Stream.EmitRecordAutoAbbrev(Code, Record);
 
         if (Content->BufferOverridden || Content->IsTransient)
           EmitBlob = true;
@@ -2421,8 +2404,8 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
         std::optional<llvm::MemoryBufferRef> Buffer = Content->getBufferOrNone(
             SourceMgr.getDiagnostics(), SourceMgr.getFileManager());
         StringRef Name = Buffer ? Buffer->getBufferIdentifier() : "";
-        Stream.EmitRecordWithBlob(SLocBufferAbbrv, Record,
-                                  StringRef(Name.data(), Name.size() + 1));
+        Stream.EmitRecordAutoAbbrev(Code, Record,
+                                    StringRef(Name.data(), Name.size() + 1));
         EmitBlob = true;
       }
 
@@ -2434,8 +2417,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
         if (!Buffer)
           Buffer = llvm::MemoryBufferRef("<<<INVALID BUFFER>>>", "");
         StringRef Blob(Buffer->getBufferStart(), Buffer->getBufferSize() + 1);
-        emitBlob(Stream, Blob, SLocBufferBlobCompressedAbbrv,
-                 SLocBufferBlobAbbrv);
+        emitBlob(Stream, Blob);
       }
     } else {
       // The source location entry is a macro expansion.
@@ -2456,7 +2438,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       if (I + 1 != N)
         NextOffset = SourceMgr.getLocalSLocEntry(I + 1).getOffset();
       Record.push_back(getAdjustedOffset(NextOffset - SLoc->getOffset()) - 1);
-      Stream.EmitRecordWithAbbrev(SLocExpansionAbbrv, Record);
+      Stream.EmitRecordAutoAbbrev(Code, Record);
     }
   }
 
@@ -2475,14 +2457,14 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 16)); // total size
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32)); // base offset
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // offsets
-  unsigned SLocOffsetsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
   {
     RecordData::value_type Record[] = {
-        SOURCE_LOCATION_OFFSETS, SLocEntryOffsets.size(),
+        SLocEntryOffsets.size(),
         getAdjustedOffset(SourceMgr.getNextLocalOffset()) - 1 /* skip dummy */,
         SLocEntryOffsetsBase - SourceManagerBlockOffset};
-    Stream.EmitRecordWithBlob(SLocOffsetsAbbrev, Record,
-                              bytes(SLocEntryOffsets));
+    Stream.EmitRecordAutoAbbrev(SOURCE_LOCATION_OFFSETS, Record,
+                                bytes(SLocEntryOffsets));
   }
 
   // Write the line table. It depends on remapping working, so it must come
@@ -2797,12 +2779,12 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 32));   // base offset
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
 
-  unsigned MacroOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {MACRO_OFFSET, MacroOffsets.size(),
+    RecordData::value_type Record[] = {MacroOffsets.size(),
                                        FirstMacroID - NUM_PREDEF_MACRO_IDS,
                                        MacroOffsetsBase - ASTBlockStartOffset};
-    Stream.EmitRecordWithBlob(MacroOffsetAbbrev, Record, bytes(MacroOffsets));
+    Stream.EmitRecordAutoAbbrev(MACRO_OFFSET, Record, bytes(MacroOffsets));
   }
 }
 
@@ -2820,8 +2802,7 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
   unsigned NumPreprocessingRecords = 0;
   using namespace llvm;
 
-  // Set up the abbreviation for
-  unsigned InclusionAbbrev = 0;
+  // Set up the abbreviation for inclusion directive
   {
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(PPD_INCLUSION_DIRECTIVE));
@@ -2830,7 +2811,7 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2)); // kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // imported module
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    InclusionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
   }
 
   unsigned FirstPreprocessorEntityID
@@ -2871,7 +2852,6 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     }
 
     if (auto *ID = dyn_cast<InclusionDirective>(*E)) {
-      Record.push_back(PPD_INCLUSION_DIRECTIVE);
       Record.push_back(ID->getFileName().size());
       Record.push_back(ID->wasInQuotes());
       Record.push_back(static_cast<unsigned>(ID->getKind()));
@@ -2882,7 +2862,7 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
       // we create a PCH even with compiler errors.
       if (ID->getFile())
         Buffer += ID->getFile()->getName();
-      Stream.EmitRecordWithBlob(InclusionAbbrev, Record, Buffer);
+      Stream.EmitRecordAutoAbbrev(PPD_INCLUSION_DIRECTIVE, Record, Buffer);
       continue;
     }
 
@@ -2901,13 +2881,12 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     Abbrev->Add(BitCodeAbbrevOp(PPD_ENTITIES_OFFSETS));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first pp entity
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned PPEOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
-    RecordData::value_type Record[] = {PPD_ENTITIES_OFFSETS,
-                                       FirstPreprocessorEntityID -
-                                           NUM_PREDEF_PP_ENTITY_IDS};
-    Stream.EmitRecordWithBlob(PPEOffsetAbbrev, Record,
-                              bytes(PreprocessedEntityOffsets));
+    RecordData::value_type Record[] = {FirstPreprocessorEntityID -
+                                       NUM_PREDEF_PP_ENTITY_IDS};
+    Stream.EmitRecordAutoAbbrev(PPD_ENTITIES_OFFSETS, Record,
+                                bytes(PreprocessedEntityOffsets));
   }
 
   // Write the skipped region table for the preprocessing record.
@@ -2924,12 +2903,11 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(PPD_SKIPPED_RANGES));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned PPESkippedRangeAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
     Record.clear();
-    Record.push_back(PPD_SKIPPED_RANGES);
-    Stream.EmitRecordWithBlob(PPESkippedRangeAbbrev, Record,
-                              bytes(SerializedSkippedRanges));
+    Stream.EmitRecordAutoAbbrev(PPD_SKIPPED_RANGES, Record,
+                                bytes(SerializedSkippedRanges));
   }
 }
 
@@ -2995,75 +2973,75 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // ModuleMapIsPriv...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // NamedModuleHasN...
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned DefinitionAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_UMBRELLA_HEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned UmbrellaAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_HEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned HeaderAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_TOPHEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned TopHeaderAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_UMBRELLA_DIR));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned UmbrellaDirAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_REQUIRES));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // State
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));     // Feature
-  unsigned RequiresAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_EXCLUDED_HEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned ExcludedHeaderAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_TEXTUAL_HEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned TextualHeaderAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_PRIVATE_HEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned PrivateHeaderAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_PRIVATE_TEXTUAL_HEADER));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Name
-  unsigned PrivateTextualHeaderAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_LINK_LIBRARY));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // IsFramework
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));     // Name
-  unsigned LinkLibraryAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_CONFIG_MACRO));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
-  unsigned ConfigMacroAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_CONFLICT));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));  // Other module
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Message
-  unsigned ConflictAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_EXPORT_AS));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
-  unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
   // Write the submodule metadata block.
   RecordData::value_type Record[] = {
@@ -3096,8 +3074,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the definition of the block.
     {
-      RecordData::value_type Record[] = {SUBMODULE_DEFINITION,
-                                         ID,
+      RecordData::value_type Record[] = {ID,
                                          ParentID,
                                          (RecordData::value_type)Mod->Kind,
                                          DefinitionLoc,
@@ -3112,54 +3089,50 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
                                          Mod->ConfigMacrosExhaustive,
                                          Mod->ModuleMapIsPrivate,
                                          Mod->NamedModuleHasInit};
-      Stream.EmitRecordWithBlob(DefinitionAbbrev, Record, Mod->Name);
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_DEFINITION, Record, Mod->Name);
     }
 
     // Emit the requirements.
     for (const auto &R : Mod->Requirements) {
-      RecordData::value_type Record[] = {SUBMODULE_REQUIRES, R.RequiredState};
-      Stream.EmitRecordWithBlob(RequiresAbbrev, Record, R.FeatureName);
+      RecordData::value_type Record[] = {R.RequiredState};
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_REQUIRES, Record, R.FeatureName);
     }
 
     // Emit the umbrella header, if there is one.
     if (std::optional<Module::Header> UmbrellaHeader =
             Mod->getUmbrellaHeaderAsWritten()) {
-      RecordData::value_type Record[] = {SUBMODULE_UMBRELLA_HEADER};
-      Stream.EmitRecordWithBlob(UmbrellaAbbrev, Record,
-                                UmbrellaHeader->NameAsWritten);
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_UMBRELLA_HEADER,
+                                  ArrayRef<uint32_t>(),
+                                  UmbrellaHeader->NameAsWritten);
     } else if (std::optional<Module::DirectoryName> UmbrellaDir =
                    Mod->getUmbrellaDirAsWritten()) {
-      RecordData::value_type Record[] = {SUBMODULE_UMBRELLA_DIR};
-      Stream.EmitRecordWithBlob(UmbrellaDirAbbrev, Record,
-                                UmbrellaDir->NameAsWritten);
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_UMBRELLA_DIR, ArrayRef<uint32_t>(),
+                                  UmbrellaDir->NameAsWritten);
     }
 
     // Emit the headers.
     struct {
       unsigned RecordKind;
-      unsigned Abbrev;
       Module::HeaderKind HeaderKind;
     } HeaderLists[] = {
-      {SUBMODULE_HEADER, HeaderAbbrev, Module::HK_Normal},
-      {SUBMODULE_TEXTUAL_HEADER, TextualHeaderAbbrev, Module::HK_Textual},
-      {SUBMODULE_PRIVATE_HEADER, PrivateHeaderAbbrev, Module::HK_Private},
-      {SUBMODULE_PRIVATE_TEXTUAL_HEADER, PrivateTextualHeaderAbbrev,
-        Module::HK_PrivateTextual},
-      {SUBMODULE_EXCLUDED_HEADER, ExcludedHeaderAbbrev, Module::HK_Excluded}
-    };
+        {SUBMODULE_HEADER, Module::HK_Normal},
+        {SUBMODULE_TEXTUAL_HEADER, Module::HK_Textual},
+        {SUBMODULE_PRIVATE_HEADER, Module::HK_Private},
+        {SUBMODULE_PRIVATE_TEXTUAL_HEADER, Module::HK_PrivateTextual},
+        {SUBMODULE_EXCLUDED_HEADER, Module::HK_Excluded}};
     for (const auto &HL : HeaderLists) {
-      RecordData::value_type Record[] = {HL.RecordKind};
       for (const auto &H : Mod->getHeaders(HL.HeaderKind))
-        Stream.EmitRecordWithBlob(HL.Abbrev, Record, H.NameAsWritten);
+        Stream.EmitRecordAutoAbbrev(HL.RecordKind, ArrayRef<uint32_t>(),
+                                    H.NameAsWritten);
     }
 
     // Emit the top headers.
     {
-      RecordData::value_type Record[] = {SUBMODULE_TOPHEADER};
       for (FileEntryRef H : Mod->getTopHeaders(PP->getFileManager())) {
         SmallString<128> HeaderName(H.getName());
         PreparePathForOutput(HeaderName);
-        Stream.EmitRecordWithBlob(TopHeaderAbbrev, Record, HeaderName);
+        Stream.EmitRecordAutoAbbrev(SUBMODULE_TOPHEADER, ArrayRef<uint32_t>(),
+                                    HeaderName);
       }
     }
 
@@ -3199,24 +3172,22 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the link libraries.
     for (const auto &LL : Mod->LinkLibraries) {
-      RecordData::value_type Record[] = {SUBMODULE_LINK_LIBRARY,
-                                         LL.IsFramework};
-      Stream.EmitRecordWithBlob(LinkLibraryAbbrev, Record, LL.Library);
+      RecordData::value_type Record[] = {LL.IsFramework};
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_LINK_LIBRARY, Record, LL.Library);
     }
 
     // Emit the conflicts.
     for (const auto &C : Mod->Conflicts) {
       // FIXME: This may fail; we don't require that all conflicting modules
       // are local or imported.
-      RecordData::value_type Record[] = {SUBMODULE_CONFLICT,
-                                         getSubmoduleID(C.Other)};
-      Stream.EmitRecordWithBlob(ConflictAbbrev, Record, C.Message);
+      RecordData::value_type Record[] = {getSubmoduleID(C.Other)};
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_CONFLICT, Record, C.Message);
     }
 
     // Emit the configuration macros.
     for (const auto &CM : Mod->ConfigMacros) {
-      RecordData::value_type Record[] = {SUBMODULE_CONFIG_MACRO};
-      Stream.EmitRecordWithBlob(ConfigMacroAbbrev, Record, CM);
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_CONFIG_MACRO, ArrayRef<uint32_t>(),
+                                  CM);
     }
 
     // Emit the reachable initializers.
@@ -3232,8 +3203,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
     // Emit the name of the re-exported module, if any.
     if (!Mod->ExportAsModule.empty()) {
-      RecordData::value_type Record[] = {SUBMODULE_EXPORT_AS};
-      Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
+      Stream.EmitRecordAutoAbbrev(SUBMODULE_EXPORT_AS, ArrayRef<uint32_t>(),
+                                  Mod->ExportAsModule);
     }
 
     // Queue up the submodules of this module.
@@ -3433,9 +3404,8 @@ uint64_t ASTWriter::WriteDeclContextLexicalBlock(ASTContext &Context,
   }
 
   ++NumLexicalDeclContexts;
-  RecordData::value_type Record[] = {DECL_CONTEXT_LEXICAL};
-  Stream.EmitRecordWithBlob(DeclContextLexicalAbbrev, Record,
-                            bytes(KindDeclPairs));
+  Stream.EmitRecordAutoAbbrev(DECL_CONTEXT_LEXICAL, ArrayRef<uint32_t>(),
+                              bytes(KindDeclPairs));
   return Offset;
 }
 
@@ -3447,10 +3417,10 @@ void ASTWriter::WriteTypeDeclOffsets() {
   Abbrev->Add(BitCodeAbbrevOp(TYPE_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of types
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // types block
-  unsigned TypeOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {TYPE_OFFSET, TypeOffsets.size()};
-    Stream.EmitRecordWithBlob(TypeOffsetAbbrev, Record, bytes(TypeOffsets));
+    RecordData::value_type Record[] = {TypeOffsets.size()};
+    Stream.EmitRecordAutoAbbrev(TYPE_OFFSET, Record, bytes(TypeOffsets));
   }
 
   // Write the declaration offsets array
@@ -3458,10 +3428,10 @@ void ASTWriter::WriteTypeDeclOffsets() {
   Abbrev->Add(BitCodeAbbrevOp(DECL_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of declarations
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // declarations block
-  unsigned DeclOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
   {
-    RecordData::value_type Record[] = {DECL_OFFSET, DeclOffsets.size()};
-    Stream.EmitRecordWithBlob(DeclOffsetAbbrev, Record, bytes(DeclOffsets));
+    RecordData::value_type Record[] = {DeclOffsets.size()};
+    Stream.EmitRecordAutoAbbrev(DECL_OFFSET, Record, bytes(DeclOffsets));
   }
 }
 
@@ -3488,10 +3458,10 @@ void ASTWriter::WriteFileDeclIDsMap() {
   Abbrev->Add(BitCodeAbbrevOp(FILE_SORTED_DECLS));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-  unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
-  RecordData::value_type Record[] = {FILE_SORTED_DECLS,
-                                     FileGroupedDeclIDs.size()};
-  Stream.EmitRecordWithBlob(AbbrevCode, Record, bytes(FileGroupedDeclIDs));
+  Stream.EmitAbbrev(std::move(Abbrev));
+  RecordData::value_type Record[] = {FileGroupedDeclIDs.size()};
+  Stream.EmitRecordAutoAbbrev(FILE_SORTED_DECLS, Record,
+                              bytes(FileGroupedDeclIDs));
 }
 
 void ASTWriter::WriteComments(ASTContext &Context) {
@@ -3721,13 +3691,12 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned MethodPoolAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
     // Write the method pool
     {
-      RecordData::value_type Record[] = {METHOD_POOL, BucketOffset,
-                                         NumTableEntries};
-      Stream.EmitRecordWithBlob(MethodPoolAbbrev, Record, MethodPool);
+      RecordData::value_type Record[] = {BucketOffset, NumTableEntries};
+      Stream.EmitRecordAutoAbbrev(METHOD_POOL, Record, MethodPool);
     }
 
     // Create a blob abbreviation for the selector table offsets.
@@ -3736,15 +3705,14 @@ void ASTWriter::WriteSelectors(Sema &SemaRef) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // first ID
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned SelectorOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
     // Write the selector offsets table.
     {
       RecordData::value_type Record[] = {
-          SELECTOR_OFFSETS, SelectorOffsets.size(),
-          FirstSelectorID - NUM_PREDEF_SELECTOR_IDS};
-      Stream.EmitRecordWithBlob(SelectorOffsetAbbrev, Record,
-                                bytes(SelectorOffsets));
+          SelectorOffsets.size(), FirstSelectorID - NUM_PREDEF_SELECTOR_IDS};
+      Stream.EmitRecordAutoAbbrev(SELECTOR_OFFSETS, Record,
+                                  bytes(SelectorOffsets));
     }
   }
 }
@@ -4025,11 +3993,11 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
     Abbrev->Add(BitCodeAbbrevOp(IDENTIFIER_TABLE));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned IDTableAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
 
     // Write the identifier table
-    RecordData::value_type Record[] = {IDENTIFIER_TABLE, BucketOffset};
-    Stream.EmitRecordWithBlob(IDTableAbbrev, Record, IdentifierTable);
+    RecordData::value_type Record[] = {BucketOffset};
+    Stream.EmitRecordAutoAbbrev(IDENTIFIER_TABLE, Record, IdentifierTable);
   }
 
   // Write the offsets table for identifier IDs.
@@ -4037,17 +4005,16 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
   Abbrev->Add(BitCodeAbbrevOp(IDENTIFIER_OFFSET));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // # of identifiers
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-  unsigned IdentifierOffsetAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
 #ifndef NDEBUG
   for (unsigned I = 0, N = IdentifierOffsets.size(); I != N; ++I)
     assert(IdentifierOffsets[I] && "Missing identifier offset?");
 #endif
 
-  RecordData::value_type Record[] = {IDENTIFIER_OFFSET,
-                                     IdentifierOffsets.size()};
-  Stream.EmitRecordWithBlob(IdentifierOffsetAbbrev, Record,
-                            bytes(IdentifierOffsets));
+  RecordData::value_type Record[] = {IdentifierOffsets.size()};
+  Stream.EmitRecordAutoAbbrev(IDENTIFIER_OFFSET, Record,
+                              bytes(IdentifierOffsets));
 
   // In C++, write the list of interesting identifiers (those that are
   // defined as macros, poisoned, or similar unusual things).
@@ -4588,11 +4555,9 @@ uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
                                         IsPartial);
 
   uint64_t Offset = Stream.GetCurrentBitNo();
-  RecordData::value_type Record[] = {static_cast<RecordData::value_type>(
-      IsPartial ? DECL_PARTIAL_SPECIALIZATIONS : DECL_SPECIALIZATIONS)};
-  Stream.EmitRecordWithBlob(IsPartial ? DeclPartialSpecializationsAbbrev
-                                      : DeclSpecializationsAbbrev,
-                            Record, LookupTable);
+  Stream.EmitRecordAutoAbbrev(IsPartial ? DECL_PARTIAL_SPECIALIZATIONS
+                                        : DECL_SPECIALIZATIONS,
+                              ArrayRef<uint32_t>(), LookupTable);
 
   return Offset;
 }
@@ -4915,29 +4880,24 @@ void ASTWriter::WriteDeclContextVisibleBlock(
                           TULookupTable);
 
   // Write the lookup table
-  RecordData::value_type Record[] = {DECL_CONTEXT_VISIBLE};
-  Stream.EmitRecordWithBlob(DeclContextVisibleLookupAbbrev, Record,
-                            LookupTable);
+  Stream.EmitRecordAutoAbbrev(DECL_CONTEXT_VISIBLE, ArrayRef<uint32_t>(),
+                              LookupTable);
   ++NumVisibleDeclContexts;
 
   if (!ModuleLocalLookupTable.empty()) {
     Offsets.ModuleLocalOffset = Stream.GetCurrentBitNo();
     assert(Offsets.ModuleLocalOffset > Offsets.VisibleOffset);
     // Write the lookup table
-    RecordData::value_type ModuleLocalRecord[] = {
-        DECL_CONTEXT_MODULE_LOCAL_VISIBLE};
-    Stream.EmitRecordWithBlob(DeclModuleLocalVisibleLookupAbbrev,
-                              ModuleLocalRecord, ModuleLocalLookupTable);
+    Stream.EmitRecordAutoAbbrev(DECL_CONTEXT_MODULE_LOCAL_VISIBLE,
+                                ArrayRef<uint32_t>(), ModuleLocalLookupTable);
     ++NumModuleLocalDeclContexts;
   }
 
   if (!TULookupTable.empty()) {
     Offsets.TULocalOffset = Stream.GetCurrentBitNo();
     // Write the lookup table
-    RecordData::value_type TULocalDeclsRecord[] = {
-        DECL_CONTEXT_TU_LOCAL_VISIBLE};
-    Stream.EmitRecordWithBlob(DeclTULocalLookupAbbrev, TULocalDeclsRecord,
-                              TULookupTable);
+    Stream.EmitRecordAutoAbbrev(DECL_CONTEXT_TU_LOCAL_VISIBLE,
+                                ArrayRef<uint32_t>(), TULookupTable);
     ++NumTULocalDeclContexts;
   }
 }
@@ -4967,23 +4927,22 @@ void ASTWriter::WriteDeclContextVisibleUpdate(ASTContext &Context,
     DC = cast<DeclContext>(Chain->getKeyDeclaration(cast<Decl>(DC)));
 
   // Write the lookup table
-  RecordData::value_type Record[] = {UPDATE_VISIBLE,
-                                     getDeclID(cast<Decl>(DC)).getRawValue()};
-  Stream.EmitRecordWithBlob(UpdateVisibleAbbrev, Record, LookupTable);
+  RecordData::value_type Record[] = {getDeclID(cast<Decl>(DC)).getRawValue()};
+  Stream.EmitRecordAutoAbbrev(UPDATE_VISIBLE, Record, LookupTable);
 
   if (!ModuleLocalLookupTable.empty()) {
     // Write the module local lookup table
     RecordData::value_type ModuleLocalRecord[] = {
-        UPDATE_MODULE_LOCAL_VISIBLE, getDeclID(cast<Decl>(DC)).getRawValue()};
-    Stream.EmitRecordWithBlob(ModuleLocalUpdateVisibleAbbrev, ModuleLocalRecord,
-                              ModuleLocalLookupTable);
+        getDeclID(cast<Decl>(DC)).getRawValue()};
+    Stream.EmitRecordAutoAbbrev(UPDATE_MODULE_LOCAL_VISIBLE, ModuleLocalRecord,
+                                ModuleLocalLookupTable);
   }
 
   if (!TULookupTable.empty()) {
     RecordData::value_type GMFRecord[] = {
-        UPDATE_TU_LOCAL_VISIBLE, getDeclID(cast<Decl>(DC)).getRawValue()};
-    Stream.EmitRecordWithBlob(TULocalUpdateVisibleAbbrev, GMFRecord,
-                              TULookupTable);
+        getDeclID(cast<Decl>(DC)).getRawValue()};
+    Stream.EmitRecordAutoAbbrev(UPDATE_TU_LOCAL_VISIBLE, GMFRecord,
+                                TULookupTable);
   }
 }
 
@@ -5063,12 +5022,13 @@ void ASTWriter::WriteObjCCategories() {
   Abbrev->Add(BitCodeAbbrevOp(OBJC_CATEGORIES_MAP));
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // # of entries
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-  unsigned AbbrevID = Stream.EmitAbbrev(std::move(Abbrev));
+  Stream.EmitAbbrev(std::move(Abbrev));
 
-  RecordData::value_type Record[] = {OBJC_CATEGORIES_MAP, CategoriesMap.size()};
-  Stream.EmitRecordWithBlob(AbbrevID, Record,
-                            reinterpret_cast<char *>(CategoriesMap.data()),
-                            CategoriesMap.size() * sizeof(ObjCCategoriesInfo));
+  RecordData::value_type Record[] = {CategoriesMap.size()};
+  Stream.EmitRecordAutoAbbrev(
+      OBJC_CATEGORIES_MAP, Record,
+      StringRef(reinterpret_cast<char *>(CategoriesMap.data()),
+                CategoriesMap.size() * sizeof(ObjCCategoriesInfo)));
 
   // Emit the category lists.
   Stream.EmitRecord(OBJC_CATEGORIES, Categories);
@@ -5184,12 +5144,11 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  unsigned Abbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 
   // Emit the metadata record.
   RecordData Record;
   auto Metadata = Writer.getExtension()->getExtensionMetadata();
-  Record.push_back(EXTENSION_METADATA);
   Record.push_back(Metadata.MajorVersion);
   Record.push_back(Metadata.MinorVersion);
   Record.push_back(Metadata.BlockName.size());
@@ -5197,7 +5156,7 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
   SmallString<64> Buffer;
   Buffer += Metadata.BlockName;
   Buffer += Metadata.UserInfo;
-  Stream.EmitRecordWithBlob(Abbrev, Record, Buffer);
+  Stream.EmitRecordAutoAbbrev(EXTENSION_METADATA, Record, Buffer);
 
   // Emit the contents of the extension block.
   Writer.writeExtensionContents(SemaRef, Stream);
@@ -5333,11 +5292,11 @@ void ASTWriter::AddPathBlob(StringRef Path, RecordDataImpl &Record,
   AddStringBlob(FilePath, Record, Blob);
 }
 
-void ASTWriter::EmitRecordWithPath(unsigned Abbrev, RecordDataRef Record,
+void ASTWriter::EmitRecordWithPath(unsigned Code, RecordDataRef Record,
                                    StringRef Path) {
   SmallString<128> FilePath(Path);
   PreparePathForOutput(FilePath);
-  Stream.EmitRecordWithBlob(Abbrev, Record, FilePath);
+  Stream.EmitRecordAutoAbbrev(Code, Record, FilePath);
 }
 
 void ASTWriter::AddVersionTuple(const VersionTuple &Version,
@@ -6040,7 +5999,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(MODULE_OFFSET_MAP));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned ModuleOffsetMapAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+    Stream.EmitAbbrev(std::move(Abbrev));
     SmallString<2048> Buffer;
     {
       llvm::raw_svector_ostream Out(Buffer);
@@ -6074,9 +6033,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
         writeBaseIDOrNone(M.BaseSelectorID, M.LocalNumSelectors);
       }
     }
-    RecordData::value_type Record[] = {MODULE_OFFSET_MAP};
-    Stream.EmitRecordWithBlob(ModuleOffsetMapAbbrev, Record,
-                              Buffer.data(), Buffer.size());
+    Stream.EmitRecordAutoAbbrev(MODULE_OFFSET_MAP, ArrayRef<uint32_t>(),
+                                Buffer);
   }
 
   if (SemaPtr)
@@ -6304,9 +6262,8 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
     Abv->Add(llvm::BitCodeAbbrevOp(RELATED_DECLS_MAP));
     Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Array));
     Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
-    unsigned FunctionToLambdaMapAbbrev = Stream.EmitAbbrev(std::move(Abv));
-    Stream.EmitRecord(RELATED_DECLS_MAP, RelatedDeclsMapRecord,
-                      FunctionToLambdaMapAbbrev);
+    Stream.EmitAbbrev(std::move(Abv));
+    Stream.EmitRecordAutoAbbrev(RELATED_DECLS_MAP, RelatedDeclsMapRecord);
   }
 
   if (!SpecializationsUpdates.empty()) {
@@ -6338,29 +6295,28 @@ void ASTWriter::WriteDeclAndTypes(ASTContext &Context) {
   auto Abv = std::make_shared<llvm::BitCodeAbbrev>();
   Abv->Add(llvm::BitCodeAbbrevOp(TU_UPDATE_LEXICAL));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  unsigned TuUpdateLexicalAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 
-  RecordData::value_type Record[] = {TU_UPDATE_LEXICAL};
-  Stream.EmitRecordWithBlob(TuUpdateLexicalAbbrev, Record,
-                            bytes(NewGlobalKindDeclPairs));
+  Stream.EmitRecordAutoAbbrev(TU_UPDATE_LEXICAL, ArrayRef<uint32_t>(),
+                              bytes(NewGlobalKindDeclPairs));
 
   Abv = std::make_shared<llvm::BitCodeAbbrev>();
   Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_VISIBLE));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  UpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 
   Abv = std::make_shared<llvm::BitCodeAbbrev>();
   Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_MODULE_LOCAL_VISIBLE));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  ModuleLocalUpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 
   Abv = std::make_shared<llvm::BitCodeAbbrev>();
   Abv->Add(llvm::BitCodeAbbrevOp(UPDATE_TU_LOCAL_VISIBLE));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  TULocalUpdateVisibleAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 
   // And a visible updates block for the translation unit.
   WriteDeclContextVisibleUpdate(Context, TU);
@@ -6382,7 +6338,7 @@ void ASTWriter::WriteSpecializationsUpdates(bool IsPartial) {
   Abv->Add(llvm::BitCodeAbbrevOp(RecordType));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::VBR, 6));
   Abv->Add(llvm::BitCodeAbbrevOp(llvm::BitCodeAbbrevOp::Blob));
-  auto UpdateSpecializationAbbrev = Stream.EmitAbbrev(std::move(Abv));
+  Stream.EmitAbbrev(std::move(Abv));
 
   auto &SpecUpdates =
       IsPartial ? PartialSpecializationsUpdates : SpecializationsUpdates;
@@ -6394,10 +6350,8 @@ void ASTWriter::WriteSpecializationsUpdates(bool IsPartial) {
                                           LookupTable, IsPartial);
 
     // Write the lookup table
-    RecordData::value_type Record[] = {
-        static_cast<RecordData::value_type>(RecordType),
-        getDeclID(D).getRawValue()};
-    Stream.EmitRecordWithBlob(UpdateSpecializationAbbrev, Record, LookupTable);
+    RecordData::value_type Record[] = {getDeclID(D).getRawValue()};
+    Stream.EmitRecordAutoAbbrev(RecordType, Record, LookupTable);
   }
 }
 
