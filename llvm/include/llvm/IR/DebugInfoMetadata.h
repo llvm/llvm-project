@@ -4112,35 +4112,49 @@ class DILabel : public DINode {
   friend class LLVMContextImpl;
   friend class MDNode;
 
-  DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
+  unsigned Column;
+  std::optional<unsigned> CoroSuspendIdx;
+  bool IsArtificial;
+
+  DILabel(LLVMContext &C, StorageType Storage, unsigned Line, unsigned Column,
+          bool IsArtificial, std::optional<unsigned> CoroSuspendIdx,
           ArrayRef<Metadata *> Ops);
   ~DILabel() = default;
 
   static DILabel *getImpl(LLVMContext &Context, DIScope *Scope, StringRef Name,
-                          DIFile *File, unsigned Line, StorageType Storage,
-                          bool ShouldCreate = true) {
+                          DIFile *File, unsigned Line, unsigned Column,
+                          bool IsArtificial,
+                          std::optional<unsigned> CoroSuspendIdx,
+                          StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name), File,
-                   Line, Storage, ShouldCreate);
+                   Line, Column, IsArtificial, CoroSuspendIdx, Storage,
+                   ShouldCreate);
   }
-  LLVM_ABI static DILabel *getImpl(LLVMContext &Context, Metadata *Scope,
-                                   MDString *Name, Metadata *File,
-                                   unsigned Line, StorageType Storage,
-                                   bool ShouldCreate = true);
+  LLVM_ABI static DILabel *
+  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name, Metadata *File,
+          unsigned Line, unsigned Column, bool IsArtificial,
+          std::optional<unsigned> CoroSuspendIdx, StorageType Storage,
+          bool ShouldCreate = true);
 
   TempDILabel cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getFile(),
-                        getLine());
+                        getLine(), getColumn(), isArtificial(),
+                        getCoroSuspendIdx());
   }
 
 public:
   DEFINE_MDNODE_GET(DILabel,
                     (DILocalScope * Scope, StringRef Name, DIFile *File,
-                     unsigned Line),
-                    (Scope, Name, File, Line))
+                     unsigned Line, unsigned Column, bool IsArtificial,
+                     std::optional<unsigned> CoroSuspendIdx),
+                    (Scope, Name, File, Line, Column, IsArtificial,
+                     CoroSuspendIdx))
   DEFINE_MDNODE_GET(DILabel,
                     (Metadata * Scope, MDString *Name, Metadata *File,
-                     unsigned Line),
-                    (Scope, Name, File, Line))
+                     unsigned Line, unsigned Column, bool IsArtificial,
+                     std::optional<unsigned> CoroSuspendIdx),
+                    (Scope, Name, File, Line, Column, IsArtificial,
+                     CoroSuspendIdx))
 
   TempDILabel clone() const { return cloneImpl(); }
 
@@ -4151,8 +4165,11 @@ public:
     return cast_or_null<DILocalScope>(getRawScope());
   }
   unsigned getLine() const { return SubclassData32; }
+  unsigned getColumn() const { return Column; }
   StringRef getName() const { return getStringOperand(1); }
   DIFile *getFile() const { return cast_or_null<DIFile>(getRawFile()); }
+  bool isArtificial() const { return IsArtificial; }
+  std::optional<unsigned> getCoroSuspendIdx() const { return CoroSuspendIdx; }
 
   Metadata *getRawScope() const { return getOperand(0); }
   MDString *getRawName() const { return getOperandAs<MDString>(1); }

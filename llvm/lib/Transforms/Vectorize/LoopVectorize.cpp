@@ -1778,9 +1778,6 @@ class GeneratedRTChecks {
   /// If it is nullptr no memory runtime checks have been generated.
   Value *MemRuntimeCheckCond = nullptr;
 
-  /// True if any checks have been added.
-  bool AddedAnyChecks = false;
-
   DominatorTree *DT;
   LoopInfo *LI;
   TargetTransformInfo *TTI;
@@ -2044,7 +2041,6 @@ public:
     if (AddBranchWeights)
       setBranchWeights(BI, SCEVCheckBypassWeights, /*IsExpected=*/false);
     ReplaceInstWithInst(SCEVCheckBlock->getTerminator(), &BI);
-    AddedAnyChecks = true;
     return SCEVCheckBlock;
   }
 
@@ -2072,12 +2068,15 @@ public:
     MemCheckBlock->getTerminator()->setDebugLoc(
         Pred->getTerminator()->getDebugLoc());
 
-    AddedAnyChecks = true;
     return MemCheckBlock;
   }
 
   /// Return true if any runtime checks have been added
-  bool hasChecks() const { return AddedAnyChecks; }
+  bool hasChecks() const {
+    using namespace llvm::PatternMatch;
+    return (SCEVCheckCond && !match(SCEVCheckCond, m_ZeroInt())) ||
+           MemRuntimeCheckCond;
+  }
 };
 } // namespace
 
