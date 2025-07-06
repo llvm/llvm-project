@@ -32,8 +32,8 @@ struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(st
 
 #if _LIBCPP_STD_VER >= 17
 
-template <class _Tp>
-inline constexpr bool __is_convertible_to_bool_v = __is_core_convertible<_Tp, bool>::value;
+template <class _Tp, class _Up>
+inline constexpr bool __is_core_convertible_v = __is_core_convertible<_Tp, _Up>::value;
 
 #endif
 
