@@ -17,6 +17,12 @@
 def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
                                 "Cortex-A35 ARM processors">;
 
+def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
+                                   "Cortex-A320 ARM processors", [
+                                   FeatureFuseAES,
+                                   FeatureFuseAdrpAdd,
+                                   FeaturePostRAScheduler]>;
+
 def TuneA53     : SubtargetFeature<"a53", "ARMProcFamily", "CortexA53",
                                    "Cortex-A53 ARM processors", [
                                    FeatureFuseAES,
@@ -296,7 +302,7 @@ def TuneOlympus : SubtargetFeature<"olympus", "ARMProcFamily", "Olympus",
                                    FeatureUseFixedOverScalableIfEqualCost]>;
 
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
-// perform the fusion and cyclone is used by default when targetting apple OSes.
+// perform the fusion and cyclone is used by default when targeting apple OSes.
 def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     "Apple A7 (the CPU formerly known as Cyclone)", [
                                     FeatureAlternateSExtLoadCVTF32Pattern,
@@ -305,7 +311,8 @@ def TuneAppleA7  : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                     FeatureDisableLatencySchedHeuristic,
                                     FeatureFuseAES, FeatureFuseCryptoEOR,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing,
                                     FeatureZCZeroingFPWorkaround]>;
 
@@ -318,7 +325,8 @@ def TuneAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
@@ -330,7 +338,8 @@ def TuneAppleA11 : SubtargetFeature<"apple-a11", "ARMProcFamily", "AppleA11",
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
@@ -342,7 +351,8 @@ def TuneAppleA12 : SubtargetFeature<"apple-a12", "ARMProcFamily", "AppleA12",
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
@@ -354,7 +364,8 @@ def TuneAppleA13 : SubtargetFeature<"apple-a13", "ARMProcFamily", "AppleA13",
                                     FeatureFuseAES,
                                     FeatureFuseCryptoEOR,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
@@ -371,7 +382,8 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
@@ -388,7 +400,8 @@ def TuneAppleA15 : SubtargetFeature<"apple-a15", "ARMProcFamily", "AppleA15",
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
@@ -405,7 +418,8 @@ def TuneAppleA16 : SubtargetFeature<"apple-a16", "ARMProcFamily", "AppleA16",
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
@@ -422,7 +436,8 @@ def TuneAppleA17 : SubtargetFeature<"apple-a17", "ARMProcFamily", "AppleA17",
                                     FeatureFuseCryptoEOR,
                                     FeatureFuseLiterals,
                                     FeatureStorePairSuppress,
-                                    FeatureZCRegMove,
+                                    FeatureZCRegMoveGPR64,
+                                    FeatureZCRegMoveFPR64,
                                     FeatureZCZeroing]>;
 
 def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
@@ -438,7 +453,8 @@ def TuneAppleM4 : SubtargetFeature<"apple-m4", "ARMProcFamily", "AppleM4",
                                      FeatureFuseCCSelect,
                                      FeatureFuseCryptoEOR,
                                      FeatureFuseLiterals,
-                                     FeatureZCRegMove,
+                                     FeatureZCRegMoveGPR64,
+                                     FeatureZCRegMoveFPR64,
                                      FeatureZCZeroing
                                      ]>;
 
@@ -555,7 +571,8 @@ def TuneNeoverseV2 : SubtargetFeature<"neoversev2", "ARMProcFamily", "NeoverseV2
                                       FeatureEnableSelectOptimize,
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
-                                      FeaturePredictableSelectIsExpensive]>;
+                                      FeaturePredictableSelectIsExpensive,
+                                      FeatureDisableLatencySchedHeuristic]>;
 
 def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3",
                                       "Neoverse V3 ARM processors", [
@@ -709,6 +726,16 @@ def TuneOryon  : SubtargetFeature<"oryon-1", "ARMProcFamily",
                                     HasV8_6aOps]>;
 
 def ProcessorFeatures {
+  list<SubtargetFeature> A320 = [HasV9_2aOps, FeatureNEON, FeatureMTE,
+                                 FeatureSVEBitPerm, FeatureFP16FML, FeatureFullFP16,
+                                 FeatureETE, FeaturePerfMon, FeatureCCIDX,
+                                 FeatureCCPP, FeatureComplxNum, FeatureCRC,
+                                 FeatureDotProd, FeatureJS, FeatureLOR,
+                                 FeatureLSE, FeaturePAN, FeaturePAN_RWV,
+                                 FeaturePAuth, FeaturePsUAO, FeatureRAS,
+                                 FeatureRDM, FeatureTRBE, FeatureVH,
+                                 FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                 FeatureSVE, FeatureSVE2];
   list<SubtargetFeature> A53  = [HasV8_0aOps, FeatureCRC, FeatureSHA2, FeatureAES,
                                  FeatureFPARMv8, FeatureNEON, FeaturePerfMon];
   list<SubtargetFeature> A55  = [HasV8_2aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
@@ -880,8 +907,9 @@ def ProcessorFeatures {
                                    FeatureFPAC, FeatureFP16FML, FeatureRandGen,
                                    FeatureSSBS, FeatureLS64, FeatureCLRBHB,
                                    FeatureSPECRES2, FeatureSVEAES, FeatureSVE2SM4,
-                                   FeatureSVE2SHA3, FeatureSVE2, FeatureSVEBitPerm, FeatureETE,
-                                   FeatureMEC, FeatureFAMINMAX, FeatureFP8DOT2, FeatureLUT];
+                                   FeatureSVESHA3, FeatureSVE2, FeatureSVEBitPerm, FeatureETE,
+                                   FeatureMEC, FeatureFAMINMAX, FeatureFP8DOT2, FeatureFP8DOT4,
+                                   FeatureFP8FMA, FeatureLUT];
   list<SubtargetFeature> Carmel   = [HasV8_2aOps, FeatureNEON, FeatureSHA2, FeatureAES,
                                      FeatureFullFP16, FeatureCRC, FeatureLSE, FeatureRAS, FeatureRDM,
                                      FeatureFPARMv8];
@@ -892,7 +920,7 @@ def ProcessorFeatures {
                                     FeatureLS64, FeatureLUT, FeatureMEC,
                                     FeatureMTE, FeaturePerfMon, FeatureRandGen,
                                     FeatureSPE, FeatureSPE_EEF, FeatureSSBS,
-                                    FeatureSVEBitPerm, FeatureSVE2SHA3,
+                                    FeatureSVEBitPerm, FeatureSVESHA3,
                                     FeatureSVE2SM4, FeatureSVEAES];
   list<SubtargetFeature> AppleA7  = [HasV8_0aOps, FeatureSHA2, FeatureAES, FeatureFPARMv8,
                                      FeatureNEON,FeaturePerfMon];
@@ -1089,7 +1117,7 @@ def ProcessorFeatures {
                                      FeatureDotProd, FeatureFPARMv8, FeatureMatMulInt8,
                                      FeatureSSBS, FeatureCCIDX,
                                      FeatureJS, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM];
-  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVE2SHA3]);
+  list<SubtargetFeature> Grace = !listconcat(NeoverseV2, [FeatureSVE2SM4, FeatureSVEAES, FeatureSVESHA3]);
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
@@ -1109,10 +1137,12 @@ class ProcessorAlias<string n, string alias> {
 def : ProcessorModel<"generic", CortexA510Model, ProcessorFeatures.Generic,
                      [FeatureFuseAES, FeatureFuseAdrpAdd, FeaturePostRAScheduler,
                       FeatureEnableSelectOptimize]>;
-def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
-                     [TuneA35]>;
 def : ProcessorModel<"cortex-a34", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA35]>;
+def : ProcessorModel<"cortex-a35", CortexA53Model, ProcessorFeatures.A53,
+                     [TuneA35]>;
+def : ProcessorModel<"cortex-a320", CortexA320Model, ProcessorFeatures.A320,
+                     [TuneA320]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, ProcessorFeatures.A53,
                      [TuneA53]>;
 def : ProcessorModel<"cortex-a55", CortexA55Model, ProcessorFeatures.A55,

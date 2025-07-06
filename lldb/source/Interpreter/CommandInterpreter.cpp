@@ -30,6 +30,7 @@
 #include "Commands/CommandObjectPlatform.h"
 #include "Commands/CommandObjectPlugin.h"
 #include "Commands/CommandObjectProcess.h"
+#include "Commands/CommandObjectProtocolServer.h"
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegexCommand.h"
 #include "Commands/CommandObjectRegister.h"
@@ -574,6 +575,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("platform", CommandObjectPlatform);
   REGISTER_COMMAND_OBJECT("plugin", CommandObjectPlugin);
   REGISTER_COMMAND_OBJECT("process", CommandObjectMultiwordProcess);
+  REGISTER_COMMAND_OBJECT("protocol-server", CommandObjectProtocolServer);
   REGISTER_COMMAND_OBJECT("quit", CommandObjectQuit);
   REGISTER_COMMAND_OBJECT("register", CommandObjectRegister);
   REGISTER_COMMAND_OBJECT("scripting", CommandObjectMultiwordScripting);
@@ -1018,6 +1020,28 @@ CommandInterpreter::VerifyUserMultiwordCmdPath(Args &path, bool leaf_is_command,
   return cur_as_multi;
 }
 
+CommandObjectSP CommandInterpreter::GetFrameLanguageCommand() const {
+  auto frame_sp = GetExecutionContext().GetFrameSP();
+  if (!frame_sp)
+    return {};
+  auto frame_language =
+      Language::GetPrimaryLanguage(frame_sp->GuessLanguage().AsLanguageType());
+
+  auto it = m_command_dict.find("language");
+  if (it == m_command_dict.end())
+    return {};
+  // The root "language" command.
+  CommandObjectSP language_cmd_sp = it->second;
+
+  auto *plugin = Language::FindPlugin(frame_language);
+  if (!plugin)
+    return {};
+  // "cplusplus", "objc", etc.
+  auto lang_name = plugin->GetPluginName();
+
+  return language_cmd_sp->GetSubcommandSPExact(lang_name);
+}
+
 CommandObjectSP
 CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
                                  bool exact, StringList *matches,
@@ -1136,7 +1160,34 @@ CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
       else
         return user_match_sp;
     }
-  } else if (matches && command_sp) {
+  }
+
+  // When no single match is found, attempt to resolve the command as a language
+  // plugin subcommand.
+  if (!command_sp) {
+    // The `language` subcommand ("language objc", "language cplusplus", etc).
+    CommandObjectMultiword *lang_subcmd = nullptr;
+    if (auto lang_subcmd_sp = GetFrameLanguageCommand()) {
+      lang_subcmd = lang_subcmd_sp->GetAsMultiwordCommand();
+      command_sp = lang_subcmd_sp->GetSubcommandSPExact(cmd_str);
+    }
+
+    if (!command_sp && !exact && lang_subcmd) {
+      StringList lang_matches;
+      AddNamesMatchingPartialString(lang_subcmd->GetSubcommandDictionary(),
+                                    cmd_str, lang_matches, descriptions);
+      if (matches)
+        matches->AppendList(lang_matches);
+      if (lang_matches.GetSize() == 1) {
+        const auto &lang_dict = lang_subcmd->GetSubcommandDictionary();
+        auto pos = lang_dict.find(lang_matches[0]);
+        if (pos != lang_dict.end())
+          return pos->second;
+      }
+    }
+  }
+
+  if (matches && command_sp) {
     matches->AppendString(cmd_str);
     if (descriptions)
       descriptions->AppendString(command_sp->GetHelp());
@@ -3346,9 +3397,9 @@ bool CommandInterpreter::SaveTranscript(
     CommandReturnObject &result, std::optional<std::string> output_file) {
   if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
-    std::replace(now.begin(), now.end(), ' ', '_');
+    llvm::replace(now, ' ', '_');
     // Can't have file name with colons on Windows
-    std::replace(now.begin(), now.end(), ':', '-');
+    llvm::replace(now, ':', '-');
     const std::string file_name = "lldb_session_" + now + ".log";
 
     FileSpec save_location = GetSaveSessionDirectory();

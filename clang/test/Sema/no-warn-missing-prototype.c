@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wmissing-prototypes -x c -ffreestanding -verify %s
 // RUN: %clang_cc1 -fsyntax-only -Wmissing-prototypes -x c++ -ffreestanding -verify %s
 // RUN: %clang_cc1 -fms-compatibility -fsyntax-only -Wmissing-prototypes -x c++ -ffreestanding -triple=x86_64-pc-win32 -verify -DMS %s
+// RUN: %clang_cc1 -fms-compatibility -fsyntax-only -Wmissing-prototypes -x c++ -ffreestanding -triple=x86_64-uefi -verify -DMS %s
 // expected-no-diagnostics
 int main() {
   return 0;

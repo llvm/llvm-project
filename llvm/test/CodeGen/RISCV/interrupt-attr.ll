@@ -19,6 +19,13 @@
 ; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV32E
 ; RUN: llc -mtriple riscv32-unknown-elf -mattr=+e,+f -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV32E-F
+
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+zve32x -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV32-V
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+zve32x,+f -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV32-FV
+; RUN: llc -mtriple riscv32-unknown-elf -mattr=+zve32x,+f,+d -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV32-FDV
 ;
 ; RUN: llc -mtriple riscv64-unknown-elf -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64
@@ -42,6 +49,13 @@
 ; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV64E-F
 ; RUN: llc -mtriple riscv64-unknown-elf -mattr=+e,+f,+d -o - %s \
 ; RUN: 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-RV64E-FD
+;
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+zve32x -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64-V
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+zve32x,+f -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64-FV
+; RUN: llc -mtriple riscv64-unknown-elf -mattr=+zve32x,+f,+d -o - %s \
+; RUN: 2>&1 | FileCheck %s -check-prefix CHECK -check-prefix CHECK-RV64-FDV
 
 ;
 ; Checking for special return instructions (sret, mret).
@@ -757,6 +771,1697 @@ define void @foo_with_call() #1 {
 ; CHECK-RV32E-F-NEXT:    addi sp, sp, 168
 ; CHECK-RV32E-F-NEXT:    mret
 ;
+; CHECK-RV32-V-LABEL: foo_with_call:
+; CHECK-RV32-V:       # %bb.0:
+; CHECK-RV32-V-NEXT:    addi sp, sp, -80
+; CHECK-RV32-V-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t0, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t1, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t2, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a0, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a1, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t3, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t4, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t5, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t6, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 5
+; CHECK-RV32-V-NEXT:    sub sp, sp, a0
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 5
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 4
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    addi a0, sp, 16
+; CHECK-RV32-V-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    call otherfoo
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 5
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 4
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    add a0, sp, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    addi a0, sp, 16
+; CHECK-RV32-V-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 5
+; CHECK-RV32-V-NEXT:    add sp, sp, a0
+; CHECK-RV32-V-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t0, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t1, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t2, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a0, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a1, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t3, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t4, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t5, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t6, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    addi sp, sp, 80
+; CHECK-RV32-V-NEXT:    mret
+;
+; CHECK-RV32-FV-LABEL: foo_with_call:
+; CHECK-RV32-FV:       # %bb.0:
+; CHECK-RV32-FV-NEXT:    addi sp, sp, -160
+; CHECK-RV32-FV-NEXT:    sw ra, 156(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t0, 152(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t1, 148(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t2, 144(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a0, 140(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a1, 136(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a2, 132(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a3, 128(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a4, 124(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a5, 120(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a6, 116(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a7, 112(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t3, 108(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t4, 104(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t5, 100(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t6, 96(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft0, 92(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft1, 88(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft2, 84(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft3, 80(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft4, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft5, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft6, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft7, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa0, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa1, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FV-NEXT:    sub sp, sp, a0
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    addi a0, sp, 16
+; CHECK-RV32-FV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    call otherfoo
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    addi a0, sp, 16
+; CHECK-RV32-FV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FV-NEXT:    add sp, sp, a0
+; CHECK-RV32-FV-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t0, 152(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t1, 148(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t2, 144(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a0, 140(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a1, 136(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a2, 132(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a3, 128(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a4, 124(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a5, 120(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a6, 116(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a7, 112(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t3, 108(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t4, 104(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t5, 100(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t6, 96(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft0, 92(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft1, 88(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft2, 84(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft3, 80(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft4, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft5, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft6, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft7, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa0, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa1, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    addi sp, sp, 160
+; CHECK-RV32-FV-NEXT:    mret
+;
+; CHECK-RV32-FDV-LABEL: foo_with_call:
+; CHECK-RV32-FDV:       # %bb.0:
+; CHECK-RV32-FDV-NEXT:    addi sp, sp, -240
+; CHECK-RV32-FDV-NEXT:    sw ra, 236(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t0, 232(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t1, 228(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t2, 224(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a0, 220(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a1, 216(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a2, 212(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a3, 208(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a4, 204(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a5, 200(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a6, 196(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a7, 192(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t3, 188(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t4, 184(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t5, 180(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t6, 176(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft6, 120(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft7, 112(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa0, 104(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa1, 96(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa2, 88(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa3, 80(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa4, 72(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa5, 64(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa6, 56(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa7, 48(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft8, 40(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft9, 32(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft10, 24(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft11, 16(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub sp, sp, a0
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    addi a0, sp, 16
+; CHECK-RV32-FDV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    call otherfoo
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    addi a0, sp, 16
+; CHECK-RV32-FDV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FDV-NEXT:    add sp, sp, a0
+; CHECK-RV32-FDV-NEXT:    lw ra, 236(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t0, 232(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t1, 228(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t2, 224(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a0, 220(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a1, 216(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a2, 212(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a3, 208(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a4, 204(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a5, 200(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a6, 196(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a7, 192(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t3, 188(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t4, 184(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t5, 180(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t6, 176(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft6, 120(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft7, 112(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa0, 104(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa1, 96(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa2, 88(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa3, 80(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa4, 72(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa5, 64(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa6, 56(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa7, 48(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft8, 40(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft9, 32(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft10, 24(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft11, 16(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    addi sp, sp, 240
+; CHECK-RV32-FDV-NEXT:    mret
+;
 ; CHECK-RV64-LABEL: foo_with_call:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    addi sp, sp, -128
@@ -1442,33 +3147,17 @@ define void @foo_with_call() #1 {
 ;
 ; CHECK-RV64E-FD-LABEL: foo_with_call:
 ; CHECK-RV64E-FD:       # %bb.0:
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, -464
-; CHECK-RV64E-FD-NEXT:    sd ra, 456(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t0, 448(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t1, 440(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t2, 432(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a0, 424(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a1, 416(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a2, 408(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a3, 400(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a4, 392(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a5, 384(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a6, 376(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a7, 368(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s2, 360(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s3, 352(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s4, 344(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s5, 336(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s6, 328(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s7, 320(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s8, 312(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s10, 296(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s11, 288(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t3, 280(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t4, 272(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t5, 264(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t6, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, -336
+; CHECK-RV64E-FD-NEXT:    sd ra, 328(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t0, 320(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t1, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t2, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a0, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a1, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a2, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a3, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a4, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a5, 256(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft0, 248(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft1, 240(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft2, 232(sp) # 8-byte Folded Spill
@@ -1502,32 +3191,16 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64E-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    call otherfoo
-; CHECK-RV64E-FD-NEXT:    ld ra, 456(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t0, 448(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t1, 440(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t2, 432(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a0, 424(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a1, 416(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a2, 408(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a3, 400(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a4, 392(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a5, 384(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a6, 376(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a7, 368(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s2, 360(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s3, 352(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s4, 344(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s5, 336(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s6, 328(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s7, 320(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s8, 312(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s9, 304(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s10, 296(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s11, 288(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t3, 280(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t4, 272(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t5, 264(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t6, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld ra, 328(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t0, 320(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t1, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t2, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a0, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a1, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a2, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a3, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a4, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a5, 256(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft1, 240(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft2, 232(sp) # 8-byte Folded Reload
@@ -1560,8 +3233,1699 @@ define void @foo_with_call() #1 {
 ; CHECK-RV64E-FD-NEXT:    fld ft9, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft10, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, 464
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, 336
 ; CHECK-RV64E-FD-NEXT:    mret
+;
+; CHECK-RV64-V-LABEL: foo_with_call:
+; CHECK-RV64-V:       # %bb.0:
+; CHECK-RV64-V-NEXT:    addi sp, sp, -144
+; CHECK-RV64-V-NEXT:    sd ra, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t0, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t1, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t2, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a0, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a1, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a2, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a3, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a4, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a5, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a6, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a7, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t3, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t4, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t5, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t6, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 5
+; CHECK-RV64-V-NEXT:    sub sp, sp, a0
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 5
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 4
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    addi a0, sp, 16
+; CHECK-RV64-V-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    call otherfoo
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 5
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 4
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    add a0, sp, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    addi a0, sp, 16
+; CHECK-RV64-V-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 5
+; CHECK-RV64-V-NEXT:    add sp, sp, a0
+; CHECK-RV64-V-NEXT:    ld ra, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t0, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t1, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t2, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a0, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a1, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a2, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a3, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a4, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a5, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a6, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a7, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t3, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t4, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t5, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t6, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    addi sp, sp, 144
+; CHECK-RV64-V-NEXT:    mret
+;
+; CHECK-RV64-FV-LABEL: foo_with_call:
+; CHECK-RV64-FV:       # %bb.0:
+; CHECK-RV64-FV-NEXT:    addi sp, sp, -224
+; CHECK-RV64-FV-NEXT:    sd ra, 216(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t0, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t1, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t2, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a0, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a1, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a2, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a3, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a4, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a5, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a6, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a7, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t3, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t4, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t5, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t6, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft0, 92(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft1, 88(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft2, 84(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft3, 80(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft4, 76(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft5, 72(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft6, 68(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft7, 64(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa0, 60(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa1, 56(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa2, 52(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa3, 48(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa4, 44(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa5, 40(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa6, 36(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa7, 32(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft8, 28(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft9, 24(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft10, 20(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft11, 16(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FV-NEXT:    sub sp, sp, a0
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    addi a0, sp, 16
+; CHECK-RV64-FV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    call otherfoo
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    addi a0, sp, 16
+; CHECK-RV64-FV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FV-NEXT:    add sp, sp, a0
+; CHECK-RV64-FV-NEXT:    ld ra, 216(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t0, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t1, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t2, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a0, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a1, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a2, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a3, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a4, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a5, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a6, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a7, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t3, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t4, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t5, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t6, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft0, 92(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft1, 88(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft2, 84(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft3, 80(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft4, 76(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft5, 72(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft6, 68(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft7, 64(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa0, 60(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa1, 56(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa2, 52(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa3, 48(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa4, 44(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa5, 40(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa6, 36(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa7, 32(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft8, 28(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft9, 24(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft10, 20(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft11, 16(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    addi sp, sp, 224
+; CHECK-RV64-FV-NEXT:    mret
+;
+; CHECK-RV64-FDV-LABEL: foo_with_call:
+; CHECK-RV64-FDV:       # %bb.0:
+; CHECK-RV64-FDV-NEXT:    addi sp, sp, -304
+; CHECK-RV64-FDV-NEXT:    sd ra, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t0, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t1, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t2, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a0, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a1, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a2, 248(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a3, 240(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a4, 232(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a5, 224(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a6, 216(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a7, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t3, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t4, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t5, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t6, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft0, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft1, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft2, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft3, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft4, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft5, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft6, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft7, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa0, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa1, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa2, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa3, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa4, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa5, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa6, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa7, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft8, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft9, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft10, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft11, 16(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub sp, sp, a0
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    addi a0, sp, 16
+; CHECK-RV64-FDV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    call otherfoo
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    add a0, sp, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    addi a0, sp, 16
+; CHECK-RV64-FDV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FDV-NEXT:    add sp, sp, a0
+; CHECK-RV64-FDV-NEXT:    ld ra, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t0, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t1, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t2, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a0, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a1, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a2, 248(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a3, 240(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a4, 232(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a5, 224(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a6, 216(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a7, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t3, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t4, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t5, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t6, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft0, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft1, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft2, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft3, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft4, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft5, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft6, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft7, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa0, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa1, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa2, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa3, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa4, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa5, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa6, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa7, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft8, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft9, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft10, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft11, 16(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    addi sp, sp, 304
+; CHECK-RV64-FDV-NEXT:    mret
   %call = call i32 @otherfoo()
   ret void
 }
@@ -2281,6 +5645,1718 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV32E-F-NEXT:    addi sp, sp, 172
 ; CHECK-RV32E-F-NEXT:    mret
 ;
+; CHECK-RV32-V-LABEL: foo_fp_with_call:
+; CHECK-RV32-V:       # %bb.0:
+; CHECK-RV32-V-NEXT:    addi sp, sp, -80
+; CHECK-RV32-V-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t0, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t1, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t2, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw s0, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a0, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a1, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a2, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a3, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a4, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a5, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a6, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw a7, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t3, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t4, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t5, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    sw t6, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32-V-NEXT:    addi s0, sp, 80
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 5
+; CHECK-RV32-V-NEXT:    sub sp, sp, a0
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 4
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 5
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 5
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-V-NEXT:    call otherfoo
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 4
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 4
+; CHECK-RV32-V-NEXT:    add a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 3
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 2
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    mv a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a1, a1, a0
+; CHECK-RV32-V-NEXT:    slli a0, a0, 1
+; CHECK-RV32-V-NEXT:    add a0, a0, a1
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a1, a0, 5
+; CHECK-RV32-V-NEXT:    sub a0, a1, a0
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    csrr a0, vlenb
+; CHECK-RV32-V-NEXT:    slli a0, a0, 5
+; CHECK-RV32-V-NEXT:    sub a0, s0, a0
+; CHECK-RV32-V-NEXT:    addi a0, a0, -80
+; CHECK-RV32-V-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-V-NEXT:    addi sp, s0, -80
+; CHECK-RV32-V-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t0, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t1, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t2, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw s0, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a0, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a1, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a2, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a3, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a4, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a5, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a6, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw a7, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t3, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t4, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t5, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    lw t6, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-V-NEXT:    addi sp, sp, 80
+; CHECK-RV32-V-NEXT:    mret
+;
+; CHECK-RV32-FV-LABEL: foo_fp_with_call:
+; CHECK-RV32-FV:       # %bb.0:
+; CHECK-RV32-FV-NEXT:    addi sp, sp, -160
+; CHECK-RV32-FV-NEXT:    sw ra, 156(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t0, 152(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t1, 148(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t2, 144(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw s0, 140(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a0, 136(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a1, 132(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a2, 128(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a3, 124(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a4, 120(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a5, 116(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a6, 112(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw a7, 108(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t3, 104(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t4, 100(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t5, 96(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    sw t6, 92(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft0, 88(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft1, 84(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft2, 80(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft3, 76(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft4, 72(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft5, 68(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft6, 64(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft7, 60(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa0, 56(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa1, 52(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa2, 48(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa3, 44(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa4, 40(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa5, 36(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa6, 32(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw fa7, 28(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft8, 24(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft9, 20(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft10, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    fsw ft11, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    addi s0, sp, 160
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FV-NEXT:    sub sp, sp, a0
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FV-NEXT:    call otherfoo
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    mv a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FV-NEXT:    addi a0, a0, -160
+; CHECK-RV32-FV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    addi sp, s0, -160
+; CHECK-RV32-FV-NEXT:    lw ra, 156(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t0, 152(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t1, 148(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t2, 144(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw s0, 140(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a0, 136(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a1, 132(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a2, 128(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a3, 124(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a4, 120(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a5, 116(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a6, 112(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw a7, 108(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t3, 104(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t4, 100(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t5, 96(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    lw t6, 92(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft0, 88(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft1, 84(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft2, 80(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft3, 76(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft4, 72(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft5, 68(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft6, 64(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft7, 60(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa0, 56(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa1, 52(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa2, 48(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa3, 44(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa4, 40(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa5, 36(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa6, 32(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw fa7, 28(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft8, 24(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft9, 20(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft10, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    flw ft11, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32-FV-NEXT:    addi sp, sp, 160
+; CHECK-RV32-FV-NEXT:    mret
+;
+; CHECK-RV32-FDV-LABEL: foo_fp_with_call:
+; CHECK-RV32-FDV:       # %bb.0:
+; CHECK-RV32-FDV-NEXT:    addi sp, sp, -240
+; CHECK-RV32-FDV-NEXT:    sw ra, 236(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t0, 232(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t1, 228(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t2, 224(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw s0, 220(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a0, 216(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a1, 212(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a2, 208(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a3, 204(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a4, 200(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a5, 196(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a6, 192(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw a7, 188(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t3, 184(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t4, 180(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t5, 176(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    sw t6, 172(sp) # 4-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft0, 160(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft1, 152(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft2, 144(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft3, 136(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft4, 128(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft5, 120(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft6, 112(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft7, 104(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa0, 96(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa1, 88(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa2, 80(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa3, 72(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa4, 64(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa5, 56(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa6, 48(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd fa7, 40(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft8, 32(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft9, 24(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft10, 16(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    fsd ft11, 8(sp) # 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    addi s0, sp, 240
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub sp, sp, a0
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV32-FDV-NEXT:    call otherfoo
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV32-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    mv a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV32-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV32-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV32-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV32-FDV-NEXT:    addi a0, a0, -240
+; CHECK-RV32-FDV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    addi sp, s0, -240
+; CHECK-RV32-FDV-NEXT:    lw ra, 236(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t0, 232(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t1, 228(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t2, 224(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw s0, 220(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a0, 216(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a1, 212(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a2, 208(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a3, 204(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a4, 200(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a5, 196(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a6, 192(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw a7, 188(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t3, 184(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t4, 180(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t5, 176(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    lw t6, 172(sp) # 4-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft0, 160(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft1, 152(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft2, 144(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft3, 136(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft4, 128(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft5, 120(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft6, 112(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft7, 104(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa0, 96(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa1, 88(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa2, 80(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa3, 72(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa4, 64(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa5, 56(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa6, 48(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld fa7, 40(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft8, 32(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft9, 24(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft10, 16(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    fld ft11, 8(sp) # 8-byte Folded Reload
+; CHECK-RV32-FDV-NEXT:    addi sp, sp, 240
+; CHECK-RV32-FDV-NEXT:    mret
+;
 ; CHECK-RV64-LABEL: foo_fp_with_call:
 ; CHECK-RV64:       # %bb.0:
 ; CHECK-RV64-NEXT:    addi sp, sp, -144
@@ -2993,34 +8069,18 @@ define void @foo_fp_with_call() #2 {
 ;
 ; CHECK-RV64E-FD-LABEL: foo_fp_with_call:
 ; CHECK-RV64E-FD:       # %bb.0:
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, -472
-; CHECK-RV64E-FD-NEXT:    sd ra, 464(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t0, 456(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t1, 448(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t2, 440(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s0, 432(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a0, 424(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a1, 416(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a2, 408(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a3, 400(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a4, 392(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a5, 384(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a6, 376(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd a7, 368(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s2, 360(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s3, 352(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s4, 344(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s5, 336(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s6, 328(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s7, 320(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s8, 312(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s9, 304(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s10, 296(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd s11, 288(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t3, 280(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t4, 272(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t5, 264(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    sd t6, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, -344
+; CHECK-RV64E-FD-NEXT:    sd ra, 336(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t0, 328(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t1, 320(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd t2, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd s0, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a0, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a1, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a2, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a3, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a4, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64E-FD-NEXT:    sd a5, 256(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft0, 248(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft1, 240(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft2, 232(sp) # 8-byte Folded Spill
@@ -3053,35 +8113,19 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64E-FD-NEXT:    fsd ft9, 16(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft10, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV64E-FD-NEXT:    fsd ft11, 0(sp) # 8-byte Folded Spill
-; CHECK-RV64E-FD-NEXT:    addi s0, sp, 472
+; CHECK-RV64E-FD-NEXT:    addi s0, sp, 344
 ; CHECK-RV64E-FD-NEXT:    call otherfoo
-; CHECK-RV64E-FD-NEXT:    ld ra, 464(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t0, 456(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t1, 448(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t2, 440(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s0, 432(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a0, 424(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a1, 416(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a2, 408(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a3, 400(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a4, 392(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a5, 384(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a6, 376(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld a7, 368(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s2, 360(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s3, 352(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s4, 344(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s5, 336(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s6, 328(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s7, 320(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s8, 312(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s9, 304(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s10, 296(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld s11, 288(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t3, 280(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t4, 272(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t5, 264(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    ld t6, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld ra, 336(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t0, 328(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t1, 320(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld t2, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld s0, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a0, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a1, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a2, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a3, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a4, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64E-FD-NEXT:    ld a5, 256(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft0, 248(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft1, 240(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft2, 232(sp) # 8-byte Folded Reload
@@ -3114,8 +8158,1720 @@ define void @foo_fp_with_call() #2 {
 ; CHECK-RV64E-FD-NEXT:    fld ft9, 16(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft10, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV64E-FD-NEXT:    fld ft11, 0(sp) # 8-byte Folded Reload
-; CHECK-RV64E-FD-NEXT:    addi sp, sp, 472
+; CHECK-RV64E-FD-NEXT:    addi sp, sp, 344
 ; CHECK-RV64E-FD-NEXT:    mret
+;
+; CHECK-RV64-V-LABEL: foo_fp_with_call:
+; CHECK-RV64-V:       # %bb.0:
+; CHECK-RV64-V-NEXT:    addi sp, sp, -160
+; CHECK-RV64-V-NEXT:    sd ra, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t0, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t1, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t2, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd s0, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a0, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a1, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a2, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a3, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a4, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a5, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a6, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd a7, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t3, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t4, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t5, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    sd t6, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    addi s0, sp, 160
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 5
+; CHECK-RV64-V-NEXT:    sub sp, sp, a0
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 4
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 5
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 5
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-V-NEXT:    call otherfoo
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 4
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 4
+; CHECK-RV64-V-NEXT:    add a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 3
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 2
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    mv a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a1, a1, a0
+; CHECK-RV64-V-NEXT:    slli a0, a0, 1
+; CHECK-RV64-V-NEXT:    add a0, a0, a1
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a1, a0, 5
+; CHECK-RV64-V-NEXT:    sub a0, a1, a0
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    csrr a0, vlenb
+; CHECK-RV64-V-NEXT:    slli a0, a0, 5
+; CHECK-RV64-V-NEXT:    sub a0, s0, a0
+; CHECK-RV64-V-NEXT:    addi a0, a0, -160
+; CHECK-RV64-V-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    addi sp, s0, -160
+; CHECK-RV64-V-NEXT:    ld ra, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t0, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t1, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t2, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld s0, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a0, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a1, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a2, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a3, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a4, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a5, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a6, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld a7, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t3, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t4, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t5, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    ld t6, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-V-NEXT:    addi sp, sp, 160
+; CHECK-RV64-V-NEXT:    mret
+;
+; CHECK-RV64-FV-LABEL: foo_fp_with_call:
+; CHECK-RV64-FV:       # %bb.0:
+; CHECK-RV64-FV-NEXT:    addi sp, sp, -240
+; CHECK-RV64-FV-NEXT:    sd ra, 232(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t0, 224(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t1, 216(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t2, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd s0, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a0, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a1, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a2, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a3, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a4, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a5, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a6, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd a7, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t3, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t4, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t5, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    sd t6, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft0, 100(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft1, 96(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft2, 92(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft3, 88(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft4, 84(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft5, 80(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft6, 76(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft7, 72(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa0, 68(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa1, 64(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa2, 60(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa3, 56(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa4, 52(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa5, 48(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa6, 44(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw fa7, 40(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft8, 36(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft9, 32(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft10, 28(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    fsw ft11, 24(sp) # 4-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    addi s0, sp, 240
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FV-NEXT:    sub sp, sp, a0
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FV-NEXT:    call otherfoo
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    mv a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FV-NEXT:    addi a0, a0, -240
+; CHECK-RV64-FV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    addi sp, s0, -240
+; CHECK-RV64-FV-NEXT:    ld ra, 232(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t0, 224(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t1, 216(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t2, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld s0, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a0, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a1, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a2, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a3, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a4, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a5, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a6, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld a7, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t3, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t4, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t5, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    ld t6, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft0, 100(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft1, 96(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft2, 92(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft3, 88(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft4, 84(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft5, 80(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft6, 76(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft7, 72(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa0, 68(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa1, 64(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa2, 60(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa3, 56(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa4, 52(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa5, 48(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa6, 44(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw fa7, 40(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft8, 36(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft9, 32(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft10, 28(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    flw ft11, 24(sp) # 4-byte Folded Reload
+; CHECK-RV64-FV-NEXT:    addi sp, sp, 240
+; CHECK-RV64-FV-NEXT:    mret
+;
+; CHECK-RV64-FDV-LABEL: foo_fp_with_call:
+; CHECK-RV64-FDV:       # %bb.0:
+; CHECK-RV64-FDV-NEXT:    addi sp, sp, -320
+; CHECK-RV64-FDV-NEXT:    sd ra, 312(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t0, 304(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t1, 296(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t2, 288(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd s0, 280(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a0, 272(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a1, 264(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a2, 256(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a3, 248(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a4, 240(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a5, 232(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a6, 224(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd a7, 216(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t3, 208(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t4, 200(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t5, 192(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    sd t6, 184(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft0, 176(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft1, 168(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft2, 160(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft3, 152(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft4, 144(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft5, 136(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft6, 128(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft7, 120(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa0, 112(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa1, 104(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa2, 96(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa3, 88(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa4, 80(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa5, 72(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa6, 64(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd fa7, 56(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft8, 48(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft9, 40(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft10, 32(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    fsd ft11, 24(sp) # 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    addi s0, sp, 320
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub sp, sp, a0
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v0, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v2, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v3, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v4, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v5, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v6, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v7, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v9, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v10, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v11, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v12, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v13, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v14, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v15, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v16, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v17, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v18, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v19, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v20, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v21, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v22, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v23, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v25, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v26, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v27, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v28, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v29, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v30, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vs1r.v v31, (a0) # vscale x 8-byte Folded Spill
+; CHECK-RV64-FDV-NEXT:    call otherfoo
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v2, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v3, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v4, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v5, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v6, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v7, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v10, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v11, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v12, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v13, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v14, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 4
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v15, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 4
+; CHECK-RV64-FDV-NEXT:    add a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v16, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v17, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v18, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v19, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v20, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v21, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v22, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v23, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 3
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v25, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v26, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v27, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 2
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v28, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    mv a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a1, a1, a0
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 1
+; CHECK-RV64-FDV-NEXT:    add a0, a0, a1
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v29, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a1, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub a0, a1, a0
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v30, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    csrr a0, vlenb
+; CHECK-RV64-FDV-NEXT:    slli a0, a0, 5
+; CHECK-RV64-FDV-NEXT:    sub a0, s0, a0
+; CHECK-RV64-FDV-NEXT:    addi a0, a0, -320
+; CHECK-RV64-FDV-NEXT:    vl1r.v v31, (a0) # vscale x 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    addi sp, s0, -320
+; CHECK-RV64-FDV-NEXT:    ld ra, 312(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t0, 304(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t1, 296(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t2, 288(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld s0, 280(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a0, 272(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a1, 264(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a2, 256(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a3, 248(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a4, 240(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a5, 232(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a6, 224(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld a7, 216(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t3, 208(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t4, 200(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t5, 192(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    ld t6, 184(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft0, 176(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft1, 168(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft2, 160(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft3, 152(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft4, 144(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft5, 136(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft6, 128(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft7, 120(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa0, 112(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa1, 104(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa2, 96(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa3, 88(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa4, 80(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa5, 72(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa6, 64(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld fa7, 56(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft8, 48(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft9, 40(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft10, 32(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    fld ft11, 24(sp) # 8-byte Folded Reload
+; CHECK-RV64-FDV-NEXT:    addi sp, sp, 320
+; CHECK-RV64-FDV-NEXT:    mret
   %call = call i32 @otherfoo()
   ret void
 }

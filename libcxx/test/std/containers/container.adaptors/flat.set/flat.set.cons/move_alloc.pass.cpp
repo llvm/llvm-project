@@ -24,28 +24,13 @@
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
-void test() {
-  {
-    // The constructors in this subclause shall not participate in overload
-    // resolution unless uses_allocator_v<container_type, Alloc> is true.
-
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    using A2 = other_allocator<int>;
-    using V1 = std::vector<int, A1>;
-    using V2 = std::vector<int, A2>;
-    using M1 = std::flat_set<int, C, V1>;
-    using M2 = std::flat_set<int, C, V2>;
-    static_assert(std::is_constructible_v<M1, M1&&, const A1&>);
-    static_assert(std::is_constructible_v<M2, M2&&, const A2&>);
-    static_assert(!std::is_constructible_v<M1, M1&&, const A2&>);
-    static_assert(!std::is_constructible_v<M2, M2&&, const A1&>);
-  }
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     int expected[] = {1, 2, 3};
     using C        = test_less<int>;
     using A        = test_allocator<int>;
-    using M        = std::flat_set<int, C, std::deque<int, A>>;
+    using M        = std::flat_set<int, C, KeyContainer<int, A>>;
     auto mo        = M(expected, expected + 3, C(5), A(7));
     auto m         = M(std::move(mo), A(3));
 
@@ -72,8 +57,38 @@ void test() {
   }
 }
 
+constexpr bool test() {
+  {
+    // The constructors in this subclause shall not participate in overload
+    // resolution unless uses_allocator_v<container_type, Alloc> is true.
+
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    using A2 = other_allocator<int>;
+    using V1 = std::vector<int, A1>;
+    using V2 = std::vector<int, A2>;
+    using M1 = std::flat_set<int, C, V1>;
+    using M2 = std::flat_set<int, C, V2>;
+    static_assert(std::is_constructible_v<M1, M1&&, const A1&>);
+    static_assert(std::is_constructible_v<M2, M2&&, const A2&>);
+    static_assert(!std::is_constructible_v<M1, M1&&, const A2&>);
+    static_assert(!std::is_constructible_v<M2, M2&&, const A1&>);
+  }
+
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

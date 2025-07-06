@@ -18,12 +18,11 @@
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-extern cl::opt<bool> UseNewDbgInfoFormat;
 
 namespace {
 
@@ -41,12 +40,9 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    ScopedDbgInfoFormatSetter FormatSetter(M, UseNewDbgInfoFormat);
     // Remove intrinsic declarations when printing in the new format.
-    // TODO: Move this into Module::setIsNewDbgInfoFormat when we're ready to
-    // update test output.
-    if (UseNewDbgInfoFormat)
-      M.removeDebugIntrinsicDeclarations();
+    // TODO: consider removing this as debug-intrinsics are gone.
+    M.removeDebugIntrinsicDeclarations();
 
     if (llvm::isFunctionInPrintList("*")) {
       if (!Banner.empty())
@@ -87,8 +83,6 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    ScopedDbgInfoFormatSetter FormatSetter(F, UseNewDbgInfoFormat);
-
     if (isFunctionInPrintList(F.getName())) {
       if (forcePrintModuleIR())
         OS << Banner << " (function: " << F.getName() << ")\n"

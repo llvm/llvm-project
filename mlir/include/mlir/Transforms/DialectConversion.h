@@ -186,7 +186,7 @@ public:
                               std::decay_t<FnT>>::template arg_t<1>>
   void addSourceMaterialization(FnT &&callback) {
     sourceMaterializations.emplace_back(
-        wrapMaterialization<T>(std::forward<FnT>(callback)));
+        wrapSourceMaterialization<T>(std::forward<FnT>(callback)));
   }
 
   /// This method registers a materialization that will be called when
@@ -221,12 +221,13 @@ public:
   ///
   /// The conversion functions take a non-null Type or subclass of Type and a
   /// non-null Attribute (or subclass of Attribute), and returns a
-  /// `AttributeConversionResult`. This result can either contan an `Attribute`,
-  /// which may be `nullptr`, representing the conversion's success,
-  /// `AttributeConversionResult::na()` (the default empty value), indicating
-  /// that the conversion function did not apply and that further conversion
-  /// functions should be checked, or `AttributeConversionResult::abort()`
-  /// indicating that the conversion process should be aborted.
+  /// `AttributeConversionResult`. This result can either contain an
+  /// `Attribute`, which may be `nullptr`, representing the conversion's
+  /// success, `AttributeConversionResult::na()` (the default empty value),
+  /// indicating that the conversion function did not apply and that further
+  /// conversion functions should be checked, or
+  /// `AttributeConversionResult::abort()` indicating that the conversion
+  /// process should be aborted.
   ///
   /// Registered conversion functions are callled in the reverse of the order in
   /// which they were registered.
@@ -330,11 +331,10 @@ private:
   using ConversionCallbackFn = std::function<std::optional<LogicalResult>(
       Type, SmallVectorImpl<Type> &)>;
 
-  /// The signature of the callback used to materialize a source/argument
-  /// conversion.
+  /// The signature of the callback used to materialize a source conversion.
   ///
   /// Arguments: builder, result type, inputs, location
-  using MaterializationCallbackFn =
+  using SourceMaterializationCallbackFn =
       std::function<Value(OpBuilder &, Type, ValueRange, Location)>;
 
   /// The signature of the callback used to materialize a target conversion.
@@ -387,12 +387,12 @@ private:
     cachedMultiConversions.clear();
   }
 
-  /// Generate a wrapper for the given argument/source materialization
-  /// callback. The callback may take any subclass of `Type` and the
-  /// wrapper will check for the target type to be of the expected class
-  /// before calling the callback.
+  /// Generate a wrapper for the given source materialization callback. The
+  /// callback may take any subclass of `Type` and the wrapper will check for
+  /// the target type to be of the expected class before calling the callback.
   template <typename T, typename FnT>
-  MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
+  SourceMaterializationCallbackFn
+  wrapSourceMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
                Location loc) -> Value {
@@ -491,7 +491,7 @@ private:
   SmallVector<ConversionCallbackFn, 4> conversions;
 
   /// The list of registered materialization functions.
-  SmallVector<MaterializationCallbackFn, 2> sourceMaterializations;
+  SmallVector<SourceMaterializationCallbackFn, 2> sourceMaterializations;
   SmallVector<TargetMaterializationCallbackFn, 2> targetMaterializations;
 
   /// The list of registered type attribute conversion functions.
@@ -740,7 +740,7 @@ public:
   ///
   /// Optionally, a type converter can be provided to build materializations.
   /// Note: If no type converter was provided or the type converter does not
-  /// specify any suitable argument/target materialization rules, the dialect
+  /// specify any suitable source/target materialization rules, the dialect
   /// conversion may fail to legalize unresolved materializations.
   Block *
   applySignatureConversion(Block *block,
@@ -764,8 +764,9 @@ public:
       Region *region, const TypeConverter &converter,
       TypeConverter::SignatureConversion *entryConversion = nullptr);
 
-  /// Replace all the uses of the block argument `from` with value `to`.
-  void replaceUsesOfBlockArgument(BlockArgument from, Value to);
+  /// Replace all the uses of the block argument `from` with `to`. This
+  /// function supports both 1:1 and 1:N replacements.
+  void replaceUsesOfBlockArgument(BlockArgument from, ValueRange to);
 
   /// Return the converted value of 'key' with a type defined by the type
   /// converter of the currently executing pattern. Return nullptr in the case
@@ -827,7 +828,7 @@ public:
 
   /// PatternRewriter hook for inlining the ops of a block into another block.
   void inlineBlockBefore(Block *source, Block *dest, Block::iterator before,
-                         ValueRange argValues = std::nullopt) override;
+                         ValueRange argValues = {}) override;
   using PatternRewriter::inlineBlockBefore;
 
   /// PatternRewriter hook for updating the given operation in-place.

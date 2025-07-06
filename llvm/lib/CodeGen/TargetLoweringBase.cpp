@@ -632,7 +632,9 @@ void RTLIB::initCmpLibcallCCs(ISD::CondCode *CmpLibcallCCs) {
 
 /// NOTE: The TargetMachine owns TLOF.
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm)
-    : TM(tm), Libcalls(TM.getTargetTriple()) {
+    : TM(tm), Libcalls(TM.getTargetTriple(), TM.Options.ExceptionModel,
+                       TM.Options.FloatABIType, TM.Options.EABIVersion,
+                       TM.Options.MCOptions.getABIName()) {
   initActions();
 
   // Perform these initializations only once.
@@ -679,9 +681,8 @@ void TargetLoweringBase::initActions() {
   memset(TruncStoreActions, 0, sizeof(TruncStoreActions));
   memset(IndexedModeActions, 0, sizeof(IndexedModeActions));
   memset(CondCodeActions, 0, sizeof(CondCodeActions));
-  std::fill(std::begin(RegClassForVT), std::end(RegClassForVT), nullptr);
-  std::fill(std::begin(TargetDAGCombineArray),
-            std::end(TargetDAGCombineArray), 0);
+  llvm::fill(RegClassForVT, nullptr);
+  llvm::fill(TargetDAGCombineArray, 0);
 
   // Let extending atomic loads be unsupported by default.
   for (MVT ValVT : MVT::all_valuetypes())
@@ -1030,7 +1031,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
     // If type is to be expanded, split the vector.
     //  <4 x i140> -> <2 x i140>
     if (LK.first == TypeExpandInteger) {
-      if (VT.getVectorElementCount().isScalable())
+      if (NumElts.isScalable() && NumElts.getKnownMinValue() == 1)
         return LegalizeKind(TypeScalarizeScalableVector, EltVT);
       return LegalizeKind(TypeSplitVector,
                           VT.getHalfNumVectorElementsVT(Context));
@@ -1975,10 +1976,9 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
   if (getTargetMachine().getTargetTriple().isOSOpenBSD()) {
     Module &M = *IRB.GetInsertBlock()->getParent()->getParent();
     PointerType *PtrTy = PointerType::getUnqual(M.getContext());
-    Constant *C = M.getOrInsertGlobal("__guard_local", PtrTy);
-    if (GlobalVariable *G = dyn_cast_or_null<GlobalVariable>(C))
-      G->setVisibility(GlobalValue::HiddenVisibility);
-    return C;
+    GlobalVariable *G = M.getOrInsertGlobal("__guard_local", PtrTy);
+    G->setVisibility(GlobalValue::HiddenVisibility);
+    return G;
   }
   return nullptr;
 }

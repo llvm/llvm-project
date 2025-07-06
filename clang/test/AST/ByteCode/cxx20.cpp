@@ -122,8 +122,8 @@ static_assert(!b4);
 constexpr auto bar(const char *p) { return p + __builtin_strlen(p); }
 constexpr auto b5 = bar(p1) == p1;
 static_assert(!b5);
-constexpr auto b6 = bar(p1) == ""; // ref-error {{must be initialized by a constant expression}} \
-                                   // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b6 = bar(p1) == ""; // both-error {{must be initialized by a constant expression}} \
+                                   // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b7 = bar(p1) + 1 == ""; // both-error {{must be initialized by a constant expression}} \
                                        // both-note {{comparison against pointer '&"test1"[6]' that points past the end of a complete object has unspecified value}}
 
@@ -996,4 +996,22 @@ namespace NastyChar {
 
   template <ToNastyChar t> constexpr auto to_nasty_char() { return t; }
   constexpr auto result = to_nasty_char<"12345">();
+}
+
+namespace TempDtor {
+  struct A {
+    int n;
+  };
+  constexpr A &&a_ref = A(); // both-note {{temporary created here}}
+  constexpr void destroy_extern_2() { // both-error {{never produces a constant expression}}
+    a_ref.~A(); // both-note {{destruction of temporary is not allowed in a constant expression outside the expression that created the temporary}}
+  }
+}
+
+namespace OnePastEndDtor {
+  struct A {int n; };
+  constexpr void destroy_past_end() { // both-error {{never produces a constant expression}}
+    A a;
+    (&a+1)->~A(); // both-note {{destruction of dereferenced one-past-the-end pointer}}
+  }
 }

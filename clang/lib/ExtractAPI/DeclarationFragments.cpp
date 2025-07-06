@@ -324,10 +324,15 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 
   // Declaration fragments of a pointer type is the declaration fragments of
   // the pointee type followed by a `*`,
-  if (T->isPointerType() && !T->isFunctionPointerType())
-    return Fragments
-        .append(getFragmentsForType(T->getPointeeType(), Context, After))
-        .append(" *", DeclarationFragments::FragmentKind::Text);
+  if (T->isPointerType() && !T->isFunctionPointerType()) {
+    QualType PointeeT = T->getPointeeType();
+    Fragments.append(getFragmentsForType(PointeeT, Context, After));
+    // If the pointee is itself a pointer, we do not want to insert a space
+    // before the `*` as the preceding character in the type name is a `*`.
+    if (!PointeeT->isAnyPointerType())
+      Fragments.appendSpace();
+    return Fragments.append("*", DeclarationFragments::FragmentKind::Text);
+  }
 
   // For Objective-C `id` and `Class` pointers
   // we do not spell out the `*`.
@@ -631,7 +636,7 @@ DeclarationFragmentsBuilder::getFragmentsForParam(const ParmVarDecl *Param) {
                 DeclarationFragments::FragmentKind::InternalParam);
   } else {
     Fragments.append(std::move(TypeFragments));
-    if (!T->isBlockPointerType())
+    if (!T->isAnyPointerType() && !T->isBlockPointerType())
       Fragments.appendSpace();
     Fragments
         .append(Param->getName(),
@@ -706,18 +711,20 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
 
   // FIXME: Is `after` actually needed here?
   DeclarationFragments After;
+  QualType ReturnType = Func->getReturnType();
   auto ReturnValueFragment =
-      getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After);
+      getFragmentsForType(ReturnType, Func->getASTContext(), After);
   if (StringRef(ReturnValueFragment.begin()->Spelling)
           .starts_with("type-parameter")) {
-    std::string ProperArgName = Func->getReturnType().getAsString();
+    std::string ProperArgName = ReturnType.getAsString();
     ReturnValueFragment.begin()->Spelling.swap(ProperArgName);
   }
 
-  Fragments.append(std::move(ReturnValueFragment))
-      .appendSpace()
-      .append(Func->getNameAsString(),
-              DeclarationFragments::FragmentKind::Identifier);
+  Fragments.append(std::move(ReturnValueFragment));
+  if (!ReturnType->isAnyPointerType())
+    Fragments.appendSpace();
+  Fragments.append(Func->getNameAsString(),
+                   DeclarationFragments::FragmentKind::Identifier);
 
   if (Func->getTemplateSpecializationInfo()) {
     Fragments.append("<", DeclarationFragments::FragmentKind::Text);
@@ -882,6 +889,9 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXMethod(
         .appendSpace();
   if (Method->isVolatile())
     Fragments.append("volatile", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
+  if (Method->isVirtual())
+    Fragments.append("virtual", DeclarationFragments::FragmentKind::Keyword)
         .appendSpace();
 
   // Build return type

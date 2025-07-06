@@ -30,19 +30,21 @@ void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {
   ID.AddString(II->getName());
 }
 
-void ODRHash::AddDeclarationName(DeclarationName Name, bool TreatAsDecl) {
+void ODRHash::AddDeclarationNameInfo(DeclarationNameInfo NameInfo,
+                                     bool TreatAsDecl) {
   if (TreatAsDecl)
     // Matches the NamedDecl check in AddDecl
     AddBoolean(true);
 
-  AddDeclarationNameImpl(Name);
+  AddDeclarationNameInfoImpl(NameInfo);
 
   if (TreatAsDecl)
     // Matches the ClassTemplateSpecializationDecl check in AddDecl
     AddBoolean(false);
 }
 
-void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
+void ODRHash::AddDeclarationNameInfoImpl(DeclarationNameInfo NameInfo) {
+  DeclarationName Name = NameInfo.getName();
   // Index all DeclarationName and use index numbers to refer to them.
   auto Result = DeclNameMap.insert(std::make_pair(Name, DeclNameMap.size()));
   ID.AddInteger(Result.first->second);
@@ -85,16 +87,17 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
   }
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
-    AddQualType(Name.getCXXNameType());
+  case DeclarationName::CXXConversionFunctionName:
+    if (auto *TSI = NameInfo.getNamedTypeInfo())
+      AddQualType(TSI->getType());
+    else
+      AddQualType(Name.getCXXNameType());
     break;
   case DeclarationName::CXXOperatorName:
     ID.AddInteger(Name.getCXXOverloadedOperator());
     break;
   case DeclarationName::CXXLiteralOperatorName:
     AddIdentifierInfo(Name.getCXXLiteralIdentifier());
-    break;
-  case DeclarationName::CXXConversionFunctionName:
-    AddQualType(Name.getCXXNameType());
     break;
   case DeclarationName::CXXUsingDirective:
     break;
@@ -314,7 +317,10 @@ public:
   }
 
   void VisitNamedDecl(const NamedDecl *D) {
-    Hash.AddDeclarationName(D->getDeclName());
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      Hash.AddDeclarationNameInfo(FD->getNameInfo());
+    else
+      Hash.AddDeclarationName(D->getDeclName());
     Inherited::VisitNamedDecl(D);
   }
 
@@ -828,7 +834,10 @@ void ODRHash::AddDecl(const Decl *D) {
     return;
   }
 
-  AddDeclarationName(ND->getDeclName());
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    AddDeclarationNameInfo(FD->getNameInfo());
+  else
+    AddDeclarationName(ND->getDeclName());
 
   // If this was a specialization we should take into account its template
   // arguments. This helps to reduce collisions coming when visiting template
@@ -1017,7 +1026,7 @@ public:
   }
 
   void VisitDecltypeType(const DecltypeType *T) {
-    AddStmt(T->getUnderlyingExpr());
+    Hash.AddStmt(T->getUnderlyingExpr());
     VisitType(T);
   }
 

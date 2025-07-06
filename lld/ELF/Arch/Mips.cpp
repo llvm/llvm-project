@@ -7,11 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
-#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
 
 using namespace llvm;

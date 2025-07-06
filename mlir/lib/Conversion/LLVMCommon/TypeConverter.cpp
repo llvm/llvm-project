@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "MemRefDescriptor.h"
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -755,7 +754,7 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
     if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
       // aligned pointer of a memref.
-      if (dyn_cast<MemRefType>(operand.getType())) {
+      if (isa<MemRefType>(operand.getType())) {
         MemRefDescriptor desc(llvmOperand);
         llvmOperand = desc.alignedPtr(builder, loc);
       } else if (isa<UnrankedMemRefType>(operand.getType())) {

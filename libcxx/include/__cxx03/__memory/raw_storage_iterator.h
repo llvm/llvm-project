@@ -29,8 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _OutputIterator, class _Tp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 raw_storage_iterator
-    : public iterator<output_iterator_tag, void, void, void, void> {
+class _LIBCPP_TEMPLATE_VIS raw_storage_iterator : public iterator<output_iterator_tag, void, void, void, void> {
   _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 private:

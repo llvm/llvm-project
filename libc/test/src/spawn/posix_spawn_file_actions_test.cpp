@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/spawn/file_actions.h"
 #include "src/spawn/posix_spawn_file_actions_addclose.h"
 #include "src/spawn/posix_spawn_file_actions_adddup2.h"

@@ -574,8 +574,8 @@ Instruction *InstCombinerImpl::foldPHIArgGEPIntoPHI(PHINode &PN) {
       // substantially cheaper to compute for the constants, so making it a
       // variable index could pessimize the path.  This also handles the case
       // for struct indices, which must always be constant.
-      if (isa<ConstantInt>(FirstInst->getOperand(Op)) ||
-          isa<ConstantInt>(GEP->getOperand(Op)))
+      if (isa<Constant>(FirstInst->getOperand(Op)) ||
+          isa<Constant>(GEP->getOperand(Op)))
         return nullptr;
 
       if (FirstInst->getOperand(Op)->getType() !=
@@ -870,7 +870,14 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
     NewPhi->addIncoming(NewIncoming[I], Phi.getIncomingBlock(I));
 
   InsertNewInstBefore(NewPhi, Phi.getIterator());
-  return CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
+  auto *CI = CastInst::CreateZExtOrBitCast(NewPhi, Phi.getType());
+
+  // We use a dropped location here because the new ZExt is necessarily a merge
+  // of ZExtInsts and at least one constant from incoming branches; the presence
+  // of the constant means we have no viable DebugLoc from that branch, and
+  // therefore we must use a dropped location.
+  CI->setDebugLoc(DebugLoc::getDropped());
+  return CI;
 }
 
 /// If all operands to a PHI node are the same "unary" operator and they all are

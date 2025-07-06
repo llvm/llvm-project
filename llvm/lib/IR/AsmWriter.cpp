@@ -125,11 +125,15 @@ static void orderValue(const Value *V, OrderMap &OM) {
   if (OM.lookup(V))
     return;
 
-  if (const Constant *C = dyn_cast<Constant>(V))
+  if (const Constant *C = dyn_cast<Constant>(V)) {
+    if (isa<ConstantData>(C))
+      return;
+
     if (C->getNumOperands() && !isa<GlobalValue>(C))
       for (const Value *Op : C->operands())
         if (!isa<BasicBlock>(Op) && !isa<GlobalValue>(Op))
           orderValue(Op, OM);
+  }
 
   // Note: we cannot cache this lookup above, since inserting into the map
   // changes the map's size, and thus affects the other IDs.
@@ -443,8 +447,7 @@ void llvm::printLLVMNameWithoutPrefix(raw_ostream &OS, StringRef Name) {
       // in the range 0-255.  This is important when building with MSVC because
       // its implementation will assert.  This situation can arise when dealing
       // with UTF-8 multibyte characters.
-      if (!isalnum(static_cast<unsigned char>(C)) && C != '-' && C != '.' &&
-          C != '_') {
+      if (!isalnum(C) && C != '-' && C != '.' && C != '_') {
         NeedsQuotes = true;
         break;
       }
@@ -1200,17 +1203,23 @@ void SlotTracker::processFunctionMetadata(const Function &F) {
 }
 
 void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
+  // Tolerate null metadata pointers: it's a completely illegal debug record,
+  // but we can have faulty metadata from debug-intrinsic days being
+  // autoupgraded into debug records. This gets caught by the verifier, which
+  // then will print the faulty IR, hitting this code path.
   if (const DbgVariableRecord *DVR = dyn_cast<const DbgVariableRecord>(&DR)) {
     // Process metadata used by DbgRecords; we only specifically care about the
     // DILocalVariable, DILocation, and DIAssignID fields, as the Value and
     // Expression fields should only be printed inline and so do not use a slot.
     // Note: The above doesn't apply for empty-metadata operands.
-    if (auto *Empty = dyn_cast<MDNode>(DVR->getRawLocation()))
+    if (auto *Empty = dyn_cast_if_present<MDNode>(DVR->getRawLocation()))
       CreateMetadataSlot(Empty);
-    CreateMetadataSlot(DVR->getRawVariable());
+    if (DVR->getRawVariable())
+      CreateMetadataSlot(DVR->getRawVariable());
     if (DVR->isDbgAssign()) {
-      CreateMetadataSlot(cast<MDNode>(DVR->getRawAssignID()));
-      if (auto *Empty = dyn_cast<MDNode>(DVR->getRawAddress()))
+      if (auto *AssignID = DVR->getRawAssignID())
+        CreateMetadataSlot(cast<MDNode>(AssignID));
+      if (auto *Empty = dyn_cast_if_present<MDNode>(DVR->getRawAddress()))
         CreateMetadataSlot(Empty);
     }
   } else if (const DbgLabelRecord *DLR = dyn_cast<const DbgLabelRecord>(&DR)) {
@@ -1218,7 +1227,8 @@ void SlotTracker::processDbgRecordMetadata(const DbgRecord &DR) {
   } else {
     llvm_unreachable("unsupported DbgRecord kind");
   }
-  CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
+  if (DR.getDebugLoc())
+    CreateMetadataSlot(DR.getDebugLoc().getAsMDNode());
 }
 
 void SlotTracker::processInstructionMetadata(const Instruction &I) {
@@ -2448,6 +2458,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   Printer.printMetadata("thrownTypes", N->getRawThrownTypes());
   Printer.printMetadata("annotations", N->getRawAnnotations());
   Printer.printString("targetFuncName", N->getTargetFuncName());
+  Printer.printBool("keyInstructions", N->getKeyInstructionsEnabled(), false);
   Out << ")";
 }
 
@@ -2600,6 +2611,11 @@ static void writeDILabel(raw_ostream &Out, const DILabel *N,
   Printer.printString("name", N->getName());
   Printer.printMetadata("file", N->getRawFile());
   Printer.printInt("line", N->getLine());
+  Printer.printInt("column", N->getColumn());
+  Printer.printBool("isArtificial", N->isArtificial(), false);
+  if (N->getCoroSuspendIdx())
+    Printer.printInt("coroSuspendIdx", *N->getCoroSuspendIdx(),
+                     /* ShouldSkipZero */ false);
   Out << ")";
 }
 
@@ -4118,6 +4134,9 @@ void AssemblyWriter::printFunction(const Function *F) {
       Out << "; Function Attrs: " << AttrStr << '\n';
   }
 
+  if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::not_intrinsic)
+    Out << "; Unknown intrinsic\n";
+
   Machine.incorporateFunction(F);
 
   if (F->isDeclaration()) {
@@ -4863,22 +4882,30 @@ void AssemblyWriter::printDbgVariableRecord(const DbgVariableRecord &DVR) {
     llvm_unreachable(
         "Tried to print a DbgVariableRecord with an invalid LocationType!");
   }
+
+  auto PrintOrNull = [&](Metadata *M) {
+    if (!M)
+      Out << "(null)";
+    else
+      WriteAsOperandInternal(Out, M, WriterCtx, true);
+  };
+
   Out << "(";
-  WriteAsOperandInternal(Out, DVR.getRawLocation(), WriterCtx, true);
+  PrintOrNull(DVR.getRawLocation());
   Out << ", ";
-  WriteAsOperandInternal(Out, DVR.getRawVariable(), WriterCtx, true);
+  PrintOrNull(DVR.getRawVariable());
   Out << ", ";
-  WriteAsOperandInternal(Out, DVR.getRawExpression(), WriterCtx, true);
+  PrintOrNull(DVR.getRawExpression());
   Out << ", ";
   if (DVR.isDbgAssign()) {
-    WriteAsOperandInternal(Out, DVR.getRawAssignID(), WriterCtx, true);
+    PrintOrNull(DVR.getRawAssignID());
     Out << ", ";
-    WriteAsOperandInternal(Out, DVR.getRawAddress(), WriterCtx, true);
+    PrintOrNull(DVR.getRawAddress());
     Out << ", ";
-    WriteAsOperandInternal(Out, DVR.getRawAddressExpression(), WriterCtx, true);
+    PrintOrNull(DVR.getRawAddressExpression());
     Out << ", ";
   }
-  WriteAsOperandInternal(Out, DVR.getDebugLoc().getAsMDNode(), WriterCtx, true);
+  PrintOrNull(DVR.getDebugLoc().getAsMDNode());
   Out << ")";
 }
 

@@ -92,7 +92,7 @@ protected:
   lldb::ValueObjectSP
   CreateValueObjectFromAddress(llvm::StringRef name, uint64_t address,
                                const ExecutionContext &exe_ctx,
-                               CompilerType type);
+                               CompilerType type, bool do_deref = true);
 
   lldb::ValueObjectSP CreateValueObjectFromData(llvm::StringRef name,
                                                 const DataExtractor &data,
@@ -273,9 +273,14 @@ public:
 
   uint32_t &GetRevision() { return m_my_revision; }
 
+  uint32_t GetPtrMatchDepth() { return m_ptr_match_depth; }
+
+  void SetPtrMatchDepth(uint32_t value) { m_ptr_match_depth = value; }
+
 protected:
   uint32_t m_my_revision = 0;
   Flags m_flags;
+  uint32_t m_ptr_match_depth = 1;
 
 private:
   SyntheticChildren(const SyntheticChildren &) = delete;
