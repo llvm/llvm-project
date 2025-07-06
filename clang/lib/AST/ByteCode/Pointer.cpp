@@ -505,8 +505,19 @@ void Pointer::activate() const {
   auto activate = [](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = true;
   };
-  auto deactivate = [](Pointer &P) -> void {
+
+  std::function<void(Pointer &)> deactivate;
+  deactivate = [&deactivate](Pointer &P) -> void {
     P.getInlineDesc()->IsActive = false;
+
+    if (const Record *R = P.getRecord()) {
+      for (const Record::Field &F : R->fields()) {
+        Pointer FieldPtr = P.atField(F.Offset);
+        if (FieldPtr.getInlineDesc()->IsActive)
+          deactivate(FieldPtr);
+      }
+      // FIXME: Bases?
+    }
   };
 
   // Unions might be nested etc., so find the topmost Pointer that's
@@ -516,21 +527,31 @@ void Pointer::activate() const {
     UnionPtr = UnionPtr.getBase();
 
   assert(UnionPtr.getFieldDesc()->isUnion());
-
   const Record *UnionRecord = UnionPtr.getRecord();
+
+  // The direct child pointer of the union that's on the path from
+  // this pointer to the union.
+  Pointer ChildPtr = *this;
+  assert(ChildPtr != UnionPtr);
+  while (true) {
+    if (ChildPtr.getBase() == UnionPtr)
+      break;
+    ChildPtr = ChildPtr.getBase();
+  }
+  assert(ChildPtr.getBase() == UnionPtr);
+
   for (const Record::Field &F : UnionRecord->fields()) {
     Pointer FieldPtr = UnionPtr.atField(F.Offset);
-    if (FieldPtr == *this) {
+    if (FieldPtr == ChildPtr) {
+      // No need to deactivate, will be activated in the next loop.
     } else {
       deactivate(FieldPtr);
-      // FIXME: Recurse.
     }
   }
 
   Pointer B = *this;
   while (B != UnionPtr) {
     activate(B);
-    // FIXME: Need to de-activate other fields of parent records.
     B = B.getBase();
   }
 }
