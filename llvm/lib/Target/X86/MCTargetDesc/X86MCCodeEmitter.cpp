@@ -587,22 +587,11 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
     }
   }
 
-  // If the fixup is pc-relative, we need to bias the value to be relative to
-  // the start of the field, not the end of the field.
-  if (PCRel) {
-    ImmOffset -= Size;
-    // If this is a pc-relative load off _GLOBAL_OFFSET_TABLE_:
-    // leaq _GLOBAL_OFFSET_TABLE_(%rip), %r15
-    // this needs to be a GOTPC32 relocation.
-    if (Size == 4 && startsWithGlobalOffsetTable(Expr) != GOT_None)
-      FixupKind = X86::reloc_global_offset_table;
-  }
-
   if (ImmOffset)
     Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(ImmOffset, Ctx),
                                    Ctx, Expr->getLoc());
 
-  // Emit a symbolic constant as a fixup and 4 zeros.
+  // Emit a symbolic constant as a fixup and a few zero bytes.
   Fixups.push_back(MCFixup::create(static_cast<uint32_t>(CB.size() - StartByte),
                                    Expr, FixupKind, PCRel));
   emitConstant(0, Size, CB);
