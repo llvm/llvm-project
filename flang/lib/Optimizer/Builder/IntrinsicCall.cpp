@@ -2648,16 +2648,18 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
 // ACOSD
 mlir::Value IntrinsicLibrary::genAcosd(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
+  // maps ACOSD to ACOS * 180 / pi
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value result =
+      getRuntimeCallGenerator("acos", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
-  return getRuntimeCallGenerator("acos", ftype)(builder, loc, {arg});
+  return builder.create<mlir::arith::MulFOp>(loc, result, factor);
 }
 
 // ADJUSTL & ADJUSTR
@@ -2799,16 +2801,18 @@ IntrinsicLibrary::genAny(mlir::Type resultType,
 // ASIND
 mlir::Value IntrinsicLibrary::genAsind(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
+  // maps ASIND to ASIN * 180 / pi
   assert(args.size() == 1);
   mlir::MLIRContext *context = builder.getContext();
   mlir::FunctionType ftype =
       mlir::FunctionType::get(context, {resultType}, {args[0].getType()});
+  mlir::Value result =
+      getRuntimeCallGenerator("asin", ftype)(builder, loc, {args[0]});
   llvm::APFloat pi = llvm::APFloat(llvm::numbers::pi);
   mlir::Value dfactor = builder.createRealConstant(
-      loc, mlir::Float64Type::get(context), pi / llvm::APFloat(180.0));
+      loc, mlir::Float64Type::get(context), llvm::APFloat(180.0) / pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
-  return getRuntimeCallGenerator("asin", ftype)(builder, loc, {arg});
+  return builder.create<mlir::arith::MulFOp>(loc, result, factor);
 }
 
 // ATAND, ATAN2D
