@@ -4247,7 +4247,7 @@ SDValue TargetLowering::foldSetCCWithOr(EVT VT, SDValue N0, SDValue N1,
   // (X | Y) == Y
   // (X | Y) != Y
   SDValue X;
-  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(N1)) {
+  if (sd_match(N0, m_Or(m_Value(X), m_Specific(N1))) && hasAndNotCompare(X)) {
     // If the target supports an 'and-not' or 'and-complement' logic operation,
     // try to use that to make a comparison operation more efficient.
 
