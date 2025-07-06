@@ -613,6 +613,7 @@ private:
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *VD) const;
   bool shouldOpportunisticallyEmitVTables();
+  bool shouldEmitUniqLinkageName(GlobalDecl GD);
   /// Map used to be sure we don't emit the same CompoundLiteral twice.
   llvm::DenseMap<const CompoundLiteralExpr *, llvm::GlobalVariable *>
       EmittedCompoundLiterals;

@@ -6,5 +6,5 @@ static long foo(const struct A*p);
 long bar(const struct A*p);
 long bar(const struct A*p) __attribute__((__alias__("foo")));
 
-// CHECK: define internal i64 @_ZL3fooPK1A.__uniq.[[ATTR:[0-9]+]](ptr noundef %p) #1 {
+// CHECK: define internal i64 @_ZL3fooPK1A.__uniq.[[ATTR:[0-9]+]](ptr noundef %p) #0 {
 static long foo(const struct A*p) {return 1;}

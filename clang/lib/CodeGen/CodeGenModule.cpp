@@ -3902,6 +3902,22 @@ bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
          Global->getType()->isCUDADeviceBuiltinTextureType();
 }
 
+bool CodeGenModule::shouldEmitUniqLinkageName(GlobalDecl GD) {
+  const auto *ND = dyn_cast<FunctionDecl>(GD.getDecl());
+  if (!ND || !getCXXABI().getMangleContext().shouldMangleDeclName(ND))
+    return false;
+  StringRef MangledName = getMangledName(GD);
+  if (!MangledName.contains(llvm::FunctionSamples::UniqSuffix))
+    return false;
+  for (const GlobalDecl &AD : Aliases) {
+    const auto *D = cast<ValueDecl>(AD.getDecl());
+    const AliasAttr *AA = D->getAttr<AliasAttr>();
+    if (AA && AA->getAliasee() == ND->getName())
+      return true;
+  }
+  return false;
+}
+
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
@@ -4056,7 +4072,6 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     CXXGlobalInits.push_back(nullptr);
   }
 
-  const auto *ND = dyn_cast<NamedDecl>(GD.getDecl());
   StringRef MangledName = getMangledName(GD);
   if (GetGlobalValue(MangledName) != nullptr) {
     // The value has already been used and should therefore be emitted.
@@ -4065,8 +4080,7 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     // The value must be emitted, but cannot be emitted eagerly.
     assert(!MayBeEmittedEagerly(Global));
     addDeferredDeclToEmit(GD);
-  } else if (!getLangOpts().CPlusPlus && ND &&
-             MangledName.contains(llvm::FunctionSamples::UniqSuffix)) {
+  } else if (!getLangOpts().CPlusPlus && shouldEmitUniqLinkageName(GD)) {
     // Emit static C function that is mangled with
     // -funique-internal-linkage-names.
     addDeferredDeclToEmit(GD);
@@ -6223,6 +6237,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
         if (llvm::GlobalValue *GVDef =
                 getModule().getNamedValue(D->getName())) {
           GVDef->replaceAllUsesWith(GV);
+          GVDef->removeFromParent();
         }
       }
     }
@@ -6285,6 +6300,18 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
   if (AA->getAliasee() == MangledName) {
     Diags.Report(AA->getLocation(), diag::err_cyclic_alias) << 0;
     return;
+  }
+
+  // Deferred emit for aliased C function when __attribute__((alias)) might be
+  // used after the definition of aliasee function
+  if (!getLangOpts().CPlusPlus) {
+    for (const auto &[Name, Decl] : DeferredDecls) {
+      const auto *FD = dyn_cast<FunctionDecl>(Decl.getDecl());
+      if (FD && FD->getName() == AA->getAliasee() &&
+          Name.contains(llvm::FunctionSamples::UniqSuffix)) {
+        addDeferredDeclToEmit(Decl);
+      }
+    }
   }
 
   // If there is a definition in the module, then it wins over the alias.
