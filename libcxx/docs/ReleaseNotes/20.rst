@@ -122,6 +122,9 @@ Improvements and New Features
 
 - The performance of ``std::getline`` has been improved, resulting in a performance uplift of up to 10x.
 
+- ``rotate`` has been optimized, resulting in a performance improvement of up to 2.2x for trivially move assignable
+  types.
+
 Deprecations and Removals
 -------------------------
 
