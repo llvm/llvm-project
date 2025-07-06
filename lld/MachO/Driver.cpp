@@ -283,6 +283,70 @@ static void saveThinArchiveToRepro(ArchiveFile const *file) {
           ": Archive::children failed: " + toString(std::move(e)));
 }
 
+typedef struct {
+  StringRef path;
+  bool isLazy;
+  std::optional<MemoryBufferRef> buffer;
+  const char *start;
+  size_t size;
+} DeferredFile;
+
+// Most input files have been mapped but not yet paged in.
+// This code forces the page-ins on multiple threads so
+// the process is not stalled waiting on disk buffer i/o.
+static void multiThreadedPageIn(std::vector<DeferredFile> &deferred) {
+#ifndef _WIN32
+#define MaxReadThreads 200
+  typedef struct {
+    std::vector<DeferredFile> &deferred;
+    size_t counter, total, pageSize;
+    pthread_mutex_t mutex;
+  } PageInState;
+  PageInState state = {deferred, 0, 0,
+                       llvm::sys::Process::getPageSizeEstimate(),
+                       pthread_mutex_t()};
+  static size_t totalBytes;
+
+  pthread_t running[MaxReadThreads];
+  if (config->readThreads > MaxReadThreads)
+    config->readThreads = MaxReadThreads;
+  pthread_mutex_init(&state.mutex, NULL);
+
+  for (int t = 0; t < config->readThreads; t++)
+    pthread_create(
+        &running[t], nullptr,
+        [](void *ptr) -> void * {
+          PageInState &state = *(PageInState *)ptr;
+          while (true) {
+            pthread_mutex_lock(&state.mutex);
+            if (state.counter >= state.deferred.size()) {
+              pthread_mutex_unlock(&state.mutex);
+              return nullptr;
+            }
+            DeferredFile &file = state.deferred[state.counter];
+            state.counter += 1;
+            pthread_mutex_unlock(&state.mutex);
+
+            const char *page = file.start, *end = page + file.size;
+            totalBytes += end - page;
+
+            int t = 0; // Reference each page to load it into memory.
+            for (; page < end; page += state.pageSize)
+              t += *page;
+            state.total += t; // Avoids the loop being optimised out.
+          }
+        },
+        &state);
+
+  for (int t = 0; t < config->readThreads; t++)
+    pthread_join(running[t], nullptr);
+
+  pthread_mutex_destroy(&state.mutex);
+  if (getenv("LLD_MULTI_THREAD_PAGE"))
+    printf("multiThreadedPageIn %ld/%ld\n", totalBytes, deferred.size());
+#endif
+}
+
 static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
                               StringRef path, LoadType loadType,
                               bool isLazy = false, bool isExplicit = true,
@@ -367,6 +431,7 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
       // we already found that it contains an ObjC symbol.
       if (readFile(path)) {
         Error e = Error::success();
+        std::vector<DeferredFile> deferredFiles;
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           Expected<MemoryBufferRef> mb = c.getMemoryBufferRef();
           if (!mb) {
@@ -380,6 +445,9 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
             continue;
           }
 
+          deferredFiles.push_back({path, isLazy, std::nullopt,
+                                   mb->getBuffer().data(),
+                                   mb->getBuffer().size()});
           if (!hasObjCSection(*mb))
             continue;
           if (Error e = file->fetch(c, "-ObjC"))
@@ -389,6 +457,8 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
         if (e)
           error(toString(file) +
                 ": Archive::children failed: " + toString(std::move(e)));
+        if (config->readThreads && deferredFiles.size() > 1)
+          multiThreadedPageIn(deferredFiles);
       }
     }
     file->addLazySymbols();
@@ -450,20 +520,14 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                      isBundleLoader, isForceHidden);
 }
 
-typedef struct {
-  StringRef path;
-  LoadType loadType;
-  bool isLazy;
-  std::optional<MemoryBufferRef> buffer;
-} DeferredFile;
-
-static void deferFile(StringRef path, LoadType loadType, bool isLazy,
+static void deferFile(StringRef path, bool isLazy,
                       std::vector<DeferredFile> &deferred) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (config->readThreads)
-    deferred.push_back({path, loadType, isLazy, buffer});
+    deferred.push_back({path, isLazy, buffer, buffer->getBuffer().data(),
+                        buffer->getBuffer().size()});
   else
-    processFile(buffer, path, loadType, isLazy);
+    processFile(buffer, path, LoadType::CommandLine, isLazy);
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
@@ -596,7 +660,7 @@ static void addFileList(StringRef path, bool isLazy,
     return;
   MemoryBufferRef mbref = *buffer;
   for (StringRef path : args::getLines(mbref))
-    deferFile(rerootPath(path), LoadType::CommandLine, isLazy, deferredFiles);
+    deferFile(rerootPath(path), isLazy, deferredFiles);
 }
 
 // We expect sub-library names of the form "libfoo", which will match a dylib
@@ -1241,61 +1305,7 @@ static void handleSymbolPatterns(InputArgList &args,
     parseSymbolPatternsFile(arg, symbolPatterns);
 }
 
-// Most input files have been mapped but not yet paged in.
-// This code forces the page-ins on multiple threads so
-// the process is not stalled waiting on disk buffer i/o.
-void multiThreadedPageIn(std::vector<DeferredFile> &deferred, int nthreads) {
-#ifndef _WIN32
-#define MaxReadThreads 200
-  typedef struct {
-    std::vector<DeferredFile> &deferred;
-    size_t counter, bytes, total, pageSize;
-    pthread_mutex_t mutex;
-  } PageInState;
-  PageInState state = {
-      deferred,         0, 0, 0, llvm::sys::Process::getPageSizeEstimate(),
-      pthread_mutex_t()};
-  pthread_mutex_init(&state.mutex, NULL);
-
-  pthread_t running[MaxReadThreads];
-  if (nthreads > MaxReadThreads)
-    nthreads = MaxReadThreads;
-
-  for (int t = 0; t < nthreads; t++)
-    pthread_create(
-        &running[t], nullptr,
-        [](void *ptr) -> void * {
-          PageInState &state = *(PageInState *)ptr;
-          while (true) {
-            pthread_mutex_lock(&state.mutex);
-            if (state.counter >= state.deferred.size()) {
-              pthread_mutex_unlock(&state.mutex);
-              return nullptr;
-            }
-            DeferredFile &file = state.deferred[state.counter];
-            state.counter += 1;
-            pthread_mutex_unlock(&state.mutex);
-
-            const char *page = file.buffer->getBuffer().data(),
-                       *end = page + file.buffer->getBuffer().size();
-            state.bytes += end - page;
-
-            int t = 0; // Reference each page to load it into memory.
-            for (; page < end; page += state.pageSize)
-              t += *page;
-            state.total += t; // Avoids the loop being optimised out.
-          }
-        },
-        &state);
-
-  for (int t = 0; t < nthreads; t++)
-    pthread_join(running[t], nullptr);
-
-  pthread_mutex_destroy(&state.mutex);
-#endif
-}
-
-void createFiles(const InputArgList &args) {
+static void createFiles(const InputArgList &args) {
   TimeTraceScope timeScope("Load input files");
   // This loop should be reserved for options whose exact ordering matters.
   // Other options should be handled via filtered() and/or getLastArg().
@@ -1311,8 +1321,7 @@ void createFiles(const InputArgList &args) {
 
     switch (opt.getID()) {
     case OPT_INPUT:
-      deferFile(rerootPath(arg->getValue()), LoadType::CommandLine, isLazy,
-                deferredFiles);
+      deferFile(rerootPath(arg->getValue()), isLazy, deferredFiles);
       break;
     case OPT_needed_library:
       if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
@@ -1380,9 +1389,9 @@ void createFiles(const InputArgList &args) {
   }
 
   if (config->readThreads) {
-    multiThreadedPageIn(deferredFiles, config->readThreads);
+    multiThreadedPageIn(deferredFiles);
     for (auto &file : deferredFiles)
-      processFile(file.buffer, file.path, file.loadType, file.isLazy);
+      processFile(file.buffer, file.path, LoadType::CommandLine, file.isLazy);
   }
 }
 
