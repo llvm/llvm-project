@@ -121,14 +121,11 @@ public:
 template <class _Fn, class... _Ranges>
 zip_transform_view(_Fn, _Ranges&&...) -> zip_transform_view<_Fn, views::all_t<_Ranges>...>;
 
-template <bool _Const, class... _Views>
-concept __base_forward = forward_range<__maybe_const<_Const, zip_view<_Views...>>>;
-
 template <bool _Const, class _Fn, class... _Views>
 struct __zip_transform_iterator_category_base {};
 
 template <bool _Const, class _Fn, class... _Views>
-  requires __base_forward<_Const, _Views...>
+  requires forward_range<__maybe_const<_Const, zip_view<_Views...>>>
 struct __zip_transform_iterator_category_base<_Const, _Fn, _Views...> {
 private:
   template <class _View>
