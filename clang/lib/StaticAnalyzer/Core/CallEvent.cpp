@@ -231,12 +231,20 @@ static void findPtrToConstParams(llvm::SmallSet<unsigned, 4> &PreserveArgs,
 
 ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
                                              ProgramStateRef Orig) const {
+  const FunctionSummary *Summary = nullptr;
   ProgramStateRef Result = (Orig ? Orig : getState());
 
-  // Don't invalidate anything if the callee is marked pure/const.
-  if (const Decl *callee = getDecl())
+  if (const Decl *callee = getDecl()) {
+    const SummaryContext *SummaryCtx =
+        State->getStateManager().getOwningEngine().getSummaryCtx();
+    const FunctionDecl *FD = llvm::dyn_cast<FunctionDecl>(callee);
+    if (SummaryCtx && FD)
+      Summary = SummaryCtx->GetSummary(FD);
+
+    // Don't invalidate anything if the callee is marked pure/const.
     if (callee->hasAttr<PureAttr>() || callee->hasAttr<ConstAttr>())
       return Result;
+  }
 
   SmallVector<SVal, 8> ValuesToInvalidate;
   RegionAndSymbolInvalidationTraits ETraits;
@@ -249,6 +257,9 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
     findPtrToConstParams(PreserveArgs, *this);
 
   for (unsigned Idx = 0, Count = getNumArgs(); Idx != Count; ++Idx) {
+    if (Summary && Summary->hasAttribute<NoWritePtrParameterAttr>())
+      continue;
+
     // Mark this region for invalidation.  We batch invalidate regions
     // below for efficiency.
     if (PreserveArgs.count(Idx))
@@ -275,13 +286,16 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
             ValuesToInvalidate.push_back(loc::MemRegionVal(TVR));
   }
 
+  bool ShouldPreserveGlobals =
+      Summary && Summary->hasAttribute<NoWriteGlobalAttr>();
+
   // Invalidate designated regions using the batch invalidation API.
   // NOTE: Even if RegionsToInvalidate is empty, we may still invalidate
   //  global variables.
-  return Result->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                   BlockCount, getLocationContext(),
-                                   /*CausedByPointerEscape*/ true,
-                                   /*Symbols=*/nullptr, this, &ETraits);
+  return Result->invalidateRegions(
+      ValuesToInvalidate, getCFGElementRef(), BlockCount, getLocationContext(),
+      /*CausedByPointerEscape*/ true,
+      /*Symbols=*/nullptr, ShouldPreserveGlobals ? nullptr : this, &ETraits);
 }
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,

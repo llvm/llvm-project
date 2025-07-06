@@ -534,6 +534,15 @@ public:
   /// minimization hints.
   std::string DumpMinimizationHintsPath;
 
+  /// The directory used to write summary files to.
+  std::string EmitSummaryDir;
+
+  /// The directory used to load summary files from.
+  std::string ReadSummaryDir;
+
+  /// The format of the summary files.
+  std::string SummaryFormat;
+
 public:
   FrontendOptions()
       : DisableFree(false), RelocatablePCH(false), ShowHelp(false),
