@@ -672,12 +672,7 @@ private:
   DynTypedMatcher Implementation;
 };  // class Matcher
 
-/// A convenient helper for creating a Matcher<T> without specifying
-/// the template type argument.
-template <typename T>
-inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
-  return Matcher<T>(Implementation);
-}
+template <typename T> Matcher(MatcherInterface<T> *) -> Matcher<T>;
 
 /// Interface that allows matchers to traverse the AST.
 /// FIXME: Find a better name.
