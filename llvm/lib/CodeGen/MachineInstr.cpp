@@ -1581,6 +1581,12 @@ bool MachineInstr::hasOrderedMemoryRef() const {
   if (memoperands_empty())
     return true;
 
+  // Conservatively skip analysis if there are too many memory operands. Keep
+  // compilation time reasonable.
+  const TargetInstrInfo *TII = getMF()->getSubtarget().getInstrInfo();
+  if (getNumMemOperands() > TII->getMemOperandLinearCheckLimit())
+    return true;
+
   // Check if any of our memory operands are ordered.
   return llvm::any_of(memoperands(), [](const MachineMemOperand *MMO) {
     return !MMO->isUnordered();
@@ -1600,7 +1606,15 @@ bool MachineInstr::isDereferenceableInvariantLoad() const {
   if (memoperands_empty())
     return false;
 
-  const MachineFrameInfo &MFI = getParent()->getParent()->getFrameInfo();
+  const MachineFunction &MF = *getMF();
+
+  // Conservatively skip analysis if there are too many memory operands. Keep
+  // compilation time reasonable.
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
+  if (getNumMemOperands() > TII->getMemOperandLinearCheckLimit())
+    return false;
+
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   for (MachineMemOperand *MMO : memoperands()) {
     if (!MMO->isUnordered())
