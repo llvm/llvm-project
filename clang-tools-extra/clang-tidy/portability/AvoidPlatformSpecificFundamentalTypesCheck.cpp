@@ -172,46 +172,40 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
   QualType QT;
   SourceRange TypeRange;
 
+  auto SetTypeRange = [&TypeRange](auto Decl){
+    if(Decl->getTypeSourceInfo()) {
+      TypeRange = Decl->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    }
+  };
+
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var_decl")) {
     Loc = VD->getLocation();
     QT = VD->getType();
-    if (VD->getTypeSourceInfo()) {
-      TypeRange = VD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
+    SetTypeRange(VD);
   } else if (const auto *FD =
                  Result.Nodes.getNodeAs<FunctionDecl>("func_decl")) {
     Loc = FD->getLocation();
     QT = FD->getReturnType();
-    if (FD->getTypeSourceInfo()) {
-      TypeRange = FD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
+    SetTypeRange(FD);
   } else if (const auto *PD =
                  Result.Nodes.getNodeAs<ParmVarDecl>("param_decl")) {
     Loc = PD->getLocation();
     QT = PD->getType();
-    if (PD->getTypeSourceInfo()) {
-      TypeRange = PD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
+    SetTypeRange(PD);
   } else if (const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("field_decl")) {
     Loc = FD->getLocation();
     QT = FD->getType();
-    if (FD->getTypeSourceInfo()) {
-      TypeRange = FD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
+    SetTypeRange(FD);
   } else if (const auto *TD =
                  Result.Nodes.getNodeAs<TypedefDecl>("typedef_decl")) {
     Loc = TD->getLocation();
     QT = TD->getUnderlyingType();
-    if (TD->getTypeSourceInfo()) {
-      TypeRange = TD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
+    SetTypeRange(TD);
   } else if (const auto *AD =
                  Result.Nodes.getNodeAs<TypeAliasDecl>("alias_decl")) {
     Loc = AD->getLocation();
     QT = AD->getUnderlyingType();
-    if (AD->getTypeSourceInfo()) {
-      TypeRange = AD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
-    }
+    SetTypeRange(AD);
   } else {
     return;
   }
