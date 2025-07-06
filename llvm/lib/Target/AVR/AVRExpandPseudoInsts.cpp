@@ -2536,36 +2536,40 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   // a write to SPL will automatically disable interrupts
   // for up to four instructions or until the next I/O memory write.
   if (STI.getELFArch() >= 102) { // An XMEGA device
+
     buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3d)
-      .addReg(SrcLoReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+        .addImm(0x3d)
+        .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
+
     buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3e)
-      .addReg(SrcHiReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+        .addImm(0x3e)
+        .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
+
   } else { // Disable interrupts for older devices (3 extra instructions)
+
     buildMI(MBB, MBBI, AVR::INRdA)
-      .addReg(STI.getTmpRegister(), RegState::Define)
-      .addImm(STI.getIORegSREG())
-      .setMIFlags(Flags);
+        .addReg(STI.getTmpRegister(), RegState::Define)
+        .addImm(STI.getIORegSREG())
+        .setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::BCLRs).addImm(0x07).setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3e)
-      .addReg(SrcHiReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+        .addImm(0x3e)
+        .addReg(SrcHiReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(STI.getIORegSREG())
-      .addReg(STI.getTmpRegister(), RegState::Kill)
-      .setMIFlags(Flags);
+        .addImm(STI.getIORegSREG())
+        .addReg(STI.getTmpRegister(), RegState::Kill)
+        .setMIFlags(Flags);
 
     buildMI(MBB, MBBI, AVR::OUTARr)
-      .addImm(0x3d)
-      .addReg(SrcLoReg, getKillRegState(SrcIsKill))
-      .setMIFlags(Flags);
+        .addImm(0x3d)
+        .addReg(SrcLoReg, getKillRegState(SrcIsKill))
+        .setMIFlags(Flags);
   }
 
   MI.eraseFromParent();
