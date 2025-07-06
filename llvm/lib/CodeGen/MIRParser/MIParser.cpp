@@ -445,6 +445,8 @@ public:
   parseBasicBlockDefinition(DenseMap<unsigned, MachineBasicBlock *> &MBBSlots);
   bool parseBasicBlock(MachineBasicBlock &MBB,
                        MachineBasicBlock *&AddFalthroughFrom);
+  // Unison MIR style extension: list of basic block live-out registers.
+  bool parseBasicBlockLiveouts();
   bool parseBasicBlockLiveins(MachineBasicBlock &MBB);
   bool parseBasicBlockSuccessors(MachineBasicBlock &MBB);
 
@@ -751,6 +753,13 @@ bool MIParser::parseBasicBlockDefinition(
         if (parseAlignment(Alignment))
           return true;
         break;
+      case MIToken::kw_freq:
+        // Unison MIR style extension: basic block execution frequency.
+          lex();
+        if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
+          return error("expected an integer literal");
+        lex();
+        break;
       case MIToken::IRBlock:
       case MIToken::NamedIRBlock:
         // TODO: Report an error when both name and ir block are specified.
@@ -888,6 +897,25 @@ bool MIParser::parseBasicBlockLiveins(MachineBasicBlock &MBB) {
   return false;
 }
 
+bool MIParser::parseBasicBlockLiveouts() {
+  assert(Token.is(MIToken::kw_liveouts));
+  lex();
+  if (expectAndConsume(MIToken::colon))
+    return true;
+  if (Token.isNewlineOrEOF()) // Allow an empty list of liveouts.
+    return false;
+  do {
+    if (Token.isNot(MIToken::NamedRegister))
+      return error("expected a named register");
+    Register Reg{0};
+    VRegInfo *RegInfo;
+    if (parseRegister(Reg, RegInfo))
+      return true;
+    lex();
+  } while (consumeIfPresent(MIToken::comma));
+  return false;
+}
+
 bool MIParser::parseBasicBlockSuccessors(MachineBasicBlock &MBB) {
   assert(Token.is(MIToken::kw_successors));
   lex();
@@ -949,6 +977,11 @@ bool MIParser::parseBasicBlock(MachineBasicBlock &MBB,
     } else if (Token.is(MIToken::kw_liveins)) {
       if (parseBasicBlockLiveins(MBB))
         return true;
+    } else if (Token.is(MIToken::kw_liveouts)) {
+      if (parseBasicBlockLiveouts())
+        return true;
+    } else if (Token.is(MIToken::kw_exit)) {
+      lex();
     } else if (consumeIfPresent(MIToken::Newline)) {
       continue;
     } else
@@ -3285,6 +3318,14 @@ bool MIParser::parseMemoryPseudoSourceValue(const PseudoSourceValue *&PSV) {
 }
 
 bool MIParser::parseMachinePointerInfo(MachinePointerInfo &Dest) {
+  // Unison MIR style extension: accept "unknown" pseudo-values, just return a
+  // null pointer.
+  if (Token.is(MIToken::kw_unknown)) {
+    lex();
+    const Value *V = nullptr;
+    Dest = MachinePointerInfo(V);
+    return false;
+  }
   if (Token.is(MIToken::kw_constant_pool) || Token.is(MIToken::kw_stack) ||
       Token.is(MIToken::kw_got) || Token.is(MIToken::kw_jump_table) ||
       Token.is(MIToken::FixedStackObject) || Token.is(MIToken::StackObject) ||

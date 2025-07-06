@@ -463,6 +463,9 @@ LLVM_ABI extern char &MachineCFGPrinterID;
 /// LiveDebugValues pass
 LLVM_ABI extern char &LiveDebugValuesID;
 
+/// UnisonMIRPrepare - This pass prepares for printing Unison-style MIR.
+LLVM_ABI extern char &UnisonMIRPrepareID;
+
 /// InterleavedAccess Pass - This pass identifies and matches interleaved
 /// memory accesses to target specific intrinsics.
 ///

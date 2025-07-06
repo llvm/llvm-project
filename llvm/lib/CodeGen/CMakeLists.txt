@@ -244,6 +244,7 @@ add_llvm_component_library(LLVMCodeGen
   TargetSubtargetInfo.cpp
   TwoAddressInstructionPass.cpp
   TypePromotion.cpp
+  UnisonMIRPrepare.cpp
   UnreachableBlockElim.cpp
   ValueTypes.cpp
   VLIWMachineScheduler.cpp

@@ -1,0 +1,3 @@
+install(PROGRAMS llc-unison
+  DESTINATION ${LLVM_TOOLS_INSTALL_DIR}
+  COMPONENT llc-unison)
