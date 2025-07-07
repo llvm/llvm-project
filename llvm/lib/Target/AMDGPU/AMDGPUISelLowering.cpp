@@ -4937,7 +4937,6 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     }
 
     // Support source modifiers as integer.
-    // (select c, (xor/or/and x, c), y) -> (bitcast (select c)))
     if (VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) {
       if (SDValue SrcMod = getBitwiseToSrcModifierOp(True, DCI)) {
         SDLoc SL(N);
