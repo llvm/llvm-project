@@ -151,6 +151,12 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
                 Enum.getEnumValNamePrefix());
 
   OS << formatv("} {0};\n", Enum.getName());
+
+  // Add field for the number of variants
+  OS << formatv(TAB_1
+                "/// @brief Number of variants for the {0} enumeration\n" TAB_1
+                "#define {0}_NUM_VARIANTS {1}\n",
+                Enum.getEnumValNamePrefix(), EtorVal);
 }
 
 static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
