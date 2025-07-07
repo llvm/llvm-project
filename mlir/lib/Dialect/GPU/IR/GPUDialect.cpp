@@ -1147,8 +1147,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernelSymbol;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = asyncDependencies.size();
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
@@ -1196,8 +1195,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernel;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = 0;
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
