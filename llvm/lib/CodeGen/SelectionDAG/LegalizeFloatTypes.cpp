@@ -715,11 +715,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   bool IsStrict = N->isStrictFPOpcode();
   unsigned Offset = IsStrict ? 1 : 0;
-  assert((N->getOperand(1 + Offset).getValueType() == MVT::i16 ||
-          N->getOperand(1 + Offset).getValueType() == MVT::i32) &&
-         "Unsupported power type!");
   bool IsPowI =
       N->getOpcode() == ISD::FPOWI || N->getOpcode() == ISD::STRICT_FPOWI;
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
   RTLIB::Libcall LC = IsPowI ? RTLIB::getPOWI(N->getValueType(0))
                              : RTLIB::getLDEXP(N->getValueType(0));
@@ -727,19 +725,22 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   if (!TLI.getLibcallName(LC)) {
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
-    DAG.getContext()->emitError("Don't know how to soften fpowi to fpow");
-    return DAG.getUNDEF(N->getValueType(0));
+    DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return DAG.getPOISON(NVT);
   }
 
   if (DAG.getLibInfo().getIntSize() !=
       N->getOperand(1 + Offset).getValueType().getSizeInBits()) {
     // If the exponent does not match with sizeof(int) a libcall to RTLIB::POWI
     // would use the wrong type for the argument.
-    DAG.getContext()->emitError("POWI exponent does not match sizeof(int)");
-    return DAG.getUNDEF(N->getValueType(0));
+    DAG.getContext()->emitError("powi exponent does not match sizeof(int)");
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return DAG.getPOISON(NVT);
   }
 
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   SDValue Ops[2] = { GetSoftenedFloat(N->getOperand(0 + Offset)),
                      N->getOperand(1 + Offset) };
   SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
