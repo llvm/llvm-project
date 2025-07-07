@@ -672,7 +672,18 @@ private:
   DynTypedMatcher Implementation;
 };  // class Matcher
 
+// Deduction guide for Matcher.
 template <typename T> Matcher(MatcherInterface<T> *) -> Matcher<T>;
+
+// TODO: Remove in LLVM 23.
+template <typename T>
+[[deprecated(
+    "makeMatcher() is deprecated and will be removed in LLVM 23. "
+    "Uses of it can be replaced with direct calls to Matcher's "
+    "constructor; with C++17's CTAD, template arguments will be deduced.")]]
+inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
+  return Matcher<T>(Implementation);
+}
 
 /// Interface that allows matchers to traverse the AST.
 /// FIXME: Find a better name.
