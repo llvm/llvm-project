@@ -28513,9 +28513,7 @@ void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
 }
 
 // Unlike X86, we let frame lowering assign offsets to all catch objects.
-bool AArch64TargetLowering::needsFixedCatchObjects() const {
-  return false;
-}
+bool AArch64TargetLowering::needsFixedCatchObjects() const { return true; }
 
 bool AArch64TargetLowering::shouldLocalize(
     const MachineInstr &MI, const TargetTransformInfo *TTI) const {
