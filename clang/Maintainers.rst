@@ -60,7 +60,7 @@ Clang MLIR generation
 | bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
 
 | Henrich Lauko
-| henrich.lauko\@trailofbits.com  (email), henrich.lauko (Discord), xlauko (GitHub)
+| henrich.lau\@gmail.com  (email), henrich.lauko (Discord), xlauko (GitHub)
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
