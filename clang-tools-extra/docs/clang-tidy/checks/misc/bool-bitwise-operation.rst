@@ -34,9 +34,9 @@ of using ``|=`` operator:
   }
 
 Limitations
--------
+-----------
 
-* Templates aren't matched.
+* Bitwise operators inside templates aren't matched.
 
 .. code-block:: c++
 
