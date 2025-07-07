@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTORSIMPLE_H
-#define LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTORSIMPLE_H
+#ifndef LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFDATAEXTRACTORSIMPLE_H
+#define LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFDATAEXTRACTORSIMPLE_H
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Compiler.h"
@@ -195,4 +195,4 @@ class DWARFDataExtractorSimple
 };
 
 } // end namespace llvm
-#endif // LLVM_DEBUGINFO_DWARF_DWARFDATAEXTRACTOR_H
+#endif // LLVM_DEBUGINFO_DWARF_LOWLEVEL_DWARFDATAEXTRACTORSIMPLE_H

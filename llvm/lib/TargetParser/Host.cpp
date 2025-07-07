@@ -180,13 +180,13 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   StringRef Implementer;
   StringRef Hardware;
   StringRef Part;
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I) {
-    if (Lines[I].starts_with("CPU implementer"))
-      Implementer = Lines[I].substr(15).ltrim("\t :");
-    if (Lines[I].starts_with("Hardware"))
-      Hardware = Lines[I].substr(8).ltrim("\t :");
-    if (Lines[I].starts_with("CPU part"))
-      Part = Lines[I].substr(8).ltrim("\t :");
+  for (StringRef Line : Lines) {
+    if (Line.consume_front("CPU implementer"))
+      Implementer = Line.ltrim("\t :");
+    else if (Line.consume_front("Hardware"))
+      Hardware = Line.ltrim("\t :");
+    else if (Line.consume_front("CPU part"))
+      Part = Line.ltrim("\t :");
   }
 
   if (Implementer == "0x41") { // ARM Ltd.

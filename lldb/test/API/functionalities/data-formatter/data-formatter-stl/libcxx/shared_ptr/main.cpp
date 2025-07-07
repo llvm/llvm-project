@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <memory>
 #include <string>
 
@@ -22,5 +23,16 @@ int main() {
       std::shared_ptr<NodeS>(new NodeS{nullptr, 2});
   ptr_node = std::shared_ptr<NodeS>(new NodeS{std::move(ptr_node), 1});
 
-  return 0; // break here
+  // Construct empty shared_ptr with non-null control field.
+  std::shared_ptr<int> si(new int(47));
+  std::shared_ptr<int> sie(si, nullptr);
+
+  std::puts("// break here");
+
+  std::weak_ptr<int> wie = sie;
+  std::weak_ptr<int> wie2 = sie;
+
+  std::puts("// break here");
+
+  return 0;
 }

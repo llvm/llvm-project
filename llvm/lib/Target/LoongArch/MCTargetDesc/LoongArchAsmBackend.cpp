@@ -57,9 +57,9 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       // LoongArchFixupKinds.h.
       //
       // {name, offset, bits, flags}
-      {"fixup_loongarch_b16", 10, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_b21", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_loongarch_b26", 0, 26, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_b16", 10, 16, 0},
+      {"fixup_loongarch_b21", 0, 26, 0},
+      {"fixup_loongarch_b26", 0, 26, 0},
       {"fixup_loongarch_abs_hi20", 5, 20, 0},
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
@@ -72,7 +72,7 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
   // do not require any extra processing.
   if (mc::isRelocation(Kind))
-    return MCAsmBackend::getFixupKindInfo(FK_NONE);
+    return {};
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -265,23 +265,17 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 6:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD6),
-                          MCFixupKind(ELF::R_LARCH_SUB6));
+    return std::make_pair(ELF::R_LARCH_ADD6, ELF::R_LARCH_SUB6);
   case 8:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD8),
-                          MCFixupKind(ELF::R_LARCH_SUB8));
+    return std::make_pair(ELF::R_LARCH_ADD8, ELF::R_LARCH_SUB8);
   case 16:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD16),
-                          MCFixupKind(ELF::R_LARCH_SUB16));
+    return std::make_pair(ELF::R_LARCH_ADD16, ELF::R_LARCH_SUB16);
   case 32:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD32),
-                          MCFixupKind(ELF::R_LARCH_SUB32));
+    return std::make_pair(ELF::R_LARCH_ADD32, ELF::R_LARCH_SUB32);
   case 64:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD64),
-                          MCFixupKind(ELF::R_LARCH_SUB64));
+    return std::make_pair(ELF::R_LARCH_ADD64, ELF::R_LARCH_SUB64);
   case 128:
-    return std::make_pair(MCFixupKind(ELF::R_LARCH_ADD_ULEB128),
-                          MCFixupKind(ELF::R_LARCH_SUB_ULEB128));
+    return std::make_pair(ELF::R_LARCH_ADD_ULEB128, ELF::R_LARCH_SUB_ULEB128);
   }
 }
 
@@ -290,7 +284,7 @@ std::pair<bool, bool> LoongArchAsmBackend::relaxLEB128(MCLEBFragment &LF,
   const MCExpr &Expr = LF.getValue();
   if (LF.isSigned() || !Expr.evaluateKnownAbsolute(Value, *Asm))
     return std::make_pair(false, false);
-  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128, Expr.getLoc()));
+  LF.addFixup(MCFixup::create(0, &Expr, FK_Data_leb128));
   return std::make_pair(true, true);
 }
 

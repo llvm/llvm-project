@@ -358,8 +358,27 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool AnyFix) {
 
 } // namespace clang::tidy
 
+void ClangTidyDiagnosticConsumer::BeginSourceFile(const LangOptions &LangOpts,
+                                                  const Preprocessor *PP) {
+  DiagnosticConsumer::BeginSourceFile(LangOpts, PP);
+
+  assert(!InSourceFile);
+  InSourceFile = true;
+}
+
+void ClangTidyDiagnosticConsumer::EndSourceFile() {
+  assert(InSourceFile);
+  InSourceFile = false;
+
+  DiagnosticConsumer::EndSourceFile();
+}
+
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
+  // A diagnostic should not be reported outside of a
+  // BeginSourceFile()/EndSourceFile() pair if it has a source location.
+  assert(InSourceFile || Info.getLocation().isInvalid());
+
   if (LastErrorWasIgnored && DiagLevel == DiagnosticsEngine::Note)
     return;
 

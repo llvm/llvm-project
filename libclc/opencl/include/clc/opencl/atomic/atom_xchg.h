@@ -7,18 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef cl_khr_global_int32_base_atomics
-#define __CLC_FUNCTION atom_xchg
+#define FUNCTION atom_xchg
 #define __CLC_ADDRESS_SPACE global
 #include <clc/opencl/atomic/atom_decl_int32.inc>
 #endif // cl_khr_global_int32_base_atomics
 
 #ifdef cl_khr_local_int32_base_atomics
-#define __CLC_FUNCTION atom_xchg
+#define FUNCTION atom_xchg
 #define __CLC_ADDRESS_SPACE local
 #include <clc/opencl/atomic/atom_decl_int32.inc>
 #endif // cl_khr_local_int32_base_atomics
 
 #ifdef cl_khr_int64_base_atomics
-#define __CLC_FUNCTION atom_xchg
+#define FUNCTION atom_xchg
 #include <clc/opencl/atomic/atom_decl_int64.inc>
 #endif // cl_khr_int64_base_atomics

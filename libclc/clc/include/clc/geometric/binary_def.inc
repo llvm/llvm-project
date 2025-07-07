@@ -8,8 +8,8 @@
 
 #include <clc/utils.h>
 
-#ifndef __CLC_FUNCTION
-#define __CLC_FUNCTION(x) __CLC_CONCAT(__clc_, x)
+#ifndef __IMPL_FUNCTION
+#define __IMPL_FUNCTION(x) __CLC_CONCAT(__clc_, x)
 #endif
 
 // Geometric functions are only defined for scalar, vec2, vec3 and vec4
@@ -18,7 +18,7 @@
 
 _CLC_OVERLOAD _CLC_DEF __CLC_SCALAR_GENTYPE FUNCTION(__CLC_GENTYPE a,
                                                      __CLC_GENTYPE b) {
-  return __CLC_FUNCTION(FUNCTION)(a, b);
+  return __IMPL_FUNCTION(FUNCTION)(a, b);
 }
 
 #endif

@@ -290,8 +290,7 @@ unsigned LanaiMCCodeEmitter::getBranchTargetOpValue(
   if (MCOp.isReg() || MCOp.isImm())
     return getMachineOpValue(Inst, MCOp, Fixups, SubtargetInfo);
 
-  Fixups.push_back(MCFixup::create(
-      0, MCOp.getExpr(), static_cast<MCFixupKind>(Lanai::FIXUP_LANAI_25)));
+  Fixups.push_back(MCFixup::create(0, MCOp.getExpr(), Lanai::FIXUP_LANAI_25));
 
   return 0;
 }

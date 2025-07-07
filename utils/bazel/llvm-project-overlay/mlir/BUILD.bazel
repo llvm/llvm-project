@@ -5076,6 +5076,8 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/VCIX*.h",
             "lib/Dialect/LLVMIR/IR/*X86Vector*.cpp",
             "lib/Dialect/LLVMIR/IR/*X86Vector*.h",
+            "lib/Dialect/LLVMIR/IR/XeVM*.cpp",
+            "lib/Dialect/LLVMIR/IR/XeVM*.h",
         ],
     ),
     hdrs = glob(
@@ -5088,6 +5090,7 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/ROCDL*.h",
             "include/mlir/Dialect/LLVMIR/VCIX*.h",
             "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
+            "include/mlir/Dialect/LLVMIR/XeVM*.h",
         ],
     ),
     includes = ["include"],
@@ -9070,6 +9073,7 @@ cc_library(
         ":X86VectorTransforms",
         ":XeGPUDialect",
         ":XeGPUTransforms",
+        ":XeVMDialect",
     ],
 )
 
@@ -13535,4 +13539,61 @@ cc_library(
         ":TransformUtils",
         "//llvm:Support",
     ],
+)
+
+cc_library(
+    name = "XeVMDialect",
+    srcs = ["lib/Dialect/LLVMIR/IR/XeVMDialect.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/XeVMDialect.h"],
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":DialectUtils",
+        ":GPUDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":ToLLVMIRTranslation",
+        ":XeVMOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "XeVMTdFiles",
+    srcs = ["include/mlir/Dialect/LLVMIR/XeVMOps.td"],
+    includes = ["include"],
+    deps = [
+        ":GPUOpsTdFiles",
+        ":LLVMOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "XeVMOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/XeVMOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/LLVMIR/XeVMOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/LLVMIR/XeVMOpsDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=xevm",
+        ],
+        "include/mlir/Dialect/LLVMIR/XeVMOpsDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=xevm",
+        ],
+        "include/mlir/Dialect/LLVMIR/XeVMOpsEnums.h.inc": ["-gen-enum-decls"],
+        "include/mlir/Dialect/LLVMIR/XeVMOpsEnums.cpp.inc": ["-gen-enum-defs"],
+        "include/mlir/Dialect/LLVMIR/XeVMOpsAttributes.h.inc": [
+            "-gen-attrdef-decls",
+            "-attrdefs-dialect=xevm",
+        ],
+        "include/mlir/Dialect/LLVMIR/XeVMOpsAttributes.cpp.inc": [
+            "-gen-attrdef-defs",
+            "-attrdefs-dialect=xevm",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/XeVMOps.td",
+    deps = [":XeVMTdFiles"],
 )

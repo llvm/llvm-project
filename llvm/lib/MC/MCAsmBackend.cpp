@@ -10,7 +10,6 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -87,6 +86,7 @@ std::optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
 }
 
 MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // clang-format off
   static const MCFixupKindInfo Builtins[] = {
       {"FK_NONE", 0, 0, 0},
       {"FK_Data_1", 0, 8, 0},
@@ -94,15 +94,12 @@ MCFixupKindInfo MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_Data_4", 0, 32, 0},
       {"FK_Data_8", 0, 64, 0},
       {"FK_Data_leb128", 0, 0, 0},
-      {"FK_PCRel_1", 0, 8, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_PCRel_8", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_SecRel_1", 0, 8, 0},
       {"FK_SecRel_2", 0, 16, 0},
       {"FK_SecRel_4", 0, 32, 0},
       {"FK_SecRel_8", 0, 64, 0},
   };
+  // clang-format on
 
   assert(size_t(Kind - FK_NONE) < std::size(Builtins) && "Unknown fixup kind");
   return Builtins[Kind - FK_NONE];

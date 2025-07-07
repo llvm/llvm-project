@@ -17,10 +17,12 @@ namespace hlsl {
 
 using TokenKind = RootSignatureToken::Kind;
 
-RootSignatureParser::RootSignatureParser(SmallVector<RootElement> &Elements,
-                                         RootSignatureLexer &Lexer,
-                                         Preprocessor &PP)
-    : Elements(Elements), Lexer(Lexer), PP(PP), CurToken(SourceLocation()) {}
+RootSignatureParser::RootSignatureParser(
+    llvm::dxbc::RootSignatureVersion Version,
+    SmallVector<RootElement> &Elements, RootSignatureLexer &Lexer,
+    Preprocessor &PP)
+    : Version(Version), Elements(Elements), Lexer(Lexer), PP(PP),
+      CurToken(SourceLocation()) {}
 
 bool RootSignatureParser::parse() {
   // Iterate as many RootElements as possible
@@ -199,7 +201,7 @@ std::optional<RootDescriptor> RootSignatureParser::parseRootDescriptor() {
     ExpectedReg = TokenKind::uReg;
     break;
   }
-  Descriptor.setDefaultFlags();
+  Descriptor.setDefaultFlags(Version);
 
   auto Params = parseRootDescriptorParams(ExpectedReg);
   if (!Params.has_value())
@@ -318,7 +320,7 @@ RootSignatureParser::parseDescriptorTableClause() {
     ExpectedReg = TokenKind::sReg;
     break;
   }
-  Clause.setDefaultFlags();
+  Clause.setDefaultFlags(Version);
 
   auto Params = parseDescriptorTableClauseParams(ExpectedReg);
   if (!Params.has_value())

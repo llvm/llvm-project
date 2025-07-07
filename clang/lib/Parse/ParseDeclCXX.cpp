@@ -4956,7 +4956,8 @@ void Parser::ParseHLSLRootSignatureAttributeArgs(ParsedAttributes &Attrs) {
     // Invoke the root signature parser to construct the in-memory constructs
     hlsl::RootSignatureLexer Lexer(Signature, SignatureLoc);
     SmallVector<llvm::hlsl::rootsig::RootElement> RootElements;
-    hlsl::RootSignatureParser Parser(RootElements, Lexer, PP);
+    hlsl::RootSignatureParser Parser(getLangOpts().HLSLRootSigVer, RootElements,
+                                     Lexer, PP);
     if (Parser.parse()) {
       T.consumeClose();
       return;

@@ -1769,8 +1769,8 @@ public:
       unsigned NumRC = TRI->getNumRegClasses();
       RegLimit.resize(NumRC);
       RegPressure.resize(NumRC);
-      std::fill(RegLimit.begin(), RegLimit.end(), 0);
-      std::fill(RegPressure.begin(), RegPressure.end(), 0);
+      llvm::fill(RegLimit, 0);
+      llvm::fill(RegPressure, 0);
       for (const TargetRegisterClass *RC : TRI->regclasses())
         RegLimit[RC->getID()] = tri->getRegPressureLimit(RC, MF);
     }
@@ -1793,7 +1793,7 @@ public:
   void releaseState() override {
     SUnits = nullptr;
     SethiUllmanNumbers.clear();
-    std::fill(RegPressure.begin(), RegPressure.end(), 0);
+    llvm::fill(RegPressure, 0);
   }
 
   unsigned getNodePriority(const SUnit *SU) const;

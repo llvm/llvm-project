@@ -7312,7 +7312,7 @@ multiclass VRINT_FPI<string op, bits<3> op9_7, SDPatternOperator Int> {
   }
 }
 
-defm VRINTNN : VRINT_FPI<"n", 0b000, int_arm_neon_vrintn>;
+defm VRINTNN : VRINT_FPI<"n", 0b000, froundeven>;
 defm VRINTXN : VRINT_FPI<"x", 0b001, frint>;
 defm VRINTAN : VRINT_FPI<"a", 0b010, fround>;
 defm VRINTZN : VRINT_FPI<"z", 0b011, ftrunc>;

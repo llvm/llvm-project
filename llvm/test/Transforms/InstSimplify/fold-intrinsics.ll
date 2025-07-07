@@ -33,7 +33,7 @@ define void @powi(double %V, ptr%P) {
 define void @powi_i16(float %V, ptr%P) {
 ; CHECK-LABEL: @powi_i16(
 ; CHECK-NEXT:    store volatile float 1.000000e+00, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    store volatile float [[V:%.*]], ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float [[D:%.*]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call float @llvm.powi.f32.i16(float %V, i16 0) nounwind
@@ -41,6 +41,49 @@ define void @powi_i16(float %V, ptr%P) {
 
   %C = tail call float @llvm.powi.f32.i16(float %V, i16 1) nounwind
   store volatile float %C, ptr %P
+
+  ret void
+}
+
+define i32 @test_ctpop_poison(i32 %a) {
+; CHECK-LABEL: @test_ctpop_poison(
+; CHECK-NEXT:    ret i32 poison
+;
+  %res = tail call i32 @llvm.ctpop.i32(i32 poison)
+  ret i32 %res
+}
+
+define void @pow_poison(i16 %arg_int,float %arg_flt, ptr %P) {
+; CHECK-LABEL: @pow_poison(
+; CHECK-NEXT:    store volatile float poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile float poison, ptr [[P]], align 4
+; CHECK-NEXT:    store volatile <2 x float> poison, ptr [[P]], align 8
+; CHECK-NEXT:    ret void
+;
+  %2 = tail call float @llvm.powi(float poison, i16 %arg_int) nounwind
+  store volatile float %2, ptr %P
+
+  %3 = tail call float @llvm.pow(float poison, float %arg_flt) nounwind
+  store volatile float %3, ptr %P
+
+  %4 = tail call float @llvm.powi(float %arg_flt, i16 poison) nounwind
+  store volatile float %4, ptr %P
+
+  %5 = tail call float @llvm.pow(float %arg_flt, float poison) nounwind
+  store volatile float %5, ptr %P
+
+  %6 = tail call float @llvm.powi(float poison, i16 poison) nounwind
+  store volatile float %6, ptr %P
+
+  %7 = tail call float @llvm.pow(float poison, float poison) nounwind
+  store volatile float %7, ptr %P
+
+  %8 = tail call <2 x float> @llvm.pow(<2 x float> poison, <2 x float> poison) nounwind
+  store volatile <2 x float> %8, ptr %P
 
   ret void
 }

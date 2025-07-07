@@ -54,8 +54,8 @@ ResourcePriorityQueue::ResourcePriorityQueue(SelectionDAGISel *IS)
   unsigned NumRC = TRI->getNumRegClasses();
   RegLimit.resize(NumRC);
   RegPressure.resize(NumRC);
-  std::fill(RegLimit.begin(), RegLimit.end(), 0);
-  std::fill(RegPressure.begin(), RegPressure.end(), 0);
+  llvm::fill(RegLimit, 0);
+  llvm::fill(RegPressure, 0);
   for (const TargetRegisterClass *RC : TRI->regclasses())
     RegLimit[RC->getID()] = TRI->getRegPressureLimit(RC, *IS->MF);
 
