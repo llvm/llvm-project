@@ -19,65 +19,21 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <type_traits>
 #include <utility>
 
 using namespace llvm;
+
+static_assert(std::is_trivially_destructible_v<MCDataFragment>,
+              "fragment classes must be trivially destructible");
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions)
     : Kind(Kind), HasInstructions(HasInstructions), AlignToBundleEnd(false),
       LinkerRelaxable(false), AllowAutoPadding(false) {}
 
-void MCFragment::destroy() {
-  switch (Kind) {
-    case FT_Align:
-      cast<MCAlignFragment>(this)->~MCAlignFragment();
-      return;
-    case FT_Data:
-      cast<MCDataFragment>(this)->~MCDataFragment();
-      return;
-    case FT_Fill:
-      cast<MCFillFragment>(this)->~MCFillFragment();
-      return;
-    case FT_Nops:
-      cast<MCNopsFragment>(this)->~MCNopsFragment();
-      return;
-    case FT_Relaxable:
-      cast<MCRelaxableFragment>(this)->~MCRelaxableFragment();
-      return;
-    case FT_Org:
-      cast<MCOrgFragment>(this)->~MCOrgFragment();
-      return;
-    case FT_Dwarf:
-      cast<MCDwarfLineAddrFragment>(this)->~MCDwarfLineAddrFragment();
-      return;
-    case FT_DwarfFrame:
-      cast<MCDwarfCallFrameFragment>(this)->~MCDwarfCallFrameFragment();
-      return;
-    case FT_LEB:
-      cast<MCLEBFragment>(this)->~MCLEBFragment();
-      return;
-    case FT_BoundaryAlign:
-      cast<MCBoundaryAlignFragment>(this)->~MCBoundaryAlignFragment();
-      return;
-    case FT_SymbolId:
-      cast<MCSymbolIdFragment>(this)->~MCSymbolIdFragment();
-      return;
-    case FT_CVInlineLines:
-      cast<MCCVInlineLineTableFragment>(this)->~MCCVInlineLineTableFragment();
-      return;
-    case FT_CVDefRange:
-      cast<MCCVDefRangeFragment>(this)->~MCCVDefRangeFragment();
-      return;
-    case FT_PseudoProbe:
-      cast<MCPseudoProbeAddrFragment>(this)->~MCPseudoProbeAddrFragment();
-      return;
-  }
-}
-
 const MCSymbol *MCFragment::getAtom() const {
   return cast<MCSectionMachO>(Parent)->getAtom(LayoutOrder);
 }
-
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCFragment::dump() const {
@@ -131,7 +87,7 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
     const auto *F = cast<MCDataFragment>(this);
     if (F->isLinkerRelaxable())
       OS << " LinkerRelaxable";
-    const SmallVectorImpl<char> &Contents = F->getContents();
+    auto Contents = F->getContents();
     OS << " Size:" << Contents.size() << " [";
     for (unsigned i = 0, e = Contents.size(); i != e; ++i) {
       if (i) OS << ",";

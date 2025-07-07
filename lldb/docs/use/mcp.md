@@ -1,6 +1,6 @@
 # Model Context Protocol (MCP)
 
-LLDB supports the [Model Context Protocol][https://modelcontextprotocol.io]
+LLDB supports the [Model Context Protocol](https://modelcontextprotocol.io)
 (MCP). This structured, machine-friendly protocol allows AI models to access
 and interact with external tools, for example debuggers. Using MCP, an AI agent
 can execute LLDB commands to control the debugger: set breakpoints, inspect
@@ -46,7 +46,7 @@ forward communication over stdio over the network connection.
 └──────────┘               └──────────┘               └──────────┘
 ```
 
-Configuration example for [Claude Code][https://modelcontextprotocol.io/quickstart/user]:
+Configuration example for [Claude Code](https://modelcontextprotocol.io/quickstart/user):
 
 ```json
 {
@@ -59,7 +59,7 @@ Configuration example for [Claude Code][https://modelcontextprotocol.io/quicksta
 }
 ```
 
-Configuration example for [Visual Studio Code][https://code.visualstudio.com/docs/copilot/chat/mcp-servers]:
+Configuration example for [Visual Studio Code](https://code.visualstudio.com/docs/copilot/chat/mcp-servers):
 
 ```json
 {
