@@ -602,6 +602,13 @@ public:
         DataAccessProfInfo[{CanonicalIp, DataAddr}] += Count;
       }
     }
+
+    assert(!SampleCounters.empty() && "Sample counters should not be empty!");
+    SampleCounter &Counter = SampleCounters.begin()->second;
+    for (const auto &[InstDataPair, Count] : DataAccessProfInfo) {
+      Counter.recordDataAccessCount(InstDataPair.first, InstDataPair.second,
+                                    Count);
+    }
   }
   const ContextSampleCounterMap &getSampleCounters() const {
     return SampleCounters;
