@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -38,12 +37,10 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
-#include <type_traits>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -1659,9 +1656,9 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
   }
 
   // If missing, initialize the write indices to 0.
-  assert(writeIndices.empty() ||
-         writeIndices.size() == static_cast<size_t>(destRank) &&
-             "Invalid number of write indices!");
+  assert((writeIndices.empty() ||
+          writeIndices.size() == static_cast<size_t>(destRank)) &&
+         "Invalid number of write indices!");
   if (writeIndices.empty()) {
     auto zero = builder.create<arith::ConstantIndexOp>(loc, 0);
     writeIndices.assign(destRank, zero);
