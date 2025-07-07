@@ -15716,14 +15716,34 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
     // Build_vector with constants only.
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(Opand);
     ConstantFPSDNode *FPC = dyn_cast<ConstantFPSDNode>(Opand);
-    if (!C && !FPC)
+    BuildVectorSDNode *BV =
+        dyn_cast<BuildVectorSDNode>(peekThroughBitcasts(Opand));
+
+    if (!C && !FPC && !BV)
       return SDValue();
-    uint64_t Val = C ? C->getZExtValue()
-                     : FPC->getValueAPF().bitcastToAPInt().getZExtValue();
+
+    uint64_t Val = 0;
+    if (BV) {
+      if (!BV->isConstant())
+        return SDValue();
+      bool IsLE = DAG.getDataLayout().isLittleEndian();
+      BitVector UndefElements;
+      SmallVector<APInt> RawBits;
+      if (!BV->getConstantRawBits(IsLE, EltSize, RawBits, UndefElements))
+        return SDValue();
+
+      assert(RawBits.size() == 1 &&
+             "BuildVector constant value retrieval expected 1 element");
+
+      if (UndefElements.any())
+        return SDValue();
+
+      Val = RawBits[0].getZExtValue();
+    } else
+      Val = C ? C->getZExtValue()
+              : FPC->getValueAPF().bitcastToAPInt().getZExtValue();
     ImmVal |= Val << ImmSize;
     ImmSize += EltSize;
-    if (ImmSize > 64)
-      return SDValue();
     if (ImmSize == 64) {
       if (!isUInt<32>(ImmVal))
         return SDValue();
