@@ -10,9 +10,13 @@
 # RUN:     | llvm-objdump --mattr=+experimental-xqcilia --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
+.option exact
+
 # CHECK-INST: qc.e.addai      s1, -1
 # CHECK-ENC: encoding: [0x9f,0x24,0xff,0xff,0xff,0xff]
 qc.e.addai x9, 4294967295
+
+.option noexact
 
 # CHECK-INST: qc.e.addai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0x24,0x00,0x00,0x00,0x80]
@@ -27,10 +31,13 @@ qc.e.addi x10, x9, -33554432
 # CHECK-ENC: encoding: [0x1f,0xb5,0xf4,0xbf,0xff,0x7f]
 qc.e.addi x10, x9, 33554431
 
+.option exact
 
 # CHECK-INST: qc.e.andai      s1, -1
 # CHECK-ENC: encoding: [0x9f,0xa4,0xff,0xff,0xff,0xff]
 qc.e.andai x9, 4294967295
+
+.option noexact
 
 # CHECK-INST: qc.e.andai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0xa4,0x00,0x00,0x00,0x80]
@@ -102,3 +109,18 @@ qc.e.addi x5, x6, 0
 # CHECK-NOALIAS: c.addi16sp sp, 48
 # CHECK-ENC: encoding: [0x45,0x61]
 qc.e.addi x2, x2, 48
+
+# CHECK-ALIAS: addi s1, s1, -1
+# CHECK-NOALIAS: c.addi s1, -1
+# CHECK-ENC: encoding: [0xfd,0x14]
+qc.e.addai x9, 4294967295
+
+# CHECK-ALIAS: addi sp, sp, 48
+# CHECK-NOALIAS: c.addi16sp sp, 48
+# CHECK-ENC: encoding: [0x45,0x61]
+qc.e.addai x2, 48
+
+# CHECK-ALIAS: andi s1, s1, -1
+# CHECK-NOALIAS: c.andi s1, -1
+# CHECK-ENC: encoding: [0xfd,0x98]
+qc.e.andai x9, 4294967295
