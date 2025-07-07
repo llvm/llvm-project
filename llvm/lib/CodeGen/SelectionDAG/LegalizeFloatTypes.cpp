@@ -719,7 +719,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
   if (!TLI.getLibcallName(LC)) {
     RTLIB::Libcall NewLC = RTLIB::getPOW(N->getValueType(0));
-    assert(NewLC != RTLIB::UNKNOWN_LIBCALL);
+    assert(NewLC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpow type");
 
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
