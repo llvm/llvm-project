@@ -2989,57 +2989,36 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
   // Check whether user specifies a libclc bytecode library
-  if (const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ)) {
-    SmallVector<StringRef, 8> LibraryPaths;
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (!A)
+    return;
 
-    // Add user defined library paths from LIBRARY_PATH.
-    std::optional<std::string> LibPath =
-        llvm::sys::Process::GetEnv("LIBRARY_PATH");
-    if (LibPath) {
-      SmallVector<StringRef, 8> Frags;
-      const char EnvPathSeparatorStr[] = {llvm::sys::EnvPathSeparator, '\0'};
-      llvm::SplitString(*LibPath, Frags, EnvPathSeparatorStr);
-      for (StringRef Path : Frags)
-        LibraryPaths.emplace_back(Path.trim());
-    }
+  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
+  SmallString<128> LibclcPath(D.ResourceDir);
+  llvm::sys::path::append(LibclcPath, "lib", "libclc");
 
-    // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
-    SmallString<128> LibclcPath(D.ResourceDir);
-    llvm::sys::path::append(LibclcPath, "lib", "libclc");
-    LibraryPaths.emplace_back(LibclcPath);
+  // If the namespec is of the form :filename, search for that file.
+  StringRef LibclcNamespec(A->getValue());
+  bool FilenameSearch = LibclcNamespec.consume_front(":");
+  SmallString<128> LibclcTargetFile(LibclcNamespec);
 
-    bool FoundBCLibrary = false;
-    StringRef LibclcNamespec(A->getValue());
+  if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
+  } else {
+    // Search the library paths for the file
+    if (!FilenameSearch)
+      LibclcTargetFile += ".bc";
 
-    // If the namespec is of the form :filename, search for that file.
-    bool FilenameSearch = LibclcNamespec.consume_front(":");
-    SmallString<128> LibclcTargetFile(LibclcNamespec);
-
-    if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
-      FoundBCLibrary = true;
+    llvm::sys::path::append(LibclcPath, LibclcTargetFile);
+    if (llvm::sys::fs::exists(LibclcPath)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
+      CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
     } else {
-      // Search the library paths for the file
-      if (!FilenameSearch)
-        LibclcTargetFile += ".bc";
-
-      for (StringRef LibraryPath : LibraryPaths) {
-        SmallString<128> LibclcPath(LibraryPath);
-        llvm::sys::path::append(LibclcPath, LibclcTargetFile);
-        if (llvm::sys::fs::exists(LibclcPath)) {
-          FoundBCLibrary = true;
-          CC1Args.push_back("-mlink-builtin-bitcode");
-          CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
-          break;
-        }
-      }
-    }
-
-    // Since the user requested a library, if we haven't one then report an
-    // error.
-    if (!FoundBCLibrary)
+      // Since the user requested a library, if we haven't one then report an
+      // error.
       D.Diag(diag::err_drv_libclc_not_found) << LibclcTargetFile;
+    }
   }
 }
 
