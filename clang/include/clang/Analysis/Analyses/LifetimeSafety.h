@@ -1,5 +1,5 @@
-#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIME_SAFETY_H
-#define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIME_SAFETY_H
+#ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
+#define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 #include "clang/AST/DeclBase.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
@@ -10,4 +10,4 @@ void runLifetimeAnalysis(const DeclContext &DC, const CFG &Cfg,
 
 } // namespace clang
 
-#endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIME_SAFETY_H
+#endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
