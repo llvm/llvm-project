@@ -3108,6 +3108,10 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
   if (const auto *DC = dyn_cast<CXXDeallocatorCall>(&Call)) {
     const CXXDeleteExpr *DE = DC->getOriginExpr();
 
+    // FIXME: I don't see a good reason for restricting the check against
+    // use-after-free violations to the case when NewDeleteChecker is disabled.
+    // (However, if NewDeleteChecker is enabled, perhaps it would be better to
+    // do this check a bit later?)
     if (!NewDeleteChecker.isEnabled())
       if (SymbolRef Sym = C.getSVal(DE->getArgument()).getAsSymbol())
         checkUseAfterFree(Sym, C, DE->getArgument());
@@ -3139,12 +3143,18 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     return;
   }
 
-  // We will check for double free in the post visit.
+  // We will check for double free in the `evalCall` callback.
+  // FIXME: It would be more logical to emit double free and use-after-free
+  // reports via the same pathway (because double free is essentially a specia
+  // case of use-after-free).
   if (const AnyFunctionCall *FC = dyn_cast<AnyFunctionCall>(&Call)) {
     const FunctionDecl *FD = FC->getDecl();
     if (!FD)
       return;
 
+    // FIXME: I suspect we should remove `MallocChecker.isEnabled() &&` because
+    // it's fishy that the enabled/disabled state of one frontend may influence
+    // reports produced by other frontends.
     if (MallocChecker.isEnabled() && isFreeingCall(Call))
       return;
   }
