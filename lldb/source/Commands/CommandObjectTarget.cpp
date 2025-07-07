@@ -1139,15 +1139,17 @@ public:
 
     Target *target = m_exe_ctx.GetTargetPtr();
     const PathMappingList &list = target->GetImageSearchPathList();
-    const size_t num = list.GetSize();
-    ConstString old_path, new_path;
-    for (size_t i = 0; i < num; ++i) {
-      if (!list.GetPathsAtIndex(i, old_path, new_path))
-        break;
-      StreamString strm;
-      strm << old_path << " -> " << new_path;
-      request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
-    }
+
+    StreamString strm;
+    size_t index = 0;
+    list.ForEach([&](llvm::StringRef orig_path, llvm::StringRef remap_path) {
+      strm << orig_path << " -> " << remap_path;
+      request.TryCompleteCurrentArg(std::to_string(index), strm.GetString());
+
+      index++;
+      strm.Clear();
+      return true;
+    });
   }
 
 protected:
