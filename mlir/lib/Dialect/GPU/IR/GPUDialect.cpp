@@ -106,6 +106,20 @@ int64_t GPUThreadMappingAttr::getRelativeIndex() const {
              : getMappingId();
 }
 
+int64_t GPULaneMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getLane());
+}
+
+bool GPULaneMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPULaneMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
+}
+
 int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getAddressSpace());
 }
@@ -1147,8 +1161,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernelSymbol;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = asyncDependencies.size();
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
@@ -1196,8 +1209,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernel;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = 0;
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
