@@ -59,7 +59,8 @@ public:
 
   using CFBranchLabelSchemeKind = CFBranchLabelSchemeKind;
   using ProfileInstrKind = llvm::driver::ProfileInstrKind;
-  using AsanDetectStackUseAfterReturnMode = llvm::AsanDetectStackUseAfterReturnMode;
+  using AsanDetectStackUseAfterReturnMode =
+      llvm::AsanDetectStackUseAfterReturnMode;
   using AsanDtorKind = llvm::AsanDtorKind;
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;

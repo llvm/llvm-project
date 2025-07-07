@@ -425,7 +425,7 @@ static bool checkCodegenOptions(const CodeGenOptions &CGOpts,
     if ((CK::Compatibility == CK::NotCompatible) ||                            \
         (CK::Compatibility == CK::Compatible &&                                \
          !AllowCompatibleDifferences)) {                                       \
-      if (ExistingCGOpts.Name != CGOpts.Name) { \
+      if (ExistingCGOpts.Name != CGOpts.Name) {                                \
         if (Diags)                                                             \
           Diags->Report(diag::err_ast_file_codegenopt_value_mismatch)          \
               << #Name << ModuleFilename;                                      \
