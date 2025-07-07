@@ -55,19 +55,19 @@ namespace llvm {
 /// In each update, for each register (or CFA), the following cases can happen:
 /// 1. The unwinding rule is not changed:
 ///   a. The registers involved in this rule are not modified: the analysis
-///   proceeds without emitting error or warning.
+///      proceeds without emitting error or warning.
 ///   b. The registers involved in this rule are modified: it emits an error.
 /// 2. The unwinding rule is changed:
 ///   a. The rule is structurally modified (i.e., the location is changed): It
-///   emits a warning.
-///   b. The rule is structurally the same, but the register set is changed: it
-///   emits a warning.
-///   c. The rule is structurally the same, using the same set of registers, but
-///   the offset is changed:
-///      i. If the registers included in the rule are modified as well: It
 ///      emits a warning.
+///   b. The rule is structurally the same, but the register set is changed: it
+///      emits a warning.
+///   c. The rule is structurally the same, using the same set of registers, but
+///      the offset is changed:
+///      i. If the registers included in the rule are modified as well: It
+///         emits a warning.
 ///     ii. If the registers included in the rule are not modified: It emits an
-///     error.
+///         error.
 ///
 /// The analysis only checks the CFA unwinding rule when the rule is a register
 /// plus some offset. Therefore, for CFA, only cases 1, 2.b, and 2.c are
