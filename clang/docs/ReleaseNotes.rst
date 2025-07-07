@@ -172,6 +172,8 @@ Resolutions to C++ Defect Reports
 C Language Changes
 ------------------
 
+- Clang now supports the :ref:`__builtin_stack_address <builtin_stack_address-doc>` () builtin.
+  The semantics match those of GCC's builtin with the same name.
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).

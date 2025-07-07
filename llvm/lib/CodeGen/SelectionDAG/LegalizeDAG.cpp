@@ -1120,6 +1120,7 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::ADJUST_TRAMPOLINE:
   case ISD::FRAMEADDR:
   case ISD::RETURNADDR:
+  case ISD::STACKADDR:
   case ISD::ADDROFRETURNADDR:
   case ISD::SPONENTRY:
     // These operations lie about being legal: when they claim to be legal,

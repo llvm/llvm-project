@@ -1771,6 +1771,7 @@ namespace llvm {
     SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerADDROFRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSTACKADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFRAME_TO_ARGS_OFFSET(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG) const;
