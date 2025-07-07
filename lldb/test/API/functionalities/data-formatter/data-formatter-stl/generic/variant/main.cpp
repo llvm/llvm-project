@@ -45,7 +45,8 @@ int main() {
       int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
       int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
       int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
-      int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, S>
+      int, int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+      S>
       v_300_types_valueless;
 
   v_valueless = 5;
