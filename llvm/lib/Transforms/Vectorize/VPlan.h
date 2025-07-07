@@ -1906,19 +1906,22 @@ public:
 #endif
 };
 
-/// A recipe to compute the pointers for widened memory accesses of IndexTy.
+/// A recipe to compute the pointers for widened memory accesses of IndexedTy,
+/// with the Stride expressed in units of IndexedTy.
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
-                              public VPUnrollPartAccessor<1> {
+                              public VPUnrollPartAccessor<2> {
   Type *SourceElementTy;
 
 public:
-  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy,
+  VPVectorPointerRecipe(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
                         GEPNoWrapFlags GEPFlags, DebugLoc DL)
-      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC, ArrayRef<VPValue *>(Ptr),
-                            GEPFlags, DL),
+      : VPRecipeWithIRFlags(VPDef::VPVectorPointerSC,
+                            ArrayRef<VPValue *>({Ptr, Stride}), GEPFlags, DL),
         SourceElementTy(SourceElementTy) {}
 
   VP_CLASSOF_IMPL(VPDef::VPVectorPointerSC)
+
+  VPValue *getStride() const { return getOperand(1); }
 
   void execute(VPTransformState &State) override;
 
@@ -1940,7 +1943,8 @@ public:
 
   VPVectorPointerRecipe *clone() override {
     return new VPVectorPointerRecipe(getOperand(0), SourceElementTy,
-                                     getGEPNoWrapFlags(), getDebugLoc());
+                                     getStride(), getGEPNoWrapFlags(),
+                                     getDebugLoc());
   }
 
   /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
