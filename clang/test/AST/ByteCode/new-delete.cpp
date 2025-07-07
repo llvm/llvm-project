@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -triple=i686-linux-gnu -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
-// RUN: %clang_cc1 -std=c++20 -verify=ref,both %s
-// RUN: %clang_cc1 -triple=i686-linux-gnu -std=c++20 -verify=ref,both %s
+// RUN: %clang_cc1            -verify=expected,both                        -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both                        -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,both -triple=i686-linux-gnu -fexperimental-new-constant-interpreter %s
+// RUN: %clang_cc1            -verify=ref,both                                                                     %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both                                                                     %s
+// RUN: %clang_cc1 -std=c++20 -verify=ref,both      -triple=i686-linux-gnu                                         %s
 
 #if __cplusplus >= 202002L
 
@@ -1011,6 +1011,52 @@ namespace WrongFrame {
 constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // both-error {{constant expression}} \
                                                                                                              // both-note {{in call}} \
                                                                                                              // both-note {{declared here}}
+
+namespace OpNewNothrow {
+  constexpr int f() {
+      int *v = (int*)operator new(sizeof(int), std::align_val_t(2), std::nothrow); // both-note {{cannot allocate untyped memory in a constant expression; use 'std::allocator<T>::allocate' to allocate memory of type 'T'}}
+      operator delete(v, std::align_val_t(2), std::nothrow);
+      return 1;
+  }
+  static_assert(f()); // both-error {{not an integral constant expression}} \
+                      // both-note {{in call to}}
+}
+
+namespace BaseCompare {
+  struct Cmp {
+    void *p;
+
+    template<typename T>
+    constexpr Cmp(T *t) : p(t) {}
+
+    constexpr friend bool operator==(Cmp a, Cmp b) {
+      return a.p == b.p;
+    }
+  };
+
+  class Base {};
+  class Derived : public Base {};
+  constexpr bool foo() {
+    Derived *D = std::allocator<Derived>{}.allocate(1);;
+    std::construct_at<Derived>(D);
+
+    Derived *d = D;
+    Base    *b = D;
+
+    Cmp ca(d);
+    Cmp cb(b);
+
+    if (ca == cb) {
+      std::allocator<Derived>{}.deallocate(D);
+      return true;
+    }
+    std::allocator<Derived>{}.deallocate(D);
+
+    return false;
+
+  }
+  static_assert(foo());
+}
 
 #else
 /// Make sure we reject this prior to C++20

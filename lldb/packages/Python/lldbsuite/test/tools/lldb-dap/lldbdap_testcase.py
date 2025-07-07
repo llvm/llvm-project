@@ -128,6 +128,16 @@ class DAPTestCaseBase(TestBase):
             time.sleep(0.5)
         return False
 
+    def assertCapabilityIsSet(self, key: str, msg: Optional[str] = None) -> None:
+        """Assert that given capability is set in the client."""
+        self.assertIn(key, self.dap_server.capabilities, msg)
+        self.assertEqual(self.dap_server.capabilities[key], True, msg)
+
+    def assertCapabilityIsNotSet(self, key: str, msg: Optional[str] = None) -> None:
+        """Assert that given capability is not set in the client."""
+        if key in self.dap_server.capabilities:
+            self.assertEqual(self.dap_server.capabilities[key], False, msg)
+
     def verify_breakpoint_hit(self, breakpoint_ids, timeout=DEFAULT_TIMEOUT):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
@@ -334,7 +344,12 @@ class DAPTestCaseBase(TestBase):
         granularity="statement",
         timeout=DEFAULT_TIMEOUT,
     ):
-        self.dap_server.request_next(threadId=threadId, granularity=granularity)
+        response = self.dap_server.request_next(
+            threadId=threadId, granularity=granularity
+        )
+        self.assertTrue(
+            response["success"], f"next request failed: response {response}"
+        )
         if waitForStop:
             return self.dap_server.wait_for_stopped(timeout)
         return None

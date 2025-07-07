@@ -31,7 +31,10 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/JSON.h"
 #include <map>
 
 namespace llvm {
@@ -43,6 +46,7 @@ class Function;
 class Type;
 class Value;
 class raw_ostream;
+class LLVMContext;
 
 /// IR2Vec computes two kinds of embeddings: Symbolic and Flow-aware.
 /// Symbolic embeddings capture the "syntactic" and "statistical correlation"
@@ -53,7 +57,75 @@ class raw_ostream;
 enum class IR2VecKind { Symbolic };
 
 namespace ir2vec {
-using Embedding = std::vector<double>;
+
+LLVM_ABI extern cl::opt<float> OpcWeight;
+LLVM_ABI extern cl::opt<float> TypeWeight;
+LLVM_ABI extern cl::opt<float> ArgWeight;
+
+/// Embedding is a datatype that wraps std::vector<double>. It provides
+/// additional functionality for arithmetic and comparison operations.
+/// It is meant to be used *like* std::vector<double> but is more restrictive
+/// in the sense that it does not allow the user to change the size of the
+/// embedding vector. The dimension of the embedding is fixed at the time of
+/// construction of Embedding object. But the elements can be modified in-place.
+struct Embedding {
+private:
+  std::vector<double> Data;
+
+public:
+  Embedding() = default;
+  Embedding(const std::vector<double> &V) : Data(V) {}
+  Embedding(std::vector<double> &&V) : Data(std::move(V)) {}
+  Embedding(std::initializer_list<double> IL) : Data(IL) {}
+
+  explicit Embedding(size_t Size) : Data(Size) {}
+  Embedding(size_t Size, double InitialValue) : Data(Size, InitialValue) {}
+
+  size_t size() const { return Data.size(); }
+  bool empty() const { return Data.empty(); }
+
+  double &operator[](size_t Itr) {
+    assert(Itr < Data.size() && "Index out of bounds");
+    return Data[Itr];
+  }
+
+  const double &operator[](size_t Itr) const {
+    assert(Itr < Data.size() && "Index out of bounds");
+    return Data[Itr];
+  }
+
+  using iterator = typename std::vector<double>::iterator;
+  using const_iterator = typename std::vector<double>::const_iterator;
+
+  iterator begin() { return Data.begin(); }
+  iterator end() { return Data.end(); }
+  const_iterator begin() const { return Data.begin(); }
+  const_iterator end() const { return Data.end(); }
+  const_iterator cbegin() const { return Data.cbegin(); }
+  const_iterator cend() const { return Data.cend(); }
+
+  const std::vector<double> &getData() const { return Data; }
+
+  /// Arithmetic operators
+  LLVM_ABI Embedding &operator+=(const Embedding &RHS);
+  LLVM_ABI Embedding operator+(const Embedding &RHS) const;
+  LLVM_ABI Embedding &operator-=(const Embedding &RHS);
+  LLVM_ABI Embedding operator-(const Embedding &RHS) const;
+  LLVM_ABI Embedding &operator*=(double Factor);
+  LLVM_ABI Embedding operator*(double Factor) const;
+
+  /// Adds Src Embedding scaled by Factor with the called Embedding.
+  /// Called_Embedding += Src * Factor
+  LLVM_ABI Embedding &scaleAndAdd(const Embedding &Src, float Factor);
+
+  /// Returns true if the embedding is approximately equal to the RHS embedding
+  /// within the specified tolerance.
+  LLVM_ABI bool approximatelyEquals(const Embedding &RHS,
+                                    double Tolerance = 1e-4) const;
+
+  void print(raw_ostream &OS) const;
+};
+
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
 using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 // FIXME: Current the keys are strings. This can be changed to
@@ -61,8 +133,8 @@ using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
 using Vocab = std::map<std::string, Embedding>;
 
 /// Embedder provides the interface to generate embeddings (vector
-/// representations) for instructions, basic blocks, and functions. The vector
-/// representations are generated using IR2Vec algorithms.
+/// representations) for instructions, basic blocks, and functions. The
+/// vector representations are generated using IR2Vec algorithms.
 ///
 /// The Embedder class is an abstract class and it is intended to be
 /// subclassed for different IR2Vec algorithms like Symbolic and Flow-aware.
@@ -84,7 +156,7 @@ protected:
   mutable BBEmbeddingsMap BBVecMap;
   mutable InstEmbeddingsMap InstVecMap;
 
-  Embedder(const Function &F, const Vocab &Vocabulary);
+  LLVM_ABI Embedder(const Function &F, const Vocab &Vocabulary);
 
   /// Helper function to compute embeddings. It generates embeddings for all
   /// the instructions and basic blocks in the function F. Logic of computing
@@ -97,45 +169,38 @@ protected:
 
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
-  Embedding lookupVocab(const std::string &Key) const;
-
-  /// Adds two vectors: Dst += Src
-  static void addVectors(Embedding &Dst, const Embedding &Src);
-
-  /// Adds Src vector scaled by Factor to Dst vector: Dst += Src * Factor
-  static void addScaledVector(Embedding &Dst, const Embedding &Src,
-                              float Factor);
+  LLVM_ABI Embedding lookupVocab(const std::string &Key) const;
 
 public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
-  static Expected<std::unique_ptr<Embedder>>
+  LLVM_ABI static std::unique_ptr<Embedder>
   create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
 
   /// Returns a map containing instructions and the corresponding embeddings for
   /// the function F if it has been computed. If not, it computes the embeddings
   /// for the function and returns the map.
-  const InstEmbeddingsMap &getInstVecMap() const;
+  LLVM_ABI const InstEmbeddingsMap &getInstVecMap() const;
 
   /// Returns a map containing basic block and the corresponding embeddings for
   /// the function F if it has been computed. If not, it computes the embeddings
   /// for the function and returns the map.
-  const BBEmbeddingsMap &getBBVecMap() const;
+  LLVM_ABI const BBEmbeddingsMap &getBBVecMap() const;
 
   /// Returns the embedding for a given basic block in the function F if it has
   /// been computed. If not, it computes the embedding for the basic block and
   /// returns it.
-  const Embedding &getBBVector(const BasicBlock &BB) const;
+  LLVM_ABI const Embedding &getBBVector(const BasicBlock &BB) const;
 
   /// Computes and returns the embedding for the current function.
-  const Embedding &getFunctionVector() const;
+  LLVM_ABI const Embedding &getFunctionVector() const;
 };
 
 /// Class for computing the Symbolic embeddings of IR2Vec.
 /// Symbolic embeddings are constructed based on the entity-level
 /// representations obtained from the Vocabulary.
-class SymbolicEmbedder : public Embedder {
+class LLVM_ABI SymbolicEmbedder : public Embedder {
 private:
   /// Utility function to compute the embedding for a given type.
   Embedding getTypeEmbedding(const Type *Ty) const;
@@ -162,13 +227,13 @@ class IR2VecVocabResult {
 
 public:
   IR2VecVocabResult() = default;
-  IR2VecVocabResult(ir2vec::Vocab &&Vocabulary);
+  LLVM_ABI IR2VecVocabResult(ir2vec::Vocab &&Vocabulary);
 
   bool isValid() const { return Valid; }
-  const ir2vec::Vocab &getVocabulary() const;
-  unsigned getDimension() const;
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv) const;
+  LLVM_ABI const ir2vec::Vocab &getVocabulary() const;
+  LLVM_ABI unsigned getDimension() const;
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv) const;
 };
 
 /// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a
@@ -177,22 +242,36 @@ public:
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
   ir2vec::Vocab Vocabulary;
   Error readVocabulary();
+  Error parseVocabSection(StringRef Key, const json::Value &ParsedVocabValue,
+                          ir2vec::Vocab &TargetVocab, unsigned &Dim);
+  void emitError(Error Err, LLVMContext &Ctx);
 
 public:
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
   IR2VecVocabAnalysis() = default;
+  LLVM_ABI explicit IR2VecVocabAnalysis(const ir2vec::Vocab &Vocab);
+  LLVM_ABI explicit IR2VecVocabAnalysis(ir2vec::Vocab &&Vocab);
   using Result = IR2VecVocabResult;
-  Result run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// This pass prints the IR2Vec embeddings for instructions, basic blocks, and
 /// functions.
 class IR2VecPrinterPass : public PassInfoMixin<IR2VecPrinterPass> {
   raw_ostream &OS;
-  void printVector(const ir2vec::Embedding &Vec) const;
 
 public:
   explicit IR2VecPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  static bool isRequired() { return true; }
+};
+
+/// This pass prints the embeddings in the vocabulary
+class IR2VecVocabPrinterPass : public PassInfoMixin<IR2VecVocabPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit IR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
   static bool isRequired() { return true; }
 };

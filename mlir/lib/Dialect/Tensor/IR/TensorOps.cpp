@@ -1061,8 +1061,7 @@ void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void EmptyOp::build(OpBuilder &builder, OperationState &result,
                     ArrayRef<int64_t> staticShape, Type elementType,
                     Attribute encoding) {
-  assert(all_of(staticShape,
-                [](int64_t sz) { return !ShapedType::isDynamic(sz); }) &&
+  assert(none_of(staticShape, ShapedType::isDynamic) &&
          "expected only static sizes");
   build(builder, result, staticShape, elementType, ValueRange{}, encoding);
 }
@@ -1873,9 +1872,9 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!sourceTy || !resultTy || sourceTy != resultTy)
     return {};
 
-  // If the source and result are both 1D tensors and have the same type, the
-  // reshape has no effect, even if the tensor is dynamically shaped.
-  if (sourceTy.getRank() == 1)
+  // If the source and result are both 0D or 1D tensors and have the same type,
+  // the reshape has no effect, even if the tensor is dynamically shaped.
+  if (sourceTy.getRank() <= 1)
     return source;
 
   if (auto fromElements = getShape().getDefiningOp<tensor::FromElementsOp>()) {
@@ -2316,13 +2315,13 @@ RankedTensorType ExtractSliceOp::inferResultType(
 RankedTensorType ExtractSliceOp::inferResultType(
     RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
     ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
-  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-  return ExtractSliceOp::inferResultType(sourceTensorType, staticOffsets,
-                                         staticSizes, staticStrides);
+  SmallVector<int64_t> staticSizes;
+  std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+  assert(static_cast<int64_t>(staticSizes.size()) ==
+             sourceTensorType.getRank() &&
+         "unexpected staticSizes not equal to rank of source");
+  return RankedTensorType::get(staticSizes, sourceTensorType.getElementType(),
+                               sourceTensorType.getEncoding());
 }
 
 /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
@@ -3793,6 +3792,29 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
 };
 
 } // namespace
+
+LogicalResult
+PadOp::reifyResultShapes(OpBuilder &b,
+                         ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  SmallVector<OpFoldResult> lp = getMixedLowPad();
+  SmallVector<OpFoldResult> hp = getMixedHighPad();
+  for (int64_t i = 0; i < getResultType().getRank(); ++i) {
+    if (!getType().isDynamicDim(i)) {
+      reifiedReturnShapes[0][i] = b.getIndexAttr(getType().getDimSize(i));
+      continue;
+    }
+    Location loc = getLoc();
+    Value dim = b.createOrFold<tensor::DimOp>(
+        loc, getSource(), b.create<arith::ConstantIndexOp>(loc, i));
+
+    AffineExpr d0, d1, d2;
+    bindDims(b.getContext(), d0, d1, d2);
+    reifiedReturnShapes[0][i] = affine::makeComposedFoldedAffineApply(
+        b, loc, {d0 + d1 + d2}, {dim, lp[i], hp[i]});
+  }
+  return success();
+}
 
 void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {

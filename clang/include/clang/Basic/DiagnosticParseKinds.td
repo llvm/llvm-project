@@ -1488,6 +1488,9 @@ def err_omp_multiple_step_or_linear_modifier : Error<
   "multiple %select{'step size'|'linear modifier'}0 found in linear clause">;
 def err_omp_deprecate_old_syntax: Error<
   "old syntax '%0' on '%1' clause was deprecated, use new syntax '%2'">;
+def warn_omp_future_directive_spelling: Warning<
+  "directive spelling '%0' is introduced in a later OpenMP version">,
+  InGroup<OpenMPFuture>;
 def warn_pragma_expected_colon_r_paren : Warning<
   "missing ':' or ')' after %0 - ignoring">, InGroup<IgnoredPragmas>;
 def err_omp_unknown_directive : Error<
@@ -1581,8 +1584,10 @@ def err_omp_unexpected_append_op : Error<
   "unexpected operation specified in 'append_args' clause, expected 'interop'">;
 def err_omp_unexpected_execution_modifier : Error<
   "unexpected 'execution' modifier in non-executable context">;
-def err_omp_unknown_adjust_args_op : Error<
-  "incorrect adjust_args type, expected 'need_device_ptr' or 'nothing'">;
+def err_omp_unknown_adjust_args_op
+    : Error<
+          "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
+          "'need_device_addr',}0 or 'nothing'">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;

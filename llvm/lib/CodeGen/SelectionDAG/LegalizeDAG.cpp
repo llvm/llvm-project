@@ -3562,9 +3562,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     unsigned Factor = Node->getNumOperands();
     if (Factor <= 2 || !isPowerOf2_32(Factor))
       break;
-    SmallVector<SDValue, 8> Ops;
-    for (SDValue Op : Node->ops())
-      Ops.push_back(Op);
+    SmallVector<SDValue, 8> Ops(Node->ops());
     EVT VecVT = Node->getValueType(0);
     SmallVector<EVT> HalfVTs(Factor / 2, VecVT);
     // Deinterleave at Factor/2 so each result contains two factors interleaved:

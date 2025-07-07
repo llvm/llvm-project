@@ -1,4 +1,4 @@
-// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
+// RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip %s | FileCheck %s
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   // CHECK-LABEL: @bool_const
@@ -276,5 +276,33 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     // CHECK: spirv.Constant -1 : si16
     %signed_minus_one = spirv.Constant -1 : si16
     spirv.ReturnValue %signed_minus_one : si16
+  }
+
+  // CHECK-LABEL: @coop_matrix_const_zero_f32
+  spirv.func @coop_matrix_const_zero_f32() -> (!spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>) "None" {
+    // CHECK: {{%.*}} = spirv.Constant dense<0.000000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    %coop = spirv.Constant dense<0.000000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  }
+
+  // CHECK-LABEL: @coop_matrix_const_non_zero_f32
+  spirv.func @coop_matrix_const_non_zero_f32() -> (!spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>) "None" {
+    // CHECK: {{%.*}} = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    %coop = spirv.Constant dense<4.200000e+00> : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+    spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
+  }
+
+  // CHECK-LABEL: @coop_matrix_const_zero_i8
+  spirv.func @coop_matrix_const_zero_i8() -> (!spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>) "None" {
+    // CHECK: {{%.*}} = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+    %coop = spirv.Constant dense<0> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+    spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+  }
+
+  // CHECK-LABEL: @coop_matrix_const_non_zero_i8
+  spirv.func @coop_matrix_const_non_zero_i8() -> (!spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>) "None" {
+    // CHECK: {{%.*}} = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+    %coop = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
+    spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   }
 }

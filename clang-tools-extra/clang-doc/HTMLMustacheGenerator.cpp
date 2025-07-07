@@ -364,9 +364,8 @@ static json::Value extractValue(const EnumInfo &I,
   Object Obj = Object();
   std::string EnumType = I.Scoped ? "enum class " : "enum ";
   EnumType += I.Name;
-  bool HasComment = std::any_of(
-      I.Members.begin(), I.Members.end(),
-      [](const EnumValueInfo &M) { return !M.Description.empty(); });
+  bool HasComment = llvm::any_of(
+      I.Members, [](const EnumValueInfo &M) { return !M.Description.empty(); });
   Obj.insert({"EnumName", EnumType});
   Obj.insert({"HasComment", HasComment});
   Obj.insert({"ID", toHex(toStringRef(I.USR))});
@@ -585,6 +584,11 @@ Error MustacheHTMLGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
     break;
   case InfoType::IT_typedef:
     OS << "IT_typedef\n";
+    break;
+  case InfoType::IT_concept:
+    break;
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected InfoType");

@@ -13,13 +13,11 @@ use omp_lib
   real, dimension (:,:), allocatable :: darray
 
   !$omp target
-      !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
       !$omp allocate allocator(omp_default_mem_alloc)
           allocate ( darray(a, b) )
   !$omp end target
 
   !$omp target
-      !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
       !ERROR: ALLOCATE directives that appear in a TARGET region must specify an allocator clause
       !$omp allocate
           allocate ( darray(a, b) )

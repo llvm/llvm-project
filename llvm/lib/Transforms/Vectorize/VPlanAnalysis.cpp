@@ -74,6 +74,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
+  case VPInstruction::ReductionStartVector:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -90,11 +91,10 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            "different types inferred for different operands");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindLastIVResult:
+    return inferScalarType(R->getOperand(1));
+  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult: {
-    auto *PhiR = cast<VPReductionPHIRecipe>(R->getOperand(0));
-    auto *OrigPhi = cast<PHINode>(PhiR->getUnderlyingValue());
-    return OrigPhi->getType();
+    return inferScalarType(R->getOperand(0));
   }
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
@@ -107,6 +107,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
+  case VPInstruction::BuildStructVector:
+  case VPInstruction::BuildVector:
     return SetResultTyFromOp();
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
@@ -295,13 +297,14 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExtendedReductionRecipe, VPMulAccumulateReductionRecipe>(
-              [](const auto *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
           .Case<VPReductionRecipe>([this](const auto *R) {
             return inferScalarType(R->getChainOp());
+          })
+          .Case<VPExpressionRecipe>([this](const auto *R) {
+            return inferScalarType(R->getOperandOfResultType());
           });
 
   assert(ResultTy && "could not infer type for the given VPValue");
@@ -395,6 +398,10 @@ static unsigned getVFScaleFactor(VPRecipeBase *R) {
     return RR->getVFScaleFactor();
   if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
     return RR->getVFScaleFactor();
+  assert(
+      (!isa<VPInstruction>(R) || cast<VPInstruction>(R)->getOpcode() !=
+                                     VPInstruction::ReductionStartVector) &&
+      "getting scaling factor of reduction-start-vector not implemented yet");
   return 1;
 }
 

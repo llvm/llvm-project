@@ -56,12 +56,16 @@ define void @v3i8(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v3i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr b0, [x0]
-; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    ldr w8, [x0]
 ; CHECK-GI-NEXT:    add x9, x0, #2
-; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x8]
-; CHECK-GI-NEXT:    ld1 { v0.b }[2], [x9]
-; CHECK-GI-NEXT:    clz v0.8b, v0.8b
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    add x8, x0, #1
+; CHECK-GI-NEXT:    mov b1, v0.b[1]
+; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
+; CHECK-GI-NEXT:    mov b0, v0.b[2]
+; CHECK-GI-NEXT:    mov v2.b[1], v1.b[0]
+; CHECK-GI-NEXT:    mov v2.b[2], v0.b[0]
+; CHECK-GI-NEXT:    clz v0.8b, v2.8b
 ; CHECK-GI-NEXT:    st1 { v0.b }[0], [x0]
 ; CHECK-GI-NEXT:    st1 { v0.b }[1], [x8]
 ; CHECK-GI-NEXT:    st1 { v0.b }[2], [x9]
@@ -181,11 +185,9 @@ define void @v3i16(ptr %p1) {
 ;
 ; CHECK-GI-LABEL: v3i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldr h0, [x0]
+; CHECK-GI-NEXT:    ldr d0, [x0]
 ; CHECK-GI-NEXT:    add x8, x0, #2
 ; CHECK-GI-NEXT:    add x9, x0, #4
-; CHECK-GI-NEXT:    ld1 { v0.h }[1], [x8]
-; CHECK-GI-NEXT:    ld1 { v0.h }[2], [x9]
 ; CHECK-GI-NEXT:    clz v0.4h, v0.4h
 ; CHECK-GI-NEXT:    str h0, [x0]
 ; CHECK-GI-NEXT:    st1 { v0.h }[1], [x8]
