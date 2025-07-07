@@ -706,11 +706,11 @@ module attributes {transform.with_named_sequence} {
 func.func @simple_fill(%arg0: memref<128xf32>) -> memref<128xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0.000000e+00> : vector<32xf32>
-//       CHECK:   %[[C6:.*]] = arith.constant 6 : index
-//       CHECK:   gpu.launch
+    //   CHECK:   %[[C6:.*]] = arith.constant 6 : index
+    //   CHECK:   gpu.launch
   scf.forall (%arg1) in (1) {
-//       CHECK:     %[[BIDX:.*]] = gpu.block_id  x
-//       CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
+    //   CHECK:     %[[BIDX:.*]] = gpu.block_id  x
+    //   CHECK:     %[[BLX:.*]] = affine.apply #[[$MAPB]]()[%[[BIDX]]]
     %0 = affine.apply #map(%arg1)
     %subview = memref.subview %arg0[%0] [128] [1] : memref<128xf32> to memref<128xf32, strided<[1], offset: ?>>
 
