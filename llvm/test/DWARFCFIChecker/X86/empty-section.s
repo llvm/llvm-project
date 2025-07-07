@@ -1,5 +1,4 @@
-# RUN: llvm-mc -triple x86_64-pc-linux-gnu %s --validate-cfi --filetype=null 2>&1 | FileCheck %s --allow-empty 
-# CHECK-NOT: warning:
+# RUN: llvm-mc -triple x86_64-pc-linux-gnu %s --validate-cfi --filetype=null 2>&1 | FileCheck %s --allow-empty --implicit-check-not warning: --implicit-check-not error:
 # RUN: llvm-mc -triple x86_64-pc-linux-gnu %s --filetype=asm 2>&1 | FileCheck %s -check-prefix=ASSEMBLER --implicit-check-not warning: --implicit-check-not error:
 # ASSEMBLER: .text
 .text
