@@ -9162,6 +9162,9 @@ LValueExprEvaluator::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     Lit = &Info.CurrentCall->createTemporary(E, E->getInitializer()->getType(),
                                              ScopeKind::Block, Result);
   }
+  // FIXME: Evaluating in place isn't always right. We should figure out how to
+  // use appropriate evaluation context here, see
+  // clang/test/AST/static-compound-literals-reeval.cpp for a failure.
   if (!EvaluateInPlace(*Lit, Info, Result, E->getInitializer())) {
     *Lit = APValue();
     return false;
