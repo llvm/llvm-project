@@ -4943,13 +4943,15 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     }
 
     // Support source modifiers as integer.
+    // (select c, (xor/or/and x, c), y) -> (bitcast (select c)))
     if (VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) {
       SDLoc SL(N);
       SDValue LHS = N->getOperand(1);
       SDValue RHS = N->getOperand(2);
       if (SDValue SrcMod = BitwiseToSrcModifierOp(LHS, DCI)) {
-        SDValue FRHS = DAG.getNode(ISD::BITCAST, SL, VT, RHS);
-        SDValue FSelect = DAG.getNode(ISD::SELECT, SL, VT, Cond, SrcMod, FRHS);
+        EVT FVT = IntToFloatVT(VT);
+        SDValue FRHS = DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
+        SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, SrcMod, FRHS);
         SDValue BC = DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
         return BC;
       }
