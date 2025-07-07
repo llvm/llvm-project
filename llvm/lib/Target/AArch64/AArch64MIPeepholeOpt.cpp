@@ -72,8 +72,14 @@
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
 
@@ -849,6 +855,59 @@ bool AArch64MIPeepholeOpt::runOnMachineFunction(MachineFunction &MF) {
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
 
   bool Changed = false;
+
+  for (MachineBasicBlock &MBB : MF) {
+    bool DidSomething;
+    do {
+      DidSomething = false;
+      for (MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != AArch64::FCVTZSUWSr)
+          continue;
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg = MI.getOperand(1).getReg();
+        SmallVector<MachineInstr *> Users;
+        for (MachineInstr &User : MRI->use_nodbg_instructions(DstReg)) {
+          if (User.getOpcode() != AArch64::STRBBui)
+            continue;
+          Users.push_back(&User);
+        }
+        if (Users.size() != 1)
+          continue;
+
+        MachineInstr &STRBBui = *Users[0];
+
+        Register NewDst = MRI->createVirtualRegister(&AArch64::FPR32RegClass);
+        {
+          MachineInstrBuilder MIB =
+              BuildMI(*MI.getParent(), MI.getIterator(), MI.getDebugLoc(),
+                      TII->get(AArch64::FCVTZSv1i32), NewDst);
+          MIB.addReg(SrcReg);
+        }
+
+        {
+          MachineInstrBuilder MIB =
+              BuildMI(*STRBBui.getParent(), STRBBui.getIterator(),
+                      STRBBui.getDebugLoc(), TII->get(AArch64::STRBui));
+          MIB.addReg(NewDst, RegState::Kill);
+          if (STRBBui.getOperand(1).isReg())
+            MIB.addReg(STRBBui.getOperand(1).getReg());
+          else
+            MIB.addFrameIndex(STRBBui.getOperand(1).getIndex());
+          MIB.addImm(STRBBui.getOperand(2).getImm());
+        }
+
+        MI.removeFromParent();
+        STRBBui.removeFromParent();
+
+        MRI->replaceRegWith(DstReg, NewDst);
+
+        Changed |= true;
+
+        DidSomething = true;
+        break;
+      }
+    } while (DidSomething);
+  }
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
