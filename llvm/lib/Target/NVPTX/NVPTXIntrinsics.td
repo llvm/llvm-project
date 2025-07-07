@@ -752,30 +752,26 @@ foreach dim = [1, 2, 3, 4, 5] in {
 
 //Prefetchu and Prefetch
 
-class PREFETCH_CONST_CHK<dag frag>
-          : PatFrag<!setdagop(frag, ops), frag, AS_match.const>;
-class PREFETCH_GENERIC_CHK<dag frag>
-          : PatFrag<!setdagop(frag, ops), frag, AS_match.generic>;
-class PREFETCH_PARAM_CHK<dag frag>
-          : PatFrag<!setdagop(frag, ops), frag, AS_match.param>;
-
 defvar frag_pat = (int_nvvm_prefetch_tensormap node:$addr);
 
-def prefetch_tensormap_const : PREFETCH_CONST_CHK<frag_pat>;
-def prefetch_tensormap_gen   : PREFETCH_GENERIC_CHK<frag_pat>;
-def prefetch_tensormap_param : PREFETCH_PARAM_CHK<frag_pat>;
+def prefetch_tensormap_const : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.const>;
+def prefetch_tensormap_gen : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.generic>;
+def prefetch_tensormap_param : PatFrag<!setdagop(frag_pat, ops), frag_pat, AS_match.param>;
 
-def PREFETCH_CONST_TENSORMAP : NVPTXInst<(outs), (ins ADDR:$addr),
+def PREFETCH_CONST_TENSORMAP : BasicNVPTXInst<(outs), (ins ADDR:$addr),
           "prefetch.const.tensormap [$addr];",
-          [(prefetch_tensormap_const addr:$addr)]>;
+          [(prefetch_tensormap_const addr:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>;
 
-def PREFETCH_GENERIC_TENSORMAP : NVPTXInst<(outs), (ins ADDR:$addr),
+def PREFETCH_GENERIC_TENSORMAP : BasicNVPTXInst<(outs), (ins ADDR:$addr),
           "prefetch.tensormap [$addr];",
-          [(prefetch_tensormap_gen addr:$addr)]>; 
+          [(prefetch_tensormap_gen addr:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>; 
 
-def PREFETCH_PARAM_TENSORMAP : NVPTXInst<(outs), (ins ADDR:$addr),
+def PREFETCH_PARAM_TENSORMAP : BasicNVPTXInst<(outs), (ins ADDR:$addr),
           "prefetch.param.tensormap [$addr];",
-          [(prefetch_tensormap_param addr:$addr)]>; 
+          [(prefetch_tensormap_param addr:$addr)]>,
+          Requires<[hasPTX<80>, hasSM<90>]>; 
 
   
 class PREFETCH_INTRS<string InstName, Intrinsic Intr> :
