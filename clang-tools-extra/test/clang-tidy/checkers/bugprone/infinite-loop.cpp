@@ -592,6 +592,53 @@ void test_structured_bindings_bad() {
   }
 }
 
+namespace std {
+    using size_t = int;
+    template <class> struct tuple_size;
+    template <std::size_t, class> struct tuple_element;
+    template <class...> class tuple;
+
+namespace {
+    template <class T, T v>
+    struct size_helper { static const T value = v; };
+} // namespace
+
+template <class... T>
+struct tuple_size<tuple<T...>> : size_helper<std::size_t, sizeof...(T)> {};
+
+template <std::size_t I, class... T>
+struct tuple_element<I, tuple<T...>> {
+    using type =  __type_pack_element<I, T...>;
+};
+
+template <class...> class tuple {};
+
+template <std::size_t I, class... T>
+typename tuple_element<I, tuple<T...>>::type get(tuple<T...>);
+} // namespace std
+
+std::tuple<int*, int> &get_chunk();
+
+void test_structured_bindings_tuple() {
+  auto [buffer, size ] = get_chunk();
+  int maxLen = 8;
+
+  while (size < maxLen) {
+    // No warning. The loop is finite because 'size' is being incremented in each iteration and compared against 'maxLen' for termination
+    buffer[size++] = 2;
+  }
+}
+
+void test_structured_bindings_tuple_ref() {
+  auto& [buffer, size ] = get_chunk();
+  int maxLen = 8;
+
+  while (size < maxLen) {
+    // No warning. The loop is finite because 'size' is being incremented in each iteration and compared against 'maxLen' for termination
+    buffer[size++] = 2;
+  }
+}
+
 void test_volatile_cast() {
   // This is a no-op cast. Clang ignores the qualifier, we should too.
   for (int i = 0; (volatile int)i < 10;) {

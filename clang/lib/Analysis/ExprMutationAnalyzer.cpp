@@ -113,6 +113,14 @@ AST_MATCHER_P(Stmt, canResolveToExpr, const Stmt *, Inner) {
   return canExprResolveTo(Exp, Target);
 }
 
+AST_MATCHER_P(BindingDecl, hasHoldingVar,
+              ast_matchers::internal::Matcher<VarDecl>, InnerMatcher) {
+  if (const VarDecl *HoldingVar = Node.getHoldingVar()) {
+    return InnerMatcher.matches(*HoldingVar, Finder, Builder);
+  }
+  return false;
+}
+
 // use class member to store data can reduce stack usage to avoid stack overflow
 // when recursive call.
 class ExprPointeeResolve {
@@ -310,21 +318,30 @@ const Stmt *ExprMutationAnalyzer::Analyzer::findMutationMemoized(
   return nullptr;
 }
 
+const ast_matchers::internal::BindableMatcher<Stmt>
+ExprMutationAnalyzer::Analyzer::makeDeclRefExprMatcher(const Decl *Dec) {
+
+  // For VarDecl created implicitly via structured bindings, create a matcher
+  // for DeclRefExpr nodes which refer to this VarDecl via BindingDecl nodes.
+  if (const auto *VD = dyn_cast<VarDecl>(Dec)) {
+    if (VD->isImplicit()) {
+      return declRefExpr(to(bindingDecl(hasHoldingVar(equalsNode(VD)))));
+    }
+  }
+
+  return declRefExpr(to(
+      // `Dec` or a binding if `Dec` is a decomposition.
+      anyOf(equalsNode(Dec), bindingDecl(forDecomposition(equalsNode(Dec))))));
+}
+
 const Stmt *
 ExprMutationAnalyzer::Analyzer::tryEachDeclRef(const Decl *Dec,
                                                MutationFinder Finder) {
-  const auto Refs = match(
-      findAll(
-          declRefExpr(to(
-                          // `Dec` or a binding if `Dec` is a decomposition.
-                          anyOf(equalsNode(Dec),
-                                bindingDecl(forDecomposition(equalsNode(Dec))))
-                          //
-                          ))
-              .bind(NodeID<Expr>::value)),
-      Stm, Context);
+  const auto matcher = makeDeclRefExprMatcher(Dec);
+  const auto nodeId = NodeID<Expr>::value;
+  const auto Refs = match(findAll(matcher.bind(nodeId)), Stm, Context);
   for (const auto &RefNodes : Refs) {
-    const auto *E = RefNodes.getNodeAs<Expr>(NodeID<Expr>::value);
+    const auto *E = RefNodes.getNodeAs<Expr>(nodeId);
     if ((this->*Finder)(E))
       return E;
   }

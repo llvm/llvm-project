@@ -54,6 +54,8 @@ public:
     const Stmt *findMutationMemoized(const Expr *Exp,
                                      llvm::ArrayRef<MutationFinder> Finders,
                                      Memoized::ResultMap &MemoizedResults);
+    const ast_matchers::internal::BindableMatcher<Stmt>
+    makeDeclRefExprMatcher(const Decl *Dec);
     const Stmt *tryEachDeclRef(const Decl *Dec, MutationFinder Finder);
 
     const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);

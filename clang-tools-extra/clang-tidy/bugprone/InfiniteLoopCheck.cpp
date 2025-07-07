@@ -64,24 +64,53 @@ static bool isChanged(const Stmt *LoopStmt, const VarDecl *Var,
   return ExprMutationAnalyzer(*LoopStmt, *Context).isMutated(Var);
 }
 
+bool isVolatileOrNonIntegerType(QualType QT) {
+
+  if (QT.isVolatileQualified())
+    return true;
+
+  const Type *T = QT.getTypePtr();
+
+  if (T->isIntegerType())
+    return false;
+
+  if (T->isRValueReferenceType()) {
+    QT = dyn_cast<RValueReferenceType>(T)->getPointeeType();
+    return isVolatileOrNonIntegerType(QT);
+  }
+
+  return true;
+}
+
+static bool isVarDeclPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
+                                     const VarDecl *Var, ASTContext *Context) {
+  if (!Var->isLocalVarDeclOrParm())
+    return true;
+
+  if (isVolatileOrNonIntegerType(Var->getType()))
+    return true;
+
+  return hasPtrOrReferenceInFunc(Func, Var) ||
+         isChanged(LoopStmt, Var, Context);
+}
+
 /// Return whether `Cond` is a variable that is possibly changed in `LoopStmt`.
 static bool isVarThatIsPossiblyChanged(const Decl *Func, const Stmt *LoopStmt,
                                        const Stmt *Cond, ASTContext *Context) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (!Var->isLocalVarDeclOrParm())
-        return true;
+    const ValueDecl *VD = DRE->getDecl();
 
-      if (Var->getType().isVolatileQualified())
-        return true;
-
-      if (!Var->getType().getTypePtr()->isIntegerType())
-        return true;
-
-      return hasPtrOrReferenceInFunc(Func, Var) ||
-             isChanged(LoopStmt, Var, Context);
-      // FIXME: Track references.
+    if (const auto *Var = dyn_cast<VarDecl>(VD)) {
+      return isVarDeclPossiblyChanged(Func, LoopStmt, Var, Context);
     }
+
+    if (const auto *BD = dyn_cast<BindingDecl>(VD)) {
+      if (const auto *Var = BD->getHoldingVar()) {
+        return isVarDeclPossiblyChanged(Func, LoopStmt, Var, Context);
+      }
+    }
+
+    // FIXME: Track references.
   } else if (isa<MemberExpr, CallExpr, ObjCIvarRefExpr, ObjCPropertyRefExpr,
                  ObjCMessageExpr>(Cond)) {
     // FIXME: Handle MemberExpr.
@@ -121,8 +150,16 @@ static bool isAtLeastOneCondVarChanged(const Decl *Func, const Stmt *LoopStmt,
 /// Return the variable names in `Cond`.
 static std::string getCondVarNames(const Stmt *Cond) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
-    if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))
+    const ValueDecl *VD = DRE->getDecl();
+
+    if (const auto *Var = dyn_cast<VarDecl>(VD))
       return std::string(Var->getName());
+
+    if (const auto *BD = dyn_cast<BindingDecl>(VD)) {
+      if (const auto *Var = BD->getHoldingVar()) {
+        return Var->getName().str();
+      }
+    }
   }
 
   std::string Result;
