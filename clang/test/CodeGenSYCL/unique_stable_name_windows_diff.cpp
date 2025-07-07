@@ -31,9 +31,18 @@ int main() {
 
   // Ensure the kernels are named the same between the device and host
   // invocations.
+  // Call from host.
   (void)__builtin_sycl_unique_stable_name(decltype(lambda1));
   (void)__builtin_sycl_unique_stable_name(decltype(lambda2));
   (void)__builtin_sycl_unique_stable_name(decltype(lambda3));
+
+  // Call from device.
+  auto lambda4 = [](){
+    (void)__builtin_sycl_unique_stable_name(decltype(lambda1));
+    (void)__builtin_sycl_unique_stable_name(decltype(lambda2));
+    (void)__builtin_sycl_unique_stable_name(decltype(lambda3));
+  };
+  kernel<class K4>(lambda4);
 
   // Make sure the following 3 are the same between the host and device compile.
   // Note that these are NOT the same value as each other, they differ by the
