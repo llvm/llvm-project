@@ -2607,9 +2607,6 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
 
 SDValue LoongArchTargetLowering::lowerRETURNADDR(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
-
   // Currently only support lowering return address for current frame.
   if (Op.getConstantOperandVal(0) != 0) {
     DAG.getContext()->emitError(

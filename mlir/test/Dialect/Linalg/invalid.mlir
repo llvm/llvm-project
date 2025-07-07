@@ -1909,14 +1909,6 @@ module {
 
 // -----
 
-func.func @elemwise_unary_invalid_mixed_types(%arg0 : tensor<?xi32>) -> tensor<?xi32> {
-  // expected-error @below {{unsupported non numeric type}}
-  %0 = linalg.elemwise_unary ins(%arg0 : tensor<?xi32>) outs(%arg0 : tensor<?xi32>) -> tensor<?xi32>
-  return %0 : tensor<?xi32>
-}
-
-// -----
-
 func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
   -> (tensor<?xf16>, vector<4xf16>)
 {

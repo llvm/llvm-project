@@ -7,6 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #define __CLC_BODY <clc/math/unary_decl_with_ptr.inc>
-#define FUNCTION __clc_sincos
+#define FUNCTION sincos
 #include <clc/math/gentype.inc>
 #undef FUNCTION

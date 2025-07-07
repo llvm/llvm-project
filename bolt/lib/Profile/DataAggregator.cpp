@@ -197,34 +197,27 @@ void DataAggregator::start() {
 
   if (opts::BasicAggregation) {
     launchPerfProcess("events without LBR", MainEventsPPI,
-                      "script -F pid,event,ip",
-                      /*Wait = */ false);
+                      "script -F pid,event,ip");
   } else if (!opts::ITraceAggregation.empty()) {
     // Disable parsing memory profile from trace data, unless requested by user.
     if (!opts::ParseMemProfile.getNumOccurrences())
       opts::ParseMemProfile = false;
-
-    std::string ItracePerfScriptArgs = llvm::formatv(
-        "script -F pid,brstack --itrace={0}", opts::ITraceAggregation);
     launchPerfProcess("branch events with itrace", MainEventsPPI,
-                      ItracePerfScriptArgs.c_str(),
-                      /*Wait = */ false);
+                      "script -F pid,brstack --itrace=" +
+                          opts::ITraceAggregation);
   } else {
-    launchPerfProcess("branch events", MainEventsPPI, "script -F pid,brstack",
-                      /*Wait = */ false);
+    launchPerfProcess("branch events", MainEventsPPI, "script -F pid,brstack");
   }
 
   if (opts::ParseMemProfile)
-    launchPerfProcess("mem events", MemEventsPPI, "script -F pid,event,addr,ip",
-                      /*Wait = */ false);
+    launchPerfProcess("mem events", MemEventsPPI,
+                      "script -F pid,event,addr,ip");
 
   launchPerfProcess("process events", MMapEventsPPI,
-                    "script --show-mmap-events --no-itrace",
-                    /*Wait = */ false);
+                    "script --show-mmap-events --no-itrace");
 
   launchPerfProcess("task events", TaskEventsPPI,
-                    "script --show-task-events --no-itrace",
-                    /*Wait = */ false);
+                    "script --show-task-events --no-itrace");
 }
 
 void DataAggregator::abort() {
@@ -246,13 +239,13 @@ void DataAggregator::abort() {
 }
 
 void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
-                                       const char *ArgsString, bool Wait) {
+                                       StringRef Args) {
   SmallVector<StringRef, 4> Argv;
 
   outs() << "PERF2BOLT: spawning perf job to read " << Name << '\n';
   Argv.push_back(PerfPath.data());
 
-  StringRef(ArgsString).split(Argv, ' ');
+  Args.split(Argv, ' ');
   Argv.push_back("-f");
   Argv.push_back("-i");
   Argv.push_back(Filename.c_str());
@@ -286,64 +279,45 @@ void DataAggregator::launchPerfProcess(StringRef Name, PerfProcessInfo &PPI,
            << "\n";
   });
 
-  if (Wait)
-    PPI.PI.ReturnCode = sys::ExecuteAndWait(PerfPath.data(), Argv,
-                                            /*envp*/ std::nullopt, Redirects);
-  else
-    PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
-                                Redirects);
+  PPI.PI = sys::ExecuteNoWait(PerfPath.data(), Argv, /*envp*/ std::nullopt,
+                              Redirects);
 }
 
 void DataAggregator::processFileBuildID(StringRef FileBuildID) {
+  auto WarningCallback = [](int ReturnCode, StringRef ErrBuf) {
+    errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
+  };
+
   PerfProcessInfo BuildIDProcessInfo;
-  launchPerfProcess("buildid list",
-                    BuildIDProcessInfo,
-                    "buildid-list",
-                    /*Wait = */true);
-
-  if (BuildIDProcessInfo.PI.ReturnCode != 0) {
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-        MemoryBuffer::getFileOrSTDIN(BuildIDProcessInfo.StderrPath.data());
-    StringRef ErrBuf = (*MB)->getBuffer();
-
-    errs() << "PERF-ERROR: return code " << BuildIDProcessInfo.PI.ReturnCode
-           << '\n';
-    errs() << ErrBuf;
+  launchPerfProcess("buildid list", BuildIDProcessInfo, "buildid-list");
+  if (prepareToParse("buildid", BuildIDProcessInfo, WarningCallback))
     return;
-  }
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
-      MemoryBuffer::getFileOrSTDIN(BuildIDProcessInfo.StdoutPath.data());
-  if (std::error_code EC = MB.getError()) {
-    errs() << "Cannot open " << BuildIDProcessInfo.StdoutPath.data() << ": "
-           << EC.message() << "\n";
-    return;
-  }
-
-  FileBuf = std::move(*MB);
-  ParsingBuf = FileBuf->getBuffer();
 
   std::optional<StringRef> FileName = getFileNameForBuildID(FileBuildID);
-  if (!FileName) {
-    if (hasAllBuildIDs()) {
-      errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
-                "This indicates the input binary supplied for data aggregation "
-                "is not the same recorded by perf when collecting profiling "
-                "data, or there were no samples recorded for the binary. "
-                "Use -ignore-build-id option to override.\n";
-      if (!opts::IgnoreBuildID)
-        abort();
-    } else {
-      errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
-                "data was recorded without it\n";
-      return;
-    }
-  } else if (*FileName != llvm::sys::path::filename(BC->getFilename())) {
+  if (FileName && *FileName == sys::path::filename(BC->getFilename())) {
+    outs() << "PERF2BOLT: matched build-id and file name\n";
+    return;
+  }
+
+  if (FileName) {
     errs() << "PERF2BOLT-WARNING: build-id matched a different file name\n";
     BuildIDBinaryName = std::string(*FileName);
-  } else {
-    outs() << "PERF2BOLT: matched build-id and file name\n";
+    return;
   }
+
+  if (!hasAllBuildIDs()) {
+    errs() << "PERF2BOLT-WARNING: build-id will not be checked because perf "
+              "data was recorded without it\n";
+    return;
+  }
+
+  errs() << "PERF2BOLT-ERROR: failed to match build-id from perf output. "
+            "This indicates the input binary supplied for data aggregation "
+            "is not the same recorded by perf when collecting profiling "
+            "data, or there were no samples recorded for the binary. "
+            "Use -ignore-build-id option to override.\n";
+  if (!opts::IgnoreBuildID)
+    abort();
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
@@ -432,13 +406,23 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   std::string Error;
   outs() << "PERF2BOLT: waiting for perf " << Name
          << " collection to finish...\n";
-  sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error);
+  std::optional<sys::ProcessStatistics> PS;
+  sys::ProcessInfo PI = sys::Wait(Process.PI, std::nullopt, &Error, &PS);
 
   if (!Error.empty()) {
     errs() << "PERF-ERROR: " << PerfPath << ": " << Error << "\n";
     deleteTempFiles();
     exit(1);
   }
+
+  LLVM_DEBUG({
+    const float UserSec = 1.f * PS->UserTime.count() / 1e6;
+    const float TotalSec = 1.f * PS->TotalTime.count() / 1e6;
+    const float PeakGiB = 1.f * PS->PeakMemory / (1 << 20);
+    dbgs() << formatv("Finished in {0:f2}s user time, {1:f2}s total time, "
+                      "{2:f2} GiB peak RSS\n",
+                      UserSec, TotalSec, PeakGiB);
+  });
 
   if (PI.ReturnCode != 0) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorMB =

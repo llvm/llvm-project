@@ -1,5 +1,5 @@
-! REQUIRES: x86_64-registered-target
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
+! REQUIRES: x86-registered-target
+! RUN: bbc -target x86_64-unknown-linux-gnu --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPsum_test(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}) -> i32 {

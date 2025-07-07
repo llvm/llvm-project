@@ -393,6 +393,29 @@ class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
   let Uses = [VL, VTYPE];
 }
 
+class NDSRVInstVLN<bits<5> funct5, string opcodestr>
+    : RVInst<(outs VR:$vd), (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm),
+             opcodestr, "$vd, ${rs1}$vm", [], InstFormatR>,
+      VLESchedMC {
+  bits<5> rs1;
+  bits<5> vd;
+  bit vm;
+
+  let Inst{31-26} = 0b000001;
+  let Inst{25} = vm;
+  let Inst{24-20} = funct5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = 0b100;
+  let Inst{11-7} = vd;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+  let mayStore = 0;
+
+  let Uses = [VTYPE, VL];
+  let RVVConstraint = VMConstraint;
+}
+
 //===----------------------------------------------------------------------===//
 // Multiclass
 //===----------------------------------------------------------------------===//
@@ -548,6 +571,15 @@ let RVVConstraint = VS2Constraint, DestEEW = EEWSEWx2 in
 def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
 let Uses = [FRM, VL, VTYPE] in
 def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
+}
+
+//===----------------------------------------------------------------------===//
+// XAndesVSIntLoad
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasVendorXAndesVSIntLoad] in {
+def NDS_VLN8_V  : NDSRVInstVLN<0b00010, "nds.vln8.v">;
+def NDS_VLNU8_V : NDSRVInstVLN<0b00011, "nds.vlnu8.v">;
 }
 
 //===----------------------------------------------------------------------===//

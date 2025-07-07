@@ -22,6 +22,7 @@
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -652,9 +653,9 @@ static ConceptReference *createTrivialConceptReference(ASTContext &Context,
       DeclarationNameInfo(AT->getTypeConstraintConcept()->getDeclName(), Loc,
                           AT->getTypeConstraintConcept()->getDeclName());
   unsigned size = AT->getTypeConstraintArguments().size();
-  TemplateArgumentLocInfo *TALI = new TemplateArgumentLocInfo[size];
+  llvm::SmallVector<TemplateArgumentLocInfo, 8> TALI(size);
   TemplateSpecializationTypeLoc::initializeArgLocs(
-      Context, AT->getTypeConstraintArguments(), TALI, Loc);
+      Context, AT->getTypeConstraintArguments(), TALI.data(), Loc);
   TemplateArgumentListInfo TAListI;
   for (unsigned i = 0; i < size; ++i) {
     TAListI.addArgument(
@@ -666,7 +667,6 @@ static ConceptReference *createTrivialConceptReference(ASTContext &Context,
       Context, NestedNameSpecifierLoc{}, Loc, DNI, nullptr,
       AT->getTypeConstraintConcept(),
       ASTTemplateArgumentListInfo::Create(Context, TAListI));
-  delete[] TALI;
   return ConceptRef;
 }
 

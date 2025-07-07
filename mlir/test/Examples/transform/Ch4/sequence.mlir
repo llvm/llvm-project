@@ -22,15 +22,15 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
 
   // Elementwise addition.
   // expected-remark @below {{elementwise binary}}
-  %biased = linalg.elemwise_binary { fun = #linalg.binary_fn<add> }
+  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
-  %c0f = arith.constant 0.0 : f32
+  %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
   // expected-remark @below {{elementwise binary}}
-  %relued = linalg.elemwise_binary { fun = #linalg.binary_fn<max_signed> }
-    ins(%biased, %c0f : tensor<512x512xf32>, f32)
+  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+    ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
 }
@@ -82,7 +82,7 @@ module @transforms attributes { transform.with_named_sequence } {
   // rewriter sequence on success.
   transform.named_sequence @match_elemwise(
       %entry: !transform.any_op {transform.readonly}) -> !transform.any_op {
-    transform.match.operation_name %entry ["linalg.elemwise_binary"] 
+    transform.match.operation_name %entry ["linalg.elementwise"] 
       : !transform.any_op
     transform.yield %entry : !transform.any_op
   }
@@ -113,7 +113,7 @@ module @transforms attributes { transform.with_named_sequence } {
       %last: !transform.any_op {transform.readonly}) 
       -> (!transform.any_op, !transform.any_op, !transform.any_op) {
     // The last operation must be an elementwise binary.
-    transform.match.operation_name %last ["linalg.elemwise_binary"]
+    transform.match.operation_name %last ["linalg.elementwise"]
       : !transform.any_op
     // Its first operand must be defined by another operation, to which we
     // will get a handle here. We are guaranteed that the first operand exists
@@ -123,7 +123,7 @@ module @transforms attributes { transform.with_named_sequence } {
     %middle = transform.get_producer_of_operand %last[0]
       : (!transform.any_op) -> !transform.any_op
     // The defining operation must itself be an elementwise binary.
-    transform.match.operation_name %middle ["linalg.elemwise_binary"]
+    transform.match.operation_name %middle ["linalg.elementwise"]
       : !transform.any_op
     // And the first operand of that operation must be defined by yet another
     // operation.
