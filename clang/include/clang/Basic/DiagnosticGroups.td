@@ -625,6 +625,7 @@ def ModuleConflict : DiagGroup<"module-conflict">;
 def ModuleFileExtension : DiagGroup<"module-file-extension">;
 def ModuleIncludeDirectiveTranslation : DiagGroup<"module-include-translation">;
 def ModuleMap : DiagGroup<"module-map">;
+def ModulesDriver : DiagGroup<"modules-driver">;
 def RoundTripCC1Args : DiagGroup<"round-trip-cc1-args">;
 def NewlineEOF : DiagGroup<"newline-eof">;
 def Nullability : DiagGroup<"nullability">;
@@ -815,19 +816,22 @@ changes to one object won't affect the others, the object's initializer will run
 once per copy, etc.
 
 Specifically, this warning fires when it detects an object which:
-1. Is defined as ``inline`` in a header file (so it might get compiled into multiple libaries), and
-2. Has external linkage (otherwise it's supposed to be duplicated), and
-3. Has hidden visibility (posix) or lacks a dllimport/dllexport attribute (windows).
+
+#. Is defined as ``inline`` in a header file (so it might get compiled into multiple libaries), and
+#. Has external linkage (otherwise it's supposed to be duplicated), and
+#. Has hidden visibility (posix) or lacks a dllimport/dllexport attribute (windows).
 
 As well as one of the following:
-1. The object is mutable, or
-2. The object's initializer definitely has side effects.
+
+#. The object is mutable, or
+#. The object's initializer definitely has side effects.
 
 The warning can be resolved by removing one of the conditions above. In rough
 order of preference, this may be done by:
-1. Marking the object ``const`` (if possible)
-2. Moving the object's definition to a source file
-3. Making the object visible using ``__attribute((visibility("default")))``,
+
+#. Marking the object ``const`` (if possible)
+#. Moving the object's definition to a source file
+#. Making the object visible using ``__attribute((visibility("default")))``,
    ``__declspec(dllimport)``, or ``__declspec(dllexport)``.
 
 When annotating an object with ``__declspec(dllimport)`` or ``__declspec(dllexport)``,

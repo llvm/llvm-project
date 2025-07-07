@@ -15,11 +15,13 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
+#include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -2641,6 +2643,23 @@ LogicalResult SimdOp::verify() {
     return emitError()
            << "'omp.composite' attribute present in non-composite wrapper";
 
+  // Firstprivate is not allowed for SIMD in the standard. Check that none of
+  // the private decls are for firstprivate.
+  std::optional<ArrayAttr> privateSyms = getPrivateSyms();
+  if (privateSyms) {
+    for (const Attribute &sym : *privateSyms) {
+      auto symRef = cast<SymbolRefAttr>(sym);
+      omp::PrivateClauseOp privatizer =
+          SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
+              getOperation(), symRef);
+      if (!privatizer)
+        return emitError() << "Cannot find privatizer '" << symRef << "'";
+      if (privatizer.getDataSharingType() ==
+          DataSharingClauseType::FirstPrivate)
+        return emitError() << "FIRSTPRIVATE cannot be used with SIMD";
+    }
+  }
+
   return success();
 }
 
@@ -3034,17 +3053,13 @@ mlir::omp ::decodeCli(Value cli) {
   OpOperand *cons = nullptr;
   for (OpOperand &use : cli.getUses()) {
     auto op = cast<LoopTransformationInterface>(use.getOwner());
-    auto applyees = op.getApplyeesODSOperandIndexAndLength();
-    auto generatees = op.getGenerateesODSOperandIndexAndLength();
 
     unsigned opnum = use.getOperandNumber();
-    if (generatees.first <= opnum &&
-        opnum < generatees.first + generatees.second) {
-      assert(!gen && "Each CLI may have at most one consumer");
+    if (op.isGeneratee(opnum)) {
+      assert(!gen && "Each CLI may have at most one def");
       gen = &use;
-    } else if (applyees.first <= opnum &&
-               opnum < applyees.first + applyees.second) {
-      assert(!cons && "Each CLI may have at most one def");
+    } else if (op.isApplyee(opnum)) {
+      assert(!cons && "Each CLI may have at most one consumer");
       cons = &use;
     } else {
       llvm_unreachable("Unexpected operand for a CLI");
@@ -3061,7 +3076,7 @@ void NewCliOp::build(::mlir::OpBuilder &odsBuilder,
 
 void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
   Value result = getResult();
-  auto [newCli, gen, cond] = decodeCli(result);
+  auto [newCli, gen, cons] = decodeCli(result);
 
   // Derive the CLI variable name from its generator:
   //  * "canonloop" for omp.canonical_loop
@@ -3088,7 +3103,6 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
                 if (!r)
                   break;
 
-                Operation *parent = r->getParentOp();
                 auto getSequentialIndex = [](Region *r, Operation *o) {
                   llvm::ReversePostOrderTraversal<Block *> traversal(
                       &r->getBlocks().front());
@@ -3108,6 +3122,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
                 size_t sequentialIdx = getSequentialIndex(r, o);
                 components.push_back(("s" + Twine(sequentialIdx)).str());
 
+                Operation *parent = r->getParentOp();
                 if (!parent)
                   break;
 
@@ -3162,12 +3177,9 @@ LogicalResult NewCliOp::verify() {
   OpOperand *cons = nullptr;
   for (mlir::OpOperand &use : cli.getUses()) {
     auto op = cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
-    auto applyees = op.getApplyeesODSOperandIndexAndLength();
-    auto generatees = op.getGenerateesODSOperandIndexAndLength();
 
     unsigned opnum = use.getOperandNumber();
-    if (generatees.first <= opnum &&
-        opnum < generatees.first + generatees.second) {
+    if (op.isGeneratee(opnum)) {
       if (gen) {
         InFlightDiagnostic error =
             emitOpError("CLI must have at most one generator");
@@ -3179,8 +3191,7 @@ LogicalResult NewCliOp::verify() {
       }
 
       gen = &use;
-    } else if (applyees.first <= opnum &&
-               opnum < applyees.first + applyees.second) {
+    } else if (op.isApplyee(opnum)) {
       if (cons) {
         InFlightDiagnostic error =
             emitOpError("CLI must have at most one consumer");

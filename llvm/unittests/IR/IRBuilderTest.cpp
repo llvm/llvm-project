@@ -920,9 +920,11 @@ TEST_F(IRBuilderTest, DIBuilder) {
     // --------------------------
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
     DILabel *AlwaysPreserveLabel = DIB.createLabel(
-        BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
-    DILabel *Label =
-        DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
+        BarScope, "meles_meles", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ true);
+    DILabel *Label = DIB.createLabel(
+        BarScope, "badger", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ false);
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.

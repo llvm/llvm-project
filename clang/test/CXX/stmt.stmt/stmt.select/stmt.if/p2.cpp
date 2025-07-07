@@ -218,4 +218,26 @@ void regression() {
 
 }
 
+namespace GH146063 {
+template <typename>
+struct A {
+  static_assert([]() constexpr { return true; }());
+};
+
+void f1() {
+  if constexpr (false) {
+    A<int> a;
+  }
+}
+
+void f2() {
+  if constexpr (false) {
+    static_assert([]{});
+    // expected-warning@-1 {{address of lambda function pointer conversion operator will always evaluate to 'true'}}
+  }
+}
+
+}
+
+
 #endif

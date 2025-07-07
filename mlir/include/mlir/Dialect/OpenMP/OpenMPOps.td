@@ -430,7 +430,7 @@ def CanonicalLoopOp : OpenMPTransform_Op<"canonical_loop",
   let description = [{
     All loops that conform to OpenMP's definition of a canonical loop can be
     simplified to a CanonicalLoopOp. In particular, there are no loop-carried
-    variables and the number of iterations it will execute is know before the
+    variables and the number of iterations it will execute is known before the
     operation. This allows e.g. to determine the number of threads and chunks
     the iterations space is split into before executing any iteration. More
     restrictions may apply in cases such as (collapsed) loop nests, doacross

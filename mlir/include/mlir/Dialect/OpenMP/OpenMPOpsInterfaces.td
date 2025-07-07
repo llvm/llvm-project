@@ -606,6 +606,34 @@ def LoopTransformationInterface : OpInterface<"LoopTransformationInterface"> {
       }]
     >,
 
+    InterfaceMethod<
+      /*description=*/[{
+        Return whether the provided operand is a generatee of this operation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "isApplyee",
+      /*args=*/       (ins "unsigned":$opnum),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        auto applyeeArgs = $_op.getApplyeesODSOperandIndexAndLength();
+        return (applyeeArgs.first <= opnum && opnum < applyeeArgs.first + applyeeArgs.second) ;
+      }]
+    >,
+
+    InterfaceMethod<
+      /*description=*/[{
+        Return whether the provided operand is a generatee of this operation.
+      }],
+      /*returnType=*/ "unsigned",
+      /*methodName=*/ "isGeneratee",
+      /*args=*/       (ins "unsigned":$opnum),
+      /*methodBody=*/ "",
+      /*defaultImpl=*/[{
+        auto generateeArgs = $_op.getGenerateesODSOperandIndexAndLength();
+        return (generateeArgs.first <= opnum && opnum < generateeArgs.first + generateeArgs.second) ;
+      }]
+    >,
+
   ];
 }
 
