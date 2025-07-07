@@ -68,9 +68,9 @@ getUnwindRuleRegSet(const dwarf::UnwindRow &UnwindRow, DWARFRegNum Reg) {
     // constant throughout the entire frame; only the way to calculate it might
     // change.
   case dwarf::UnwindLocation::Location::DWARFExpr:
-    // TODO: Expressions are not supported yet, but if wanted to be supported,
-    // all the registers used in an expression should extracted and returned
-    // here.
+    // TODO: Expressions are not supported yet, but if they were to be
+    // supported, all the registers used in an expression should extracted and
+    // returned here.
     return {};
   case dwarf::UnwindLocation::Location::Same:
     return {Reg};
@@ -200,9 +200,10 @@ void DWARFCFIAnalysis::checkRegDiff(const MCInst &Inst, DWARFRegNum Reg,
   // Each case is annotated with its corresponding number as described in
   // `llvm/include/llvm/DWARFCFIChecker/DWARFCFIAnalysis.h`.
 
-  // TODO: Expressions are not supported yet, but if wanted to be supported,
-  // structure equality for expressions is more than just checking if they are
-  // both expressions. The operations should also be the same.
+  // TODO: Expressions are not supported yet, but if they were to be supported,
+  // note that structure equality for expressions is defined as follows. Two
+  // expressions are structurally equal if they become the same after you
+  // replace every operand with a placeholder.
 
   if (PrevLoc == NextLoc) { // Case 1
     for (DWARFRegNum UsedReg : getUnwindRuleRegSet(PrevRow, Reg))
