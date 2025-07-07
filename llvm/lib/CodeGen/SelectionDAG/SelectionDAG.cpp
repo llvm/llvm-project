@@ -7327,6 +7327,7 @@ SDValue SelectionDAG::FoldConstantBuildVector(BuildVectorSDNode *BV,
     if (SDValue Tmp = FoldConstantBuildVector(BV, DL, IntEltVT))
       return FoldConstantBuildVector(cast<BuildVectorSDNode>(Tmp), DL,
                                      DstEltVT);
+    return SDValue();
   }
 
   // Okay, we know the src/dst types are both integers of differing types.
