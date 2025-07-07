@@ -16,21 +16,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-struct CheckCSpan {
-  const wchar_t *str;
-  CheckCSpan(const wchar_t *w) { str = w; }
-  bool operator()(wchar_t c) {
-    for (int n = 0; str[n]; ++n) {
-      if (str[n] == c)
-        return false;
-    }
-    return true;
-  }
-};
-
 LLVM_LIBC_FUNCTION(size_t, wcscspn, (const wchar_t *s1, const wchar_t *s2)) {
-  CheckCSpan check(s2);
-  return internal::inline_wcsspn(s1, check);
+  return internal::inline_wcsspn(s1, s2, true);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

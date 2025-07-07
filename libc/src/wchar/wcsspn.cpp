@@ -14,23 +14,10 @@
 #include "src/__support/macros/config.h"
 #include "wchar_utils.h"
 
-struct CheckSpan {
-  const wchar_t *str;
-  CheckSpan(const wchar_t *w) { str = w; }
-  bool operator()(wchar_t c) {
-    for (int n = 0; str[n]; ++n) {
-      if (str[n] == c)
-        return true;
-    }
-    return false;
-  }
-};
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(size_t, wcsspn, (const wchar_t *s1, const wchar_t *s2)) {
-  CheckSpan check(s2);
-  return internal::inline_wcsspn(s1, check);
+  return internal::inline_wcsspn(s1, s2, false);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
