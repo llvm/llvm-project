@@ -17,6 +17,7 @@
 #include "DWARFCFIAnalysis.h"
 #include "DWARFCFIFunctionFrameReceiver.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 
@@ -41,7 +42,7 @@ public:
 
 private:
   MCInstrInfo const &MCII;
-  std::vector<DWARFCFIAnalysis> UIAs;
+  SmallVector<DWARFCFIAnalysis> UIAs;
 };
 
 } // namespace llvm

@@ -15,6 +15,7 @@
 #define LLVM_DWARFCFICHECKER_DWARFCFIFUNCTIONFRAMESTREAMER_H
 
 #include "DWARFCFIFunctionFrameReceiver.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -74,12 +75,12 @@ private:
   /// the debug frames are intertwined with each other only in stack form.
 
   /// The last instruction that is not sent to the receiver for each frame.
-  std::vector<std::optional<MCInst>> LastInstructions;
+  SmallVector<std::optional<MCInst>> LastInstructions;
   /// The index of the last directive that is not sent to the receiver for each
   /// frame.
-  std::vector<unsigned> LastDirectiveIndices;
+  SmallVector<unsigned> LastDirectiveIndices;
   /// The index of each frame in `DwarfFrameInfos` field in `MCStreamer`.
-  std::vector<unsigned> FrameIndices;
+  SmallVector<unsigned> FrameIndices;
 
   std::unique_ptr<CFIFunctionFrameReceiver> Receiver;
 };
