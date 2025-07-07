@@ -494,7 +494,7 @@ func.func @linearize_vector_load_scalable(%arg0: memref<2x8xf32>) -> vector<1x[4
   // CHECK: %[[CST0:.*]] = arith.constant 0 : index
   // CHECK: %[[LOAD:.*]] = vector.load %[[ARG0]][%[[CST0]], %[[CST0]]] : memref<2x8xf32>, vector<[4]xf32>
   // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] : vector<[4]xf32> to vector<1x[4]xf32>
-  // CHECK: return %[[CAST]] : vector<1x[4]xf32
+  // CHECK: return %[[CAST]] : vector<1x[4]xf32>
   %c0 = arith.constant 0 : index
   %0 = vector.load %arg0[%c0, %c0] : memref<2x8xf32>, vector<1x[4]xf32>
   return %0 : vector<1x[4]xf32>
