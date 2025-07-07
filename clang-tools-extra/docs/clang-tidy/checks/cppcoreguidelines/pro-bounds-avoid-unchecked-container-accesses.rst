@@ -5,6 +5,9 @@ cppcoreguidelines-pro-bounds-avoid-unchecked-container-accesses
 
 Finds calls to ``operator[]`` in STL containers and suggests replacing them
 with safe alternatives.
+Safe alternatives include STL ``at`` or GSL ``at`` functions, ``begin()`` or
+``end()`` functions, ``range-for`` loops, ``std::span``, or an appropriate
+function from ``<algorithms>``.
 
 For example, both
 
