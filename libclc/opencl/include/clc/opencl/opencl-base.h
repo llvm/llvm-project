@@ -6,8 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/integer/clc_abs.h>
-#include <clc/opencl/integer/abs.h>
+#ifndef __CLC_OPENCL_OPENCL_BASE_H__
+#define __CLC_OPENCL_OPENCL_BASE_H__
 
-#define __CLC_BODY <abs.inc>
-#include <clc/integer/gentype.inc>
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
+#ifdef cl_khr_fp16
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+/* Function Attributes */
+#include <clc/clcfunc.h>
+
+/* 6.1 Supported Data Types */
+#include <clc/clctypes.h>
+
+#endif // __CLC_OPENCL_OPENCL_BASE_H__
