@@ -31,6 +31,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Visitors.h"
@@ -561,7 +562,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   if (originalBasisWasProvided) {
     for (Value tmpPredicate : builderResult.predicateOps) {
       predicate = predicate ? arith::AndIOp::create(rewriter, loc, predicate,
-                                                             tmpPredicate)
+                                                    tmpPredicate)
                             : tmpPredicate;
     }
   }
@@ -574,7 +575,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   if (predicate) {
     // Step 6.a. If predicated, move at the beginning.
     auto ifOp = scf::IfOp::create(rewriter, loc, predicate,
-                                           /*withElseRegion=*/false);
+                                  /*withElseRegion=*/false);
     targetBlock = ifOp.thenBlock();
     insertionPoint = ifOp.thenBlock()->begin();
   } else {

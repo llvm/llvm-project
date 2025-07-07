@@ -18,6 +18,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -318,9 +319,9 @@ static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
   if (!newShardOp) {
     auto shardingOp =
         ShardingOp::create(builder, operandValue.getLoc(), sharding);
-    newShardOp =
-        ShardOp::create(builder, operandValue.getLoc(), operandValue, shardingOp,
-                                /*annotate_for_users*/ false);
+    newShardOp = ShardOp::create(builder, operandValue.getLoc(), operandValue,
+                                 shardingOp,
+                                 /*annotate_for_users*/ false);
   }
   operandValue.replaceUsesWithIf(
       newShardOp, [operandOp, operandValue](OpOperand &use) {
@@ -332,8 +333,8 @@ static void maybeInsertTargetShardingAnnotationImpl(MeshSharding sharding,
   }
 
   auto newShardOp2 = ShardOp::create(builder, operandValue.getLoc(), newShardOp,
-                                             newShardOp.getSharding(),
-                                             /*annotate_for_users*/ true);
+                                     newShardOp.getSharding(),
+                                     /*annotate_for_users*/ true);
   newShardOp.getResult().replaceAllUsesExcept(newShardOp2, newShardOp2);
 }
 
@@ -382,7 +383,7 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
       ShardingOp::create(builder, operand.get().getLoc(), sharding);
   auto newShardOp =
       ShardOp::create(builder, operandValue.getLoc(), operandValue, shardingOp,
-                              /*annotate_for_users*/ true);
+                      /*annotate_for_users*/ true);
   IRRewriter rewriter(builder);
   rewriter.replaceUsesWithIf(
       operandValue, newShardOp, [operandOp, operandValue](OpOperand &use) {
@@ -397,7 +398,7 @@ void mlir::mesh::maybeInsertSourceShardingAnnotation(MeshSharding sharding,
   builder.setInsertionPoint(newShardOp);
   auto newPreceedingShardOp =
       ShardOp::create(builder, operandValue.getLoc(), operandValue, shardingOp,
-                              /*annotate_for_users*/ false);
+                      /*annotate_for_users*/ false);
   rewriter.replaceUsesWithIf(
       newShardOp.getSrc(), newPreceedingShardOp, [&newShardOp](OpOperand &use) {
         return use.getOwner() == newShardOp.getOperation();

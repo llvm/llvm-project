@@ -12,6 +12,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsDialect.cpp.inc"

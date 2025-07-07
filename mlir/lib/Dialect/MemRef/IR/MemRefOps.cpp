@@ -13,6 +13,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -213,9 +214,9 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocLikeOp> {
     assert(dynamicSizes.size() == newMemRefType.getNumDynamicDims());
 
     // Create and insert the alloc op for the new memref.
-    auto newAlloc = AllocLikeOp::create(rewriter,
-        alloc.getLoc(), newMemRefType, dynamicSizes, alloc.getSymbolOperands(),
-        alloc.getAlignmentAttr());
+    auto newAlloc = AllocLikeOp::create(rewriter, alloc.getLoc(), newMemRefType,
+                                        dynamicSizes, alloc.getSymbolOperands(),
+                                        alloc.getAlignmentAttr());
     // Insert a cast so we have the same type as the old alloc.
     rewriter.replaceOpWithNewOp<CastOp>(alloc, alloc.getType(), newAlloc);
     return success();
@@ -1358,8 +1359,9 @@ static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
     assert(isa<Attribute>(maybeConstant) &&
            "The constified value should be either unchanged (i.e., == result) "
            "or a constant");
-    Value constantVal = arith::ConstantIndexOp::create(rewriter,
-        loc, llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
+    Value constantVal = arith::ConstantIndexOp::create(
+        rewriter, loc,
+        llvm::cast<IntegerAttr>(cast<Attribute>(maybeConstant)).getInt());
     for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
       // modifyOpInPlace: lambda cannot capture structured bindings in C++17
       // yet.
@@ -2587,8 +2589,9 @@ public:
       rewriter.modifyOpInPlace(
           op, [&]() { op.getSrcMutable().assign(cast.getSource()); });
     } else {
-      Value newOp = CollapseShapeOp::create(rewriter,
-          op->getLoc(), cast.getSource(), op.getReassociationIndices());
+      Value newOp =
+          CollapseShapeOp::create(rewriter, op->getLoc(), cast.getSource(),
+                                  op.getReassociationIndices());
       rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(), newOp);
     }
     return success();
@@ -3212,8 +3215,8 @@ public:
     if (!resultType)
       return failure();
 
-    Value newSubView = SubViewOp::create(rewriter,
-        subViewOp.getLoc(), resultType, castOp.getSource(),
+    Value newSubView = SubViewOp::create(
+        rewriter, subViewOp.getLoc(), resultType, castOp.getSource(),
         subViewOp.getOffsets(), subViewOp.getSizes(), subViewOp.getStrides(),
         subViewOp.getStaticOffsets(), subViewOp.getStaticSizes(),
         subViewOp.getStaticStrides());
@@ -3534,9 +3537,9 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
       return failure();
 
     // Create new ViewOp.
-    auto newViewOp = ViewOp::create(rewriter,
-        viewOp.getLoc(), newMemRefType, viewOp.getOperand(0),
-        viewOp.getByteShift(), newOperands);
+    auto newViewOp = ViewOp::create(rewriter, viewOp.getLoc(), newMemRefType,
+                                    viewOp.getOperand(0), viewOp.getByteShift(),
+                                    newOperands);
     // Insert a cast so we have the same type as the old memref type.
     rewriter.replaceOpWithNewOp<CastOp>(viewOp, viewOp.getType(), newViewOp);
     return success();

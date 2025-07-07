@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include <optional>
 
@@ -321,8 +322,8 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
         newShape, op.getType().getElementType(), op.getType().getEncoding());
     if (newType == op.getType())
       return failure();
-    auto newOp = AllocTensorOp::create(rewriter,
-        op.getLoc(), newType, newDynamicSizes, /*copy=*/Value());
+    auto newOp = AllocTensorOp::create(rewriter, op.getLoc(), newType,
+                                       newDynamicSizes, /*copy=*/Value());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -514,7 +515,7 @@ struct SimplifyClones : public OpRewritePattern<CloneOp> {
 
     if (source.getType() != cloneOp.getType())
       source = memref::CastOp::create(rewriter, cloneOp.getLoc(),
-                                               cloneOp.getType(), source);
+                                      cloneOp.getType(), source);
     rewriter.replaceOp(cloneOp, source);
     rewriter.eraseOp(redundantDealloc);
     return success();
@@ -643,8 +644,9 @@ Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
   assert(getRestrict() &&
          "expected that ops with memrefs dest have 'restrict'");
   setRestrict(false);
-  return ToTensorOp::create(builder,
-      loc, memref::getTensorTypeFromMemRefType(getDest().getType()), getDest(),
+  return ToTensorOp::create(
+      builder, loc, memref::getTensorTypeFromMemRefType(getDest().getType()),
+      getDest(),
       /*restrict=*/true, getWritable());
 }
 
@@ -807,7 +809,7 @@ struct ToBufferOfCast : public OpRewritePattern<ToBufferOp> {
     auto memrefType = MemRefType::get(srcTensorType.getShape(),
                                       srcTensorType.getElementType());
     Value memref = ToBufferOp::create(rewriter, toBuffer.getLoc(), memrefType,
-                                               tensorCastOperand.getOperand());
+                                      tensorCastOperand.getOperand());
     rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, toBuffer.getType(),
                                                 memref);
     return success();
@@ -1015,7 +1017,7 @@ struct DeallocRemoveDuplicateRetainedMemrefs
     // same as the number of condition operands.
     auto newDeallocOp =
         DeallocOp::create(rewriter, deallocOp.getLoc(), deallocOp.getMemrefs(),
-                                   deallocOp.getConditions(), newRetained);
+                          deallocOp.getConditions(), newRetained);
     SmallVector<Value> replacements(
         llvm::map_range(resultReplacementIdx, [&](unsigned idx) {
           return newDeallocOp.getUpdatedConditions()[idx];
@@ -1036,8 +1038,8 @@ struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     if (deallocOp.getMemrefs().empty()) {
-      Value constFalse = arith::ConstantOp::create(rewriter,
-          deallocOp.getLoc(), rewriter.getBoolAttr(false));
+      Value constFalse = arith::ConstantOp::create(rewriter, deallocOp.getLoc(),
+                                                   rewriter.getBoolAttr(false));
       rewriter.replaceOp(
           deallocOp, SmallVector<Value>(deallocOp.getUpdatedConditions().size(),
                                         constFalse));

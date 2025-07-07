@@ -13,6 +13,7 @@
 
 #include "MyExtension.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE_MATCHER "transform-matcher"
