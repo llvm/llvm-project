@@ -6227,6 +6227,7 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
                                                    /*DontDefer=*/true,
                                                    ForDefinition));
 
+  llvm::GlobalAlias *GA = nullptr;
   if (!getLangOpts().CPlusPlus &&
       getCXXABI().getMangleContext().shouldMangleDeclName(D)) {
     // -funique-internal-linkage-names may change the symbol name of C function.
@@ -6235,9 +6236,17 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
       if (II->getName() != GV->getName() &&
           GV->getName().contains(llvm::FunctionSamples::UniqSuffix)) {
         if (llvm::GlobalValue *GVDef =
-                getModule().getNamedValue(D->getName())) {
+                getModule().getNamedValue(II->getName())) {
           GVDef->replaceAllUsesWith(GV);
-          GVDef->removeFromParent();
+          GVDef->eraseFromParent();
+        } else if (!D->hasAttr<AlwaysInlineAttr>() &&
+                   !D->hasAttr<GNUInlineAttr>()) {
+          // Create a GlobalAlias to the original symbol in case it was
+          // referenced in the inline assembly
+          unsigned AS = GV->getType()->getPointerAddressSpace();
+          GA = llvm::GlobalAlias::create(GV->getValueType(), AS,
+                                         llvm::GlobalValue::InternalLinkage,
+                                         II->getName(), GV, &getModule());
         }
       }
     }
@@ -6281,6 +6290,28 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
   }
 
   SetLLVMFunctionAttributesForDefinition(D, Fn);
+
+  // Avoid extra uses of the internal GlobalAlias if Callee has
+  // __attribute__((error)).
+  for (auto BB = Fn->begin(); GA && BB != Fn->end(); BB++) {
+    for (auto &I : *BB) {
+      if (auto *CI = dyn_cast<llvm::CallInst>(&I)) {
+        if (auto *Callee = CI->getCalledFunction()) {
+          if (Callee->hasFnAttribute("dontcall-error")) {
+            GA->eraseFromParent();
+            GA = nullptr;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Set Attributes to perserve the internal GlobalAlias
+  if (GA) {
+    SetCommonAttributes(GD, GA);
+    addUsedOrCompilerUsedGlobal(GA);
+  }
 
   if (const ConstructorAttr *CA = D->getAttr<ConstructorAttr>())
     AddGlobalCtor(Fn, CA->getPriority());
