@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -118,6 +119,50 @@ int64_t GPULaneMappingAttr::getRelativeIndex() const {
   return isLinearMapping()
              ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
              : getMappingId();
+}
+
+int64_t GPUMappingMaskAttr::getMaxNumPhysicalIds() const { return 64; }
+
+///                 8       4       0
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+///
+/// Active physical (resp. logical) is  2 (0), 4 (1) and 5 (2).
+/// Logical id for e.g. 5 (2) constructs filter (1 << 5 - 1).
+///
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+/// Example filter: 0 0 0 0 1 1 1 1 1
+/// Intersection  : 0 0 0 0 1 0 1 0 0
+/// PopCnt        : 2
+Value GPUMappingMaskAttr::createLogicalLinearMappingId(
+    OpBuilder &b, Value physicalLinearMappingId) const {
+  Location loc = physicalLinearMappingId.getLoc();
+  Value mask = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(getMask()));
+  Value one = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(1));
+  Value filter = b.create<arith::ShLIOp>(loc, one, physicalLinearMappingId);
+  filter = b.create<arith::SubIOp>(loc, filter, one);
+  Value filteredId = b.create<arith::AndIOp>(loc, mask, filter);
+  return b.create<math::CtPopOp>(loc, filteredId);
+}
+
+///                 8       4       0
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+///
+/// Active physical (resp. logical) is  2 (0), 4 (1) and 5 (2).
+/// Logical id for e.g. 5 (2) constructs filter (1 << 5).
+///
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+/// Example filter: 0 0 0 1 0 0 0 0 0
+/// Intersection  : 0 0 0 1 0 0 0 0 0
+/// Cmp           : 1
+Value GPUMappingMaskAttr::createIsActiveIdPredicate(
+    OpBuilder &b, Value physicalLinearMappingId) const {
+  Location loc = physicalLinearMappingId.getLoc();
+  Value mask = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(getMask()));
+  Value one = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(1));
+  Value filter = b.create<arith::ShLIOp>(loc, one, physicalLinearMappingId);
+  Value filtered = b.create<arith::AndIOp>(loc, mask, filter);
+  Value zero = b.create<arith::ConstantOp>(loc, b.getI64IntegerAttr(0));
+  return b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ne, filtered, zero);
 }
 
 int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
