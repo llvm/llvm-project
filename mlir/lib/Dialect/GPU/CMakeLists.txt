@@ -44,6 +44,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/ShuffleRewriter.cpp
   Transforms/SubgroupIdRewriter.cpp
   Transforms/SubgroupReduceLowering.cpp
+  Transforms/XeVMAttachTarget.cpp
 
   OBJECT
 
