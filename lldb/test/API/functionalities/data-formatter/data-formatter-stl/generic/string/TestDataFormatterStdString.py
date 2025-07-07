@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibcxxStringDataFormatterTestCase(TestBase):
+class StdStringDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -18,17 +18,8 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         self.main_spec = lldb.SBFileSpec("main.cpp")
         self.namespace = "std"
 
-    @add_test_categories(["libc++"])
-    @expectedFailureAll(
-        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
-    )
-    # Inline namespace is randomly ignored as Clang due to broken lookup inside
-    # the std namespace.
-    @expectedFailureAll(debug_info="gmodules")
-    def test_with_run_command(self):
+    def do_test(self):
         """Test that that file and class static variables display correctly."""
-        self.build()
-
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set break point at this line.", self.main_spec
         )
@@ -124,6 +115,25 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             ],
         )
 
+        # Test references and pointers to std::string.
+        var_rq = self.frame().FindVariable("rq")
+        var_rQ = self.frame().FindVariable("rQ")
+        var_pq = self.frame().FindVariable("pq")
+        var_pQ = self.frame().FindVariable("pQ")
+
+        self.assertEqual(var_rq.GetSummary(), '"hello world"', "rq summary wrong")
+        self.assertEqual(
+            var_rQ.GetSummary(),
+            '"quite a long std::strin with lots of info inside it"',
+            "rQ summary wrong",
+        )
+        self.assertEqual(var_pq.GetSummary(), '"hello world"', "pq summary wrong")
+        self.assertEqual(
+            var_pQ.GetSummary(),
+            '"quite a long std::strin with lots of info inside it"',
+            "pQ summary wrong",
+        )
+
         # Finally, make sure that if the string is not readable, we give an error:
         bkpt_2 = target.BreakpointCreateBySourceRegex(
             "Break here to look at bad string", self.main_spec
@@ -136,3 +146,25 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         self.assertTrue(var.GetError().Success(), "Made variable")
         summary = var.GetSummary()
         self.assertEqual(summary, "Summary Unavailable", "No summary for bad value")
+
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
+    )
+    # Inline namespace is randomly ignored as Clang due to broken lookup inside
+    # the std namespace.
+    @expectedFailureAll(debug_info="gmodules")
+    @add_test_categories(["libc++"])
+    def test_libcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr36109", debug_info="gmodules", triple=".*-android"
+    )
+    # Inline namespace is randomly ignored as Clang due to broken lookup inside
+    # the std namespace.
+    @expectedFailureAll(debug_info="gmodules")
+    @add_test_categories(["libstdcxx"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
