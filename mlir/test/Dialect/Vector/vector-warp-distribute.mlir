@@ -1142,7 +1142,7 @@ func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %
 
 //       CHECK-PROP:   #[[$MAP:.*]] = affine_map<()[s0] -> (s0 ceildiv 3)>
 //       CHECK-PROP:   #[[$MAP1:.*]] = affine_map<()[s0] -> (s0 mod 3)>
-// CHECK-PROP-LABEL: func @_1d(
+// CHECK-PROP-LABEL: func @vector_insert_1d(
 //  CHECK-PROP-SAME:     %[[LANEID:.*]]: index, %[[POS:.*]]: index
 //       CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0{{.*}} -> (vector<3xf32>, f32)
 //       CHECK-PROP:   %[[INSERTING_LANE:.*]] = affine.apply #[[$MAP]]()[%[[POS]]]
@@ -1155,7 +1155,7 @@ func.func @warp_execute_nd_distribute(%laneid: index, %v0: vector<1x64x1xf32>, %
 //       CHECK-PROP:     scf.yield %[[W]]#0
 //       CHECK-PROP:   }
 //       CHECK-PROP:   return %[[R]]
-func.func @_1d(%laneid: index, %pos: index) -> (vector<3xf32>) {
+func.func @vector_insert_1d(%laneid: index, %pos: index) -> (vector<3xf32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<3xf32>) {
     %0 = "some_def"() : () -> (vector<96xf32>)
     %f = "another_def"() : () -> (f32)
@@ -1167,14 +1167,14 @@ func.func @_1d(%laneid: index, %pos: index) -> (vector<3xf32>) {
 
 // -----
 
-// CHECK-PROP-LABEL: func @_1d_broadcast(
+// CHECK-PROP-LABEL: func @vector_insert_1d_broadcast(
 //  CHECK-PROP-SAME:     %[[LANEID:.*]]: index, %[[POS:.*]]: index
 //       CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0{{.*}} -> (vector<96xf32>, f32)
 //       CHECK-PROP:     %[[VEC:.*]] = "some_def"
 //       CHECK-PROP:     %[[VAL:.*]] = "another_def"
 //       CHECK-PROP:     gpu.yield %[[VEC]], %[[VAL]]
 //       CHECK-PROP:   vector.insert %[[W]]#1, %[[W]]#0 [%[[POS]]] : f32 into vector<96xf32>
-func.func @_1d_broadcast(%laneid: index, %pos: index) -> (vector<96xf32>) {
+func.func @vector_insert_1d_broadcast(%laneid: index, %pos: index) -> (vector<96xf32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<96xf32>) {
     %0 = "some_def"() : () -> (vector<96xf32>)
     %f = "another_def"() : () -> (f32)
@@ -1186,13 +1186,13 @@ func.func @_1d_broadcast(%laneid: index, %pos: index) -> (vector<96xf32>) {
 
 // -----
 
-// CHECK-PROP-LABEL: func @_0d(
+// CHECK-PROP-LABEL: func @vector_insert_0d(
 //       CHECK-PROP:   %[[W:.*]]:2 = gpu.warp_execute_on_lane_0{{.*}} -> (vector<f32>, f32)
 //       CHECK-PROP:     %[[VEC:.*]] = "some_def"
 //       CHECK-PROP:     %[[VAL:.*]] = "another_def"
 //       CHECK-PROP:     gpu.yield %[[VEC]], %[[VAL]]
 //       CHECK-PROP:   vector.insert %[[W]]#1, %[[W]]#0 [] : f32 into vector<f32>
-func.func @_0d(%laneid: index) -> (vector<f32>) {
+func.func @vector_insert_0d(%laneid: index) -> (vector<f32>) {
   %r = gpu.warp_execute_on_lane_0(%laneid)[32] -> (vector<f32>) {
     %0 = "some_def"() : () -> (vector<f32>)
     %f = "another_def"() : () -> (f32)
