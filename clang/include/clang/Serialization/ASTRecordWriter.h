@@ -91,20 +91,19 @@ public:
 
   /// Emit the record to the stream, followed by its substatements, and
   /// return its offset.
-  // FIXME: Allow record producers to suggest Abbrevs.
-  uint64_t Emit(unsigned Code, unsigned Abbrev = 0) {
+  uint64_t Emit(unsigned Code) {
     uint64_t Offset = Writer->Stream.GetCurrentBitNo();
     PrepareToEmit(Offset);
-    Writer->Stream.EmitRecord(Code, *Record, Abbrev);
+    Writer->Stream.EmitRecordAutoAbbrev(Code, *Record);
     FlushStmts();
     return Offset;
   }
 
   /// Emit the record to the stream, preceded by its substatements.
-  uint64_t EmitStmt(unsigned Code, unsigned Abbrev = 0) {
+  uint64_t EmitStmt(unsigned Code) {
     FlushSubStmts();
     PrepareToEmit(Writer->Stream.GetCurrentBitNo());
-    Writer->Stream.EmitRecord(Code, *Record, Abbrev);
+    Writer->Stream.EmitRecordAutoAbbrev(Code, *Record);
     return Writer->Stream.GetCurrentBitNo();
   }
 

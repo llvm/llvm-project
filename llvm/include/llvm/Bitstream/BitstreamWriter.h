@@ -15,6 +15,7 @@
 #define LLVM_BITSTREAM_BITSTREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitCodes.h"
@@ -63,6 +64,9 @@ class BitstreamWriter {
   /// CurAbbrevs - Abbrevs installed at in this block.
   std::vector<std::shared_ptr<BitCodeAbbrev>> CurAbbrevs;
 
+  /// Map of code to possible abbevs that would match that code.
+  DenseMap<unsigned, std::vector<unsigned>> CodeAbbrevIndex;
+
   // Support for retrieving a section of the output, for purposes such as
   // checksumming.
   std::optional<size_t> BlockFlushingStartPos;
@@ -71,6 +75,7 @@ class BitstreamWriter {
     unsigned PrevCodeSize;
     size_t StartSizeWord;
     std::vector<std::shared_ptr<BitCodeAbbrev>> PrevAbbrevs;
+    DenseMap<unsigned, std::vector<unsigned>> PrevCodeAbbrevIndex;
     Block(unsigned PCS, size_t SSW) : PrevCodeSize(PCS), StartSizeWord(SSW) {}
   };
 
@@ -82,6 +87,7 @@ class BitstreamWriter {
   struct BlockInfo {
     unsigned BlockID;
     std::vector<std::shared_ptr<BitCodeAbbrev>> Abbrevs;
+    DenseMap<unsigned, std::vector<unsigned>> CodeAbbrevIndex;
   };
   std::vector<BlockInfo> BlockInfoRecords;
 
@@ -380,11 +386,14 @@ public:
     // empty abbrev set.
     BlockScope.emplace_back(OldCodeSize, BlockSizeWordIndex);
     BlockScope.back().PrevAbbrevs.swap(CurAbbrevs);
+    BlockScope.back().PrevCodeAbbrevIndex.swap(CodeAbbrevIndex);
 
     // If there is a blockinfo for this BlockID, add all the predefined abbrevs
     // to the abbrev list.
-    if (BlockInfo *Info = getBlockInfo(BlockID))
-      append_range(CurAbbrevs, Info->Abbrevs);
+    if (BlockInfo *Info = getBlockInfo(BlockID)) {
+      CurAbbrevs = Info->Abbrevs;
+      CodeAbbrevIndex = Info->CodeAbbrevIndex;
+    }
   }
 
   void ExitBlock() {
@@ -406,6 +415,7 @@ public:
     // Restore the inner block's code size and abbrev table.
     CurCodeSize = B.PrevCodeSize;
     CurAbbrevs = std::move(B.PrevAbbrevs);
+    CodeAbbrevIndex = std::move(B.PrevCodeAbbrevIndex);
     BlockScope.pop_back();
     FlushToFile();
   }
@@ -415,6 +425,113 @@ public:
   //===--------------------------------------------------------------------===//
 
 private:
+  /// Check whether the abbrev Abbv can encode the provided Vals/Blob.
+  /// The Code field is assumed already processed.
+  template <typename uintty>
+  bool CheckAbbrevValidity(ArrayRef<uintty> Vals, StringRef Blob,
+                           const BitCodeAbbrev *Abbv) {
+    unsigned i = 1; // skip first field, which is 'Code'.
+    unsigned e = static_cast<unsigned>(Abbv->getNumOperandInfos());
+
+    unsigned RecordIdx = 0;
+
+    // return the maximum bitwidth a value can have for the encoding.
+    auto getMaxBitWidth = [](const BitCodeAbbrevOp &Op) -> uint64_t {
+      BitCodeAbbrevOp::Encoding Enc = Op.getEncoding();
+      if (Enc == BitCodeAbbrevOp::Fixed)
+        return Op.getEncodingData();
+
+      if (Enc == BitCodeAbbrevOp::Char6)
+        return 6;
+
+      assert(Enc == BitCodeAbbrevOp::VBR && "Unexpected encoding");
+      return 64;
+    };
+
+    for (; i != e; ++i) {
+      const BitCodeAbbrevOp &Op = Abbv->getOperandInfo(i);
+      if (Op.isLiteral()) {
+        // Literals must match exactly.
+        if (RecordIdx >= Vals.size())
+          return false;
+        if (Vals[RecordIdx] != Op.getLiteralValue())
+          return false;
+        ++RecordIdx;
+      } else if (Op.getEncoding() == BitCodeAbbrevOp::Array) {
+        // Arrays store an arbitrary number of values with a specified encoding.
+        // Check the value of each element of the array to see if it works.
+        assert(i + 2 == e && "array op not second to last?");
+        const BitCodeAbbrevOp &EltEnc = Abbv->getOperandInfo(++i);
+        unsigned MaxBitwidth = getMaxBitWidth(EltEnc);
+
+        if (Blob.data()) {
+          // 'Blob' takes the place of entries in the Vals array. There should
+          // be no more Vals.
+          if (RecordIdx != Vals.size())
+            return false;
+          // If the bitwidth of the encoding is below 8, we must validate the
+          // blob values.
+          if (MaxBitwidth < 8) {
+            if (!llvm::all_of(
+                    Blob, [&](unsigned B) { return isUIntN(MaxBitwidth, B); }))
+              return false;
+          }
+        } else {
+          // Check each Val
+          for (uintty e = Vals.size(); RecordIdx != e; ++RecordIdx)
+            if (!isUIntN(MaxBitwidth, Vals[RecordIdx]))
+              return false;
+        }
+        return true; // Checked all data!
+      } else if (Op.getEncoding() == BitCodeAbbrevOp::Blob) {
+        // Blobs store an arbitrary number of 8-bit values
+        assert(i + 1 == e && "blob op not last?");
+
+        if (Blob.data()) {
+          // 'Blob' takes the place of entries in the Vals array. There should
+          // be no more Vals.
+          if (RecordIdx != Vals.size())
+            return false;
+          // We already know the encoding fits, so don't need to check.
+        } else {
+          if (!llvm::all_of(Vals.slice(RecordIdx),
+                            [](uintty B) { return isUInt<8>(B); }))
+            return false;
+        }
+        return true; // Checked all data!
+      } else {
+        // Check if the specified value fits the encoding.
+        if (RecordIdx >= Vals.size())
+          return false;
+
+        unsigned MaxBitwidth = getMaxBitWidth(Op);
+
+        if (!isUIntN(MaxBitwidth, Vals[RecordIdx]))
+          return false;
+        ++RecordIdx;
+      }
+    }
+
+    // Finally, check that we used all the input data.
+    return !Blob.data() && RecordIdx == Vals.size();
+  }
+
+  /// Search for a valid abbrev which can encode the provided data.
+  /// Return it if found, otherwise return 0.
+  template <typename uintty>
+  unsigned FindValidAbbrev(unsigned Code, ArrayRef<uintty> Vals,
+                           StringRef Blob) {
+    if (auto it = CodeAbbrevIndex.find(Code); it != CodeAbbrevIndex.end()) {
+      for (unsigned AbbrevToTry : it->second) {
+        const BitCodeAbbrev *Abbv =
+            CurAbbrevs[AbbrevToTry - bitc::FIRST_APPLICATION_ABBREV].get();
+        if (CheckAbbrevValidity(Vals, Blob, Abbv))
+          return AbbrevToTry;
+      }
+    }
+    return 0;
+  }
+
   /// EmitAbbreviatedLiteral - Emit a literal value according to its abbrev
   /// record.  This is a no-op, since the abbrev specifies the literal to use.
   template<typename uintty>
@@ -565,8 +682,39 @@ public:
              ShouldEmitSize);
   }
 
+  /// Emit the specified record to the stream, automatically choosing an abbrev
+  /// to compress the record if possible.
+  template <typename Container>
+  void EmitRecordAutoAbbrev(unsigned Code, const Container &Vals) {
+    unsigned Abbrev = FindValidAbbrev(Code, ArrayRef(Vals), StringRef());
+    EmitRecord(Code, Vals, Abbrev);
+  }
+
+  /// Emit the specified record to the stream with Blob data, automatically
+  /// choosing an abbrev to compress the record. Note that a matching abbrev
+  /// _must_ be available when Blob is provided.
+  template <typename Container>
+  void EmitRecordAutoAbbrev(unsigned Code, const Container &Vals,
+                            StringRef Blob) {
+    if (!Blob.data())
+      EmitRecordAutoAbbrev(Code, Vals);
+
+    unsigned Abbrev = FindValidAbbrev(Code, ArrayRef(Vals), Blob);
+    if (!Abbrev) {
+      // While it _should_ be valid to emit an unabbreviated record here, the
+      // reader's BitstreamCursor::readRecord currently returns different
+      // results depending on whether the encoding used an abbrev Blob encoding
+      // or not. Unless that's fixed, data with Blobs cannot be encoded with a
+      // theoretically-equivalent unabbreviated record.
+      reportFatalInternalError(
+          "BitstreamWriter: Abbrev required when Blob data is provided");
+    }
+
+    EmitRecordWithAbbrevImpl(Abbrev, ArrayRef(Vals), Blob, Code);
+  }
+
   /// EmitRecord - Emit the specified record to the stream, using an abbrev if
-  /// we have one to compress the output.
+  /// provided to compress the output.
   template <typename Container>
   void EmitRecord(unsigned Code, const Container &Vals, unsigned Abbrev = 0) {
     if (!Abbrev) {
@@ -628,6 +776,14 @@ public:
   //===--------------------------------------------------------------------===//
 
 private:
+  void UpdateAbbrevIndex(DenseMap<unsigned, std::vector<unsigned>> &Index,
+                         const BitCodeAbbrev &Abbv, unsigned AbbrevNum) {
+    if (Abbv.getNumOperandInfos() > 0 && Abbv.getOperandInfo(0).isLiteral()) {
+      unsigned Code = Abbv.getOperandInfo(0).getLiteralValue();
+      Index[Code].push_back(AbbrevNum);
+    }
+  }
+
   // Emit the abbreviation as a DEFINE_ABBREV record.
   void EncodeAbbrev(const BitCodeAbbrev &Abbv) {
     EmitCode(bitc::DEFINE_ABBREV);
@@ -651,8 +807,10 @@ public:
   unsigned EmitAbbrev(std::shared_ptr<BitCodeAbbrev> Abbv) {
     EncodeAbbrev(*Abbv);
     CurAbbrevs.push_back(std::move(Abbv));
-    return static_cast<unsigned>(CurAbbrevs.size())-1 +
-      bitc::FIRST_APPLICATION_ABBREV;
+    unsigned AbbrevNum = static_cast<unsigned>(CurAbbrevs.size()) - 1 +
+                         bitc::FIRST_APPLICATION_ABBREV;
+    UpdateAbbrevIndex(CodeAbbrevIndex, *CurAbbrevs.back(), AbbrevNum);
+    return AbbrevNum;
   }
 
   //===--------------------------------------------------------------------===//
@@ -697,8 +855,10 @@ public:
     // Add the abbrev to the specified block record.
     BlockInfo &Info = getOrCreateBlockInfo(BlockID);
     Info.Abbrevs.push_back(std::move(Abbv));
-
-    return Info.Abbrevs.size()-1+bitc::FIRST_APPLICATION_ABBREV;
+    unsigned AbbrevNum =
+        Info.Abbrevs.size() - 1 + bitc::FIRST_APPLICATION_ABBREV;
+    UpdateAbbrevIndex(Info.CodeAbbrevIndex, *Info.Abbrevs.back(), AbbrevNum);
+    return AbbrevNum;
   }
 };
 

@@ -34,7 +34,6 @@ namespace clang {
     ASTRecordWriter Record;
 
     serialization::StmtCode Code;
-    unsigned AbbrevToUse;
 
     /// A helper that can help us to write a packed bit across function
     /// calls. For example, we may write separate bits in separate functions:
@@ -93,8 +92,8 @@ namespace clang {
     ASTStmtWriter(ASTContext &Context, ASTWriter &Writer,
                   ASTWriter::RecordData &Record)
         : Writer(Writer), Record(Context, Writer, Record),
-          Code(serialization::STMT_NULL_PTR), AbbrevToUse(0),
-          CurrentPackingBits(this->Record) {}
+          Code(serialization::STMT_NULL_PTR), CurrentPackingBits(this->Record) {
+    }
 
     ASTStmtWriter(const ASTStmtWriter&) = delete;
     ASTStmtWriter &operator=(const ASTStmtWriter &) = delete;
@@ -103,7 +102,7 @@ namespace clang {
       CurrentPackingBits.writeBits();
       assert(Code != serialization::STMT_NULL_PTR &&
              "unhandled sub-statement writing AST file");
-      return Record.EmitStmt(Code, AbbrevToUse);
+      return Record.EmitStmt(Code);
     }
 
     void AddTemplateKWAndArgsInfo(const ASTTemplateKWAndArgsInfo &ArgInfo,
@@ -147,9 +146,6 @@ void ASTStmtWriter::VisitCompoundStmt(CompoundStmt *S) {
     Record.push_back(S->getStoredFPFeatures().getAsOpaqueInt());
   Record.AddSourceLocation(S->getLBracLoc());
   Record.AddSourceLocation(S->getRBracLoc());
-
-  if (!S->hasStoredFPFeatures())
-    AbbrevToUse = Writer.getCompoundStmtAbbrev();
 
   Code = serialization::STMT_COMPOUND;
 }
@@ -701,14 +697,6 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
     Record.push_back(NumTemplateArgs);
   }
 
-  DeclarationName::NameKind nk = (E->getDecl()->getDeclName().getNameKind());
-
-  if ((!E->hasTemplateKWAndArgsInfo()) && (!E->hasQualifier()) &&
-      (E->getDecl() == E->getFoundDecl()) &&
-      nk == DeclarationName::Identifier && E->getObjectKind() == OK_Ordinary) {
-    AbbrevToUse = Writer.getDeclRefExprAbbrev();
-  }
-
   if (E->hasQualifier())
     Record.AddNestedNameSpecifierLoc(E->getQualifierLoc());
 
@@ -729,10 +717,6 @@ void ASTStmtWriter::VisitIntegerLiteral(IntegerLiteral *E) {
   VisitExpr(E);
   Record.AddSourceLocation(E->getLocation());
   Record.AddAPInt(E->getValue());
-
-  if (E->getValue().getBitWidth() == 32) {
-    AbbrevToUse = Writer.getIntegerLiteralAbbrev();
-  }
 
   Code = serialization::EXPR_INTEGER_LITERAL;
 }
@@ -787,8 +771,6 @@ void ASTStmtWriter::VisitCharacterLiteral(CharacterLiteral *E) {
   Record.push_back(E->getValue());
   Record.AddSourceLocation(E->getLocation());
   Record.push_back(llvm::to_underlying(E->getKind()));
-
-  AbbrevToUse = Writer.getCharacterLiteralAbbrev();
 
   Code = serialization::EXPR_CHARACTER_LITERAL;
 }
@@ -970,10 +952,6 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   if (E->hasStoredFPFeatures())
     Record.push_back(E->getFPFeatures().getAsOpaqueInt());
 
-  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()) &&
-      !E->usesMemberSyntax() && E->getStmtClass() == Stmt::CallExprClass)
-    AbbrevToUse = Writer.getCallExprAbbrev();
-
   Code = serialization::EXPR_CALL;
 }
 
@@ -1088,10 +1066,6 @@ void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
   if (HasFPFeatures)
     Record.push_back(E->getStoredFPFeatures().getAsOpaqueInt());
 
-  if (!HasFPFeatures && E->getValueKind() == VK_PRValue &&
-      E->getObjectKind() == OK_Ordinary)
-    AbbrevToUse = Writer.getBinaryOperatorAbbrev();
-
   Code = serialization::EXPR_BINARY_OPERATOR;
 }
 
@@ -1099,10 +1073,6 @@ void ASTStmtWriter::VisitCompoundAssignOperator(CompoundAssignOperator *E) {
   VisitBinaryOperator(E);
   Record.AddTypeRef(E->getComputationLHSType());
   Record.AddTypeRef(E->getComputationResultType());
-
-  if (!E->hasStoredFPFeatures() && E->getValueKind() == VK_PRValue &&
-      E->getObjectKind() == OK_Ordinary)
-    AbbrevToUse = Writer.getCompoundAssignOperatorAbbrev();
 
   Code = serialization::EXPR_COMPOUND_ASSIGN_OPERATOR;
 }
@@ -1133,9 +1103,6 @@ ASTStmtWriter::VisitBinaryConditionalOperator(BinaryConditionalOperator *E) {
 void ASTStmtWriter::VisitImplicitCastExpr(ImplicitCastExpr *E) {
   VisitCastExpr(E);
   CurrentPackingBits.addBit(E->isPartOfExplicitCast());
-
-  if (E->path_size() == 0 && !E->hasStoredFPFeatures())
-    AbbrevToUse = Writer.getExprImplicitCastAbbrev();
 
   Code = serialization::EXPR_IMPLICIT_CAST;
 }
@@ -1704,17 +1671,11 @@ void ASTStmtWriter::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   Record.push_back(E->getOperator());
   Record.AddSourceRange(E->Range);
 
-  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
-    AbbrevToUse = Writer.getCXXOperatorCallExprAbbrev();
-
   Code = serialization::EXPR_CXX_OPERATOR_CALL;
 }
 
 void ASTStmtWriter::VisitCXXMemberCallExpr(CXXMemberCallExpr *E) {
   VisitCallExpr(E);
-
-  if (!E->hasStoredFPFeatures() && !static_cast<bool>(E->getADLCallKind()))
-    AbbrevToUse = Writer.getCXXMemberCallExprAbbrev();
 
   Code = serialization::EXPR_CXX_MEMBER_CALL;
 }

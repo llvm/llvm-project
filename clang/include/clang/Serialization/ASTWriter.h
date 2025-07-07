@@ -638,44 +638,6 @@ private:
   void WriteModuleFileExtension(Sema &SemaRef,
                                 ModuleFileExtensionWriter &Writer);
 
-  unsigned DeclParmVarAbbrev = 0;
-  unsigned DeclContextLexicalAbbrev = 0;
-  unsigned DeclContextVisibleLookupAbbrev = 0;
-  unsigned DeclModuleLocalVisibleLookupAbbrev = 0;
-  unsigned DeclTULocalLookupAbbrev = 0;
-  unsigned UpdateVisibleAbbrev = 0;
-  unsigned ModuleLocalUpdateVisibleAbbrev = 0;
-  unsigned TULocalUpdateVisibleAbbrev = 0;
-  unsigned DeclRecordAbbrev = 0;
-  unsigned DeclTypedefAbbrev = 0;
-  unsigned DeclVarAbbrev = 0;
-  unsigned DeclFieldAbbrev = 0;
-  unsigned DeclEnumAbbrev = 0;
-  unsigned DeclObjCIvarAbbrev = 0;
-  unsigned DeclCXXMethodAbbrev = 0;
-  unsigned DeclSpecializationsAbbrev = 0;
-  unsigned DeclPartialSpecializationsAbbrev = 0;
-
-  unsigned DeclDependentNonTemplateCXXMethodAbbrev = 0;
-  unsigned DeclTemplateCXXMethodAbbrev = 0;
-  unsigned DeclMemberSpecializedCXXMethodAbbrev = 0;
-  unsigned DeclTemplateSpecializedCXXMethodAbbrev = 0;
-  unsigned DeclDependentSpecializationCXXMethodAbbrev = 0;
-  unsigned DeclTemplateTypeParmAbbrev = 0;
-  unsigned DeclUsingShadowAbbrev = 0;
-
-  unsigned DeclRefExprAbbrev = 0;
-  unsigned CharacterLiteralAbbrev = 0;
-  unsigned IntegerLiteralAbbrev = 0;
-  unsigned ExprImplicitCastAbbrev = 0;
-  unsigned BinaryOperatorAbbrev = 0;
-  unsigned CompoundAssignOperatorAbbrev = 0;
-  unsigned CallExprAbbrev = 0;
-  unsigned CXXOperatorCallExprAbbrev = 0;
-  unsigned CXXMemberCallExprAbbrev = 0;
-
-  unsigned CompoundStmtAbbrev = 0;
-
   void WriteDeclAbbrevs();
   void WriteDecl(ASTContext &Context, Decl *D);
 
@@ -843,53 +805,6 @@ public:
   unsigned getSwitchCaseID(SwitchCase *S);
 
   void ClearSwitchCaseIDs();
-
-  unsigned getTypeExtQualAbbrev() const {
-    return TypeExtQualAbbrev;
-  }
-
-  unsigned getDeclParmVarAbbrev() const { return DeclParmVarAbbrev; }
-  unsigned getDeclRecordAbbrev() const { return DeclRecordAbbrev; }
-  unsigned getDeclTypedefAbbrev() const { return DeclTypedefAbbrev; }
-  unsigned getDeclVarAbbrev() const { return DeclVarAbbrev; }
-  unsigned getDeclFieldAbbrev() const { return DeclFieldAbbrev; }
-  unsigned getDeclEnumAbbrev() const { return DeclEnumAbbrev; }
-  unsigned getDeclObjCIvarAbbrev() const { return DeclObjCIvarAbbrev; }
-  unsigned getDeclCXXMethodAbbrev(FunctionDecl::TemplatedKind Kind) const {
-    switch (Kind) {
-    case FunctionDecl::TK_NonTemplate:
-      return DeclCXXMethodAbbrev;
-    case FunctionDecl::TK_FunctionTemplate:
-      return DeclTemplateCXXMethodAbbrev;
-    case FunctionDecl::TK_MemberSpecialization:
-      return DeclMemberSpecializedCXXMethodAbbrev;
-    case FunctionDecl::TK_FunctionTemplateSpecialization:
-      return DeclTemplateSpecializedCXXMethodAbbrev;
-    case FunctionDecl::TK_DependentNonTemplate:
-      return DeclDependentNonTemplateCXXMethodAbbrev;
-    case FunctionDecl::TK_DependentFunctionTemplateSpecialization:
-      return DeclDependentSpecializationCXXMethodAbbrev;
-    }
-    llvm_unreachable("Unknwon Template Kind!");
-  }
-  unsigned getDeclTemplateTypeParmAbbrev() const {
-    return DeclTemplateTypeParmAbbrev;
-  }
-  unsigned getDeclUsingShadowAbbrev() const { return DeclUsingShadowAbbrev; }
-
-  unsigned getDeclRefExprAbbrev() const { return DeclRefExprAbbrev; }
-  unsigned getCharacterLiteralAbbrev() const { return CharacterLiteralAbbrev; }
-  unsigned getIntegerLiteralAbbrev() const { return IntegerLiteralAbbrev; }
-  unsigned getExprImplicitCastAbbrev() const { return ExprImplicitCastAbbrev; }
-  unsigned getBinaryOperatorAbbrev() const { return BinaryOperatorAbbrev; }
-  unsigned getCompoundAssignOperatorAbbrev() const {
-    return CompoundAssignOperatorAbbrev;
-  }
-  unsigned getCallExprAbbrev() const { return CallExprAbbrev; }
-  unsigned getCXXOperatorCallExprAbbrev() { return CXXOperatorCallExprAbbrev; }
-  unsigned getCXXMemberCallExprAbbrev() { return CXXMemberCallExprAbbrev; }
-
-  unsigned getCompoundStmtAbbrev() const { return CompoundStmtAbbrev; }
 
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
