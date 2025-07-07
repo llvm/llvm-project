@@ -451,6 +451,8 @@ public:
         CUMode = false;
       else if (F == "+image-insts")
         HasImage = true;
+      else if (F == "+gfx950-insts" || F == "+gfx1250-insts")
+        HasFullBFloat16 = true;
       bool IsOn = F.front() == '+';
       StringRef Name = StringRef(F).drop_front();
       if (!llvm::is_contained(TargetIDFeatures, Name))
