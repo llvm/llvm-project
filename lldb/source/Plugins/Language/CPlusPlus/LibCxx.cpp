@@ -264,11 +264,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
 
   if (idx == 1) {
     Status status;
-    auto value_type_sp = valobj_sp->GetCompilerType()
-                             .GetTypeTemplateArgument(0)
-                             .GetPointerType();
-    ValueObjectSP cast_ptr_sp = m_ptr_obj->Cast(value_type_sp);
-    ValueObjectSP value_sp = cast_ptr_sp->Dereference(status);
+    ValueObjectSP value_sp = m_ptr_obj->Dereference(status);
     if (status.Success())
       return value_sp;
   }
@@ -293,7 +289,11 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
+  auto cast_ptr_sp = GetCxxSmartPtrElementPointerType(*ptr_obj_sp, *valobj_sp);
+  if (!cast_ptr_sp)
+    return lldb::ChildCacheState::eRefetch;
+
+  m_ptr_obj = cast_ptr_sp->Clone(ConstString("pointer")).get();
 
   lldb::ValueObjectSP cntrl_sp(valobj_sp->GetChildMemberWithName("__cntrl_"));
 
@@ -305,7 +305,7 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::Update() {
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  if (name == "__ptr_" || name == "pointer")
+  if (name == "pointer")
     return 0;
 
   if (name == "object" || name == "$$dereference$$")

@@ -63,6 +63,11 @@ void DumpCxxSmartPtrPointerSummary(Stream &stream, ValueObject &ptr,
 bool ContainerSizeSummaryProvider(ValueObject &valobj, Stream &stream,
                                   const TypeSummaryOptions &options);
 
+/// Return the ValueObjectSP of the underlying pointer member whose type
+/// is a desugared 'std::shared_ptr::element_type *'.
+lldb::ValueObjectSP GetCxxSmartPtrElementPointerType(ValueObject &ptr,
+                                                     ValueObject &container);
+
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
 
 time_t GetOSXEpoch();
