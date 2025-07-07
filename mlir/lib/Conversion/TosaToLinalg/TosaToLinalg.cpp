@@ -27,11 +27,9 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 
-#include <numeric>
 #include <type_traits>
 
 using namespace mlir;
@@ -759,7 +757,7 @@ computeTargetSize(PatternRewriter &rewriter, Location loc, IndexPool &indexPool,
   // dimension greater than 1 with a different value is undefined behavior.
   for (auto operand : operands) {
     auto size = cast<RankedTensorType>(operand.getType()).getDimSize(dim);
-    if (!ShapedType::isDynamic(size) && size > 1)
+    if (ShapedType::isStatic(size) && size > 1)
       return {rewriter.getIndexAttr(size), operand};
   }
 
