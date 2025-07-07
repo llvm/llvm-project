@@ -211,8 +211,7 @@ void MachineFunction::init() {
   ConstantPool = new (Allocator) MachineConstantPool(getDataLayout());
   Alignment = STI->getTargetLowering()->getMinFunctionAlignment();
 
-  // FIXME: Use Function::hasOptSize().
-  if (!F.getAlign() && !F.hasFnAttribute(Attribute::OptimizeForSize))
+  if (!F.getAlign() && !F.hasOptSize())
     Alignment = std::max(Alignment,
                          STI->getTargetLowering()->getPrefFunctionAlignment());
 
