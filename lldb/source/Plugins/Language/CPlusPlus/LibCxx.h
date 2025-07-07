@@ -105,6 +105,7 @@ public:
 
 private:
   ValueObject *m_cntrl;
+  ValueObject *m_ptr_obj;
 };
 
 class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
