@@ -6349,8 +6349,8 @@ struct AAInvariantLoadPointer : public AbstractAttribute {
   }
 
   /// Create an abstract attribute view for the position \p IRP.
-  LLVM_ABI static AAInvariantLoadPointer &createForPosition(const IRPosition &IRP,
-                                                   Attributor &A);
+  LLVM_ABI static AAInvariantLoadPointer &
+  createForPosition(const IRPosition &IRP, Attributor &A);
 
   /// Return true if the pointer's contents are known to remain invariant.
   virtual bool isKnownInvariant() const = 0;

@@ -613,11 +613,13 @@ public:
                            unsigned EntrySize);
 
   LLVM_ABI MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
-                                GOFF::SDAttr SDAttributes);
+                                         GOFF::SDAttr SDAttributes);
   LLVM_ABI MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
-                                GOFF::EDAttr EDAttributes, MCSection *Parent);
+                                         GOFF::EDAttr EDAttributes,
+                                         MCSection *Parent);
   LLVM_ABI MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
-                                GOFF::PRAttr PRAttributes, MCSection *Parent);
+                                         GOFF::PRAttr PRAttributes,
+                                         MCSection *Parent);
 
   LLVM_ABI MCSectionCOFF *
   getCOFFSection(StringRef Section, unsigned Characteristics,

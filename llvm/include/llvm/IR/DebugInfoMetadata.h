@@ -871,21 +871,21 @@ protected:
                    Flags, Storage, ShouldCreate);
   }
   static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                                       MDString *Name, uint64_t SizeInBits,
-                                       uint32_t AlignInBits, unsigned Encoding,
-                                       uint32_t NumExtraInhabitants,
-                                       DIFlags Flags, StorageType Storage,
-                                       bool ShouldCreate = true) {
+                              MDString *Name, uint64_t SizeInBits,
+                              uint32_t AlignInBits, unsigned Encoding,
+                              uint32_t NumExtraInhabitants, DIFlags Flags,
+                              StorageType Storage, bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, SizeInBitsNode, AlignInBits, Encoding,
                    NumExtraInhabitants, Flags, Storage, ShouldCreate);
   }
   LLVM_ABI static DIBasicType *getImpl(LLVMContext &Context, unsigned Tag,
-                              MDString *Name, Metadata *SizeInBits,
-                              uint32_t AlignInBits, unsigned Encoding,
-                              uint32_t NumExtraInhabitants, DIFlags Flags,
-                              StorageType Storage, bool ShouldCreate = true);
+                                       MDString *Name, Metadata *SizeInBits,
+                                       uint32_t AlignInBits, unsigned Encoding,
+                                       uint32_t NumExtraInhabitants,
+                                       DIFlags Flags, StorageType Storage,
+                                       bool ShouldCreate = true);
 
   TempDIBasicType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),
@@ -1127,23 +1127,23 @@ class DIStringType : public DIType {
                    StringLength, StrLenExp, StrLocationExp, SizeInBitsNode,
                    AlignInBits, Encoding, Storage, ShouldCreate);
   }
-  static DIStringType *
-  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
-          Metadata *StringLength, Metadata *StrLenExp, Metadata *StrLocationExp,
-          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
-          StorageType Storage, bool ShouldCreate = true) {
+  static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
+                               MDString *Name, Metadata *StringLength,
+                               Metadata *StrLenExp, Metadata *StrLocationExp,
+                               uint64_t SizeInBits, uint32_t AlignInBits,
+                               unsigned Encoding, StorageType Storage,
+                               bool ShouldCreate = true) {
     auto *SizeInBitsNode = ConstantAsMetadata::get(
         ConstantInt::get(Type::getInt64Ty(Context), SizeInBits));
     return getImpl(Context, Tag, Name, StringLength, StrLenExp, StrLocationExp,
                    SizeInBitsNode, AlignInBits, Encoding, Storage,
                    ShouldCreate);
   }
-  LLVM_ABI static DIStringType *getImpl(LLVMContext &Context, unsigned Tag,
-                               MDString *Name, Metadata *StringLength,
-                               Metadata *StrLenExp, Metadata *StrLocationExp,
-                               Metadata *SizeInBits, uint32_t AlignInBits,
-                               unsigned Encoding, StorageType Storage,
-                               bool ShouldCreate = true);
+  LLVM_ABI static DIStringType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          Metadata *StringLength, Metadata *StrLenExp, Metadata *StrLocationExp,
+          Metadata *SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          StorageType Storage, bool ShouldCreate = true);
 
   TempDIStringType cloneImpl() const {
     return getTemporary(getContext(), getTag(), getRawName(),

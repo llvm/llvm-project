@@ -15,10 +15,10 @@
 #ifndef LLVM_MC_MCSECTIONGOFF_H
 #define LLVM_MC_MCSECTIONGOFF_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 

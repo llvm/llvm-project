@@ -40,25 +40,23 @@ public:
 
   /// Extracts a value and returns it as adjusted by the Relocator
   uint64_t getRelocatedValue(uint32_t Size, uint64_t *Off,
-                                      uint64_t *SectionIndex = nullptr,
-                                      Error *Err = nullptr) const {
+                             uint64_t *SectionIndex = nullptr,
+                             Error *Err = nullptr) const {
     return static_cast<const Relocator *>(this)->getRelocatedValueImpl(
         Size, Off, SectionIndex, Err);
   }
 
   uint64_t getRelocatedValue(Cursor &C, uint32_t Size,
-                                      uint64_t *SectionIndex = nullptr) const {
+                             uint64_t *SectionIndex = nullptr) const {
     return getRelocatedValue(Size, &getOffset(C), SectionIndex, &getError(C));
   }
 
   /// Extracts an address-sized value.
-  uint64_t getRelocatedAddress(uint64_t *Off,
-                                        uint64_t *SecIx = nullptr) const {
+  uint64_t getRelocatedAddress(uint64_t *Off, uint64_t *SecIx = nullptr) const {
     return getRelocatedValue(getAddressSize(), Off, SecIx);
   }
 
-  uint64_t getRelocatedAddress(Cursor &C,
-                                        uint64_t *SecIx = nullptr) const {
+  uint64_t getRelocatedAddress(Cursor &C, uint64_t *SecIx = nullptr) const {
     return getRelocatedValue(getAddressSize(), &getOffset(C), SecIx,
                              &getError(C));
   }
@@ -100,8 +98,7 @@ public:
     return {0, dwarf::DWARF32};
   }
 
-  std::pair<uint64_t, dwarf::DwarfFormat>
-  getInitialLength(Cursor &C) const {
+  std::pair<uint64_t, dwarf::DwarfFormat> getInitialLength(Cursor &C) const {
     return getInitialLength(&getOffset(C), &getError(C));
   }
 
@@ -109,9 +106,8 @@ public:
   /// There is a DWARF encoding that uses a PC-relative adjustment.
   /// For these values, \p AbsPosOffset is used to fix them, which should
   /// reflect the absolute address of this pointer.
-  std::optional<uint64_t>
-  getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
-                    uint64_t PCRelOffset) const {
+  std::optional<uint64_t> getEncodedPointer(uint64_t *Offset, uint8_t Encoding,
+                                            uint64_t PCRelOffset) const {
     if (Encoding == dwarf::DW_EH_PE_omit)
       return std::nullopt;
 

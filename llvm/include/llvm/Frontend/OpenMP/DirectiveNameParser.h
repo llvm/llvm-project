@@ -9,11 +9,11 @@
 #ifndef LLVM_FRONTEND_OPENMP_DIRECTIVENAMEPARSER_H
 #define LLVM_FRONTEND_OPENMP_DIRECTIVENAMEPARSER_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 
