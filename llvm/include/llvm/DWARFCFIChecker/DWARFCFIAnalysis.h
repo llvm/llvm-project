@@ -12,6 +12,13 @@
 /// described in this link:
 /// https://discourse.llvm.org/t/rfc-dwarf-cfi-validation/86936
 ///
+/// The goal of the checker is to validate DWARF CFI directives using the
+/// prologue directives and the machine instructions. The main proposed
+/// algorithm validates the directives by comparing the CFI state in each
+/// instruction with the state achieved by abstract execution of the instruction
+/// on the CFI state. However, the current version implemented here is a simple
+/// conditional check based on the registers modified by each instruction.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_DWARFCFICHECKER_DWARFCFIANALYSIS_H
