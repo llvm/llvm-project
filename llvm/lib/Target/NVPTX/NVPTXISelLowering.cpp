@@ -3974,12 +3974,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   }
 
   case Intrinsic::nvvm_prefetch_tensormap: {
-    auto &DL = I.getDataLayout(); 
+    auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.memVT = getPointerTy(DL); 
+    Info.memVT = getPointerTy(DL);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.flags = 
+    Info.flags =
         MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
     Info.align.reset();
     return true;
