@@ -9629,7 +9629,6 @@ static void genMapInfoForCaptures(
            CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
            "Inconsistent map information sizes!");
 
-
     // We need to append the results of this capture to what we already have.
     CombinedInfo.append(CurInfo);
   }
