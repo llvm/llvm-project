@@ -115,7 +115,7 @@ bb54:                                             ; preds = %bb37
   ret i1 true
 
 bb55:                                             ; preds = %bb31, %bb29
-  %load56 = load i1, ptr addrspace(5) null, align 8
+  %load56 = load i1, ptr addrspace(5) %arg25, align 8
   ret i1 %load56
 }
 
