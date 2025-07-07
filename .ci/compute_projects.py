@@ -19,6 +19,7 @@ import sys
 PROJECT_DEPENDENCIES = {
     "llvm": set(),
     "clang": {"llvm"},
+    "CIR": {"clang", "mlir"},
     "bolt": {"clang", "lld", "llvm"},
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
@@ -50,11 +51,15 @@ DEPENDENTS_TO_TEST = {
     "lld": {"bolt", "cross-project-tests"},
     # TODO(issues/132795): LLDB should be enabled on clang changes.
     "clang": {"clang-tools-extra", "cross-project-tests"},
-    "mlir": {"flang"},
+    "mlir": {
+        "CIR",
+        "flang",
+    },
     # Test everything if ci scripts are changed.
     ".ci": {
         "llvm",
         "clang",
+        "CIR",
         "lld",
         "lldb",
         "bolt",
@@ -128,6 +133,7 @@ PROJECT_CHECK_TARGETS = {
     "lldb": "check-lldb",
     "llvm": "check-llvm",
     "clang": "check-clang",
+    "CIR": "check-clang-cir",
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
@@ -192,7 +198,12 @@ def _compute_projects_to_test(modified_projects: Set[str], platform: str) -> Set
 def _compute_projects_to_build(
     projects_to_test: Set[str], runtimes: Set[str]
 ) -> Set[str]:
-    return _add_dependencies(projects_to_test, runtimes)
+    projects_with_deps = _add_dependencies(projects_to_test, runtimes)
+    # CIR is used as a pseudo-project in this script. We detect modifications
+    # to clang's CIR-specific subdirectories and add CIR as a modified project
+    # if a file in these directories is modified, but we need to remove it
+    # explicitly here.
+    return projects_with_deps - {"CIR"}
 
 
 def _compute_project_check_targets(projects_to_test: Set[str]) -> Set[str]:
@@ -247,6 +258,14 @@ def _get_modified_projects(modified_files: list[str]) -> Set[str]:
         # capacity.
         if len(path_parts) > 3 and path_parts[:3] == ("llvm", "utils", "gn"):
             continue
+        # If the file is in the clang/lib/CIR directory, add the CIR project.
+        if (len(path_parts) > 3 and
+               (path_parts[:3] == ("clang", "lib", "CIR") or
+                path_parts[:3] == ("clang", "test", "CIR") or
+                path_parts[:4] == ("clang", "include", "clang", "CIR"))):
+            modified_projects.add("clang")
+            modified_projects.add("CIR")
+            continue
         modified_projects.add(pathlib.Path(modified_file).parts[0])
     return modified_projects
 
@@ -267,6 +286,10 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
     runtimes_check_targets_needs_reconfig = _compute_project_check_targets(
         runtimes_to_test_needs_reconfig
     )
+
+    # Check if both clang and mlir are in projects_to_build to enable CIR
+    enable_cir = "ON" if "clang" in projects_to_build and "mlir" in projects_to_build else "OFF"
+
     # We use a semicolon to separate the projects/runtimes as they get passed
     # to the CMake invocation and thus we need to use the CMake list separator
     # (;). We use spaces to separate the check targets as they end up getting
@@ -279,6 +302,7 @@ def get_env_variables(modified_files: list[str], platform: str) -> Set[str]:
         "runtimes_check_targets_needs_reconfig": " ".join(
             sorted(runtimes_check_targets_needs_reconfig)
         ),
+        "enable_cir": enable_cir,
     }
 
 
