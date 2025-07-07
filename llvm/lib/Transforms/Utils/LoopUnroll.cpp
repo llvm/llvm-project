@@ -485,6 +485,8 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   assert(ULO.Count > 0);
 
+  LoopUnrollResult Result = LoopUnrollResult::Unmodified;
+
   if (ULO.Runtime && SE) {
     BasicBlock *OrigHeader = L->getHeader();
     BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
@@ -499,10 +501,12 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       SQ.TLI = nullptr;
       SQ.DT = DT;
       SQ.AC = AC;
-      llvm::LoopRotation(L, LI, TTI, AC, DT, SE, nullptr /*MemorySSAUpdater*/,
-                         SQ, false /*RotationOnly*/, 16 /*Threshold*/,
-                         false /*IsUtilMode*/, false /*PrepareForLTO*/,
-                         [](Loop *, ScalarEvolution *) { return true; });
+      if (llvm::LoopRotation(L, LI, TTI, AC, DT, SE,
+                             nullptr /*MemorySSAUpdater*/, SQ,
+                             false /*RotationOnly*/, 16 /*Threshold*/,
+                             false /*IsUtilMode*/, false /*PrepareForLTO*/,
+                             [](Loop *, ScalarEvolution *) { return true; }))
+        Result = LoopUnrollResult::Modified;
     }
   }
 
@@ -599,7 +603,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
-    return LoopUnrollResult::Unmodified;
+    return Result;
   }
 
   assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
@@ -620,7 +624,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     else {
       LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
-      return LoopUnrollResult::Unmodified;
+      return Result;
     }
   }
 
