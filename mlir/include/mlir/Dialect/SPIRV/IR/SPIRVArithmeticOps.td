@@ -24,8 +24,6 @@ class SPIRV_ArithmeticBinaryOp<string mnemonic, Type type,
       SPIRV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
                                [Pure, AllTypesMatch<["operand1", "operand2", "result"]>])> {
-  // In addition to normal types arithmetic instructions can support cooperative
-  // matrix.
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<type>:$operand1,
     SPIRV_ScalarOrVectorOf<type>:$operand2
