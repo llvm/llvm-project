@@ -451,6 +451,10 @@ public:
     return Inst;
   }
   void setInst(const MCInst &Inst) {
+    // If we ever support Flags in relaxable fragments, revisit the data
+    // structure.
+    assert(Inst.getFlags() == 0 && "relaxable fragment doesn't support flags");
+
     Opcode = Inst.getOpcode();
     auto &S = getParent()->MCOperandStorage;
     if (Inst.getNumOperands() > OperandSize) {
