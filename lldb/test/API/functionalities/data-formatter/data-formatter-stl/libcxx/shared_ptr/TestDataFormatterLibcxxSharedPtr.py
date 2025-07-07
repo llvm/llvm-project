@@ -22,7 +22,7 @@ class TestCase(TestBase):
             "sp_empty",
             type="std::shared_ptr<int>",
             summary="nullptr",
-            children=[ValueCheck(name="__ptr_")],
+            children=[ValueCheck(name="pointer")],
         )
         self.assertEqual(
             valobj.child[0].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
@@ -35,7 +35,7 @@ class TestCase(TestBase):
         valobj = self.expect_var_path(
             "sp_int",
             type="std::shared_ptr<int>",
-            children=[ValueCheck(name="__ptr_")],
+            children=[ValueCheck(name="pointer")],
         )
         self.assertRegex(valobj.summary, r"^10( strong=1)? weak=0$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
@@ -43,7 +43,7 @@ class TestCase(TestBase):
         valobj = self.expect_var_path(
             "sp_int_ref",
             type="std::shared_ptr<int> &",
-            children=[ValueCheck(name="__ptr_")],
+            children=[ValueCheck(name="pointer")],
         )
         self.assertRegex(valobj.summary, r"^10( strong=1)? weak=0$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
@@ -51,7 +51,7 @@ class TestCase(TestBase):
         valobj = self.expect_var_path(
             "sp_int_ref_ref",
             type="std::shared_ptr<int> &&",
-            children=[ValueCheck(name="__ptr_")],
+            children=[ValueCheck(name="pointer")],
         )
         self.assertRegex(valobj.summary, r"^10( strong=1)? weak=0$")
         self.assertNotEqual(valobj.child[0].unsigned, 0)
@@ -66,7 +66,7 @@ class TestCase(TestBase):
         valobj = self.expect_var_path(
             "sp_str",
             type="std::shared_ptr<" + string_type + ">",
-            children=[ValueCheck(name="__ptr_", summary='"hello"')],
+            children=[ValueCheck(name="pointer", summary='"hello"')],
         )
         self.assertRegex(valobj.summary, r'^"hello"( strong=1)? weak=0$')
 
@@ -85,7 +85,7 @@ class TestCase(TestBase):
                 ValueCheck(name="name", summary='"steph"'),
             ],
         )
-        self.assertEqual(str(valobj), '(User) *__ptr_ = (id = 30, name = "steph")')
+        self.assertEqual(str(valobj), '(User) *pointer = (id = 30, name = "steph")')
 
         self.expect_var_path("sp_user->id", type="int", value="30")
         self.expect_var_path("sp_user->name", type="std::string", summary='"steph"')
