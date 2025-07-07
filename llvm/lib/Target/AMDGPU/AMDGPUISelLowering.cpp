@@ -4857,8 +4857,8 @@ static SDValue BitwiseToSrcModifierOp(SDValue N,
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
-  SDValue LHS = N.getNode()->getOperand(0);
-  SDValue RHS = N.getNode()->getOperand(1);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
   ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
 
   if (!CRHS)
@@ -4869,31 +4869,25 @@ static SDValue BitwiseToSrcModifierOp(SDValue N,
   assert((VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) &&
          "Expected i32, v2i32 or i64 value type.");
 
-  uint64_t Mask = 0;
-  if (VT.isVector()) {
-    SDValue Splat = DAG.getSplatValue(RHS);
-    const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat);
-    Mask = C->getZExtValue();
-  } else
-    Mask = CRHS->getZExtValue();
-
+  uint64_t Mask = CRHS->getZExtValue();
   EVT FVT = IntToFloatVT(VT);
-  SDValue BC = DAG.getNode(ISD::BITCAST, SDLoc(N), FVT, LHS);
+  SDLoc SL = SDLoc(N);
+  SDValue BC = DAG.getNode(ISD::BITCAST, SL, FVT, LHS);
 
   switch (Opc) {
   case ISD::XOR:
     if (Mask == 0x80000000u || Mask == 0x8000000000000000u)
-      return DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
+      return DAG.getNode(ISD::FNEG, SL, FVT, BC);
     break;
   case ISD::OR:
     if (Mask == 0x80000000u || Mask == 0x8000000000000000u) {
       SDValue Neg = DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
-      return DAG.getNode(ISD::FABS, SDLoc(N), FVT, Neg);
+      return DAG.getNode(ISD::FABS, SL, FVT, Neg);
     }
     break;
   case ISD::AND:
     if (Mask == 0x7fffffffu || Mask == 0x7fffffffffffffffu)
-      return DAG.getNode(ISD::FABS, SDLoc(N), FVT, BC);
+      return DAG.getNode(ISD::FABS, SL, FVT, BC);
     break;
   default:
     return SDValue();
@@ -4945,12 +4939,10 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     // Support source modifiers as integer.
     // (select c, (xor/or/and x, c), y) -> (bitcast (select c)))
     if (VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) {
-      SDLoc SL(N);
-      SDValue LHS = N->getOperand(1);
-      SDValue RHS = N->getOperand(2);
-      if (SDValue SrcMod = BitwiseToSrcModifierOp(LHS, DCI)) {
+      if (SDValue SrcMod = BitwiseToSrcModifierOp(True, DCI)) {
+        SDLoc SL(N);
         EVT FVT = IntToFloatVT(VT);
-        SDValue FRHS = DAG.getNode(ISD::BITCAST, SL, FVT, RHS);
+        SDValue FRHS = DAG.getNode(ISD::BITCAST, SL, FVT, False);
         SDValue FSelect = DAG.getNode(ISD::SELECT, SL, FVT, Cond, SrcMod, FRHS);
         SDValue BC = DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
         return BC;
