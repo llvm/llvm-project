@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #define __CLC_BODY <clc/math/unary_decl.inc>
-#define __CLC_FUNCTION half_sqrt
+#define FUNCTION half_sqrt
 #define __FLOAT_ONLY
 #include <clc/math/gentype.inc>
-#undef __CLC_FUNCTION
+#undef FUNCTION
