@@ -41,6 +41,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 
@@ -49,6 +50,10 @@ using namespace llvm;
 #define DEBUG_TYPE "isolate-path"
 
 STATISTIC(NumIsolatedBlocks, "Number of isolated blocks");
+
+static cl::opt<bool> ConvertUBToTrapUnreachable(
+    "isolate-ub-path-to-trap-unreachable", cl::init(false), cl::Hidden,
+    cl::desc("Isolate the UB path into one with a 'trap-unreachable' pair."));
 
 /// Look through GEPs to see if the nullptr is accessed.
 static bool HasUBAccess(BasicBlock *Parent, GetElementPtrInst *GEP) {
@@ -152,81 +157,86 @@ bool IsolatePathPass::ProcessPointerUndefinedBehavior(BasicBlock *BB,
     else
       NonUBPhiPreds.insert(FirstUBPhiNode->getIncomingBlock(Index++));
 
+  if (NonUBPhiPreds.empty())
+    // All paths have undefined behavior. Other passes will deal with this
+    // code.
+    return false;
+
   SmallVector<DominatorTree::UpdateType, 8> Updates;
   BasicBlock *UBBlock = nullptr;
-  if (NonUBPhiPreds.empty()) {
-    // All PHI node values cause UB in the block. Just add the 'trap'
-    // instruction without cloning.
-    UBBlock = BB;
 
-    // Remove the block from any successors.
-    for (BasicBlock *Succ : successors(BB)) {
-      Succ->removePredecessor(BB);
-      Updates.push_back({DominatorTree::Delete, BB, Succ});
-    }
-  } else {
-    // Clone the block, isolating the UB instructions on their own path.
-    ValueToValueMapTy VMap;
-    UBBlock = CloneBasicBlock(BB, VMap, ".ub.path", BB->getParent());
-    VMap[BB] = UBBlock;
-    ++NumIsolatedBlocks;
+  // Clone the block, isolating the UB instructions on their own path.
+  ValueToValueMapTy VMap;
+  UBBlock = CloneBasicBlock(BB, VMap, ".ub.path", BB->getParent());
+  VMap[BB] = UBBlock;
+  ++NumIsolatedBlocks;
 
-    // Replace the UB predecessors' terminators' targets with the new block.
-    llvm::for_each(UBPhiPreds, [&](BasicBlock *Pred) {
-      Pred->getTerminator()->replaceSuccessorWith(BB, UBBlock);
+  // Replace the UB predecessors' terminators' targets with the new block.
+  llvm::for_each(UBPhiPreds, [&](BasicBlock *Pred) {
+    Pred->getTerminator()->replaceSuccessorWith(BB, UBBlock);
+  });
+
+  // Remove predecessors of isolated paths from the original PHI nodes.
+  for (PHINode &PN : BB->phis())
+    PN.removeIncomingValueIf([&](unsigned I) {
+      return UBPhiPreds.contains(PN.getIncomingBlock(I));
     });
 
-    // Remove predecessors of isolated paths from the original PHI nodes.
-    for (PHINode &PN : BB->phis())
-      PN.removeIncomingValueIf([&](unsigned I) {
-        return UBPhiPreds.contains(PN.getIncomingBlock(I));
-      });
+  // Remove predecessors of valid paths from the isolated path PHI nodes.
+  for (PHINode &PN : UBBlock->phis())
+    PN.removeIncomingValueIf([&](unsigned I) {
+      return NonUBPhiPreds.contains(PN.getIncomingBlock(I));
+    });
 
-    // Remove predecessors of valid paths from the isolated path PHI nodes.
-    for (PHINode &PN : UBBlock->phis())
-      PN.removeIncomingValueIf([&](unsigned I) {
-        return NonUBPhiPreds.contains(PN.getIncomingBlock(I));
-      });
-
-    // Rewrite the instructions in the cloned block to refer to the instructions
-    // in the cloned block.
-    for (auto &I : *UBBlock) {
-      RemapDbgRecordRange(BB->getModule(), I.getDbgRecordRange(), VMap,
-                          RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-      RemapInstruction(&I, VMap,
-                       RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    }
-
-    // Update the dominator tree.
-    for (auto *Pred : UBPhiPreds) {
-      Updates.push_back({DominatorTree::Insert, Pred, UBBlock});
-      Updates.push_back({DominatorTree::Delete, Pred, BB});
-    }
+  // Rewrite the instructions in the cloned block to refer to the instructions
+  // in the cloned block.
+  for (auto &I : *UBBlock) {
+    RemapDbgRecordRange(BB->getModule(), I.getDbgRecordRange(), VMap,
+                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+    RemapInstruction(&I, VMap,
+                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
   }
 
-  // Get the index into the block of the first UB instruction.
-  unsigned UBIndex = 0;
-  for (auto Iter = BB->begin(); Iter != BB->end(); ++Iter, ++UBIndex)
-    if (&*Iter == FirstUBInst) {
-      if (isa<LoadInst>(FirstUBInst))
-        ++UBIndex;
-      break;
-    }
+  // Update the dominator tree.
+  for (auto *Pred : UBPhiPreds) {
+    Updates.push_back({DominatorTree::Insert, Pred, UBBlock});
+    Updates.push_back({DominatorTree::Delete, Pred, BB});
+  }
 
-  // Remove the instructions following the nullptr dereference.
-  for (unsigned Index = UBBlock->size(); Index > UBIndex; --Index)
-    UBBlock->rbegin()->eraseFromParent();
+  if (ConvertUBToTrapUnreachable) {
+    // Isolate the UB path into a trap-unreachable instruction.
+    unsigned UBIndex = 0;
 
-  // Allow the NULL dereference to actually occur so that code that wishes to
-  // catch the signal can do so.
-  if (const auto *LI = dyn_cast<LoadInst>(&*UBBlock->rbegin()))
-    const_cast<LoadInst *>(LI)->setVolatile(true);
+    // Get the index into the block of the first UB instruction.
+    for (auto Iter = BB->begin(); Iter != BB->end(); ++Iter, ++UBIndex)
+      if (&*Iter == FirstUBInst) {
+        if (isa<LoadInst>(FirstUBInst))
+          ++UBIndex;
+        break;
+      }
 
-  // Add a 'trap()' call followed by an 'unreachable' terminator.
+    // Remove the instructions following the nullptr dereference.
+    for (unsigned Index = UBBlock->size(); Index > UBIndex; --Index)
+      UBBlock->rbegin()->eraseFromParent();
+
+    // Allow the NULL dereference to actually occur so that code that wishes to
+    // catch the signal can do so.
+    if (const auto *LI = dyn_cast<LoadInst>(&*UBBlock->rbegin()))
+      const_cast<LoadInst *>(LI)->setVolatile(true);
+
+    // Add a 'trap()' call.
+    IRBuilder<> Builder(UBBlock);
+    Function *TrapDecl =
+        Intrinsic::getOrInsertDeclaration(BB->getModule(), Intrinsic::trap);
+    Builder.CreateCall(TrapDecl);
+  } else {
+    // Remove all instructions.
+    for (unsigned Index = UBBlock->size(); Index > 0; --Index)
+      UBBlock->rbegin()->eraseFromParent();
+  }
+
+  // End in an 'unreachable' instruction.
   IRBuilder<> Builder(UBBlock);
-  Function *TrapDecl =
-      Intrinsic::getOrInsertDeclaration(BB->getModule(), Intrinsic::trap);
-  Builder.CreateCall(TrapDecl);
   Builder.CreateUnreachable();
 
   if (!Updates.empty())
