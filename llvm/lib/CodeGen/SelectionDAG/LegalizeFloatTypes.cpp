@@ -761,19 +761,20 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   EVT VT0 = N->getValueType(0);
   EVT VT1 = N->getValueType(1);
   RTLIB::Libcall LC = RTLIB::getFREXP(VT0);
+  EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
+  SDLoc DL(N);
 
   if (DAG.getLibInfo().getIntSize() != VT1.getSizeInBits()) {
     // If the exponent does not match with sizeof(int) a libcall would use the
     // wrong type for the argument.
     // TODO: Should be able to handle mismatches.
     DAG.getContext()->emitError("ffrexp exponent does not match sizeof(int)");
-    return DAG.getUNDEF(N->getValueType(0));
+    SDValue PoisonExp = DAG.getPOISON(VT1);
+    ReplaceValueWith(SDValue(N, 1), PoisonExp);
+    return DAG.getMergeValues({DAG.getPOISON(NVT0), PoisonExp}, DL);
   }
 
-  EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
   SDValue StackSlot = DAG.CreateStackTemporary(VT1);
-
-  SDLoc DL(N);
 
   auto PointerTy = PointerType::getUnqual(*DAG.getContext());
   TargetLowering::MakeLibCallOptions CallOptions;
