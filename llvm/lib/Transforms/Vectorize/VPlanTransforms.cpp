@@ -3195,10 +3195,6 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
         match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())))
       continue;
 
-    if (isa<VPDerivedIVRecipe, VPScalarIVStepsRecipe>(&R) &&
-        vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
-      continue;
-
     // Bail out on recipes not supported at the moment:
     //  * phi recipes other than the canonical induction
     //  * recipes writing to memory except interleave groups
@@ -3255,7 +3251,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     if (!WideMember0)
       return;
     for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
+      auto *R = dyn_cast_or_null<VPWidenRecipe>(V->getDefiningRecipe());
       if (!R || R->getOpcode() != WideMember0->getOpcode() ||
           R->getNumOperands() > 2)
         return;
