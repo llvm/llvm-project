@@ -2275,28 +2275,23 @@ public:
     unsigned MsgParam = 0;
     NamedDecl *D = nullptr;
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Operation)) {
-      Loc = ASE->getBase()->getExprLoc();
-      Range = ASE->getBase()->getSourceRange();
+      Loc = ASE->getExprLoc();
+      Range = ASE->getSourceRange();
       MsgParam = 2;
     } else if (const auto *BO = dyn_cast<BinaryOperator>(Operation)) {
       BinaryOperator::Opcode Op = BO->getOpcode();
       if (Op == BO_Add || Op == BO_AddAssign || Op == BO_Sub ||
           Op == BO_SubAssign) {
-        if (BO->getRHS()->getType()->isIntegerType()) {
-          Loc = BO->getLHS()->getExprLoc();
-          Range = BO->getLHS()->getSourceRange();
-        } else {
-          Loc = BO->getRHS()->getExprLoc();
-          Range = BO->getRHS()->getSourceRange();
-        }
+        Loc = BO->getExprLoc();
+        Range = BO->getSourceRange();
         MsgParam = 1;
       }
     } else if (const auto *UO = dyn_cast<UnaryOperator>(Operation)) {
       UnaryOperator::Opcode Op = UO->getOpcode();
       if (Op == UO_PreInc || Op == UO_PreDec || Op == UO_PostInc ||
           Op == UO_PostDec) {
-        Loc = UO->getSubExpr()->getExprLoc();
-        Range = UO->getSubExpr()->getSourceRange();
+        Loc = UO->getExprLoc();
+        Range = UO->getSourceRange();
         MsgParam = 1;
       }
     } else {
