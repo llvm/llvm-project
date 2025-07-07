@@ -26,9 +26,12 @@ function(add_unittest_framework_library name)
   endforeach()
 
   if(LLVM_LIBC_FULL_BUILD)
-    # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
-    # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
-    set(LLVM_LIBC_FULL_BUILD "")
+    # Ensure UEFI is built with full build since it doesn't support overlay.
+    if(NOT LIBC_TARGET_OS_IS_UEFI)
+      # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
+      # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
+      set(LLVM_LIBC_FULL_BUILD "")
+    endif()
     _get_common_test_compile_options(compile_options "" "")
     target_compile_options(${name}.unit PRIVATE ${compile_options})
     set(LLVM_LIBC_FULL_BUILD ON)
