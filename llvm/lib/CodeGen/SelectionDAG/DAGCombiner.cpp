@@ -638,7 +638,6 @@ namespace {
     SDValue mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToLoad(SDNode *N, unsigned InsIndex);
-    SDValue ConstantFoldBITCASTofBUILD_VECTOR(SDNode *, EVT);
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
@@ -16431,8 +16430,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
         TLI.isTypeLegal(VT.getVectorElementType()))) &&
       N0.getOpcode() == ISD::BUILD_VECTOR && N0->hasOneUse() &&
       cast<BuildVectorSDNode>(N0)->isConstant())
-    return ConstantFoldBITCASTofBUILD_VECTOR(N0.getNode(),
-                                             VT.getVectorElementType());
+    return DAG.FoldConstantBuildVector(cast<BuildVectorSDNode>(N0), SDLoc(N),
+                                       VT.getVectorElementType());
 
   // If the input is a constant, let getNode fold it.
   if (isIntOrFPConstant(N0)) {
@@ -16823,83 +16822,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SafeFlags.setApproximateFuncs(SrcFlags.hasApproximateFuncs());
   SafeFlags.setAllowReciprocal(SrcFlags.hasAllowReciprocal());
   return DAG.getNode(N0.getOpcode(), DL, N0->getVTList(), Ops, SafeFlags);
-}
-
-/// We know that BV is a build_vector node with Constant, ConstantFP or Undef
-/// operands. DstEltVT indicates the destination element value type.
-SDValue DAGCombiner::
-ConstantFoldBITCASTofBUILD_VECTOR(SDNode *BV, EVT DstEltVT) {
-  EVT SrcEltVT = BV->getValueType(0).getVectorElementType();
-
-  // If this is already the right type, we're done.
-  if (SrcEltVT == DstEltVT) return SDValue(BV, 0);
-
-  unsigned SrcBitSize = SrcEltVT.getSizeInBits();
-  unsigned DstBitSize = DstEltVT.getSizeInBits();
-
-  // If this is a conversion of N elements of one type to N elements of another
-  // type, convert each element.  This handles FP<->INT cases.
-  if (SrcBitSize == DstBitSize) {
-    SmallVector<SDValue, 8> Ops;
-    for (SDValue Op : BV->op_values()) {
-      // If the vector element type is not legal, the BUILD_VECTOR operands
-      // are promoted and implicitly truncated.  Make that explicit here.
-      if (Op.getValueType() != SrcEltVT)
-        Op = DAG.getNode(ISD::TRUNCATE, SDLoc(BV), SrcEltVT, Op);
-      Ops.push_back(DAG.getBitcast(DstEltVT, Op));
-      AddToWorklist(Ops.back().getNode());
-    }
-    EVT VT = EVT::getVectorVT(*DAG.getContext(), DstEltVT,
-                              BV->getValueType(0).getVectorNumElements());
-    return DAG.getBuildVector(VT, SDLoc(BV), Ops);
-  }
-
-  // Otherwise, we're growing or shrinking the elements.  To avoid having to
-  // handle annoying details of growing/shrinking FP values, we convert them to
-  // int first.
-  if (SrcEltVT.isFloatingPoint()) {
-    // Convert the input float vector to a int vector where the elements are the
-    // same sizes.
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), SrcEltVT.getSizeInBits());
-    BV = ConstantFoldBITCASTofBUILD_VECTOR(BV, IntVT).getNode();
-    SrcEltVT = IntVT;
-  }
-
-  // Now we know the input is an integer vector.  If the output is a FP type,
-  // convert to integer first, then to FP of the right size.
-  if (DstEltVT.isFloatingPoint()) {
-    EVT TmpVT = EVT::getIntegerVT(*DAG.getContext(), DstEltVT.getSizeInBits());
-    SDNode *Tmp = ConstantFoldBITCASTofBUILD_VECTOR(BV, TmpVT).getNode();
-
-    // Next, convert to FP elements of the same size.
-    return ConstantFoldBITCASTofBUILD_VECTOR(Tmp, DstEltVT);
-  }
-
-  // Okay, we know the src/dst types are both integers of differing types.
-  assert(SrcEltVT.isInteger() && DstEltVT.isInteger());
-
-  // TODO: Should ConstantFoldBITCASTofBUILD_VECTOR always take a
-  // BuildVectorSDNode?
-  auto *BVN = cast<BuildVectorSDNode>(BV);
-
-  // Extract the constant raw bit data.
-  BitVector UndefElements;
-  SmallVector<APInt> RawBits;
-  bool IsLE = DAG.getDataLayout().isLittleEndian();
-  if (!BVN->getConstantRawBits(IsLE, DstBitSize, RawBits, UndefElements))
-    return SDValue();
-
-  SDLoc DL(BV);
-  SmallVector<SDValue, 8> Ops;
-  for (unsigned I = 0, E = RawBits.size(); I != E; ++I) {
-    if (UndefElements[I])
-      Ops.push_back(DAG.getUNDEF(DstEltVT));
-    else
-      Ops.push_back(DAG.getConstant(RawBits[I], DL, DstEltVT));
-  }
-
-  EVT VT = EVT::getVectorVT(*DAG.getContext(), DstEltVT, Ops.size());
-  return DAG.getBuildVector(VT, DL, Ops);
 }
 
 // Returns true if floating point contraction is allowed on the FMUL-SDValue
