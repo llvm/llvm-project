@@ -5,9 +5,6 @@
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: Target architecture: aarch64
-# CHECK: BOLT-INFO: enabling relocation mode
-# CHECK-NOT: llvm-bolt:
 # CHECK: BOLT-INFO: Starting stub-insertion pass
 
 .text
@@ -16,54 +13,22 @@
 
 main:
 .cfi_startproc
-.cfi_def_cfa_offset 16
-.cfi_offset x30, -8
 .cfi_remember_state
-mov	x9, #0x3ff0000000000000
-mov	x8, x0
-stp	x30, x9, [sp, #-0x10]!
-add	x3, sp, #0x8
-mov	x0, x1
-mov	x1, x2
-mov	x2, x8
-bl main
-fcmp	d0, #0.0
-b.ne main+0x34
-
-mov	w0, wzr
-ldr	x30, [sp], #0x10
-.cfi_def_cfa_offset 0
-.cfi_restore x30
-
-ret
-.cfi_restore_state
-.cfi_remember_state
-
-fmov	x8, d0
-mov	x9, #0x7ff0000000000000
-and	x8, x8, #0x7fffffffffffffff
-cmp	x8, x9
-b.lt main+0x5c
-fcmp	d0, #0.0
-mov	w8, #-0x1
-csinc	w0, w8, wzr, le
-ldr	x30, [sp], #0x10
-.cfi_def_cfa_offset 0
-.cfi_restore x30
-
-ret
-nop
-.cfi_restore_state
-
-ldr	d2, [sp, #0x8]
-mov	x8, #0x3cb0000000000000
-fabs	d1, d0
-fcmp	d0, #0.0
-fmov	d3, x8
-mov	w8, #-0x1
-csinc	w0, w8, wzr, le
-fmul	d2, d2, d3
-fcmp	d1, d2
-b.ls main+0x28
-b main+0x2c
+  mov	w0, wzr
+  b.ne .L1
+.L0:
+  mov	w0, wzr
+.L1:
+  cmp	x0, #0
+  b.lt .L2
+.L2:
+  nop
+  .cfi_restore_state
+  mov	x8, xzr
+  b.ls .L0
+  ret
 .cfi_endproc
+    .size main, .-main
+
+## Force relocation mode.
+  .reloc 0, R_AARCH64_NONE
