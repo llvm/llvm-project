@@ -1,14 +1,19 @@
+//===- LifetimeSafety.cpp - C++ Lifetime Safety Analysis -*--------- C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "clang/Analysis/Analyses/LifetimeSafety.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
-#include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
-#include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
