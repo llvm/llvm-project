@@ -53,17 +53,16 @@ public:
 MCFixupKindInfo XtensaAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[Xtensa::NumTargetFixupKinds] = {
       // name                     offset bits  flags
-      {"fixup_xtensa_branch_6", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_branch_8", 16, 8, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_branch_12", 12, 12, MCFixupKindInfo::FKF_IsPCRel},
-      {"fixup_xtensa_jump_18", 6, 18, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_xtensa_branch_6", 0, 16, 0},
+      {"fixup_xtensa_branch_8", 16, 8, 0},
+      {"fixup_xtensa_branch_12", 12, 12, 0},
+      {"fixup_xtensa_jump_18", 6, 18, 0},
       {"fixup_xtensa_call_18", 6, 18,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
       {"fixup_xtensa_l32r_16", 8, 16,
-       MCFixupKindInfo::FKF_IsPCRel |
-           MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
-      {"fixup_xtensa_loop_8", 16, 8, MCFixupKindInfo::FKF_IsPCRel}};
+       MCFixupKindInfo::FKF_IsAlignedDownTo32Bits},
+      {"fixup_xtensa_loop_8", 16, 8, 0},
+  };
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -143,10 +142,11 @@ static unsigned getSize(unsigned Kind) {
   }
 }
 
-void XtensaAsmBackend::applyFixup(const MCFragment &, const MCFixup &Fixup,
+void XtensaAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                   const MCValue &Target,
                                   MutableArrayRef<char> Data, uint64_t Value,
                                   bool IsResolved) {
+  maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   MCContext &Ctx = getContext();
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
 

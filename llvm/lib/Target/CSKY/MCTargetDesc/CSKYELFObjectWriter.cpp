@@ -62,7 +62,6 @@ unsigned CSKYELFObjectWriter::getRelocType(const MCFixup &Fixup,
       reportError(Fixup.getLoc(), "Unsupported relocation type");
       return ELF::R_CKCORE_NONE;
     case FK_Data_4:
-    case FK_PCRel_4:
       return ELF::R_CKCORE_PCREL32;
     case CSKY::fixup_csky_pcrel_uimm16_scale4:
       return ELF::R_CKCORE_PCREL_IMM16_4;

@@ -1171,8 +1171,10 @@ void MetadataLoader::MetadataLoaderImpl::lazyLoadOneMetadata(
   assert(ID >= MDStringRef.size() && "Unexpected lazy-loading of MDString");
   // Lookup first if the metadata hasn't already been loaded.
   if (auto *MD = MetadataList.lookup(ID)) {
-    auto *N = cast<MDNode>(MD);
-    if (!N->isTemporary())
+    auto *N = dyn_cast<MDNode>(MD);
+    // If the node is not an MDNode, or if it is not temporary, then
+    // we're done.
+    if (!N || !N->isTemporary())
       return;
   }
   SmallVector<uint64_t, 64> Record;
@@ -2450,15 +2452,28 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LABEL: {
-    if (Record.size() != 5)
+    if (Record.size() < 5 || Record.size() > 7)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
+    uint64_t Line = Record[4];
+    uint64_t Column = Record.size() > 5 ? Record[5] : 0;
+    bool IsArtificial = Record[0] & 2;
+    std::optional<unsigned> CoroSuspendIdx;
+    if (Record.size() > 6) {
+      uint64_t RawSuspendIdx = Record[6];
+      if (RawSuspendIdx != std::numeric_limits<uint64_t>::max()) {
+        if (RawSuspendIdx > (uint64_t)std::numeric_limits<unsigned>::max())
+          return error("CoroSuspendIdx value is too large");
+        CoroSuspendIdx = RawSuspendIdx;
+      }
+    }
+
     MetadataList.assignValue(
         GET_OR_DISTINCT(DILabel,
                         (Context, getMDOrNull(Record[1]),
-                         getMDString(Record[2]),
-                         getMDOrNull(Record[3]), Record[4])),
+                         getMDString(Record[2]), getMDOrNull(Record[3]), Line,
+                         Column, IsArtificial, CoroSuspendIdx)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

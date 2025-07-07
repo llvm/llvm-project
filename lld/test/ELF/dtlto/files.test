@@ -24,8 +24,8 @@ RUN: llc t2.ll --filetype=obj -o t2.o
 ## the contents of the object files supplied on the command line into the
 ## output object files in job order.
 RUN: echo "t1.bc t2.bc --start-lib t3.bc --end-lib -o my.elf \
-RUN:   --thinlto-distributor=%python \
-RUN:   --thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
+RUN:   --thinlto-distributor=\"%python\" \
+RUN:   --thinlto-distributor-arg=\"%llvm_src_root/utils/dtlto/mock.py\" \
 RUN:   --thinlto-distributor-arg=t1.o \
 RUN:   --thinlto-distributor-arg=t2.o" > l.rsp
 
