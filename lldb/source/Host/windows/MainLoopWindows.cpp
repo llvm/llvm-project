@@ -8,13 +8,19 @@
 
 #include "lldb/Host/windows/MainLoopWindows.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/Socket.h"
+#include "lldb/Host/windows/windows.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/WindowsError.h"
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
 #include <csignal>
 #include <ctime>
+#include <io.h>
+#include <thread>
 #include <vector>
 #include <winsock2.h>
 
@@ -31,6 +37,122 @@ static DWORD ToTimeout(std::optional<MainLoopWindows::TimePoint> point) {
   return ceil<milliseconds>(dur).count();
 }
 
+namespace {
+
+class PipeEvent : public MainLoopWindows::IOEvent {
+public:
+  explicit PipeEvent(HANDLE handle)
+      : IOEvent(CreateEventW(NULL, /*bManualReset=*/FALSE,
+                             /*bInitialState=*/FALSE, NULL)),
+        m_handle(handle), m_ready(CreateEventW(NULL, /*bManualReset=*/FALSE,
+                                               /*bInitialState=*/FALSE, NULL)) {
+    assert(m_event && m_ready);
+  }
+
+  ~PipeEvent() override {
+    if (m_monitor_thread.joinable()) {
+      m_stopped = true;
+      SetEvent(m_ready);
+      // Keep trying to cancel ReadFile() until the thread exits.
+      do {
+        CancelIoEx(m_handle, /*lpOverlapped=*/NULL);
+      } while (WaitForSingleObject(m_monitor_thread.native_handle(), 1) ==
+               WAIT_TIMEOUT);
+      m_monitor_thread.join();
+    }
+    CloseHandle(m_event);
+    CloseHandle(m_ready);
+  }
+
+  void WillPoll() override {
+    if (!m_monitor_thread.joinable())
+      m_monitor_thread = std::thread(&PipeEvent::Monitor, this);
+  }
+
+  void Disarm() override { SetEvent(m_ready); }
+
+  /// Monitors the handle performing a zero byte read to determine when data is
+  /// avaiable.
+  void Monitor() {
+    do {
+      char buf[1];
+      DWORD bytes_read = 0;
+      OVERLAPPED ov;
+      ZeroMemory(&ov, sizeof(ov));
+      // Block on a 0-byte read; this will only resume when data is
+      // available in the pipe. The pipe must be PIPE_WAIT or this thread
+      // will spin.
+      BOOL success =
+          ReadFile(m_handle, buf, /*nNumberOfBytesToRead=*/0, &bytes_read, &ov);
+      DWORD bytes_available = 0;
+      DWORD err = GetLastError();
+      if (!success && err == ERROR_IO_PENDING) {
+        success = GetOverlappedResult(m_handle, &ov, &bytes_read,
+                                      /*bWait=*/TRUE);
+        err = GetLastError();
+      }
+      if (success) {
+        success =
+            PeekNamedPipe(m_handle, NULL, 0, NULL, &bytes_available, NULL);
+        err = GetLastError();
+      }
+      if (success) {
+        if (bytes_available == 0) {
+          // This can happen with a zero-byte write. Try again.
+          continue;
+        }
+      } else if (err == ERROR_NO_DATA) {
+        // The pipe is nonblocking. Try again.
+        Sleep(0);
+        continue;
+      } else if (err == ERROR_OPERATION_ABORTED) {
+        // Read may have been cancelled, try again.
+        continue;
+      }
+
+      SetEvent(m_event);
+
+      // Wait until the current read is consumed before doing the next read.
+      WaitForSingleObject(m_ready, INFINITE);
+    } while (!m_stopped);
+  }
+
+private:
+  HANDLE m_handle;
+  HANDLE m_ready;
+  std::thread m_monitor_thread;
+  std::atomic<bool> m_stopped = false;
+};
+
+class SocketEvent : public MainLoopWindows::IOEvent {
+public:
+  explicit SocketEvent(SOCKET socket)
+      : IOEvent(WSACreateEvent()), m_socket(socket) {
+    assert(m_event != WSA_INVALID_EVENT);
+  }
+
+  ~SocketEvent() override { WSACloseEvent(m_event); }
+
+  void WillPoll() override {
+    int result =
+        WSAEventSelect(m_socket, m_event, FD_READ | FD_ACCEPT | FD_CLOSE);
+    assert(result == 0);
+    UNUSED_IF_ASSERT_DISABLED(result);
+  }
+
+  void DidPoll() override {
+    int result = WSAEventSelect(m_socket, WSA_INVALID_EVENT, 0);
+    assert(result == 0);
+    UNUSED_IF_ASSERT_DISABLED(result);
+  }
+
+  void Disarm() override { WSAResetEvent(m_event); }
+
+  SOCKET m_socket;
+};
+
+} // namespace
+
 MainLoopWindows::MainLoopWindows() {
   m_interrupt_event = WSACreateEvent();
   assert(m_interrupt_event != WSA_INVALID_EVENT);
@@ -44,14 +166,11 @@ MainLoopWindows::~MainLoopWindows() {
 }
 
 llvm::Expected<size_t> MainLoopWindows::Poll() {
-  std::vector<WSAEVENT> events;
+  std::vector<HANDLE> events;
   events.reserve(m_read_fds.size() + 1);
-  for (auto &[fd, info] : m_read_fds) {
-    int result = WSAEventSelect(fd, info.event, FD_READ | FD_ACCEPT | FD_CLOSE);
-    assert(result == 0);
-    UNUSED_IF_ASSERT_DISABLED(result);
-
-    events.push_back(info.event);
+  for (auto &[_, fd_info] : m_read_fds) {
+    fd_info.event->WillPoll();
+    events.push_back(fd_info.event->GetHandle());
   }
   events.push_back(m_interrupt_event);
 
@@ -59,11 +178,8 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
       WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
                                ToTimeout(GetNextWakeupTime()), FALSE);
 
-  for (auto &fd : m_read_fds) {
-    int result = WSAEventSelect(fd.first, WSA_INVALID_EVENT, 0);
-    assert(result == 0);
-    UNUSED_IF_ASSERT_DISABLED(result);
-  }
+  for (auto &[_, fd_info] : m_read_fds)
+    fd_info.event->DidPoll();
 
   if (result >= WSA_WAIT_EVENT_0 && result < WSA_WAIT_EVENT_0 + events.size())
     return result - WSA_WAIT_EVENT_0;
@@ -83,29 +199,31 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
     error = Status::FromErrorString("IO object is not valid.");
     return nullptr;
   }
-  if (object_sp->GetFdType() != IOObject::eFDTypeSocket) {
-    error = Status::FromErrorString(
-        "MainLoopWindows: non-socket types unsupported on Windows");
-    return nullptr;
-  }
 
-  WSAEVENT event = WSACreateEvent();
-  if (event == WSA_INVALID_EVENT) {
-    error =
-        Status::FromErrorStringWithFormat("Cannot create monitoring event.");
-    return nullptr;
-  }
+  IOObject::WaitableHandle waitable_handle = object_sp->GetWaitableHandle();
+  assert(waitable_handle != IOObject::kInvalidHandleValue);
 
-  const bool inserted =
-      m_read_fds
-          .try_emplace(object_sp->GetWaitableHandle(), FdInfo{event, callback})
-          .second;
-  if (!inserted) {
-    WSACloseEvent(event);
+  if (m_read_fds.find(waitable_handle) != m_read_fds.end()) {
     error = Status::FromErrorStringWithFormat(
-        "File descriptor %d already monitored.",
-        object_sp->GetWaitableHandle());
+        "File descriptor %d already monitored.", waitable_handle);
     return nullptr;
+  }
+
+  if (object_sp->GetFdType() == IOObject::eFDTypeSocket) {
+    m_read_fds[waitable_handle] = {
+        std::make_unique<SocketEvent>(
+            reinterpret_cast<SOCKET>(waitable_handle)),
+        callback};
+  } else {
+    DWORD file_type = GetFileType(waitable_handle);
+    if (file_type != FILE_TYPE_PIPE) {
+      error = Status::FromErrorStringWithFormat("Unsupported file type %d",
+                                                file_type);
+      return nullptr;
+    }
+
+    m_read_fds[waitable_handle] = {std::make_unique<PipeEvent>(waitable_handle),
+                                   callback};
   }
 
   return CreateReadHandle(object_sp);
@@ -114,16 +232,7 @@ MainLoopWindows::RegisterReadObject(const IOObjectSP &object_sp,
 void MainLoopWindows::UnregisterReadObject(IOObject::WaitableHandle handle) {
   auto it = m_read_fds.find(handle);
   assert(it != m_read_fds.end());
-  BOOL result = WSACloseEvent(it->second.event);
-  assert(result == TRUE);
-  UNUSED_IF_ASSERT_DISABLED(result);
   m_read_fds.erase(it);
-}
-
-void MainLoopWindows::ProcessReadObject(IOObject::WaitableHandle handle) {
-  auto it = m_read_fds.find(handle);
-  if (it != m_read_fds.end())
-    it->second.callback(*this); // Do the work
 }
 
 Status MainLoopWindows::Run() {
@@ -138,8 +247,8 @@ Status MainLoopWindows::Run() {
 
     if (*signaled_event < m_read_fds.size()) {
       auto &KV = *std::next(m_read_fds.begin(), *signaled_event);
-      WSAResetEvent(KV.second.event);
-      ProcessReadObject(KV.first);
+      KV.second.event->Disarm();
+      KV.second.callback(*this); // Do the work.
     } else {
       assert(*signaled_event == m_read_fds.size());
       WSAResetEvent(m_interrupt_event);

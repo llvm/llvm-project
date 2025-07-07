@@ -221,6 +221,34 @@ define i1 @eq_base_inbounds_commute_use(i64 %y) {
   ret i1 %r
 }
 
+define i1 @ne_base_inbounds_use_scaled(ptr %x, i64 %y) {
+; CHECK-LABEL: @ne_base_inbounds_use_scaled(
+; CHECK-NEXT:    [[G_IDX:%.*]] = shl nsw i64 [[Y:%.*]], 3
+; CHECK-NEXT:    [[G:%.*]] = getelementptr inbounds i8, ptr [[X:%.*]], i64 [[G_IDX]]
+; CHECK-NEXT:    call void @use(ptr [[G]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[Y]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %g = getelementptr inbounds i64, ptr %x, i64 %y
+  call void @use(ptr %g)
+  %r = icmp ne ptr %g, %x
+  ret i1 %r
+}
+
+define i1 @ne_base_use_scaled(ptr %x, i64 %y) {
+; CHECK-LABEL: @ne_base_use_scaled(
+; CHECK-NEXT:    [[G_IDX_MASK:%.*]] = shl i64 [[Y:%.*]], 3
+; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[G_IDX_MASK]]
+; CHECK-NEXT:    call void @use(ptr [[G]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[G_IDX_MASK]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %g = getelementptr i64, ptr %x, i64 %y
+  call void @use(ptr %g)
+  %r = icmp ne ptr %g, %x
+  ret i1 %r
+}
+
 define i1 @eq_bitcast_base(ptr %p, i64 %x) {
 ; CHECK-LABEL: @eq_bitcast_base(
 ; CHECK-NEXT:    [[GEP_IDX_MASK:%.*]] = and i64 [[X:%.*]], 9223372036854775807
@@ -755,5 +783,69 @@ define i1 @gep_diff_base_same_indices_nuw_nusw(ptr %x, ptr %y, i64 %z) {
   %gep1 = getelementptr nuw i8, ptr %x, i64 %z
   %gep2 = getelementptr nusw i8, ptr %y, i64 %z
   %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_multiple_eq(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_multiple_eq(
+; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[DOTMASK:%.*]] = and i64 [[GEP1_IDX1]], 4611686018427387903
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[DOTMASK]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %base, i64 %idx
+  %gep2 = getelementptr i32, ptr %gep1, i64 %idx2
+  %cmp = icmp eq ptr %gep2, %base
+  ret i1 %cmp
+}
+
+define i1 @gep_multiple_eq_commuted(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_multiple_eq_commuted(
+; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[DOTMASK:%.*]] = and i64 [[GEP1_IDX1]], 4611686018427387903
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[DOTMASK]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %base, i64 %idx
+  %gep2 = getelementptr i32, ptr %gep1, i64 %idx2
+  %cmp = icmp eq ptr %base, %gep2
+  ret i1 %cmp
+}
+
+define i1 @gep_mugtiple_ugt_nuw(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_mugtiple_ugt_nuw(
+; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = sub i64 0, [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IDX:%.*]], [[GEP1_IDX1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i32, ptr %base, i64 %idx
+  %gep2 = getelementptr nuw i32, ptr %gep1, i64 %idx2
+  %cmp = icmp ugt ptr %gep2, %base
+  ret i1 %cmp
+}
+
+define i1 @gep_mugtiple_ugt_not_all_nuw(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_mugtiple_ugt_not_all_nuw(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP2]], [[BASE]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i32, ptr %base, i64 %idx
+  %gep2 = getelementptr i32, ptr %gep1, i64 %idx2
+  %cmp = icmp ugt ptr %gep2, %base
+  ret i1 %cmp
+}
+
+define i1 @gep_mugtiple_ugt_inbounds_nusw(ptr %base, i64 %idx, i64 %idx2) {
+; CHECK-LABEL: @gep_mugtiple_ugt_inbounds_nusw(
+; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[GEP1_IDX1]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr inbounds i32, ptr %base, i64 %idx
+  %gep2 = getelementptr nusw i32, ptr %gep1, i64 %idx2
+  %cmp = icmp ugt ptr %gep2, %base
   ret i1 %cmp
 }

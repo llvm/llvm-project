@@ -59,7 +59,7 @@ class CodeGenTarget {
   const Record *TargetRec;
 
   mutable DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>>
-      Instructions;
+      InstructionMap;
   mutable std::unique_ptr<CodeGenRegBank> RegBank;
   mutable ArrayRef<const Record *> RegAltNameIndices;
   mutable SmallVector<ValueTypeByHwMode, 8> LegalValueTypes;
@@ -154,30 +154,21 @@ public:
 
 private:
   DenseMap<const Record *, std::unique_ptr<CodeGenInstruction>> &
-  getInstructions() const {
-    if (Instructions.empty())
+  getInstructionMap() const {
+    if (InstructionMap.empty())
       ReadInstructions();
-    return Instructions;
+    return InstructionMap;
   }
 
 public:
   CodeGenInstruction &getInstruction(const Record *InstRec) const {
-    if (Instructions.empty())
-      ReadInstructions();
-    auto I = Instructions.find(InstRec);
-    assert(I != Instructions.end() && "Not an instruction");
+    auto I = getInstructionMap().find(InstRec);
+    assert(I != InstructionMap.end() && "Not an instruction");
     return *I->second;
   }
 
   /// Returns the number of predefined instructions.
   static unsigned getNumFixedInstructions();
-
-  /// Returns the number of pseudo instructions.
-  unsigned getNumPseudoInstructions() const {
-    if (InstrsByEnum.empty())
-      ComputeInstrsByEnum();
-    return NumPseudoInstructions;
-  }
 
   /// Return all of the instructions defined by the target, ordered by their
   /// enum value.
@@ -191,18 +182,33 @@ public:
     return InstrsByEnum;
   }
 
+  // Functions that return various slices of `getInstructionsByEnumValue`.
+  ArrayRef<const CodeGenInstruction *>
+  getGenericInstructionsByEnumValue() const {
+    return getInstructionsByEnumValue().take_front(getNumFixedInstructions());
+  }
+
+  ArrayRef<const CodeGenInstruction *>
+  getTargetInstructionsByEnumValue() const {
+    return getInstructionsByEnumValue().drop_front(getNumFixedInstructions());
+  }
+
+  ArrayRef<const CodeGenInstruction *>
+  getTargetPseudoInstructionsByEnumValue() const {
+    return getTargetInstructionsByEnumValue().take_front(NumPseudoInstructions);
+  }
+
+  ArrayRef<const CodeGenInstruction *>
+  getTargetNonPseudoInstructionsByEnumValue() const {
+    return getTargetInstructionsByEnumValue().drop_front(NumPseudoInstructions);
+  }
+
   /// Return the integer enum value corresponding to this instruction record.
   unsigned getInstrIntValue(const Record *R) const {
     if (InstrsByEnum.empty())
       ComputeInstrsByEnum();
     return getInstruction(R).EnumVal;
   }
-
-  typedef ArrayRef<const CodeGenInstruction *>::const_iterator inst_iterator;
-  inst_iterator inst_begin() const {
-    return getInstructionsByEnumValue().begin();
-  }
-  inst_iterator inst_end() const { return getInstructionsByEnumValue().end(); }
 
   /// Return whether instructions have variable length encodings on this target.
   bool hasVariableLengthEncodings() const { return HasVariableLengthEncodings; }

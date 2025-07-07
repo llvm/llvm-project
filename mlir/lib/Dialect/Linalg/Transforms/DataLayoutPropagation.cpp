@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
-
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Dominance.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -358,6 +353,12 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
   return newGenericOp;
 }
 
+static bool isGenericOutsNotUsed(linalg::GenericOp genericOp) {
+  return llvm::all_of(genericOp.getDpsInitsMutable(), [&](OpOperand &operand) {
+    return genericOp.getMatchingBlockArgument(&operand).use_empty();
+  });
+}
+
 /// Bubbles up linalg.pack op through a producer generic op. This
 /// swap pack(generic) to generic(pack). The new generic op works on packed
 /// domain; pack ops are created for input and output operands. E.g.,
@@ -470,12 +471,15 @@ bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
       getOrCreatePackedViewOfOperand(rewriter, genericOp.getLoc(), *packInfo,
                                      genericOp, opOperand);
 
-  // If the dps init operand of the generic is a tensor.empty forward the pack
-  // op destination.
+  // Forward the new tensor.empty as a destination if it is one of the following
+  // situations:
+  // 1) The dps init operand is a tensor.empty.
+  // 2) The dps init is a write-only operand, i.e., it is not used in the
+  // genericOp
   Value dest = packedOutOperand;
-  if (auto initTensor = genericOp.getDpsInitOperand(0)
-                            ->get()
-                            .getDefiningOp<tensor::EmptyOp>()) {
+  auto initTensor =
+      genericOp.getDpsInitOperand(0)->get().getDefiningOp<tensor::EmptyOp>();
+  if (initTensor || isGenericOutsNotUsed(genericOp)) {
     dest = packOpDest;
   }
   // pack(unpack) isn't naively foldable because the unpack op can be from
@@ -1101,12 +1105,15 @@ pushDownUnPackOpThroughGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                                      genericOp, genericOp.getDpsInitOperand(0));
   auto destPack = packedOutOperand.getDefiningOp<linalg::PackOp>();
 
-  // If the dps init operand of the generic is a tensor.empty, do not pack it
-  // and forward the new tensor.empty as a destination.
+  // Forward the new tensor.empty as a destination if it is one of the following
+  // situations:
+  // 1) The dps init operand is a tensor.empty.
+  // 2) The dps init is a write-only operand, i.e., it is not used in the
+  // genericOp
   Value dest = packedOutOperand;
-  if (auto initTensor = genericOp.getDpsInitOperand(0)
-                            ->get()
-                            .getDefiningOp<tensor::EmptyOp>()) {
+  auto initTensor =
+      genericOp.getDpsInitOperand(0)->get().getDefiningOp<tensor::EmptyOp>();
+  if (initTensor || isGenericOutsNotUsed(genericOp)) {
     if (destPack)
       dest = destPack.getDest();
   }

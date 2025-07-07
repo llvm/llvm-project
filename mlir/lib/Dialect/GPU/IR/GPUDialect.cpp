@@ -106,6 +106,20 @@ int64_t GPUThreadMappingAttr::getRelativeIndex() const {
              : getMappingId();
 }
 
+int64_t GPULaneMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getLane());
+}
+
+bool GPULaneMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPULaneMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
+}
+
 int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
   return static_cast<int64_t>(getAddressSpace());
 }
@@ -1147,8 +1161,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernelSymbol;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = asyncDependencies.size();
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
@@ -1196,8 +1209,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernel;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = 0;
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
@@ -1329,6 +1341,49 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
         builder.create<arith::ConstantOp>(result.location,
                                           builder.getI32IntegerAttr(width)),
         mode);
+}
+
+//===----------------------------------------------------------------------===//
+// RotateOp
+//===----------------------------------------------------------------------===//
+
+void RotateOp::build(OpBuilder &builder, OperationState &result, Value value,
+                     int32_t offset, int32_t width) {
+  build(builder, result, value,
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(offset)),
+        builder.create<arith::ConstantOp>(result.location,
+                                          builder.getI32IntegerAttr(width)));
+}
+
+LogicalResult RotateOp::verify() {
+  auto offsetConstOp = getOffset().getDefiningOp<arith::ConstantOp>();
+  if (!offsetConstOp)
+    return emitOpError() << "offset is not a constant value";
+
+  auto offsetIntAttr =
+      llvm::dyn_cast<mlir::IntegerAttr>(offsetConstOp.getValue());
+
+  auto widthConstOp = getWidth().getDefiningOp<arith::ConstantOp>();
+  if (!widthConstOp)
+    return emitOpError() << "width is not a constant value";
+
+  auto widthIntAttr =
+      llvm::dyn_cast<mlir::IntegerAttr>(widthConstOp.getValue());
+
+  llvm::APInt offsetValue = offsetIntAttr.getValue();
+  llvm::APInt widthValue = widthIntAttr.getValue();
+
+  if (!widthValue.isPowerOf2())
+    return emitOpError() << "width must be a power of two";
+
+  if (offsetValue.sge(widthValue) || offsetValue.slt(0)) {
+    int64_t widthValueInt = widthValue.getSExtValue();
+    return emitOpError() << "offset must be in the range [0, " << widthValueInt
+                         << ")";
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
