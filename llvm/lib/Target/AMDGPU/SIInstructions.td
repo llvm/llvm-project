@@ -2497,33 +2497,6 @@ def : GCNPat<pat,
                                   $src1, /* clamp */ 0, /* op_sel */ 0)
 >;
 
-//def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
-//     (V_ALIGNBIT_B32_opsel_e64 0, /* src0_modifiers */
-//                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
-//                                0, /* src1_modifiers */
-//                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
-//                                0, /* src2_modifiers */
-//                                $src1, /* clamp */ 0, /* op_sel */ 0)
-//>;
-
-//def : GCNPat<(i32 (trunc (srl i64:$src0, (and i32:$src1, (i32 31))))),
-//     (V_ALIGNBIT_B32_opsel_e64 0, /* src0_modifiers */
-//                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
-//                                0, /* src1_modifiers */
-//                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
-//                                0, /* src2_modifiers */
-//                                $src1, /* clamp */ 0, /* op_sel */ 0)
-//>;
-
-//def : GCNPat<(i32 (trunc (srl i64:$src0, (i32 ShiftAmt32Imm:$src1)))),
-//     (V_ALIGNBIT_B32_opsel_e64 0, /* src0_modifiers */
-//                               (i32 (EXTRACT_SUBREG (i64 $src0), sub1)),
-//                                0, /* src1_modifiers */
-//                               (i32 (EXTRACT_SUBREG (i64 $src0), sub0)),
-//                                0, /* src2_modifiers */
-//                                $src1, /* clamp */ 0, /* op_sel */ 0)
-//>;
-
 def : GCNPat<(fshr i32:$src0, i32:$src1, i32:$src2),
         (V_ALIGNBIT_B32_opsel_e64 /* src0_modifiers */ 0, $src0,
                                   /* src1_modifiers */ 0, $src1,
@@ -3607,7 +3580,6 @@ def : GCNPat <
 // Take the upper 16 bits from V[0] and the lower 16 bits from V[1]
 // Special case, can use V_ALIGNBIT (always uses encoded literal)
 let True16Predicate = NotHasTrue16BitInsts in {
-
 defvar BuildVectorToAlignBitPat =
   (vecTy (DivergentBinFrag<build_vector>
     (Ty !if(!eq(Ty, i16),
@@ -3620,26 +3592,6 @@ def : GCNPat<BuildVectorToAlignBitPat, (V_ALIGNBIT_B32_e64 VGPR_32:$b, VGPR_32:$
 
 let SubtargetPredicate = isGFX9GFX10 in
 def : GCNPat<BuildVectorToAlignBitPat, (V_ALIGNBIT_B32_opsel_e64 0, VGPR_32:$b, 0, VGPR_32:$a, 0, (i32 16), 0, 0)>;
-
-//let SubtargetPredicate = isNotGFX9Plus in
-//def : GCNPat <
-//  (vecTy (DivergentBinFrag<build_vector>
-//    (Ty !if(!eq(Ty, i16),
-//      (Ty (trunc (srl VGPR_32:$a, (i32 16)))),
-//      (Ty (bitconvert (i16 (trunc (srl VGPR_32:$a, (i32 16)))))))),
-//    (Ty VGPR_32:$b))),
-//    (V_ALIGNBIT_B32_e64 VGPR_32:$b, VGPR_32:$a, (i32 16))
-//>;
-
-//let SubtargetPredicate = isGFX9GFX10 in
-//def : GCNPat <
-//  (vecTy (DivergentBinFrag<build_vector>
-//    (Ty !if(!eq(Ty, i16),
-//      (Ty (trunc (srl VGPR_32:$a, (i32 16)))),
-//      (Ty (bitconvert (i16 (trunc (srl VGPR_32:$a, (i32 16)))))))),
-//    (Ty VGPR_32:$b))),
-//    (V_ALIGNBIT_B32_opsel_e64 0, VGPR_32:$b, 0, VGPR_32:$a, 0, (i32 16), 0, 0)
-//>;
 } //True16Predicate = NotHasTrue16BitInsts
 
 let True16Predicate = UseFakeTrue16Insts in
