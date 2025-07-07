@@ -6519,11 +6519,11 @@ AST_POLYMORPHIC_MATCHER(
 /// Given
 /// \code
 ///   void a(int);
-///   void b(long);
+///   void b(unsigned long);
 ///   void c(double);
 /// \endcode
 /// functionDecl(hasAnyParameter(hasType(isInteger())))
-/// matches "a(int)", "b(long)", but not "c(double)".
+/// matches "a(int)", "b(unsigned long)", but not "c(double)".
 AST_MATCHER(QualType, isInteger) {
     return Node->isIntegerType();
 }
