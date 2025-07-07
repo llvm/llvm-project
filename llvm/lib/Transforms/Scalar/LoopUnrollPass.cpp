@@ -1172,7 +1172,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
-                    << L->getHeader()->getName() << "\n");
+                    << L->getHeader()->getName() << " Full=" << OnlyFullUnroll
+                    << " Loc=" << L->getLocStr() << "\n");
   TransformationMode TM = hasUnrollTransformation(L);
   if (TM & TM_Disable)
     return LoopUnrollResult::Unmodified;
@@ -1219,6 +1220,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
       ProvidedFullUnrollMaxCount);
   TargetTransformInfo::PeelingPreferences PP = gatherPeelingPreferences(
       L, SE, TTI, ProvidedAllowPeeling, ProvidedAllowProfileBasedPeeling, true);
+  LLVM_DEBUG(dbgs() << "  UP.Partial=" << UP.Partial
+                    << " UP.Runtime=" << UP.Runtime << "\n");
 
   // Exit early if unrolling is disabled. For OptForSize, we pick the loop size
   // as threshold later on.
