@@ -10,15 +10,15 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
+#include "llvm/Support/LogicalResult.h"
 #include <type_traits>
 
 using namespace mlir;
@@ -124,6 +125,41 @@ void transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
 
 LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
     verifyTypeConverter(transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+void transform::ApplyGPUToROCDLConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  populateGpuMemorySpaceAttributeConversions(
+      llvmTypeConverter, [](AddressSpace space) {
+        switch (space) {
+        case AddressSpace::Global:
+          return ROCDL::ROCDLDialect::kGlobalMemoryAddressSpace;
+        case AddressSpace::Workgroup:
+          return ROCDL::ROCDLDialect::kSharedMemoryAddressSpace;
+        case AddressSpace::Private:
+          return ROCDL::ROCDLDialect::kPrivateMemoryAddressSpace;
+        }
+        llvm_unreachable("unknown address space enum value");
+      });
+  FailureOr<amdgpu::Chipset> maybeChipset =
+      amdgpu::Chipset::parse(getChipset());
+  assert(llvm::succeeded(maybeChipset) && "expected valid chipset");
+  populateGpuToROCDLConversionPatterns(
+      llvmTypeConverter, patterns, mlir::gpu::amd::Runtime::HIP, *maybeChipset);
+}
+
+LogicalResult
+transform::ApplyGPUToROCDLConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  FailureOr<amdgpu::Chipset> maybeChipset =
+      amdgpu::Chipset::parse(getChipset());
+  if (failed(maybeChipset)) {
+    return emitOpError("Invalid chipset name: " + getChipset());
+  }
   if (builder.getTypeConverterType() != "LLVMTypeConverter")
     return emitOpError("expected LLVMTypeConverter");
   return success();
@@ -351,14 +387,23 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
     seen.insert(map);
   }
 
-  auto isLinear = [](Attribute a) {
-    return cast<DeviceMappingAttrInterface>(a).isLinearMapping();
+  auto isLinear = [](DeviceMappingAttrInterface attr) {
+    return attr.isLinearMapping();
   };
-  if (llvm::any_of(forallOp.getMapping()->getValue(), isLinear) &&
-      !llvm::all_of(forallOp.getMapping()->getValue(), isLinear)) {
+  if (llvm::any_of(forallOp.getDeviceMappingAttrs(), isLinear) &&
+      !llvm::all_of(forallOp.getDeviceMappingAttrs(), isLinear)) {
     return definiteFailureHelper(
         transformOp, forallOp,
         "cannot mix linear and non-linear mapping modes");
+  }
+
+  FailureOr<DeviceMaskingAttrInterface> maybeMaskingAttr =
+      forallOp.getDeviceMaskingAttr();
+  if (succeeded(maybeMaskingAttr) && *maybeMaskingAttr &&
+      !forallOp.usesLinearMapping()) {
+    return definiteFailureHelper(
+        transformOp, forallOp,
+        "device masking is only available in linear mapping mode");
   }
 
   return DiagnosedSilenceableFailure::success();
@@ -381,9 +426,7 @@ verifyGpuMapping(std::optional<TransformOpInterface> transformOp,
   if (forallOp.getNumResults() > 0)
     return definiteFailureHelper(transformOp, forallOp,
                                  "only bufferized scf.forall can be mapped");
-  bool useLinearMapping = cast<DeviceMappingAttrInterface>(
-                              forallOp.getMapping()->getValue().front())
-                              .isLinearMapping();
+  bool useLinearMapping = forallOp.usesLinearMapping();
   // TODO: This would be more natural with support for Optional<EnumParameter>
   // in GPUDeviceMappingAttr.
   int64_t maxNumMappingsSupported =
@@ -436,8 +479,10 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   assert(forallOp.isNormalized() && numParallelIterations.has_value() &&
          "requires statically sized, normalized forall op");
   SmallVector<int64_t> tmpMappingSizes = numParallelIterations.value();
+  SmallVector<DeviceMappingAttrInterface> forallMappingAttrsVec =
+      forallOp.getDeviceMappingAttrs();
   SetVector<Attribute> forallMappingAttrs;
-  forallMappingAttrs.insert_range(forallOp.getMapping()->getValue());
+  forallMappingAttrs.insert_range(forallMappingAttrsVec);
   auto comparator = [](Attribute a, Attribute b) -> bool {
     return cast<DeviceMappingAttrInterface>(a).getMappingId() <
            cast<DeviceMappingAttrInterface>(b).getMappingId();
@@ -682,12 +727,17 @@ DiagnosedSilenceableFailure transform::MapForallToBlocks::applyToOne(
 
   // The BlockIdBuilder adapts to whatever is thrown at it.
   bool useLinearMapping = false;
-  if (topLevelForallOp.getMapping()) {
-    auto mappingAttr = cast<DeviceMappingAttrInterface>(
-        topLevelForallOp.getMapping()->getValue().front());
-    useLinearMapping = mappingAttr.isLinearMapping();
-  }
-  GpuBlockIdBuilder gpuBlockIdBuilder(getContext(), useLinearMapping);
+  if (topLevelForallOp.getMapping())
+    useLinearMapping = topLevelForallOp.usesLinearMapping();
+
+  FailureOr<DeviceMaskingAttrInterface> maybeMaskingAttr =
+      topLevelForallOp.getDeviceMaskingAttr();
+  assert(succeeded(maybeMaskingAttr) && "unexpected failed maybeMaskingAttr");
+  assert((!*maybeMaskingAttr || useLinearMapping) &&
+         "masking requires linear mapping");
+
+  GpuBlockIdBuilder gpuBlockIdBuilder(getContext(), useLinearMapping,
+                                      *maybeMaskingAttr);
 
   diag = mlir::transform::gpu::mapForallToBlocksImpl(
       rewriter, transformOp, topLevelForallOp, gridDims, gpuBlockIdBuilder);
@@ -744,8 +794,8 @@ static DiagnosedSilenceableFailure
 getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
                    scf::ForallOp forallOp, ArrayRef<int64_t> blockSizes,
                    int64_t warpSize, GpuIdBuilder &gpuIdBuilder) {
-  auto mappingAttr = cast<DeviceMappingAttrInterface>(
-      forallOp.getMapping()->getValue().front());
+  DeviceMappingAttrInterface mappingAttr =
+      forallOp.getDeviceMappingAttrs().front();
   bool useLinearMapping = mappingAttr.isLinearMapping();
 
   // Sanity checks that may result in runtime verification errors.
@@ -768,21 +818,30 @@ getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
   if (!diag.succeeded())
     return diag;
 
+  FailureOr<DeviceMaskingAttrInterface> maybeMaskingAttr =
+      forallOp.getDeviceMaskingAttr();
+  assert(succeeded(maybeMaskingAttr) && "unexpected failed maybeMaskingAttr");
+  assert((!*maybeMaskingAttr || useLinearMapping) &&
+         "masking requires linear mapping");
+
   // Start mapping.
   MLIRContext *ctx = forallOp.getContext();
   gpuIdBuilder =
       TypeSwitch<DeviceMappingAttrInterface, GpuIdBuilder>(mappingAttr)
           .Case([&](GPUWarpgroupMappingAttr) {
-            return GpuWarpgroupIdBuilder(ctx, warpSize, useLinearMapping);
+            return GpuWarpgroupIdBuilder(ctx, warpSize, useLinearMapping,
+                                         *maybeMaskingAttr);
           })
           .Case([&](GPUWarpMappingAttr) {
-            return GpuWarpIdBuilder(ctx, warpSize, useLinearMapping);
+            return GpuWarpIdBuilder(ctx, warpSize, useLinearMapping,
+                                    *maybeMaskingAttr);
           })
           .Case([&](GPUThreadMappingAttr) {
-            return GpuThreadIdBuilder(ctx, useLinearMapping);
+            return GpuThreadIdBuilder(ctx, useLinearMapping, *maybeMaskingAttr);
           })
           .Case([&](GPULaneMappingAttr) {
-            return GpuLaneIdBuilder(ctx, warpSize, useLinearMapping);
+            return GpuLaneIdBuilder(ctx, warpSize, useLinearMapping,
+                                    *maybeMaskingAttr);
           })
           .Default([&](DeviceMappingAttrInterface) -> GpuIdBuilder {
             llvm_unreachable("unknown mapping attribute");
