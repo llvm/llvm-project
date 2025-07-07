@@ -1173,6 +1173,25 @@ bool HasVectorSubscript(const Expr<SomeType> &expr) {
   return HasVectorSubscriptHelper{}(expr);
 }
 
+// HasTriplet()
+struct HasTripletHelper
+    : public AnyTraverse<HasTripletHelper, bool,
+          /*TraverseAssocEntityDetails=*/false> {
+  using Base = AnyTraverse<HasTripletHelper, bool, false>;
+  HasTripletHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const Subscript &ss) const {
+    return std::holds_alternative<Triplet>(ss.u);
+  }
+  bool operator()(const ProcedureRef &) const {
+    return false; // don't descend into function call arguments
+  }
+};
+
+bool HasTriplet(const Expr<SomeType> &expr) {
+  return HasTripletHelper{}(expr);
+}
+
 // HasConstant()
 struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
                                /*TraverseAssocEntityDetails=*/false> {
