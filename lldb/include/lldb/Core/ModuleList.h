@@ -482,6 +482,9 @@ public:
 
   static bool RemoveSharedModuleIfOrphaned(const Module *module_ptr);
 
+  /// Empty global cache of modules to release memory, file locks, etc.
+  static void ClearSharedModules();
+
   /// Applies 'callback' to each module in this ModuleList.
   /// If 'callback' returns false, iteration terminates.
   /// The 'module_sp' passed to 'callback' is guaranteed to

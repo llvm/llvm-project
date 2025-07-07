@@ -700,6 +700,17 @@ bool Debugger::SetShowInlineDiagnostics(bool b) {
   return SetPropertyAtIndex(idx, b);
 }
 
+bool Debugger::GetClearSharedModules() const {
+  const uint32_t idx = ePropertyClearSharedModules;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_debugger_properties[idx].default_uint_value);
+}
+
+bool Debugger::SetClearSharedModules(bool b) {
+  const uint32_t idx = ePropertyClearSharedModules;
+  return SetPropertyAtIndex(idx, b);
+}
+
 #pragma mark Debugger
 
 // const DebuggerPropertiesSP &
@@ -1092,6 +1103,8 @@ void Debugger::Clear() {
     StopIOHandlerThread();
     StopEventHandlerThread();
     m_listener_sp->Clear();
+    if (GetClearSharedModules())
+      ModuleList::ClearSharedModules();
     for (TargetSP target_sp : m_target_list.Targets()) {
       if (target_sp) {
         if (ProcessSP process_sp = target_sp->GetProcessSP())

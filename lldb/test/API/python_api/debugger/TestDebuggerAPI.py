@@ -294,3 +294,33 @@ class DebuggerAPITestCase(TestBase):
 
         self.assertEqual(instance_str, class_str)
         self.assertEqual(class_str, property_str)
+
+    def test_default_SetClearSharedModules(self):
+        """Check that that SBDebugger does not clear shared modules by
+        default.
+        """
+        messages = list()
+        self.dbg.SetLoggingCallback(messages.append)
+        self.runCmd("log enable lldb module")
+        self.dbg.Destroy(self.dbg)
+        self.assertFalse(any("cleared shared modules cache" in msg for msg in messages))
+
+    def test_enable_SetClearSharedModules(self):
+        """Check that SetClearSharedModule(true) clears shared module cache."""
+        messages = list()
+        self.dbg.SetLoggingCallback(messages.append)
+        self.dbg.SetClearSharedModules(True)
+        self.runCmd("log enable lldb module")
+        self.dbg.Destroy(self.dbg)
+        self.assertTrue(any("cleared shared modules" in msg for msg in messages))
+
+    def test_enable_clear_shared_modules(self):
+        """Check that clear-shared-module setting is equivalent
+        to SetClearSharedModules(true).
+        """
+        messages = list()
+        self.dbg.SetLoggingCallback(messages.append)
+        self.runCmd("settings set clear-shared-modules true")
+        self.runCmd("log enable lldb module")
+        self.dbg.Destroy(self.dbg)
+        self.assertTrue(any("cleared shared modules" in msg for msg in messages))
