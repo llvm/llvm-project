@@ -68,7 +68,7 @@ LogicalResult Serializer::processConstantOp(spirv::ConstantOp op) {
 
 LogicalResult Serializer::processConstantCompositeReplicateOp(
     spirv::EXTConstantCompositeReplicateOp op) {
-  if (auto resultID = prepareConstantCompositeReplicate(op)) {
+  if (uint32_t resultID = prepareConstantCompositeReplicate(op)) {
     valueIDMap[op.getResult()] = resultID;
     return success();
   }
@@ -135,14 +135,14 @@ LogicalResult Serializer::processSpecConstantCompositeReplicateOp(
   }
 
   auto constituent = dyn_cast<FlatSymbolRefAttr>(op.getConstituent());
-  auto constituentName = constituent.getValue();
-  auto constituentID = getSpecConstID(constituentName);
+  StringRef constituentName = constituent.getValue();
+  uint32_t constituentID = getSpecConstID(constituentName);
   if (!constituentID) {
     return op.emitError("unknown result <id> for replicated spec constant ")
            << constituentName;
   }
 
-  auto resultID = getNextID();
+  uint32_t resultID = getNextID();
   SmallVector<uint32_t> operands = {typeID, resultID, constituentID};
 
   encodeInstructionInto(typesGlobalValues,

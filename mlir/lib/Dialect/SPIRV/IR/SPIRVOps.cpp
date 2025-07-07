@@ -779,13 +779,13 @@ spirv::EXTConstantCompositeReplicateOp::parse(OpAsmParser &parser,
     return failure();
   }
 
-  if (llvm::isa<TensorType>(compositeType)) {
+  if (isa<TensorType>(compositeType)) {
     if (parser.parseColonType(compositeType))
       return failure();
   }
 
-  auto constType = cast<spirv::CompositeType>(compositeType).getElementType(0);
-  while (auto type = llvm::dyn_cast<spirv::ArrayType>(constType)) {
+  Type constType = cast<spirv::CompositeType>(compositeType).getElementType(0);
+  while (auto type = dyn_cast<spirv::ArrayType>(constType)) {
     constType = type.getElementType();
   }
 

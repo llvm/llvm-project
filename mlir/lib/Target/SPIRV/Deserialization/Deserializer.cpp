@@ -680,10 +680,10 @@ spirv::Deserializer::getConstant(uint32_t id) {
 
 std::optional<std::pair<uint32_t, Type>>
 spirv::Deserializer::getConstantCompositeReplicate(uint32_t id) {
-  auto constIt = constantCompositeReplicateMap.find(id);
-  if (constIt == constantCompositeReplicateMap.end())
-    return std::nullopt;
-  return constIt->getSecond();
+  if (auto it = constantCompositeReplicateMap.find(id);
+      it != constantCompositeReplicateMap.end())
+    return it->second;
+  return std::nullopt;
 }
 
 std::optional<spirv::SpecConstOperationMaterializationInfo>
@@ -1564,7 +1564,6 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
 
 LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
     ArrayRef<uint32_t> operands) {
-
   if (operands.size() != 3) {
     return emitError(
         unknownLoc,
@@ -1585,11 +1584,12 @@ LogicalResult spirv::Deserializer::processConstantCompositeReplicateEXT(
            << operands[0];
   }
 
-  auto resultID = operands[1];
-  auto constantID = operands[2];
+  uint32_t resultID = operands[1];
+  uint32_t constantID = operands[2];
 
-  auto constantInfo = getConstant(constantID);
-  auto replicatedConstantCompositeInfo =
+  std::optional<std::pair<Attribute, Type>> constantInfo =
+      getConstant(constantID);
+  std::optional<std::pair<uint32_t, Type>> replicatedConstantCompositeInfo =
       getConstantCompositeReplicate(constantID);
   if (!constantInfo && !replicatedConstantCompositeInfo) {
     return emitError(unknownLoc,
@@ -1642,7 +1642,6 @@ spirv::Deserializer::processSpecConstantComposite(ArrayRef<uint32_t> operands) {
 
 LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
     ArrayRef<uint32_t> operands) {
-
   if (operands.size() != 3) {
     return emitError(unknownLoc,
                      "OpSpecConstantCompositeReplicateEXT must have "
@@ -1663,10 +1662,11 @@ LogicalResult spirv::Deserializer::processSpecConstantCompositeReplicateEXT(
            << operands[0];
   }
 
-  auto resultID = operands[1];
+  uint32_t resultID = operands[1];
 
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
-  auto constituentSpecConstantOp = getSpecConstant(operands[2]);
+  spirv::SpecConstantOp constituentSpecConstantOp =
+      getSpecConstant(operands[2]);
   auto op = opBuilder.create<spirv::EXTSpecConstantCompositeReplicateOp>(
       unknownLoc, TypeAttr::get(resultType), symName,
       SymbolRefAttr::get(constituentSpecConstantOp));
