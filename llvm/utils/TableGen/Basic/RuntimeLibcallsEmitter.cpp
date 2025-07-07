@@ -318,9 +318,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     SetTheory Sets;
 
     DenseMap<const Record *, std::vector<const Record *>> Func2Preds;
-    Sets.addExpander(
-        "LibcallImpls",
-        std::make_unique<LibcallPredicateExpander>(*this, Func2Preds));
+    Sets.addExpander("LibcallImpls", std::make_unique<LibcallPredicateExpander>(
+                                         *this, Func2Preds));
 
     const SetTheory::RecVec *Elements =
         Sets.expand(R->getValueAsDef("MemberList"));
