@@ -1525,8 +1525,8 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibstdcppMapIteratorSyntheticFrontEndCreator,
-      "std::map iterator synthetic children", "^std::_Rb_tree_iterator<.+>$",
-      stl_synth_flags, true);
+      "std::map iterator synthetic children",
+      "^std::_Rb_tree_(const_)?iterator<.+>$", stl_synth_flags, true);
 
   AddCXXSynthetic(
       cpp_category_sp,
