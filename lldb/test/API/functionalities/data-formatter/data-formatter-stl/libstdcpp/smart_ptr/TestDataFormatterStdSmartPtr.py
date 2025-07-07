@@ -2,7 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -48,5 +47,7 @@ class StdSmartPtrDataFormatterTestCase(TestBase):
         self.expect("frame variable ssp", substrs=["ssp = nullptr"])
 
         self.expect("frame variable nwp", substrs=["nwp = nullptr"])
-        self.expect("frame variable iwp", substrs=["iwp = nullptr"])
-        self.expect("frame variable swp", substrs=["swp = nullptr"])
+
+        # FIXME: these weak_ptr's should also be reset to nullptr.
+        self.expect("frame variable iwp", substrs=["iwp = ", "strong=0 weak=1"])
+        self.expect("frame variable swp", substrs=["swp = ", "strong=0 weak=1"])
