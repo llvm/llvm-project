@@ -139,9 +139,8 @@ public:
 
   OriginID get(const Expr &E) {
     // Origin of DeclRefExpr is that of the declaration it refers to.
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(&E)) {
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(&E))
       return get(*DRE->getDecl());
-    }
     auto It = ExprToOriginID.find(&E);
     // TODO: This should be an assert(It != ExprToOriginID.end()). The current
     // implementation falls back to getOrCreate to avoid crashing on
