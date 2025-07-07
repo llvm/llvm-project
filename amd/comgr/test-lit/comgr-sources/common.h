@@ -38,6 +38,17 @@
     }                                                                          \
   } while (false)
 
+#define fail_amd_comgr_(call)                                                  \
+  do {                                                                         \
+    amd_comgr_status_t status = amd_comgr_##call;                              \
+    if (status == AMD_COMGR_STATUS_SUCCESS) {                                  \
+      const char *reason = "";                                                 \
+      amd_comgr_status_string(status, &reason);                                \
+      fail(#call " expected fail: %s\n  file, line: %s, %d\n", reason,         \
+           __FILE__, __LINE__);                                                \
+    }                                                                          \
+  } while (false)
+
 static void fail(const char *format, ...) {
   va_list ap;
   va_start(ap, format);
