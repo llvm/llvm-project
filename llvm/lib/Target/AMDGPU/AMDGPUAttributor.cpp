@@ -1452,11 +1452,12 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
                 Instruction *I = IRP.getCtxI();
                 if (!I)
                   return;
-                if (auto *II = dyn_cast<IntrinsicInst>(I))
+                if (auto *II = dyn_cast<IntrinsicInst>(I)) {
                   if (II->getIntrinsicID() ==
                       Intrinsic::amdgcn_make_buffer_rsrc)
                     Values.push_back(
                         AA::ValueAndContext{*I->getOperand(0), nullptr});
+                }
               };
           A.registerAlignmentCallback(IRP, ACB);
 
