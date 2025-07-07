@@ -367,6 +367,11 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
   if (!Params.has_value())
     return std::nullopt;
 
+  if (consumeExpectedToken(TokenKind::pu_r_paren,
+                           diag::err_hlsl_unexpected_end_of_params,
+                           /*param of=*/TokenKind::kw_StaticSampler))
+    return std::nullopt;
+
   // Check mandatory parameters were provided
   if (!Params->Reg.has_value()) {
     reportDiag(diag::err_hlsl_rootsig_missing_param) << TokenKind::sReg;
@@ -411,11 +416,6 @@ std::optional<StaticSampler> RootSignatureParser::parseStaticSampler() {
 
   if (Params->Visibility.has_value())
     Sampler.Visibility = Params->Visibility.value();
-
-  if (consumeExpectedToken(TokenKind::pu_r_paren,
-                           diag::err_hlsl_unexpected_end_of_params,
-                           /*param of=*/TokenKind::kw_StaticSampler))
-    return std::nullopt;
 
   return Sampler;
 }
@@ -664,9 +664,9 @@ RootSignatureParser::parseStaticSamplerParams() {
          "Expects to only be invoked starting at given token");
 
   ParsedStaticSamplerParams Params;
-  do {
-    // `s` POS_INT
+  while (!peekExpectedToken(TokenKind::pu_r_paren)) {
     if (tryConsumeExpectedToken(TokenKind::sReg)) {
+      // `s` POS_INT
       if (Params.Reg.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -675,10 +675,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!Reg.has_value())
         return std::nullopt;
       Params.Reg = Reg;
-    }
-
-    // `filter` `=` FILTER
-    if (tryConsumeExpectedToken(TokenKind::kw_filter)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_filter)) {
+      // `filter` `=` FILTER
       if (Params.Filter.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -691,10 +689,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!Filter.has_value())
         return std::nullopt;
       Params.Filter = Filter;
-    }
-
-    // `addressU` `=` TEXTURE_ADDRESS
-    if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_addressU)) {
+      // `addressU` `=` TEXTURE_ADDRESS
       if (Params.AddressU.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -707,10 +703,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!AddressU.has_value())
         return std::nullopt;
       Params.AddressU = AddressU;
-    }
-
-    // `addressV` `=` TEXTURE_ADDRESS
-    if (tryConsumeExpectedToken(TokenKind::kw_addressV)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_addressV)) {
+      // `addressV` `=` TEXTURE_ADDRESS
       if (Params.AddressV.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -723,10 +717,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!AddressV.has_value())
         return std::nullopt;
       Params.AddressV = AddressV;
-    }
-
-    // `addressW` `=` TEXTURE_ADDRESS
-    if (tryConsumeExpectedToken(TokenKind::kw_addressW)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_addressW)) {
+      // `addressW` `=` TEXTURE_ADDRESS
       if (Params.AddressW.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -739,10 +731,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!AddressW.has_value())
         return std::nullopt;
       Params.AddressW = AddressW;
-    }
-
-    // `mipLODBias` `=` NUMBER
-    if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_mipLODBias)) {
+      // `mipLODBias` `=` NUMBER
       if (Params.MipLODBias.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -755,10 +745,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MipLODBias.has_value())
         return std::nullopt;
       Params.MipLODBias = MipLODBias;
-    }
-
-    // `maxAnisotropy` `=` POS_INT
-    if (tryConsumeExpectedToken(TokenKind::kw_maxAnisotropy)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_maxAnisotropy)) {
+      // `maxAnisotropy` `=` POS_INT
       if (Params.MaxAnisotropy.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -771,10 +759,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MaxAnisotropy.has_value())
         return std::nullopt;
       Params.MaxAnisotropy = MaxAnisotropy;
-    }
-
-    // `comparisonFunc` `=` COMPARISON_FUNC
-    if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_comparisonFunc)) {
+      // `comparisonFunc` `=` COMPARISON_FUNC
       if (Params.CompFunc.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -787,10 +773,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!CompFunc.has_value())
         return std::nullopt;
       Params.CompFunc = CompFunc;
-    }
-
-    // `borderColor` `=` STATIC_BORDER_COLOR
-    if (tryConsumeExpectedToken(TokenKind::kw_borderColor)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_borderColor)) {
+      // `borderColor` `=` STATIC_BORDER_COLOR
       if (Params.BorderColor.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -803,10 +787,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!BorderColor.has_value())
         return std::nullopt;
       Params.BorderColor = BorderColor;
-    }
-
-    // `minLOD` `=` NUMBER
-    if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_minLOD)) {
+      // `minLOD` `=` NUMBER
       if (Params.MinLOD.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -819,10 +801,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MinLOD.has_value())
         return std::nullopt;
       Params.MinLOD = MinLOD;
-    }
-
-    // `maxLOD` `=` NUMBER
-    if (tryConsumeExpectedToken(TokenKind::kw_maxLOD)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_maxLOD)) {
+      // `maxLOD` `=` NUMBER
       if (Params.MaxLOD.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -835,10 +815,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!MaxLOD.has_value())
         return std::nullopt;
       Params.MaxLOD = MaxLOD;
-    }
-
-    // `space` `=` POS_INT
-    if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_space)) {
+      // `space` `=` POS_INT
       if (Params.Space.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -851,10 +829,8 @@ RootSignatureParser::parseStaticSamplerParams() {
       if (!Space.has_value())
         return std::nullopt;
       Params.Space = Space;
-    }
-
-    // `visibility` `=` SHADER_VISIBILITY
-    if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+    } else if (tryConsumeExpectedToken(TokenKind::kw_visibility)) {
+      // `visibility` `=` SHADER_VISIBILITY
       if (Params.Visibility.has_value()) {
         reportDiag(diag::err_hlsl_rootsig_repeat_param) << CurToken.TokKind;
         return std::nullopt;
@@ -868,7 +844,11 @@ RootSignatureParser::parseStaticSamplerParams() {
         return std::nullopt;
       Params.Visibility = Visibility;
     }
-  } while (tryConsumeExpectedToken(TokenKind::pu_comma));
+
+    // ',' denotes another element, otherwise, expected to be at ')'
+    if (!tryConsumeExpectedToken(TokenKind::pu_comma))
+      break;
+  }
 
   return Params;
 }
