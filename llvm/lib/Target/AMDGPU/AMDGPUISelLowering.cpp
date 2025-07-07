@@ -4842,6 +4842,64 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   return SDValue();
 }
 
+static EVT IntToFloatVT(EVT VT) {
+  return VT = VT.isVector() ? MVT::getVectorVT(MVT::getFloatingPointVT(
+                                                   VT.getScalarSizeInBits()),
+                                               VT.getVectorNumElements())
+                            : MVT::getFloatingPointVT(VT.getFixedSizeInBits());
+}
+
+static SDValue BitwiseToSrcModifierOp(SDValue N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+
+  unsigned Opc = N.getNode()->getOpcode();
+  if (Opc != ISD::AND && Opc != ISD::XOR && Opc != ISD::AND)
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue LHS = N.getNode()->getOperand(0);
+  SDValue RHS = N.getNode()->getOperand(1);
+  ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
+
+  if (!CRHS)
+    return SDValue();
+
+  EVT VT = RHS.getValueType();
+
+  assert((VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) &&
+         "Expected i32, v2i32 or i64 value type.");
+
+  uint64_t Mask = 0;
+  if (VT.isVector()) {
+    SDValue Splat = DAG.getSplatValue(RHS);
+    const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Splat);
+    Mask = C->getZExtValue();
+  } else
+    Mask = CRHS->getZExtValue();
+
+  EVT FVT = IntToFloatVT(VT);
+  SDValue BC = DAG.getNode(ISD::BITCAST, SDLoc(N), FVT, LHS);
+
+  switch (Opc) {
+  case ISD::XOR:
+    if (Mask == 0x80000000u || Mask == 0x8000000000000000u)
+      return DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
+    return SDValue();
+  case ISD::OR:
+    if (Mask == 0x80000000u || Mask == 0x8000000000000000u) {
+      SDValue Abs = DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
+      return DAG.getNode(ISD::FABS, SDLoc(N), FVT, Abs);
+    }
+    return SDValue();
+  case ISD::AND:
+    if (Mask == 0x7fffffffu || Mask == 0x7fffffffffffffffu)
+      return DAG.getNode(ISD::FABS, SDLoc(N), FVT, BC);
+    return SDValue();
+  default:
+    return SDValue();
+  }
+}
+
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   if (SDValue Folded = foldFreeOpFromSelect(DCI, SDValue(N, 0)))
@@ -4876,11 +4934,24 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
     }
 
     if (VT == MVT::f32 && Subtarget->hasFminFmaxLegacy()) {
-      SDValue MinMax
-        = combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
+      SDValue MinMax =
+          combineFMinMaxLegacy(SDLoc(N), VT, LHS, RHS, True, False, CC, DCI);
       // Revisit this node so we can catch min3/max3/med3 patterns.
-      //DCI.AddToWorklist(MinMax.getNode());
+      // DCI.AddToWorklist(MinMax.getNode());
       return MinMax;
+    }
+
+    // Support source modifiers as integer.
+    if (VT == MVT::i32 || VT == MVT::v2i32 || VT == MVT::i64) {
+      SDLoc SL(N);
+      SDValue LHS = N->getOperand(1);
+      SDValue RHS = N->getOperand(2);
+      if (SDValue SrcMod = BitwiseToSrcModifierOp(LHS, DCI)) {
+        SDValue FRHS = DAG.getNode(ISD::BITCAST, SL, VT, RHS);
+        SDValue FSelect = DAG.getNode(ISD::SELECT, SL, VT, Cond, SrcMod, FRHS);
+        SDValue BC = DAG.getNode(ISD::BITCAST, SL, VT, FSelect);
+        return BC;
+      }
     }
   }
 
