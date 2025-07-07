@@ -79,6 +79,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRSupport
   MLIRTransformUtils
   MLIRVectorDialect
+  MLIRXeVMDialect
   )
 
 add_subdirectory(TransformOps)
