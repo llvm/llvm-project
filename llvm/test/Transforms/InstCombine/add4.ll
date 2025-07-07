@@ -293,8 +293,8 @@ entry:
 define i32 @fold_add_udiv_urem_no_mul(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_no_mul(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[DIV]], -9
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[VAL]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[DIV]], [[REM]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %div = udiv i32 %val, 10
@@ -306,9 +306,9 @@ define i32 @fold_add_udiv_urem_no_mul(i32 noundef %val) {
 define i32 @fold_add_udiv_urem_rem_mul(i32 noundef %val) {
 ; CHECK-LABEL: @fold_add_udiv_urem_rem_mul(
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[VAL:%.*]], 10
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[VAL]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[DIV]], -29
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[VAL]], 10
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[REM]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[DIV]], [[MUL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %div = udiv i32 %val, 10
@@ -321,8 +321,8 @@ define i32 @fold_add_udiv_urem_rem_mul(i32 noundef %val) {
 define i32 @fold_add_udiv_urem_pow2_no_mul(i32 noundef %arg) {
 ; CHECK-LABEL: @fold_add_udiv_urem_pow2_no_mul(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[LSHR]], -15
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP1]], [[ARG]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG]], 15
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LSHR]], [[AND]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %lshr = lshr i32 %arg, 4
@@ -348,9 +348,9 @@ define i32 @fold_add_udiv_urem_pow2_div_mul(i32 noundef %arg) {
 define i32 @fold_add_udiv_urem_pow2_rem_mul(i32 noundef %arg) {
 ; CHECK-LABEL: @fold_add_udiv_urem_pow2_rem_mul(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 [[ARG:%.*]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[ARG]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[LSHR]], -47
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG]], 15
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[AND]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[LSHR]], [[MUL]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %lshr = lshr i32 %arg, 4

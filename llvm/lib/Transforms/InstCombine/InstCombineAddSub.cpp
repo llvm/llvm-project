@@ -1193,8 +1193,10 @@ Value *InstCombinerImpl::SimplifyAddWithRemainder(BinaryOperator &I) {
   }
   Value *DivOpV;
   APInt DivOpC;
+  // The transform is valid for C1==1, but not profitable.
   if (MatchRem(Rem, X, C0, IsSigned) &&
-      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC) {
+      MatchDiv(Div, DivOpV, DivOpC, IsSigned) && X == DivOpV && C0 == DivOpC &&
+      !C1.isOne()) {
     APInt NewC = C1 - C2 * C0;
     if (!NewC.isZero() && !Rem->hasOneUse())
       return nullptr;
