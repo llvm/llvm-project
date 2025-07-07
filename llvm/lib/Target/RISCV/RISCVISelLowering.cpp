@@ -4239,8 +4239,8 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
   if ((EltVT == MVT::f16 && !Subtarget.hasStdExtZvfh()) || EltVT == MVT::bf16) {
     MVT IVT = VT.changeVectorElementType(MVT::i16);
     SmallVector<SDValue, 16> NewOps(Op.getNumOperands());
-    for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
-      SDValue Elem = Op.getOperand(I);
+    for (const auto &[I, U] : enumerate(Op->ops())) {
+      SDValue Elem = U.get();
       if ((EltVT == MVT::bf16 && Subtarget.hasStdExtZfbfmin()) ||
           (EltVT == MVT::f16 && Subtarget.hasStdExtZfhmin())) {
         // Called by LegalizeDAG, we need to use XLenVT operations since we
@@ -4379,16 +4379,16 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     SDValue UndefElem = DAG.getUNDEF(Op->getOperand(0)->getValueType(0));
     SubVecAOps.reserve(NumElts);
     SubVecBOps.reserve(NumElts);
-    for (unsigned i = 0; i < NumElts; i++) {
-      SDValue Elem = Op->getOperand(i);
-      if (i < NumElts / 2) {
+    for (const auto &[Idx, U] : enumerate(Op->ops())) {
+      SDValue Elem = U.get();
+      if (Idx < NumElts / 2) {
         SubVecAOps.push_back(Elem);
         SubVecBOps.push_back(UndefElem);
       } else {
         SubVecAOps.push_back(UndefElem);
         SubVecBOps.push_back(Elem);
       }
-      bool SelectMaskVal = (i < NumElts / 2);
+      bool SelectMaskVal = (Idx < NumElts / 2);
       MaskVals.push_back(DAG.getConstant(SelectMaskVal, DL, XLenVT));
     }
     assert(SubVecAOps.size() == NumElts && SubVecBOps.size() == NumElts &&
@@ -4769,16 +4769,15 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
                           ArrayRef<int> Mask, unsigned Factor,
                           bool RequiredPolarity) {
   int NumElts = Mask.size();
-  for (int i = 0; i != NumElts; ++i) {
-    int M = Mask[i];
+  for (const auto &[Idx, M] : enumerate(Mask)) {
     if (M < 0)
       continue;
     int Src = M >= NumElts;
-    int Diff = (int)i - (M % NumElts);
+    int Diff = (int)Idx - (M % NumElts);
     bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
     assert(C != (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
            "Must match exactly one of the two slides");
-    if (RequiredPolarity != (C == (i / Factor) % 2))
+    if (RequiredPolarity != (C == (Idx / Factor) % 2))
       return false;
   }
   return true;
@@ -5503,18 +5502,18 @@ static SDValue lowerShuffleViaVRegSplitting(ShuffleVectorSDNode *SVN,
 static bool isCompressMask(ArrayRef<int> Mask) {
   int Last = -1;
   bool SawUndef = false;
-  for (unsigned i = 0; i < Mask.size(); i++) {
-    if (Mask[i] == -1) {
+  for (const auto &[Idx, M] : enumerate(Mask)) {
+    if (M == -1) {
       SawUndef = true;
       continue;
     }
     if (SawUndef)
       return false;
-    if (i > (unsigned)Mask[i])
+    if (Idx > (unsigned)M)
       return false;
-    if (Mask[i] <= Last)
+    if (M <= Last)
       return false;
-    Last = Mask[i];
+    Last = M;
   }
   return true;
 }
@@ -5906,8 +5905,8 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // otherwise reuse the even stream for the undef one.  This improves
     // spread(2) shuffles.
     bool LaneIsUndef[2] = { true, true};
-    for (unsigned i = 0; i < Mask.size(); i++)
-      LaneIsUndef[i % 2] &= (Mask[i] == -1);
+    for (const auto &[Idx, M] : enumerate(Mask))
+      LaneIsUndef[Idx % 2] &= (M == -1);
 
     int Size = Mask.size();
     SDValue EvenV, OddV;
@@ -6019,14 +6018,14 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // undefined in the mask.  If the mask ends up all true (or undef), it
     // will be folded away by general logic.
     SmallVector<SDValue> MaskVals;
-    for (unsigned i = 0; i != Mask.size(); ++i) {
-      int M = Mask[i];
-      if (M < 0 || (SrcInfo[1].second > 0 && i < (unsigned)SrcInfo[1].second)) {
+    for (const auto &[Idx, M] : enumerate(Mask)) {
+      if (M < 0 ||
+          (SrcInfo[1].second > 0 && Idx < (unsigned)SrcInfo[1].second)) {
         MaskVals.push_back(DAG.getUNDEF(XLenVT));
         continue;
       }
       int Src = M >= (int)NumElts;
-      int Diff = (int)i - (M % NumElts);
+      int Diff = (int)Idx - (M % NumElts);
       bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
       assert(C ^ (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
              "Must match exactly one of the two slides");
@@ -21938,22 +21937,21 @@ void RISCVTargetLowering::analyzeInputArgs(
     MachineFunction &MF, CCState &CCInfo,
     const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
     RISCVCCAssignFn Fn) const {
-  unsigned NumArgs = Ins.size();
   FunctionType *FType = MF.getFunction().getFunctionType();
 
-  for (unsigned i = 0; i != NumArgs; ++i) {
-    MVT ArgVT = Ins[i].VT;
-    ISD::ArgFlagsTy ArgFlags = Ins[i].Flags;
+  for (const auto &[Idx, In] : enumerate(Ins)) {
+    MVT ArgVT = In.VT;
+    ISD::ArgFlagsTy ArgFlags = In.Flags;
 
     Type *ArgTy = nullptr;
     if (IsRet)
       ArgTy = FType->getReturnType();
-    else if (Ins[i].isOrigArg())
-      ArgTy = FType->getParamType(Ins[i].getOrigArgIndex());
+    else if (In.isOrigArg())
+      ArgTy = FType->getParamType(In.getOrigArgIndex());
 
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
+    if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
            /*IsFixed=*/true, IsRet, ArgTy)) {
-      LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
+      LLVM_DEBUG(dbgs() << "InputArg #" << Idx << " has unhandled type "
                         << ArgVT << '\n');
       llvm_unreachable(nullptr);
     }
@@ -21964,16 +21962,14 @@ void RISCVTargetLowering::analyzeOutputArgs(
     MachineFunction &MF, CCState &CCInfo,
     const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsRet,
     CallLoweringInfo *CLI, RISCVCCAssignFn Fn) const {
-  unsigned NumArgs = Outs.size();
+  for (const auto &[Idx, Out] : enumerate(Outs)) {
+    MVT ArgVT = Out.VT;
+    ISD::ArgFlagsTy ArgFlags = Out.Flags;
+    Type *OrigTy = CLI ? CLI->getArgs()[Out.OrigArgIndex].Ty : nullptr;
 
-  for (unsigned i = 0; i != NumArgs; i++) {
-    MVT ArgVT = Outs[i].VT;
-    ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
-    Type *OrigTy = CLI ? CLI->getArgs()[Outs[i].OrigArgIndex].Ty : nullptr;
-
-    if (Fn(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo,
-           Outs[i].IsFixed, IsRet, OrigTy)) {
-      LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
+    if (Fn(Idx, ArgVT, ArgVT, CCValAssign::Full, ArgFlags, CCInfo, Out.IsFixed,
+           IsRet, OrigTy)) {
+      LLVM_DEBUG(dbgs() << "OutputArg #" << Idx << " has unhandled type "
                         << ArgVT << "\n");
       llvm_unreachable(nullptr);
     }
