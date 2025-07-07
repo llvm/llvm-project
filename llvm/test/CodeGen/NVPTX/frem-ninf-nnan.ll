@@ -1,4 +1,4 @@
-; RUN: llc %s --stop-after=nvptx-isel -mcpu=sm_60 -o - | FileCheck %s
+; RUN: llc %s --stop-after=finalize-isel -mcpu=sm_60 -o - | FileCheck %s
 
 target triple = "nvptx64-unknown-cuda"
 
