@@ -12499,21 +12499,14 @@ bool ScalarEvolution::isImpliedCondOperands(CmpPredicate Pred, const SCEV *LHS,
                                             const SCEV *FoundLHS,
                                             const SCEV *FoundRHS,
                                             const Instruction *CtxI) {
-  if (isImpliedCondOperandsViaRanges(Pred, LHS, RHS, Pred, FoundLHS, FoundRHS))
-    return true;
-
-  if (isImpliedCondOperandsViaNoOverflow(Pred, LHS, RHS, FoundLHS, FoundRHS))
-    return true;
-
-  if (isImpliedCondOperandsViaShift(Pred, LHS, RHS, FoundLHS, FoundRHS))
-    return true;
-
-  if (isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
-                                          CtxI))
-    return true;
-
-  return isImpliedCondOperandsHelper(Pred, LHS, RHS,
-                                     FoundLHS, FoundRHS);
+  return isImpliedCondOperandsViaRanges(Pred, LHS, RHS, Pred, FoundLHS,
+                                        FoundRHS) ||
+         isImpliedCondOperandsViaNoOverflow(Pred, LHS, RHS, FoundLHS,
+                                            FoundRHS) ||
+         isImpliedCondOperandsViaShift(Pred, LHS, RHS, FoundLHS, FoundRHS) ||
+         isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
+                                             CtxI) ||
+         isImpliedCondOperandsHelper(Pred, LHS, RHS, FoundLHS, FoundRHS);
 }
 
 /// Is MaybeMinMaxExpr an (U|S)(Min|Max) of Candidate and some other values?
