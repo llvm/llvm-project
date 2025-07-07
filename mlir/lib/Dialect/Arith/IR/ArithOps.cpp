@@ -267,6 +267,12 @@ arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
   return result;
 }
 
+arith::ConstantIntOp arith::ConstantIntOp::create(ImplicitLocOpBuilder &builder,
+                                                  int64_t value,
+                                                  unsigned width) {
+  return create(builder, builder.getLoc(), value, width);
+}
+
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                                  Type type, int64_t value) {
   arith::ConstantOp::build(builder, result, type,
@@ -283,6 +289,11 @@ arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
   return result;
 }
 
+arith::ConstantIntOp arith::ConstantIntOp::create(ImplicitLocOpBuilder &builder,
+                                                  Type type, int64_t value) {
+  return create(builder, builder.getLoc(), type, value);
+}
+
 void arith::ConstantIntOp::build(OpBuilder &builder, OperationState &result,
                                  Type type, const APInt &value) {
   arith::ConstantOp::build(builder, result, type,
@@ -297,6 +308,12 @@ arith::ConstantIntOp arith::ConstantIntOp::create(OpBuilder &builder,
   auto result = llvm::dyn_cast<ConstantIntOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
+}
+
+arith::ConstantIntOp arith::ConstantIntOp::create(ImplicitLocOpBuilder &builder,
+                                                  Type type,
+                                                  const APInt &value) {
+  return create(builder, builder.getLoc(), type, value);
 }
 
 bool arith::ConstantIntOp::classof(Operation *op) {
@@ -322,6 +339,12 @@ arith::ConstantFloatOp arith::ConstantFloatOp::create(OpBuilder &builder,
   return result;
 }
 
+arith::ConstantFloatOp
+arith::ConstantFloatOp::create(ImplicitLocOpBuilder &builder, FloatType type,
+                               const APFloat &value) {
+  return create(builder, builder.getLoc(), type, value);
+}
+
 bool arith::ConstantFloatOp::classof(Operation *op) {
   if (auto constOp = dyn_cast_or_null<arith::ConstantOp>(op))
     return llvm::isa<FloatType>(constOp.getType());
@@ -342,6 +365,11 @@ arith::ConstantIndexOp arith::ConstantIndexOp::create(OpBuilder &builder,
   auto result = llvm::dyn_cast<ConstantIndexOp>(builder.create(state));
   assert(result && "builder didn't return the right type");
   return result;
+}
+
+arith::ConstantIndexOp
+arith::ConstantIndexOp::create(ImplicitLocOpBuilder &builder, int64_t value) {
+  return create(builder, builder.getLoc(), value);
 }
 
 bool arith::ConstantIndexOp::classof(Operation *op) {

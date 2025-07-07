@@ -18,7 +18,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -131,10 +131,10 @@ static void insertCopies(Region &region, Location loc, Value from, Value to) {
 
   auto b = ImplicitLocOpBuilder::atBlockBegin(loc, &region.front());
   insertCopyLoops(b, from, to);
-  gpu::BarrierOp::create(b, );
+  gpu::BarrierOp::create(b);
 
   b.setInsertionPoint(&region.front().back());
-  gpu::BarrierOp::create(b, );
+  gpu::BarrierOp::create(b);
   insertCopyLoops(b, to, from);
 }
 

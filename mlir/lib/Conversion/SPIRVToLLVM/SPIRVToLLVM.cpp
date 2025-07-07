@@ -709,7 +709,7 @@ public:
         loc, llvmI32Type,
         rewriter.getI32IntegerAttr(
             static_cast<uint32_t>(executionModeAttr.getValue())));
-    structValue = LLVM::InsertValueOp::create(rewriter, loc, structValue,
+    structValue = rewriter.create<LLVM::InsertValueOp>(loc, structValue,
                                                        executionMode, 0);
 
     // Insert extra operands if they exist into execution mode info struct.

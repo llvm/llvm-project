@@ -1747,6 +1747,32 @@ void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
+AffineDmaStartOp AffineDmaStartOp::create(
+    OpBuilder &builder, Location location, Value srcMemRef, AffineMap srcMap,
+    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
+    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
+    ValueRange tagIndices, Value numElements, Value stride,
+    Value elementsPerStride) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, srcMemRef, srcMap, srcIndices, destMemRef, dstMap,
+        destIndices, tagMemRef, tagMap, tagIndices, numElements, stride,
+        elementsPerStride);
+  auto result = llvm::dyn_cast<AffineDmaStartOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+AffineDmaStartOp AffineDmaStartOp::create(
+    ImplicitLocOpBuilder &builder, Value srcMemRef, AffineMap srcMap,
+    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
+    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
+    ValueRange tagIndices, Value numElements, Value stride,
+    Value elementsPerStride) {
+  return create(builder, builder.getLoc(), srcMemRef, srcMap, srcIndices,
+                destMemRef, dstMap, destIndices, tagMemRef, tagMap, tagIndices,
+                numElements, stride, elementsPerStride);
+}
+
 void AffineDmaStartOp::print(OpAsmPrinter &p) {
   p << " " << getSrcMemRef() << '[';
   p.printAffineMapOfSSAIds(getSrcMapAttr(), getSrcIndices());
@@ -1915,6 +1941,25 @@ void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getTagMapAttrStrName(), AffineMapAttr::get(tagMap));
   result.addOperands(tagIndices);
   result.addOperands(numElements);
+}
+
+AffineDmaWaitOp AffineDmaWaitOp::create(OpBuilder &builder, Location location,
+                                        Value tagMemRef, AffineMap tagMap,
+                                        ValueRange tagIndices,
+                                        Value numElements) {
+  mlir::OperationState state(location, getOperationName());
+  build(builder, state, tagMemRef, tagMap, tagIndices, numElements);
+  auto result = llvm::dyn_cast<AffineDmaWaitOp>(builder.create(state));
+  assert(result && "builder didn't return the right type");
+  return result;
+}
+
+AffineDmaWaitOp AffineDmaWaitOp::create(ImplicitLocOpBuilder &builder,
+                                        Value tagMemRef, AffineMap tagMap,
+                                        ValueRange tagIndices,
+                                        Value numElements) {
+  return create(builder, builder.getLoc(), tagMemRef, tagMap, tagIndices,
+                numElements);
 }
 
 void AffineDmaWaitOp::print(OpAsmPrinter &p) {
@@ -2688,8 +2733,8 @@ FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
   rewriter.setInsertionPoint(getOperation());
   auto inits = llvm::to_vector(getInits());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  AffineForOp newLoop = AffineForOp::create(rewriter,
-      getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
+  AffineForOp newLoop = AffineForOp::create(
+      rewriter, getLoc(), getLowerBoundOperands(), getLowerBoundMap(),
       getUpperBoundOperands(), getUpperBoundMap(), getStepAsInt(), inits);
 
   // Generate the new yield values and append them to the scf.yield operation.
@@ -2847,7 +2892,7 @@ buildAffineLoopFromConstants(OpBuilder &builder, Location loc, int64_t lb,
                              int64_t ub, int64_t step,
                              AffineForOp::BodyBuilderFn bodyBuilderFn) {
   return AffineForOp::create(builder, loc, lb, ub, step,
-                                     /*iterArgs=*/ValueRange(), bodyBuilderFn);
+                             /*iterArgs=*/ValueRange(), bodyBuilderFn);
 }
 
 /// Creates an affine loop from the bounds that may or may not be constants.
@@ -2861,8 +2906,8 @@ buildAffineLoopFromValues(OpBuilder &builder, Location loc, Value lb, Value ub,
     return buildAffineLoopFromConstants(builder, loc, lbConst.value(),
                                         ubConst.value(), step, bodyBuilderFn);
   return AffineForOp::create(builder, loc, lb, builder.getDimIdentityMap(), ub,
-                                     builder.getDimIdentityMap(), step,
-                                     /*iterArgs=*/ValueRange(), bodyBuilderFn);
+                             builder.getDimIdentityMap(), step,
+                             /*iterArgs=*/ValueRange(), bodyBuilderFn);
 }
 
 void mlir::affine::buildAffineLoopNest(
@@ -4906,8 +4951,8 @@ struct DropUnitExtentBasis
 
     if (!newBasis.empty()) {
       // Will drop the leading nullptr from `basis` if there was no outer bound.
-      auto newDelinearizeOp = affine::AffineDelinearizeIndexOp::create(rewriter,
-          loc, delinearizeOp.getLinearIndex(), newBasis);
+      auto newDelinearizeOp = affine::AffineDelinearizeIndexOp::create(
+          rewriter, loc, delinearizeOp.getLinearIndex(), newBasis);
       int newIndex = 0;
       // Map back the new delinearized indices to the values they replace.
       for (auto &replacement : replacements) {
@@ -4971,12 +5016,12 @@ struct CancelDelinearizeOfLinearizeDisjointExactTail
       return success();
     }
 
-    Value newLinearize = affine::AffineLinearizeIndexOp::create(rewriter,
-        linearizeOp.getLoc(), linearizeIns.drop_back(numMatches),
+    Value newLinearize = affine::AffineLinearizeIndexOp::create(
+        rewriter, linearizeOp.getLoc(), linearizeIns.drop_back(numMatches),
         ArrayRef<OpFoldResult>{linearizeBasis}.drop_back(numMatches),
         linearizeOp.getDisjoint());
-    auto newDelinearize = affine::AffineDelinearizeIndexOp::create(rewriter,
-        delinearizeOp.getLoc(), newLinearize,
+    auto newDelinearize = affine::AffineDelinearizeIndexOp::create(
+        rewriter, delinearizeOp.getLoc(), newLinearize,
         ArrayRef<OpFoldResult>{delinearizeBasis}.drop_back(numMatches),
         delinearizeOp.hasOuterBound());
     SmallVector<Value> mergedResults(newDelinearize.getResults());
@@ -5048,19 +5093,16 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
           delinearizeOp,
           "need at least two elements to form the basis product");
 
-    Value linearizeWithoutBack =
-        affine::AffineLinearizeIndexOp::create(rewriter,
-            linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
-            linearizeOp.getDynamicBasis(),
-            linearizeOp.getStaticBasis().drop_back(),
-            linearizeOp.getDisjoint());
-    auto delinearizeWithoutSplitPart =
-        affine::AffineDelinearizeIndexOp::create(rewriter,
-            delinearizeOp.getLoc(), linearizeWithoutBack,
-            delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
-            delinearizeOp.hasOuterBound());
-    auto delinearizeBack = affine::AffineDelinearizeIndexOp::create(rewriter,
-        delinearizeOp.getLoc(), linearizeOp.getMultiIndex().back(),
+    Value linearizeWithoutBack = affine::AffineLinearizeIndexOp::create(
+        rewriter, linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
+        linearizeOp.getDynamicBasis(), linearizeOp.getStaticBasis().drop_back(),
+        linearizeOp.getDisjoint());
+    auto delinearizeWithoutSplitPart = affine::AffineDelinearizeIndexOp::create(
+        rewriter, delinearizeOp.getLoc(), linearizeWithoutBack,
+        delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
+        delinearizeOp.hasOuterBound());
+    auto delinearizeBack = affine::AffineDelinearizeIndexOp::create(
+        rewriter, delinearizeOp.getLoc(), linearizeOp.getMultiIndex().back(),
         basis.take_back(elemsToSplit), /*hasOuterBound=*/true);
     SmallVector<Value> results = llvm::to_vector(
         llvm::concat<Value>(delinearizeWithoutSplitPart.getResults(),
@@ -5437,16 +5479,16 @@ public:
       newDelinBasis.erase(newDelinBasis.begin() + m.delinStart,
                           newDelinBasis.begin() + m.delinStart + m.length);
       newDelinBasis.insert(newDelinBasis.begin() + m.delinStart, newSize);
-      auto newDelinearize = AffineDelinearizeIndexOp::create(rewriter,
-          m.delinearize.getLoc(), m.delinearize.getLinearIndex(),
+      auto newDelinearize = AffineDelinearizeIndexOp::create(
+          rewriter, m.delinearize.getLoc(), m.delinearize.getLinearIndex(),
           newDelinBasis);
 
       // Since there may be other uses of the indices we just merged together,
       // create a residual affine.delinearize_index that delinearizes the
       // merged output into its component parts.
       Value combinedElem = newDelinearize.getResult(m.delinStart);
-      auto residualDelinearize = AffineDelinearizeIndexOp::create(rewriter,
-          m.delinearize.getLoc(), combinedElem, basisToMerge);
+      auto residualDelinearize = AffineDelinearizeIndexOp::create(
+          rewriter, m.delinearize.getLoc(), combinedElem, basisToMerge);
 
       // Swap all the uses of the unaffected delinearize outputs to the new
       // delinearization so that the old code can be removed if this
