@@ -213,7 +213,7 @@ struct VPlanTransforms {
   /// one step backwards.
   static void optimizeInductionExitUsers(
       VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues,
-      DenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs);
+      SmallDenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
   static void materializeBroadcasts(VPlan &Plan);

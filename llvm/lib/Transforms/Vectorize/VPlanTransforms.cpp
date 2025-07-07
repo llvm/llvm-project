@@ -826,7 +826,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues,
-    DenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs) {
+    SmallDenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs) {
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
@@ -880,7 +880,7 @@ static VPValue *optimizeLatchExitInductionUser(
 
 void VPlanTransforms::optimizeInductionExitUsers(
     VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues,
-    DenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs) {
+    SmallDenseMap<VPValue *, VPWidenInductionRecipe *> &MapIVs) {
   VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
