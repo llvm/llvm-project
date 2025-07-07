@@ -5729,6 +5729,17 @@ libc_function(
 
 ############################## wchar targets ###############################
 
+libc_support_library(
+    name = "wchar_utils",
+    hdrs = ["src/wchar/wchar_utils.h"],
+    deps = [
+        ":__support_common",
+        ":__support_macros_attributes",
+        ":types_size_t",
+        ":types_wchar_t",
+    ],
+)
+
 libc_function(
     name = "btowc",
     srcs = ["src/wchar/btowc.cpp"],
@@ -5826,6 +5837,7 @@ libc_function(
         ":__support_macros_config",
         ":types_size_t",
         ":types_wchar_t",
+        ":wchar_utils",
     ],
 )
 
@@ -5911,6 +5923,7 @@ libc_function(
         ":__support_macros_config",
         ":types_size_t",
         ":types_wchar_t",
+        ":wchar_utils",
     ],
 )
 

@@ -12,23 +12,25 @@
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "wchar_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-bool check(wchar_t c, const wchar_t *s2) {
-  for (int n = 0; s2[n]; ++n) {
-    if (s2[n] == c)
-      return false;
+struct CheckCSpan {
+  const wchar_t *str;
+  CheckCSpan(const wchar_t *w) { str = w; }
+  bool operator()(wchar_t c) {
+    for (int n = 0; str[n]; ++n) {
+      if (str[n] == c)
+        return false;
+    }
+    return true;
   }
-  return true;
-}
+};
+
 LLVM_LIBC_FUNCTION(size_t, wcscspn, (const wchar_t *s1, const wchar_t *s2)) {
-  size_t i = 0;
-  for (; s1[i]; ++i) {
-    if (!check(s1[i], s2))
-      return i;
-  }
-  return i;
+  CheckCSpan check(s2);
+  return internal::inline_wcsspn(s1, check);
 }
 
 } // namespace LIBC_NAMESPACE_DECL
