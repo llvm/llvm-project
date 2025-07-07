@@ -762,7 +762,6 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   EVT VT1 = N->getValueType(1);
   RTLIB::Libcall LC = RTLIB::getFREXP(VT0);
   EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
-  EVT NVT1 = TLI.getTypeToTransformTo(*DAG.getContext(), VT1);
   SDLoc DL(N);
 
   if (DAG.getLibInfo().getIntSize() != VT1.getSizeInBits()) {
