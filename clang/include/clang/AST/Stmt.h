@@ -621,9 +621,6 @@ protected:
     /// when naming a static member.
     LLVM_PREFERRED_TYPE(NonOdrUseReason)
     unsigned NonOdrUseReason : 2;
-
-    /// This is the location of the -> or . in the expression.
-    // SourceLocation OperatorLoc;
   };
 
   class CastExprBitfields {
