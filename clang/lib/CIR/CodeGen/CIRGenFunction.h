@@ -1208,15 +1208,15 @@ private:
   // keep track of the 'loop' so that we can add the cache vars to it correctly.
   mlir::acc::LoopOp *activeLoopOp = nullptr;
 
-  struct ActiveLoopRAII {
+  struct ActiveOpenACCLoopRAII {
     CIRGenFunction &cgf;
     mlir::acc::LoopOp *oldLoopOp;
 
-    ActiveLoopRAII(CIRGenFunction &cgf, mlir::acc::LoopOp *newOp)
+    ActiveOpenACCLoopRAII(CIRGenFunction &cgf, mlir::acc::LoopOp *newOp)
         : cgf(cgf), oldLoopOp(cgf.activeLoopOp) {
       cgf.activeLoopOp = newOp;
     }
-    ~ActiveLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
+    ~ActiveOpenACCLoopRAII() { cgf.activeLoopOp = oldLoopOp; }
   };
 
 public:

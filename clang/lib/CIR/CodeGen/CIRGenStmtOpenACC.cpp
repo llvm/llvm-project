@@ -95,7 +95,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpCombinedConstruct(
       builder.setInsertionPointToEnd(&innerBlock);
 
       LexicalScope ls{*this, start, builder.getInsertionBlock()};
-      ActiveLoopRAII activeLoop{*this, &loopOp};
+      ActiveOpenACCLoopRAII activeLoop{*this, &loopOp};
 
       res = emitStmt(loopStmt, /*useCurrentScope=*/true);
 
