@@ -189,6 +189,12 @@ Changes in existing checks
   calls of ``std::string`` constructor with char pointer, start position and
   length parameters.
 
+- Improved :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone/bugprone-unhandled-self-assignment` check
+  by adding an additional matcher that generalizes the copy-and-swap idiom
+  pattern detection. The checker now properly recognizes copy-and-swap
+  implementations that use "extended" copy/move constructors.
+
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
   positives from smart pointer accessors repeated in checking ``has_value``
