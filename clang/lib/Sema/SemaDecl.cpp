@@ -12486,6 +12486,15 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
                                 : FixItHint());
       FD->setInvalidDecl(true);
     }
+
+    // [basic.start.main]p3:
+    // A program that declares a function main that belongs to the global scope
+    // and is attached to a named module is ill-formed.
+    if (FD->isInNamedModule()) {
+      const SourceLocation start = FD->getTypeSpecStartLoc();
+      Diag(start, diag::warn_main_in_named_module)
+          << FixItHint::CreateInsertion(start, "extern \"C++\" ", true);
+    }
   }
 
   // Treat protoless main() as nullary.
@@ -18627,8 +18636,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
         << FieldName << FieldTy << BitWidth->getSourceRange();
     return Diag(FieldLoc, diag::err_not_integral_type_anon_bitfield)
       << FieldTy << BitWidth->getSourceRange();
-  } else if (DiagnoseUnexpandedParameterPack(const_cast<Expr *>(BitWidth),
-                                             UPPC_BitFieldWidth))
+  } else if (DiagnoseUnexpandedParameterPack(BitWidth, UPPC_BitFieldWidth))
     return ExprError();
 
   // If the bit-width is type- or value-dependent, don't try to check
