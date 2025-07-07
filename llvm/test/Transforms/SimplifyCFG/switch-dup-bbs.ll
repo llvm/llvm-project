@@ -207,18 +207,16 @@ define i32 @switch_dup_unbounded_predecessors(i32 %val) {
 ; SIMPLIFY-CFG-NEXT:    switch i32 [[VAL]], label %[[EXIT:.*]] [
 ; SIMPLIFY-CFG-NEXT:      i32 99, label %[[BB1:.*]]
 ; SIMPLIFY-CFG-NEXT:      i32 115, label %[[BB1]]
-; SIMPLIFY-CFG-NEXT:      i32 102, label %[[BB2:.*]]
-; SIMPLIFY-CFG-NEXT:      i32 70, label %[[BB2]]
-; SIMPLIFY-CFG-NEXT:      i32 101, label %[[BB2]]
-; SIMPLIFY-CFG-NEXT:      i32 69, label %[[BB2]]
-; SIMPLIFY-CFG-NEXT:      i32 103, label %[[BB2]]
+; SIMPLIFY-CFG-NEXT:      i32 102, label %[[BB1]]
+; SIMPLIFY-CFG-NEXT:      i32 70, label %[[BB1]]
+; SIMPLIFY-CFG-NEXT:      i32 101, label %[[BB1]]
+; SIMPLIFY-CFG-NEXT:      i32 69, label %[[BB1]]
+; SIMPLIFY-CFG-NEXT:      i32 103, label %[[BB1]]
 ; SIMPLIFY-CFG-NEXT:    ]
 ; SIMPLIFY-CFG:       [[BB1]]:
 ; SIMPLIFY-CFG-NEXT:    br label %[[EXIT]]
-; SIMPLIFY-CFG:       [[BB2]]:
-; SIMPLIFY-CFG-NEXT:    br label %[[EXIT]]
 ; SIMPLIFY-CFG:       [[EXIT]]:
-; SIMPLIFY-CFG-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[BB1]] ], [ 1, %[[BB2]] ]
+; SIMPLIFY-CFG-NEXT:    [[PHI:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ 1, %[[BB1]] ]
 ; SIMPLIFY-CFG-NEXT:    ret i32 [[PHI]]
 ;
 entry:
