@@ -477,3 +477,8 @@ namespace P2361 {
 }
 
 alignas(int) struct AlignAsAttribute {}; // expected-error {{misplaced attributes; expected attributes here}}
+
+namespace GH147217 {
+  [[clang::annotate(#)]] void a();      // expected-error {{'#' is not allowed in attribute argument lists}}
+  [[clang::annotate(##)]] void b();     // expected-error {{'##' is not allowed in attribute argument lists}}
+}

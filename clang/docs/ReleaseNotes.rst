@@ -673,6 +673,7 @@ Improvements to Clang's diagnostics
   false positives in exception-heavy code, though only simple patterns
   are currently recognized.
 
+- Clang now rejects ``#`` operators in attribute argument lists. (#GH147217)
 
 Improvements to Clang's time-trace
 ----------------------------------

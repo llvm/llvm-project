@@ -488,6 +488,13 @@ unsigned Parser::ParseAttributeArgsCommon(
   bool AttributeHasVariadicIdentifierArg =
       attributeHasVariadicIdentifierArg(*AttrName, Form.getSyntax(), ScopeName);
 
+  if (Tok.is(tok::hash) || Tok.is(tok::hashhash)) {
+    Diag(Tok.getLocation(), diag::err_invalid_attribute_argument)
+        << PP.getSpelling(Tok);
+    SkipUntil(tok::r_paren, StopAtSemi);
+    return 0;
+  }
+
   // Interpret "kw_this" as an identifier if the attributed requests it.
   if (ChangeKWThisToIdent && Tok.is(tok::kw_this))
     Tok.setKind(tok::identifier);

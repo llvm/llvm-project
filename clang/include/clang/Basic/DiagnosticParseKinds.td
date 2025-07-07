@@ -830,6 +830,8 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have a default member initializer">;
+def err_invalid_attribute_argument
+    : Error<"'%0' is not allowed in attribute argument lists">;
 
 def err_assume_attr_expects_cond_expr : Error<
   "use of this expression in an %0 attribute requires parentheses">;
