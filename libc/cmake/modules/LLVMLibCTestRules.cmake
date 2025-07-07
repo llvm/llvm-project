@@ -612,6 +612,8 @@ function(add_integration_test test_name)
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
       $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
+      $<$<BOOL:${LIBC_TARGET_OS_IS_UEFI}>:${uefi_test_exe}>
+      $<$<BOOL:${LIBC_TARGET_OS_IS_UEFI}>:${LIBC_TARGET_TRIPLE}>
       ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
       $<TARGET_FILE:${fq_build_target_name}> ${INTEGRATION_TEST_ARGS})
@@ -810,7 +812,9 @@ function(add_libc_hermetic test_name)
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     set(test_cmd ${HERMETIC_TEST_ENV}
-        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
+        $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
+        $<$<BOOL:${LIBC_TARGET_OS_IS_UEFI}>:${uefi_test_exe}>
+        ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     add_custom_target(
       ${fq_target_name}
