@@ -290,8 +290,14 @@ public:
     return PointerBounds;
   }
 
-  AssumptionCache *getAC() const { return AC; }
-  DominatorTree *getDT() const { return DT; }
+  DominatorTree *getDT() const {
+    assert(AC && "requested DT, but it is not available");
+    return DT;
+  }
+  AssumptionCache *getAC() const {
+    assert(AC && "requested AC, but it is not available");
+    return AC;
+  }
 
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
@@ -927,7 +933,7 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
-    AssumptionCache *AC, DominatorTree *DT);
+    DominatorTree *DT, AssumptionCache *AC);
 
 class LoopAccessInfoManager {
   /// The cache.
@@ -944,8 +950,9 @@ class LoopAccessInfoManager {
 
 public:
   LoopAccessInfoManager(ScalarEvolution &SE, AAResults &AA, DominatorTree &DT,
-                        LoopInfo &LI, TargetTransformInfo *TTI,
-                        const TargetLibraryInfo *TLI, AssumptionCache *AC)
+                        LoopInfo &LI, TargetTransformInfo *TTI = nullptr,
+                        const TargetLibraryInfo *TLI = nullptr,
+                        AssumptionCache *AC = nullptr)
       : SE(SE), AA(AA), DT(DT), LI(LI), TTI(TTI), TLI(TLI), AC(AC) {}
 
   LLVM_ABI const LoopAccessInfo &getInfo(Loop &L, bool AllowPartial = false);

@@ -1009,8 +1009,7 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI, nullptr,
-                             nullptr);
+  LoopAccessInfoManager LAIM(AR.SE, AR.AA, AR.DT, AR.LI, &AR.TTI);
   for (Loop *InnerLoop : LN.getLoops()) {
     auto *OuterLoop = InnerLoop->getParentLoop();
     if (!OuterLoop)

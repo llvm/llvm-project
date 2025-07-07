@@ -214,7 +214,7 @@ static bool
 evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
                                      const SCEV *MaxBTC, const SCEV *EltSize,
                                      ScalarEvolution &SE, const DataLayout &DL,
-                                     AssumptionCache *AC, DominatorTree *DT) {
+                                     DominatorTree *DT, AssumptionCache *AC) {
   auto *PointerBase = SE.getPointerBase(AR->getStart());
   auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
   if (!StartPtr)
@@ -233,23 +233,14 @@ evaluatePtrAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
   const SCEV *DerefBytesSCEV = SE.getConstant(WiderTy, DerefBytes);
 
   // Check if we have a suitable dereferencable assumption we can use.
-  RetainedKnowledge DerefRK;
-  if (!StartPtrV->canBeFreed() &&
-      getKnowledgeForValue(
-          StartPtrV, {Attribute::Dereferenceable}, *AC,
-          [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-            if (!isValidAssumeForContext(
-                    Assume, L->getLoopPredecessor()->getTerminator(), DT))
-              return false;
-            if (RK.AttrKind == Attribute::Dereferenceable) {
-              DerefRK = std::max(DerefRK, RK);
-              return true;
-            }
-            return false;
-          }) &&
-      DerefRK.ArgValue) {
-    DerefBytesSCEV = SE.getUMaxExpr(DerefBytesSCEV,
-                                    SE.getConstant(WiderTy, DerefRK.ArgValue));
+  if (!StartPtrV->canBeFreed()) {
+    RetainedKnowledge DerefRK = getKnowledgeValidInContext(
+        StartPtrV, {Attribute::Dereferenceable}, *AC,
+        L->getLoopPredecessor()->getTerminator(), DT);
+    if (DerefRK) {
+      DerefBytesSCEV = SE.getUMaxExpr(
+          DerefBytesSCEV, SE.getConstant(WiderTy, DerefRK.ArgValue));
+    }
   }
 
   bool IsKnownNonNegative = SE.isKnownNonNegative(Step);
@@ -298,7 +289,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, Type *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
-    AssumptionCache *AC, DominatorTree *DT) {
+    DominatorTree *DT, AssumptionCache *AC) {
   std::pair<const SCEV *, const SCEV *> *PtrBoundsPair;
   if (PointerBounds) {
     auto [Iter, Ins] = PointerBounds->insert(
@@ -334,7 +325,7 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // separately checks that accesses cannot not wrap, so unsigned max
       // represents an upper bound.
       if (evaluatePtrAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, EltSizeSCEV, *SE, DL,
-                                               AC, DT)) {
+                                               DT, AC)) {
         ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
       } else {
         ScEnd = SE->getAddExpr(
@@ -383,7 +374,7 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
   const SCEV *BTC = PSE.getBackedgeTakenCount();
   const auto &[ScStart, ScEnd] = getStartAndEndForAccess(
       Lp, PtrExpr, AccessTy, BTC, SymbolicMaxBTC, PSE.getSE(),
-      &DC.getPointerBounds(), DC.getAC(), DC.getDT());
+      &DC.getPointerBounds(), DC.getDT(), DC.getAC());
   assert(!isa<SCEVCouldNotCompute>(ScStart) &&
          !isa<SCEVCouldNotCompute>(ScEnd) &&
          "must be able to compute both start and end expressions");
@@ -2036,10 +2027,10 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const SCEV *SymbolicMaxBTC = PSE.getSymbolicMaxBackedgeTakenCount();
     const auto &[SrcStart_, SrcEnd_] =
         getStartAndEndForAccess(InnermostLoop, Src, ATy, BTC, SymbolicMaxBTC,
-                                PSE.getSE(), &PointerBounds, AC, DT);
+                                PSE.getSE(), &PointerBounds, DT, AC);
     const auto &[SinkStart_, SinkEnd_] =
         getStartAndEndForAccess(InnermostLoop, Sink, BTy, BTC, SymbolicMaxBTC,
-                                PSE.getSE(), &PointerBounds, AC, DT);
+                                PSE.getSE(), &PointerBounds, DT, AC);
     if (!isa<SCEVCouldNotCompute>(SrcStart_) &&
         !isa<SCEVCouldNotCompute>(SrcEnd_) &&
         !isa<SCEVCouldNotCompute>(SinkStart_) &&
