@@ -158,13 +158,17 @@ int Test::runTests(const TestOptions &Options) {
     }
 
     tlog << green << "[ RUN      ] " << reset << TestName << '\n';
+#ifdef TARGET_SUPPORTS_CLOCK
     [[maybe_unused]] const uint64_t start_time = static_cast<uint64_t>(clock());
+#endif
     RunContext Ctx;
     T->SetUp();
     T->setContext(&Ctx);
     T->Run();
     T->TearDown();
+#ifdef TARGET_SUPPORTS_CLOCK
     [[maybe_unused]] const uint64_t end_time = static_cast<uint64_t>(clock());
+#endif
     switch (Ctx.status()) {
     case RunContext::RunResult::Fail:
       tlog << red << "[  FAILED  ] " << reset << TestName << '\n';

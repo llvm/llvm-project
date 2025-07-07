@@ -20,7 +20,8 @@ function(add_unittest_framework_library name)
       ${TEST_LIB_HDRS}
     )
     target_include_directories(${lib} PRIVATE ${LIBC_SOURCE_DIR})
-    if(TARGET libc.src.time.clock)
+    # Somehow "TARGET libc.src.time.clock" is TRUE on UEFI despite not being defined.
+    if(TARGET libc.src.time.clock AND NOT LIBC_TARGET_OS_IS_UEFI)
       target_compile_definitions(${lib} PRIVATE TARGET_SUPPORTS_CLOCK)
     endif()
   endforeach()
@@ -43,6 +44,11 @@ function(add_unittest_framework_library name)
   _get_hermetic_test_compile_options(compile_options "")
   target_include_directories(${name}.hermetic PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name}.hermetic PRIVATE ${compile_options} -nostdinc++)
+
+  # All tests in UEFI need to use the libc.
+  if(LIBC_TARGET_OS_IS_UEFI)
+    target_include_directories(${name}.unit PRIVATE ${LIBC_INCLUDE_DIR})
+  endif()
 
   if(TEST_LIB_DEPENDS)
     foreach(dep IN ITEMS ${TEST_LIB_DEPENDS})
