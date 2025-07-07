@@ -983,13 +983,9 @@ public:
     return 0;
   }
 
-  virtual Value *getResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                           Type *ExpectedType) const {
-    return nullptr;
-  }
-
-  virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                   Type *ExpectedType) const {
+  virtual Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const {
     return nullptr;
   }
 

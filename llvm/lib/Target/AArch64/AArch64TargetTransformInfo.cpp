@@ -4967,8 +4967,9 @@ void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-Value *AArch64TTIImpl::getResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                 Type *ExpectedType) const {
+Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
+                                                         Type *ExpectedType,
+                                                         bool CanCreate) const {
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
@@ -4978,21 +4979,12 @@ Value *AArch64TTIImpl::getResultFromMemIntrinsic(IntrinsicInst *Inst,
     if (Inst->getType() == ExpectedType)
       return Inst;
     return nullptr;
-  }
-}
-
-Value *
-AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                  Type *ExpectedType) const {
-  switch (Inst->getIntrinsicID()) {
-  default:
-    return getResultFromMemIntrinsic(Inst, ExpectedType);
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
     // Create a struct type
     StructType *ST = dyn_cast<StructType>(ExpectedType);
-    if (!ST)
+    if (!CanCreate || !ST)
       return nullptr;
     unsigned NumElts = Inst->arg_size() - 1;
     if (ST->getNumElements() != NumElts)

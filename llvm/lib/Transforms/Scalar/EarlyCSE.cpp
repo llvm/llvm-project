@@ -972,8 +972,7 @@ private:
         V = II->getOperand(0);
         break;
       default:
-        return Create ? TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType)
-                      : TTI.getResultFromMemIntrinsic(II, ExpectedType);
+        return TTI.getOrCreateResultFromMemIntrinsic(II, ExpectedType, Create);
       }
     } else {
       V = isa<LoadInst>(Inst) ? Inst : cast<StoreInst>(Inst)->getValueOperand();

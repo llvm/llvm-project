@@ -1702,19 +1702,13 @@ public:
   /// unordered-atomic memory intrinsic.
   LLVM_ABI unsigned getAtomicMemIntrinsicMaxElementSize() const;
 
-  /// \returns A value which is the result of the given memory intrinsic.
-  /// Returns nullptr if the target cannot return a result from the given
-  /// intrinsic, e.g. because it would require creating new instructions. Use
-  /// getOrCreateResultFromMemIntrinsic to allow creating new instructions.
-  LLVM_ABI Value *getResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                            Type *ExpectedType) const;
-
-  /// \returns A value which is the result of the given memory intrinsic.  New
-  /// instructions may be created to extract the result from the given intrinsic
-  /// memory operation. Returns nullptr if the target cannot create a result
-  /// from the given intrinsic.
-  LLVM_ABI Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                    Type *ExpectedType) const;
+  /// \returns A value which is the result of the given memory intrinsic. If \p
+  /// CanCreate is true, new instructions may be created to extract the result
+  /// from the given intrinsic memory operation. Returns nullptr if the target
+  /// cannot create a result from the given intrinsic.
+  LLVM_ABI Value *
+  getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst, Type *ExpectedType,
+                                    bool CanCreate = true) const;
 
   /// \returns The type to use in a loop expansion of a memcpy call.
   LLVM_ABI Type *getMemcpyLoopLoweringType(

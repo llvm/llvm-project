@@ -1293,15 +1293,10 @@ unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {
   return TTIImpl->getAtomicMemIntrinsicMaxElementSize();
 }
 
-Value *
-TargetTransformInfo::getResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                               Type *ExpectedType) const {
-  return TTIImpl->getResultFromMemIntrinsic(Inst, ExpectedType);
-}
-
 Value *TargetTransformInfo::getOrCreateResultFromMemIntrinsic(
-    IntrinsicInst *Inst, Type *ExpectedType) const {
-  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType);
+    IntrinsicInst *Inst, Type *ExpectedType, bool CanCreate) const {
+  return TTIImpl->getOrCreateResultFromMemIntrinsic(Inst, ExpectedType,
+                                                    CanCreate);
 }
 
 Type *TargetTransformInfo::getMemcpyLoopLoweringType(
