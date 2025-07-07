@@ -18144,12 +18144,12 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   unsigned NumUses = N->use_size();
-  unsigned MaskMinElts = N->getValueType(0).getVectorMinNumElements();
-  if (MaskMinElts % NumUses != 0)
+  auto MaskEC = N->getValueType(0).getVectorElementCount();
+  if (!MaskEC.isKnownMultipleOf(NumUses))
     return SDValue();
 
-  unsigned ExtMinElts = MaskMinElts / NumUses;
-  if (ExtMinElts < 2)
+  ElementCount ExtMinEC = MaskEC.divideCoefficientBy(NumUses);
+  if (ExtMinEC.getKnownMinValue() < 2)
     return SDValue();
 
   SmallVector<SDNode *> Extracts(NumUses, nullptr);
@@ -18159,12 +18159,12 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
     // Ensure the extract type is correct (e.g. if NumUses is 4 and
     // the mask return type is nxv8i1, each extract should be nxv2i1.
-    if (Use->getValueType(0).getVectorMinNumElements() != ExtMinElts)
+    if (Use->getValueType(0).getVectorElementCount() != ExtMinEC)
       return SDValue();
 
     // There should be exactly one extract for each part of the mask.
     unsigned Offset = Use->getConstantOperandVal(1);
-    unsigned Part = Offset / ExtMinElts;
+    unsigned Part = Offset / ExtMinEC.getKnownMinValue();
     if (Extracts[Part] != nullptr)
       return SDValue();
 
