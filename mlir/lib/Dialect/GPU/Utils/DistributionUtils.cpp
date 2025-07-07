@@ -27,7 +27,7 @@ WarpDistributionPattern::moveRegionToNewWarpOpAndReplaceReturns(
   // Create a new op before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(warpOp);
-  auto newWarpOp = rewriter.create<WarpExecuteOnLane0Op>(
+  auto newWarpOp = WarpExecuteOnLane0Op::create(rewriter,
       warpOp.getLoc(), newReturnTypes, warpOp.getLaneid(), warpOp.getWarpSize(),
       warpOp.getArgs(), warpOp.getBody()->getArgumentTypes());
 
@@ -124,7 +124,7 @@ bool WarpDistributionPattern::delinearizeLaneId(
 
   int64_t usedThreads = 1;
 
-  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
   delinearizedIds.assign(sizes.size(), zero);
 
   for (int i = sizes.size() - 1; i >= 0; --i) {

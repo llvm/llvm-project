@@ -73,7 +73,7 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
     if (ShapedType::isDynamic(inputSize)) {
       Value dimZero = getValueOrCreateConstantIndexOp(rewriter, loc,
                                                       rewriter.getIndexAttr(0));
-      currSize = rewriter.create<memref::DimOp>(loc, op.getSource(), dimZero)
+      currSize = memref::DimOp::create(rewriter, loc, op.getSource(), dimZero)
                      .getResult();
     }
 
@@ -88,9 +88,9 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
     // the old buffer is smaller than the requested size.
     Value lhs = getValueOrCreateConstantIndexOp(rewriter, loc, currSize);
     Value rhs = getValueOrCreateConstantIndexOp(rewriter, loc, targetSize);
-    Value cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+    Value cond = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ult,
                                                 lhs, rhs);
-    auto ifOp = rewriter.create<scf::IfOp>(
+    auto ifOp = scf::IfOp::create(rewriter,
         loc, cond,
         [&](OpBuilder &builder, Location loc) {
           // Allocate the new buffer. If it is a dynamic memref we need to pass
@@ -100,25 +100,25 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
           if (op.getDynamicResultSize())
             dynamicSizeOperands.push_back(op.getDynamicResultSize());
 
-          Value newAlloc = builder.create<memref::AllocOp>(
+          Value newAlloc = memref::AllocOp::create(builder,
               loc, op.getResult().getType(), dynamicSizeOperands,
               op.getAlignmentAttr());
 
           // Take a subview of the new (bigger) buffer such that we can copy the
           // old values over (the copy operation requires both operands to have
           // the same shape).
-          Value subview = builder.create<memref::SubViewOp>(
+          Value subview = memref::SubViewOp::create(builder,
               loc, newAlloc, ArrayRef<OpFoldResult>{rewriter.getIndexAttr(0)},
               ArrayRef<OpFoldResult>{currSize},
               ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)});
-          builder.create<memref::CopyOp>(loc, op.getSource(), subview);
+          memref::CopyOp::create(builder, loc, op.getSource(), subview);
 
           // Insert the deallocation of the old buffer only if requested
           // (enabled by default).
           if (emitDeallocs)
-            builder.create<memref::DeallocOp>(loc, op.getSource());
+            memref::DeallocOp::create(builder, loc, op.getSource());
 
-          builder.create<scf::YieldOp>(loc, newAlloc);
+          scf::YieldOp::create(builder, loc, newAlloc);
         },
         [&](OpBuilder &builder, Location loc) {
           // We need to reinterpret-cast here because either the input or output
@@ -126,11 +126,11 @@ struct ExpandReallocOpPattern : public OpRewritePattern<memref::ReallocOp> {
           // dynamic or vice-versa. If both are static and the original buffer
           // is already bigger than the requested size, the cast represents a
           // subview operation.
-          Value casted = builder.create<memref::ReinterpretCastOp>(
+          Value casted = memref::ReinterpretCastOp::create(builder,
               loc, cast<MemRefType>(op.getResult().getType()), op.getSource(),
               rewriter.getIndexAttr(0), ArrayRef<OpFoldResult>{targetSize},
               ArrayRef<OpFoldResult>{rewriter.getIndexAttr(1)});
-          builder.create<scf::YieldOp>(loc, casted);
+          scf::YieldOp::create(builder, loc, casted);
         });
 
     rewriter.replaceOp(op, ifOp.getResult(0));

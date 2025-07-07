@@ -94,7 +94,7 @@ createVariablesForResults(T op, const TypeConverter *typeConverter,
     Type varType = emitc::LValueType::get(resultType);
     emitc::OpaqueAttr noInit = emitc::OpaqueAttr::get(context, "");
     emitc::VariableOp var =
-        rewriter.create<emitc::VariableOp>(loc, varType, noInit);
+        emitc::VariableOp::create(rewriter, loc, varType, noInit);
     resultVariables.push_back(var);
   }
 
@@ -106,14 +106,14 @@ createVariablesForResults(T op, const TypeConverter *typeConverter,
 static void assignValues(ValueRange values, ValueRange variables,
                          ConversionPatternRewriter &rewriter, Location loc) {
   for (auto [value, var] : llvm::zip(values, variables))
-    rewriter.create<emitc::AssignOp>(loc, var, value);
+    emitc::AssignOp::create(rewriter, loc, var, value);
 }
 
 SmallVector<Value> loadValues(const SmallVector<Value> &variables,
                               PatternRewriter &rewriter, Location loc) {
   return llvm::map_to_vector<>(variables, [&](Value var) {
     Type type = cast<emitc::LValueType>(var.getType()).getValueType();
-    return rewriter.create<emitc::LoadOp>(loc, type, var).getResult();
+    return emitc::LoadOp::create(rewriter, loc, type, var).getResult();
   });
 }
 
@@ -132,7 +132,7 @@ static LogicalResult lowerYield(Operation *op, ValueRange resultVariables,
 
   assignValues(yieldOperands, resultVariables, rewriter, loc);
 
-  rewriter.create<emitc::YieldOp>(loc);
+  emitc::YieldOp::create(rewriter, loc);
   rewriter.eraseOp(yield);
 
   return success();
@@ -167,7 +167,7 @@ ForLowering::matchAndRewrite(ForOp forOp, OpAdaptor adaptor,
 
   assignValues(adaptor.getInitArgs(), resultVariables, rewriter, loc);
 
-  emitc::ForOp loweredFor = rewriter.create<emitc::ForOp>(
+  emitc::ForOp loweredFor = emitc::ForOp::create(rewriter,
       loc, adaptor.getLowerBound(), adaptor.getUpperBound(), adaptor.getStep());
 
   Block *loweredBody = loweredFor.getBody();
@@ -260,7 +260,7 @@ IfLowering::matchAndRewrite(IfOp ifOp, OpAdaptor adaptor,
   bool hasElseBlock = !elseRegion.empty();
 
   auto loweredIf =
-      rewriter.create<emitc::IfOp>(loc, adaptor.getCondition(), false, false);
+      emitc::IfOp::create(rewriter, loc, adaptor.getCondition(), false, false);
 
   Region &loweredThenRegion = loweredIf.getThenRegion();
   auto result = lowerRegion(thenRegion, loweredThenRegion);
@@ -307,7 +307,7 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
                                        "create variables for results failed");
   }
 
-  auto loweredSwitch = rewriter.create<emitc::SwitchOp>(
+  auto loweredSwitch = emitc::SwitchOp::create(rewriter,
       loc, adaptor.getArg(), adaptor.getCases(), indexSwitchOp.getNumCases());
 
   // Lowering all case regions.

@@ -243,7 +243,7 @@ bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
 ConstantOp arith::ConstantOp::materialize(OpBuilder &builder, Attribute value,
                                           Type type, Location loc) {
   if (isBuildableWith(value, type))
-    return builder.create<arith::ConstantOp>(loc, cast<TypedAttr>(value));
+    return arith::ConstantOp::create(builder, loc, cast<TypedAttr>(value));
   return nullptr;
 }
 
@@ -2321,7 +2321,7 @@ public:
     // comparison.
     rewriter.replaceOpWithNewOp<CmpIOp>(
         op, pred, intVal,
-        rewriter.create<ConstantOp>(
+        ConstantOp::create(rewriter,
             op.getLoc(), intVal.getType(),
             rewriter.getIntegerAttr(intVal.getType(), rhsInt)));
     return success();
@@ -2360,9 +2360,9 @@ struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
         matchPattern(op.getFalseValue(), m_One())) {
       rewriter.replaceOpWithNewOp<arith::ExtUIOp>(
           op, op.getType(),
-          rewriter.create<arith::XOrIOp>(
+          arith::XOrIOp::create(rewriter,
               op.getLoc(), op.getCondition(),
-              rewriter.create<arith::ConstantIntOp>(
+              arith::ConstantIntOp::create(rewriter,
                   op.getLoc(), 1, op.getCondition().getType())));
       return success();
     }
@@ -2679,7 +2679,7 @@ Value mlir::arith::getIdentityValue(AtomicRMWKind op, Type resultType,
                                     bool useOnlyFiniteValue) {
   auto attr =
       getIdentityValueAttr(op, resultType, builder, loc, useOnlyFiniteValue);
-  return builder.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(builder, loc, attr);
 }
 
 /// Return the value obtained by applying the reduction operation kind
@@ -2688,33 +2688,33 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
                                   Location loc, Value lhs, Value rhs) {
   switch (op) {
   case AtomicRMWKind::addf:
-    return builder.create<arith::AddFOp>(loc, lhs, rhs);
+    return arith::AddFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::addi:
-    return builder.create<arith::AddIOp>(loc, lhs, rhs);
+    return arith::AddIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::mulf:
-    return builder.create<arith::MulFOp>(loc, lhs, rhs);
+    return arith::MulFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::muli:
-    return builder.create<arith::MulIOp>(loc, lhs, rhs);
+    return arith::MulIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::maximumf:
-    return builder.create<arith::MaximumFOp>(loc, lhs, rhs);
+    return arith::MaximumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minimumf:
-    return builder.create<arith::MinimumFOp>(loc, lhs, rhs);
+    return arith::MinimumFOp::create(builder, loc, lhs, rhs);
    case AtomicRMWKind::maxnumf:
-    return builder.create<arith::MaxNumFOp>(loc, lhs, rhs);
+    return arith::MaxNumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minnumf:
-    return builder.create<arith::MinNumFOp>(loc, lhs, rhs);
+    return arith::MinNumFOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::maxs:
-    return builder.create<arith::MaxSIOp>(loc, lhs, rhs);
+    return arith::MaxSIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::mins:
-    return builder.create<arith::MinSIOp>(loc, lhs, rhs);
+    return arith::MinSIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::maxu:
-    return builder.create<arith::MaxUIOp>(loc, lhs, rhs);
+    return arith::MaxUIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::minu:
-    return builder.create<arith::MinUIOp>(loc, lhs, rhs);
+    return arith::MinUIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::ori:
-    return builder.create<arith::OrIOp>(loc, lhs, rhs);
+    return arith::OrIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::andi:
-    return builder.create<arith::AndIOp>(loc, lhs, rhs);
+    return arith::AndIOp::create(builder, loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");

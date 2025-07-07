@@ -64,7 +64,7 @@ getFlatOffsetAndStrides(OpBuilder &rewriter, Location loc, Value source,
     OpBuilder::InsertionGuard g(rewriter);
     setInsertionPointToStart(rewriter, source);
     newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(loc, source);
+        memref::ExtractStridedMetadataOp::create(rewriter, loc, source);
   }
 
   auto &&[sourceStrides, sourceOffset] = sourceType.getStridesAndOffset();
@@ -110,7 +110,7 @@ static Value getFlatMemref(OpBuilder &rewriter, Location loc, Value source,
   auto &&[base, offset, ignore] =
       getFlatOffsetAndStrides(rewriter, loc, source, offsetsTemp);
   MemRefType retType = inferCastResultType(base, offset);
-  return rewriter.create<memref::ReinterpretCastOp>(loc, retType, base, offset,
+  return memref::ReinterpretCastOp::create(rewriter, loc, retType, base, offset,
                                                     std::nullopt, std::nullopt);
 }
 

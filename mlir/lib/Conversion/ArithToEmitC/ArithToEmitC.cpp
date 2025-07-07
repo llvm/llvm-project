@@ -110,7 +110,7 @@ public:
     emitc::CmpPredicate predicate;
     switch (op.getPredicate()) {
     case arith::CmpFPredicate::AlwaysFalse: {
-      auto constant = rewriter.create<emitc::ConstantOp>(
+      auto constant = emitc::ConstantOp::create(rewriter,
           op.getLoc(), rewriter.getI1Type(),
           rewriter.getBoolAttr(/*value=*/false));
       rewriter.replaceOp(op, constant);
@@ -179,7 +179,7 @@ public:
       return success();
     }
     case arith::CmpFPredicate::AlwaysTrue: {
-      auto constant = rewriter.create<emitc::ConstantOp>(
+      auto constant = emitc::ConstantOp::create(rewriter,
           op.getLoc(), rewriter.getI1Type(),
           rewriter.getBoolAttr(/*value=*/true));
       rewriter.replaceOp(op, constant);
@@ -189,7 +189,7 @@ public:
 
     // Compare the values naively
     auto cmpResult =
-        rewriter.create<emitc::CmpOp>(op.getLoc(), op.getType(), predicate,
+        emitc::CmpOp::create(rewriter, op.getLoc(), op.getType(), predicate,
                                       adaptor.getLhs(), adaptor.getRhs());
 
     // Adjust the results for unordered/ordered semantics
@@ -213,7 +213,7 @@ private:
   Value isNaN(ConversionPatternRewriter &rewriter, Location loc,
               Value operand) const {
     // A value is NaN exactly when it compares unequal to itself.
-    return rewriter.create<emitc::CmpOp>(
+    return emitc::CmpOp::create(rewriter,
         loc, rewriter.getI1Type(), emitc::CmpPredicate::ne, operand, operand);
   }
 
@@ -221,7 +221,7 @@ private:
   Value isNotNaN(ConversionPatternRewriter &rewriter, Location loc,
                  Value operand) const {
     // A value is not NaN exactly when it compares equal to itself.
-    return rewriter.create<emitc::CmpOp>(
+    return emitc::CmpOp::create(rewriter,
         loc, rewriter.getI1Type(), emitc::CmpPredicate::eq, operand, operand);
   }
 
@@ -231,7 +231,7 @@ private:
                                Location loc, Value first, Value second) const {
     auto firstIsNaN = isNaN(rewriter, loc, first);
     auto secondIsNaN = isNaN(rewriter, loc, second);
-    return rewriter.create<emitc::LogicalOrOp>(loc, rewriter.getI1Type(),
+    return emitc::LogicalOrOp::create(rewriter, loc, rewriter.getI1Type(),
                                                firstIsNaN, secondIsNaN);
   }
 
@@ -241,7 +241,7 @@ private:
                              Value first, Value second) const {
     auto firstIsNotNaN = isNotNaN(rewriter, loc, first);
     auto secondIsNotNaN = isNotNaN(rewriter, loc, second);
-    return rewriter.create<emitc::LogicalAndOp>(loc, rewriter.getI1Type(),
+    return emitc::LogicalAndOp::create(rewriter, loc, rewriter.getI1Type(),
                                                 firstIsNotNaN, secondIsNotNaN);
   }
 };
@@ -378,9 +378,9 @@ public:
       Type attrType = (emitc::isPointerWideType(operandType))
                           ? rewriter.getIndexType()
                           : operandType;
-      auto constOne = rewriter.create<emitc::ConstantOp>(
+      auto constOne = emitc::ConstantOp::create(rewriter,
           op.getLoc(), operandType, rewriter.getOneAttr(attrType));
-      auto oneAndOperand = rewriter.create<emitc::BitwiseAndOp>(
+      auto oneAndOperand = emitc::BitwiseAndOp::create(rewriter,
           op.getLoc(), operandType, adaptor.getIn(), constOne);
       rewriter.replaceOpWithNewOp<emitc::CastOp>(op, opReturnType,
                                                  oneAndOperand);
@@ -467,7 +467,7 @@ public:
     Value rhsAdapted = adaptValueType(uiBinOp.getRhs(), rewriter, unsignedType);
 
     auto newDivOp =
-        rewriter.create<EmitCOp>(uiBinOp.getLoc(), unsignedType,
+        EmitCOp::create(rewriter, uiBinOp.getLoc(), unsignedType,
                                  ArrayRef<Value>{lhsAdapted, rhsAdapted});
     Value resultAdapted = adaptValueType(newDivOp, rewriter, newRetTy);
     rewriter.replaceOp(uiBinOp, resultAdapted);
@@ -588,38 +588,38 @@ public:
     // Add a runtime check for overflow
     Value width;
     if (emitc::isPointerWideType(type)) {
-      Value eight = rewriter.create<emitc::ConstantOp>(
+      Value eight = emitc::ConstantOp::create(rewriter,
           op.getLoc(), rhsType, rewriter.getIndexAttr(8));
-      emitc::CallOpaqueOp sizeOfCall = rewriter.create<emitc::CallOpaqueOp>(
+      emitc::CallOpaqueOp sizeOfCall = emitc::CallOpaqueOp::create(rewriter,
           op.getLoc(), rhsType, "sizeof", ArrayRef<Value>{eight});
-      width = rewriter.create<emitc::MulOp>(op.getLoc(), rhsType, eight,
+      width = emitc::MulOp::create(rewriter, op.getLoc(), rhsType, eight,
                                             sizeOfCall.getResult(0));
     } else {
-      width = rewriter.create<emitc::ConstantOp>(
+      width = emitc::ConstantOp::create(rewriter,
           op.getLoc(), rhsType,
           rewriter.getIntegerAttr(rhsType, type.getIntOrFloatBitWidth()));
     }
 
-    Value excessCheck = rewriter.create<emitc::CmpOp>(
+    Value excessCheck = emitc::CmpOp::create(rewriter,
         op.getLoc(), rewriter.getI1Type(), emitc::CmpPredicate::lt, rhs, width);
 
     // Any concrete value is a valid refinement of poison.
-    Value poison = rewriter.create<emitc::ConstantOp>(
+    Value poison = emitc::ConstantOp::create(rewriter,
         op.getLoc(), arithmeticType,
         (isa<IntegerType>(arithmeticType)
              ? rewriter.getIntegerAttr(arithmeticType, 0)
              : rewriter.getIndexAttr(0)));
 
-    emitc::ExpressionOp ternary = rewriter.create<emitc::ExpressionOp>(
+    emitc::ExpressionOp ternary = emitc::ExpressionOp::create(rewriter,
         op.getLoc(), arithmeticType, /*do_not_inline=*/false);
     Block &bodyBlock = ternary.getBodyRegion().emplaceBlock();
     auto currentPoint = rewriter.getInsertionPoint();
     rewriter.setInsertionPointToStart(&bodyBlock);
     Value arithmeticResult =
-        rewriter.create<EmitCOp>(op.getLoc(), arithmeticType, lhs, rhs);
-    Value resultOrPoison = rewriter.create<emitc::ConditionalOp>(
+        EmitCOp::create(rewriter, op.getLoc(), arithmeticType, lhs, rhs);
+    Value resultOrPoison = emitc::ConditionalOp::create(rewriter,
         op.getLoc(), arithmeticType, excessCheck, arithmeticResult, poison);
-    rewriter.create<emitc::YieldOp>(op.getLoc(), resultOrPoison);
+    emitc::YieldOp::create(rewriter, op.getLoc(), resultOrPoison);
     rewriter.setInsertionPoint(op->getBlock(), currentPoint);
 
     Value result = adaptValueType(ternary, rewriter, type);
@@ -700,11 +700,11 @@ public:
                                   /*isSigned=*/false);
     }
 
-    Value result = rewriter.create<emitc::CastOp>(
+    Value result = emitc::CastOp::create(rewriter,
         castOp.getLoc(), actualResultType, adaptor.getOperands());
 
     if (isa<arith::FPToUIOp>(castOp)) {
-      result = rewriter.create<emitc::CastOp>(castOp.getLoc(), dstType, result);
+      result = emitc::CastOp::create(rewriter, castOp.getLoc(), dstType, result);
     }
     rewriter.replaceOp(castOp, result);
 

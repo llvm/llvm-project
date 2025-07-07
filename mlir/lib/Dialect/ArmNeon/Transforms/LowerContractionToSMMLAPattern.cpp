@@ -126,7 +126,7 @@ public:
 
     // Initial accumulator for the final result. This is the un-tiled result if
     // tiling is done.
-    Value result = rewriter.create<arith::ConstantOp>(
+    Value result = arith::ConstantOp::create(rewriter,
         loc, op.getResultType(), rewriter.getZeroAttr(op.getResultType()));
 
     SmallVector<int64_t> unrolledSize = *op.getShapeForUnroll();
@@ -178,7 +178,7 @@ public:
       if (isVecmat) {
         auto expandForSMMLA = [&](Value tiledOperand,
                                   VectorType expandedTypeType) {
-          auto emptyOperand = rewriter.create<arith::ConstantOp>(
+          auto emptyOperand = arith::ConstantOp::create(rewriter,
               loc, expandedTypeType, rewriter.getZeroAttr(expandedTypeType));
           SmallVector<int64_t> offsets(
               cast<ShapedType>(emptyOperand.getType()).getRank(), 0);

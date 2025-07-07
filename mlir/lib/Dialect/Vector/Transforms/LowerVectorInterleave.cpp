@@ -60,14 +60,14 @@ public:
       return failure();
 
     auto loc = op.getLoc();
-    Value result = rewriter.create<arith::ConstantOp>(
+    Value result = arith::ConstantOp::create(rewriter,
         loc, resultType, rewriter.getZeroAttr(resultType));
     for (auto position : *unrollIterator) {
-      Value extractLhs = rewriter.create<ExtractOp>(loc, op.getLhs(), position);
-      Value extractRhs = rewriter.create<ExtractOp>(loc, op.getRhs(), position);
+      Value extractLhs = ExtractOp::create(rewriter, loc, op.getLhs(), position);
+      Value extractRhs = ExtractOp::create(rewriter, loc, op.getRhs(), position);
       Value interleave =
-          rewriter.create<InterleaveOp>(loc, extractLhs, extractRhs);
-      result = rewriter.create<InsertOp>(loc, interleave, result, position);
+          InterleaveOp::create(rewriter, loc, extractLhs, extractRhs);
+      result = InsertOp::create(rewriter, loc, interleave, result, position);
     }
 
     rewriter.replaceOp(op, result);
@@ -123,19 +123,19 @@ public:
       return failure();
 
     auto loc = op.getLoc();
-    Value emptyResult = rewriter.create<arith::ConstantOp>(
+    Value emptyResult = arith::ConstantOp::create(rewriter,
         loc, resultType, rewriter.getZeroAttr(resultType));
     Value evenResult = emptyResult;
     Value oddResult = emptyResult;
 
     for (auto position : *unrollIterator) {
       auto extractSrc =
-          rewriter.create<vector::ExtractOp>(loc, op.getSource(), position);
+          vector::ExtractOp::create(rewriter, loc, op.getSource(), position);
       auto deinterleave =
-          rewriter.create<vector::DeinterleaveOp>(loc, extractSrc);
-      evenResult = rewriter.create<vector::InsertOp>(
+          vector::DeinterleaveOp::create(rewriter, loc, extractSrc);
+      evenResult = vector::InsertOp::create(rewriter,
           loc, deinterleave.getRes1(), evenResult, position);
-      oddResult = rewriter.create<vector::InsertOp>(loc, deinterleave.getRes2(),
+      oddResult = vector::InsertOp::create(rewriter, loc, deinterleave.getRes2(),
                                                     oddResult, position);
     }
     rewriter.replaceOp(op, ValueRange{evenResult, oddResult});

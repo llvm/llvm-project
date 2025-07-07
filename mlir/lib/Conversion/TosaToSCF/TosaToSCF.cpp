@@ -32,7 +32,7 @@ static void inlineIfCase(Region &srcRegion, Region &dstRegion,
 
   auto yield = cast<YieldOp>(headBlock->getTerminator());
   rewriter.setInsertionPoint(yield);
-  rewriter.create<scf::YieldOp>(yield.getLoc(), yield.getInputs());
+  scf::YieldOp::create(rewriter, yield.getLoc(), yield.getInputs());
   rewriter.eraseOp(yield);
 
   headBlock->eraseArguments(0, headBlock->getNumArguments());
@@ -49,12 +49,12 @@ static void inlineWhileCase(Region &srcRegion, Region &dstRegion,
   rewriter.setInsertionPoint(yield);
   if (isCond) {
     auto condition =
-        rewriter.create<tensor::ExtractOp>(yield.getLoc(), yield.getOperand(0));
-    rewriter.create<scf::ConditionOp>(yield.getLoc(), condition,
+        tensor::ExtractOp::create(rewriter, yield.getLoc(), yield.getOperand(0));
+    scf::ConditionOp::create(rewriter, yield.getLoc(), condition,
                                       headBlock->getArguments());
   } else {
     rewriter.setInsertionPoint(yield);
-    rewriter.create<scf::YieldOp>(yield.getLoc(), yield.getInputs());
+    scf::YieldOp::create(rewriter, yield.getLoc(), yield.getInputs());
   }
   rewriter.eraseOp(yield);
 }
@@ -68,8 +68,8 @@ public:
   LogicalResult matchAndRewrite(tosa::IfOp op,
                                 PatternRewriter &rewriter) const final {
     auto condition =
-        rewriter.create<tensor::ExtractOp>(op.getLoc(), op.getCondition());
-    auto newIf = rewriter.create<scf::IfOp>(op.getLoc(), op.getResultTypes(),
+        tensor::ExtractOp::create(rewriter, op.getLoc(), op.getCondition());
+    auto newIf = scf::IfOp::create(rewriter, op.getLoc(), op.getResultTypes(),
                                             condition, true);
 
     inlineIfCase(op.getThenGraph(), newIf.getThenRegion(), op.getInputList(),
@@ -90,7 +90,7 @@ class ScatterOpConverter : public OpRewritePattern<tosa::ScatterOp> {
 
   static Value createIndexConst(OpBuilder &builder, Location loc,
                                 int64_t value) {
-    return builder.create<arith::ConstantIndexOp>(loc, value);
+    return arith::ConstantIndexOp::create(builder, loc, value);
   }
 
 public:
@@ -121,8 +121,8 @@ public:
       auto n = ivs[0];
 
       // Read the index and cast it to index type
-      auto index = builder.create<tensor::ExtractOp>(loc, indices, ivs);
-      auto castIndex = builder.create<arith::IndexCastOp>(
+      auto index = tensor::ExtractOp::create(builder, loc, indices, ivs);
+      auto castIndex = arith::IndexCastOp::create(builder,
           loc, builder.getIndexType(), index);
 
       // Offset, sizes, and strides for the input tensor
@@ -132,12 +132,12 @@ public:
       llvm::SmallVector<Value> sizes = {one, one, dimC};
       llvm::SmallVector<Value> strides = {one, one, one};
 
-      auto slice = builder.create<tensor::ExtractSliceOp>(
+      auto slice = tensor::ExtractSliceOp::create(builder,
           loc, input, inputOffset, sizes, strides);
 
       // Insert the slice into the output accumulator tensor.
       llvm::SmallVector<Value> outputOffset = {n, castIndex, zero};
-      auto updated = builder.create<tensor::InsertSliceOp>(
+      auto updated = tensor::InsertSliceOp::create(builder,
           loc, slice, args[0], outputOffset, sizes, strides);
 
       return {updated};
@@ -157,7 +157,7 @@ public:
 
   LogicalResult matchAndRewrite(tosa::WhileOp op,
                                 PatternRewriter &rewriter) const final {
-    auto newWhile = rewriter.create<scf::WhileOp>(
+    auto newWhile = scf::WhileOp::create(rewriter,
         op.getLoc(), op.getResultTypes(), op.getInputList());
     rewriter.createBlock(&newWhile.getBefore());
     rewriter.createBlock(&newWhile.getAfter());

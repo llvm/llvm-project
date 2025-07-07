@@ -116,7 +116,7 @@ struct TransferWriteOpInterface
         getBuffer(rewriter, writeOp.getBase(), options, state);
     if (failed(resultBuffer))
       return failure();
-    rewriter.create<vector::TransferWriteOp>(
+    vector::TransferWriteOp::create(rewriter,
         writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
         writeOp.getIndices(), writeOp.getPermutationMapAttr(),
         writeOp.getMask(), writeOp.getInBoundsAttr());
@@ -241,7 +241,7 @@ struct MaskOpInterface
     // Create a new vector.mask op.
     ValueRange newYieldedValuesRange(newYieldedValues);
     TypeRange newResultTypes(newYieldedValuesRange);
-    auto newOp = rewriter.create<vector::MaskOp>(
+    auto newOp = vector::MaskOp::create(rewriter,
         op->getLoc(), newResultTypes, maskOp.getMask(), maskOp.getPassthru(),
         /*maskableOp=*/nullptr,
         /*maskRegionBuilder=*/[](OpBuilder &b, Operation *) {});

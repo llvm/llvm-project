@@ -71,7 +71,7 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   varType =
       spirv::PointerType::get(varPointeeType, varPtrType.getStorageClass());
 
-  return builder.create<spirv::GlobalVariableOp>(
+  return spirv::GlobalVariableOp::create(builder,
       funcOp.getLoc(), varType, varName, abiInfo.getDescriptorSet(),
       abiInfo.getBinding());
 }
@@ -147,7 +147,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return funcOp.emitRemark("lower entry point failure: could not select "
                              "execution model based on 'spirv.target_env'");
 
-  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), *executionModel, funcOp,
+  spirv::EntryPointOp::create(builder, funcOp.getLoc(), *executionModel, funcOp,
                                       interfaceVars);
 
   // Specifies the spirv.ExecutionModeOp.
@@ -155,7 +155,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::LocalSize);
     if (!caps || targetEnv.allows(*caps)) {
-      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
+      spirv::ExecutionModeOp::create(builder, funcOp.getLoc(), funcOp,
                                              spirv::ExecutionMode::LocalSize,
                                              workgroupSizeAttr.asArrayRef());
       // Erase workgroup size.
@@ -168,7 +168,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
     if (!caps || targetEnv.allows(*caps)) {
-      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
+      spirv::ExecutionModeOp::create(builder, funcOp.getLoc(), funcOp,
                                              spirv::ExecutionMode::SubgroupSize,
                                              *subgroupSize);
       // Erase subgroup size.
@@ -181,7 +181,7 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SignedZeroInfNanPreserve);
     if (!caps || targetEnv.allows(*caps)) {
-      builder.create<spirv::ExecutionModeOp>(
+      spirv::ExecutionModeOp::create(builder,
           funcOp.getLoc(), funcOp,
           spirv::ExecutionMode::SignedZeroInfNanPreserve, *targetWidth);
       // Erase target width.
@@ -260,7 +260,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
 
     // Insert spirv::AddressOf and spirv::AccessChain operations.
     Value replacement =
-        rewriter.create<spirv::AddressOfOp>(funcOp.getLoc(), var);
+        spirv::AddressOfOp::create(rewriter, funcOp.getLoc(), var);
     // Check if the arg is a scalar or vector type. In that case, the value
     // needs to be loaded into registers.
     // TODO: This is loading value of the scalar into registers
@@ -270,9 +270,9 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     if (cast<spirv::SPIRVType>(argType.value()).isScalarOrVector()) {
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
-      auto loadPtr = rewriter.create<spirv::AccessChainOp>(
+      auto loadPtr = spirv::AccessChainOp::create(rewriter,
           funcOp.getLoc(), replacement, zero.getConstant());
-      replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);
+      replacement = spirv::LoadOp::create(rewriter, funcOp.getLoc(), loadPtr);
     }
     signatureConverter.remapInput(argType.index(), replacement);
   }
@@ -309,7 +309,7 @@ void LowerABIAttributesPass::runOnOperation() {
                                             ValueRange inputs, Location loc) {
     if (inputs.size() != 1 || !isa<spirv::PointerType>(inputs[0].getType()))
       return Value();
-    return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
+    return spirv::BitcastOp::create(builder, loc, type, inputs[0]).getResult();
   });
 
   RewritePatternSet patterns(context);

@@ -416,7 +416,7 @@ static LogicalResult generateLoopNestUsingForOp(
   SmallVector<Value> ivs;
   for (auto [lb, ub, step] : llvm::zip_equal(lbVals, ubVals, stepVals)) {
     auto loop =
-        rewriter.create<scf::ForOp>(loc, lb, ub, step, destinationTensors,
+        scf::ForOp::create(rewriter, loc, lb, ub, step, destinationTensors,
                                     [](OpBuilder &bodyBuilder, Location bodyLoc,
                                        Value iv, ValueRange /*iterArgs*/) {});
     loops.push_back(loop);
@@ -445,12 +445,12 @@ static LogicalResult generateLoopNestUsingForOp(
                        resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
-    auto insertSlice = rewriter.create<tensor::InsertSliceOp>(
+    auto insertSlice = tensor::InsertSliceOp::create(rewriter,
         loc, tiledValue, destinationTensor, resultOffset, resultSize,
         resultStride);
     yieldedValues.push_back(insertSlice);
   }
-  rewriter.create<scf::YieldOp>(loc, yieldedValues);
+  scf::YieldOp::create(rewriter, loc, yieldedValues);
 
   // Add the scf.yield operations for all the outer loops.
   for (auto [outerLoop, innerLoop] :
@@ -458,7 +458,7 @@ static LogicalResult generateLoopNestUsingForOp(
                        MutableArrayRef(loops).drop_front())) {
     rewriter.setInsertionPointToEnd(
         cast<scf::ForOp>(outerLoop.getOperation()).getBody());
-    rewriter.create<scf::YieldOp>(outerLoop.getLoc(), innerLoop->getResults());
+    scf::YieldOp::create(rewriter, outerLoop.getLoc(), innerLoop->getResults());
   }
   return success();
 }
@@ -499,13 +499,13 @@ static LogicalResult generateLoopNestUsingForallOp(
         continue;
       nonZeroNumThreads.push_back(nt);
     }
-    forallOp = rewriter.create<scf::ForallOp>(loc, nonZeroNumThreads,
+    forallOp = scf::ForallOp::create(rewriter, loc, nonZeroNumThreads,
                                               destinationTensors, mappingAttr);
   } else {
     SmallVector<OpFoldResult> lbs, ubs, steps;
     std::tie(lbs, ubs, steps) =
         getLoopBounds(rewriter, loc, loopRanges, tileSizes);
-    forallOp = rewriter.create<scf::ForallOp>(loc, lbs, ubs, steps,
+    forallOp = scf::ForallOp::create(rewriter, loc, lbs, ubs, steps,
                                               destinationTensors, mappingAttr);
   }
   loops.push_back(forallOp);
@@ -527,7 +527,7 @@ static LogicalResult generateLoopNestUsingForallOp(
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
 
-    rewriter.create<tensor::ParallelInsertSliceOp>(
+    tensor::ParallelInsertSliceOp::create(rewriter,
         loc, tiledValue, destinationTensor, resultOffset, resultSize,
         resultStride);
   }
@@ -741,7 +741,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
 
   auto inits = llvm::to_vector(loopOp.getInitArgs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  auto newLoop = rewriter.create<scf::ForOp>(
+  auto newLoop = scf::ForOp::create(rewriter,
       loc, loopOp.getLowerBound(), loopOp.getUpperBound(), loopOp.getStep(),
       inits, [](OpBuilder &, Location, Value, ValueRange) {});
 
@@ -772,7 +772,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForOp>(
                        resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
-    Value insert = rewriter.create<tensor::InsertSliceOp>(
+    Value insert = tensor::InsertSliceOp::create(rewriter,
         yieldOp->getLoc(), tiledValue, regionIterArg, resultOffset, resultSize,
         resultStride);
     newYieldValues.push_back(insert);
@@ -794,7 +794,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
   rewriter.setInsertionPoint(loopOp);
   auto inits = llvm::to_vector(loopOp.getOutputs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  auto newLoop = rewriter.create<scf::ForallOp>(
+  auto newLoop = scf::ForallOp::create(rewriter,
       loc, loopOp.getMixedLowerBound(), loopOp.getMixedUpperBound(),
       loopOp.getMixedStep(), inits, loopOp.getMapping(),
       [](OpBuilder &, Location, ValueRange) {});
@@ -827,7 +827,7 @@ FailureOr<LoopLikeOpInterface> yieldTiledValuesAndReplaceLoop<scf::ForallOp>(
            tiledValues, regionIterArgs, resultOffsets, resultSizes)) {
     SmallVector<OpFoldResult> resultStride(resultOffset.size(),
                                            rewriter.getIndexAttr(1));
-    rewriter.create<tensor::ParallelInsertSliceOp>(
+    tensor::ParallelInsertSliceOp::create(rewriter,
         terminator.getLoc(), tiledValue, iterArg, resultOffset, resultSize,
         resultStride);
   }
@@ -878,7 +878,7 @@ static LogicalResult addInitOperandsToLoopNest(
     // Create a new loop with the new init values for this loop.
     SmallVector<Value> newInits = llvm::to_vector(forLoop.getInitArgs());
     newInits.append(newInitValues.begin(), newInitValues.end());
-    auto newLoop = rewriter.create<scf::ForOp>(
+    auto newLoop = scf::ForOp::create(rewriter,
         forLoop.getLoc(), forLoop.getLowerBound(), forLoop.getUpperBound(),
         forLoop.getStep(), newInits,
         [&](OpBuilder &b, Location loc, Value iv, ValueRange iterArgs) {});
@@ -1349,7 +1349,7 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
       rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
-        auto destSlice = rewriter.create<tensor::ExtractSliceOp>(
+        auto destSlice = tensor::ExtractSliceOp::create(rewriter,
             loc, newRegionArg, offsetList[index], sizesList[index],
             SmallVector<OpFoldResult>(offsetList[index].size(),
                                       rewriter.getIndexAttr(1)));
@@ -2072,7 +2072,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(
           dyn_cast<tensor::ParallelInsertSliceOp>(candidateSliceOp)) {
     auto newForallOp = cast<scf::ForallOp>(innerMostLoop.getOperation());
     rewriter.setInsertionPoint(newForallOp.getTerminator());
-    clonedInsertSliceOp = rewriter.create<tensor::InsertSliceOp>(
+    clonedInsertSliceOp = tensor::InsertSliceOp::create(rewriter,
         loc, sliceOp.getSource(), sliceOp.getDest(), sliceOp.getMixedOffsets(),
         sliceOp.getMixedSizes(), sliceOp.getMixedStrides());
   } else {
@@ -2165,7 +2165,7 @@ mlir::scf::tileAndFuseConsumerOfSlice(
       rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
-        auto destSlice = rewriter.create<tensor::ExtractSliceOp>(
+        auto destSlice = tensor::ExtractSliceOp::create(rewriter,
             loc, newRegionArg, resultOffsets[index], resultSizes[index],
             SmallVector<OpFoldResult>(resultOffsets[index].size(),
                                       rewriter.getIndexAttr(1)));
@@ -2239,7 +2239,7 @@ mlir::scf::lowerToLoopsUsingSCFForOp(RewriterBase &rewriter,
         getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.size);
     Value strideVal =
         getValueOrCreateConstantIndexOp(rewriter, loc, loopRange.stride);
-    auto loop = rewriter.create<scf::ForOp>(op.getLoc(), offsetVal, sizeVal,
+    auto loop = scf::ForOp::create(rewriter, op.getLoc(), offsetVal, sizeVal,
                                             strideVal, ValueRange{});
     loops.push_back(loop);
     ivs.push_back(loop.getInductionVar());

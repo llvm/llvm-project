@@ -77,7 +77,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
 
     Location loc = extractOp.getLoc();
 
-    Value newSrcVector = rewriter.create<vector::ExtractOp>(
+    Value newSrcVector = vector::ExtractOp::create(rewriter,
         loc, extractOp.getVector(), splatZero(dropCount));
 
     // The offsets/sizes/strides attribute can have a less number of elements
@@ -89,7 +89,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     auto newStrides = rewriter.getArrayAttr(
         extractOp.getStrides().getValue().drop_front(dropCount));
 
-    auto newExtractOp = rewriter.create<vector::ExtractStridedSliceOp>(
+    auto newExtractOp = vector::ExtractStridedSliceOp::create(rewriter,
         loc, newDstType, newSrcVector, newOffsets, newSizes, newStrides);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(extractOp, oldDstType,
@@ -120,9 +120,9 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     // Trim leading one dimensions from both operands.
     Location loc = insertOp.getLoc();
 
-    Value newSrcVector = rewriter.create<vector::ExtractOp>(
+    Value newSrcVector = vector::ExtractOp::create(rewriter,
         loc, insertOp.getValueToStore(), splatZero(srcDropCount));
-    Value newDstVector = rewriter.create<vector::ExtractOp>(
+    Value newDstVector = vector::ExtractOp::create(rewriter,
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
     auto newOffsets = rewriter.getArrayAttr(
@@ -130,7 +130,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
     auto newStrides = rewriter.getArrayAttr(
         insertOp.getStrides().getValue().take_back(newSrcType.getRank()));
 
-    auto newInsertOp = rewriter.create<vector::InsertStridedSliceOp>(
+    auto newInsertOp = vector::InsertStridedSliceOp::create(rewriter,
         loc, newDstType, newSrcVector, newDstVector, newOffsets, newStrides);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
@@ -169,10 +169,10 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
     Value newSrcVector = insertOp.getValueToStore();
     if (oldSrcRank != 0) {
-      newSrcVector = rewriter.create<vector::ExtractOp>(
+      newSrcVector = vector::ExtractOp::create(rewriter,
           loc, insertOp.getValueToStore(), splatZero(srcDropCount));
     }
-    Value newDstVector = rewriter.create<vector::ExtractOp>(
+    Value newDstVector = vector::ExtractOp::create(rewriter,
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
     // New position rank needs to be computed in two steps: (1) if destination
@@ -187,7 +187,7 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     newPosition.resize(newDstType.getRank() - newSrcRank,
                        rewriter.getI64IntegerAttr(0));
 
-    auto newInsertOp = rewriter.create<vector::InsertOp>(
+    auto newInsertOp = vector::InsertOp::create(rewriter,
         loc, newSrcVector, newDstVector, newPosition);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
@@ -209,9 +209,9 @@ static Value dropUnitDimsFromMask(OpBuilder &b, Location loc, Value mask,
   if (vector::isBroadcastableTo(newMaskType, oldMaskType) ==
       BroadcastableToResult::Success) {
     int64_t dropDim = oldMaskType.getRank() - newMaskType.getRank();
-    return b.create<vector::ExtractOp>(loc, mask, splatZero(dropDim));
+    return vector::ExtractOp::create(b, loc, mask, splatZero(dropDim));
   }
-  return b.create<vector::ShapeCastOp>(loc, newMaskType, mask);
+  return vector::ShapeCastOp::create(b, loc, newMaskType, mask);
 }
 
 // Turns vector.transfer_read on vector with leading 1 dimensions into
@@ -259,7 +259,7 @@ struct CastAwayTransferReadLeadingOneDim
                                   newType, newMap, maskType);
     }
 
-    auto newRead = rewriter.create<vector::TransferReadOp>(
+    auto newRead = vector::TransferReadOp::create(rewriter,
         read.getLoc(), newType, read.getBase(), read.getIndices(),
         AffineMapAttr::get(newMap), read.getPadding(), mask, inBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(read, oldType, newRead);
@@ -306,7 +306,7 @@ struct CastAwayTransferWriteLeadingOneDim
       inBoundsAttr = rewriter.getArrayAttr(
           write.getInBoundsAttr().getValue().take_back(newType.getRank()));
 
-    auto newVector = rewriter.create<vector::ExtractOp>(
+    auto newVector = vector::ExtractOp::create(rewriter,
         write.getLoc(), write.getVector(), splatZero(dropDim));
 
     if (write.getMask()) {
@@ -444,20 +444,20 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
     // Extract if its a valid extraction, otherwise use the operand
     // without extraction.
     newOperands.push_back(
-        validExtract ? rewriter.create<vector::ExtractOp>(
+        validExtract ? vector::ExtractOp::create(rewriter,
                            loc, operands[it.index()], splatZero(dropDim))
                      : operands[it.index()]);
   }
 
   // Depending on whether this vector.contract is masked, the replacing Op
   // should either be a new vector.contract Op or vector.mask Op.
-  Operation *newOp = rewriter.create<vector::ContractionOp>(
+  Operation *newOp = vector::ContractionOp::create(rewriter,
       loc, newOperands[0], newOperands[1], newOperands[2],
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
       rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
 
   if (maskingOp) {
-    auto newMask = rewriter.create<vector::ExtractOp>(loc, maskingOp.getMask(),
+    auto newMask = vector::ExtractOp::create(rewriter, loc, maskingOp.getMask(),
                                                       splatZero(dropDim));
 
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
@@ -519,7 +519,7 @@ public:
     SmallVector<Value, 4> newOperands;
     for (Value operand : op->getOperands()) {
       if (auto opVecType = dyn_cast<VectorType>(operand.getType())) {
-        newOperands.push_back(rewriter.create<vector::ExtractOp>(
+        newOperands.push_back(vector::ExtractOp::create(rewriter,
             op->getLoc(), operand, splatZero(dropDim)));
       } else {
         newOperands.push_back(operand);
@@ -559,7 +559,7 @@ struct CastAwayConstantMaskLeadingOneDim
     SmallVector<int64_t> newDimSizes = {flatLeadingSize};
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 
-    auto newMask = rewriter.create<vector::ConstantMaskOp>(
+    auto newMask = vector::ConstantMaskOp::create(rewriter,
         mask.getLoc(), newType, newDimSizes);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(mask, oldType, newMask);
     return success();

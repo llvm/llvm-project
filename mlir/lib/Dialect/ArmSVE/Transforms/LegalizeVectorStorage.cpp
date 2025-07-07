@@ -71,7 +71,7 @@ void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
                                        TLegalizerCallback callback) {
   replaceOpWithLegalizedOp(rewriter, op, [&](TOp newOp) {
     // Mark our `unrealized_conversion_casts` with a pass label.
-    return rewriter.create<UnrealizedConversionCastOp>(
+    return UnrealizedConversionCastOp::create(rewriter,
         op.getLoc(), TypeRange{op.getResult().getType()},
         ValueRange{callback(newOp)},
         NamedAttribute(rewriter.getStringAttr(kSVELegalizerTag),
@@ -239,7 +239,7 @@ struct LegalizeSVEMaskStoreConversion
 
     auto legalMaskType = widenScalableMaskTypeToSvbool(
         llvm::cast<VectorType>(valueToStore.getType()));
-    auto convertToSvbool = rewriter.create<arm_sve::ConvertToSvboolOp>(
+    auto convertToSvbool = arm_sve::ConvertToSvboolOp::create(rewriter,
         loc, legalMaskType, valueToStore);
     // Replace this store with a conversion to a storable svbool mask [1],
     // followed by a wider store.
@@ -290,7 +290,7 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
     replaceOpWithLegalizedOp(rewriter, loadOp, [&](memref::LoadOp newLoadOp) {
       newLoadOp.setMemRef(*legalMemref);
       newLoadOp.getResult().setType(legalMaskType);
-      return rewriter.create<arm_sve::ConvertFromSvboolOp>(
+      return arm_sve::ConvertFromSvboolOp::create(rewriter,
           loc, loadedMask.getType(), newLoadOp);
     });
 
