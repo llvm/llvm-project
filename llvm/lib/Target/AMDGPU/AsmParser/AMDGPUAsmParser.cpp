@@ -4753,10 +4753,8 @@ bool AMDGPUAsmParser::validateTensorR128(const MCInst &Inst) {
     return true;
 
   int R128Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::r128);
-  if (R128Idx >= 0 && Inst.getOperand(R128Idx).getImm())
-    return false;
 
-  return true;
+  return R128Idx < 0 || !Inst.getOperand(R128Idx).getImm();
 }
 
 bool AMDGPUAsmParser::validateRayTracingR128(const MCInst &Inst) {
@@ -5917,7 +5915,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   }
   if (!validateTensorR128(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
-      "instruction must set modifier r128=0");
+          "instruction must set modifier r128=0");
     return false;
   }
   //TODO: FIXME:  GFX13 - verify if r128==1 for RayTracing.
