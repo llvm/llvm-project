@@ -2833,38 +2833,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     // (see [expr.call]).
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
-
     if (!NoReturn)
       NoReturn = FD->isAnalyzerNoReturn() || C->isBuiltinAssumeFalse(*Context);
-
-    // Some well-known 'noreturn' functions
-    if (!NoReturn)
-      NoReturn = llvm::StringSwitch<bool>(FD->getQualifiedNameAsString())
-                     .Case("BloombergLP::bsls::Assert::invokeHandler", true)
-                     .Case("std::terminate", true)
-                     .Case("std::abort", true)
-                     .Case("exit", true)
-                     .Case("abort", true)
-                     .Case("panic", true)
-                     .Case("error", true)
-                     .Case("Assert", true)
-                     .Case("ziperr", true)
-                     .Case("assfail", true)
-                     .Case("db_error", true)
-                     .Case("__assert", true)
-                     .Case("__assert2", true)
-                     .Case("_wassert", true)
-                     .Case("__assert_rtn", true)
-                     .Case("__assert_fail", true)
-                     .Case("dtrace_assfail", true)
-                     .Case("yy_fatal_error", true)
-                     .Case("_XCAssertionFailureHandler", true)
-                     .Case("_DTAssertionFailureHandler", true)
-                     .Case("_TSAssertionFailureHandler", true)
-                     .Case("__builtin_trap", true)
-                     .Case("__builtin_unreachable", true)
-                     .Default(false);
-
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
     if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
