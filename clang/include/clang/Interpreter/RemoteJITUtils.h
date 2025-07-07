@@ -23,10 +23,11 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <unistd.h>
 
 llvm::Expected<std::unique_ptr<llvm::orc::SimpleRemoteEPC>>
 launchExecutor(llvm::StringRef ExecutablePath, bool UseSharedMemory,
-               llvm::StringRef SlabAllocateSizeString, int stdin_fd = 0, int stdout_fd = 1, int stderr_fd = 2);
+               llvm::StringRef SlabAllocateSizeString, int stdin_fd = STDIN_FILENO, int stdout_fd = STDOUT_FILENO, int stderr_fd = STDERR_FILENO);
 
 /// Create a JITLinkExecutor that connects to the given network address
 /// through a TCP socket. A valid NetworkAddress provides hostname and port,

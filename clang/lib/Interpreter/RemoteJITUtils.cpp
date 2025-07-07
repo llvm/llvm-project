@@ -136,25 +136,20 @@ launchExecutor(StringRef ExecutablePath, bool UseSharedMemory,
     close(ToExecutor[WriteEnd]);
     close(FromExecutor[ReadEnd]);
 
-    if (stdin_fd != 0) {
+    if (stdin_fd != STDIN_FILENO) {
       dup2(stdin_fd, STDIN_FILENO);
-      if (stdin_fd != STDIN_FILENO)
-        close(stdin_fd);
+      close(stdin_fd);
     }
 
-    if (stdout_fd != 1) {
+    if (stdout_fd != STDOUT_FILENO) {
       dup2(stdout_fd, STDOUT_FILENO);
-      if (stdout_fd != STDOUT_FILENO)
-        close(stdout_fd);
-
+      close(stdout_fd);
       setvbuf(stdout, NULL, _IONBF, 0);
     }
 
-    if (stderr_fd != 2) {
+    if (stderr_fd != STDERR_FILENO) {
       dup2(stderr_fd, STDERR_FILENO);
-      if (stderr_fd != STDERR_FILENO)
-        close(stderr_fd);
-
+      close(stderr_fd);
       setvbuf(stderr, NULL, _IONBF, 0);
     }
 
