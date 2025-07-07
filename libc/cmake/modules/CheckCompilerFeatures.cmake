@@ -15,7 +15,6 @@ set(
     "fixed_point"
     "cfloat16"
     "cfloat128"
-    "bfloat16"
 )
 
 # Making sure ALL_COMPILER_FEATURES is sorted.
@@ -117,8 +116,6 @@ foreach(feature IN LISTS ALL_COMPILER_FEATURES)
       set(LIBC_TYPES_HAS_CFLOAT16 TRUE)
     elseif(${feature} STREQUAL "cfloat128")
       set(LIBC_TYPES_HAS_CFLOAT128 TRUE)
-    elseif(${feature} STREQUAL "bfloat16")
-      set(LIBC_TYPES_HAS_BFLOAT16 TRUE)
     elseif(${feature} STREQUAL "builtin_ceil_floor_rint_trunc")
       set(LIBC_COMPILER_HAS_BUILTIN_CEIL_FLOOR_RINT_TRUNC TRUE)
     elseif(${feature} STREQUAL "builtin_fmax_fmin")
