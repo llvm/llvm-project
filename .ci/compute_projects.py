@@ -46,6 +46,7 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
+        "libclc",
     },
     "lld": {"bolt", "cross-project-tests"},
     # TODO(issues/132795): LLDB should be enabled on clang changes.
@@ -75,7 +76,7 @@ DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
 DEPENDENT_RUNTIMES_TO_TEST = {
-    "clang": {"compiler-rt"},
+    "clang": {"compiler-rt", "libclc"},
     "clang-tools-extra": {"libc"},
     "libc": {"libc"},
     ".ci": {"compiler-rt", "libc"},
@@ -132,6 +133,7 @@ PROJECT_CHECK_TARGETS = {
     "lld": "check-lld",
     "flang": "check-flang",
     "libc": "check-libc",
+    "libclc": "check-libclc",
     "lld": "check-lld",
     "lldb": "check-lldb",
     "mlir": "check-mlir",
@@ -139,7 +141,7 @@ PROJECT_CHECK_TARGETS = {
     "polly": "check-polly",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "libclc"}
 
 
 def _add_dependencies(projects: Set[str], runtimes: Set[str]) -> Set[str]:
