@@ -1416,8 +1416,9 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
     return true;
   return characteristics->GetIntent() == Fortran::common::Intent::Out;
 }
+
 template <typename T>
-bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
+bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous(const bool argHasTriplet)
     const {
   if (!characteristics)
     return true;
@@ -1430,7 +1431,7 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
     return false;
 
   // TODO: should this check ignore "device" or "managed"?
-  if (dummy->ignoreTKR.any())
+  if (dummy->ignoreTKR.any() && argHasTriplet)
     return true;
 
   const auto &shapeAttrs = dummy->type.attrs();
