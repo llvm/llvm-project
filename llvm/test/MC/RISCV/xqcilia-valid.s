@@ -16,7 +16,6 @@
 # CHECK-ENC: encoding: [0x9f,0x24,0xff,0xff,0xff,0xff]
 qc.e.addai x9, 4294967295
 
-.option noexact
 
 # CHECK-INST: qc.e.addai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0x24,0x00,0x00,0x00,0x80]
@@ -31,13 +30,11 @@ qc.e.addi x10, x9, -33554432
 # CHECK-ENC: encoding: [0x1f,0xb5,0xf4,0xbf,0xff,0x7f]
 qc.e.addi x10, x9, 33554431
 
-.option exact
 
 # CHECK-INST: qc.e.andai      s1, -1
 # CHECK-ENC: encoding: [0x9f,0xa4,0xff,0xff,0xff,0xff]
 qc.e.andai x9, 4294967295
 
-.option noexact
 
 # CHECK-INST: qc.e.andai      s1, -2147483648
 # CHECK-ENC: encoding: [0x9f,0xa4,0x00,0x00,0x00,0x80]
@@ -89,6 +86,8 @@ qc.e.xori x10, x9, -33554432
 qc.e.xori x10, x9, 33554431
 
 # Check that compress patterns work as expected
+
+.option noexact
 
 # CHECK-ALIAS: addi t0, t0, 20
 # CHECK-NOALIAS: c.addi t0, 20
