@@ -1,4 +1,4 @@
-//===- compile-minimal-test.c ---------------------------------------------===//
+//===- compile-opencl-minimal.c -------------------------------------------===//
 //
 // Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
 // amd/comgr/LICENSE.TXT in this repository for license information.
@@ -25,6 +25,16 @@ int main(int argc, char *argv[]) {
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
 
   SizeSource = setBuf(argv[1], &BufSource);
+
+  amd_comgr_language_t OpenCLVersion;
+  if (strcmp(argv[3], "1.2")) {
+    OpenCLVersion = AMD_COMGR_LANGUAGE_OPENCL_1_2;
+  }
+  else if (strcmp(argv[3], "2.0")) {
+    OpenCLVersion = AMD_COMGR_LANGUAGE_OPENCL_1_2;
+  }
+  else
+    fail("unsupported OCL version: %s", argv[3]);
 
   amd_comgr_(create_data_set(&DataSetIn));
   amd_comgr_(create_data(AMD_COMGR_DATA_KIND_SOURCE, &DataSource));

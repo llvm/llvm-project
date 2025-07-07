@@ -6,7 +6,7 @@
 // RUN:   AMD_COMGR_CACHE_POLICY="foo=2h" \
 // RUN:   AMD_COMGR_EMIT_VERBOSE_LOGS=1 \
 // RUN:   AMD_COMGR_REDIRECT_LOGS=%t.log \
-// RUN:     compile-minimal-test %S/../compile-minimal-test.cl %t.bin
+// RUN:     compile-opencl-minimal %S/../compile-minimal-test.cl %t.bin 1.2
 // RUN: llvm-objdump -d %t.bin | FileCheck %S/../compile-minimal-test.cl
 // RUN: FileCheck --check-prefix=BAD %s < %t.log
 // BAD: when parsing the cache policy: Unknown key: 'foo'
