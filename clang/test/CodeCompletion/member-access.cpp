@@ -28,7 +28,7 @@ public:
 };
 
 void test(const Proxy &p) {
-  p->
+  p-> 
 }
 
 struct Test1 {
