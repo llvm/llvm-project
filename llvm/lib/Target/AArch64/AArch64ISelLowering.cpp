@@ -17456,14 +17456,16 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 }
 
 bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
-    LoadInst *LI, ArrayRef<Value *> DeinterleavedValues) const {
-  unsigned Factor = DeinterleavedValues.size();
+    LoadInst *LI, ArrayRef<Value *> DeinterleavedValues,
+    unsigned Factor) const {
   if (Factor != 2 && Factor != 4) {
     LLVM_DEBUG(dbgs() << "Matching ld2 and ld4 patterns failed\n");
     return false;
   }
 
-  VectorType *VTy = cast<VectorType>(DeinterleavedValues[0]->getType());
+  Value *FirstActive = *llvm::find_if(DeinterleavedValues,
+                                      [](Value *V) { return V != nullptr; });
+  VectorType *VTy = cast<VectorType>(FirstActive->getType());
 
   const DataLayout &DL = LI->getModule()->getDataLayout();
   bool UseScalable;
@@ -17512,8 +17514,10 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       LLVM_DEBUG(dbgs() << "LdN4 res: "; LdN->dump());
     }
     // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
-    for (unsigned J = 0; J < Factor; ++J)
-      DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
+    for (unsigned J = 0; J < Factor; ++J) {
+      if (DeinterleavedValues[J])
+        DeinterleavedValues[J]->replaceAllUsesWith(ExtractedLdValues[J]);
+    }
   } else {
     Value *Result;
     if (UseScalable)
@@ -17522,8 +17526,10 @@ bool AArch64TargetLowering::lowerDeinterleaveIntrinsicToLoad(
       Result = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
     // Replace output of deinterleave2 intrinsic by output of ldN2/ldN4
     for (unsigned I = 0; I < Factor; I++) {
-      Value *NewExtract = Builder.CreateExtractValue(Result, I);
-      DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+      if (DeinterleavedValues[I]) {
+        Value *NewExtract = Builder.CreateExtractValue(Result, I);
+        DeinterleavedValues[I]->replaceAllUsesWith(NewExtract);
+      }
     }
   }
   return true;
