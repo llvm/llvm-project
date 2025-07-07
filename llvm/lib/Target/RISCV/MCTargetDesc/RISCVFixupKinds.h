@@ -56,6 +56,10 @@ enum Fixups {
   // 32-bit fixup for symbol references in the 48-bit qc.j/qc.jal instructions
   fixup_riscv_qc_e_call_plt,
 
+  // Andes specific fixups
+  // 10-bit fixup for symbol references in the xandesperf branch instruction
+  fixup_riscv_nds_branch_10,
+
   // Used as a sentinel, must be the last
   fixup_riscv_invalid,
   NumTargetFixupKinds = fixup_riscv_invalid - FirstTargetFixupKind
@@ -67,21 +71,17 @@ getRelocPairForSize(unsigned Size) {
   default:
     llvm_unreachable("unsupported fixup size");
   case 1:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD8),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB8));
+    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD8,
+                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB8);
   case 2:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD16),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB16));
+    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD16,
+                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB16);
   case 4:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD32),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB32));
+    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD32,
+                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB32);
   case 8:
-    return std::make_pair(
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_ADD64),
-        MCFixupKind(FirstLiteralRelocationKind + ELF::R_RISCV_SUB64));
+    return std::make_pair(FirstLiteralRelocationKind + ELF::R_RISCV_ADD64,
+                          FirstLiteralRelocationKind + ELF::R_RISCV_SUB64);
   }
 }
 

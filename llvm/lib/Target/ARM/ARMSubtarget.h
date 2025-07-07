@@ -334,6 +334,9 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// @{
+  /// These properties are per-module, please use the TargetMachine
+  /// TargetTriple.
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetWatchOS() const { return TargetTriple.isWatchOS(); }
@@ -359,6 +362,7 @@ public:
   bool isTargetEHABICompatible() const {
     return TargetTriple.isTargetEHABICompatible();
   }
+  /// @}
 
   bool isReadTPSoft() const {
     return !(isReadTPTPIDRURW() || isReadTPTPIDRURO() || isReadTPTPIDRPRW());

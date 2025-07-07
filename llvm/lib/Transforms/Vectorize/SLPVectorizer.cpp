@@ -1196,6 +1196,8 @@ class InstructionsState {
   /// GetVectorCost.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
+  /// Weather the instruction state represents copyable instructions.
+  bool HasCopyables = false;
 
 public:
   Instruction *getMainOp() const {
@@ -1283,12 +1285,15 @@ public:
   explicit operator bool() const { return valid(); }
 
   InstructionsState() = delete;
-  InstructionsState(Instruction *MainOp, Instruction *AltOp)
-      : MainOp(MainOp), AltOp(AltOp) {}
+  InstructionsState(Instruction *MainOp, Instruction *AltOp,
+                    bool HasCopyables = false)
+      : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   bool isCopyableElement(Value *V) const {
     assert(valid() && "InstructionsState is invalid.");
+    if (!HasCopyables)
+      return false;
     if (isAltShuffle() || getOpcode() == Instruction::GetElementPtr)
       return false;
     auto *I = dyn_cast<Instruction>(V);
@@ -1300,10 +1305,6 @@ public:
       return true;
     if (I->getOpcode() == MainOp->getOpcode())
       return false;
-    // FIXME: remove doesNotNeedToBeScheduled() and isa<PHINode>() check once
-    // scheduling is supported.
-    if (!isa<PHINode>(I) && !doesNotNeedToBeScheduled(I))
-      return false;
     if (!I->isBinaryOp())
       return true;
     BinOpSameOpcodeHelper Converter(MainOp);
@@ -1311,34 +1312,35 @@ public:
            Converter.hasAltOp() || !Converter.hasCandidateOpcode(getOpcode());
   }
 
-  bool areInstructionsWithCopyableElements(ArrayRef<Value *> VL) const {
+  /// Checks if the value is non-schedulable.
+  bool isNonSchedulable(Value *V) const {
     assert(valid() && "InstructionsState is invalid.");
-    if (isAltShuffle())
-      return false;
-    bool HasAtLeastOneCopyableElement = false;
-    auto IsCopyableElement = [&](Value *V) {
-      bool IsCopyable = isCopyableElement(V);
-      HasAtLeastOneCopyableElement |= IsCopyable;
-      return IsCopyable;
-    };
-    return all_of(VL,
-                  [&](Value *V) {
-                    if (V == MainOp || isa<PoisonValue>(V))
-                      return true;
-                    if (IsCopyableElement(V))
-                      return true;
-                    auto *I = dyn_cast<Instruction>(V);
-                    if (getOpcode() == Instruction::GetElementPtr && !I)
-                      return true;
-                    assert(I && "Only accepts PoisonValue and Instruction.");
-                    return I->getType() == MainOp->getType() &&
-                           (I->getParent() == MainOp->getParent() ||
-                            (isVectorLikeInstWithConstOps(I) &&
-                             isVectorLikeInstWithConstOps(MainOp))) &&
-                           getMatchingMainOpOrAltOp(cast<Instruction>(V)) ==
-                               MainOp;
-                  }) &&
-           HasAtLeastOneCopyableElement;
+    auto *I = dyn_cast<Instruction>(V);
+    if (!HasCopyables)
+      return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
+             doesNotNeedToBeScheduled(V);
+    // MainOp for copyables always schedulable to correctly identify
+    // non-schedulable copyables.
+    if (isCopyableElement(V)) {
+      auto IsNonSchedulableCopyableElement = [this](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        return !I || isa<PHINode>(I) || I->getParent() != MainOp->getParent() ||
+               (doesNotNeedToBeScheduled(I) &&
+                // If the copyable instructions comes after MainOp
+                // (non-schedulable, but used in the block) - cannot vectorize
+                // it, will possibly generate use before def.
+                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+      };
+
+      return IsNonSchedulableCopyableElement(V);
+    }
+    return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
+           doesNotNeedToBeScheduled(V);
+  }
+
+  bool areInstructionsWithCopyableElements() const {
+    assert(valid() && "InstructionsState is invalid.");
+    return HasCopyables;
   }
 };
 
@@ -1611,8 +1613,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
 /// \returns true if all of the values in \p VL have the same type or false
 /// otherwise.
 static bool allSameType(ArrayRef<Value *> VL) {
-  Type *Ty = VL.front()->getType();
-  return all_of(VL.drop_front(), [&](Value *V) { return V->getType() == Ty; });
+  Type *Ty = VL.consume_front()->getType();
+  return all_of(VL, [&](Value *V) { return V->getType() == Ty; });
 }
 
 /// \returns True if in-tree use also needs extract. This refers to
@@ -3927,11 +3929,7 @@ private:
     void setInterleave(unsigned Factor) { InterleaveFactor = Factor; }
 
     /// Marks the node as one that does not require scheduling.
-    void setDoesNotNeedToSchedule() {
-      assert(::doesNotNeedToSchedule(Scalars) &&
-             "Expected to not need scheduling");
-      DoesNotNeedToSchedule = true;
-    }
+    void setDoesNotNeedToSchedule() { DoesNotNeedToSchedule = true; }
     /// Returns true if the node is marked as one that does not require
     /// scheduling.
     bool doesNotNeedToSchedule() const { return DoesNotNeedToSchedule; }
@@ -4268,7 +4266,11 @@ private:
         }
       }
     } else if (!Last->isGather()) {
-      if (doesNotNeedToSchedule(VL))
+      if (isa<PHINode>(S.getMainOp()) ||
+          isVectorLikeInstWithConstOps(S.getMainOp()) ||
+          (!S.areInstructionsWithCopyableElements() &&
+           doesNotNeedToSchedule(VL)) ||
+          all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))
         Last->setDoesNotNeedToSchedule();
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
@@ -4289,22 +4291,14 @@ private:
         }
       }
       // Update the scheduler bundle to point to this TreeEntry.
-      assert((!Bundle.getBundle().empty() || isa<PHINode>(S.getMainOp()) ||
-              isVectorLikeInstWithConstOps(S.getMainOp()) ||
-              Last->doesNotNeedToSchedule() || doesNotNeedToSchedule(VL) ||
-              all_of(VL,
-                     [&](Value *V) {
-                       return S.isCopyableElement(V) ||
-                              doesNotNeedToBeScheduled(V);
-                     })) &&
+      assert((!Bundle.getBundle().empty() || Last->doesNotNeedToSchedule()) &&
              "Bundle and VL out of sync");
       if (!Bundle.getBundle().empty()) {
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
         auto *BundleMember = Bundle.getBundle().begin();
         SmallPtrSet<Value *, 4> Processed;
         for (Value *V : VL) {
-          if (doesNotNeedToBeScheduled(V) || S.isCopyableElement(V) ||
-              !Processed.insert(V).second)
+          if (S.isNonSchedulable(V) || !Processed.insert(V).second)
             continue;
           ++BundleMember;
         }
@@ -5578,7 +5572,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       MutableArrayRef<unsigned> Slice = CurrentOrder.slice(I * PartSz, Limit);
       // Shuffle of at least 2 vectors - ignore.
       if (any_of(Slice, [&](unsigned I) { return I != NumScalars; })) {
-        std::fill(Slice.begin(), Slice.end(), NumScalars);
+        llvm::fill(Slice, NumScalars);
         ShuffledSubMasks.set(I);
         continue;
       }
@@ -5606,7 +5600,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       FirstMin = (FirstMin / PartSz) * PartSz;
       // Shuffle of at least 2 vectors - ignore.
       if (SecondVecFound) {
-        std::fill(Slice.begin(), Slice.end(), NumScalars);
+        llvm::fill(Slice, NumScalars);
         ShuffledSubMasks.set(I);
         continue;
       }
@@ -5627,7 +5621,7 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
       }
       // Shuffle of at least 2 vectors - ignore.
       if (SecondVecFound) {
-        std::fill(Slice.begin(), Slice.end(), NumScalars);
+        llvm::fill(Slice, NumScalars);
         ShuffledSubMasks.set(I);
         continue;
       }
@@ -5702,8 +5696,8 @@ static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
 /// Calculates minimal alignment as a common alignment.
 template <typename T>
 static Align computeCommonAlignment(ArrayRef<Value *> VL) {
-  Align CommonAlignment = cast<T>(VL.front())->getAlign();
-  for (Value *V : VL.drop_front())
+  Align CommonAlignment = cast<T>(VL.consume_front())->getAlign();
+  for (Value *V : VL)
     CommonAlignment = std::min(CommonAlignment, cast<T>(V)->getAlign());
   return CommonAlignment;
 }
@@ -5852,20 +5846,24 @@ getShuffleCost(const TargetTransformInfo &TTI, TTI::ShuffleKind Kind,
                TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
                int Index = 0, VectorType *SubTp = nullptr,
                ArrayRef<const Value *> Args = {}) {
+  VectorType *DstTy = Tp;
+  if (!Mask.empty())
+    DstTy = FixedVectorType::get(Tp->getScalarType(), Mask.size());
+
   if (Kind != TTI::SK_PermuteTwoSrc)
-    return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+    return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+                              Args);
   int NumSrcElts = Tp->getElementCount().getKnownMinValue();
   int NumSubElts;
   if (Mask.size() > 2 && ShuffleVectorInst::isInsertSubvectorMask(
                              Mask, NumSrcElts, NumSubElts, Index)) {
     if (Index + NumSubElts > NumSrcElts &&
         Index + NumSrcElts <= static_cast<int>(Mask.size()))
-      return TTI.getShuffleCost(
-          TTI::SK_InsertSubvector,
-          getWidenedType(Tp->getElementType(), Mask.size()), Mask,
-          TTI::TCK_RecipThroughput, Index, Tp);
+      return TTI.getShuffleCost(TTI::SK_InsertSubvector, DstTy, Tp, Mask,
+                                TTI::TCK_RecipThroughput, Index, Tp);
   }
-  return TTI.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
+  return TTI.getShuffleCost(Kind, DstTy, Tp, Mask, CostKind, Index, SubTp,
+                            Args);
 }
 
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
@@ -6129,7 +6127,7 @@ static bool isMaskedLoadCompress(
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
                               Instruction::Load, AlignedLoadVecTy,
-                              CompressMask[1], std::nullopt, CommonAlignment,
+                              CompressMask[1], {}, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (InterleavedCost < GatherCost) {
         InterleaveFactor = CompressMask[1];
@@ -9614,8 +9612,8 @@ public:
       ArrayRef<unsigned> IncomingValues = P.second;
       if (IncomingValues.size() <= 1)
         continue;
-      unsigned BasicI = IncomingValues.front();
-      for (unsigned I : IncomingValues.drop_front()) {
+      unsigned BasicI = IncomingValues.consume_front();
+      for (unsigned I : IncomingValues) {
         assert(all_of(enumerate(Operands[I]),
                       [&](const auto &Data) {
                         return !Data.value() ||
@@ -9749,7 +9747,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons operations are still valid for
         // vectorization (div/rem are not allowed).
-        if (!S.areInstructionsWithCopyableElements(PaddedUniqueValues) &&
+        if (!S.areInstructionsWithCopyableElements() &&
             !getSameOpcode(PaddedUniqueValues, TLI).valid()) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           ReuseShuffleIndices.clear();
@@ -9920,6 +9918,7 @@ class InstructionsCompatibilityAnalysis {
     auto IsSupportedOpcode = [](Instruction *I) {
       return I && I->getOpcode() == Instruction::Add;
     };
+    SmallDenseSet<Value *, 8> Operands;
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
@@ -9929,6 +9928,7 @@ class InstructionsCompatibilityAnalysis {
       if (!MainOp) {
         MainOp = I;
         Parent = I->getParent();
+        Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
       if (Parent == I->getParent()) {
@@ -9937,6 +9937,7 @@ class InstructionsCompatibilityAnalysis {
         if (MainOp->getOpcode() == I->getOpcode() &&
             doesNotNeedToBeScheduled(MainOp) && !doesNotNeedToBeScheduled(I))
           MainOp = I;
+        Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
       auto *NodeA = DT.getNode(Parent);
@@ -9949,22 +9950,11 @@ class InstructionsCompatibilityAnalysis {
       if (NodeA->getDFSNumIn() < NodeB->getDFSNumIn()) {
         MainOp = I;
         Parent = I->getParent();
+        Operands.clear();
+        Operands.insert(I->op_begin(), I->op_end());
       }
     }
-    // FIXME: remove second part of the check, once the scheduling support
-    // for copyable instructions is landed.
-    if (!IsSupportedOpcode(MainOp) || any_of(VL, [&](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && I->getOpcode() != MainOp->getOpcode() &&
-                 I->getParent() == MainOp->getParent() && !isa<PHINode>(I) &&
-                 (!doesNotNeedToBeScheduled(I) ||
-                  // If the copyable instructions comes after MainOp
-                  // (non-schedulable, but used in the block) - cannot vectorize
-                  // it, will possibly generate use before def.
-                  (areAllOperandsNonInsts(MainOp) &&
-                   !isUsedOutsideBlock(MainOp) &&
-                   !isVectorLikeInstWithConstOps(I) && MainOp->comesBefore(I)));
-        })) {
+    if (!IsSupportedOpcode(MainOp) || Operands.contains(MainOp)) {
       MainOp = nullptr;
       return;
     }
@@ -10172,7 +10162,13 @@ public:
     findAndSetMainInstruction(VL);
     if (!MainOp)
       return InstructionsState::invalid();
-    S = InstructionsState(MainOp, MainOp);
+    S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+    // TODO: Remove this check once support for schulable copyables is landed.
+    if (any_of(VL, [&](Value *V) {
+          return S.isCopyableElement(V) && !S.isNonSchedulable(V);
+        }))
+      return InstructionsState::invalid();
+
     if (!WithProfitabilityCheck)
       return S;
     // Check if it is profitable to vectorize the instruction.
@@ -10206,11 +10202,12 @@ public:
         if (!Res)
           return InstructionsState::invalid();
       }
+      return S;
     }
     assert(Operands.size() == 2 && "Unexpected number of operands!");
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
-    if (CopyableNum <= VL.size() / 2)
+    if (CopyableNum < VL.size() / 2)
       return S;
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
@@ -10229,18 +10226,40 @@ public:
       }
     }
     // 2. Check, if operands can be vectorized.
-    if (!allConstant(Operands.back()))
+    if (count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return InstructionsState::invalid();
-    bool Res = allConstant(Operands.front()) || isSplat(Operands.front());
-    if (!Res) {
+    auto CheckOperand = [&](ArrayRef<Value *> Ops) {
+      if (allConstant(Ops) || isSplat(Ops))
+        return true;
+      // Check if it is "almost" splat, i.e. has >= 4 elements and only single
+      // one is different.
+      constexpr unsigned Limit = 4;
+      if (Operands.front().size() >= Limit) {
+        SmallDenseMap<const Value *, unsigned> Counters;
+        for (Value *V : Ops) {
+          if (isa<UndefValue>(V))
+            continue;
+          ++Counters[V];
+        }
+        if (Counters.size() == 2 &&
+            any_of(Counters, [&](const std::pair<const Value *, unsigned> &C) {
+              return C.second == 1;
+            }))
+          return true;
+      }
       // First operand not a constant or splat? Last attempt - check for
       // potential vectorization.
       InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
-      if (!Analysis.buildInstructionsState(
-              Operands.front(), R,
-              /*TryCopyableElementsVectorization=*/true))
-        return InstructionsState::invalid();
-    }
+      InstructionsState OpS = Analysis.buildInstructionsState(
+          Ops, R, /*TryCopyableElementsVectorization=*/true);
+      if (!OpS)
+        return false;
+      unsigned CopyableNum =
+          count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
+      return CopyableNum <= VL.size() / 2;
+    };
+    if (!CheckOperand(Operands.front()))
+      return InstructionsState::invalid();
 
     return S;
   }
@@ -10249,7 +10268,7 @@ public:
                                                 ArrayRef<Value *> VL) {
     assert(S && "Invalid state!");
     SmallVector<BoUpSLP::ValueList> Operands;
-    if (S.areInstructionsWithCopyableElements(VL)) {
+    if (S.areInstructionsWithCopyableElements()) {
       MainOp = S.getMainOp();
       MainOpcode = S.getOpcode();
       Operands.assign(MainOp->getNumOperands(),
@@ -12373,7 +12392,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           return TTI.getShuffleCost(
-              TTI::SK_InsertSubvector, VecTy, {}, CostKind,
+              TTI::SK_InsertSubvector, VecTy, VecTy, {}, CostKind,
               std::distance(VL.begin(), It) * getNumElements(ScalarTy),
               cast<FixedVectorType>(ScalarTy));
         }
@@ -13900,7 +13919,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       case TreeEntry::Vectorize:
         if (unsigned Factor = E->getInterleaveFactor()) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, VecTy, Factor, std::nullopt, LI0->getAlign(),
+              Instruction::Load, VecTy, Factor, {}, LI0->getAlign(),
               LI0->getPointerAddressSpace(), CostKind);
 
         } else {
@@ -13941,7 +13960,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         Align CommonAlignment = LI0->getAlign();
         if (InterleaveFactor) {
           VecLdCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Load, LoadVecTy, InterleaveFactor, std::nullopt,
+              Instruction::Load, LoadVecTy, InterleaveFactor, {},
               CommonAlignment, LI0->getPointerAddressSpace(), CostKind);
         } else if (IsMasked) {
           VecLdCost = TTI->getMaskedMemoryOpCost(
@@ -14016,8 +14035,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                  "No reused shuffles expected");
           CommonCost = 0;
           VecStCost = TTI->getInterleavedMemoryOpCost(
-              Instruction::Store, VecTy, Factor, std::nullopt,
-              BaseSI->getAlign(), BaseSI->getPointerAddressSpace(), CostKind);
+              Instruction::Store, VecTy, Factor, {}, BaseSI->getAlign(),
+              BaseSI->getPointerAddressSpace(), CostKind);
         } else {
           TTI::OperandValueInfo OpInfo = getOperandInfo(E->getOperand(0));
           VecStCost = TTI->getMemoryOpCost(
@@ -16398,8 +16417,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         continue;
-      if (E->isCopyableElement(I) &&
-          (!E->hasState() || I->getParent() != E->getMainOp()->getParent()))
+      if (E->isCopyableElement(I))
         continue;
       if (FirstInst->getParent() == I->getParent()) {
         if (I->comesBefore(FirstInst))
@@ -16465,7 +16483,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
       return nullptr;
     for (Value *V : E->Scalars) {
       auto *I = dyn_cast<Instruction>(V);
-      if (!I || isa<PHINode>(I) || doesNotNeedToBeScheduled(I))
+      if (!I || isa<PHINode>(I) ||
+          (!E->isCopyableElement(I) && doesNotNeedToBeScheduled(I)))
         continue;
       ArrayRef<ScheduleBundle *> Bundles = It->second->getScheduleBundles(I);
       if (Bundles.empty())
@@ -16546,7 +16565,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
-       !E->isCopyableElement(LastInst) && E->doesNotNeedToSchedule()) ||
+       E->doesNotNeedToSchedule()) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -16633,14 +16652,8 @@ Value *BoUpSLP::gather(
           UserOp = InsElt;
         }
         if (UserOp) {
-          if (const auto *It = find_if_not(Entries,
-                                           [&](const TreeEntry *TE) {
-                                             return TE->isCopyableElement(V);
-                                           });
-              It != Entries.end()) {
-            unsigned FoundLane = Entries.front()->findLaneForValue(V);
-            ExternalUses.emplace_back(V, UserOp, *Entries.front(), FoundLane);
-          }
+          unsigned FoundLane = Entries.front()->findLaneForValue(V);
+          ExternalUses.emplace_back(V, UserOp, *Entries.front(), FoundLane);
         }
       }
     }
@@ -19756,10 +19769,19 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
+  bool HasCopyables = S.areInstructionsWithCopyableElements();
   if (isa<PHINode>(S.getMainOp()) ||
-      isVectorLikeInstWithConstOps(S.getMainOp()) || doesNotNeedToSchedule(VL))
+      isVectorLikeInstWithConstOps(S.getMainOp()) ||
+      (!HasCopyables && doesNotNeedToSchedule(VL)) ||
+      all_of(VL, [&](Value *V) { return S.isNonSchedulable(V); }))
     return nullptr;
 
+  // TODO Remove once full support for copyables is landed.
+  assert(all_of(VL,
+                [&](Value *V) {
+                  return !S.isCopyableElement(V) || S.isNonSchedulable(V);
+                }) &&
+         "Copyable elements should not be schedulable");
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");
@@ -21557,7 +21579,11 @@ bool SLPVectorizerPass::vectorizeStores(
         }
       }
 
+      // MaxRegVF represents the number of instructions (scalar, or vector in
+      // case of revec) that can be vectorized to naturally fit in a vector
+      // register.
       unsigned MaxRegVF = MaxVF;
+
       MaxVF = std::min<unsigned>(MaxVF, bit_floor(Operands.size()));
       if (MaxVF < MinVF) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
@@ -21566,13 +21592,11 @@ bool SLPVectorizerPass::vectorizeStores(
         continue;
       }
 
-      unsigned Sz = 1 + Log2_32(MaxVF) - Log2_32(MinVF);
-      SmallVector<unsigned> CandidateVFs(Sz + (NonPowerOf2VF > 0 ? 1 : 0));
-      unsigned Size = MinVF;
-      for (unsigned &VF : reverse(CandidateVFs)) {
-        VF = Size > MaxVF ? NonPowerOf2VF : Size;
-        Size *= 2;
-      }
+      SmallVector<unsigned> CandidateVFs;
+      for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
+           VF = divideCeil(VF, 2))
+        CandidateVFs.push_back(VF);
+
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
@@ -23352,7 +23376,10 @@ private:
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
               VectorCost += TTI->getShuffleCost(
-                  TTI::SK_PermuteSingleSrc, VectorTy,
+                  TTI::SK_PermuteSingleSrc,
+                  FixedVectorType::get(VecTy->getScalarType(),
+                                       ReducedVals.size()),
+                  VectorTy,
                   createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
               VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy,
                                                             FMF, CostKind);
@@ -23530,7 +23557,9 @@ private:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
         case RecurKind::AnyOf:
-        case RecurKind::FindLastIV:
+        case RecurKind::FindFirstIVSMin:
+        case RecurKind::FindLastIVSMax:
+        case RecurKind::FindLastIVUMax:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
         case RecurKind::None:
@@ -23664,7 +23693,9 @@ private:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
-    case RecurKind::FindLastIV:
+    case RecurKind::FindFirstIVSMin:
+    case RecurKind::FindLastIVSMax:
+    case RecurKind::FindLastIVUMax:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -23763,7 +23794,9 @@ private:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
     case RecurKind::AnyOf:
-    case RecurKind::FindLastIV:
+    case RecurKind::FindFirstIVSMin:
+    case RecurKind::FindLastIVSMax:
+    case RecurKind::FindLastIVUMax:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:

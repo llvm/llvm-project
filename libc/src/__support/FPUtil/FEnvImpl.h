@@ -91,7 +91,12 @@ LIBC_INLINE static int set_except_if_required([[maybe_unused]] int excepts) {
 LIBC_INLINE static int raise_except_if_required([[maybe_unused]] int excepts) {
 #ifndef LIBC_MATH_HAS_NO_EXCEPT
   if (math_errhandling & MATH_ERREXCEPT)
+#ifdef LIBC_TARGET_ARCH_IS_X86_64
+    return raise_except</*SKIP_X87_FPU*/ true>(excepts);
+#else  // !LIBC_TARGET_ARCH_IS_X86
     return raise_except(excepts);
+#endif // LIBC_TARGET_ARCH_IS_X86
+
 #endif // LIBC_MATH_HAS_NO_EXCEPT
   return 0;
 }

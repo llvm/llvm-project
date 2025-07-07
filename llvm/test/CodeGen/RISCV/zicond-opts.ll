@@ -62,37 +62,30 @@ define i64 @rotate_l_nez(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-LABEL: rotate_l_nez:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    bexti a3, a2, 5
-; RV32ZICOND-NEXT:    not a5, a2
-; RV32ZICOND-NEXT:    czero.nez a6, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a7, a0, a3
-; RV32ZICOND-NEXT:    czero.nez t0, a0, a3
-; RV32ZICOND-NEXT:    czero.eqz a3, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a4
-; RV32ZICOND-NEXT:    or a6, a7, a6
-; RV32ZICOND-NEXT:    or a3, a3, t0
-; RV32ZICOND-NEXT:    sll a7, a6, a2
-; RV32ZICOND-NEXT:    srli t0, a3, 1
-; RV32ZICOND-NEXT:    sll a2, a3, a2
-; RV32ZICOND-NEXT:    srli a3, a6, 1
-; RV32ZICOND-NEXT:    srl a6, t0, a5
-; RV32ZICOND-NEXT:    srl a3, a3, a5
-; RV32ZICOND-NEXT:    or a5, a7, a6
-; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
-; RV32ZICOND-NEXT:    czero.nez a3, a5, a4
-; RV32ZICOND-NEXT:    or a0, a0, a2
-; RV32ZICOND-NEXT:    or a1, a1, a3
+; RV32ZICOND-NEXT:    bexti a3, a2, 5
+; RV32ZICOND-NEXT:    czero.nez a4, a0, a3
+; RV32ZICOND-NEXT:    czero.eqz a5, a1, a3
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
+; RV32ZICOND-NEXT:    not a3, a2
+; RV32ZICOND-NEXT:    or a4, a5, a4
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sll a1, a4, a2
+; RV32ZICOND-NEXT:    srli a5, a0, 1
+; RV32ZICOND-NEXT:    sll a2, a0, a2
+; RV32ZICOND-NEXT:    srli a4, a4, 1
+; RV32ZICOND-NEXT:    srl a0, a5, a3
+; RV32ZICOND-NEXT:    srl a3, a4, a3
+; RV32ZICOND-NEXT:    or a0, a1, a0
+; RV32ZICOND-NEXT:    or a1, a2, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: rotate_l_nez:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    rol a1, a0, a1
 ; RV64ZICOND-NEXT:    czero.nez a1, a1, a2
-; RV64ZICOND-NEXT:    czero.eqz a0, a0, a2
-; RV64ZICOND-NEXT:    or a0, a0, a1
+; RV64ZICOND-NEXT:    rol a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %6 = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %rot.amt)
   %7 = select i1 %cond, i64 %x, i64 %6
@@ -104,37 +97,30 @@ define i64 @rotate_l_eqz(i64 %x, i64 %rot.amt, i1 %cond) {
 ; RV32ZICOND-LABEL: rotate_l_eqz:
 ; RV32ZICOND:       # %bb.0:
 ; RV32ZICOND-NEXT:    andi a4, a4, 1
-; RV32ZICOND-NEXT:    bexti a3, a2, 5
-; RV32ZICOND-NEXT:    not a5, a2
-; RV32ZICOND-NEXT:    czero.nez a6, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a7, a0, a3
-; RV32ZICOND-NEXT:    czero.nez t0, a0, a3
-; RV32ZICOND-NEXT:    czero.eqz a3, a1, a3
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a4
-; RV32ZICOND-NEXT:    czero.nez a1, a1, a4
-; RV32ZICOND-NEXT:    or a6, a7, a6
-; RV32ZICOND-NEXT:    or a3, a3, t0
-; RV32ZICOND-NEXT:    sll a7, a6, a2
-; RV32ZICOND-NEXT:    srli t0, a3, 1
-; RV32ZICOND-NEXT:    sll a2, a3, a2
-; RV32ZICOND-NEXT:    srli a3, a6, 1
-; RV32ZICOND-NEXT:    srl a6, t0, a5
-; RV32ZICOND-NEXT:    srl a3, a3, a5
-; RV32ZICOND-NEXT:    or a5, a7, a6
-; RV32ZICOND-NEXT:    or a2, a2, a3
 ; RV32ZICOND-NEXT:    czero.eqz a2, a2, a4
-; RV32ZICOND-NEXT:    czero.eqz a3, a5, a4
-; RV32ZICOND-NEXT:    or a0, a2, a0
-; RV32ZICOND-NEXT:    or a1, a3, a1
+; RV32ZICOND-NEXT:    bexti a3, a2, 5
+; RV32ZICOND-NEXT:    czero.nez a4, a0, a3
+; RV32ZICOND-NEXT:    czero.eqz a5, a1, a3
+; RV32ZICOND-NEXT:    czero.nez a1, a1, a3
+; RV32ZICOND-NEXT:    czero.eqz a0, a0, a3
+; RV32ZICOND-NEXT:    not a3, a2
+; RV32ZICOND-NEXT:    or a4, a5, a4
+; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sll a1, a4, a2
+; RV32ZICOND-NEXT:    srli a5, a0, 1
+; RV32ZICOND-NEXT:    sll a2, a0, a2
+; RV32ZICOND-NEXT:    srli a4, a4, 1
+; RV32ZICOND-NEXT:    srl a0, a5, a3
+; RV32ZICOND-NEXT:    srl a3, a4, a3
+; RV32ZICOND-NEXT:    or a0, a1, a0
+; RV32ZICOND-NEXT:    or a1, a2, a3
 ; RV32ZICOND-NEXT:    ret
 ;
 ; RV64ZICOND-LABEL: rotate_l_eqz:
 ; RV64ZICOND:       # %bb.0:
 ; RV64ZICOND-NEXT:    andi a2, a2, 1
-; RV64ZICOND-NEXT:    rol a1, a0, a1
-; RV64ZICOND-NEXT:    czero.nez a0, a0, a2
 ; RV64ZICOND-NEXT:    czero.eqz a1, a1, a2
-; RV64ZICOND-NEXT:    or a0, a1, a0
+; RV64ZICOND-NEXT:    rol a0, a0, a1
 ; RV64ZICOND-NEXT:    ret
   %6 = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %rot.amt)
   %7 = select i1 %cond, i64 %6, i64 %x

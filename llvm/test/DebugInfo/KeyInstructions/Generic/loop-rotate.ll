@@ -25,6 +25,7 @@
 ; CHECK:    [[CMP:%.*]] = icmp slt i32 {{.*}}, 100, !dbg [[G2R2:![0-9]+]]
 ; CHECK:    br i1 [[CMP]], label %for.body, label %for.end, !dbg [[G2R1:![0-9]+]]
 ;
+; CHECK: distinct !DISubprogram(name: "test1", {{.*}}keyInstructions: true)
 ; CHECK: [[G3R1]] = !DILocation(line: 4{{.*}}, atomGroup: 3, atomRank: 1)
 ; CHECK: [[G4R1]] = !DILocation(line: 6{{.*}}, atomGroup: 4, atomRank: 1)
 ; CHECK: [[G1R1]] = !DILocation(line: 4{{.*}}, atomGroup: 1, atomRank: 1)
@@ -69,6 +70,6 @@ attributes #1 = { noduplicate }
 !2 = !{i32 12}
 !3 = !{i32 0}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "test1", linkageName: "test1", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = distinct !DISubprogram(name: "test1", linkageName: "test1", scope: null, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !6 = !DISubroutineType(types: !7)
 !7 = !{}
