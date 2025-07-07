@@ -25,7 +25,7 @@
 ; ASM-CHECK-NEXT:   .ascii  "branch-hinting"
 
 ; ASM-CHECK:        .section        .custom_section.metadata.code.branch_hint,"",@
-; ASM-CHECK-NEXT:   .asciz  "\202\200\200\200"
+; ASM-CHECK-NEXT:   .int8   2
 ; ASM-CHECK-NEXT:   .uleb128 test_unlikely_likely_branch@FUNCINDEX
 ; ASM-CHECK-NEXT:   .int8   2
 ; ASM-CHECK-NEXT:   .uleb128 .Ltmp0@DEBUGREF
@@ -47,10 +47,10 @@
 ; YAML-CHECK-NEXT:     Relocations:
 ; YAML-CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; YAML-CHECK-NEXT:         Index:           0
-; YAML-CHECK-NEXT:         Offset:          0x5
+; YAML-CHECK-NEXT:         Offset:          0x1
 ; YAML-CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; YAML-CHECK-NEXT:         Index:           1
-; YAML-CHECK-NEXT:         Offset:          0x11
+; YAML-CHECK-NEXT:         Offset:          0xD
 ; YAML-CHECK-NEXT:     Name:            metadata.code.branch_hint
 ; YAML-CHECK-NEXT:     Entries:
 ; YAML-CHECK-NEXT:       - FuncIdx:         0

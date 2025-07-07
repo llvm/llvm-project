@@ -463,12 +463,14 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
 void WebAssemblyAsmPrinter::emitBranchHintSection() const {
   MCSectionWasm *BranchHintsSection = OutContext.getWasmSection(
       ".custom_section.metadata.code.branch_hint", SectionKind::getMetadata());
-  OutStreamer->pushSection();
-  OutStreamer->switchSection(BranchHintsSection);
   const uint32_t NumFunctionHints =
       std::count_if(BranchHints.begin(), BranchHints.end(),
                     [](const auto &BHR) { return !BHR.Hints.empty(); });
-  OutStreamer->emitULEB128IntValue(NumFunctionHints, 5);
+  if (NumFunctionHints == 0)
+    return;
+  OutStreamer->pushSection();
+  OutStreamer->switchSection(BranchHintsSection);
+  OutStreamer->emitULEB128IntValue(NumFunctionHints);
   for (const auto &BHR : BranchHints) {
     if (BHR.Hints.empty())
       continue;

@@ -187,7 +187,7 @@ void Writer::createBranchHintSection() {
   if (const auto &Ins = customSectionMapping.find(SectionName);
       Ins != customSectionMapping.end()) {
     OutputSection *Sec =
-        make<CodeMetaDataSection>(std::move(SectionName), Ins->second);
+        make<CodeMetaDataOutputSection>(std::move(SectionName), Ins->second);
     if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
       auto *sym = make<OutputSectionSymbol>(Sec);
       out.linkingSec->addToSymtab(sym);

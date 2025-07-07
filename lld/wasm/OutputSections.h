@@ -132,15 +132,18 @@ protected:
   std::string nameData;
 };
 
-class CodeMetaDataSection : public CustomSection {
+class CodeMetaDataOutputSection : public CustomSection {
 public:
-  CodeMetaDataSection(std::string name, ArrayRef<InputChunk *> inputSections)
+  CodeMetaDataOutputSection(std::string name,
+                            ArrayRef<InputChunk *> inputSections)
       : CustomSection(name, inputSections) {}
 
   void writeTo(uint8_t *buf) override;
   void finalizeContents() override;
-};
 
+private:
+  uint32_t NumFuncHints = 0;
+};
 } // namespace wasm
 } // namespace lld
 

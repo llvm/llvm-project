@@ -10,13 +10,13 @@
 ; C1-NEXT:     Relocations:
 ; C1-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; C1-NEXT:         Index:           0
-; C1-NEXT:         Offset:          0x5
+; C1-NEXT:         Offset:          0x1
 ; C1-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; C1-NEXT:         Index:           1
-; C1-NEXT:         Offset:          0xE
+; C1-NEXT:         Offset:          0xA
 ; C1-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; C1-NEXT:         Index:           2
-; C1-NEXT:         Offset:          0x17
+; C1-NEXT:         Offset:          0x13
 ; C1-NEXT:     Name:            metadata.code.branch_hint
 ; C1-NEXT:     Entries:
 ; C1-NEXT:       - FuncIdx:         0
@@ -39,7 +39,7 @@
 ; C2-NEXT:     Relocations:
 ; C2-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; C2-NEXT:         Index:           2
-; C2-NEXT:         Offset:          0x5
+; C2-NEXT:         Offset:          0x1
 ; C2-NEXT:     Name:            metadata.code.branch_hint
 ; C2-NEXT:     Entries:
 ; C2-NEXT:       - FuncIdx:         2
@@ -52,10 +52,10 @@
 ; C3-NEXT:     Relocations:
 ; C3-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; C3-NEXT:         Index:           0
-; C3-NEXT:         Offset:          0x5
+; C3-NEXT:         Offset:          0x1
 ; C3-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; C3-NEXT:         Index:           2
-; C3-NEXT:         Offset:          0xE
+; C3-NEXT:         Offset:          0xA
 ; C3-NEXT:     Name:            metadata.code.branch_hint
 ; C3-NEXT:     Entries:
 ; C3-NEXT:       - FuncIdx:         0

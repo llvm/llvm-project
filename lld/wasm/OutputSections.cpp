@@ -270,62 +270,6 @@ void CustomSection::writeTo(uint8_t *buf) {
     section->writeTo(buf);
 }
 
-void CodeMetaDataSection::writeTo(uint8_t *buf) {
-  log("writing " + toString(*this) + " offset=" + Twine(offset) +
-      " size=" + Twine(getSize()) + " chunks=" + Twine(inputSections.size()));
-
-  assert(offset);
-  buf += offset;
-
-  // Write section header
-  memcpy(buf, header.data(), header.size());
-  buf += header.size();
-  memcpy(buf, nameData.data(), nameData.size());
-  buf += nameData.size();
-
-  uint32_t TotalNumHints = 0;
-  for (const InputChunk *section :
-       make_range(inputSections.rbegin(), inputSections.rend())) {
-    section->writeTo(buf);
-    unsigned EncodingSize;
-    uint32_t NumHints =
-        decodeULEB128(buf + section->outSecOff, &EncodingSize, nullptr);
-    if (EncodingSize != 5) {
-      fatal("Unexpected encoding size for function hint vec size in " + name +
-            ": must be exactly 5 bytes.");
-    }
-    TotalNumHints += NumHints;
-  }
-  encodeULEB128(TotalNumHints, buf, 5);
-}
-
-void CodeMetaDataSection::finalizeContents() {
-  finalizeInputSections();
-
-  raw_string_ostream os(nameData);
-  encodeULEB128(name.size(), os);
-  os << name;
-
-  bool firstSection = true;
-  for (InputChunk *section : inputSections) {
-    assert(!section->discarded);
-    payloadSize = alignTo(payloadSize, section->alignment);
-    if (firstSection) {
-      section->outSecOff = payloadSize;
-      payloadSize += section->getSize();
-      firstSection = false;
-    } else {
-      // adjust output offset so that each section write overwrites exactly the
-      // subsequent section's function hint vector size (which deduplicates)
-      section->outSecOff = payloadSize - 5;
-      // payload size should not include the hint vector size, which is deduped
-      payloadSize += section->getSize() - 5;
-    }
-  }
-
-  createHeader(payloadSize + nameData.size());
-}
-
 uint32_t CustomSection::getNumRelocations() const {
   uint32_t count = 0;
   for (const InputChunk *inputSect : inputSections)
@@ -338,5 +282,46 @@ void CustomSection::writeRelocations(raw_ostream &os) const {
     s->writeRelocations(os);
 }
 
+void CodeMetaDataOutputSection::writeTo(uint8_t *buf) {
+  log("writing " + toString(*this) + " offset=" + Twine(offset) +
+      " size=" + Twine(getSize()) + " chunks=" + Twine(inputSections.size()));
+
+  assert(offset);
+  buf += offset;
+
+  // Write section header
+  memcpy(buf, header.data(), header.size());
+  buf += header.size();
+  memcpy(buf, nameData.data(), nameData.size());
+  buf += nameData.size();
+
+  // all input sections' outSecOff is relative to the buffer AFTER this leading
+  // count
+  buf += encodeULEB128(NumFuncHints, buf);
+  for (InputChunk *Section : inputSections) {
+    assert(!Section->discarded);
+    CodeMetaDataInputSection *CMSec =
+        dyn_cast<CodeMetaDataInputSection>(Section);
+    CMSec->writeTo(buf);
+  }
+}
+
+void CodeMetaDataOutputSection::finalizeContents() {
+  raw_string_ostream os(nameData);
+  encodeULEB128(name.size(), os);
+  os << name;
+
+  for (InputChunk *Section : inputSections) {
+    assert(!Section->discarded);
+    CodeMetaDataInputSection *CMSec =
+        dyn_cast<CodeMetaDataInputSection>(Section);
+    CMSec->finalizeContents();
+    NumFuncHints += CMSec->getNumFuncHints();
+    CMSec->outSecOff = payloadSize;
+    payloadSize += CMSec->getSize();
+  }
+  payloadSize += getULEB128Size(NumFuncHints);
+  createHeader(payloadSize + nameData.size());
+}
 } // namespace wasm
 } // namespace lld

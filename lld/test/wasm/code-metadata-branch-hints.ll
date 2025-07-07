@@ -1,13 +1,11 @@
 # RUN: rm -rf %t; split-file %s %t
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %t/f1.ll -o %t/f1.o -mattr=+branch-hinting
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %t/f2.ll -o %t/f2.o -mattr=+branch-hinting
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; with branch hints
+; RUN: llc -mcpu=mvp -filetype=obj %t/f1.ll -o %t/f1.o -mattr=+branch-hinting
+; RUN: llc -mcpu=mvp -filetype=obj %t/f2.ll -o %t/f2.o -mattr=+branch-hinting
 ; RUN: wasm-ld --export-all -o %t.wasm %t/f2.o %t/f1.o
 ; RUN: obj2yaml %t.wasm | FileCheck --check-prefixes=CHECK %s
-
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %t/f1.ll -o %t/f1.o -mattr=-branch-hinting
-; RUN: llc -mcpu=mvp -mtriple=wasm32-unknown-unknown -filetype=obj %t/f2.ll -o %t/f2.o -mattr=-branch-hinting
-; RUN: wasm-ld --export-all -o %t.wasm %t/f2.o %t/f1.o
-; RUN: obj2yaml %t.wasm | FileCheck --check-prefixes=NCHECK %s
 
 ; CHECK:          - Type:            CUSTOM
 ; CHECK:            Name:            metadata.code.branch_hint
@@ -56,11 +54,49 @@
 ; CHECK-NEXT:       - Prefix:          USED
 ; CHECK-NEXT:         Name:            branch-hinting
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; without branch hints
+; RUN: llc -mcpu=mvp -filetype=obj %t/f1.ll -o %t/f1.o -mattr=-branch-hinting
+; RUN: llc -mcpu=mvp -filetype=obj %t/f2.ll -o %t/f2.o -mattr=-branch-hinting
+; RUN: wasm-ld --export-all -o %t.wasm %t/f2.o %t/f1.o
+; RUN: obj2yaml %t.wasm | FileCheck --check-prefixes=NCHECK %s
 
 ; NCHECK-NOT:         Name:            metadata.code.branch_hint
 ; NCHECK-NOT:         Name:            branch-hinting
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; with branch hints, but only the _start function is not removed by lld (no --export-all)
+; RUN: llc -mcpu=mvp -filetype=obj %t/f1.ll -o %t/f1.o -mattr=+branch-hinting
+; RUN: llc -mcpu=mvp -filetype=obj %t/f2.ll -o %t/f2.o -mattr=+branch-hinting
+; RUN: wasm-ld -o %t.wasm %t/f2.o %t/f1.o
+; RUN: obj2yaml %t.wasm | FileCheck --check-prefixes=RCHECK %s
+
+; RCHECK:          - Type:            CUSTOM
+; RCHECK:            Name:            metadata.code.branch_hint
+; RCHECK-NEXT:       Entries:
+; RCHECK-NEXT:         - FuncIdx:         0
+; RCHECK-NEXT:           Hints:
+; RCHECK-NEXT:             - Offset:          5
+; RCHECK-NEXT:               Size:            1
+; RCHECK-NEXT:               Data:            UNLIKELY
+; RCHECK-NEXT:    - Type:            CODE
+
+; RCHECK:         - Type:            CUSTOM
+; RCHECK-NEXT:      Name:            name
+; RCHECK-NEXT:      FunctionNames:
+; RCHECK-NEXT:        - Index:           0
+; RCHECK-NEXT:          Name:            _start
+
+; RCHECK:        - Type:            CUSTOM
+; RCHECK:          Name:            target_features
+; RCHECK-NEXT:     Features:
+; RCHECK-NEXT:       - Prefix:          USED
+; RCHECK-NEXT:         Name:            branch-hinting
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 #--- f1.ll
+target triple = "wasm32-unknown-unknown"
+
 define i32 @_start(i32 %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
