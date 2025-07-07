@@ -929,9 +929,7 @@ static CharSourceRange makeRangeFromFileLocs(CharSourceRange Range,
   }
 
   // Break down the source locations.
-  FileID FID;
-  unsigned BeginOffs;
-  std::tie(FID, BeginOffs) = SM.getDecomposedLoc(Begin);
+  auto [FID, BeginOffs] = SM.getDecomposedLoc(Begin);
   if (FID.isInvalid())
     return {};
 

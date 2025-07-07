@@ -517,6 +517,8 @@ getOperandLog2EEW(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
   case RISCV::VWSUB_VV:
   case RISCV::VWSUB_VX:
   case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
   // Vector Widening Integer Multiply Instructions
   // Destination EEW=2*SEW. Source EEW=SEW.
   case RISCV::VWMUL_VV:
@@ -1019,6 +1021,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
 
   // Vector Crypto
   case RISCV::VWSLL_VI:
+  case RISCV::VWSLL_VX:
+  case RISCV::VWSLL_VV:
 
   // Vector Mask Instructions
   // Vector Mask-Register Logical Instructions
@@ -1045,7 +1049,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VSLIDEUP_VI:
   case RISCV::VSLIDEDOWN_VX:
   case RISCV::VSLIDEDOWN_VI:
-  // TODO: Handle v[f]slide1up, but not v[f]slide1down.
+  case RISCV::VSLIDE1UP_VX:
+  case RISCV::VFSLIDE1UP_VF:
   // Vector Single-Width Floating-Point Add/Subtract Instructions
   case RISCV::VFADD_VF:
   case RISCV::VFADD_VV:
@@ -1102,6 +1107,8 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VFSQRT_V:
   // Vector Floating-Point Reciprocal Square-Root Estimate Instruction
   case RISCV::VFRSQRT7_V:
+  // Vector Floating-Point Reciprocal Estimate Instruction
+  case RISCV::VFREC7_V:
   // Vector Floating-Point MIN/MAX Instructions
   case RISCV::VFMIN_VF:
   case RISCV::VFMIN_VV:

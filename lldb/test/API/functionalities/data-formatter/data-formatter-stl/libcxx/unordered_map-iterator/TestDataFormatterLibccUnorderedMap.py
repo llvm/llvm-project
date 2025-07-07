@@ -105,7 +105,21 @@ class LibcxxUnorderedMapDataFormatterTestCase(TestBase):
             type="const StringMapT *const &",
         )
 
-        lldbutil.continue_to_breakpoint(process, bkpt)
+    @expectedFailureAll(
+        bugnumber="https://github.com/llvm/llvm-project/issues/146040",
+        compiler="clang",
+        compiler_version=["<", "21"],
+    )
+    @add_test_categories(["libc++"])
+    def test_ptr_formatters(self):
+        """
+        Test that pointers to std::unordered_map are formatted correctly.
+        """
+
+        self.build()
+        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here", lldb.SBFileSpec("main.cpp", False)
+        )
 
         self.check_ptr_or_ref("ptr1")
         self.check_ptr_or_ref("ptr2")
