@@ -552,7 +552,7 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       "bool":$padded,
       "RecordKind":$kind
     ), [{
-      return $_get($_ctxt, members, name, /*complete=*/true, packed, padded,
+      return $_get($_ctxt, members, name, /*incomplete=*/false, packed, padded,
                    kind);
     }]>,
 
@@ -564,6 +564,17 @@ def CIR_RecordType : CIR_Type<"Record", "record", [
       return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
                          /*incomplete=*/true, /*packed=*/false,
                          /*padded=*/false, kind);
+    }]>,
+
+    // Create an anonymous record type (always complete).
+    TypeBuilder<(ins
+      "llvm::ArrayRef<mlir::Type>":$members,
+      "bool":$packed,
+      "bool":$padded,
+      "RecordKind":$kind
+    ), [{
+      return $_get($_ctxt, members, mlir::StringAttr{}, /*incomplete=*/false,
+                      packed, padded, kind);
     }]>];
 
   let extraClassDeclaration = [{
