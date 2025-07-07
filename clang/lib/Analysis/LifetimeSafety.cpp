@@ -310,9 +310,8 @@ public:
   }
 
   void addBlockFacts(const CFGBlock *B, llvm::ArrayRef<Fact *> NewFacts) {
-    if (!NewFacts.empty()) {
+    if (!NewFacts.empty())
       BlockToFactsMap[B].assign(NewFacts.begin(), NewFacts.end());
-    }
   }
 
   template <typename FactType, typename... Args>
@@ -325,10 +324,9 @@ public:
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << "       Lifetime Analysis Facts:\n";
     llvm::dbgs() << "==========================================\n";
-    if (const Decl *D = AC.getDecl()) {
+    if (const Decl *D = AC.getDecl())
       if (const auto *ND = dyn_cast<NamedDecl>(D))
         llvm::dbgs() << "Function: " << ND->getQualifiedNameAsString() << "\n";
-    }
     // Print blocks in the order as they appear in code for a stable ordering.
     for (const CFGBlock *B : *AC.getAnalysis<PostOrderCFGView>()) {
       llvm::dbgs() << "  Block B" << B->getBlockID() << ":\n";
@@ -476,11 +474,9 @@ private:
       const AccessPath &LoanPath = L.Path;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
-      if (LoanPath.PathKind == AccessPath::Kind::StackVariable) {
-        if (LoanPath.D == DestructedVD) {
+      if (LoanPath.PathKind == AccessPath::Kind::StackVariable)
+        if (LoanPath.D == DestructedVD)
           CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(L.ID));
-        }
-      }
     }
   }
 
