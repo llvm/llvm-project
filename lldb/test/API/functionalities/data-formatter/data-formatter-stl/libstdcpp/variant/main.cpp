@@ -49,7 +49,6 @@ int main() {
   v1 = 12; // v contains int
   v1_typedef = v1;
   v_v1 = v1;
-  v1_typedef = v1;
   int i = std::get<int>(v1);
   printf("%d\n", i); // break here
 
