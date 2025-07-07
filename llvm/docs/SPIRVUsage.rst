@@ -585,3 +585,31 @@ Group and Subgroup Operations
 For workgroup and subgroup operations, LLVM uses function calls to represent SPIR-V's
 group-based instructions. These builtins facilitate group synchronization, data sharing,
 and collective operations essential for efficient parallel computation.
+
+SPIR-V Instructions Mapped to LLVM Metadata
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Some SPIR-V instructions don't have a direct equivalent in the LLVM IR language. To
+address this, the SPIR-V Target uses different specific LLVM named metadata to convey
+the necessary information. The SPIR-V specification allows multiple module-scope
+instructions, where as LLVM named metadata must be unique. Therefore, the encoding of
+such instructions has the following format:
+
+.. code-block:: llvm
+
+  !spirv.<OpCodeName> = !{!<InstructionMetadata1>, !<InstructionMetadata2>, ..}
+  !<InstructionMetadata1> = !{<Operand1>, <Operand2>, ..}
+  !<InstructionMetadata2> = !{<Operand1>, <Operand2>, ..}
+
+Below, you will find the mappings between SPIR-V instruction and their corresponding
+LLVM IR representations.
+
++--------------------+---------------------------------------------------------+
+| SPIR-V instruction | LLVM IR                                                 |
++====================+=========================================================+
+| OpExecutionMode    | .. code-block:: llvm                                    |
+|                    |                                                         |
+|                    |    !spirv.ExecutionMode = !{!0}                         |
+|                    |    !0 = !{void @worker, i32 30, i32 262149}         |
+|                    |    ; Set execution mode with id 30 (VecTypeHint) and    |
+|                    |    ; literal `262149` operand.                          |
++--------------------+---------------------------------------------------------+
