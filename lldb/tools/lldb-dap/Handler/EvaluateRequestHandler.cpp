@@ -205,10 +205,7 @@ void EvaluateRequestHandler::operator()(
     if (value.GetError().Success() && context == "repl")
       value = value.Persist();
 
-    // Only the repl should evaluate expressions, which can mutate application
-    // state. Other contexts are used for observing debuggee state only, not
-    // mutating state.
-    if (value.GetError().Fail() && context == "repl")
+    if (value.GetError().Fail() && context != "hover")
       value = frame.EvaluateExpression(expression.data());
 
     if (value.GetError().Fail()) {
