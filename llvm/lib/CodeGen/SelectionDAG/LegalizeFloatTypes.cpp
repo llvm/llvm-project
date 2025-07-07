@@ -704,12 +704,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_ROUND(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FPOW(SDNode *N) {
-  return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
-                                               RTLIB::POW_F32,
-                                               RTLIB::POW_F64,
-                                               RTLIB::POW_F80,
-                                               RTLIB::POW_F128,
-                                               RTLIB::POW_PPCF128));
+  return SoftenFloatRes_Binary(N, RTLIB::getPOW(N->getValueType(0)));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
@@ -723,6 +718,9 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
                              : RTLIB::getLDEXP(N->getValueType(0));
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpowi.");
   if (!TLI.getLibcallName(LC)) {
+    RTLIB::Libcall NewLC = RTLIB::getPOW(N->getValueType(0));
+    assert(NewLC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fpow type");
+
     // Some targets don't have a powi libcall; use pow instead.
     // FIXME: Implement this if some target needs it.
     DAG.getContext()->emitError("do not know how to soften fpowi to fpow");
