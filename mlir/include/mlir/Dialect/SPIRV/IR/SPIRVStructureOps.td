@@ -767,7 +767,6 @@ def SPIRV_EXTSpecConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"SpecConstantC
   let results = (outs);
 
   let autogenSerialization = 0;
-
 }
 
 // -----

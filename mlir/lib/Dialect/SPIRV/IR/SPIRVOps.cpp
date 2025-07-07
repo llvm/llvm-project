@@ -773,18 +773,22 @@ ParseResult
 spirv::EXTConstantCompositeReplicateOp::parse(OpAsmParser &parser,
                                               OperationState &result) {
   OpAsmParser::UnresolvedOperand constOperand;
-  Type compositeType;
-  if (parser.parseOperand(constOperand) ||
-      parser.parseColonType(compositeType)) {
+  Type resultType;
+  if (parser.parseOperand(constOperand) || parser.parseColonType(resultType)) {
     return failure();
   }
 
-  if (isa<TensorType>(compositeType)) {
-    if (parser.parseColonType(compositeType))
+  if (isa<TensorType>(resultType)) {
+    if (parser.parseColonType(resultType))
       return failure();
   }
 
-  Type constType = cast<spirv::CompositeType>(compositeType).getElementType(0);
+  auto compositeType = dyn_cast_or_null<spirv::CompositeType>(resultType);
+  if (!compositeType)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "result is not a composite type");
+
+  Type constType = compositeType.getElementType(0);
   while (auto type = dyn_cast<spirv::ArrayType>(constType)) {
     constType = type.getElementType();
   }
@@ -805,7 +809,7 @@ LogicalResult spirv::EXTConstantCompositeReplicateOp::verify() {
     return emitError("result type must be a composite type, but provided ")
            << getType();
 
-  auto constantDefiningOp = getConstant().getDefiningOp();
+  Operation *constantDefiningOp = getConstant().getDefiningOp();
   if (!constantDefiningOp)
     return this->emitOpError("op defining the splat constant not found");
 
@@ -1972,12 +1976,16 @@ LogicalResult spirv::EXTSpecConstantCompositeReplicateOp::verify() {
     return emitError("result type must be a composite type, but provided ")
            << getType();
 
-  auto constituentSpecConstOp =
-      dyn_cast<spirv::SpecConstantOp>(SymbolTable::lookupNearestSymbolFrom(
-          (*this)->getParentOp(), this->getConstituent()));
+  Operation *constituentOp = SymbolTable::lookupNearestSymbolFrom(
+      (*this)->getParentOp(), this->getConstituent());
+  if (!constituentOp)
+    return emitError(
+        "splat spec constant reference defining constituent not found");
 
-  auto constituentType = constituentSpecConstOp.getDefaultValue().getType();
-  auto compositeElemType = compositeType.getElementType(0);
+  auto constituentSpecConstOp = dyn_cast<spirv::SpecConstantOp>(constituentOp);
+
+  Type constituentType = constituentSpecConstOp.getDefaultValue().getType();
+  Type compositeElemType = compositeType.getElementType(0);
   if (constituentType != compositeElemType)
     return emitError("constituent has incorrect type: expected ")
            << compositeElemType << ", but provided " << constituentType;

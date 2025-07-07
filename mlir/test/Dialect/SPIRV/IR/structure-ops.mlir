@@ -166,6 +166,45 @@ func.func @coop_matrix_const_wrong_type() -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.EXT.ConstantCompositeReplicate
+//===----------------------------------------------------------------------===//
+
+spirv.module Logical GLSL450 {
+  spirv.func @ccr() -> i32 "None" {
+    %0 = spirv.Constant 1 : i32
+    // expected-error @+2 {{result is not a composite type}}
+    %1 = spirv.EXT.ConstantCompositeReplicate %0 : i32
+    spirv.ReturnValue %1: i32
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @ccr() -> vector<2xf32> "None" {
+    %0 = spirv.Constant 1 : i32
+    // expected-note@-1 {{prior use here}}
+    // expected-error @+1 {{use of value '%0' expects different type than prior uses: 'f32' vs 'i32'}}
+    %1 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xf32>
+    spirv.ReturnValue %1: vector<2xf32>
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @ccr() -> vector<2xi32> "None" {
+    %c1 = spirv.Constant 1 : i32
+    %0 = spirv.IAdd %c1, %c1 : i32
+    // expected-error @+1 {{op defining the splat constant is not a spirv.Constant or a spirv.EXT.ConstantCompositeReplicate}}
+    %1 = spirv.EXT.ConstantCompositeReplicate %0 : vector<2xi32>
+    spirv.ReturnValue %1: vector<2xi32>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.EntryPoint
 //===----------------------------------------------------------------------===//
 
@@ -852,6 +891,32 @@ spirv.module Logical GLSL450 {
   spirv.SpecConstant @sc1 = 1.5 : f32
   // expected-error @+1 {{unsupported composite type}}
   spirv.SpecConstantComposite @scc (@sc1) : !spirv.coopmatrix<8x16xf32, Device, MatrixA>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.EXT.SpecConstantCompositeReplicate
+//===----------------------------------------------------------------------===//
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{result type must be a composite type, but provided 'i32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_i32_1) : i32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{splat spec constant reference defining constituent not found}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.array<3 x i32>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @sc_f32_1 = 1.0 : f32
+  // expected-error @+1 {{constituent has incorrect type: expected 'i32', but provided 'f32'}}
+  spirv.EXT.SpecConstantCompositeReplicate @sccr (@sc_f32_1) : !spirv.array<3 x i32>
 }
 
 //===----------------------------------------------------------------------===//

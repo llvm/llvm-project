@@ -1111,7 +1111,7 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
 
 uint32_t Serializer::prepareConstantCompositeReplicate(
     spirv::EXTConstantCompositeReplicateOp op) {
-  if (auto id = getValueID(op.getResult())) {
+  if (uint32_t id = getValueID(op.getResult())) {
     return id;
   }
 
@@ -1120,7 +1120,7 @@ uint32_t Serializer::prepareConstantCompositeReplicate(
     return 0;
   }
 
-  auto definingOp = op.getConstant().getDefiningOp();
+  Operation *definingOp = op.getConstant().getDefiningOp();
   if (!definingOp) {
     emitError(op.getLoc(), "op defining splat value not found");
     return 0;
