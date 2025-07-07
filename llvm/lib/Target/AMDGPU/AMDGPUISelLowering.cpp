@@ -4884,20 +4884,21 @@ static SDValue BitwiseToSrcModifierOp(SDValue N,
   case ISD::XOR:
     if (Mask == 0x80000000u || Mask == 0x8000000000000000u)
       return DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
-    return SDValue();
+    break;
   case ISD::OR:
     if (Mask == 0x80000000u || Mask == 0x8000000000000000u) {
       SDValue Abs = DAG.getNode(ISD::FNEG, SDLoc(N), FVT, BC);
       return DAG.getNode(ISD::FABS, SDLoc(N), FVT, Abs);
     }
-    return SDValue();
+    break;
   case ISD::AND:
     if (Mask == 0x7fffffffu || Mask == 0x7fffffffffffffffu)
       return DAG.getNode(ISD::FABS, SDLoc(N), FVT, BC);
-    return SDValue();
+    break;
   default:
     return SDValue();
   }
+  return SDValue();
 }
 
 SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
