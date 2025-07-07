@@ -755,7 +755,10 @@ Bug Fixes in This Version
 - Fixed a crash when a malformed using declaration appears in a ``constexpr`` function. (#GH144264)
 - Fixed a bug when use unicode character name in macro concatenation. (#GH145240)
 - Clang doesn't erroneously inject a ``static_assert`` macro in ms-compatibility and
-  -std=c99 mode.
+  -std=c99 mode. This resulted in deletion of ``-W/Wno-microsoft-static-assert``
+  flag and diagnostic because the macro injection was used to emit this warning.
+  Unfortunately there is no other good way to diagnose usage of ``static_assert``
+  macro without inclusion of ``<assert.h>``.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
