@@ -3012,9 +3012,8 @@ void tools::addOpenCLBuiltinsLib(const Driver &D,
     StringRef LibclcNamespec(A->getValue());
 
     // If the namespec is of the form :filename, search for that file.
-    bool FilenameSearch = LibclcNamespec.starts_with(":");
-    SmallString<128> LibclcTargetFile(
-        LibclcNamespec.drop_front(FilenameSearch ? 1 : 0));
+    bool FilenameSearch = LibclcNamespec.consume_front(":");
+    SmallString<128> LibclcTargetFile(LibclcNamespec);
 
     if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
       FoundBCLibrary = true;
