@@ -205,12 +205,8 @@ mlir::Value ComplexExprEmitter::VisitChooseExpr(ChooseExpr *e) {
 mlir::Value
 ComplexExprEmitter::VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
   mlir::Location loc = cgf.getLoc(e->getExprLoc());
-  QualType complexElemTy =
-      e->getType()->castAs<clang::ComplexType>()->getElementType();
-  mlir::Type complexElemLLVMTy = cgf.convertType(complexElemTy);
-  mlir::TypedAttr defaultValue = builder.getZeroInitAttr(complexElemLLVMTy);
-  auto complexAttr = cir::ConstComplexAttr::get(defaultValue, defaultValue);
-  return builder.create<cir::ConstantOp>(loc, complexAttr);
+  mlir::Type complexLLVMTy = cgf.convertType(e->getType());
+  return builder.getNullValue(complexLLVMTy, loc);
 }
 
 mlir::Value ComplexExprEmitter::VisitDeclRefExpr(DeclRefExpr *e) {
