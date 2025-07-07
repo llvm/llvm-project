@@ -341,12 +341,44 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
                                                 ~(PageSize - 1U));
 
         TextSegmentOffsets.push_back(Phdr.p_offset & ~(PageSize - 1U));
+      } else {
+        PhdrInfo Info;
+        Info.FileOffset = Phdr.p_offset;
+        Info.FileSz = Phdr.p_filesz;
+        Info.vAddr = Phdr.p_vaddr;
+        NonTextPhdrInfo.push_back(Info);
       }
     }
   }
 
   if (PreferredTextSegmentAddresses.empty())
     exitWithError("no executable segment found", FileName);
+}
+
+uint64_t ProfiledBinary::CanonicalizeNonTextAddress(uint64_t Address) {
+  uint64_t FileOffset = 0;
+  for (const auto &MMapEvent : MMapNonTextEvents) {
+    if (MMapEvent.Address <= Address &&
+        Address < MMapEvent.Address + MMapEvent.Size) {
+      // If the address is within the mmap event, return the file offset.
+      FileOffset = Address - MMapEvent.Address + MMapEvent.Offset;
+      break;
+    }
+  }
+  if (FileOffset == 0) {
+    // If the address is not within any mmap event, return the address as is.
+    return Address;
+  }
+  for (const auto &PhdrInfo : NonTextPhdrInfo) {
+    // Check if the file offset is within the non-text segment.
+    if (PhdrInfo.FileOffset <= FileOffset &&
+        FileOffset < PhdrInfo.FileOffset + PhdrInfo.FileSz) {
+      // If it is, return the virtual address of the segment.
+      return PhdrInfo.vAddr + (FileOffset - PhdrInfo.FileOffset);
+    }
+  }
+
+  return Address;
 }
 
 void ProfiledBinary::setPreferredTextSegmentAddresses(const COFFObjectFile *Obj,

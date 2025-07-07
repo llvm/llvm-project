@@ -577,10 +577,12 @@ struct ProfiledInfo {
 // Read perf trace to parse the events and samples.
 class PerfReaderBase {
 public:
-  PerfReaderBase(ProfiledBinary *B, StringRef PerfTrace)
+  PerfReaderBase(ProfiledBinary *B, StringRef PerfTrace, bool reset = true)
       : Binary(B), PerfTraceFile(PerfTrace) {
+    if (reset) {
     // Initialize the base address to preferred address.
     Binary->setBaseAddress(Binary->getPreferredBaseAddress());
+    }
   };
   virtual ~PerfReaderBase() = default;
   static std::unique_ptr<PerfReaderBase>
@@ -594,7 +596,10 @@ public:
     DataAccessProfInfo.clear();
     for (const auto &[IpAddr, DataCount] : In) {
       for (const auto [DataAddr, Count] : DataCount) {
-        DataAccessProfInfo[{IpAddr, DataAddr}] += Count;
+        uint64_t CanonicalIp = Binary->canonicalizeVirtualAddress(IpAddr);
+        errs() << "Canonicalize IP: " << format("%llx", IpAddr) << " to "
+               << format("%llx", CanonicalIp) << "\n";
+        DataAccessProfInfo[{CanonicalIp, DataAddr}] += Count;
       }
     }
   }
@@ -620,8 +625,8 @@ protected:
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
+                   std::optional<int32_t> PID, bool reset = true)
+      : PerfReaderBase(B, PerfTrace, reset), PIDFilter(PID) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
@@ -638,16 +643,6 @@ public:
   static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
-  // The parsed MMap event
-  struct MMapEvent {
-    int64_t PID = 0;
-    uint64_t Address = 0;
-    uint64_t Size = 0;
-    uint64_t Offset = 0;
-    StringRef MemProtectionFlag;
-    StringRef BinaryPath;
-  };
-
   // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line);
   // Check whether a given line is MMAP event

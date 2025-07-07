@@ -185,6 +185,16 @@ private:
 
 using AddressRange = std::pair<uint64_t, uint64_t>;
 
+// The parsed MMap event
+struct MMapEvent {
+  int64_t PID = 0;
+  uint64_t Address = 0;
+  uint64_t Size = 0;
+  uint64_t Offset = 0;
+  StringRef MemProtectionFlag;
+  StringRef BinaryPath;
+};
+
 class ProfiledBinary {
   // Absolute path of the executable binary.
   std::string Path;
@@ -275,6 +285,17 @@ class ProfiledBinary {
 
   // String table owning function name strings created from the symbolizer.
   std::unordered_set<std::string> NameStrings;
+
+  SmallVector<MMapEvent> MMapNonTextEvents;
+
+  struct PhdrInfo {
+    uint64_t FileOffset;
+    uint64_t FileSz;
+    uint64_t vAddr;
+  };
+
+  // first is offset, and second is vaddr
+  SmallVector<PhdrInfo> NonTextPhdrInfo;
 
   // A collection of functions to print disassembly for.
   StringSet<> DisassembleFunctionSet;
@@ -372,7 +393,11 @@ public:
   StringRef getPath() const { return Path; }
   StringRef getName() const { return llvm::sys::path::filename(Path); }
   uint64_t getBaseAddress() const { return BaseAddress; }
-  void setBaseAddress(uint64_t Address) { BaseAddress = Address; }
+  void setBaseAddress(uint64_t Address) {
+    errs() << "Set base address to " << format("0x%llx", Address)
+           << " for binary: " << getName() << "\n";
+    BaseAddress = Address;
+  }
 
   bool isCOFF() const { return IsCOFF; }
 
@@ -606,6 +631,24 @@ public:
   getInlinerDescForProbe(const MCDecodedPseudoProbe *Probe) {
     return ProbeDecoder.getInlinerDescForProbe(Probe);
   }
+
+  bool InRange(uint64_t Address, const MMapEvent &MMap) const {
+    return Address >= MMap.Address && Address < MMap.Address + MMap.Size;
+  }
+
+  bool InRange(uint64_t Address) const {
+    for (const auto &MMap : MMapNonTextEvents) {
+      if (InRange(Address, MMap))
+        return true;
+    }
+    return false;
+  }
+
+  void addMMapNonTextEvent(MMapEvent MMap) {
+    MMapNonTextEvents.push_back(MMap);
+  }
+
+  uint64_t CanonicalizeNonTextAddress(uint64_t Address);
 
   bool getTrackFuncContextSize() { return TrackFuncContextSize; }
 

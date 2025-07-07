@@ -24,25 +24,13 @@ public:
   };
   DataAccessPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
                        std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID), PerfTraceFilename(PerfTrace) {
+      : PerfScriptReader(Binary, PerfTrace, PID, false),
+        PerfTraceFilename(PerfTrace) {
     // Assume this is non-pie binary.
-  }
-
-  uint64_t canonicalizeDataAddress(uint64_t Address,
-                                   const ProfiledBinary &ProfiledBinary,
-                                   const PerfScriptReader::MMapEvent &MMap,
-                                   const DataSegment &DataSegment) {
-    return Address;
-    // virtual-addr = segment.virtual-addr (0x3180) + (runtime-addr -
-    // map.adddress - segment.file-offset (0x1180) + map.file-offset (0x1000))
-    return DataSegment.VirtualAddress +
-           (Address - MMap.Address - (DataSegment.FileOffset - MMap.Offset));
   }
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
-
-  
 
   // A hack to demonstrate the symbolized output of vtable type profiling.
   void print() const {
@@ -70,28 +58,12 @@ getAddressMap() const {
     return AddressMap;
   }
 
-
 private:
-  bool InRange(uint64_t Address, const MMapEvent &MMap) const {
-    return Address >= MMap.Address && Address < MMap.Address + MMap.Size;
-  }
-
-  bool InRange(uint64_t Address) const {
-    for (const auto &MMap : MMapNonTextEvents) {
-      if (InRange(Address, MMap))
-        return true;
-    }
-    return false;
-  }
   void parsePerfTrace(StringRef PerfTrace);
 
   DenseMap<uint64_t, DenseMap<StringRef, uint64_t>> AddressMap;
 
-  SmallVector<MMapEvent> MMapNonTextEvents;
-
   StringRef PerfTraceFilename;
-
-  PerfScriptReader::MMapEvent DataMMap;
 };
 
 } // namespace llvm

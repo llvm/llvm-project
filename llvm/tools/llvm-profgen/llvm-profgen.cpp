@@ -190,6 +190,16 @@ int main(int argc, const char *argv[]) {
     PerfInputFile PerfFile = getPerfInputFile();
     std::unique_ptr<PerfReaderBase> Reader =
         PerfReaderBase::create(Binary.get(), PerfFile, PIDFilter);
+
+    errs() << "1. Binary base and preferred address: "
+           << format("0x%llx", Binary->getBaseAddress()) << " "
+           << format("0x%llx", Binary->getPreferredBaseAddress()) << "\n";
+    // Parse perf events and samples
+    Reader->parsePerfTraces();
+
+    errs() << "2. Binary base and preferred address: "
+           << format("0x%llx", Binary->getBaseAddress()) << " "
+           << format("0x%llx", Binary->getPreferredBaseAddress()) << "\n";
     if (!DataAccessProfileFilename.empty()) {
       // data access profile.
       auto DAPReader = std::make_unique<DataAccessPerfReader>(
@@ -197,10 +207,17 @@ int main(int argc, const char *argv[]) {
       DAPReader->parsePerfTraces();
       DAPReader->print();
       errs() << "perf script reader parse dap address maps\n";
+      errs() << "3. Binary base and preferred address: "
+             << format("0x%llx", Binary->getBaseAddress()) << " "
+             << format("0x%llx", Binary->getPreferredBaseAddress()) << "\n";
+      for (const auto &[IpAddr, DataCount] : DAPReader->getAddressMap()) {
+
+        uint64_t CanonicalIp = Binary->canonicalizeVirtualAddress(IpAddr);
+        errs() << "profgen.cpp:\tCanonicalize IP: " << format("%llx", IpAddr)
+               << " to " << format("%llx", CanonicalIp) << "\n";
+      }
       Reader->recordDataAccessCountRef(DAPReader->getAddressMap());
     }
-    // Parse perf events and samples
-    Reader->parsePerfTraces();
 
     if (SkipSymbolization)
       return EXIT_SUCCESS;
