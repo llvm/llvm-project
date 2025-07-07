@@ -694,7 +694,7 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-#map = affine_map<(d0) -> (d0 *  128)>
+#map = affine_map<(d0) -> (d0 * 128)>
 #map1 = affine_map<(d0) -> (d0 * 32)>
 
 // CHECK-DAG: #[[$MAPB:.*]] = affine_map<()[s0] -> (s0 * 128)>
