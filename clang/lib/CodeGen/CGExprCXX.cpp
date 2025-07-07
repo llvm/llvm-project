@@ -1484,6 +1484,7 @@ namespace {
       TypeAwareAllocationMode TypeAwareDeallocation =
           TypeAwareAllocationMode::No;
       if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
+        assert(CGF.getLangOpts().CXXTypeAwareAllocators);
         TypeAwareDeallocation = TypeAwareAllocationMode::Yes;
         QualType SpecializedTypeIdentity = FPT->getParamType(0);
         ++FirstNonTypeArg;

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx  %s -std=c++23 -fcoroutines -fexceptions -emit-llvm  -Wno-coro-type-aware-allocation-function -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx  %s -std=c++23 -fcxx-type-aware-allocators -fcoroutines -fexceptions -emit-llvm  -Wno-coro-type-aware-allocation-function -o - | FileCheck %s
 // RUN: %clang_cc1 -triple arm64-apple-macosx  %s -std=c++26 -fcoroutines -fexceptions -emit-llvm  -Wno-coro-type-aware-allocation-function -o - | FileCheck %s
 
 #include "Inputs/std-coroutine.h"

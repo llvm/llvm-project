@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation    -faligned-allocation -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-sized-deallocation    -faligned-allocation -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23    -fsized-deallocation -fno-aligned-allocation -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fno-aligned-allocation -fno-sized-deallocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fcxx-type-aware-allocators    -fsized-deallocation    -faligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fcxx-type-aware-allocators -fno-sized-deallocation    -faligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fcxx-type-aware-allocators    -fsized-deallocation -fno-aligned-allocation -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple arm64-apple-macosx -emit-llvm -fcxx-exceptions -fexceptions -std=c++23 -fcxx-type-aware-allocators -fno-aligned-allocation -fno-sized-deallocation -o - | FileCheck %s
 
 namespace std {
   template <class T> struct type_identity {};
