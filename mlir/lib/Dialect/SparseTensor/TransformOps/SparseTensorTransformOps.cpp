@@ -9,6 +9,7 @@
 #include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;

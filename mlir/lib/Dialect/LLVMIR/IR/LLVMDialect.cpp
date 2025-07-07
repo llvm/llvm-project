@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
@@ -4304,8 +4305,8 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
   OpBuilder moduleBuilder(module.getBodyRegion(), builder.getListener());
   MLIRContext *ctx = builder.getContext();
   auto type = LLVM::LLVMArrayType::get(IntegerType::get(ctx, 8), value.size());
-  auto global = LLVM::GlobalOp::create(moduleBuilder,
-      loc, type, /*isConstant=*/true, linkage, name,
+  auto global = LLVM::GlobalOp::create(
+      moduleBuilder, loc, type, /*isConstant=*/true, linkage, name,
       builder.getStringAttr(value), /*alignment=*/0);
 
   LLVMPointerType ptrType = LLVMPointerType::get(ctx);
@@ -4313,7 +4314,7 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
   Value globalPtr =
       LLVM::AddressOfOp::create(builder, loc, ptrType, global.getSymNameAttr());
   return LLVM::GEPOp::create(builder, loc, ptrType, type, globalPtr,
-                                     ArrayRef<GEPArg>{0, 0});
+                             ArrayRef<GEPArg>{0, 0});
 }
 
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {

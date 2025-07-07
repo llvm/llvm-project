@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/SMT/IR/SMTOps.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/APSInt.h"
 

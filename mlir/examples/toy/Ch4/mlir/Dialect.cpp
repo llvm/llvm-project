@@ -16,6 +16,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -206,7 +207,8 @@ void ConstantOp::print(mlir::OpAsmPrinter &printer) {
 llvm::LogicalResult ConstantOp::verify() {
   // If the return type of the constant is not an unranked tensor, the shape
   // must match the shape of the attribute holding the data.
-  auto resultType = llvm::dyn_cast<mlir::RankedTensorType>(getResult().getType());
+  auto resultType =
+      llvm::dyn_cast<mlir::RankedTensorType>(getResult().getType());
   if (!resultType)
     return success();
 
@@ -395,7 +397,8 @@ llvm::LogicalResult ReturnOp::verify() {
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
-  if (inputType == resultType || llvm::isa<mlir::UnrankedTensorType>(inputType) ||
+  if (inputType == resultType ||
+      llvm::isa<mlir::UnrankedTensorType>(inputType) ||
       llvm::isa<mlir::UnrankedTensorType>(resultType))
     return mlir::success();
 

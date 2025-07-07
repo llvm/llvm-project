@@ -11,6 +11,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
@@ -60,8 +61,8 @@ struct FoldRank final : public mlir::OpRewritePattern<mlir::mpi::CommRankOp> {
     if (!isa<IntegerAttr>(dltiAttr.value()))
       return op->emitError()
              << "Expected an integer attribute for MPI:comm_world_rank";
-    Value res = arith::ConstantIndexOp::create(b,
-        op.getLoc(), cast<IntegerAttr>(dltiAttr.value()).getInt());
+    Value res = arith::ConstantIndexOp::create(
+        b, op.getLoc(), cast<IntegerAttr>(dltiAttr.value()).getInt());
     if (Value retVal = op.getRetval())
       b.replaceOp(op, {retVal, res});
     else

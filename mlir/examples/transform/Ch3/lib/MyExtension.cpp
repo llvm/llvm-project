@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 

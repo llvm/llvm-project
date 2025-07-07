@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -54,7 +55,7 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
     return op;
   if (complex::ConstantOp::isBuildableWith(value, type))
     return complex::ConstantOp::create(builder, loc, type,
-                                               llvm::cast<ArrayAttr>(value));
+                                       llvm::cast<ArrayAttr>(value));
   return nullptr;
 }
 
@@ -678,8 +679,8 @@ FailureOr<SmallVector<Value>> ConcatOp::decomposeOperation(OpBuilder &builder) {
     inputShapes.emplace_back(std::move(inputShape));
   }
 
-  Value replacement = tensor::EmptyOp::create(builder,
-      loc, outputShape, getType().getElementType());
+  Value replacement = tensor::EmptyOp::create(builder, loc, outputShape,
+                                              getType().getElementType());
 
   int64_t rank = getType().getRank();
   OpFoldResult one = builder.getIndexAttr(1);
@@ -687,8 +688,8 @@ FailureOr<SmallVector<Value>> ConcatOp::decomposeOperation(OpBuilder &builder) {
   SmallVector<OpFoldResult> offsets(rank, zero);
   for (auto [index, input] : llvm::enumerate(getInputs())) {
     offsets[concatDim] = concatOffsets[index];
-    auto insertSlice = tensor::InsertSliceOp::create(builder,
-        loc, input, replacement, offsets, inputShapes[index], strides);
+    auto insertSlice = tensor::InsertSliceOp::create(
+        builder, loc, input, replacement, offsets, inputShapes[index], strides);
     replacement = insertSlice.getResult();
   }
   if (replacement.getType() != getType()) {
@@ -824,7 +825,7 @@ struct InferConcatOperandTypes : public OpRewritePattern<ConcatOp> {
         // Use refined operand type and create cast from original operand.
         auto castOp =
             CastOp::create(rewriter, concatOp->getLoc(), inferredOperandType,
-                                    concatOp.getOperand(operandIdx));
+                           concatOp.getOperand(operandIdx));
         rewriter.modifyOpInPlace(concatOp, [=, operandIdx = operandIdx] {
           concatOp->setOperand(operandIdx, castOp->getResult(0));
         });
@@ -864,8 +865,9 @@ struct InferConcatResultType : public OpRewritePattern<ConcatOp> {
       return failure();
     }
 
-    auto newConcatOp = ConcatOp::create(rewriter,
-        concatOp->getLoc(), inferredResultType, dim, concatOp->getOperands());
+    auto newConcatOp =
+        ConcatOp::create(rewriter, concatOp->getLoc(), inferredResultType, dim,
+                         concatOp->getOperands());
     rewriter.replaceOpWithNewOp<CastOp>(concatOp, concatOp.getResultType(),
                                         newConcatOp);
 
@@ -1151,7 +1153,7 @@ struct ReplaceEmptyTensorStaticShapeDims : OpRewritePattern<EmptyOp> {
       return failure();
 
     auto newOp = EmptyOp::create(rewriter, op.getLoc(), foldedTensorType,
-                                          foldedDynamicSizes);
+                                 foldedDynamicSizes);
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -1326,8 +1328,8 @@ struct ExtractFromCollapseShape : public OpRewritePattern<tensor::ExtractOp> {
 
       SmallVector<int64_t> basis =
           llvm::map_to_vector(group, [&](int64_t d) { return sourceSizes[d]; });
-      auto delinearize = affine::AffineDelinearizeIndexOp::create(rewriter,
-          extractOp.getLoc(), index, basis, /*hasOuterBound=*/true);
+      auto delinearize = affine::AffineDelinearizeIndexOp::create(
+          rewriter, extractOp.getLoc(), index, basis, /*hasOuterBound=*/true);
       llvm::append_range(sourceIndices, delinearize.getResults());
     }
     if (collapseOp.getReassociationIndices().empty()) {
@@ -1498,8 +1500,8 @@ struct ExtractElementFromIndexCast
 
     Type elementTy = getElementTypeOrSelf(indexCast.getIn());
 
-    auto newExtract = tensor::ExtractOp::create(rewriter,
-        loc, elementTy, indexCast.getIn(), extract.getIndices());
+    auto newExtract = tensor::ExtractOp::create(
+        rewriter, loc, elementTy, indexCast.getIn(), extract.getIndices());
 
     rewriter.replaceOpWithNewOp<arith::IndexCastOp>(extract, extract.getType(),
                                                     newExtract);
@@ -2161,9 +2163,9 @@ struct FoldCollapseOfCastOp : public OpRewritePattern<CollapseShapeOp> {
         collapseShapeOp.getSrcMutable().assign(castOp.getSource());
       });
     } else {
-      auto newOp = CollapseShapeOp::create(rewriter,
-          collapseShapeOp.getLoc(), newResultType, castOp.getSource(),
-          collapseShapeOp.getReassociation());
+      auto newOp = CollapseShapeOp::create(rewriter, collapseShapeOp.getLoc(),
+                                           newResultType, castOp.getSource(),
+                                           collapseShapeOp.getReassociation());
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           collapseShapeOp, collapseShapeOp.getResultType(), newOp);
     }
@@ -2241,9 +2243,9 @@ struct ConvertToStaticExpandShape : public OpRewritePattern<ExpandShapeOp> {
     auto outputType = RankedTensorType::get(
         newOutputShape, expandOp.getSrcType().getElementType());
     auto inputCast = CastOp::create(rewriter, expandOp.getLoc(), inputType,
-                                             expandOp.getSrc());
-    auto newExpand = ExpandShapeOp::create(rewriter,
-        expandOp.getLoc(), outputType, inputCast.getResult(),
+                                    expandOp.getSrc());
+    auto newExpand = ExpandShapeOp::create(
+        rewriter, expandOp.getLoc(), outputType, inputCast.getResult(),
         expandOp.getReassociationIndices(), outputOfr);
     rewriter.replaceOpWithNewOp<CastOp>(expandOp, expandOp.getType(),
                                         newExpand.getResult());
@@ -2555,10 +2557,11 @@ public:
 
     // Create folded extract.
     Location loc = sliceOp.getLoc();
-    Value newResult = ExtractSliceOp::create(rewriter,
-        loc, sliceOp.getType(), castOp.getSource(), sliceOp.getOffsets(),
-        sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
-        sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
+    Value newResult = ExtractSliceOp::create(
+        rewriter, loc, sliceOp.getType(), castOp.getSource(),
+        sliceOp.getOffsets(), sliceOp.getSizes(), sliceOp.getStrides(),
+        sliceOp.getStaticOffsets(), sliceOp.getStaticSizes(),
+        sliceOp.getStaticStrides());
     rewriter.replaceOp(sliceOp, newResult);
     return success();
   }
@@ -2710,7 +2713,7 @@ struct SliceCanonicalizer {
     Value replacement = newOp.getResult();
     if (replacement.getType() != op.getType())
       replacement = tensor::CastOp::create(rewriter, op.getLoc(), op.getType(),
-                                                    replacement);
+                                           replacement);
     rewriter.replaceOp(op, replacement);
   }
 };
@@ -2979,7 +2982,7 @@ public:
       if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
         rewriter.setInsertionPoint(insertSliceOp->getParentOp());
       toInsert = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
-                                                 sourceType, toInsert);
+                                        sourceType, toInsert);
     }
     rewriter.replaceOpWithNewOp<InsertOpTy>(
         insertSliceOp, toInsert, insertSliceOp.getDest(), mixedOffsets,
@@ -3075,17 +3078,18 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     if (!sliceResult.isValid)
       return failure();
 
-    Operation *replacement = InsertOpTy::create(rewriter,
-        insertSliceOp.getLoc(), src, dst, insertSliceOp.getMixedOffsets(),
-        mixedSizes, insertSliceOp.getMixedStrides());
+    Operation *replacement =
+        InsertOpTy::create(rewriter, insertSliceOp.getLoc(), src, dst,
+                           insertSliceOp.getMixedOffsets(), mixedSizes,
+                           insertSliceOp.getMixedStrides());
 
     // In the parallel case there is no result and so nothing to cast.
     bool isParallelInsert =
         std::is_same<InsertOpTy, ParallelInsertSliceOp>::value;
     if (!isParallelInsert && dst.getType() != insertSliceOp.getDestType()) {
       replacement = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
-                                                    insertSliceOp.getDestType(),
-                                                    replacement->getResult(0));
+                                           insertSliceOp.getDestType(),
+                                           replacement->getResult(0));
     }
     rewriter.replaceOp(insertSliceOp, replacement->getResults());
     return success();
@@ -3154,8 +3158,8 @@ struct InsertSliceOpSourceCastInserter final
     // parallel case.
     if (std::is_same<InsertOpTy, ParallelInsertSliceOp>::value)
       rewriter.setInsertionPoint(insertSliceOp->getParentOp());
-    Value cast = tensor::CastOp::create(rewriter,
-        insertSliceOp.getLoc(), newSrcType, insertSliceOp.getSource());
+    Value cast = tensor::CastOp::create(rewriter, insertSliceOp.getLoc(),
+                                        newSrcType, insertSliceOp.getSource());
     rewriter.replaceOpWithNewOp<InsertOpTy>(
         insertSliceOp, cast, insertSliceOp.getDest(),
         insertSliceOp.getMixedOffsets(), insertSliceOp.getMixedSizes(),
@@ -3407,10 +3411,11 @@ struct FoldSourceTensorCast : public OpRewritePattern<PadOp> {
         padTensorOp.getSourceMutable().assign(castOp.getSource());
       });
     } else {
-      auto newOp = PadOp::create(rewriter,
-          padTensorOp->getLoc(), newResultType, padTensorOp.getSource(),
-          padTensorOp.getStaticLow(), padTensorOp.getStaticHigh(),
-          padTensorOp.getLow(), padTensorOp.getHigh(), padTensorOp.getNofold(),
+      auto newOp = PadOp::create(
+          rewriter, padTensorOp->getLoc(), newResultType,
+          padTensorOp.getSource(), padTensorOp.getStaticLow(),
+          padTensorOp.getStaticHigh(), padTensorOp.getLow(),
+          padTensorOp.getHigh(), padTensorOp.getNofold(),
           getPrunedAttributeList(padTensorOp, PadOp::getAttributeNames()));
       IRMapping mapper;
       padTensorOp.getRegion().cloneInto(&newOp.getRegion(), mapper);
@@ -3439,8 +3444,8 @@ struct FoldTargetTensorCast : public OpRewritePattern<PadOp> {
                                             tensorCastOp.getDest().getType()))
       return failure();
 
-    auto replacementOp = PadOp::create(rewriter,
-        padTensorOp.getLoc(), tensorCastOp.getDest().getType(),
+    auto replacementOp = PadOp::create(
+        rewriter, padTensorOp.getLoc(), tensorCastOp.getDest().getType(),
         padTensorOp.getSource(), padTensorOp.getStaticLow(),
         padTensorOp.getStaticHigh(), padTensorOp.getLow(),
         padTensorOp.getHigh(), padTensorOp.getNofold(),
@@ -3597,11 +3602,11 @@ struct FoldOrthogonalPaddings : public OpRewritePattern<PadOp> {
 
     // Create a new tensor::ExtractSliceOp, tensor::PadOp pair that performs
     // the two paddings in one step.
-    auto newSliceOp = ExtractSliceOp::create(rewriter,
-        padOp.getLoc(), outerSliceOp.getSource(), newOffsets, newSizes,
-        innerSliceOp.getMixedStrides());
-    auto newPadOp = PadOp::create(rewriter,
-        padOp.getLoc(), padOp.getResultType(), newSliceOp.getResult(),
+    auto newSliceOp = ExtractSliceOp::create(
+        rewriter, padOp.getLoc(), outerSliceOp.getSource(), newOffsets,
+        newSizes, innerSliceOp.getMixedStrides());
+    auto newPadOp = PadOp::create(
+        rewriter, padOp.getLoc(), padOp.getResultType(), newSliceOp.getResult(),
         padOp.getMixedLowPad(), newHighPad, padOp.getNofold(),
         getPrunedAttributeList(padOp, PadOp::getAttributeNames()));
     rewriter.inlineRegionBefore(padOp.getRegion(), newPadOp.getRegion(),
@@ -3697,9 +3702,9 @@ struct FoldStaticPadding : public OpRewritePattern<PadOp> {
     // Rewrite the op using the new static type.
     auto newResultType = RankedTensorType::get(
         newOutDims, padTensorOp.getType().getElementType());
-    auto newOp = PadOp::create(rewriter,
-        padTensorOp->getLoc(), newResultType, input, staticLow, staticHigh,
-        newLows, newHighs, padTensorOp.getNofold(),
+    auto newOp = PadOp::create(
+        rewriter, padTensorOp->getLoc(), newResultType, input, staticLow,
+        staticHigh, newLows, newHighs, padTensorOp.getNofold(),
         getPrunedAttributeList(padTensorOp, PadOp::getAttributeNames()));
 
     IRMapping mapper;
@@ -3777,9 +3782,9 @@ struct FoldConsecutiveConstantPadding : public OpRewritePattern<tensor::PadOp> {
     SmallVector<OpFoldResult> newLowPad =
         addPaddings(padOp.getMixedLowPad(), producerPad.getMixedLowPad());
 
-    auto newPadOp = tensor::PadOp::create(rewriter,
-        padOp.getLoc(), padOp.getResultType(), producerPad.getSource(),
-        newLowPad, newHighPad, padOp.getNofold(),
+    auto newPadOp = tensor::PadOp::create(
+        rewriter, padOp.getLoc(), padOp.getResultType(),
+        producerPad.getSource(), newLowPad, newHighPad, padOp.getNofold(),
         getPrunedAttributeList(padOp, tensor::PadOp::getAttributeNames()));
     rewriter.inlineRegionBefore(padOp.getRegion(), newPadOp.getRegion(),
                                 newPadOp.getRegion().begin());
@@ -4108,8 +4113,8 @@ struct FoldTensorCastProducerOp
     for (auto [oldResult, newResult] :
          llvm::zip(op->getResults(), newOp->getResults())) {
       if (newResult.getType() != oldResult.getType()) {
-        replacements.push_back(tensor::CastOp::create(rewriter,
-            op->getLoc(), oldResult.getType(), newResult));
+        replacements.push_back(tensor::CastOp::create(
+            rewriter, op->getLoc(), oldResult.getType(), newResult));
       } else {
         replacements.push_back(newResult);
       }

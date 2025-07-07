@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Transform/DebugExtension/DebugExtensionOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 
 using namespace mlir;
 

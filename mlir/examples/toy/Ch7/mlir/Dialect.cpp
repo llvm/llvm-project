@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
@@ -429,7 +430,8 @@ llvm::LogicalResult ReturnOp::verify() {
   auto resultType = results.front();
 
   // Check that the result type of the function matches the operand type.
-  if (inputType == resultType || llvm::isa<mlir::UnrankedTensorType>(inputType) ||
+  if (inputType == resultType ||
+      llvm::isa<mlir::UnrankedTensorType>(inputType) ||
       llvm::isa<mlir::UnrankedTensorType>(resultType))
     return mlir::success();
 

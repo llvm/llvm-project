@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1382,9 +1383,9 @@ void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
                       int32_t offset, int32_t width, ShuffleMode mode) {
   build(builder, result, value,
         arith::ConstantOp::create(builder, result.location,
-                                          builder.getI32IntegerAttr(offset)),
+                                  builder.getI32IntegerAttr(offset)),
         arith::ConstantOp::create(builder, result.location,
-                                          builder.getI32IntegerAttr(width)),
+                                  builder.getI32IntegerAttr(width)),
         mode);
 }
 
@@ -1396,9 +1397,9 @@ void RotateOp::build(OpBuilder &builder, OperationState &result, Value value,
                      int32_t offset, int32_t width) {
   build(builder, result, value,
         arith::ConstantOp::create(builder, result.location,
-                                          builder.getI32IntegerAttr(offset)),
+                                  builder.getI32IntegerAttr(offset)),
         arith::ConstantOp::create(builder, result.location,
-                                          builder.getI32IntegerAttr(width)));
+                                  builder.getI32IntegerAttr(width)));
 }
 
 LogicalResult RotateOp::verify() {

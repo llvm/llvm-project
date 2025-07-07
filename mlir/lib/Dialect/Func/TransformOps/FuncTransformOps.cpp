@@ -15,6 +15,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 
@@ -171,7 +172,7 @@ transform::CastAndCallOp::apply(transform::TransformRewriter &rewriter,
   }
 
   auto callOp = func::CallOp::create(rewriter, insertionPoint->getLoc(),
-                                              targetFunction, inputs);
+                                     targetFunction, inputs);
 
   // Cast the call results back to the expected types. If any conversions fail
   // this is a definite failure as the call has been constructed at this point.

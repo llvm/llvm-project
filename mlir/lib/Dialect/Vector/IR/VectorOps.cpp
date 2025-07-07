@@ -30,6 +30,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -599,8 +600,8 @@ struct ElideUnitDimsInMultiDimReduction
                             dstVecType.getScalableDims());
         mask = vector::ShapeCastOp::create(rewriter, loc, newMaskType, mask);
       }
-      cast = vector::ShapeCastOp::create(rewriter,
-          loc, reductionOp.getDestType(), reductionOp.getSource());
+      cast = vector::ShapeCastOp::create(
+          rewriter, loc, reductionOp.getDestType(), reductionOp.getSource());
     } else {
       // This means we are reducing all the dimensions, and all reduction
       // dimensions are of size 1. So a simple extraction would do.
@@ -674,35 +675,35 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   case arith::AtomicRMWKind::addf:
   case arith::AtomicRMWKind::addi:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::ADD, vector);
+                                       CombiningKind::ADD, vector);
   case arith::AtomicRMWKind::mulf:
   case arith::AtomicRMWKind::muli:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MUL, vector);
+                                       CombiningKind::MUL, vector);
   case arith::AtomicRMWKind::minimumf:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MINIMUMF, vector);
+                                       CombiningKind::MINIMUMF, vector);
   case arith::AtomicRMWKind::mins:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MINSI, vector);
+                                       CombiningKind::MINSI, vector);
   case arith::AtomicRMWKind::minu:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MINUI, vector);
+                                       CombiningKind::MINUI, vector);
   case arith::AtomicRMWKind::maximumf:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MAXIMUMF, vector);
+                                       CombiningKind::MAXIMUMF, vector);
   case arith::AtomicRMWKind::maxs:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MAXSI, vector);
+                                       CombiningKind::MAXSI, vector);
   case arith::AtomicRMWKind::maxu:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::MAXUI, vector);
+                                       CombiningKind::MAXUI, vector);
   case arith::AtomicRMWKind::andi:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::AND, vector);
+                                       CombiningKind::AND, vector);
   case arith::AtomicRMWKind::ori:
     return vector::ReductionOp::create(builder, vector.getLoc(),
-                                               CombiningKind::OR, vector);
+                                       CombiningKind::OR, vector);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
@@ -4255,8 +4256,8 @@ public:
     // just a single scalar.
     bool isScalarSrc = (srcRank == 0 || srcVecType.getNumElements() == 1);
     if (!lowerDimMatch && !isScalarSrc) {
-      source = ExtractStridedSliceOp::create(rewriter,
-          op->getLoc(), source,
+      source = ExtractStridedSliceOp::create(
+          rewriter, op->getLoc(), source,
           getI64SubArray(op.getOffsets(), /* dropFront=*/rankDiff),
           getI64SubArray(op.getSizes(), /* dropFront=*/rankDiff),
           getI64SubArray(op.getStrides(), /* dropFront=*/rankDiff));
@@ -4351,7 +4352,7 @@ public:
     SmallVector<int64_t> offsets = getI64SubArray(op.getOffsets());
     auto extractOffsets = ArrayRef(offsets).take_front(numOffsets);
     Value extract = vector::ExtractOp::create(rewriter, op->getLoc(), source,
-                                                       extractOffsets);
+                                              extractOffsets);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getType(), extract);
     return success();
   }
@@ -5421,13 +5422,14 @@ public:
     // Swap the tensor::ExtractSliceOp in front of the vector::TransferWriteOp.
     // Set all in_bounds to false and let the folder infer them.
     SmallVector<bool> newInBounds(vectorShape.size(), false);
-    auto newExtractOp = tensor::ExtractSliceOp::create(rewriter,
-        extractOp.getLoc(), insertOp.getSourceType(), insertOp.getDest(),
-        insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
-        insertOp.getMixedStrides());
-    auto newTransferWriteOp = TransferWriteOp::create(rewriter,
-        transferOp.getLoc(), transferOp.getVector(), newExtractOp.getResult(),
-        transferOp.getIndices(), transferOp.getPermutationMapAttr(),
+    auto newExtractOp = tensor::ExtractSliceOp::create(
+        rewriter, extractOp.getLoc(), insertOp.getSourceType(),
+        insertOp.getDest(), insertOp.getMixedOffsets(),
+        insertOp.getMixedSizes(), insertOp.getMixedStrides());
+    auto newTransferWriteOp = TransferWriteOp::create(
+        rewriter, transferOp.getLoc(), transferOp.getVector(),
+        newExtractOp.getResult(), transferOp.getIndices(),
+        transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
     rewriter.modifyOpInPlace(insertOp, [&]() {
       insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
@@ -7299,11 +7301,11 @@ Operation *mlir::vector::maskOperation(OpBuilder &builder,
     return maskableOp;
   if (passthru)
     return MaskOp::create(builder, maskableOp->getLoc(),
-                                  maskableOp->getResultTypes(), mask, passthru,
-                                  maskableOp, createMaskOpRegion);
+                          maskableOp->getResultTypes(), mask, passthru,
+                          maskableOp, createMaskOpRegion);
   return MaskOp::create(builder, maskableOp->getLoc(),
-                                maskableOp->getResultTypes(), mask, maskableOp,
-                                createMaskOpRegion);
+                        maskableOp->getResultTypes(), mask, maskableOp,
+                        createMaskOpRegion);
 }
 
 /// Creates a vector select operation that picks values from `newValue` or
@@ -7319,7 +7321,7 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
     return newValue;
 
   return arith::SelectOp::create(builder, newValue.getLoc(), newValue.getType(),
-                                         mask, newValue, passthru);
+                                 mask, newValue, passthru);
 }
 
 //===----------------------------------------------------------------------===//

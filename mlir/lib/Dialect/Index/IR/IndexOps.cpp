@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
@@ -129,15 +130,18 @@ canonicalizeAssociativeCommutativeBinaryOp(BinaryOp op,
 
   auto lhsOp = op.getLhs().template getDefiningOp<BinaryOp>();
   if (!lhsOp)
-    return rewriter.notifyMatchFailure(op.getLoc(), "LHS is not the same BinaryOp");
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "LHS is not the same BinaryOp");
 
   if (!mlir::matchPattern(lhsOp.getRhs(), mlir::m_Constant()))
-    return rewriter.notifyMatchFailure(op.getLoc(), "RHS of LHS op is not a constant");
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "RHS of LHS op is not a constant");
 
   Value c = rewriter.createOrFold<BinaryOp>(op->getLoc(), op.getRhs(),
-                                           lhsOp.getRhs());
+                                            lhsOp.getRhs());
   if (c.getDefiningOp<BinaryOp>())
-    return rewriter.notifyMatchFailure(op.getLoc(), "new BinaryOp was not folded");
+    return rewriter.notifyMatchFailure(op.getLoc(),
+                                       "new BinaryOp was not folded");
 
   rewriter.replaceOpWithNewOp<BinaryOp>(op, lhsOp.getLhs(), c);
   return success();
@@ -716,10 +720,10 @@ LogicalResult CmpOp::canonicalize(CmpOp op, PatternRewriter &rewriter) {
   index::CmpOp newCmp;
   if (rhsIsZero)
     newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
-                                           subOp.getLhs(), subOp.getRhs());
+                                  subOp.getLhs(), subOp.getRhs());
   else
     newCmp = index::CmpOp::create(rewriter, op.getLoc(), op.getPred(),
-                                           subOp.getRhs(), subOp.getLhs());
+                                  subOp.getRhs(), subOp.getLhs());
   rewriter.replaceOp(op, newCmp);
   return success();
 }

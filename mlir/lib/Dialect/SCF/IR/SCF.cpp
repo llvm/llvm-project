@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
@@ -247,7 +248,7 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
       if (YieldOp yieldOp = dyn_cast<YieldOp>(blk.getTerminator())) {
         rewriter.setInsertionPoint(yieldOp);
         cf::BranchOp::create(rewriter, yieldOp.getLoc(), postBlock,
-                                      yieldOp.getResults());
+                             yieldOp.getResults());
         rewriter.eraseOp(yieldOp);
       }
     }
@@ -557,8 +558,8 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   rewriter.setInsertionPoint(getOperation());
   auto inits = llvm::to_vector(getInitArgs());
   inits.append(newInitOperands.begin(), newInitOperands.end());
-  scf::ForOp newLoop = scf::ForOp::create(rewriter,
-      getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
+  scf::ForOp newLoop = scf::ForOp::create(
+      rewriter, getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {});
   newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
 
@@ -673,8 +674,8 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
     Value dst = parallelInsertSliceOp.getDest();
     Value src = parallelInsertSliceOp.getSource();
     if (llvm::isa<TensorType>(src.getType())) {
-      results.push_back(tensor::InsertSliceOp::create(rewriter,
-          forallOp.getLoc(), dst.getType(), src, dst,
+      results.push_back(tensor::InsertSliceOp::create(
+          rewriter, forallOp.getLoc(), dst.getType(), src, dst,
           parallelInsertSliceOp.getOffsets(), parallelInsertSliceOp.getSizes(),
           parallelInsertSliceOp.getStrides(),
           parallelInsertSliceOp.getStaticOffsets(),
@@ -722,8 +723,8 @@ LoopNest mlir::scf::buildLoopNest(
   ValueRange currentIterArgs = iterArgs;
   Location currentLoc = loc;
   for (unsigned i = 0, e = lbs.size(); i < e; ++i) {
-    auto loop = scf::ForOp::create(builder,
-        currentLoc, lbs[i], ubs[i], steps[i], currentIterArgs,
+    auto loop = scf::ForOp::create(
+        builder, currentLoc, lbs[i], ubs[i], steps[i], currentIterArgs,
         [&](OpBuilder &nestedBuilder, Location nestedLoc, Value iv,
             ValueRange args) {
           ivs.push_back(iv);
@@ -801,8 +802,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
   }
 
   // 2. Create the new forOp shell.
-  scf::ForOp newForOp = scf::ForOp::create(rewriter,
-      forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
+  scf::ForOp newForOp = scf::ForOp::create(
+      rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
       forOp.getStep(), newIterOperands);
   newForOp->setAttrs(forOp->getAttrs());
   Block &newBlock = newForOp.getRegion().front();
@@ -926,9 +927,9 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
     if (!canonicalize)
       return failure();
 
-    scf::ForOp newForOp = scf::ForOp::create(rewriter,
-        forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), newIterArgs);
+    scf::ForOp newForOp =
+        scf::ForOp::create(rewriter, forOp.getLoc(), forOp.getLowerBound(),
+                           forOp.getUpperBound(), forOp.getStep(), newIterArgs);
     newForOp->setAttrs(forOp->getAttrs());
     Block &newBlock = newForOp.getRegion().front();
 
@@ -971,7 +972,7 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
         if (keepMask[idx])
           filteredOperands.push_back(mergedTerminator.getOperand(idx));
       scf::YieldOp::create(rewriter, mergedTerminator.getLoc(),
-                                    filteredOperands);
+                           filteredOperands);
     };
 
     rewriter.mergeBlocks(&oldBlock, &newBlock, newBlockTransferArgs);
@@ -1685,8 +1686,8 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
 
     // Step 3. Create a new scf.forall op with the new shared_outs' operands
     //         fetched earlier
-    auto newForallOp = scf::ForallOp::create(rewriter,
-        forallOp.getLoc(), forallOp.getMixedLowerBound(),
+    auto newForallOp = scf::ForallOp::create(
+        rewriter, forallOp.getLoc(), forallOp.getMixedLowerBound(),
         forallOp.getMixedUpperBound(), forallOp.getMixedStep(), newOuts,
         forallOp.getMapping(),
         /*bodyBuilderFn =*/[](OpBuilder &, Location, ValueRange) {});
@@ -1783,8 +1784,8 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     // Replace the loop by a lower-dimensional loop.
     ForallOp newOp;
     newOp = ForallOp::create(rewriter, loc, newMixedLowerBounds,
-                                      newMixedUpperBounds, newMixedSteps,
-                                      op.getOutputs(), std::nullopt, nullptr);
+                             newMixedUpperBounds, newMixedSteps,
+                             op.getOutputs(), std::nullopt, nullptr);
     newOp.getBodyRegion().getBlocks().clear();
     // The new loop needs to keep all attributes from the old one, except for
     // "operandSegmentSizes" and static loop bound attributes which capture
@@ -1867,16 +1868,17 @@ struct FoldTensorCastOfOutputIntoForallOp
 
     // Create new loop.
     Location loc = forallOp.getLoc();
-    auto newForallOp = ForallOp::create(rewriter,
-        loc, forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
-        forallOp.getMixedStep(), newOutputTensors, forallOp.getMapping(),
+    auto newForallOp = ForallOp::create(
+        rewriter, loc, forallOp.getMixedLowerBound(),
+        forallOp.getMixedUpperBound(), forallOp.getMixedStep(),
+        newOutputTensors, forallOp.getMapping(),
         [&](OpBuilder nestedBuilder, Location nestedLoc, ValueRange bbArgs) {
           auto castBlockArgs =
               llvm::to_vector(bbArgs.take_back(forallOp->getNumResults()));
           for (auto [index, cast] : tensorCastProducers) {
             Value &oldTypeBBArg = castBlockArgs[index];
-            oldTypeBBArg = tensor::CastOp::create(nestedBuilder,
-                nestedLoc, cast.dstType, oldTypeBBArg);
+            oldTypeBBArg = tensor::CastOp::create(nestedBuilder, nestedLoc,
+                                                  cast.dstType, oldTypeBBArg);
           }
 
           // Move old body into new parallel loop.
@@ -1903,7 +1905,7 @@ struct FoldTensorCastOfOutputIntoForallOp
     for (auto &item : tensorCastProducers) {
       Value &oldTypeResult = castResults[item.first];
       oldTypeResult = tensor::CastOp::create(rewriter, loc, item.second.dstType,
-                                                      oldTypeResult);
+                                             oldTypeResult);
     }
     rewriter.replaceOp(forallOp, castResults);
     return success();
@@ -2373,7 +2375,7 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
       return failure();
 
     IfOp replacement = IfOp::create(rewriter, op.getLoc(), nonHoistable, cond,
-                                             /*withElseRegion=*/false);
+                                    /*withElseRegion=*/false);
     if (replacement.thenBlock())
       rewriter.eraseBlock(replacement.thenBlock());
     replacement.getThenRegion().takeBody(op.getThenRegion());
@@ -2398,8 +2400,8 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
       } else if (trueVal == falseVal)
         results[it.index()] = trueVal;
       else
-        results[it.index()] = arith::SelectOp::create(rewriter,
-            op.getLoc(), cond, trueVal, falseVal);
+        results[it.index()] = arith::SelectOp::create(rewriter, op.getLoc(),
+                                                      cond, trueVal, falseVal);
     }
 
     rewriter.setInsertionPointToEnd(replacement.thenBlock());
@@ -2450,8 +2452,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
         changed = true;
 
         if (!constantTrue)
-          constantTrue = arith::ConstantOp::create(rewriter,
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
+          constantTrue = arith::ConstantOp::create(
+              rewriter, op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 1));
 
         rewriter.modifyOpInPlace(use.getOwner(),
                                  [&]() { use.set(constantTrue); });
@@ -2460,8 +2462,8 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
         changed = true;
 
         if (!constantFalse)
-          constantFalse = arith::ConstantOp::create(rewriter,
-              op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
+          constantFalse = arith::ConstantOp::create(
+              rewriter, op.getLoc(), i1Ty, rewriter.getIntegerAttr(i1Ty, 0));
 
         rewriter.modifyOpInPlace(use.getOwner(),
                                  [&]() { use.set(constantFalse); });
@@ -2547,8 +2549,8 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
       if (!trueVal && falseVal) {
         if (!opResult.use_empty()) {
           Dialect *constDialect = trueResult.getDefiningOp()->getDialect();
-          Value notCond = arith::XOrIOp::create(rewriter,
-              op.getLoc(), op.getCondition(),
+          Value notCond = arith::XOrIOp::create(
+              rewriter, op.getLoc(), op.getCondition(),
               constDialect
                   ->materializeConstant(rewriter,
                                         rewriter.getIntegerAttr(i1Ty, 1), i1Ty,
@@ -2661,8 +2663,8 @@ struct CombineIfs : public OpRewritePattern<IfOp> {
     SmallVector<Type> mergedTypes(prevIf.getResultTypes());
     llvm::append_range(mergedTypes, nextIf.getResultTypes());
 
-    IfOp combinedIf = IfOp::create(rewriter,
-        nextIf.getLoc(), mergedTypes, prevIf.getCondition(), /*hasElse=*/false);
+    IfOp combinedIf = IfOp::create(rewriter, nextIf.getLoc(), mergedTypes,
+                                   prevIf.getCondition(), /*hasElse=*/false);
     rewriter.eraseBlock(&combinedIf.getThenRegion().back());
 
     rewriter.inlineRegionBefore(prevIf.getThenRegion(),
@@ -2823,8 +2825,8 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
     }
 
     Location loc = op.getLoc();
-    Value newCondition = arith::AndIOp::create(rewriter,
-        loc, op.getCondition(), nestedIf.getCondition());
+    Value newCondition = arith::AndIOp::create(rewriter, loc, op.getCondition(),
+                                               nestedIf.getCondition());
     auto newIf = IfOp::create(rewriter, loc, op.getResultTypes(), newCondition);
     Block *newIfBlock = rewriter.createBlock(&newIf.getThenRegion());
 
@@ -2833,8 +2835,9 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
     rewriter.setInsertionPoint(newIf);
 
     for (auto idx : elseYieldsToUpgradeToSelect)
-      results[idx] = arith::SelectOp::create(rewriter,
-          op.getLoc(), op.getCondition(), thenYield[idx], elseYield[idx]);
+      results[idx] =
+          arith::SelectOp::create(rewriter, op.getLoc(), op.getCondition(),
+                                  thenYield[idx], elseYield[idx]);
 
     rewriter.mergeBlocks(nestedIf.thenBlock(), newIfBlock);
     rewriter.setInsertionPointToEnd(newIf.thenBlock());
@@ -3160,8 +3163,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     }
     // Replace the parallel loop by lower-dimensional parallel loop.
     auto newOp =
-        ParallelOp::create(rewriter, op.getLoc(), newLowerBounds, newUpperBounds,
-                                    newSteps, op.getInitVals(), nullptr);
+        ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
+                           newUpperBounds, newSteps, op.getInitVals(), nullptr);
     // Erase the empty block that was inserted by the builder.
     rewriter.eraseBlock(newOp.getBody());
     // Clone the loop body and remap the block arguments of the collapsed loops
@@ -3541,8 +3544,8 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
       if (std::get<0>(yieldedAndBlockArgs) == term.getCondition()) {
         if (!std::get<1>(yieldedAndBlockArgs).use_empty()) {
           if (!constantTrue)
-            constantTrue = arith::ConstantOp::create(rewriter,
-                op.getLoc(), term.getCondition().getType(),
+            constantTrue = arith::ConstantOp::create(
+                rewriter, op.getLoc(), term.getCondition().getType(),
                 rewriter.getBoolAttr(true));
 
           rewriter.replaceAllUsesWith(std::get<1>(yieldedAndBlockArgs),
@@ -3684,8 +3687,8 @@ struct RemoveLoopInvariantArgsFromBeforeBlock
       rewriter.replaceOpWithNewOp<YieldOp>(yieldOp, newYieldOpArgs);
     }
 
-    auto newWhile =
-        WhileOp::create(rewriter, op.getLoc(), op.getResultTypes(), newInitArgs);
+    auto newWhile = WhileOp::create(rewriter, op.getLoc(), op.getResultTypes(),
+                                    newInitArgs);
 
     Block &newBeforeBlock = *rewriter.createBlock(
         &newWhile.getBefore(), /*insertPt*/ {},
@@ -3808,7 +3811,7 @@ struct RemoveLoopInvariantValueYielded : public OpRewritePattern<WhileOp> {
     }
 
     auto newWhile = WhileOp::create(rewriter, op.getLoc(), newAfterBlockType,
-                                             op.getOperands());
+                                    op.getOperands());
 
     Block &newAfterBlock =
         *rewriter.createBlock(&newWhile.getAfter(), /*insertPt*/ {},
@@ -4044,7 +4047,7 @@ struct WhileRemoveUnusedArgs : public OpRewritePattern<WhileOp> {
     Location loc = op.getLoc();
     auto newWhileOp =
         WhileOp::create(rewriter, loc, op.getResultTypes(), newInits,
-                                 /*beforeBody*/ nullptr, /*afterBody*/ nullptr);
+                        /*beforeBody*/ nullptr, /*afterBody*/ nullptr);
     Block &newBeforeBlock = *newWhileOp.getBeforeBody();
     Block &newAfterBlock = *newWhileOp.getAfterBody();
 
@@ -4091,9 +4094,10 @@ struct WhileRemoveDuplicatedResults : public OpRewritePattern<WhileOp> {
     ValueRange argsRange(newArgs);
 
     Location loc = op.getLoc();
-    auto newWhileOp = scf::WhileOp::create(rewriter,
-        loc, argsRange.getTypes(), op.getInits(), /*beforeBody*/ nullptr,
-        /*afterBody*/ nullptr);
+    auto newWhileOp =
+        scf::WhileOp::create(rewriter, loc, argsRange.getTypes(), op.getInits(),
+                             /*beforeBody*/ nullptr,
+                             /*afterBody*/ nullptr);
     Block &newBeforeBlock = *newWhileOp.getBeforeBody();
     Block &newAfterBlock = *newWhileOp.getAfterBody();
 
@@ -4187,8 +4191,8 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
     for (auto &&[i, j] : llvm::enumerate(*mapping))
       newResultTypes[j] = loop.getResult(i).getType();
 
-    auto newLoop = WhileOp::create(rewriter,
-        loop.getLoc(), newResultTypes, loop.getInits(),
+    auto newLoop = WhileOp::create(
+        rewriter, loop.getLoc(), newResultTypes, loop.getInits(),
         /*beforeBuilder=*/nullptr, /*afterBuilder=*/nullptr);
     auto newBefore = newLoop.getBeforeBody();
     auto newAfter = newLoop.getAfterBody();

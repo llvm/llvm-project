@@ -14,6 +14,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -64,7 +65,7 @@ SmallVector<Value> x86vector::MaskCompressOp::getIntrinsicOperands(
     src = adaptor.getSrc();
   } else if (adaptor.getConstantSrc()) {
     src = LLVM::ConstantOp::create(rewriter, loc, opType,
-                                            adaptor.getConstantSrcAttr());
+                                   adaptor.getConstantSrcAttr());
   } else {
     auto zeroAttr = rewriter.getZeroAttr(opType);
     src = LLVM::ConstantOp::create(rewriter, loc, opType, zeroAttr);
