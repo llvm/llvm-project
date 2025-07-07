@@ -7762,31 +7762,31 @@ void Sema::AddMethodCandidate(
   Candidate.Viable = true;
 
   unsigned FirstConvIdx = PO == OverloadCandidateParamOrder::Reversed ? 1 : 0;
-  if (IgnoreExplicitObject)
-    ;
-  else if (ObjectType.isNull())
-    Candidate.IgnoreObjectArgument = true;
-  else if (Method->isStatic()) {
-    // [over.best.ics.general]p8
-    // When the parameter is the implicit object parameter of a static member
-    // function, the implicit conversion sequence is a standard conversion
-    // sequence that is neither better nor worse than any other standard
-    // conversion sequence.
-    //
-    // This is a rule that was introduced in C++23 to support static lambdas. We
-    // apply it retroactively because we want to support static lambdas as an
-    // extension and it doesn't hurt previous code.
-    Candidate.Conversions[FirstConvIdx].setStaticObjectArgument();
-  } else {
-    // Determine the implicit conversion sequence for the object
-    // parameter.
-    Candidate.Conversions[FirstConvIdx] = TryObjectArgumentInitialization(
-        *this, CandidateSet.getLocation(), ObjectType, ObjectClassification,
-        Method, ActingContext, /*InOverloadResolution=*/true);
-    if (Candidate.Conversions[FirstConvIdx].isBad()) {
-      Candidate.Viable = false;
-      Candidate.FailureKind = ovl_fail_bad_conversion;
-      return;
+  if (!IgnoreExplicitObject) {
+    if (ObjectType.isNull())
+      Candidate.IgnoreObjectArgument = true;
+    else if (Method->isStatic()) {
+      // [over.best.ics.general]p8
+      // When the parameter is the implicit object parameter of a static member
+      // function, the implicit conversion sequence is a standard conversion
+      // sequence that is neither better nor worse than any other standard
+      // conversion sequence.
+      //
+      // This is a rule that was introduced in C++23 to support static lambdas.
+      // We apply it retroactively because we want to support static lambdas as
+      // an extension and it doesn't hurt previous code.
+      Candidate.Conversions[FirstConvIdx].setStaticObjectArgument();
+    } else {
+      // Determine the implicit conversion sequence for the object
+      // parameter.
+      Candidate.Conversions[FirstConvIdx] = TryObjectArgumentInitialization(
+          *this, CandidateSet.getLocation(), ObjectType, ObjectClassification,
+          Method, ActingContext, /*InOverloadResolution=*/true);
+      if (Candidate.Conversions[FirstConvIdx].isBad()) {
+        Candidate.Viable = false;
+        Candidate.FailureKind = ovl_fail_bad_conversion;
+        return;
+      }
     }
   }
 
@@ -7883,7 +7883,7 @@ static void AddMethodTemplateCandidateImmediately(
   //   function template are combined with the set of non-template candidate
   //   functions.
   TemplateDeductionInfo Info(CandidateSet.getLocation());
-  auto Method = cast<CXXMethodDecl>(MethodTmpl->getTemplatedDecl());
+  auto *Method = cast<CXXMethodDecl>(MethodTmpl->getTemplatedDecl());
   FunctionDecl *Specialization = nullptr;
   ConversionSequenceList Conversions;
   if (TemplateDeductionResult Result = S.DeduceTemplateArguments(
